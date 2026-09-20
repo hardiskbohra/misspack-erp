@@ -4,6 +4,7 @@
 
 @section('content')
 @push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/master-media.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/shipments.css') }}">
 @endpush
 
