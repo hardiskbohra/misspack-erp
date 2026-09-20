@@ -1,0 +1,10 @@
+@extends('client_portal.layouts.app')
+
+@section('title', 'Quotations')
+@section('page-title', 'Quotations')
+
+@section('content')
+<div class="cp-page-head"><div><p class="cp-eyebrow">Sales</p><h1>Quotations</h1><p>View quotations shared by MissPack.</p></div></div>
+<div class="cp-card" style="padding:18px;margin-bottom:18px;"><form method="GET" class="cp-form-grid"><div class="cp-field"><label>Search</label><input name="search" value="{{ $search }}" placeholder="Search quote number or title..."></div><div class="cp-field"><label>Status</label><select name="status"><option value="all">All Status</option>@foreach($statusOptions as $key=>$label)<option value="{{ $key }}" {{ $status===$key?'selected':'' }}>{{ $label }}</option>@endforeach</select></div><div style="display:flex;align-items:end;gap:10px;"><button class="cp-btn cp-btn-primary">Filter</button><a class="cp-btn cp-btn-light" href="{{ route('client-portal.quotes.index') }}">Reset</a></div></form></div>
+<div class="cp-card"><div class="cp-table-wrap"><table class="cp-table"><thead><tr><th>Quote</th><th>Date</th><th>Items</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody>@forelse($quotes as $quote)<tr><td><strong>{{ $quote->quote_number }}</strong><span class="cp-muted" style="display:block;">{{ $quote->title }}</span></td><td>{{ optional($quote->quote_date)->format('d M Y') ?: '-' }}<span class="cp-muted" style="display:block;">Expiry: {{ optional($quote->expiry_date)->format('d M Y') ?: '-' }}</span></td><td>{{ $quote->items->count() }}</td><td>{{ $quote->currency }} {{ number_format((float)$quote->total_amount, 2) }}</td><td><span class="cp-badge status-{{ $quote->status }}">{{ $quote->statusLabel() }}</span></td><td><a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ route('client-portal.quotes.show', $quote->id) }}">Open</a></td></tr>@empty<tr><td colspan="6"><div class="cp-empty">No public quotations found.</div></td></tr>@endforelse</tbody></table></div>@if(method_exists($quotes,'links'))<div class="cp-pagination">{{ $quotes->links() }}</div>@endif</div>
+@endsection
