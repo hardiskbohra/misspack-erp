@@ -4,120 +4,9 @@
 
 @section('content')
 
-<style>
-
-    .master-badge {
-        display: inline-flex;
-        border-radius: 10px;
-        padding: 10px;
-        font-size: 11px;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: .03em;
-    }
-
-    .status-draft {
-        background: #fff4e5;
-        color: #d97706
-    }
-
-    .status-under-review {
-        background: #eaf1ff;
-        color: #3f7cf4
-    }
-
-    .status-approved {
-        background: #e8fff7;
-        color: #0e9f6e
-    }
-
-    .status-rejected {
-        background: #ffeaf0;
-        color: #e11d48
-    }
-
-    .status-revision {
-        background: #f3f6fb;
-        color: #536079
-    }
-    
-    .portal-enabled { 
-        background: #10b98150;
-        color:#000; 
-    }
-    .portal-disabled { 
-        background: #f3f6fb; 
-        color: #536079; 
-    }
-    
-    .portal-credential-box { 
-        background:#fff8ec;
-        border:1px solid #fedf89;
-        border-radius:14px;
-        padding:14px;
-        margin-top:12px
-    }
-    
-    .portal-credential-box span { 
-        display:block;
-        color:#7a4b08;
-        font-size:11px;
-        text-transform:uppercase;
-        font-weight:600
-    }
-    
-    .portal-credential-box strong { 
-        display:block;
-        margin-top:5px;
-        font-size:14px
-    }
-    
-    .portal-mini-list { 
-        display:grid;gap:10px
-    }
-    
-    .portal-mini-item { 
-        display:flex;
-        justify-content:space-between;
-        gap:10px;
-        padding:10px 0;
-        border-bottom:1px solid var(--client-border)
-    }
-    
-    .portal-mini-item:last-child { 
-        border-bottom:0
-    }
-    
-    .portal-mini-item span{
-        display: block;
-        color: #7d8aa0;
-        font-size: 12px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: .06em;
-    }
-    
-    .portal-mini-item p {
-        font-size: 13px;
-        padding-top:3px;
-        padding-bottom:3px;
-        font-weight: 400;
-        overflow-wrap: anywhere;
-    }
-
-    .portal-mini-item strong {
-        font-size: 14px;
-        font-weight: 500;
-        color:black;
-        overflow-wrap: anywhere;
-    }
-    .master-btn-pink {
-        background:#ef4770;
-        color:#fff;
-        box-shadow:0 10px 24px rgba(239,71,112,.24);
-    }
-    .portal-mini-item strong{font-size:13px}
-</style>
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/clients.css') }}">
+@endpush
 
 @php
     $statusClass = str_replace('_', '-', $client->status);
@@ -128,7 +17,7 @@
     $portalEnabled = (bool) ($client->portal_enabled ?? false);
 @endphp
 
-<div class="client">
+<div class="client client-show">
     <div class="master-card master-header">
         <div>
             <h1>{{ $client->company_name }}</h1>
