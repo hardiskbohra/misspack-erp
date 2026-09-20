@@ -1,0 +1,397 @@
+/* ==========================================================================
+   CORE.CSS — Misspack ERP · shared core components
+   --------------------------------------------------------------------------
+   Single source of truth for generic UI components, shared by EVERY module
+   (admin + client portal). Loaded once in both app layouts, before the
+   module-level stylesheets.
+
+   RULES FOR MODULES
+   -----------------
+   1. Do NOT define your own CSS for generic components (text inputs,
+      selects, textareas, labels, buttons, links, headings, cards, badges).
+      Use the core-* classes below instead.
+   2. Module CSS files (shipments.css, products.css, ...) may contain
+      CONTEXTUAL layout rules only — e.g. sizing/placement of a core
+      component inside a specific screen (".ship-index .core-search {...}").
+   3. Legacy module-scoped classes (master-*, cf-*, cq-*, lm-*, si-*,
+      cp-*) remain valid for screens already built; new screens must use
+      core-* classes. Migration guide at the bottom of this file.
+
+   NAMING
+   ------
+   Everything is prefixed `core-` so it can never collide with (or be
+   shadowed by) ad-hoc module classes. There are deliberately NO element
+   selectors (h1/a/button/...) here: existing pages rely on unstyled
+   elements, so global element rules would change live UI. Use the
+   .core-heading-1/.core-heading-2/.core-heading-3 and .core-link classes
+   on the element where you want core styling.
+
+   USAGE
+   -----
+     <label class="core-label">Company Name <span class="core-required">*</span></label>
+     <input type="text" class="core-text-input">
+     <select class="core-select">…</select>
+     <textarea class="core-textarea"></textarea>
+     <div class="core-search"><span>⌕</span><input class="core-text-input" type="search" placeholder="Search…"></div>
+     <button class="core-button core-button-primary">Save</button>
+     <button class="core-button core-button-soft core-button-sm">Reset</button>
+     <a class="core-button core-button-outline" href="#">Cancel</a>
+     <a class="core-link" href="#">View details</a>
+     <h1 class="core-heading-1">Shipments</h1>
+     <div class="core-card">…</div>
+     <span class="core-badge core-badge-success">Approved</span>
+   ========================================================================== */
+
+:root {
+    --core-primary: #4f83f1;
+    --core-primary-2: #6366f1;
+    --core-accent: #ef4770;
+    --core-danger: #e11d48;
+    --core-success: #0e9f6e;
+    --core-warning: #d97706;
+    --core-ink: #17233b;
+    --core-muted: #687386;
+    --core-border: #dfe7f3;
+    --core-field-border: #d8e2ef;
+    --core-soft-bg: #eef3ff;
+    --core-soft-ink: #4f83f1;
+    --core-focus-ring: 0 0 0 3px rgba(79, 131, 241, .12);
+    --core-radius-field: 12px;
+    --core-radius-btn: 14px;
+    --core-radius-card: 18px;
+    --core-shadow: 0 14px 35px rgba(25, 42, 70, .08);
+}
+
+/* --------------------------------------------------------------------------
+   Form fields
+   -------------------------------------------------------------------------- */
+.core-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--core-ink);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.core-required {
+    color: var(--core-accent);
+}
+
+.core-text-input,
+.core-select,
+.core-textarea {
+    width: 100%;
+    border: 1px solid var(--core-field-border);
+    border-radius: var(--core-radius-field);
+    background: #fff;
+    color: var(--core-ink);
+    font-size: 14px;
+    font-weight: 500;
+    font-family: inherit;
+    outline: none;
+    transition: .2s;
+}
+
+.core-text-input,
+.core-select {
+    height: 44px;
+    padding: 10px 14px;
+}
+
+.core-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23687386' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    cursor: pointer;
+}
+
+.core-textarea {
+    min-height: 96px;
+    padding: 12px 14px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.core-text-input:focus,
+.core-select:focus,
+.core-textarea:focus {
+    border-color: var(--core-primary);
+    box-shadow: var(--core-focus-ring);
+}
+
+.core-text-input::placeholder,
+.core-textarea::placeholder {
+    color: #9aa5b8;
+    font-weight: 400;
+}
+
+/* field wrapper: label + control stack */
+.core-field {
+    margin-bottom: 16px;
+}
+
+.core-field:last-child {
+    margin-bottom: 0;
+}
+
+/* validation message under a control */
+.core-field-error {
+    margin-top: 5px;
+    color: #be123c;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* search box: .core-search > span (icon) + .core-text-input */
+.core-search {
+    position: relative;
+    flex: 1 1 320px;
+    max-width: 480px;
+}
+
+.core-search span {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #8792a5;
+    font-size: 20px;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.core-search .core-text-input {
+    padding-left: 44px;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+.core-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 42px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: var(--core-radius-btn);
+    background: transparent;
+    color: var(--core-ink);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.core-button:hover {
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+
+.core-button:active {
+    transform: translateY(0);
+}
+
+/* variants — pair one with .core-button */
+.core-button-primary {
+    background: var(--core-accent);
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(239, 71, 112, .24);
+}
+
+.core-button-primary:hover {
+    background: var(--core-danger);
+}
+
+.core-button-danger {
+    background: linear-gradient(135deg, var(--core-accent), var(--core-danger));
+    color: #fff;
+}
+
+.core-button-success {
+    background: #e8fff7;
+    color: var(--core-success);
+}
+
+.core-button-soft {
+    background: var(--core-soft-bg);
+    color: var(--core-soft-ink);
+}
+
+.core-button-soft:hover {
+    background: #e2ebff;
+}
+
+.core-button-light {
+    background: var(--core-soft-bg);
+    color: var(--core-soft-ink);
+    border: 1px solid rgba(255, 255, 255, .35);
+}
+
+.core-button-outline {
+    background: #fff;
+    border: 1px solid var(--core-field-border);
+    color: var(--core-ink);
+}
+
+.core-button-outline:hover {
+    border-color: var(--core-primary);
+    color: var(--core-primary);
+}
+
+/* sizes */
+.core-button-sm {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.core-button-lg {
+    height: 48px;
+    padding: 0 20px;
+    font-size: 14px;
+}
+
+/* square icon button (e.g. copy / download / delete glyphs) */
+.core-button-icon {
+    width: 42px;
+    padding: 0;
+}
+
+.core-button-icon.core-button-sm {
+    width: 34px;
+}
+
+.core-button:disabled,
+.core-button[aria-disabled="true"] {
+    opacity: .55;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* --------------------------------------------------------------------------
+   Links
+   -------------------------------------------------------------------------- */
+.core-link {
+    color: var(--core-primary);
+    font-weight: 600;
+    text-decoration: none;
+    transition: .15s;
+}
+
+.core-link:hover {
+    color: var(--core-primary-2);
+    text-decoration: underline;
+}
+
+.core-link-muted {
+    color: var(--core-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Typography
+   -------------------------------------------------------------------------- */
+.core-heading-1 {
+    color: var(--core-ink);
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.core-heading-2 {
+    color: var(--core-ink);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.core-heading-3 {
+    color: var(--core-ink);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.core-text-muted {
+    color: var(--core-muted);
+}
+
+.core-text-sm {
+    font-size: 11px;
+}
+
+/* --------------------------------------------------------------------------
+   Surfaces
+   -------------------------------------------------------------------------- */
+.core-card {
+    background: #fff;
+    border: 1px solid var(--core-border);
+    border-radius: var(--core-radius-card);
+    box-shadow: var(--core-shadow);
+}
+
+/* --------------------------------------------------------------------------
+   Badges — pair one tone with .core-badge
+   -------------------------------------------------------------------------- */
+.core-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 6px 11px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+.core-badge-success {
+    background: #e8fff7;
+    color: var(--core-success);
+}
+
+.core-badge-warning {
+    background: #fff4e5;
+    color: var(--core-warning);
+}
+
+.core-badge-danger {
+    background: #ffeaf0;
+    color: var(--core-danger);
+}
+
+.core-badge-info {
+    background: #eaf1ff;
+    color: #3f7cf4;
+}
+
+.core-badge-neutral {
+    background: #f3f6fb;
+    color: #536079;
+}
+
+/* ==========================================================================
+   MIGRATION GUIDE — legacy class → core-* equivalent
+   (same visual result; migrate screen-by-screen, then drop the old rules)
+   --------------------------------------------------------------------------
+     master-input / cf-input / cq-input / lm-input / si-input      → core-text-input
+     master-select / cf-select / cq-select                         → core-select
+     master-textarea / cf-textarea / lm-textarea                   → core-textarea
+     master-label / cf-label / cq-label / lm-label                 → core-label
+     master-required                                               → core-required
+     master-search (+ inner input)                                 → core-search
+     master-error                                                  → core-field-error
+     master-btn + master-btn-primary / -soft / -light / -danger /
+     -green / -sm / master-icon-btn                                → core-button + core-button-primary / -soft / -light / -danger / -success / -sm / core-button-icon
+     master-card                                                   → core-card
+     master-badge + .status-* / .type-* tones                      → core-badge + core-badge-success / -warning / -danger / -info / -neutral
+     (no legacy equivalent — new)                                  → core-link, core-heading-1/2/3, core-field, core-field-error
+   ========================================================================== */

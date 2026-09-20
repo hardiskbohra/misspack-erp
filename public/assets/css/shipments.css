@@ -1,0 +1,559 @@
+/* =====================================================================
+   MissPack ERP - Shipment Module Stylesheet
+   ---------------------------------------------------------------------
+   Shared by every shipment view:
+     - shipments/index.blade.php        (list page, wrapper: .ship-index)
+     - shipments/form.blade.php         (create / edit)
+     - shipments/show.blade.php         (detail)
+     - client_portal/shipments/show.blade.php (client portal detail)
+
+   Load order: this file is pushed via @push('styles') AFTER the shared
+   master-*.css files, so the rules below keep the same cascade priority
+   as the inline <style> blocks they replaced.
+   ===================================================================== */
+
+/* =====================================================================
+   1. Shipment List (index)
+   Badge colours + mobile table-card layout.
+   Rules scoped to .ship-index only where they override the shared
+   master-*.css palette (status/type/label badges) or could otherwise
+   leak onto the detail / form pages.
+   ===================================================================== */
+
+    .master-route { max-width: 260px; }
+    .master-route strong { display: block; }
+
+    .ship-index .type-domestic { background: #46d488; color: #fff; }
+    .ship-index .type-import { background: #fff4e5; color: #d97706; }
+    .ship-index .type-export { background: #ecfdf5; color: #059669; }
+    .ship-index .status-planning { background: #aab1bd; color: #FFF; }
+    .ship-index .status-picked-up { background: #dbcb3b; color: #FFF; }
+    .ship-index .status-in-transit { background: #7b99db; color: #FFF; }
+    .ship-index .status-custom-hold { background: #fff4e5; color: #d97706; }
+    .ship-index .status-delayed { background: #ffeaf0; color: #e11d48; }
+    .ship-index .status-out-for-delivery { background: #46d488; color: #FFF; }
+    .ship-index .status-delivered { background: #e8fff7; color: #0e9f6e; }
+    .ship-index .status-cancelled { background: #f3f4f6; color: #4b5563; }
+    
+    /* Default */
+    .ship-index .label-0 { background:blue; color:#FFF; }
+    
+    /* Mobile Responsive Shipment Table */
+    @media (max-width:768px){
+
+        .master-table,
+        .master-table tbody,
+        .master-table tr,
+        .master-table td {
+            display:block;
+            min-width: 350px;
+            width:100%;
+        }
+    
+        .master-table thead{
+            display:none;
+        }
+    
+        .master-table tr{
+            background:#fff;
+            border:0px solid #e8edf7;
+            border-radius:16px;
+            padding:18px;
+            margin-bottom:18px;
+            box-shadow:0 4px 18px rgba(0,0,0,.06);
+        }
+    
+        .master-table td{
+            padding:0;
+            border:none;
+            margin-bottom:16px;
+        }
+    
+        .master-table td:last-child{
+            margin-bottom:0;
+        }
+    
+        .master-table td::before{
+            display:block;
+            font-size:13px;
+            font-weight:600;
+            color:#64748b;
+            margin-bottom:6px;
+        }
+    
+        .master-table td:nth-child(1)::before{content:"";}
+        .master-table td:nth-child(2)::before{content:"";}
+        .master-table td:nth-child(3)::before{content:"";}
+        .master-table td:nth-child(4)::before{content:"";}
+        .master-table td:nth-child(5)::before{content:"";}
+        .master-table td:nth-child(6)::before{content:"";}
+    
+        /* Shipment */
+    
+        .ship-index .master-id{
+            display:block;
+            font-size:20px;
+            font-weight:600;
+        }
+    
+        .ship-index .master-sub{
+            display:block;
+            color:#64748b;
+            margin-top:4px;
+        }
+    
+        .ship-index .master-badge{
+            display:inline-flex;
+            font-size:11px;
+            border-radius: 999px;
+            padding: 6px 11px;
+        }
+    
+        /* Route */
+    
+        .ship-index .master-route strong{
+            display:block;
+            white-space:normal;
+            line-height:1.5;
+            font-size:16px;
+        }
+    
+        .ship-index .master-route .master-sub{
+            margin-top:8px;
+        }
+    
+        /* Pickup */
+    
+        .ship-index .master-table td:nth-child(3){
+            font-weight:600;
+        }
+    
+        .ship-index .master-table td:nth-child(3) .master-sub{
+            margin-top:6px;
+        }
+    
+        /* Logistic */
+    
+        .ship-index .master-table td:nth-child(4){
+            font-weight:600;
+        }
+    
+        .ship-index .master-table td:nth-child(4) .master-sub{
+            margin-top:6px;
+        }
+    
+        /* Actions */
+    
+        .ship-index .master-row-actions{
+            display:flex;
+            justify-content:flex-start;
+            gap:10px;
+            flex-wrap:wrap;
+        }
+    
+        .ship-index .master-icon-btn{
+            width:42px;
+            height:42px;
+        }
+    }
+/* =====================================================================
+   2. Shipment Form (create / edit)
+   Products table, tracking history management, attachments and the
+   public-tracking toggle.
+   ===================================================================== */
+
+    .master-items-wrap{width:100%;overflow-x:auto}.master-items-table{width:100%;min-width:1120px;border-collapse:collapse}.master-items-table th,.master-items-table td{padding:10px;border-bottom:1px solid var(--master-border);vertical-align:top}.master-items-table th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#000;text-align:left}.master-remove-row{width:34px;height:34px;border:0;border-radius:9px;background:#fff0f4;color:#e11d48;cursor:pointer;font-weight:900}.master-add-row{margin-top:12px}
+    
+    .master-history-card{padding:26px;margin-top:22px}.master-history-form{display:grid;gap:14px}.master-history-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:14px}.master-history-row{border:1px solid var(--master-border);border-radius:16px;background:#fbfdff;padding:16px;margin-bottom:14px}.master-history-row-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}.master-history-row-title{font-size:14px;font-weight:600;color:var(--master-dark)}.master-history-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.master-history-delete{margin:0}.master-history-note{font-size:12px;color:var(--master-muted);font-weight:500;line-height:1.5}.master-public-check{display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px;font-weight:600;color:#536079}
+    
+    @media (max-width:1200px){
+        .master-history-grid{
+            grid-template-columns:repeat(3,1fr);
+        }
+    }
+    
+    @media (max-width:768px){
+        .master-history-grid{
+            grid-template-columns:1fr;
+        }
+    }
+    
+    .master-attachments-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.master-attachment-card{border:1px solid var(--master-border);border-radius:16px;background:#fbfdff;overflow:hidden}.master-attachment-card img{width:150px;height:150px;object-fit:cover;background:#f8fafc;display:block}.master-attachment-body{padding:12px;display:grid;gap:10px}.master-attachment-actions{display:flex;gap:8px;flex-wrap:wrap}.master-photo-upload-box{padding:14px;border:1px dashed var(--master-border);border-radius:14px;background:#fbfdff}.master-photo-help{font-size:12px;color:var(--master-muted);font-weight:500;margin-top:6px;line-height:1.5}
+    
+    .master-history-footer{
+        display:flex;
+        justify-content:right;
+        align-items:center;
+        gap:12px;
+        margin-top:18px;
+        flex-wrap:wrap;
+    }
+    
+    .master-history-footer form{
+        margin:0;
+    }
+    
+    .master-history-footer .master-btn-primary{
+        min-width:160px;
+    }
+    
+    .master-history-footer .master-btn-danger{
+        min-width:160px;
+    }
+    
+    .master-existing-attachments{
+        margin-bottom:24px;
+    }
+    
+    .master-attachment-grid{
+        display:grid;
+        grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+        gap:18px;
+        margin-top:12px;
+    }
+    
+    .master-attachment-card{
+        background:#fff;
+        border:1px solid #e7edf7;
+        border-radius:16px;
+        overflow:hidden;
+    }
+    
+    .master-attachment-preview{
+        height:140px;
+        background:#f8faff;
+        display:flex;
+        justify-content:center;
+    }
+    
+    .master-attachment-preview img{
+        width:100%;
+        height:100%;
+        object-fit:cover;
+    }
+    
+    .master-file-icon{
+        font-size:42px;
+    }
+    
+    .master-attachment-info{
+        padding:12px;
+    }
+    
+    .master-attachment-info strong{
+        display:block;
+        font-size:13px;
+        margin-bottom:4px;
+        word-break:break-word;
+    }
+    
+    .master-attachment-info small{
+        color:#8a96a8;
+    }
+    
+    .master-attachment-actions{
+        display:flex;
+        gap:8px;
+        padding:12px;
+    }
+    
+    .master-attachment-actions .master-btn{
+        flex:1;
+    }
+    
+    .ship-public-toggle {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #536079;
+        cursor: pointer;
+        user-select: none;
+    }
+    
+    .ship-public-toggle input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+    
+    .ship-public-switch {
+        width: 44px;
+        height: 24px;
+        border-radius: 999px;
+        background: #d8e2ef;
+        position: relative;
+        flex: 0 0 44px;
+        transition: .2s ease;
+    }
+    
+    .ship-public-switch:after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 2px 6px rgba(15,23,42,.18);
+        transition: .2s ease;
+    }
+    
+    .ship-public-toggle input:checked + .ship-public-switch {
+        background: linear-gradient(135deg, var(--ship-primary), var(--ship-primary-2));
+    }
+    
+    .ship-public-toggle input:checked + .ship-public-switch:after {
+        transform: translateX(20px);
+    }
+    
+    .ship-public-toggle strong {
+        line-height: 1.3;
+    }
+    
+    .ship-public-toggle small {
+        display: block;
+        font-size: 11px;
+        color: var(--ship-muted);
+        font-weight: 500;
+        margin-top: 2px;
+    }
+    
+    .master-photo-upload-grid{
+        display:grid;
+        grid-template-columns:2fr 1fr;
+        gap:24px;
+    }
+    
+    .master-photo-public{
+        display:flex;
+    }
+    
+    @media(max-width:768px) {
+        
+        .master-items-table,
+        .master-items-table thead,
+        .master-items-table tbody,
+        .master-items-table tr,
+        .master-items-table td{
+            display:block;
+            min-width: 346px;
+            width:100%;
+        }
+        
+        .master-items-wrap {
+            width:100%;
+            overflow-x:auto
+            
+        }
+        
+        .master-items-table thead{
+            display:none;
+        }
+        
+        .master-items-table tr{
+            border:1px solid var(--master-border);
+            border-radius:16px;
+            padding:16px;
+            margin-bottom:16px;
+            background:#fff;
+        }
+        
+        .master-items-table input,
+        .master-items-table select,
+        .master-items-table button,
+        .master-items-table textarea{
+            width:94%;
+        }
+        
+        .master-items-table td{
+            border:none;
+            padding:8px 0;
+        }
+        
+        .master-items-table td::before{
+            display:block;
+            font-size:11px;
+            color:#8a96a8;
+            font-weight:700;
+            margin-bottom:4px;
+        }
+        
+        .master-items-table td:nth-child(1)::before{content:"Product";}
+        .master-items-table td:nth-child(2)::before{content:"HS Code";}
+        .master-items-table td:nth-child(3)::before{content:"Qty";}
+        .master-items-table td:nth-child(4)::before{content:"Unit";}
+        .master-items-table td:nth-child(5)::before{content:"Amount";}
+        .master-items-table td:nth-child(6)::before{content:"Currency";}
+        .master-items-table td:nth-child(7)::before{content:"";}
+        
+        .master-remove-row{
+            width:100%;
+        }
+        
+        .master-attachment-grid{
+            grid-template-columns:1fr;
+        }
+        
+        .master-attachment-preview{
+            height:220px;
+        }
+        
+        .master-photo-upload-grid{
+            grid-template-columns:1fr;
+            gap:16px;
+        }
+    
+        .master-photo-public{
+            justify-content:flex-start;
+            padding-top:0;
+        }
+        
+        .master-form .master-actions{
+            display:flex;
+            flex-direction:column;
+            gap:12px;
+        }
+        
+        .master-form .master-actions .master-btn{
+            width:100%;
+        }
+
+        .master-history-footer{
+            flex-direction:column;
+            align-items:stretch;
+        }
+        
+        .master-history-footer .master-btn{
+            width:100%;
+        }
+        
+        .master-attachment-actions{
+            flex-direction:column;
+        }
+        
+        .master-attachment-actions .master-btn{
+            width:100%;
+        }
+        
+        .master-history-row-head{
+            flex-direction:column;
+            align-items:flex-start;
+            gap:10px;
+        }
+        
+        .master-detail-grid {
+            grid-template-columns:1fr;
+        }
+        
+    }
+/* =====================================================================
+   3. Shipment Detail (admin + client portal)
+   Product cards, file cards and the module's default shipment label
+   palette. (The photo grid itself lives in master-media.css, shared
+   with the products module.)
+   ===================================================================== */
+
+    
+    
+    /* Default shipment label palette (label-0 is overridden per page
+       for the list view, see section 1). */
+    .label-0 { background:#fff4e5; color:#000; }
+    .label-1 { background:red; color:#FFF; }
+    .label-2 { background:green; color:#FFF; }
+    .label-3 { background:orange; color:black; }
+    .label-4 { background:yellow; color:red; }
+    .label-5 { background:pink; color:blue; }
+    
+    
+    
+    
+    
+    
+    .desktop-products{
+        display:block;
+    }
+    
+    .mobile-products{
+        display:none;
+    }
+    
+    .product-card{
+        background:#fff;
+        border:1px solid var(--master-border);
+        border-radius:16px;
+        padding:16px;
+        margin-bottom:16px;
+    }
+    
+    .product-title{
+        font-size:16px;
+        font-weight:700;
+        margin-bottom:4px;
+    }
+    
+    .product-desc{
+        color:#6b7280;
+        font-size:13px;
+        margin-bottom:15px;
+    }
+    
+    .product-grid{
+        display:grid;
+        grid-template-columns:repeat(2,1fr);
+        gap:14px;
+    }
+    
+    .product-grid span{
+        display:block;
+        color:#94a3b8;
+        font-size:12px;
+        margin-bottom:4px;
+    }
+    
+    .product-grid strong{
+        display:block;
+        font-size:14px;
+        font-weight:500;
+        color:#1f2937;
+    }
+    
+    .file-card{
+        height:260px;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        padding:20px;
+        background:#f8fafc;
+    }
+    
+    .file-icon{
+        font-size:70px;
+        color:#64748b;
+        margin-bottom:15px;
+    }
+    
+    .file-name{
+        text-align:center;
+        font-size:14px;
+        font-weight:600;
+        color:#374151;
+        word-break:break-word;
+        line-height:1.4;
+    }
+    
+    @media (max-width:768px){
+    
+        .desktop-products{
+            display:none;
+        }
+    
+        .mobile-products{
+            display:block;
+        }
+    
+    }

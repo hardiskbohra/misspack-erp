@@ -3,65 +3,9 @@
 @section('page-title', $product->exists ? 'Edit Product' : 'Add Product')
 
 @section('content')
-    <style>
-        :root {
-            --master-primary: #4f83f1;
-            --master-primary2: #6366f1;
-            --master-dark: #17233b;
-            --master-muted: #687386;
-            --master-border: #dfe7f3;
-            --master-bg: #eef3ff;
-            --master-soft: #edf5ff;
-            --master-red: #ef4770;
-            --master-shadow: 0 14px 35px rgba(25, 42, 70, .08)
-        }
-        .master-existing-media{
-            display:grid;
-            grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
-            gap:16px;
-            margin-top:18px;
-        }
-        
-        .master-media-card{
-            border:1px solid var(--master-border);
-            border-radius:14px;
-            padding:12px;
-            background:#fff;
-        }
-        
-        .master-media-thumb{
-            width:100%;
-            height:120px;
-            object-fit:cover;
-            border-radius:10px;
-        }
-        
-        .master-media-file{
-            height:120px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-size:42px;
-            background:#f6f8fc;
-            border-radius:10px;
-        }
-        
-        .master-media-info{
-            margin-top:10px;
-            word-break:break-word;
-            font-size:12px;
-        }
-        
-        .master-remove-media{
-            display:flex;
-            align-items:center;
-            gap:8px;
-            margin-top:10px;
-            color:#dc2626;
-            font-weight:600;
-            cursor:pointer;
-        }
-    </style>
+    @push('styles')
+        <link rel="stylesheet" href="{{ asset('assets/css/products.css') }}">
+    @endpush
 
 @php($isEdit=$product->exists)
 @php($ladders=old('price_ladders') ?? $product->priceLadders->map(function($row){return $row->only(['quantity','unit','capacity','finish_type','printing_type','landing_cost_inr','selling_cost_inr','remarks']);})->toArray())
@@ -302,16 +246,14 @@
         <td><button type="button" class="master-btn master-remove-row" onclick="removeLadderRow(this)">×</button></td>
     </tr>
 </template>
-<script>
-    let ladderIndex = {{ count($ladders) }};
-    document.getElementById('addLadderRow')?.addEventListener('click', function() {
-        document.querySelector('#priceLadderTable tbody').insertAdjacentHTML('beforeend', document
-            .getElementById('ladderTemplate').innerHTML.replaceAll('__INDEX__', ladderIndex++));
-    });
-
-    function removeLadderRow(btn) {
-        const tbody = document.querySelector('#priceLadderTable tbody');
-        if (tbody.children.length > 1) btn.closest('tr').remove();
-    }
-</script>
+@push('scripts')
+    <script src="{{ asset('assets/js/products.js') }}"></script>
+    <script>
+        let ladderIndex = {{ count($ladders) }};
+        document.getElementById('addLadderRow')?.addEventListener('click', function() {
+            document.querySelector('#priceLadderTable tbody').insertAdjacentHTML('beforeend', document
+                .getElementById('ladderTemplate').innerHTML.replaceAll('__INDEX__', ladderIndex++));
+        });
+    </script>
+@endpush
 @endsection

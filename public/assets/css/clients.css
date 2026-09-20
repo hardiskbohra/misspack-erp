@@ -1,0 +1,224 @@
+/* ==========================================================================
+   CLIENTS.CSS — Client module (admin screens: list, detail, portal mgmt)
+   --------------------------------------------------------------------------
+   Loaded via @push('styles') on clients/index, clients/show and
+   clients/portal only.
+
+   Module-scoped rules only. Generic components (inputs, selects, buttons,
+   cards, labels...) come from core.css + master-*.css — do NOT redefine
+   them here. See core.css header for the module rules.
+
+   Page wrappers used for scoping (badge palettes differ per screen):
+     .client-index  — clients list
+     .client-show   — client detail
+   The portal management screen (clients/portal) is fully self-contained
+   under the cpa-* namespace (no collisions possible).
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Index — type / status / portal badges + avatar cell
+   -------------------------------------------------------------------------- */
+.client-index .type-customer {
+    background: #eaf1ff;
+    color: #3f7cf4;
+}
+
+.client-index .type-vendor {
+    background: #fff4e5;
+    color: #d97706;
+}
+
+.client-index .type-both {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.client-index .status-draft {
+    background: #f3f6fb;
+    color: #536079;
+}
+
+.client-index .status-under-review {
+    background: #fff4e5;
+    color: #d97706;
+}
+
+.client-index .status-approved {
+    background: #e8fff7;
+    color: #0e9f6e;
+}
+
+.client-index .status-rejected {
+    background: #ffeaf0;
+    color: #e11d48;
+}
+
+.client-index .status-revision {
+    background: #ece7ff;
+    color: #7c3aed;
+}
+
+.client-index .portal-enabled {
+    background: green;
+    color: #FFF;
+}
+
+.client-index .portal-disabled {
+    background: #f3f6fb;
+    color: #536079;
+}
+
+.client-index .user-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.client-index .u-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.client-index .u-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* --------------------------------------------------------------------------
+   Show — badge shape override + status / portal palette + portal widgets
+   -------------------------------------------------------------------------- */
+/* Note: the original page rule also set display/font-weight/letter-spacing,
+   but on this screen `.master-info span/strong` (higher specificity) already
+   wins those three for in-info badges — so they are intentionally NOT
+   restated here, keeping the current rendered values exactly. */
+.client-show .master-badge {
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.client-show .status-draft {
+    background: #fff4e5;
+    color: #d97706
+}
+
+.client-show .status-under-review {
+    background: #eaf1ff;
+    color: #3f7cf4
+}
+
+.client-show .status-approved {
+    background: #e8fff7;
+    color: #0e9f6e
+}
+
+.client-show .status-rejected {
+    background: #ffeaf0;
+    color: #e11d48
+}
+
+.client-show .status-revision {
+    background: #f3f6fb;
+    color: #536079
+}
+
+.client-show .portal-enabled {
+    background: #10b98150;
+    color: #000;
+}
+
+.client-show .portal-disabled {
+    background: #f3f6fb;
+    color: #536079;
+}
+
+.client-show .portal-credential-box {
+    background: #fff8ec;
+    border: 1px solid #fedf89;
+    border-radius: 14px;
+    padding: 14px;
+    margin-top: 12px
+}
+
+.client-show .portal-credential-box span {
+    display: block;
+    color: #7a4b08;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600
+}
+
+.client-show .portal-credential-box strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 14px
+}
+
+.client-show .portal-mini-list {
+    display: grid;
+    gap: 10px
+}
+
+.client-show .portal-mini-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--client-border)
+}
+
+.client-show .portal-mini-item:last-child {
+    border-bottom: 0
+}
+
+.client-show .portal-mini-item span {
+    display: block;
+    color: #7d8aa0;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.client-show .portal-mini-item p {
+    font-size: 13px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    font-weight: 400;
+    overflow-wrap: anywhere;
+}
+
+.client-show .portal-mini-item strong {
+    font-size: 14px;
+    font-weight: 500;
+    color: black;
+    overflow-wrap: anywhere;
+}
+
+.client-show .master-btn-pink {
+    background: #ef4770;
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(239,71,112,.24);
+}
+
+/* trailing rule from original page style — keeps 13px winning */
+.client-show .portal-mini-item strong {
+    font-size: 13px
+}
+
+/* --------------------------------------------------------------------------
+   Portal management screen (cpa-* namespace — self-contained)
+   -------------------------------------------------------------------------- */
+.client-portal-admin{display:flex;flex-direction:column;gap:18px}.cpa-hero{background:linear-gradient(135deg,#4f83f1,#6366f1);border-radius:24px;padding:24px;color:#fff;display:flex;justify-content:space-between;gap:18px;box-shadow:0 18px 45px rgba(79,131,241,.22)}.cpa-eyebrow{margin:0 0 6px;text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:900;opacity:.78}.cpa-hero h1{margin:0;font-size:30px;font-weight:900}.cpa-hero p{margin:8px 0 0;opacity:.9}.cpa-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.cpa-btn{border:0;border-radius:14px;padding:10px 15px;font-weight:900;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;white-space:nowrap}.cpa-btn-primary{background:#ef4770;color:#fff;box-shadow:0 10px 24px rgba(239,71,112,.24)}.cpa-btn-light{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.3)}.cpa-btn-light-dark{background:#f3f6fb;color:#17233b}.cpa-btn-soft{background:#eef3ff;color:#4f83f1}.cpa-btn-green{background:#e8fff7;color:#0e9f6e}.cpa-btn-sm{padding:8px 11px;font-size:12px;border-radius:12px}.cpa-alert{border-radius:16px;padding:13px 15px;font-weight:800}.cpa-alert-success{background:#e8fff7;color:#047857;border:1px solid #a7f3d0}.cpa-alert-error{background:#fff0f4;color:#be123c;border:1px solid #fecdd3}.cpa-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.cpa-card{background:#fff;border:1px solid #dfe7f3;border-radius:22px;box-shadow:0 14px 35px rgba(25,42,70,.08);padding:20px}.cpa-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px}.cpa-section-head h2{margin:0}.cpa-badge{background:#f3f6fb;color:#536079;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:900}.cpa-badge.active{background:#e8fff7;color:#047857}.cpa-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.cpa-field{display:flex;flex-direction:column;gap:7px}.cpa-field.full{grid-column:1/-1}.cpa-field label{font-size:12px;color:#536079;font-weight:900}.cpa-field input,.cpa-field select,.cpa-field textarea{width:100%;border:1px solid #d8e2ef;border-radius:13px;padding:11px;background:#fff;outline:none}.cpa-field textarea{min-height:92px}.cpa-checks{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.cpa-checks label,.cpa-check-inline{display:flex;gap:8px;align-items:center;font-weight:800;color:#536079}.cpa-submit{grid-column:1/-1;display:flex;justify-content:flex-end}.cpa-password-box{margin-top:14px;background:#fff8ec;border:1px solid #fedf89;border-radius:16px;padding:14px}.cpa-password-box span{display:block;color:#7a4b08;font-weight:900;font-size:12px;text-transform:uppercase}.cpa-password-box strong{font-size:24px;display:inline-block;margin:7px 10px 7px 0}.cpa-actions-wrap{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}.cpa-muted{color:#687386;font-weight:700}.cpa-empty{padding:24px;border:1px dashed #d8deea;border-radius:16px;text-align:center;color:#687386;font-weight:800;background:#fbfcff}.cpa-table-wrap{overflow:auto}.cpa-table{width:100%;border-collapse:collapse;min-width:760px}.cpa-table th,.cpa-table td{padding:14px 16px;border-bottom:1px solid #dfe7f3;text-align:left}.cpa-table th{font-size:12px;text-transform:uppercase;color:#7d8aa0}.cpa-table span{display:block;color:#687386;font-size:12px}@media(max-width:991px){.cpa-grid{grid-template-columns:1fr}.cpa-hero{flex-direction:column}}@media(max-width:767px){.cpa-form-grid,.cpa-checks{grid-template-columns:1fr}.cpa-actions,.cpa-actions .cpa-btn,.cpa-actions-wrap .cpa-btn{width:100%}.cpa-submit .cpa-btn{width:100%}.cpa-card{padding:15px}}

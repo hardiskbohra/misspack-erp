@@ -72,10 +72,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     {{-- App CSS --}}
+    <link rel="stylesheet" href="{{ asset('assets/css/core.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/app-layout.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-index.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-show.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
+
+    @stack('styles')
 </head>
 <body style="line-height:1.5;">
 @php
