@@ -76,6 +76,8 @@
     <link rel="stylesheet" href="{{ asset('assets/css/master-index.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-show.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
+
+    @stack('styles')
 </head>
 <body style="line-height:1.5;">
 @php
