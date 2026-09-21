@@ -481,3 +481,23 @@
 .master-table td {
     line-height: 1.5;
 }
+/* checkbox / radio label row (e.g. "Also create linked INR cashflow entry") */
+.master-check {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-weight: 600;
+    color: #536079;
+}
+
+.master-check input[type="checkbox"],
+.master-check input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--master-primary);
+    cursor: pointer;
+}
+
+.master-check.full {
+    grid-column: 1 / -1;
+}

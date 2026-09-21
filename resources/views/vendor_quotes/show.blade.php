@@ -3,47 +3,6 @@
 @section('page-title', 'Vendor Quote Detail')
 
 @section('content')
-    <style>
-        .photo-grid{
-            display:grid;
-            grid-template-columns:repeat(2, minmax(0,1fr));
-            gap:20px;
-        }
-        
-        .photo-card{
-            display:flex;
-            flex-direction:column;
-            background:#fff;
-            border:1px solid var(--master-border);
-            border-radius:16px;
-            overflow:hidden;
-            text-decoration:none;
-            transition:.2s;
-        }
-        
-        .photo-card:hover{
-            transform:translateY(-3px);
-            box-shadow:0 8px 24px rgba(0,0,0,.08);
-        }
-        
-        .photo-card img{
-            width:100%;
-            height:180px;
-            object-fit:cover;
-            display:block;
-        }
-        
-        .photo-card-body{
-            padding:12px;
-            text-align:center;
-        }
-        
-        .photo-meta{
-            font-size:13px;
-            font-weight:600;
-            color:var(--master-muted);
-        }
-    </style>
     @php($productMedia = $quote->product?->primaryMedia())
     @php($quoteImage = $quote->product_image_path ?: ($productMedia?->file_path ?: $quote->lead?->product_image_path))
     <div class="master">
