@@ -3,64 +3,11 @@
 @section('page-title', 'Vendor Management')
 
 @section('content')
-<style>
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/vendors.css') }}">
+@endpush
 
-    .master-avatar {
-        width: 46px;
-        height: 46px;
-        border-radius: 14px;
-        object-fit: cover;
-        background: var(--master-soft);
-        color: var(--master-primary);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        flex: 0 0 46px;
-    }
-
-    .type-manufacturer {
-        background: #eaf1ff;
-        color: #3f7cf4;
-    }
-
-    .type-trader {
-        background: #fff4e5;
-        color: #d97706;
-    }
-
-    .type-distributor {
-        background: #ecfdf5;
-        color: #059669;
-    }
-
-    .type-service-provider {
-        background: #ece7ff;
-        color: #7c3aed;
-    }
-
-    .status-active {
-        background: #e8fff7;
-        color: #0e9f6e;
-    }
-
-    .status-inactive {
-        background: #f3f6fb;
-        color: #536079;
-    }
-
-    .status-on-hold {
-        background: #fff4e5;
-        color: #d97706;
-    }
-
-    .status-blacklisted {
-        background: #ffeaf0;
-        color: #e11d48;
-    }
-</style>
-
-<div class="vendor">
+<div class="vendor vendor-index">
 
     <div class="master-stats">
         <div class="master-stat blue"><span class="icon">🏭</span>
@@ -98,14 +45,14 @@
                         id="openQuickVendorModal">+ Quick Vendor</button><a href="{{ route('vendors.create') }}"
                         class="master-btn master-btn-soft">Detailed Form</a></div>
             </div>
-            {{-- <div class="master-filter-row">
+            <div class="master-filter-row">
                 <select class="master-select" name="status">
                     <option value="all">All Status</option>@foreach($statusOptions as $key => $label)<option
-                    value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>@endforeach
+                        value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>@endforeach
                 </select>
                 <select class="master-select" name="type">
                     <option value="all">All Types</option>@foreach($typeOptions as $key => $label)<option
-                    value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>@endforeach
+                        value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>@endforeach
                 </select>
                 <select class="master-select" name="country">
                     <option value="all">All Countries</option>@foreach($countries as $countryName)<option
@@ -114,7 +61,7 @@
                 </select>
                 <button class="master-btn master-btn-primary" type="submit">Filter</button><a
                     class="master-btn master-btn-light" href="{{ route('vendors.index') }}">Reset</a>
-            </div> --}}
+            </div>
         </form>
     </div>
 
@@ -148,7 +95,7 @@
                                     @endif
                                     <div><span class="master-sub">{{ $vendor->vendor_number }}</span><span
                                             class="master-id">{{ $vendor->contact_person_name ?: '-' }}</span><span
-                                            class="master-sub">{{ Str::limit($vendor->vendor_name, 25, '…') }}</span></div>
+                                            class="master-sub">{{ \Illuminate\Support\Str::limit($vendor->vendor_name, 25, '…') }}</span></div>
                                 </div>
                             </a>
                         </td>
@@ -164,7 +111,6 @@
                             <span class="master-sub">@if($vendor->alibaba_link)<a href="{{ $vendor->alibaba_link }}"
                             target="_blank">Alibaba Link</a>@else No Alibaba link @endif</span>
                         </td>
-                        </td>
                         <td><span class="master-badge status-{{ $statusClass }}">{{ $vendor->statusLabel() }}</span>
                         </td>
                         <td>
@@ -179,7 +125,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="9">
+                        <td colspan="7">
                             <div class="master-empty">No vendors found. Create your first vendor.</div>
                         </td>
                     </tr>
@@ -210,18 +156,16 @@
                         <div class="master-field full"><label class="master-label">Company Name <span
                                     class="master-required">*</span></label><input class="master-input"
                                 name="vendor_name" required placeholder="Vendor company name"></div>
-                            <input hidden class="master-input" name="brand_name" placeholder="Brand name">
-                            <select hidden
-                                class="master-select" name="vendor_type">
-                                @foreach($typeOptions as $key => $label)
-                                    <option value="{{ $key }}">{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        
-                            <select hidden
-                                class="master-select" name="status">@foreach($statusOptions as $key => $label)<option
+                        {{-- Defaults required by validation; surfaced in the detailed form. --}}
+                        <input hidden class="master-input" name="brand_name">
+                        <select hidden class="master-select" name="vendor_type">
+                            @foreach($typeOptions as $key => $label)
+                                <option value="{{ $key }}" @selected($key === 'manufacturer')>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <select hidden class="master-select" name="status">@foreach($statusOptions as $key => $label)<option
                                     value="{{ $key }}" @selected($key === 'active')>{{ $label }}</option>
-                                @endforeach</select>
+                            @endforeach</select>
                         <div class="master-field"><label class="master-label">Category</label><input
                                 class="master-input" name="category" placeholder="Raw material / Packaging"></div>
                         <div class="master-field"><label class="master-label">Contact Person</label><input
@@ -232,13 +176,9 @@
                                 name="contact_person_mobile"></div>
                         <div class="master-field"><label class="master-label">Preferred Currency</label><select
                             class="master-select" name="preferred_currency">@foreach($currencyOptions as $key => $label)
-                            <option value="{{ $key }}" @selected(old('preferred_currency', $vendor->preferred_currency) === $key)>{{ $label }}</option>@endforeach</select></div>
+                            <option value="{{ $key }}" @selected(old('preferred_currency', 'INR') === $key)>{{ $label }}</option>@endforeach</select></div>
                         <div class="master-field"><label class="master-label">Country</label><input class="master-input"
                             name="country" value="China"></div>
-                        <div class="master-field">
-                            <input class="master-input" name="payment_terms" placeholder="Advance / 30 days" hidden>
-                            <textarea class="master-textarea" name="notes" hidden></textarea>
-                        </div>
                     </div>
                 </div>
                 <div class="master-modal-footer"><button type="button" class="master-btn master-btn-light"
@@ -273,22 +213,7 @@
     </div>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const quickModal = document.getElementById('quickVendorModal');
-        const deleteModal = document.getElementById('deleteVendorModal');
-        const deleteForm = document.getElementById('deleteVendorForm');
-        const deleteDesc = document.getElementById('deleteVendorDesc');
-        function openModal(modal) { modal?.classList.add('open'); modal?.setAttribute('aria-hidden', 'false'); document.body.classList.add('master-modal-open'); }
-        function closeModal(modal) { modal?.classList.remove('open'); modal?.setAttribute('aria-hidden', 'true'); document.body.classList.remove('master-modal-open'); }
-        document.getElementById('openQuickVendorModal')?.addEventListener('click', () => openModal(quickModal));
-        document.getElementById('closeQuickVendorModal')?.addEventListener('click', () => closeModal(quickModal));
-        document.getElementById('cancelQuickVendorModal')?.addEventListener('click', () => closeModal(quickModal));
-        document.querySelectorAll('.master-delete-btn').forEach(function (button) { button.addEventListener('click', function () { deleteDesc.textContent = 'Are you sure you want to delete "' + button.dataset.name + '"? This action cannot be undone.'; deleteForm.action = button.dataset.deleteUrl; openModal(deleteModal); }); });
-        document.getElementById('closeDeleteVendorModal')?.addEventListener('click', () => closeModal(deleteModal));
-        document.getElementById('cancelDeleteVendorModal')?.addEventListener('click', () => closeModal(deleteModal));
-        [quickModal, deleteModal].forEach(function (modal) { modal?.addEventListener('click', function (event) { if (event.target === modal) closeModal(modal); }); });
-        document.addEventListener('keydown', function (event) { if (event.key !== 'Escape') return; closeModal(quickModal); closeModal(deleteModal); });
-    });
-</script>
+@push('scripts')
+    <script src="{{ asset('assets/js/vendors.js') }}"></script>
+@endpush
 @endsection

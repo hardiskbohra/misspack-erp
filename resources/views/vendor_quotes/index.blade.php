@@ -3,24 +3,7 @@
 @section('page-title', 'Vendor Quote Management')
 
 @section('content')
-    <style>
-        :root {
-            --master-primary: #4f83f1;
-            --master-primary-2: #6366f1;
-            --master-info: #159ff7;
-            --master-teal: #12cbb7;
-            --master-purple: #8b5cf6;
-            --master-orange: #f59e0b;
-            --master-red: #ef4770;
-            --master-green: #10b981;
-            --master-dark: #17233b;
-            --master-muted: #687386;
-            --master-border: #dfe7f3;
-            --master-bg: #eef3ff;
-            --master-soft: #edf5ff;
-            --master-shadow: 0 14px 35px rgba(25, 42, 70, .08);
-        }
-    </style>
+    {{-- The --master-* custom properties are already defined in master-index.css (loaded globally). --}}
     <div class="master">
 
         <div class="master-stats">
@@ -186,12 +169,12 @@
             <x-pagination :items="$quotes" />
         </div>
 
-        <div class="master-modal" id="quickQuoteModal">
-            <div class="master-modal-card">
+        <div class="master-modal" id="quickQuoteModal" aria-hidden="true">
+            <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="quickQuoteTitle">
                 <form method="POST" action="{{ route('vendor-quotes.quickStore') }}" enctype="multipart/form-data">@csrf
                     <div class="master-modal-header">
                         <div>
-                            <h3 class="master-modal-title" id="quickClientTitle">Quick Vendor Quote</h3>
+                            <h3 class="master-modal-title" id="quickQuoteTitle">Quick Vendor Quote</h3>
                             <p class="master-modal-subtitle">Create a simple quote for a lead or standalone enquiry.</p>
                         </div><button type="button" class="master-modal-close" data-close-modal="quickQuoteModal">×</button>
                     </div>
@@ -224,26 +207,8 @@
             </div>
         </div>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            function openModal(id) {
-                document.getElementById(id)?.classList.add('open')
-            }
 
-            function closeModal(id) {
-                document.getElementById(id)?.classList.remove('open')
-            }
-            document.getElementById('openQuickQuoteModal')?.addEventListener('click', () => openModal(
-                'quickQuoteModal'));
-            document.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () =>
-                closeModal(b.dataset.closeModal)));
-            document.querySelectorAll('.master-modal').forEach(m => m.addEventListener('click', e => {
-                if (e.target === m) closeModal(m.id)
-            }));
-            document.addEventListener('keydown', e => {
-                if (e.key === 'Escape') document.querySelectorAll('.master-modal.open').forEach(m =>
-                    closeModal(m.id))
-            });
-        });
-    </script>
+@push('scripts')
+    <script src="{{ asset('assets/js/vendors.js') }}"></script>
+@endpush
 @endsection
