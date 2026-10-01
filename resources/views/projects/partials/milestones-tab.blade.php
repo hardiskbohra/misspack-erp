@@ -32,7 +32,8 @@
                 <div class="pmile-head-actions">
                     @if (\Illuminate\Support\Facades\Route::has('projects.milestones.defaults'))
                         <form method="POST" action="{{ route('projects.milestones.defaults', $project) }}"
-                            data-confirm="Generate default milestones for all project products? Existing milestones will not be duplicated."">
+                            data-confirm="Generate default milestones for all project products? Existing milestones will not be duplicated."
+                            data-confirm-text="Generate" data-confirm-danger="false">
                             @csrf
                             <button type="submit" class="master-btn master-btn-soft"><i
                                     class="fa-solid fa-wand-magic-sparkles"></i> Generate Default Timeline</button>
@@ -50,6 +51,7 @@
                     'title' => 'Project Level Milestones',
                     'productMilestones' => $projectLevelMilestones,
                     'projectProduct' => null,
+                    'editable' => true,
                 ])
             @endif
 
@@ -59,6 +61,7 @@
                     'title' => $projectProduct->product_name,
                     'productMilestones' => $productMilestones,
                     'projectProduct' => $projectProduct,
+                    'editable' => true,
                 ])
             @empty
                 @if (!$projectLevelMilestones->count())
@@ -177,9 +180,9 @@
                     <button type="submit" class="master-btn master-btn-primary">Save Milestone</button>
                 </div>
             </form>
-            <div>
+            <div class="pmile-modal-delete-wrap">
                 <form method="POST" action="#" id="deleteMilestoneForm" class="pmile-modal-delete-form"
-                    data-confirm="Delete this milestone?"">
+                    data-confirm="Delete this milestone?">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="pd-link-danger"><i class="fa-solid fa-trash"></i> Delete Milestone</button>

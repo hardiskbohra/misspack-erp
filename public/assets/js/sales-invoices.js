@@ -42,7 +42,7 @@
         }
 
         function productSelect(name, selected) {
-            var html = '<select class="master-product-select" name="' + name + '"><option value="">Manual</option>';
+            var html = '<select class="master-select master-product-select" name="' + name + '"><option value="">Manual</option>';
             productOptions.forEach(function (p) {
                 html += '<option value="' + p.id + '"' + (String(selected || '') === String(p.id) ? ' selected' : '') + '>' + p.no + ' : ' + p.name + '</option>';
             });
@@ -123,14 +123,14 @@
                 '                <div>\n' +
                 '                ' + productSelect('items[' + i + '][product_id]', item.product_id || '') + '\n' +
                 '                <input name="items[' + i + '][project_product_id]" type="hidden" value="' + (item.project_product_id || '') + '"></div><br>\n' +
-                '                <div><input name="items[' + i + '][product_name]" value="' + (item.product_name || '') + '" placeholder="Product name"></div><br>\n' +
-                '                <textarea rows="3" name="items[' + i + '][description]" placeholder="Description">' + (item.description || '') + '</textarea>\n' +
+                '                <div><input class="master-input" name="items[' + i + '][product_name]" value="' + (item.product_name || '') + '" placeholder="Product name"></div><br>\n' +
+                '                <textarea class="master-textarea" rows="3" name="items[' + i + '][description]" placeholder="Description">' + (item.description || '') + '</textarea>\n' +
                 '            </td>\n' +
-                '            <td><input name="items[' + i + '][hsn_sac]" value="' + (item.hsn_sac || '') + '" placeholder="HSN"></td>\n' +
-                '            <td><input class="calc" type="number" step="1" min="0" name="items[' + i + '][quantity]" value="' + (item.quantity || 1) + '"></td>\n' +
-                '            <td><input name="items[' + i + '][unit]" value="' + (item.unit || 'pcs') + '"></td>\n' +
-                '            <td><input class="calc" type="number" step="0.05" min="0" name="items[' + i + '][unit_price]" value="' + (item.unit_price || 0) + '"></td>\n' +
-                '            <td><input class="calc" type="number" step="1" min="0" name="items[' + i + '][gst_percent]" value="' + (item.gst_percent || 18) + '"></td>\n' +
+                '            <td><input class="master-input" name="items[' + i + '][hsn_sac]" value="' + (item.hsn_sac || '') + '" placeholder="HSN"></td>\n' +
+                '            <td><input class="master-input calc" type="number" step="1" min="0" name="items[' + i + '][quantity]" value="' + (item.quantity || 1) + '"></td>\n' +
+                '            <td><input class="master-input" name="items[' + i + '][unit]" value="' + (item.unit || 'pcs') + '"></td>\n' +
+                '            <td><input class="master-input calc" type="number" step="0.05" min="0" name="items[' + i + '][unit_price]" value="' + (item.unit_price || 0) + '"></td>\n' +
+                '            <td><input class="master-input calc" type="number" step="1" min="0" name="items[' + i + '][gst_percent]" value="' + (item.gst_percent || 18) + '"></td>\n' +
                 '            <td><strong class="line-total">₹ 0.00</strong><input name="items[' + i + '][remarks]" placeholder="Remarks" style="margin-top:5px;" hidden></td>\n' +
                 '            <td><button type="button" class="master-remove">×</button></td>\n' +
                 '        </tr>');

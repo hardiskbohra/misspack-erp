@@ -16,7 +16,7 @@
         .photo-card{
             display:flex;
             flex-direction:column;
-            background:#fff;
+            background: var(--mc-card);
             border:1px solid var(--master-border);
             border-radius:16px;
             overflow:hidden;

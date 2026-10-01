@@ -16,12 +16,12 @@
     --master-green: #10b981;
     --master-dark: #17233b;
     --master-muted: #687386;
-    --master-border: #dfe7f3;
-    --master-bg: #eef3ff;
-    --master-soft: #edf5ff;
-    --master-white: #ffffff;
+    --master-border: var(--mc-border);
+    --master-bg: var(--mc-soft);
+    --master-soft: var(--mc-soft);
+    --master-white: var(--mc-card);
     --master-shadow: 0 14px 35px rgba(25, 42, 70, .08);
-    --master-hover-bg: #f7f9fc;
+    --master-hover-bg: var(--mc-hover);
 
     /* Backward-compatible aliases used by some older module views */
     --lm-soft: var(--master-soft);
@@ -30,8 +30,22 @@
     --vendor-primary: var(--master-primary);
     --vq-primary: var(--master-primary);
     --vq-red: var(--master-red);
-    --bg-card: #fbfdff;
+    --bg-card: var(--mc-card-soft);
     --dark: var(--master-dark);
+}
+
+/* Dark theme — re-map the master surface/text tokens (accent colours
+   intentionally stay the same in both themes). */
+:root[data-theme="dark"] {
+    --master-dark: var(--mc-border);
+    --master-muted: #aab6c9;
+    --master-border: #2a3854;
+    --master-bg: #0f1628;
+    --master-soft: #1d2c4d;
+    --master-white: #1a2540;
+    --master-shadow: 0 14px 35px rgba(0, 0, 0, .35);
+    --master-hover-bg: rgba(255, 255, 255, .05);
+    --bg-card: #1a2540;
 }
 
 /* =========================================================
@@ -202,7 +216,7 @@
 }
 
 .master-btn-soft {
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: var(--master-primary);
 }
 
@@ -351,7 +365,7 @@
 .master-modal .master-label,
 .master-page .master-label {
     margin: 0 0 7px;
-    color: #536079;
+    color: var(--mc-text-2);
     font-size: 12px;
     font-weight: 600;
 }
@@ -364,9 +378,9 @@
 .master-select,
 .master-textarea {
     width: 100%;
-    border: 1px solid #d8e2ef;
+    border: 1px solid var(--mc-border);
     border-radius: 12px;
-    background: #fff;
+    background: var(--mc-card);
     color: var(--master-dark);
     font-size: 14px;
     font-weight: 500;
@@ -500,12 +514,12 @@
     padding: 14px;
     border: 1px solid var(--master-border);
     border-radius: 14px;
-    background: #fbfdff;
+    background: var(--mc-card-soft);
 }
 
 .master-info span {
     display: block;
-    color: #7d8aa0;
+    color: var(--mc-text-3);
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
@@ -581,7 +595,7 @@
 
 .master-stat-title {
     margin: 0 0 3px;
-    color: #536079;
+    color: var(--mc-text-2);
     font-size: 14px;
     font-weight: 500;
 }
@@ -613,7 +627,7 @@
     left: 15px;
     top: 50%;
     transform: translateY(-50%);
-    color: #8792a5;
+    color: var(--mc-text-3);
     font-size: 24px;
 }
 
@@ -684,17 +698,17 @@
 }
 
 .master-table th {
-    color: #000;
+    color: var(--mc-text);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: .07em;
     text-transform: uppercase;
-    background: #fbfdff;
+    background: var(--mc-card-soft);
     padding-top: 0;
 }
 
 .master-show .master-table th {
-    color: #7d8aa0;
+    color: var(--mc-text-3);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: .06em;
@@ -803,8 +817,8 @@
 .status-converted,
 .status-secondary,
 .status-planning {
-    background: #f3f6fb;
-    color: #536079;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
 }
 
 .status-info {
@@ -820,8 +834,8 @@
 
 .status-dark,
 .status-cancelled {
-    background: #edf1f5;
-    color: #374151;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
 }
 
 .type-credit {
@@ -914,7 +928,7 @@
     height: 40px;
     border: none;
     border-radius: 12px;
-    background: #f4f7ff;
+    background: var(--bg-input);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -934,8 +948,8 @@
     top: 48px;
     z-index: 9999;
     width: 220px;
-    background: #fff;
-    border: 1px solid #e8edf7;
+    background: var(--mc-card);
+    border: 1px solid var(--mc-border);
     border-radius: 14px;
     box-shadow: 0 15px 40px rgba(0, 0, 0, .12);
     display: none;
@@ -1004,7 +1018,7 @@
     width: min(700px, calc(100vw - 32px));
     max-height: calc(100vh - 40px);
     overflow: hidden;
-    background: #fff;
+    background: var(--mc-card);
     border: 1px solid var(--master-border);
     border-radius: 16px;
     box-shadow: 0 26px 70px rgba(13, 24, 45, .28);
@@ -1121,10 +1135,10 @@
     min-height: 42px;
     min-width: 110px;
     padding: 10px 16px;
-    border: 1px solid #d8e2ef;
+    border: 1px solid var(--mc-border);
     border-radius: 999px;
-    background: #fff;
-    color: #536079;
+    background: var(--mc-card);
+    color: var(--mc-text-2);
     font-size: 14px;
     font-weight: 600;
     display: inline-flex;
@@ -1135,7 +1149,7 @@
 }
 
 .master-chip:hover span {
-    background: #f8fbff;
+    background: var(--mc-card-soft);
     border-color: #bcd3f8;
 }
 

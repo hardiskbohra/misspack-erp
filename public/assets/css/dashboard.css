@@ -15,10 +15,10 @@
     display:flex;
     flex-direction:column;
     gap:18px;
-    background:#eef3ff;
+    background: var(--mc-soft);
     min-height:calc(100vh - 70px);
     padding:28px;
-    color:#17233b;
+    color: var(--mc-text);
 }
 
 .master-page * {
@@ -95,17 +95,17 @@
     display:flex;
     gap:10px;
     overflow-x:auto;
-    background:#fff;
-    border:1px solid #dfe7f3;
+    background: var(--mc-card);
+    border: 1px solid var(--mc-border);
     border-radius:20px;
     padding:10px;
     box-shadow:0 14px 35px rgba(25,42,70,.08);
 }
 
 .master-tab {
-    border:1px solid #dfe7f3;
-    background:#fff;
-    color:#687386;
+    border: 1px solid var(--mc-border);
+    background: var(--mc-card);
+    color: var(--mc-text-2);
     border-radius:14px;
     padding:11px 15px;
     font-weight:600;
@@ -148,8 +148,8 @@
 
 .master-metric-card,
 .master-card {
-    background:#fff;
-    border:1px solid #dfe7f3;
+    background: var(--mc-card);
+    border: 1px solid var(--mc-border);
     border-radius:22px;
     box-shadow:0 14px 35px rgba(25,42,70,.08);
 }
@@ -157,7 +157,7 @@
 .master-metric-card {
     padding:16px;
     text-decoration:none;
-    color:#17233b;
+    color: var(--mc-text);
     display:flex;
     gap:13px;
     align-items:center;
@@ -168,7 +168,7 @@
 .master-metric-card:hover {
     transform:translateY(-2px);
     text-decoration:none;
-    color:#17233b;
+    color: var(--mc-text);
 }
 
 .master-metric-icon {
@@ -208,7 +208,7 @@
 
 .master-metric-card span {
     display:block;
-    color:#687386;
+    color: var(--mc-text-2);
     font-size:12px;
     text-transform:uppercase;
     font-weight:600;
@@ -222,7 +222,7 @@
 
 .master-metric-card small {
     display:block;
-    color:#8792a5;
+    color: var(--mc-text-3);
     font-weight:500;
 }
 
@@ -268,7 +268,7 @@
 }
 
 .master-pill {
-    background:#eef3ff;
+    background: var(--mc-soft);
     color:#4f83f1;
     border-radius:999px;
     padding:7px 10px;
@@ -296,9 +296,9 @@
 }
 
 .master-attention-block {
-    border:1px solid #dfe7f3;
+    border: 1px solid var(--mc-border);
     border-radius:18px;
-    background:#fbfdff;
+    background: var(--mc-card-soft);
     padding:14px;
 }
 
@@ -313,7 +313,7 @@
     width:42px;
     height:42px;
     border-radius:14px;
-    background:#eef3ff;
+    background: var(--mc-soft);
     display:grid;
     place-items:center;
     font-size:19px;
@@ -325,7 +325,7 @@
 }
 
 .master-attention-title small {
-    color:#687386;
+    color: var(--mc-text-2);
     font-weight:600;
     margin-top:3px;
 }
@@ -345,9 +345,9 @@
     gap:10px;
     align-items:center;
     text-decoration:none;
-    color:#17233b;
-    background:#fff;
-    border:1px solid #edf0f7;
+    color: var(--mc-text);
+    background: var(--mc-card);
+    border: 1px solid var(--mc-border);
     border-radius:14px;
     padding:11px;
 }
@@ -364,7 +364,7 @@
 
 .master-attention-item small {
     display:block;
-    color:#687386;
+    color: var(--mc-text-2);
     font-weight:500;
     margin-top:3px;
     line-height:1.35;
@@ -375,7 +375,7 @@
     padding:5px 8px;
     font-size:11px;
     font-weight:600;
-    background:#eef3ff;
+    background: var(--mc-soft);
     color:#4f83f1;
     white-space:nowrap;
 }
@@ -410,17 +410,17 @@
     gap:11px;
     align-items:flex-start;
     text-decoration:none;
-    color:#17233b;
-    border:1px solid #dfe7f3;
+    color: var(--mc-text);
+    border: 1px solid var(--mc-border);
     border-radius:16px;
     padding:12px;
-    background:#fff;
+    background: var(--mc-card);
 }
 
 .master-alert-item small,
 .master-activity-item small {
     display:block;
-    color:#687386;
+    color: var(--mc-text-2);
     margin-top:3px;
     font-weight:500;
 }
@@ -442,11 +442,11 @@
 .master-empty {
     padding:30px;
     text-align:center;
-    border:1px dashed #d8deea;
+    border: 1px dashed var(--mc-border);
     border-radius:18px;
-    color:#687386;
+    color: var(--mc-text-2);
     font-weight:600;
-    background:#fbfcff;
+    background: var(--mc-card-soft);
 }
 
 .master-empty.small {
@@ -466,7 +466,7 @@
     gap:6px;
     font-size:12px;
     font-weight:600;
-    color:#687386;
+    color: var(--mc-text-2);
 }
 
 .master-legend-color {
@@ -488,13 +488,13 @@
 
 .master-status-row span {
     font-weight:600;
-    color:#17233b;
+    color: var(--mc-text);
 }
 
 .master-status-bar {
     grid-column:1/-1;
     height:9px;
-    background:#eef3ff;
+    background: var(--mc-soft);
     border-radius:999px;
     overflow:hidden;
 }
@@ -519,7 +519,7 @@
 .master-table th,
 .master-table td {
     padding:13px 14px;
-    border-bottom:1px solid #dfe7f3;
+    border-bottom: 1px solid var(--mc-border);
     text-align:left;
 }
 
@@ -527,8 +527,8 @@
     font-size:11px;
     text-transform:uppercase;
     letter-spacing:.07em;
-    color:#7d8aa0;
-    background:#fbfdff;
+    color: var(--mc-text-3);
+    background: var(--mc-card-soft);
 }
 
 .master-table a {
@@ -538,7 +538,7 @@
 
 .master-mini-progress {
     height:8px;
-    background:#eef3ff;
+    background: var(--mc-soft);
     border-radius:999px;
     overflow:hidden;
     min-width:120px;
@@ -557,15 +557,15 @@
 }
 
 .master-finance-summary div {
-    background:#f8fbff;
-    border:1px solid #dfe7f3;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
     border-radius:16px;
     padding:14px;
 }
 
 .master-finance-summary span {
     display:block;
-    color:#687386;
+    color: var(--mc-text-2);
     font-size:12px;
     font-weight:600;
     text-transform:uppercase;
@@ -593,11 +593,11 @@
 
 .master-module-card {
     text-decoration:none;
-    color:#17233b;
-    border:1px solid #dfe7f3;
+    color: var(--mc-text);
+    border: 1px solid var(--mc-border);
     border-radius:18px;
     padding:16px;
-    background:#fbfdff;
+    background: var(--mc-card-soft);
 }
 
 .master-module-card span {
@@ -606,8 +606,8 @@
     text-transform:uppercase;
     border-radius:999px;
     padding:5px 8px;
-    background:#f3f6fb;
-    color:#536079;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
 }
 
 .master-module-card.installed span {
@@ -623,7 +623,7 @@
 
 .master-module-card small {
     display:block;
-    color:#687386;
+    color: var(--mc-text-2);
     margin-top:4px;
 }
 
@@ -633,11 +633,11 @@
     gap:12px;
     align-items:center;
     text-decoration:none;
-    color:#17233b;
-    border:1px solid #dfe7f3;
+    color: var(--mc-text);
+    border: 1px solid var(--mc-border);
     border-radius:16px;
     padding:12px;
-    background:#fff;
+    background: var(--mc-card);
 }
 
 .master-activity-type {
@@ -646,7 +646,7 @@
     border-radius:14px;
     display:grid;
     place-items:center;
-    background:#eef3ff;
+    background: var(--mc-soft);
     color:#4f83f1;
     font-weight:600;
 }
@@ -667,7 +667,7 @@
 }
 
 .master-activity-item>span {
-    color:#687386;
+    color: var(--mc-text-2);
     font-size:12px;
     font-weight:600;
 }

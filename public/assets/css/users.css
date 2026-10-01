@@ -713,10 +713,10 @@
         }
 
         .user-card{
-            background:#fff;
+            background: var(--mc-card);
             border-radius:18px;
             overflow:hidden;
-            border:1px solid #ececec;
+            border: 1px solid var(--mc-border);
             box-shadow: 0 4px 12px rgba(0,0,0,.12);
         }
 
@@ -736,7 +736,7 @@
             min-height: 90px;
             border-radius: 50%;
             overflow: hidden;
-            border: 3px solid #fff;
+            border: 3px solid var(--mc-card);
             box-shadow: 0 4px 12px rgba(0,0,0,.12);
             flex-shrink: 0;
         }
@@ -777,7 +777,7 @@
             justify-content:space-between;
             align-items:center;
             padding:10px 0;
-            border-bottom:1px solid #ececec;
+            border-bottom: 1px solid var(--mc-border);
         }
 
         .user-row:last-child{
@@ -806,7 +806,7 @@
             height:46px;
             border:none;
             border-radius:50%;
-            background:#fff;
+            background: var(--mc-card);
             cursor:pointer;
             font-size:18px;
             box-shadow:0 2px 8px rgba(0,0,0,.08);

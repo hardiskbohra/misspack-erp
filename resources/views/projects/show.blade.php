@@ -297,7 +297,7 @@
                                             <div class="master-row-actions">
                                                 <button type="button" class="master-icon-btn editProductBtn" data-product='@json($projectProduct)'><i class="fas fa-pen"></i></button>
                                                 <form method="POST"
-                                                    action="{{ route('projects.products.destroy',$projectProduct) }}" data-confirm="Remove product?"">
+                                                    action="{{ route('projects.products.destroy',$projectProduct) }}" data-confirm="Remove product?">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button class="master-icon-btn danger"><i class="fas fa-trash"></i></button>
@@ -533,7 +533,7 @@
                                             <div class="master-row-actions">
                                                 <button type="button" class="master-icon-btn editTrackingBtn" data-tracking='@json($tracking)'><i class="fas fa-pen"></i></button>
                                                 <form method="POST"
-                                                    action="{{ route('projects.tracking.destroy',$tracking) }}" data-confirm="Remove tracking?"">
+                                                    action="{{ route('projects.tracking.destroy',$tracking) }}" data-confirm="Remove tracking?">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button class="master-icon-btn danger"><i class="fas fa-trash"></i></button>
@@ -711,7 +711,7 @@
                                 <div class="pd-row-actions">
                                     <button type="button" class="master-btn master-btn-soft editCommentBtn" data-comment='@json($comment)'>Edit</button>
                                     <form method="POST" action="{{ route('projects.comments.destroy', $comment) }}"
-                                        data-confirm="Delete this comment?"">
+                                        data-confirm="Delete this comment?">
                                         @csrf @method('DELETE')
                                             <button type="submit" class="pd-link-danger">Delete</button>
                                     </form>
@@ -877,7 +877,7 @@
                                                 target="_blank">Open</a>
                                             <form method="POST"
                                                 action="{{ route('projects.attachments.destroy', $attachment) }}"
-                                                data-confirm="Delete attachment?"">@csrf
+                                                data-confirm="Delete attachment?">@csrf
                                                 @method('DELETE')<button type="submit"
                                                     class="pd-link-danger">Delete</button></form>
                                         </div>
@@ -1038,7 +1038,7 @@
                                                 <div class="master-row-actions">
                                                     <button type="button" class="master-icon-btn editPaymentBtn" data-payment='@json($payment)'><i class="fas fa-pen"></i></button>
                                                     <form method="POST"
-                                                        action="{{ route('projects.payments.destroy',$payment) }}" data-confirm="Remove payment entry?"">
+                                                        action="{{ route('projects.payments.destroy',$payment) }}" data-confirm="Remove payment entry?">
                                                         @csrf
                                                         @method('DELETE')
                                                         <button class="master-icon-btn danger"><i class="fas fa-trash"></i></button>

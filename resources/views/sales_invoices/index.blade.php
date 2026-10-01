@@ -48,7 +48,9 @@
                         <tr>
                             <td>
                                 <a href="{{ route('sales-invoices.show', $invoice) }}" title="Open" style="text-decoration:none;">
-                                    <strong class="master-id">{{ $invoice->invoice_number }}</strong><br><span style="color:grey;font-size:11px;">{{ $invoice->typeLabel() }}</span><br>{{ optional($invoice->invoice_date)->format('d M Y') ?: '-' }}
+                                    <strong class="master-id">{{ $invoice->invoice_number }}</strong>
+                                    <span>{{ $invoice->typeLabel() }}</span>
+                                    <span>{{ optional($invoice->invoice_date)->format('d M Y') ?: '-' }}</span>
                                 </a>
                             </td>
                             <td><strong>{{ Str::limit($invoice->client_company_name, 22, '...') ?: '-' }}</strong><br><span>{{ $invoice->client_gstin ?: 'GSTIN -' }}</span></td>
@@ -58,7 +60,7 @@
                             <td>{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}</td>
                             <td><span class="si-badge {{ $invoice->show_client_portal ? 'public' : 'private' }}">{{ $invoice->show_client_portal ? 'Visible' : 'Hidden' }}</span></td>
                             <td><span class="si-badge status-{{ $invoice->status }}">{{ $invoice->statusLabel() }}</span></td>
-                            <td><div class="si-row-actions"><a class="master-icon-btn" href="{{ route('sales-invoices.show', $invoice) }}" title="Open">👁</a><a class="master-icon-btn" href="{{ route('sales-invoices.print', $invoice) }}" target="_blank" title="Print">🖨</a><a class="master-icon-btn" href="{{ route('sales-invoices.edit', $invoice) }}" title="Edit">✎</a><form method="POST" action="{{ route('sales-invoices.destroy', $invoice) }}" data-confirm="Delete invoice?"">@csrf @method('DELETE')<button class="master-icon-btn danger" type="submit">🗑</button></form></div></td>
+                            <td><div class="si-row-actions"><a class="master-icon-btn" href="{{ route('sales-invoices.show', $invoice) }}" title="Open">👁</a><a class="master-icon-btn" href="{{ route('sales-invoices.print', $invoice) }}" target="_blank" title="Print">🖨</a><a class="master-icon-btn" href="{{ route('sales-invoices.edit', $invoice) }}" title="Edit">✎</a><form method="POST" action="{{ route('sales-invoices.destroy', $invoice) }}" data-confirm="Delete invoice?">@csrf @method('DELETE')<button class="master-icon-btn danger" type="submit">🗑</button></form></div></td>
                         </tr>
                     @empty
                         <tr><td colspan="10"><div class="si-empty">No invoices found.</div></td></tr>

@@ -182,7 +182,7 @@
                                     
                                                 <form method="POST"
                                                       action="{{ route('leads.destroy', $lead) }}"
-                                                      data-confirm="Delete this lead?"">
+                                                      data-confirm="Delete this lead?">
                                     
                                                     @csrf
                                                     @method('DELETE')

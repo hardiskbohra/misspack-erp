@@ -3,10 +3,10 @@
     --master-primary-2: #6366f1;
     --master-dark: #17233b;
     --master-muted: #687386;
-    --master-border: #dfe7f3;
-    --master-bg: #eef3ff;
-    --master-soft: #edf5ff;
-    --master-white: #fff;
+    --master-border: var(--mc-border);
+    --master-bg: var(--mc-soft);
+    --master-soft: var(--mc-soft);
+    --master-white: var(--mc-card);
     --master-red: #ef4770;
     --master-shadow: 0 14px 35px rgba(25, 42, 70, .08);
 }
@@ -25,7 +25,7 @@
 }
 
 .master-card {
-    background: #fff;
+    background: var(--mc-card);
     border: 1px solid var(--master-border);
     border-radius: 18px;
     box-shadow: var(--master-shadow)
@@ -102,12 +102,12 @@
     padding: 14px;
     border: 1px solid var(--master-border);
     border-radius: 14px;
-    background: #fbfdff
+    background: var(--mc-card-soft)
 }
 
 .master-info span {
     display: block;
-    color: #7d8aa0;
+    color: var(--mc-text-3);
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
@@ -164,9 +164,9 @@
 .master-select,
 .master-textarea {
     width: 100%;
-    border: 1px solid #d8e2ef;
+    border: 1px solid var(--mc-border);
     border-radius: 12px;
-    background: #fff;
+    background: var(--mc-card);
     color: var(--dark);
     font-size: 14px;
     font-weight: 400;
@@ -226,13 +226,13 @@
 }
 
 .master-btn-light {
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: #4f83f1;
     border: 1px solid rgba(255, 255, 255, .35)
 }
 
 .master-btn-soft {
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: #4f83f1
 }
 
@@ -356,10 +356,10 @@
     min-height: 42px;
     min-width: 110px;
     padding: 10px 16px;
-    border: 1px solid #d8e2ef;
+    border: 1px solid var(--mc-border);
     border-radius: 999px;
-    background: #fff;
-    color: #536079;
+    background: var(--mc-card);
+    color: var(--mc-text-2);
     font-size: 14px;
     font-weight: 600;
     display: inline-flex;
@@ -370,7 +370,7 @@
 }
 
 .master-chip:hover span {
-    background: #f8fbff;
+    background: var(--mc-card-soft);
     border-color: #bcd3f8;
 }
 
@@ -454,7 +454,7 @@
     height:22px;
     left:4px;
     top:4px;
-    background:#fff;
+    background: var(--mc-card);
     border-radius:50%;
     transition:.25s;
     box-shadow:0 2px 8px rgba(0,0,0,.15);
@@ -487,7 +487,7 @@
     gap: 8px;
     align-items: center;
     font-weight: 600;
-    color: #536079;
+    color: var(--mc-text-2);
 }
 
 .master-check input[type="checkbox"],
@@ -511,13 +511,13 @@
 .master-field { display: flex; flex-direction: column; gap: 7px; min-width: 0 }
 
 /* Button color variants */
-.master-btn-light-dark { background: #f3f6fb; color: #17233b }
+.master-btn-light-dark { background: var(--mc-card-soft); color: var(--mc-text) }
 .master-btn-orange { background: #f59e0b; color: #fff; box-shadow: 0 10px 24px rgba(245, 158, 11, .24) }
 /* Ghost button — for use on colored/gradient surfaces (hero headers) */
 .master-btn-ghost { background: rgba(255, 255, 255, .16); color: #fff; border: 1px solid rgba(255, 255, 255, .3) }
 
 /* Icon button action variants */
-.master-icon-btn.edit { background: #eef3ff; color: #4f83f1 }
+.master-icon-btn.edit { background: var(--mc-soft); color: #4f83f1 }
 .master-icon-btn.edit:hover { background: #4f83f1; color: #fff }
 .master-icon-btn.delete { background: #fff0f4; color: #ef4770 }
 .master-icon-btn.delete:hover { background: #ef4770; color: #fff }
@@ -525,9 +525,11 @@
 /* Table row add/remove controls */
 .master-add-row { margin-top: 12px }
 .master-remove-row { width: 34px; height: 34px; border: 0; border-radius: 9px; background: #fff0f4; color: #e11d48; cursor: pointer; font-weight: 900 }
+.master-remove { width: 30px; height: 30px; border: 0; border-radius: 9px; background: #fff0f4; color: #e11d48; font-weight: 900; cursor: pointer; transition: all .2s }
+.master-remove:hover { background: #ef4770; color: #fff }
 
 /* Password field toggle (eye icon) */
-.master-password-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: 0; cursor: pointer; color: #8792a5; font-size: 13px; padding: 2px }
+.master-password-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: 0; cursor: pointer; color: var(--mc-text-3); font-size: 13px; padding: 2px }
 .master-password-toggle:hover { color: #4f83f1 }
 
 /* Avatar / file upload actions */
@@ -538,11 +540,11 @@
 .master-remove-avatar-btn:hover { background: #ef4770; color: #fff }
 
 /* Compact menu button (kanban rows) */
-.master-menu-btn { border: 0; background: #f6f8fc; color: #17233b; width: 34px; height: 34px; border-radius: 12px; cursor: pointer }
+.master-menu-btn { border: 0; background: var(--mc-card-soft); color: var(--mc-text); width: 34px; height: 34px; border-radius: 12px; cursor: pointer }
 
 /* Card toggle (label + pill switch) */
-.master-toggle { min-height: 42px; border-radius: 14px; padding: 9px 13px; background: #fff; border: 1px solid #dfe7f3; color: #17233b; text-decoration: none; font-weight: 500; display: flex; align-items: center; gap: 9px; font-size: 13px; cursor: pointer }
-.master-toggle span { width: 38px; height: 22px; border-radius: 999px; padding: 3px; background: #d8e2ef; display: flex }
-.master-toggle span i { display: block; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: .2s }
+.master-toggle { min-height: 42px; border-radius: 14px; padding: 9px 13px; background: var(--mc-card); border: 1px solid var(--mc-border); color: var(--mc-text); text-decoration: none; font-weight: 500; display: flex; align-items: center; gap: 9px; font-size: 13px; cursor: pointer }
+.master-toggle span { width: 38px; height: 22px; border-radius: 999px; padding: 3px; background: var(--mc-border); display: flex }
+.master-toggle span i { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--mc-card); transition: .2s }
 .master-toggle.is-on span { background: #4f83f1 }
 .master-toggle.is-on span i { transform: translateX(16px) }

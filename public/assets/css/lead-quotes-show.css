@@ -10,8 +10,8 @@
 :root {
     --cq-dark:#17233b;
     --cq-muted:#687386;
-    --cq-border:#dfe7f3;
-    --cq-bg:#eef3ff;
+    --cq-border: var(--mc-border);
+    --cq-bg: var(--mc-soft);
     --cq-shadow:0 14px 35px rgba(25,42,70,.08);
 }
 
@@ -29,7 +29,7 @@
 }
 
 .cq-card {
-    background:#fff;
+    background: var(--mc-card);
     border:1px solid var(--cq-border);
     border-radius:18px;
     box-shadow:var(--cq-shadow);
@@ -89,12 +89,12 @@
     padding:14px;
     border:1px solid var(--cq-border);
     border-radius:14px;
-    background:#fbfdff;
+    background: var(--mc-card-soft);
 }
 
 .cq-info span {
     display:block;
-    color:#7d8aa0;
+    color: var(--mc-text-3);
     font-size:11px;
     font-weight:900;
     text-transform:uppercase;
@@ -132,7 +132,7 @@
 
 .cq-table th {
     font-size:11px;
-    color:#7d8aa0;
+    color: var(--mc-text-3);
     text-transform:uppercase;
 }
 
@@ -156,8 +156,8 @@
 }
 
 .status-draft {
-    background:#f3f6fb;
-    color:#536079;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
 }
 
 .status-sent {

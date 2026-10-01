@@ -221,12 +221,19 @@
             {
                 title: form.getAttribute('data-confirm-title') || 'Are you sure?',
                 confirmText: form.getAttribute('data-confirm-text') || 'Delete',
-                danger: form.hasAttribute('data-confirm-danger') || true
+                danger: confirmDanger(form)
             }
         ).then(function (ok) {
             if (ok) form.submit();
         });
     });
+
+    /* data-confirm-danger: absent = danger (default); "false"/"0" = neutral */
+    function confirmDanger(node) {
+        var value = node.getAttribute('data-confirm-danger');
+        if (value == null) return true;
+        return value !== 'false' && value !== '0';
+    }
 
     /* ---------------- data-confirm buttons (submit without form) ---------------- */
 
@@ -243,7 +250,7 @@
             {
                 title: btn.getAttribute('data-confirm-title') || 'Are you sure?',
                 confirmText: btn.getAttribute('data-confirm-text') || 'Delete',
-                danger: btn.hasAttribute('data-confirm-danger') || true
+                danger: confirmDanger(btn)
             }
         ).then(function (ok) {
             if (!ok) return;

@@ -25,8 +25,8 @@
 
 .vendor-index .status-inactive,
 .vendor-show .status-inactive {
-    background: #f3f6fb;
-    color: #536079;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
 }
 
 .vendor-index .status-on-hold,
@@ -78,10 +78,10 @@
     --vendor-primary-2: #6366f1;
     --vendor-dark: #17233b;
     --vendor-muted: #687386;
-    --vendor-border: #dfe7f3;
-    --vendor-bg: #eef3ff;
-    --vendor-soft: #edf5ff;
-    --vendor-white: #fff;
+    --vendor-border: var(--mc-border);
+    --vendor-bg: var(--mc-soft);
+    --vendor-soft: var(--mc-soft);
+    --vendor-white: var(--mc-card);
     --vendor-red: #ef4770;
     --vendor-green: #10b981;
     --vendor-orange: #f59e0b;
@@ -160,7 +160,7 @@
 }
 
 .vendor-kpi {
-    background: #fff;
+    background: var(--mc-card);
     border: 1px solid var(--vendor-border);
     border-radius: 22px;
     box-shadow: var(--vendor-shadow);
@@ -169,7 +169,7 @@
 
 .vendor-kpi span {
     display: block;
-    color: #687386;
+    color: var(--mc-text-2);
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
@@ -184,7 +184,7 @@
 .vendor-kpi small {
     display: block;
     margin-top: 5px;
-    color: #8792a5;
+    color: var(--mc-text-3);
     font-weight: 500;
 }
 
@@ -220,7 +220,7 @@
 /* ---------------- Tabs ---------------- */
 
 .vendor-tabs-card {
-    background: #fff;
+    background: var(--mc-card);
     border: 1px solid var(--vendor-border);
     border-radius: 22px;
     box-shadow: var(--vendor-shadow);
@@ -232,14 +232,14 @@
     gap: 8px;
     overflow-x: auto;
     padding: 12px;
-    background: #f8fbff;
+    background: var(--mc-card-soft);
     border-bottom: 1px solid var(--vendor-border);
 }
 
 .vendor-tab {
     border: 1px solid var(--vendor-border);
-    background: #fff;
-    color: #687386;
+    background: var(--mc-card);
+    color: var(--mc-text-2);
     border-radius: 14px;
     padding: 10px 13px;
     font-weight: 600;
@@ -254,7 +254,7 @@
 }
 
 .vendor-tab span {
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: #4f83f1;
     border-radius: 999px;
     padding: 3px 7px;
@@ -282,7 +282,7 @@
 /* ---------------- Shared panel building blocks ---------------- */
 
 .vendor-card {
-    background: #fff;
+    background: var(--mc-card);
     border: 1px solid var(--vendor-border);
     border-radius: 22px;
     box-shadow: none;
@@ -313,7 +313,7 @@
 
 .vendor-section-head h2 {
     margin: 0;
-    color: #172033;
+    color: var(--mc-text);
     font-weight: 600;
     font-size: 20px;
 }
@@ -329,7 +329,7 @@
 
 .vendor-count,
 .vendor-pill {
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: #4f83f1;
     border-radius: 999px;
     padding: 7px 10px;
@@ -361,11 +361,11 @@
 .vendor-empty {
     padding: 28px;
     text-align: center;
-    border: 1px dashed #d8deea;
+    border: 1px dashed var(--mc-border);
     border-radius: 16px;
-    color: #687386;
+    color: var(--mc-text-2);
     font-weight: 600;
-    background: #fbfcff;
+    background: var(--mc-card-soft);
 }
 
 .vendor-empty.small {
@@ -392,7 +392,7 @@
 }
 
 .vendor-mini-row small {
-    color: #687386;
+    color: var(--mc-text-2);
     margin-top: 3px;
 }
 
@@ -401,7 +401,7 @@
     border-radius: 16px;
     padding: 12px;
     margin-bottom: 10px;
-    background: #fff;
+    background: var(--mc-card);
 }
 
 .vendor-comment-mini strong {
@@ -410,7 +410,7 @@
 
 .vendor-comment-mini p {
     margin: 6px 0 0;
-    color: #536079;
+    color: var(--mc-text-2);
     white-space: pre-wrap;
 }
 
@@ -430,12 +430,12 @@
     padding: 14px;
     border: 1px solid var(--vendor-border);
     border-radius: 14px;
-    background: #fbfdff;
+    background: var(--mc-card-soft);
 }
 
 .vendor-info span {
     display: block;
-    color: #7d8aa0;
+    color: var(--mc-text-3);
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -450,7 +450,7 @@
 }
 
 .vendor-info small {
-    color: #687386;
+    color: var(--mc-text-2);
     margin-top: 4px;
     font-weight: 500;
 }
@@ -487,8 +487,8 @@
 }
 
 .vendor-table th {
-    background: #fbfdff;
-    color: #7d8aa0;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-3);
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: .07em;
@@ -496,7 +496,7 @@
 
 .vendor-table small {
     display: block;
-    color: #687386;
+    color: var(--mc-text-2);
     margin-top: 3px;
     font-weight: 500;
 }
@@ -525,7 +525,7 @@
     height: 62px;
     border-radius: 14px;
     object-fit: cover;
-    background: #edf5ff;
+    background: var(--mc-soft);
     color: #4f83f1;
     display: grid;
     place-items: center;
@@ -538,7 +538,7 @@
 }
 
 .vendor-product-card small {
-    color: #687386;
+    color: var(--mc-text-2);
     margin-top: 3px;
 }
 
@@ -557,8 +557,8 @@
 .vendor-attachment {
     display: grid;
     grid-template-columns: 64px 1fr;
-    border: 1px solid #edf0f7;
-    background: #fff;
+    border: 1px solid var(--mc-border);
+    background: var(--mc-card);
     border-radius: 18px;
     padding: 14px;
     gap: 12px;
@@ -570,7 +570,7 @@
     height: 64px;
     border-radius: 14px;
     object-fit: cover;
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: #4f83f1;
     display: grid;
     place-items: center;
@@ -583,7 +583,7 @@
 }
 
 .vendor-attachment span {
-    color: #7b8495;
+    color: var(--mc-text-3);
     font-size: 12px;
     margin-top: 3px;
 }
@@ -619,7 +619,7 @@
 /* ---------------- Payment entry modals ---------------- */
 
 .vendor-payment-form {
-    background: #f8fbff;
+    background: var(--mc-card-soft);
     border: 1px solid var(--vendor-border);
     border-radius: 18px;
     padding: 16px;
@@ -629,7 +629,7 @@
     display: inline-flex;
     border-radius: 999px;
     padding: 5px 8px;
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: #4f83f1;
     text-decoration: none;
     font-size: 11px;
@@ -646,7 +646,7 @@
 }
 
 .vendor-currency-summary div {
-    background: #f8fbff;
+    background: var(--mc-card-soft);
     border: 1px solid var(--vendor-border);
     border-radius: 16px;
     padding: 14px;
@@ -654,7 +654,7 @@
 
 .vendor-currency-summary span {
     display: block;
-    color: #687386;
+    color: var(--mc-text-2);
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
@@ -673,23 +673,23 @@
     border-radius: 16px;
     padding: 12px;
     margin-bottom: 10px;
-    background: #fff;
+    background: var(--mc-card);
 }
 
 .vendor-comment p {
     margin: 6px 0 0;
-    color: #536079;
+    color: var(--mc-text-2);
     white-space: pre-wrap;
 }
 
 .vendor-comment.pinned {
-    background: #fffdf7;
+    background: var(--mc-card-soft);
     border-color: #fedf89;
 }
 
 .vendor-comment span {
     display: block;
-    color: #687386;
+    color: var(--mc-text-2);
     font-size: 12px;
     margin-top: 3px;
 }
@@ -709,7 +709,7 @@
 }
 
 .vendor-comment-form {
-    background: #f8fbff;
+    background: var(--mc-card-soft);
     border: 1px solid var(--vendor-border);
     border-radius: 18px;
     padding: 16px;
@@ -803,10 +803,10 @@
     --img-primary-2: #6366f1;
     --img-dark: #17233b;
     --img-muted: #687386;
-    --img-border: #dfe7f3;
-    --img-bg: #eef3ff;
-    --img-soft: #edf5ff;
-    --img-white: #ffffff;
+    --img-border: var(--mc-border);
+    --img-bg: var(--mc-soft);
+    --img-soft: var(--mc-soft);
+    --img-white: var(--mc-card);
     --img-shadow: 0 14px 35px rgba(25, 42, 70, 0.08);
     background: var(--img-bg);
     min-height: calc(100vh - 70px);
@@ -867,7 +867,7 @@
     min-height: 540px;
     border: 1px dashed var(--img-border);
     border-radius: 18px;
-    background: #fbfdff;
+    background: var(--mc-card-soft);
     display: grid;
     place-items: center;
     overflow: auto;
@@ -880,7 +880,7 @@
     object-fit: contain;
     border-radius: 14px;
     box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
-    background: #fff;
+    background: var(--mc-card);
 }
 
 .image-empty {
@@ -912,12 +912,12 @@
     padding: 14px;
     border: 1px solid var(--img-border);
     border-radius: 14px;
-    background: #fbfdff;
+    background: var(--mc-card-soft);
 }
 
 .image-meta-item span {
     display: block;
-    color: #7d8aa0;
+    color: var(--mc-text-3);
     font-size: 11px;
     font-weight: 900;
     text-transform: uppercase;

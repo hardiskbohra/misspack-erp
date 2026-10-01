@@ -9,10 +9,10 @@
     --master-green: #10b981;
     --master-dark: #17233b;
     --master-muted: #687386;
-    --master-border: #dfe7f3;
-    --master-bg: #eef3ff;
-    --master-soft: #edf5ff;
-    --master-white: #fff;
+    --master-border: var(--mc-border);
+    --master-bg: var(--mc-soft);
+    --master-soft: var(--mc-soft);
+    --master-white: var(--mc-card);
     --master-shadow: 0 14px 35px rgba(25, 42, 70, .08);
 }
 
@@ -33,7 +33,7 @@
 }
 
 .master-card {
-    background: #fff;
+    background: var(--mc-card);
     border: 1px solid var(--master-border);
     border-radius: 18px;
     box-shadow: var(--master-shadow)
@@ -102,7 +102,7 @@
 
 .master-stat-title {
     font-size: 14px;
-    color: #536079;
+    color: var(--mc-text-2);
     font-weight: 500;
     margin: 0 0 3px
 }
@@ -188,7 +188,7 @@
     left: 15px;
     top: 50%;
     transform: translateY(-50%);
-    color: #8792a5;
+    color: var(--mc-text-3);
     font-size: 24px
 }
 
@@ -196,9 +196,9 @@
 .master-select,
 .master-textarea {
     width: 100%;
-    border: 1px solid #d8e2ef;
+    border: 1px solid var(--mc-border);
     border-radius: 12px;
-    background: #fff;
+    background: var(--mc-card);
     color: var(--master-dark);
     font-size: 14px;
     font-weight: 500;
@@ -264,13 +264,13 @@
 }
 
 .master-btn-light {
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: #4f83f1;
     border: 1px solid rgba(255, 255, 255, .35)
 }
 
 .master-btn-soft {
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: #4f83f1;
 }
 
@@ -336,12 +336,12 @@
 }
 
 .master-table th {
-    color: #000;
+    color: var(--mc-text);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: .07em;
     text-transform: uppercase;
-    background: #fbfdff;
+    background: var(--mc-card-soft);
     padding-top:0px;
 }
 
@@ -397,8 +397,8 @@
 }
 
 .status-ignored, .status-converted {
-    background: #f3f6fb;
-    color: #536079
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2)
 }
 
 .type-credit {
@@ -477,7 +477,7 @@
     width: min(700px, calc(100vw - 32px));
     max-height: calc(100vh - 40px);
     overflow: hidden;
-    background: #fff;
+    background: var(--mc-card);
     border: 1px solid var(--master-border);
     border-radius: 16px;
     box-shadow: 0 26px 70px rgba(13, 24, 45, .28)
@@ -569,7 +569,7 @@
 .master-label {
     display: block;
     margin-bottom: 7px;
-    color: #536079;
+    color: var(--mc-text-2);
     font-size: 12px;
     font-weight: 600
 }
@@ -729,10 +729,10 @@
     min-height: 42px;
     min-width: 110px;
     padding: 10px 16px;
-    border: 1px solid #d8e2ef;
+    border: 1px solid var(--mc-border);
     border-radius: 999px;
-    background: #fff;
-    color: #536079;
+    background: var(--mc-card);
+    color: var(--mc-text-2);
     font-size: 14px;
     font-weight: 600;
     display: inline-flex;
@@ -743,7 +743,7 @@
 }
 
 .master-chip:hover span {
-    background: #f8fbff;
+    background: var(--mc-card-soft);
     border-color: #bcd3f8;
 }
 
@@ -809,7 +809,7 @@
     height:40px;
     border:none;
     border-radius:12px;
-    background:#f4f7ff;
+    background: var(--bg-input);
     cursor:pointer;
     display:flex;
     align-items:center;
@@ -830,8 +830,8 @@
     z-index:9999;
     top:48px;
     width:220px;
-    background:#fff;
-    border:1px solid #e8edf7;
+    background: var(--mc-card);
+    border: 1px solid var(--mc-border);
     border-radius:14px;
     box-shadow:0 15px 40px rgba(0,0,0,.12);
     display:none;
@@ -861,7 +861,7 @@
 
 .master-dropdown-menu a:hover,
 .master-dropdown-menu button:hover{
-    background:#f7f9fc;
+    background: var(--mc-hover);
 }
 
 .master-dropdown-menu .danger{
@@ -909,8 +909,8 @@
 
 /* Secondary (Gray) */
 .status-secondary {
-    background: #f3f6fb;
-    color: #536079;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
 }
 
 /* Purple */
@@ -921,8 +921,8 @@
 
 /* Dark */
 .status-dark {
-    background: #edf1f5;
-    color: #374151;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
 }
 
 .master-table tr:hover {

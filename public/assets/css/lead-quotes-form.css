@@ -10,8 +10,8 @@
 
 :root {
     --cq-dark:#17233b;
-    --cq-border:#dfe7f3;
-    --cq-bg:#eef3ff;
+    --cq-border: var(--mc-border);
+    --cq-bg: var(--mc-soft);
     --cq-shadow:0 14px 35px rgba(25,42,70,.08);
 }
 
@@ -29,7 +29,7 @@
 }
 
 .cq-card {
-    background:#fff;
+    background: var(--mc-card);
     border:1px solid var(--cq-border);
     border-radius:18px;
     box-shadow:var(--cq-shadow);
@@ -63,7 +63,7 @@
     align-items:center;
     gap:12px;
     margin:0 0 16px;
-    color:#7d8aa0;
+    color: var(--mc-text-3);
     font-size:12px;
     font-weight:900;
     letter-spacing:.08em;

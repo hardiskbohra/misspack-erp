@@ -51,9 +51,9 @@
     --core-warning: #d97706;
     --core-ink: #17233b;
     --core-muted: #687386;
-    --core-border: #dfe7f3;
-    --core-field-border: #d8e2ef;
-    --core-soft-bg: #eef3ff;
+    --core-border: var(--mc-border);
+    --core-field-border: var(--mc-border);
+    --core-soft-bg: var(--mc-soft);
     --core-soft-ink: #4f83f1;
     --core-focus-ring: 0 0 0 3px rgba(79, 131, 241, .12);
     --core-radius-field: 12px;
@@ -83,7 +83,7 @@
     width: 100%;
     border: 1px solid var(--core-field-border);
     border-radius: var(--core-radius-field);
-    background: #fff;
+    background: var(--mc-card);
     color: var(--core-ink);
     font-size: 14px;
     font-weight: 500;
@@ -157,7 +157,7 @@
     left: 15px;
     top: 50%;
     transform: translateY(-50%);
-    color: #8792a5;
+    color: var(--mc-text-3);
     font-size: 20px;
     line-height: 1;
     pointer-events: none;
@@ -227,7 +227,7 @@
 }
 
 .core-button-soft:hover {
-    background: #e2ebff;
+    background: var(--mc-soft);
 }
 
 .core-button-light {
@@ -237,7 +237,7 @@
 }
 
 .core-button-outline {
-    background: #fff;
+    background: var(--mc-card);
     border: 1px solid var(--core-field-border);
     color: var(--core-ink);
 }
@@ -333,7 +333,7 @@
    Surfaces
    -------------------------------------------------------------------------- */
 .core-card {
-    background: #fff;
+    background: var(--mc-card);
     border: 1px solid var(--core-border);
     border-radius: var(--core-radius-card);
     box-shadow: var(--core-shadow);
@@ -374,8 +374,8 @@
 }
 
 .core-badge-neutral {
-    background: #f3f6fb;
-    color: #536079;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
 }
 
 /* ==========================================================================

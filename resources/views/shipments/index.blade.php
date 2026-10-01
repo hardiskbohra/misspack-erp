@@ -124,7 +124,7 @@
                                 
                                             <form method="POST"
                                                   action="{{ route('shipments.destroy', $shipment) }}"
-                                                  data-confirm="Delete this shipment?"">
+                                                  data-confirm="Delete this shipment?">
                                 
                                                 @csrf
                                                 @method('DELETE')
