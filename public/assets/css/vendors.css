@@ -1,0 +1,1031 @@
+/* ==========================================================================
+   VENDORS.CSS — Vendor module (vendors/* + vendor_quotes/* views)
+   --------------------------------------------------------------------------
+   Module stylesheet for the Purchase section: vendor list, vendor detail
+   (tabbed dashboard), vendor form, vendor quotes and the quote image
+   viewer. Loaded on vendor screens via @push('styles').
+
+   Generic components (master-*, core-*) come from the shared foundations
+   loaded by layouts/app.blade.php — this file only carries vendor-specific
+   layout, badges, tabs, tables, modals and the image viewer.
+   ========================================================================== */
+
+/* ==========================================================================
+   VENDOR LIST — resources/views/vendors/index.blade.php
+   --------------------------------------------------------------------------
+   Tone badges for vendor status/type. .master-avatar / .master-profile /
+   table / modal rules are shared (master-index.css).
+   ========================================================================== */
+
+.vendor-index .status-active,
+.vendor-show .status-active {
+    background: #e8fff7;
+    color: #0e9f6e;
+}
+
+.vendor-index .status-inactive,
+.vendor-show .status-inactive {
+    background: #f3f6fb;
+    color: #536079;
+}
+
+.vendor-index .status-on-hold,
+.vendor-show .status-on-hold {
+    background: #fff4e5;
+    color: #d97706;
+}
+
+.vendor-index .status-blacklisted,
+.vendor-show .status-blacklisted {
+    background: #ffeaf0;
+    color: #e11d48;
+}
+
+.vendor-index .type-manufacturer,
+.vendor-show .type-manufacturer {
+    background: #eaf1ff;
+    color: #3f7cf4;
+}
+
+.vendor-index .type-trader,
+.vendor-show .type-trader {
+    background: #fff4e5;
+    color: #d97706;
+}
+
+.vendor-index .type-distributor,
+.vendor-show .type-distributor {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.vendor-index .type-service-provider,
+.vendor-show .type-service-provider {
+    background: #ece7ff;
+    color: #7c3aed;
+}
+
+/* ==========================================================================
+   VENDOR DETAIL — resources/views/vendors/show.blade.php
+   --------------------------------------------------------------------------
+   Hero, KPI strip, tabbed dashboard (overview / basic / projects / products
+   / payments / statement / shipments / attachments / comments) and the
+   ledger modals. Everything is scoped under .vendor-show.
+   ========================================================================== */
+
+.vendor-show {
+    --vendor-primary: #4f83f1;
+    --vendor-primary-2: #6366f1;
+    --vendor-dark: #17233b;
+    --vendor-muted: #687386;
+    --vendor-border: #dfe7f3;
+    --vendor-bg: #eef3ff;
+    --vendor-soft: #edf5ff;
+    --vendor-white: #fff;
+    --vendor-red: #ef4770;
+    --vendor-green: #10b981;
+    --vendor-orange: #f59e0b;
+    --vendor-shadow: 0 14px 35px rgba(25, 42, 70, .08);
+    background: var(--vendor-bg);
+    color: var(--vendor-dark);
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.vendor-show,
+.vendor-show * {
+    box-sizing: border-box;
+}
+
+/* ---------------- Hero ---------------- */
+
+.vendor-hero {
+    background: linear-gradient(135deg, #4f83f1, #7b61ff);
+    border-radius: 26px;
+    padding: 24px;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    box-shadow: 0 18px 45px rgba(79, 131, 241, .22);
+}
+
+.vendor-hero h1 {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 600;
+}
+
+.vendor-hero p {
+    margin: 6px 0 0;
+    opacity: .9;
+}
+
+.vendor-head-left {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    min-width: 0;
+}
+
+.vendor-hero .master-chip-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    padding-top: 10px;
+}
+
+.vendor-hero .master-badge.currency {
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
+}
+
+.vendor-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.vendor-btn {
+    min-height: 42px;
+    border: 0;
+    border-radius: 14px;
+    padding: 11px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.vendor-btn-primary {
+    background: #ef4770;
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(239, 71, 112, .24);
+}
+
+.vendor-btn-light {
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, .3);
+}
+
+/* ---------------- KPI strip ---------------- */
+
+.vendor-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.vendor-kpi {
+    background: #fff;
+    border: 1px solid var(--vendor-border);
+    border-radius: 22px;
+    box-shadow: var(--vendor-shadow);
+    padding: 16px;
+}
+
+.vendor-kpi span {
+    display: block;
+    color: #687386;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.vendor-kpi strong {
+    display: block;
+    margin-top: 7px;
+    font-size: 22px;
+}
+
+.vendor-kpi small {
+    display: block;
+    margin-top: 5px;
+    color: #8792a5;
+    font-weight: 500;
+}
+
+.vendor-kpi.blue strong {
+    color: #4f83f1;
+}
+
+.vendor-kpi.purple strong {
+    color: #7c3aed;
+}
+
+/* Coloured amounts on the detail screen (KPI cards, ledger tables,
+   currency summary and overview mini rows). */
+.vendor-kpi.green strong,
+.vendor-table .green,
+.vendor-currency-summary .green,
+.vendor-mini-row .green {
+    color: #0e9f6e !important;
+}
+
+.vendor-kpi.red strong,
+.vendor-table .red,
+.vendor-currency-summary .red {
+    color: #e11d48 !important;
+}
+
+.vendor-kpi.orange strong,
+.vendor-table .orange,
+.vendor-currency-summary .orange {
+    color: #d97706 !important;
+}
+
+/* ---------------- Tabs ---------------- */
+
+.vendor-tabs-card {
+    background: #fff;
+    border: 1px solid var(--vendor-border);
+    border-radius: 22px;
+    box-shadow: var(--vendor-shadow);
+    overflow: hidden;
+}
+
+.vendor-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 12px;
+    background: #f8fbff;
+    border-bottom: 1px solid var(--vendor-border);
+}
+
+.vendor-tab {
+    border: 1px solid var(--vendor-border);
+    background: #fff;
+    color: #687386;
+    border-radius: 14px;
+    padding: 10px 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.vendor-tab.active {
+    background: #4f83f1;
+    color: #fff;
+    border-color: #4f83f1;
+}
+
+.vendor-tab span {
+    background: #eef3ff;
+    color: #4f83f1;
+    border-radius: 999px;
+    padding: 3px 7px;
+    font-size: 11px;
+    margin-left: 5px;
+}
+
+.vendor-tab.active span {
+    background: rgba(255, 255, 255, .2);
+    color: #fff;
+}
+
+.vendor-tab-panels {
+    padding: 18px;
+}
+
+.vendor-panel {
+    display: none;
+}
+
+.vendor-panel.active {
+    display: block;
+}
+
+/* ---------------- Shared panel building blocks ---------------- */
+
+.vendor-card {
+    background: #fff;
+    border: 1px solid var(--vendor-border);
+    border-radius: 22px;
+    box-shadow: none;
+}
+
+.vendor-section {
+    padding: 20px;
+}
+
+.vendor-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+/* Section heads that sit directly inside a tab panel (not a .vendor-section
+   card) carry their own 15px padding; a head following a table gets top
+   spacing (payments tab has two of them). */
+.vendor-panel > .vendor-section-head {
+    padding: 15px;
+}
+
+.vendor-panel .vendor-table-wrap + .vendor-section-head {
+    margin-top: 18px;
+}
+
+.vendor-section-head h2 {
+    margin: 0;
+    color: #172033;
+    font-weight: 600;
+    font-size: 20px;
+}
+
+.vendor-eyebrow {
+    margin: 0 0 6px;
+    text-transform: uppercase;
+    letter-spacing: .13em;
+    font-size: 11px;
+    font-weight: 600;
+    opacity: .78;
+}
+
+.vendor-count,
+.vendor-pill {
+    background: #eef3ff;
+    color: #4f83f1;
+    border-radius: 999px;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.vendor-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.vendor-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.vendor-panel .vendor-grid-3 {
+    margin-top: 18px;
+}
+
+.vendor-show .no-decorate {
+    text-decoration: none;
+}
+
+.vendor-empty {
+    padding: 28px;
+    text-align: center;
+    border: 1px dashed #d8deea;
+    border-radius: 16px;
+    color: #687386;
+    font-weight: 600;
+    background: #fbfcff;
+}
+
+.vendor-empty.small {
+    padding: 16px;
+}
+
+/* ---------------- Overview tab ---------------- */
+
+.vendor-mini-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px solid var(--vendor-border);
+    padding: 10px 0;
+}
+
+.vendor-mini-row:last-child {
+    border-bottom: 0;
+}
+
+.vendor-mini-row strong,
+.vendor-mini-row small {
+    display: block;
+}
+
+.vendor-mini-row small {
+    color: #687386;
+    margin-top: 3px;
+}
+
+.vendor-comment-mini {
+    border: 1px solid var(--vendor-border);
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #fff;
+}
+
+.vendor-comment-mini strong {
+    display: block;
+}
+
+.vendor-comment-mini p {
+    margin: 6px 0 0;
+    color: #536079;
+    white-space: pre-wrap;
+}
+
+/* ---------------- Basic details tab ---------------- */
+
+.vendor-panel[data-panel="basic"] > .vendor-card:first-child {
+    margin-bottom: 20px;
+}
+
+.vendor-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.vendor-info {
+    padding: 14px;
+    border: 1px solid var(--vendor-border);
+    border-radius: 14px;
+    background: #fbfdff;
+}
+
+.vendor-info span {
+    display: block;
+    color: #7d8aa0;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 5px;
+}
+
+.vendor-info strong,
+.vendor-info small {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.vendor-info small {
+    color: #687386;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.vendor-rating {
+    font-size: 20px;
+    color: #f59e0b;
+    letter-spacing: 2px;
+}
+
+/* ---------------- Ledger tables (payments / statement / shipments) ---------------- */
+
+.vendor-table-wrap {
+    overflow: auto;
+}
+
+/* The statement table sits below the currency summary strip. */
+.vendor-currency-summary + .vendor-table-wrap {
+    margin-top: 16px;
+}
+
+.vendor-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 980px;
+}
+
+.vendor-table th,
+.vendor-table td {
+    padding: 13px 14px;
+    border-bottom: 1px solid var(--vendor-border);
+    text-align: left;
+    vertical-align: top;
+}
+
+.vendor-table th {
+    background: #fbfdff;
+    color: #7d8aa0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+}
+
+.vendor-table small {
+    display: block;
+    color: #687386;
+    margin-top: 3px;
+    font-weight: 500;
+}
+
+/* ---------------- Projects tab ---------------- */
+
+/* ---------------- Products tab ---------------- */
+
+.vendor-info-grid.vendor-card {
+    padding: 15px;
+}
+
+.vendor-product-card {
+    display: grid;
+    grid-template-columns: 62px 1fr;
+    gap: 10px;
+    align-items: center;
+    border: 1px solid var(--vendor-border);
+    border-radius: 16px;
+    padding: 10px;
+}
+
+.vendor-product-card img,
+.vendor-product-empty {
+    width: 62px;
+    height: 62px;
+    border-radius: 14px;
+    object-fit: cover;
+    background: #edf5ff;
+    color: #4f83f1;
+    display: grid;
+    place-items: center;
+    font-size: 24px;
+}
+
+.vendor-product-card strong,
+.vendor-product-card small {
+    display: block;
+}
+
+.vendor-product-card small {
+    color: #687386;
+    margin-top: 3px;
+}
+
+/* ---------------- Attachments tab ---------------- */
+
+.vendor-attachment-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.vendor-attachment-grid.vendor-card {
+    padding: 15px;
+}
+
+.vendor-attachment {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    border: 1px solid #edf0f7;
+    background: #fff;
+    border-radius: 18px;
+    padding: 14px;
+    gap: 12px;
+}
+
+.vendor-attachment img,
+.vendor-file-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    object-fit: cover;
+    background: #eef3ff;
+    color: #4f83f1;
+    display: grid;
+    place-items: center;
+    font-size: 22px;
+}
+
+.vendor-attachment strong,
+.vendor-attachment span {
+    display: block;
+}
+
+.vendor-attachment span {
+    color: #7b8495;
+    font-size: 12px;
+    margin-top: 3px;
+}
+
+.vendor-row-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.vendor-row-actions a {
+    font-weight: 600;
+    text-decoration: none;
+}
+
+/* grid span utility used inside the attachment modal (2-col master grid) */
+.pd-span-2 {
+    grid-column: span 2;
+}
+
+.vendor-row-delete {
+    border: 0;
+    border-radius: 10px;
+    background: #fff0f4;
+    color: #e11d48;
+    padding: 8px 10px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* ---------------- Payment entry modals ---------------- */
+
+.vendor-payment-form {
+    background: #f8fbff;
+    border: 1px solid var(--vendor-border);
+    border-radius: 18px;
+    padding: 16px;
+}
+
+.vendor-file-link {
+    display: inline-flex;
+    border-radius: 999px;
+    padding: 5px 8px;
+    background: #eef3ff;
+    color: #4f83f1;
+    text-decoration: none;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 2px;
+}
+
+/* ---------------- Statement tab ---------------- */
+
+.vendor-currency-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.vendor-currency-summary div {
+    background: #f8fbff;
+    border: 1px solid var(--vendor-border);
+    border-radius: 16px;
+    padding: 14px;
+}
+
+.vendor-currency-summary span {
+    display: block;
+    color: #687386;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.vendor-currency-summary strong {
+    display: block;
+    margin-top: 7px;
+    font-size: 18px;
+}
+
+/* ---------------- Comments tab ---------------- */
+
+.vendor-comment {
+    border: 1px solid var(--vendor-border);
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #fff;
+}
+
+.vendor-comment p {
+    margin: 6px 0 0;
+    color: #536079;
+    white-space: pre-wrap;
+}
+
+.vendor-comment.pinned {
+    background: #fffdf7;
+    border-color: #fedf89;
+}
+
+.vendor-comment span {
+    display: block;
+    color: #687386;
+    font-size: 12px;
+    margin-top: 3px;
+}
+
+.vendor-comment form {
+    margin-top: 8px;
+}
+
+.vendor-comment button {
+    border: 0;
+    background: #fff0f4;
+    color: #e11d48;
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.vendor-comment-form {
+    background: #f8fbff;
+    border: 1px solid var(--vendor-border);
+    border-radius: 18px;
+    padding: 16px;
+}
+
+.vendor-comment-form label {
+    font-weight: 600;
+    color: #536079;
+}
+
+/* ---------------- Responsive: vendor detail ---------------- */
+
+@media (max-width: 1500px) {
+    .vendor-kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .vendor-grid-3,
+    .vendor-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 1200px) {
+    .vendor-currency-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767px) {
+    .vendor-hero {
+        flex-direction: column;
+    }
+
+    .vendor-head-left {
+        align-items: flex-start;
+    }
+
+    .vendor-actions,
+    .vendor-actions .vendor-btn {
+        width: 100%;
+    }
+
+    .vendor-kpi-grid,
+    .vendor-info-grid,
+    .vendor-attachment-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .vendor-tab-panels {
+        padding: 12px;
+    }
+
+    .vendor-section {
+        padding: 15px;
+    }
+
+    .vendor-hero h1 {
+        font-size: 24px;
+    }
+
+    .vendor-currency-summary {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================================================
+   VENDOR QUOTES — resources/views/vendor_quotes/*.blade.php
+   --------------------------------------------------------------------------
+   Quote list reuses the shared master-* list screen; the quote form adds
+   quantity price-break rows; the image viewer is a standalone lightbox
+   page scoped under .image-view-page.
+   ========================================================================== */
+
+/* ---------------- Quote form: price-break rows ---------------- */
+
+.vendor-quote-form .master-items {
+    overflow-x: auto;
+}
+
+.vendor-quote-form .master-remove {
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 9px;
+    background: #fff0f4;
+    color: #e11d48;
+    cursor: pointer;
+    font-weight: 900;
+}
+
+/* ---------------- Quote image viewer ---------------- */
+
+.image-view-page {
+    --img-primary: #4f83f1;
+    --img-primary-2: #6366f1;
+    --img-dark: #17233b;
+    --img-muted: #687386;
+    --img-border: #dfe7f3;
+    --img-bg: #eef3ff;
+    --img-soft: #edf5ff;
+    --img-white: #ffffff;
+    --img-shadow: 0 14px 35px rgba(25, 42, 70, 0.08);
+    background: var(--img-bg);
+    min-height: calc(100vh - 70px);
+    padding: 28px;
+    color: var(--img-dark);
+    font-size: 14px;
+}
+
+.image-view-page,
+.image-view-page * {
+    box-sizing: border-box;
+}
+
+.image-card {
+    background: var(--img-white);
+    border: 1px solid var(--img-border);
+    border-radius: 18px;
+    box-shadow: var(--img-shadow);
+}
+
+.image-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 28px;
+    margin-bottom: 24px;
+}
+
+.image-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+}
+
+.image-header p {
+    margin: 5px 0 0;
+    color: var(--img-muted);
+    font-weight: 700;
+}
+
+.image-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.image-btn {
+    min-height: 42px;
+    border: 0;
+    border-radius: 12px;
+    padding: 11px 18px;
+    font-size: 14px;
+    font-weight: 900;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.image-btn-primary {
+    background: linear-gradient(135deg, var(--img-primary), var(--img-primary-2));
+    color: #fff;
+}
+
+.image-btn-soft {
+    background: var(--img-soft);
+    color: var(--img-primary);
+}
+
+.image-btn-light {
+    background: #f3f6fb;
+    color: var(--img-dark);
+}
+
+.image-stage {
+    padding: 24px;
+    display: grid;
+    place-items: center;
+    min-height: 620px;
+}
+
+.image-frame {
+    width: 100%;
+    min-height: 540px;
+    border: 1px dashed var(--img-border);
+    border-radius: 18px;
+    background: #fbfdff;
+    display: grid;
+    place-items: center;
+    overflow: auto;
+    padding: 18px;
+}
+
+.image-frame img {
+    max-width: 100%;
+    max-height: 74vh;
+    object-fit: contain;
+    border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+    background: #fff;
+}
+
+.image-empty {
+    text-align: center;
+    color: var(--img-muted);
+    font-weight: 800;
+}
+
+.image-empty .icon {
+    width: 88px;
+    height: 88px;
+    margin: 0 auto 16px;
+    border-radius: 22px;
+    background: var(--img-soft);
+    color: var(--img-primary);
+    display: grid;
+    place-items: center;
+    font-size: 36px;
+}
+
+.image-meta {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    padding: 0 24px 24px;
+}
+
+.image-meta-item {
+    padding: 14px;
+    border: 1px solid var(--img-border);
+    border-radius: 14px;
+    background: #fbfdff;
+}
+
+.image-meta-item span {
+    display: block;
+    color: #7d8aa0;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 5px;
+}
+
+.image-meta-item strong {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+    .image-meta {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .image-view-page {
+        padding: 14px;
+    }
+
+    .image-header {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 18px;
+    }
+
+    .image-actions,
+    .image-actions .image-btn {
+        width: 100%;
+    }
+
+    .image-stage {
+        padding: 16px;
+        min-height: 420px;
+    }
+
+    .image-frame {
+        min-height: 360px;
+    }
+
+    .image-meta {
+        grid-template-columns: 1fr;
+        padding: 0 16px 16px;
+    }
+}

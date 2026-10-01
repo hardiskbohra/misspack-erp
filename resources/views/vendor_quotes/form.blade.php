@@ -3,15 +3,15 @@
 @section('page-title', $quote->exists ? 'Edit Vendor Quote' : 'Add Vendor Quote')
 
 @section('content')
-<style>
-    
-</style>
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/vendors.css') }}">
+@endpush
 @php($isEdit = $quote->exists)
 @php($productMedia = $quote->product?->primaryMedia())
 @php($quoteImage = $quote->product_image_path ?: ($productMedia?->file_path ?: $quote->lead?->product_image_path))
 @php($prices = old('prices') ?? $quote->prices->map(function($price){ return $price->only(['quantity','unit','finish_type','printing_type','vendor_unit_price','landing_cost_inr','selling_price_inr','moq','remarks']); })->toArray())
 @if(empty($prices)) @php($prices=[['quantity'=>$quote->quantity,'unit'=>$quote->unit ?: 'pcs','finish_type'=>'','printing_type'=>'','vendor_unit_price'=>$quote->vendor_unit_price,'landing_cost_inr'=>$quote->landing_cost_inr,'selling_price_inr'=>$quote->selling_price_inr,'moq'=>$quote->moq,'remarks'=>'']]) @endif
-    <div class="master-form">
+    <div class="master-form vendor-quote-form">
         <div class="master-card master-header">
             <h1>{{ $isEdit ? 'Edit Vendor Quote' : 'Add Vendor Quote' }}</h1>
             <div class="master-breadcrumb"><a href="{{ url('/') }}">Home</a><span>•</span><a
@@ -283,16 +283,7 @@
             <td><button type="button" class="master-remove" onclick="removeQuotePriceRow(this)">×</button></td>
         </tr>
     </template>
-    <script>
-        let quotePriceIndex = {{ count($prices) }};
-        document.getElementById('addQuotePriceRow')?.addEventListener('click', function() {
-            document.querySelector('#quotePricesTable tbody').insertAdjacentHTML('beforeend', document
-                .getElementById('quotePriceRowTemplate').innerHTML.replaceAll('__INDEX__', quotePriceIndex++));
-        });
-
-        function removeQuotePriceRow(btn) {
-            const tbody = document.querySelector('#quotePricesTable tbody');
-            if (tbody.children.length > 1) btn.closest('tr').remove();
-        }
-    </script>
+@push('scripts')
+    <script src="{{ asset('assets/js/vendors.js') }}"></script>
+@endpush
 @endsection

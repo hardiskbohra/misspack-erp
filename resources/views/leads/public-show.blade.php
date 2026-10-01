@@ -7,63 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #4f83f1;
-            --primary2: #6366f1;
-            --green: #10b981;
-            --orange: #f59e0b;
-            --red: #ef4770;
-            --dark: #17233b;
-            --muted: #687386;
-            --border: #dfe7f3;
-            --bg: #eef3ff;
-            --soft: #edf5ff;
-            --white: #ffffff;
-            --shadow: 0 14px 35px rgba(25, 42, 70, .08);
-        }
-
-        * { box-sizing: border-box; }
-        html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
-        body { margin: 0; background: var(--bg); font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--dark); font-size: 14px; line-height: 1.45; }
-        .page { max-width: 1180px; margin: 0 auto; padding: 28px; }
-        .card { background: var(--white); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); }
-        .header { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 26px; margin-bottom: 22px; }
-        .brand { color: var(--primary); font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
-        .header h1 { margin: 8px 0 6px; font-size: 28px; line-height: 1.18; font-weight: 900; letter-spacing: -.03em; }
-        .header p { margin: 0; color: var(--muted); font-weight: 700; max-width: 760px; }
-        .badge { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 10px 14px; background: var(--soft); color: var(--primary); font-weight: 900; white-space: nowrap; }
-        .layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr); gap: 22px; align-items: start; }
-        .gallery { padding: 18px; }
-        .main-media { min-height: 560px; border: 1px solid var(--border); border-radius: 16px; background: #fbfdff; display: grid; place-items: center; overflow: hidden; position: relative; }
-        .main-media img, .main-media video { width: 100%; max-height: 620px; object-fit: contain; display: block; background: #fff; }
-        .main-media video { height: auto; }
-        .placeholder { text-align: center; color: var(--muted); font-weight: 800; padding: 50px 20px; }
-        .placeholder .icon { width: 96px; height: 96px; border-radius: 24px; background: var(--soft); color: var(--primary); display: grid; place-items: center; font-size: 40px; margin: 0 auto 16px; }
-        .gallery-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 42px; height: 42px; border: 0; border-radius: 50%; background: rgba(255,255,255,.95); color: var(--dark); cursor: pointer; box-shadow: 0 8px 20px rgba(15,23,42,.18); z-index: 5; }
-        .gallery-arrow.left { left: 14px; }
-        .gallery-arrow.right { right: 14px; }
-        .thumbs { display: flex; gap: 10px; overflow-x: auto; padding: 14px 2px 2px; }
-        .thumb { width: 76px; height: 76px; border-radius: 13px; border: 2px solid transparent; background: var(--soft); object-fit: cover; cursor: pointer; flex: 0 0 76px; display: inline-flex; align-items: center; justify-content: center; color: var(--primary); font-weight: 900; }
-        .thumb.active { border-color: var(--primary); }
-        .section { padding: 22px; margin-bottom: 22px; }
-        .section h2 { margin: 0 0 16px; font-size: 18px; font-weight: 900; }
-        .info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-        .info { padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: #fbfdff; }
-        .info span { display: block; color: #7d8aa0; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px; }
-        .info strong { display: block; overflow-wrap: anywhere; }
-        .text-box { padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: #fbfdff; color: #536079; font-weight: 700; line-height: 1.7; white-space: pre-line; }
-        .doc-list { display: grid; gap: 10px; }
-        .doc-link { display: block; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: #fbfdff; color: var(--primary); font-weight: 800; text-decoration: none; overflow-wrap: anywhere; }
-        .footer { margin-top: 24px; overflow: hidden; }
-        .footer-top { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 22px; padding: 24px; }
-        .footer h4 { margin: 0 0 10px; font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
-        .footer p, .footer a, .footer span { color: var(--muted); font-weight: 700; line-height: 1.65; text-decoration: none; }
-        .footer a:hover { color: var(--primary); }
-        .footer-bottom { display: flex; justify-content: space-between; gap: 12px; padding: 14px 24px; border-top: 1px solid var(--border); background: #fbfdff; color: var(--muted); font-size: 12px; font-weight: 800; }
-        @media(max-width: 1000px) { .layout { grid-template-columns: 1fr; } .main-media { min-height: 420px; } .footer-top { grid-template-columns: 1fr 1fr; } }
-        @media(max-width: 700px) { .page { padding: 14px; } .header { flex-direction: column; align-items: flex-start; padding: 20px; } .header h1 { font-size: 22px; } .badge { align-self: flex-start; } .main-media { min-height: 320px; } .gallery { padding: 12px; } .info-grid { grid-template-columns: 1fr; } .section { padding: 18px; } .footer-top { grid-template-columns: 1fr; text-align: center; } .footer-bottom { flex-direction: column; text-align: center; align-items: center; } }
-    </style>
+    <link rel="stylesheet" href="{{ asset('assets/css/leads-public-show.css') }}">
 </head>
 <body>
 @php
@@ -177,71 +121,8 @@
     </footer>
 </div>
 <script>
-    const mediaItems = @json($media);
-    let currentMediaIndex = 0;
-
-    function renderMedia(index) {
-        const main = document.getElementById('mainMedia');
-        const item = mediaItems[index];
-
-        if (!main || !item) return;
-
-        if (item.type === 'video') {
-            main.innerHTML = `<video src="${item.url}" controls playsinline></video>`;
-        } else {
-            main.innerHTML = `<img src="${item.url}" alt="${item.title || 'Product Media'}">`;
-        }
-
-        if (mediaItems.length > 1) {
-            main.insertAdjacentHTML('beforeend', `<button type="button" class="gallery-arrow left" onclick="previousMedia()">‹</button><button type="button" class="gallery-arrow right" onclick="nextMedia()">›</button>`);
-        }
-
-        document.querySelectorAll('.thumb').forEach((thumb, thumbIndex) => {
-            thumb.classList.toggle('active', thumbIndex === index);
-        });
-    }
-
-    function nextMedia() {
-        if (!mediaItems.length) return;
-        currentMediaIndex = (currentMediaIndex + 1) % mediaItems.length;
-        renderMedia(currentMediaIndex);
-    }
-
-    function previousMedia() {
-        if (!mediaItems.length) return;
-        currentMediaIndex = (currentMediaIndex - 1 + mediaItems.length) % mediaItems.length;
-        renderMedia(currentMediaIndex);
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        if (mediaItems.length) {
-            renderMedia(0);
-        }
-
-        const thumbs = document.getElementById('thumbs');
-        if (thumbs) {
-            mediaItems.forEach((item, index) => {
-                const thumb = document.createElement(item.type === 'image' ? 'img' : 'button');
-                thumb.className = 'thumb' + (index === 0 ? ' active' : '');
-
-                if (item.type === 'image') {
-                    thumb.src = item.url;
-                    thumb.alt = item.title || 'Image';
-                } else {
-                    thumb.type = 'button';
-                    thumb.textContent = '▶';
-                    thumb.title = item.title || 'Video';
-                }
-
-                thumb.addEventListener('click', function () {
-                    currentMediaIndex = index;
-                    renderMedia(index);
-                });
-
-                thumbs.appendChild(thumb);
-            });
-        }
-    });
+    window.leadMediaItems = @json($media);
 </script>
+<script src="{{ asset('assets/js/leads-public.js') }}"></script>
 </body>
 </html>

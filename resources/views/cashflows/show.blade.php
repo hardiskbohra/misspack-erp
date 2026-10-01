@@ -3,65 +3,9 @@
 @section('page-title', 'Cashflow Detail')
 
 @section('content')
-<style>
-
-    .status-pending {
-        background: #fff4e5;
-        color: #d97706
-    }
-
-    .status-booked {
-        background: #eaf1ff;
-        color: #3f7cf4
-    }
-
-    .status-reconciled {
-        background: #e8fff7;
-        color: #0e9f6e
-    }
-
-    .status-disputed {
-        background: #ffeaf0;
-        color: #e11d48
-    }
-
-    .status-ignored {
-        background: #f3f6fb;
-        color: #536079
-    }
-
-    .type-credit {
-        background: #e8fff7;
-        color: #0e9f6e
-    }
-
-    .type-debit {
-        background: #ffeaf0;
-        color: #e11d48
-    }
-
-    .amount-credit {
-        font-size: 30px;
-        color: #059669;
-        font-weight: 900
-    }
-
-    .amount-debit {
-        font-size: 30px;
-        color: #e11d48;
-        font-weight: 900
-    }
-
-    .master-muted-box {
-        background: #fbfdff;
-        border: 1px solid var(--master-border);
-        border-radius: 14px;
-        padding: 14px;
-        color: #536079;
-        font-weight: 700;
-        line-height: 1.55
-    }
-</style>
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/cashflows.css') }}">
+@endpush
 @php($statusClass = str_replace('_', '-', $entry->accounting_status))
 <div class="cf">
     <div class="master-card master-header">

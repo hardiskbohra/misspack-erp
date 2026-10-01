@@ -1,0 +1,942 @@
+/* ==========================================================================
+   CASHFLOWS.CSS — Cashflow module (reports, settings, show views)
+   --------------------------------------------------------------------------
+   Module stylesheet for the Cashflow section: reports dashboard (cf-*),
+   cashflow settings (cf-settings*) and cashflow detail (status/type
+   badges). Loaded on cashflow screens via @push('styles').
+
+   The reports and settings views each carried an identical --cf-* :root
+   palette (settings added --cf-white); they are merged into one block
+   above. The PDF export is standalone and uses cashflows-pdf.css.
+   ========================================================================== */
+
+/* ==========================================================================
+   MODULE PALETTE
+   Merged from the identical :root blocks of the reports and
+   settings views.
+   ========================================================================== */
+
+:root {
+    --cf-primary: #4f83f1;
+    --cf-primary-2: #6366f1;
+    --cf-info: #159ff7;
+    --cf-teal: #12cbb7;
+    --cf-purple: #8b5cf6;
+    --cf-orange: #f59e0b;
+    --cf-red: #ef4770;
+    --cf-green: #10b981;
+    --cf-dark: #17233b;
+    --cf-muted: #687386;
+    --cf-border: #dfe7f3;
+    --cf-bg: #eef3ff;
+    --cf-soft: #edf5ff;
+    --cf-white: #fff;
+    --cf-shadow: 0 14px 35px rgba(25, 42, 70, .08);
+}
+
+/* ==========================================================================
+   CASHFLOW REPORTS — resources/views/cashflows/reports.blade.php
+   Reports dashboard (cf-*).
+   ========================================================================== */
+
+
+
+        .cf-page,
+        .cf-page * {
+            box-sizing: border-box
+        }
+
+
+
+        .cf-page {
+            background: var(--cf-bg);
+            min-height: calc(100vh - 70px);
+            padding: 28px;
+            color: var(--cf-dark);
+            font-size: 14px
+        }
+
+
+
+        .cf-card {
+            background: #fff;
+            border: 1px solid var(--cf-border);
+            border-radius: 18px;
+            box-shadow: var(--cf-shadow)
+        }
+
+
+
+        .cf-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 22px 28px;
+            margin-bottom: 24px
+        }
+
+
+
+        .cf-header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 900
+        }
+
+
+
+        .cf-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+
+
+        .cf-btn {
+            min-height: 42px;
+            border: 0;
+            border-radius: 12px;
+            padding: 11px 18px;
+            font-size: 14px;
+            font-weight: 900;
+            text-decoration: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            white-space: nowrap
+        }
+
+
+
+        .cf-btn-primary {
+            background: linear-gradient(135deg, var(--cf-primary), var(--cf-primary-2));
+            color: #fff
+        }
+
+
+
+        .cf-btn-soft {
+            background: var(--cf-soft);
+            color: var(--cf-primary)
+        }
+
+
+
+        .cf-btn-light {
+            background: #f3f6fb;
+            color: var(--cf-dark)
+        }
+
+
+
+        .cf-filter {
+            padding: 22px 24px;
+            margin-bottom: 24px
+        }
+
+
+
+        .cf-filter-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px
+        }
+
+
+
+        .cf-input,
+        .cf-select {
+            width: 100%;
+            height: 44px;
+            border: 1px solid #d8e2ef;
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--cf-dark);
+            outline: none
+        }
+
+
+
+        .cf-label {
+            display: block;
+            margin-bottom: 7px;
+            color: #536079;
+            font-size: 12px;
+            font-weight: 700
+        }
+
+
+
+        .cf-summary {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 18px;
+            margin-bottom: 24px
+        }
+
+
+
+        .cf-stat {
+            padding: 22px;
+            border-radius: 18px
+        }
+
+
+
+        .cf-stat.blue {
+            background: #dff1ff
+        }
+
+
+
+        .cf-stat.purple {
+            background: #ece7ff
+        }
+
+
+
+        .cf-stat.teal {
+            background: #dcf8f3
+        }
+
+
+
+        .cf-stat.orange {
+            background: #fff2dc
+        }
+
+
+
+        .cf-stat p {
+            margin: 0 0 6px;
+            color: #536079;
+            font-weight: 900
+        }
+
+
+
+        .cf-stat strong {
+            font-size: 24px
+        }
+
+
+
+        .cf-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+            margin-bottom: 24px
+        }
+
+
+
+        .cf-section {
+            padding: 22px
+        }
+
+
+
+        .cf-section h3 {
+            margin: 0 0 16px;
+            font-size: 16px;
+            font-weight: 900
+        }
+
+
+
+        .cf-table-wrap {
+            overflow-x: auto
+        }
+
+
+
+        .cf-table {
+            width: 100%;
+            min-width: 780px;
+            border-collapse: collapse
+        }
+
+
+
+        .cf-table th,
+        .cf-table td {
+            padding: 14px;
+            border-bottom: 1px solid var(--cf-border);
+            text-align: left
+        }
+
+
+
+        .cf-table th {
+            font-size: 11px;
+            color: #7d8aa0;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .06em
+        }
+
+
+
+        .credit {
+            color: #059669;
+            font-weight: 900
+        }
+
+
+
+        .debit {
+            color: #e11d48;
+            font-weight: 900
+        }
+
+
+
+        .cf-sub {
+            display: block;
+            color: var(--cf-muted);
+            font-size: 12px;
+            margin-top: 3px;
+            font-weight: 700
+        }
+
+
+
+        .cf-badge {
+            display: inline-flex;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase
+        }
+
+
+
+        .status-reconciled {
+            background: #e8fff7;
+            color: #0e9f6e
+        }
+
+
+
+        .status-booked {
+            background: #eaf1ff;
+            color: #3f7cf4
+        }
+
+
+
+        .status-pending {
+            background: #fff4e5;
+            color: #d97706
+        }
+
+
+
+        .status-disputed {
+            background: #ffeaf0;
+            color: #e11d48
+        }
+
+
+
+        .status-ignored {
+            background: #f3f6fb;
+            color: #536079
+        }
+
+
+
+        @media(max-width:1100px) {
+            .cf-filter-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr))
+            }
+
+            .cf-summary {
+                grid-template-columns: repeat(2, minmax(0, 1fr))
+            }
+
+            .cf-grid {
+                grid-template-columns: 1fr
+            }
+        }
+
+
+
+        @media(max-width:700px) {
+            .cf-page {
+                padding: 14px
+            }
+
+            .cf-header {
+                align-items: flex-start;
+                flex-direction: column;
+                padding: 18px
+            }
+
+            .cf-actions,
+            .cf-actions .cf-btn {
+                width: 100%
+            }
+
+            .cf-filter-grid,
+            .cf-summary {
+                grid-template-columns: 1fr
+            }
+
+            .cf-section {
+                padding: 18px
+            }
+        }
+
+/* ==========================================================================
+   CASHFLOW SETTINGS — resources/views/cashflows/settings.blade.php
+   Settings page (cf-settings*).
+   ========================================================================== */
+
+
+
+    .cf-settings,
+    .cf-settings * {
+        box-sizing: border-box
+    }
+
+
+
+    .cf-settings {
+        background: var(--cf-bg);
+        min-height: calc(100vh - 70px);
+        padding: 28px;
+        color: var(--cf-dark);
+        font-size: 14px;
+        line-height: 1.45
+    }
+
+
+
+    .cf-card {
+        background: #fff;
+        border: 1px solid var(--cf-border);
+        border-radius: 18px;
+        box-shadow: var(--cf-shadow)
+    }
+
+
+
+    .cf-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        padding: 22px 28px;
+        margin-bottom: 24px
+    }
+
+
+
+    .cf-header h1 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 900
+    }
+
+
+
+    .cf-header p {
+        margin: 5px 0 0;
+        color: var(--cf-muted);
+        font-weight: 700
+    }
+
+
+
+    .cf-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap
+    }
+
+
+
+    .cf-btn {
+        min-height: 40px;
+        border: 0;
+        border-radius: 12px;
+        padding: 10px 16px;
+        font-size: 13px;
+        font-weight: 900;
+        text-decoration: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        white-space: nowrap
+    }
+
+
+
+    .cf-btn-primary {
+        background: linear-gradient(135deg, var(--cf-primary), var(--cf-primary-2));
+        color: #fff
+    }
+
+
+
+    .cf-btn-soft {
+        background: var(--cf-soft);
+        color: var(--cf-primary)
+    }
+
+
+
+    .cf-btn-light {
+        background: #f3f6fb;
+        color: var(--cf-dark)
+    }
+
+
+
+    .cf-btn-danger {
+        background: #fff0f4;
+        color: #e11d48
+    }
+
+
+
+    .cf-btn-green {
+        background: #e8fff7;
+        color: #0e9f6e
+    }
+
+
+
+    .cf-alert {
+        padding: 14px 16px;
+        margin-bottom: 18px;
+        border-radius: 14px;
+        font-weight: 800
+    }
+
+
+
+    .cf-alert-success {
+        color: #047857;
+        background: #e8fff7;
+        border: 1px solid #a7f3d0
+    }
+
+
+
+    .cf-alert-error {
+        color: #be123c;
+        background: #fff0f4;
+        border: 1px solid #fecdd3
+    }
+
+
+
+    .cf-tabs {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid var(--cf-border);
+        overflow-x: auto
+    }
+
+
+
+    .cf-tab {
+        padding: 16px 24px;
+        color: var(--cf-dark);
+        text-decoration: none;
+        font-weight: 500;
+        border-bottom: 2px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap
+    }
+
+
+
+    .cf-tab.active {
+        color: var(--cf-primary);
+        border-bottom-color: var(--cf-primary);
+        background: #fbfdff
+    }
+
+
+
+    .cf-panel {
+        padding: 22px
+    }
+
+
+
+    .cf-section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 0 0 16px
+    }
+
+
+
+    .cf-section-title h2 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 900
+    }
+
+
+
+    .cf-section-title p {
+        margin: 4px 0 0;
+        color: var(--cf-muted);
+        font-weight: 600
+    }
+
+
+
+    .cf-form-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 18px
+    }
+
+
+
+    .cf-form-grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+
+
+
+    .cf-field.full {
+        grid-column: 1/-1
+    }
+
+
+
+    .cf-label {
+        display: block;
+        margin-bottom: 7px;
+        color: #536079;
+        font-size: 12px;
+        font-weight: 900
+    }
+
+
+
+    .cf-input,
+    .cf-select,
+    .cf-textarea {
+        width: 100%;
+        border: 1px solid #d8e2ef;
+        border-radius: 12px;
+        background: #fff;
+        color: var(--cf-dark);
+        font-size: 14px;
+        font-weight: 500;
+        outline: none
+    }
+
+
+
+    .cf-input,
+    .cf-select {
+        height: 42px;
+        padding: 9px 12px
+    }
+
+
+
+    .cf-textarea {
+        min-height: 74px;
+        padding: 10px 12px;
+        resize: vertical
+    }
+
+
+
+    .cf-input:focus,
+    .cf-select:focus,
+    .cf-textarea:focus {
+        border-color: var(--cf-primary);
+        box-shadow: 0 0 0 3px rgba(79, 131, 241, .12)
+    }
+
+
+
+    .cf-help {
+        color: var(--cf-muted);
+        font-size: 12px;
+        font-weight: 700
+    }
+
+
+
+    .cf-sub-card {
+        border: 2px solid var(--cf-border);
+        border-radius: 16px;
+        padding: 18px;
+        background: #fbfdff;
+        margin-bottom: 22px
+    }
+
+
+
+    .cf-sub-card h3 {
+        margin: 0 0 14px;
+        font-size: 16px;
+        font-weight: 900
+    }
+
+
+
+    .cf-list {
+        display: grid;
+        gap: 12px
+    }
+
+
+
+    .cf-row {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr 1fr .8fr .9fr .8fr auto;
+        gap: 10px;
+        align-items: end;
+        padding: 14px;
+        border: 1px solid var(--cf-border);
+        border-radius: 14px;
+        background: #fff
+    }
+
+
+
+    .cf-row.category {
+        grid-template-columns: 1.5fr 1fr .7fr .7fr .7fr auto
+    }
+
+
+
+    .cf-row.master {
+        grid-template-columns: 1fr 1fr 1fr .6fr .7fr .7fr auto
+    }
+
+
+
+    .cf-row .current-balance {
+        font-size: 15px;
+        font-weight: 900;
+        color: var(--cf-green);
+        padding: 10px 0
+    }
+
+
+
+    .cf-check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 900;
+        color: #536079;
+        min-height: 42px
+    }
+
+
+
+    .cf-badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 10px 10px;
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase
+    }
+
+
+
+    .cf-badge.active {
+        background: #e8fff7;
+        color: #0e9f6e
+    }
+
+
+
+    .cf-badge.inactive {
+        background: #f3f6fb;
+        color: #536079
+    }
+
+
+
+    .cf-color-dot {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: inline-block;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 1px var(--cf-border)
+    }
+
+
+
+    .cf-master-filter {
+        display: flex;
+        gap: 12px;
+        align-items: end;
+        flex-wrap: wrap;
+        margin-bottom: 18px
+    }
+
+
+
+    .cf-master-filter>div {
+        min-width: 240px;
+        flex: 0 1 280px
+    }
+
+
+
+    @media(max-width:1280px) {
+        .cf-settings {
+            padding: 22px 18px
+        }
+
+        .cf-form-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr))
+        }
+
+        .cf-row,
+        .cf-row.category,
+        .cf-row.master {
+            grid-template-columns: repeat(2, minmax(0, 1fr))
+        }
+
+        .cf-row-actions {
+            grid-column: 1/-1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px
+        }
+    }
+
+
+
+    @media(max-width:700px) {
+        .cf-settings {
+            padding: 14px
+        }
+
+        .cf-header {
+            align-items: flex-start;
+            flex-direction: column;
+            padding: 18px
+        }
+
+        .cf-actions,
+        .cf-actions .cf-btn {
+            width: 100%
+        }
+
+        .cf-panel {
+            padding: 16px
+        }
+
+        .cf-form-grid,
+        .cf-form-grid.two,
+        .cf-row,
+        .cf-row.category,
+        .cf-row.master {
+            grid-template-columns: 1fr
+        }
+
+        .cf-row-actions {
+            justify-content: stretch;
+            flex-direction: column
+        }
+
+        .cf-row-actions .cf-btn {
+            width: 100%
+        }
+
+        .cf-tabs {
+            padding: 0 4px
+        }
+
+        .cf-tab {
+            padding: 14px 16px
+        }
+    }
+
+/* ==========================================================================
+   CASHFLOW DETAIL — resources/views/cashflows/show.blade.php
+   Detail page: status and type badges.
+   ========================================================================== */
+
+.status-pending {
+        background: #fff4e5;
+        color: #d97706
+    }
+
+    .status-booked {
+        background: #eaf1ff;
+        color: #3f7cf4
+    }
+
+    .status-reconciled {
+        background: #e8fff7;
+        color: #0e9f6e
+    }
+
+    .status-disputed {
+        background: #ffeaf0;
+        color: #e11d48
+    }
+
+    .status-ignored {
+        background: #f3f6fb;
+        color: #536079
+    }
+
+    .type-credit {
+        background: #e8fff7;
+        color: #0e9f6e
+    }
+
+    .type-debit {
+        background: #ffeaf0;
+        color: #e11d48
+    }
+
+    .amount-credit {
+        font-size: 30px;
+        color: #059669;
+        font-weight: 900
+    }
+
+    .amount-debit {
+        font-size: 30px;
+        color: #e11d48;
+        font-weight: 900
+    }
+
+    .master-muted-box {
+        background: #fbfdff;
+        border: 1px solid var(--master-border);
+        border-radius: 14px;
+        padding: 14px;
+        color: #536079;
+        font-weight: 700;
+        line-height: 1.55
+    }

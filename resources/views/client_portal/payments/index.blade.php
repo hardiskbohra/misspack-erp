@@ -4,37 +4,9 @@
 @section('page-title', 'Payments')
 
 @section('content')
-<style>
-    .pd-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        border-radius: 12px;
-        padding: 7px 15px;
-        background: #f1f4f9;
-        color: #5f6b7a;
-        font-size: 12px;
-        font-weight: 600
-    }
-
-    .pd-status-in_progress,
-    .pd-mode-cash,
-    .pd-status-pending {
-        background: #fff7e6;
-        color: #b54708
-    }
-
-    .pd-status-completed,
-    .pd-status-booked,
-    .pd-health-green,
-    .pd-mode-neft,
-    .pd-mode-upi,
-    .pd-mode-rtgs,
-    .pd-public {
-        background: #c1f2bb !important;
-        color: green !important
-    }
-</style>
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/client-portal-payments.css') }}">
+@endpush
 <div class="master-header" style="padding:5px;margin-bottom:15px;">
     <div>
         <h1>Payments</h1>

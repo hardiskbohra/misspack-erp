@@ -1,0 +1,567 @@
+/* ==========================================================================
+   SALES-INVOICES.CSS — Sales invoices module (form, index, show views)
+   --------------------------------------------------------------------------
+   Module stylesheet for the Sales section: PI/Tax invoice list, invoice
+   form (line items + GST preview) and invoice detail.
+   Loaded on invoice screens via @push('styles') (stack renders after the
+   shared master-* sheets, so the rules below win the cascade — same as the
+   original inline <style> blocks).
+
+   NOTE (design debt, kept as-is for visual fidelity): this module was built
+   as a local fork of the shared master-* design system — the same class
+   names with module-tuned values (spacing, radii, table widths). Do not
+   delete the master-* rules here expecting the shared foundation to look
+   the same; it does not. A future cleanup should rename these to a
+   module prefix (si-*) or converge on the shared component values.
+   ========================================================================== */
+
+/* ==========================================================================
+   INVOICE FORM — resources/views/sales_invoices/form.blade.php
+   Form page: hero, sections, line-items table, GST total preview.
+   ========================================================================== */
+
+.master-page {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            background: #eef3ff;
+            min-height: calc(100vh - 70px);
+            padding: 28px;
+            color: #17233b
+        }
+
+        .master-page * {
+            box-sizing: border-box
+        }
+
+        .master-hero {
+            background: linear-gradient(135deg, #4f83f1, #7b61ff);
+            border-radius: 26px;
+            padding: 24px;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            box-shadow: 0 18px 45px rgba(79, 131, 241, .22)
+        }
+
+        .master-eyebrow {
+            margin: 0 0 6px;
+            text-transform: uppercase;
+            letter-spacing: .13em;
+            font-size: 11px;
+            font-weight: 600;
+            opacity: .78
+        }
+
+        .master-hero h1 {
+            margin: 0;
+            font-size: 30px;
+            font-weight: 600
+        }
+
+        .master-hero p {
+            margin: 8px 0 0;
+            max-width: 780px;
+            opacity: .9
+        }
+
+        .master-btn {
+            border: 0;
+            border-radius: 14px;
+            padding: 10px 15px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer
+        }
+
+        .master-btn-primary {
+            background: #ef4770;
+            color: #fff;
+            box-shadow: 0 10px 24px rgba(239, 71, 112, .24)
+        }
+
+        .master-btn-light {
+            background: rgba(255, 255, 255, .16);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, .3)
+        }
+
+        .master-btn-soft {
+            background: #eef3ff;
+            color: #4f83f1
+        }
+
+        .master-btn-light-dark {
+            background: #f3f6fb;
+            color: #17233b
+        }
+
+        .master-alert {
+            border-radius: 16px;
+            padding: 13px 15px;
+            font-weight: 600
+        }
+
+        .master-alert.error {
+            background: #fff0f4;
+            color: #be123c;
+            border: 1px solid #fecdd3
+        }
+
+        .master-form {
+            display: flex;
+            flex-direction: column;
+            gap: 18px
+        }
+
+        .master-card {
+            background: #fff;
+            border: 1px solid #dfe7f3;
+            border-radius: 22px;
+            padding: 20px;
+            box-shadow: 0 14px 35px rgba(25, 42, 70, .08)
+        }
+
+        .master-section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px
+        }
+
+        .master-section-head h2 {
+            margin: 0
+        }
+
+        .master-grid {
+            display: grid;
+            gap: 12px
+        }
+
+        .master-grid.two {
+            grid-template-columns: repeat(2, minmax(0, 1fr))
+        }
+
+        .master-grid.three {
+            grid-template-columns: repeat(3, minmax(0, 1fr))
+        }
+
+        .master-grid.four {
+            grid-template-columns: repeat(4, minmax(0, 1fr))
+        }
+
+        .master-field {
+            display: flex;
+            flex-direction: column;
+            gap: 7px
+        }
+
+        .master-field.full {
+            grid-column: 1/-1
+        }
+
+        .master-field label {
+            font-size: 12px;
+            color: #536079;
+            font-weight: 600
+        }
+
+        .master-field input,
+        .master-field select,
+        .master-field textarea {
+            width: 100%;
+            border: 1px solid #d8e2ef;
+            border-radius: 13px;
+            padding: 10px 12px;
+            background: #fff;
+            color: #17233b;
+            outline: none
+        }
+
+        .master-field input,
+        .master-field select {
+            height: 42px
+        }
+
+        .master-field textarea {
+            resize: vertical;
+            min-height: 72px
+        }
+
+        .master-check {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            font-weight: 600;
+            color: #536079;
+            margin-top: 25px
+        }
+
+        .master-items-wrap {
+            overflow: auto
+        }
+
+        .master-items-table {
+            width: 100%;
+            min-width: 1050px;
+            border-collapse: collapse
+        }
+
+        .master-items-table th,
+        .master-items-table td {
+            padding: 9px;
+            border-bottom: 1px solid #dfe7f3;
+            text-align: left
+        }
+
+        .master-items-table th {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #7d8aa0;
+            background: #fbfdff
+        }
+
+        .master-items-table input,
+        .master-items-table textarea,
+        .master-items-table select {
+            width: 100%;
+            border: 1px solid #d8e2ef;
+            border-radius: 10px;
+            padding: 8px
+        }
+
+        .master-items-table textarea {
+            min-height: 38px
+        }
+
+        .master-remove {
+            border: 0;
+            border-radius: 10px;
+            background: #fff0f4;
+            color: #e11d48;
+            padding: 8px 10px;
+            font-weight: 600
+        }
+
+        .master-total-box {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 14px
+        }
+
+        .master-total-box div {
+            background: #f8fbff;
+            border: 1px solid #edf2ff;
+            border-radius: 14px;
+            padding: 12px
+        }
+
+        .master-total-box span {
+            display: block;
+            color: #687386;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase
+        }
+
+        .master-total-box strong {
+            display: block;
+            margin-top: 5px;
+            font-size: 18px
+        }
+
+        .master-submit {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px
+        }
+
+        .master-product-select {
+            min-width: 180px
+        }
+
+        @media(max-width:1200px) {
+
+            .master-grid.four,
+            .master-grid.three {
+                grid-template-columns: repeat(2, minmax(0, 1fr))
+            }
+        }
+
+        @media(max-width:767px) {
+            .master-page {
+                padding: 14px
+            }
+
+            .master-hero,
+            .master-section-head,
+            .master-submit {
+                flex-direction: column
+            }
+
+            .master-grid.two,
+            .master-grid.three,
+            .master-grid.four,
+            .master-total-box {
+                grid-template-columns: 1fr
+            }
+
+            .master-btn,
+            .master-submit .master-btn {
+                width: 100%
+            }
+
+            .master-card {
+                padding: 15px
+            }
+        }
+
+/* ==========================================================================
+   INVOICE LIST — resources/views/sales_invoices/index.blade.php
+   List page: status badges and table tweaks.
+   ========================================================================== */
+
+.si-page{display:flex;flex-direction:column;gap:18px;background:#eef3ff;min-height:calc(100vh - 70px);padding:28px;color:#17233b}.si-page *{box-sizing:border-box}.si-hero{background:linear-gradient(135deg,#4f83f1,#7b61ff);border-radius:26px;padding:24px;color:#fff;display:flex;justify-content:space-between;gap:18px;box-shadow:0 18px 45px rgba(79,131,241,.22)}.si-eyebrow{margin:0 0 6px;text-transform:uppercase;letter-spacing:.13em;font-size:11px;font-weight:600;opacity:.78}.si-hero h1{margin:0;font-size:30px;font-weight:600}.si-hero p{margin:8px 0 0;max-width:780px;opacity:.9}.si-actions,.si-row-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.si-btn{border:0;border-radius:14px;padding:10px 15px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;white-space:nowrap}.si-btn-primary{background:#ef4770;color:#fff;box-shadow:0 10px 24px rgba(239,71,112,.24)}.si-btn-light{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.3)}.si-btn-soft{background:#eef3ff;color:#4f83f1}.si-alert{border-radius:16px;padding:13px 15px;font-weight:600}.si-alert.success{background:#e8fff7;color:#047857;border:1px solid #a7f3d0}.si-alert.error{background:#fff0f4;color:#be123c;border:1px solid #fecdd3}.si-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}.si-stat,.si-card{background:#fff;border:1px solid #dfe7f3;border-radius:22px;box-shadow:0 14px 35px rgba(25,42,70,.08)}.si-stat{padding:16px}.si-stat span{display:block;color:#687386;font-size:12px;font-weight:600;text-transform:uppercase}.si-stat strong{display:block;margin-top:7px;font-size:24px}.si-stat.blue strong{color:#4f83f1}.si-stat.purple strong{color:#7c3aed}.si-stat.green strong{color:#0e9f6e}.si-stat.orange strong{color:#d97706}.si-filter-card{padding:16px}.si-filter-form{display:grid;grid-template-columns:minmax(220px,1.3fr) repeat(4,minmax(140px,.8fr)) auto;gap:12px;align-items:end}.si-field{display:flex;flex-direction:column;gap:7px}.si-field label{font-size:12px;color:#536079;font-weight:600}.si-field input,.si-field select{height:44px;border:1px solid #d8e2ef;border-radius:13px;padding:10px 12px;background:#fff;outline:none}.si-filter-actions{display:flex;gap:8px}.si-table-wrap{overflow:auto}.si-table{width:100%;min-width:1180px;border-collapse:collapse}.si-table th,.si-table td{padding:15px 17px;border-bottom:1px solid #dfe7f3;text-align:left;vertical-align:top}.si-table th{font-size:12px;color:#7d8aa0;text-transform:uppercase;letter-spacing:.07em;background:#fbfdff}.si-table span{display:block;color:#687386;font-size:12px;margin-top:3px;font-weight:700}.si-id{color:#4f83f1}.si-badge{display:inline-flex!important;border-radius:999px;padding:6px 10px;font-size:11px!important;font-weight:600!important;text-transform:uppercase;margin:0!important}.si-badge.public,.status-paid,.status-accepted{background:#e8fff7;color:#0e9f6e!important}.si-badge.private,.status-draft{background:#f3f6fb;color:#536079!important}.status-sent,.status-partial{background:#eaf1ff;color:#3f7cf4!important}.status-overdue,.status-cancelled{background:#ffeaf0;color:#e11d48!important}.si-icon{width:36px;height:36px;border:0;border-radius:10px;background:#eef5ff;color:#4f83f1;text-decoration:none;display:grid;place-items:center;cursor:pointer}.si-icon.danger{background:#fff0f4;color:#ef4770}.si-empty{padding:50px;text-align:center;color:#687386;font-weight:600}.si-pagination{padding:16px}@media(max-width:1400px){.si-filter-form{grid-template-columns:1fr 1fr}.si-field.search{grid-column:1/-1}.si-filter-actions{grid-column:1/-1}.si-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:767px){.si-page{padding:14px}.si-hero{flex-direction:column}.si-actions,.si-actions .si-btn{width:100%}.si-filter-form,.si-stats{grid-template-columns:1fr}.si-filter-actions .si-btn{flex:1}.si-card{border-radius:18px}}
+
+/* ==========================================================================
+   INVOICE DETAIL — resources/views/sales_invoices/show.blade.php
+   Detail page: stats, items table, info panel, totals, files.
+   ========================================================================== */
+
+.master-page {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            background: #eef3ff;
+            min-height: calc(100vh - 70px);
+            padding: 28px;
+            color: #17233b
+        }
+
+        .master-page * {
+            box-sizing: border-box
+        }
+
+        .master-hero {
+            background: linear-gradient(135deg, #4f83f1, #7b61ff);
+            border-radius: 26px;
+            padding: 24px;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            gap: 18px
+        }
+
+        .master-eyebrow {
+            margin: 0 0 6px;
+            text-transform: uppercase;
+            letter-spacing: .13em;
+            font-size: 11px;
+            font-weight: 600;
+            opacity: .78
+        }
+
+        .master-hero h1 {
+            margin: 0;
+            font-size: 30px
+        }
+
+        .master-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center
+        }
+
+        .master-btn {
+            border: 0;
+            border-radius: 14px;
+            padding: 10px 15px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .master-btn-primary {
+            background: #ef4770;
+            color: #fff
+        }
+
+        .master-btn-light {
+            background: rgba(255, 255, 255, .16);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, .3)
+        }
+
+        .master-btn-soft {
+            background: #eef3ff;
+            color: #4f83f1
+        }
+
+        .master-alert {
+            border-radius: 16px;
+            padding: 13px 15px;
+            font-weight: 600
+        }
+
+        .master-alert.success {
+            background: #e8fff7;
+            color: #047857
+        }
+
+        .master-stats {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 14px
+        }
+
+        .master-stats div,
+        .master-card {
+            background: #fff;
+            border: 1px solid #dfe7f3;
+            border-radius: 22px;
+            padding: 18px;
+            box-shadow: 0 14px 35px rgba(25, 42, 70, .08)
+        }
+
+        .master-stats span {
+            display: block;
+            color: #687386;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase
+        }
+
+        .master-stats strong {
+            display: block;
+            margin-top: 6px;
+            font-size: 20px
+        }
+
+        .master-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(320px, .6fr);
+            gap: 18px
+        }
+
+        .master-head h2 {
+            margin: 0 0 14px
+        }
+
+        .master-table-wrap {
+            overflow: auto
+        }
+
+        .master-table {
+            width: 100%;
+            min-width: 780px;
+            border-collapse: collapse
+        }
+
+        .master-table th,
+        .master-table td {
+            padding: 12px;
+            border-bottom: 1px solid #dfe7f3;
+            text-align: left;
+            vertical-align: top
+        }
+
+        .master-table th {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #7d8aa0
+        }
+
+        .master-table span,
+        .master-info span {
+            display: block;
+            color: #687386;
+            font-size: 12px;
+            margin-top: 3px
+        }
+
+        .master-info {
+            background: #f8fbff;
+            border: 1px solid #edf2ff;
+            border-radius: 14px;
+            padding: 12px;
+            margin-bottom: 10px
+        }
+
+        .master-info strong {
+            display: block;
+            margin-top: 5px
+        }
+
+        .master-total-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #edf0f7;
+            padding: 10px 0
+        }
+
+        .master-total-row.big {
+            font-size: 20px
+        }
+
+        .master-file {
+            display: flex;
+            gap: 10px;
+            border: 1px solid #edf0f7;
+            border-radius: 14px;
+            padding: 10px;
+            margin-bottom: 10px
+        }
+
+        .master-file a {
+            display: block;
+            color: #4f83f1;
+            font-weight: 600;
+            text-decoration: none;
+            margin-top: 5px
+        }
+
+        .master-empty {
+            text-align: center;
+            padding: 25px;
+            color: #687386;
+            border: 1px dashed #d8deea;
+            border-radius: 16px
+        }
+
+        @media(max-width:991px) {
+
+            .master-grid,
+            .master-stats {
+                grid-template-columns: 1fr 1fr
+            }
+        }
+
+        @media(max-width:767px) {
+            .master-page {
+                padding: 14px
+            }
+
+            .master-hero {
+                flex-direction: column
+            }
+
+            .master-actions,
+            .master-actions .master-btn {
+                width: 100%
+            }
+
+            .master-grid,
+            .master-stats {
+                grid-template-columns: 1fr
+            }
+        }

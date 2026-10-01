@@ -69,22 +69,7 @@
         </div>
     </div>
     
-    <script>
-    function copyKycLink() {
-        const link = document.getElementById('kycLink').value;
-        const message = document.getElementById('copySuccess');
-    
-        navigator.clipboard.writeText(link).then(() => {
-    
-            message.style.display = 'inline';
-    
-            setTimeout(() => {
-                message.style.display = 'none';
-            }, 2000);
-    
-        }).catch(() => {
-            prompt('Copy link', link);
-        });
-    }
-    </script>
+@push('scripts')
+    <script src="{{ asset('assets/js/client-portal-kyc.js') }}"></script>
+@endpush
 @endsection

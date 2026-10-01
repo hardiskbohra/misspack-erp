@@ -107,6 +107,53 @@
 
         applyResponsiveState();
         
+        /* ==================================================================
+           master-* modal system (shared by every module)
+           ----------------------------------------------------------------
+           Generic lifecycle for .master-modal dialogs (master-index.css):
+             - [data-close-modal] buttons  (value = modal id, else nearest)
+             - backdrop click
+             - Escape key
+           Module JS only needs to OPEN its modals (per-page ids/behaviour).
+           ================================================================== */
+        function openMasterModal(modal) {
+            if (!modal || modal.classList.contains('open')) return;
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('master-modal-open');
+        }
+
+        function closeMasterModal(modal) {
+            if (!modal) return;
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+            if (!document.querySelector('.master-modal.open')) {
+                document.body.classList.remove('master-modal-open');
+            }
+        }
+
+        window.MasterModal = { open: openMasterModal, close: closeMasterModal };
+
+        document.querySelectorAll('[data-close-modal]').forEach(btn => {
+            btn.addEventListener('click', function () {
+                var target = btn.dataset.closeModal
+                    ? document.getElementById(btn.dataset.closeModal)
+                    : btn.closest('.master-modal');
+                closeMasterModal(target);
+            });
+        });
+
+        document.querySelectorAll('.master-modal').forEach(modal => {
+            modal.addEventListener('click', function (e) {
+                if (e.target === modal) closeMasterModal(modal);
+            });
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') return;
+            document.querySelectorAll('.master-modal.open').forEach(closeMasterModal);
+        });
+
         document.querySelectorAll('.master-dropdown-toggle').forEach(btn => {
 
             btn.addEventListener('click', function(e){

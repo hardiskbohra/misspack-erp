@@ -5,40 +5,9 @@
 
 @section('content')
 
-<style>
-    .projects-progress-wrap{
-        width:360px;
-        flex-shrink:0;
-        align-self:center;
-    }
-    
-    .projects-progress-text{
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        margin-bottom:10px;
-    }
-    
-    .projects-progress{
-        height:12px;
-        background:#e5e7eb;
-        border-radius:999px;
-        overflow:hidden;
-    }
-    
-    .projects-progress span{
-        display:block;
-        height:100%;
-        border-radius:999px;
-        background:linear-gradient(90deg,#4f7cff,#18b66b);
-    }
-
-    .projects-number {
-        font-size: 12px;
-        color: #4f83f1;
-        font-weight: 600
-    }
-</style>
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/client-portal-dashboard.css') }}">
+@endpush
 
 <div class="cp-page-head" style="margin-bottom:25px;">
     <div>

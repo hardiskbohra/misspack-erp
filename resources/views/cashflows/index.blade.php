@@ -269,39 +269,10 @@
             </div>
         </div>
 
-        <div class="master-modal" id="deleteCashflowModal" aria-hidden="true">
-            <div class="master-modal-card" style="max-width:440px;">
-                <div class="master-modal-header">
-                    <div class="master-modal-heading"><span class="master-modal-icon"
-                            style="background:#fff0f4;color:var(--master-red);">🗑</span>
-                        <div>
-                            <h3 class="master-modal-title">Delete Entry</h3>
-                            <p class="master-modal-subtitle">This action cannot be undone</p>
-                        </div>
-                    </div><button type="button" class="master-modal-close" data-close-modal="deleteCashflowModal">×</button>
-                </div>
-                <div class="master-modal-body">
-                    <p id="deleteCashflowDesc" style="margin:0;font-weight:700;color:#536079;">Are you sure?</p>
-                </div>
-                <form method="POST" id="deleteCashflowForm">@csrf @method('DELETE')
-                    <div class="master-modal-footer"><button type="button" class="master-btn master-btn-light"
-                            data-close-modal="deleteCashflowModal">Cancel</button><button type="submit"
-                            class="master-btn master-btn-danger">Delete Entry</button></div>
-                </form>
-            </div>
-        </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            function openModal(id) { const modal = document.getElementById(id); modal?.classList.add('open'); modal?.setAttribute('aria-hidden', 'false'); document.body.classList.add('master-modal-open'); }
-            function closeModal(id) { const modal = document.getElementById(id); modal?.classList.remove('open'); modal?.setAttribute('aria-hidden', 'true'); document.body.classList.remove('master-modal-open'); }
-            document.getElementById('openQuickCashflowModal')?.addEventListener('click', () => openModal('quickCashflowModal'));
-            document.getElementById('openAccountModal')?.addEventListener('click', () => openModal('accountModal'));
-            document.querySelectorAll('[data-close-modal]').forEach(btn => btn.addEventListener('click', () => closeModal(btn.dataset.closeModal)));
-            document.querySelectorAll('.master-modal').forEach(modal => modal.addEventListener('click', e => { if (e.target === modal) closeModal(modal.id); }));
-            document.querySelectorAll('.master-delete-btn').forEach(btn => btn.addEventListener('click', function () { document.getElementById('deleteCashflowDesc').textContent = 'Are you sure you want to delete "' + this.dataset.name + '"?'; document.getElementById('deleteCashflowForm').action = this.dataset.deleteUrl; openModal('deleteCashflowModal'); }));
-            document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.master-modal.open').forEach(m => closeModal(m.id)); });
-        });
-    </script>
+
+@push('scripts')
+    <script src="{{ asset('assets/js/cashflows.js') }}"></script>
+@endpush
 @endsection

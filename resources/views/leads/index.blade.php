@@ -3,135 +3,10 @@
 @section('page-title', 'Lead Management')
 
 @section('content')
-    <style>
-        :root {
-            --master-primary: #4f83f1;
-            --master-primary-2: #6366f1;
-            --master-info: #159ff7;
-            --master-teal: #12cbb7;
-            --master-purple: #8b5cf6;
-            --master-orange: #f59e0b;
-            --master-red: #ef4770;
-            --master-green: #10b981;
-            --master-dark: #17233b;
-            --master-muted: #687386;
-            --master-border: #dfe7f3;
-            --master-bg: #eef3ff;
-            --master-soft: #edf5ff;
-            --master-white: #fff;
-            --master-shadow: 0 14px 35px rgba(25, 42, 70, .08);
-        }
 
-        .priority-low {
-            background: #e8fff7;
-            color: #0e9f6e
-        }
-
-        .priority-medium {
-            background: #eaf1ff;
-            color: #3f7cf4
-        }
-
-        .priority-high {
-            background: #fff4e5;
-            color: #d97706
-        }
-
-        .priority-urgent {
-            background: #ffeaf0;
-            color: #e11d48
-        }
-
-        .status-new {
-            background: #eaf1ff;
-            color: #3f7cf4
-        }
-
-        .status-requirement-received {
-            background: #f3f6fb;
-            color: #536079
-        }
-
-        .status-sourcing {
-            background: #ece7ff;
-            color: #7c3aed
-        }
-
-        .status-quoted {
-            background: #fff4e5;
-            color: #d97706
-        }
-
-        .status-negotiation {
-            background: #fef3c7;
-            color: #92400e
-        }
-
-        .status-won {
-            background: #e8fff7;
-            color: #0e9f6e
-        }
-
-        .status-lost {
-            background: #ffeaf0;
-            color: #e11d48
-        }
-
-        .status-on-hold {
-            background: #f3f4f6;
-            color: #4b5563
-        }
-
-        .master-status-form {
-            margin-top: 8px;
-        }
-
-        .master-status-select {
-            height: 34px;
-            min-width: 100px;
-            border: 1px solid var(--master-border);
-            border-radius: 10px;
-            color: var(--master-dark);
-            font-size: 12px;
-            font-weight: 600;
-            padding: 6px 12px;
-            outline: none;
-            cursor: pointer;
-        }
-
-        .master-status-select:focus {
-            border-color: var(--lm-primary);
-            box-shadow: 0 0 0 3px rgba(79, 131, 241, .12);
-        }
-
-        .users-person {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .users-avatar {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 14px;
-            color: #fff;
-            flex: 0 0 42px;
-            overflow: hidden;
-        }
-
-        .users-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 50%;
-        }
-    </style>
-
+@push('styles')
+        <link rel="stylesheet" href="{{ asset('assets/css/leads.css') }}">
+@endpush
     <div class="master">
 
         <div class="master-stats">
@@ -425,28 +300,8 @@
             </div>
         </div>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            function openModal(id) {
-                document.getElementById(id)?.classList.add('open');
-                document.body.classList.add('master-modal-open')
-            }
 
-            function closeModal(id) {
-                document.getElementById(id)?.classList.remove('open');
-                document.body.classList.remove('master-modal-open')
-            }
-            document.getElementById('openQuickLeadModal')?.addEventListener('click', () => openModal(
-                'quickLeadModal'));
-            document.querySelectorAll('[data-close-modal]').forEach(btn => btn.addEventListener('click', () =>
-                closeModal(btn.dataset.closeModal)));
-            document.querySelectorAll('.master-modal').forEach(m => m.addEventListener('click', e => {
-                if (e.target === m) closeModal(m.id)
-            }));
-            document.addEventListener('keydown', e => {
-                if (e.key === 'Escape') document.querySelectorAll('.master-modal.open').forEach(m =>
-                    closeModal(m.id))
-            });
-        });
-    </script>
+@push('scripts')
+    <script src="{{ asset('assets/js/leads.js') }}"></script>
+@endpush
 @endsection
