@@ -457,6 +457,8 @@ class VendorController extends Controller
         $cashflowAccounts = $this->cashflowAccounts();
         $projectsForPayment = $this->projectsForVendorPayment($vendor);
         $attachmentOptions = class_exists(VendorAttachment::class) ? VendorAttachment::categoryOptions() : [];
+        $commentsAvailable = Schema::hasTable('vendor_comments');
+        $attachmentsAvailable = Schema::hasTable('vendor_attachments');
 
         $projectValue = (float) $projectProducts->sum('total_amount');
         $quoteValue = (float) $vendorQuotes->sum(function ($quote) {
@@ -543,7 +545,9 @@ class VendorController extends Controller
             'paymentOptions',
             'attachmentOptions',
             'summary',
-            'routes'
+            'routes',
+            'commentsAvailable',
+            'attachmentsAvailable'
         );
     }
 
@@ -613,7 +617,10 @@ class VendorController extends Controller
             return collect();
         }
 
-        $relations = ['attachments', 'creator'];
+        $relations = ['creator'];
+        if (Schema::hasTable('vendor_payment_attachments')) {
+            $relations[] = 'attachments';
+        }
         if (class_exists(\App\Models\Project::class) && Schema::hasTable('projects')) {
             $relations[] = 'project';
         }
