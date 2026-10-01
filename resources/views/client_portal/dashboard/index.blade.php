@@ -15,7 +15,7 @@
         <h1>{{ $client->company_name }}</h1>
         
     </div>
-    <!--<a href="{{ route('client-portal.attachments.index') }}" class="cp-btn cp-btn-primary">Upload Document</a>-->
+    <!--<a href="{{ route('client-portal.attachments.index') }}" class="master-btn master-btn-primary">Upload Document</a>-->
 </div>
 
 <div class="master-stats">
@@ -58,7 +58,7 @@
                 <p class="cp-eyebrow">Latest</p>
                 <h1 style="font-size:20px;">Projects</h1>
             </div>
-            <a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ route('client-portal.projects.index') }}">View All</a>
+            <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('client-portal.projects.index') }}">View All</a>
         </div>
         @forelse($projects as $project)
             <div class="cp-file" style="margin-bottom:10px;">
@@ -91,7 +91,7 @@
                 <p class="cp-eyebrow">Latest</p>
                 <h1 style="font-size:20px;">Shipments</h1>
             </div>
-            <a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ route('client-portal.shipments.index') }}">View All</a>
+            <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('client-portal.shipments.index') }}">View All</a>
         </div>
         @forelse($shipments as $shipment)
         
@@ -119,7 +119,7 @@
                 <p class="cp-eyebrow">Latest</p>
                 <h1 style="font-size:20px;">Notifications</h1>
             </div>
-            <a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ route('client-portal.notifications.index') }}">View All</a>
+            <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('client-portal.notifications.index') }}">View All</a>
         </div>
         @forelse($notifications as $notification)
             <div class="cp-comment" style="background:{{ $notification->is_read ? '#fff' : '#f8fbff' }};">
@@ -129,7 +129,7 @@
                 </div>
                 <p>{{ $notification->message }}</p>
                 @if($notification->action_url)
-                    <a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ $notification->action_url }}" style="margin-top:8px;">Open</a>
+                    <a class="master-btn master-btn-soft master-btn-sm" href="{{ $notification->action_url }}" style="margin-top:8px;">Open</a>
                 @endif
             </div>
         @empty
@@ -143,7 +143,7 @@
     <!--            <p class="cp-eyebrow">Latest</p>-->
     <!--            <h1 style="font-size:20px;">Invoices</h1>-->
     <!--        </div>-->
-    <!--        <a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ route('client-portal.invoices.index') }}">View All</a>-->
+    <!--        <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('client-portal.invoices.index') }}">View All</a>-->
     <!--    </div>-->
     <!--    @forelse($invoices as $invoice)-->
     <!--        <div class="cp-file" style="margin-bottom:10px;">-->
@@ -151,7 +151,7 @@
     <!--            <div>-->
     <!--                <strong>{{ $invoice->invoice_number }}</strong>-->
     <!--                <div class="cp-muted">{{ $invoice->currency }} {{ number_format((float) $invoice->total_amount, 2) }} · {{ $invoice->statusLabel() }}</div>-->
-    <!--                <a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ route('client-portal.invoices.show', $invoice) }}" style="margin-top:8px;">Open</a>-->
+    <!--                <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('client-portal.invoices.show', $invoice) }}" style="margin-top:8px;">Open</a>-->
     <!--            </div>-->
     <!--        </div>-->
     <!--    @empty-->

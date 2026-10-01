@@ -120,7 +120,7 @@
                                                 Edit Shipment
                                             </a>
                                             
-                                            <button type="button" onclick="copyShipmentLink('{{ route('shipments.publicTrack', $shipment->public_token) }}')">Public Link</button>
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm" onclick="copyShipmentLink('{{ route('shipments.publicTrack', $shipment->public_token) }}')">Public Link</button>
                                 
                                             <form method="POST"
                                                   action="{{ route('shipments.destroy', $shipment) }}"
@@ -129,7 +129,7 @@
                                                 @csrf
                                                 @method('DELETE')
                                 
-                                                <button type="submit" class="danger">
+                                                <button type="submit" class="master-btn master-btn-danger master-btn-sm">
                                                     <i class="fas fa-trash"></i>
                                                     Delete Shipment
                                                 </button>

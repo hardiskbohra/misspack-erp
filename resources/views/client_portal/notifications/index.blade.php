@@ -11,7 +11,7 @@
         </div>
         <div class="master-actions">
             <form method="POST" action="{{ route('client-portal.notifications.readAll') }}">@csrf @method('PATCH')<button
-                class="cp-btn cp-btn-primary">Mark All Read</button></form>
+                class="master-btn master-btn-primary">Mark All Read</button></form>
         </div>
     </div>
     <div class="cp-card" style="padding:20px;">
@@ -23,11 +23,11 @@
                 <p>{{ $notification->message }}</p>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
                     @if ($notification->action_url)
-                        <a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ $notification->action_url }}">Open</a>
+                        <a class="master-btn master-btn-soft master-btn-sm" href="{{ $notification->action_url }}">Open</a>
                     @endif
                     @if (!$notification->is_read)
                         <form method="POST" action="{{ route('client-portal.notifications.read', $notification) }}">
-                            @csrf @method('PATCH')<button class="cp-btn cp-btn-light cp-btn-sm">Mark Read</button>
+                            @csrf @method('PATCH')<button class="master-btn master-btn-light master-btn-sm">Mark Read</button>
                         </form>
                     @endif
                     <span class="cp-badge status-{{ $notification->is_read ? 'active' : 'pending' }}">

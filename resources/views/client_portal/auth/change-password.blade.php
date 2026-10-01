@@ -15,11 +15,11 @@
     <form method="POST" action="{{ route('client-portal.password.update') }}" class="cp-form-grid">
         @csrf
         @if(! $portalUser->must_change_password)
-            <div class="cp-field" style="grid-column:1/-1;"><label>Current Password</label><input type="password" name="current_password" required></div>
+            <div class="master-field" style="grid-column:1/-1;"><label class="master-label">Current Password</label><input class="master-input" type="password" name="current_password" required></div>
         @endif
-        <div class="cp-field"><label>New Password</label><input type="password" name="password" required></div>
-        <div class="cp-field"><label>Confirm Password</label><input type="password" name="password_confirmation" required></div>
-        <div style="grid-column:1/-1;display:flex;justify-content:flex-end;gap:10px;"><button class="cp-btn cp-btn-primary" type="submit">Update Password</button></div>
+        <div class="master-field"><label class="master-label">New Password</label><input class="master-input" type="password" name="password" required></div>
+        <div class="master-field"><label class="master-label">Confirm Password</label><input class="master-input" type="password" name="password_confirmation" required></div>
+        <div style="grid-column:1/-1;display:flex;justify-content:flex-end;gap:10px;"><button class="master-btn master-btn-primary" type="submit">Update Password</button></div>
     </form>
 </div>
 @endsection

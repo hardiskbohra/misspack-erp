@@ -140,7 +140,7 @@
                     @endif
                     <div class="master-actions">
                         @if($portalRouteExists)
-                            <a href="{{ route('clients.portal.show', $client) }}" class="master-btn master-btn-pink">Manage Portal</a>
+                            <a href="{{ route('clients.portal.show', $client) }}" class="master-btn master-btn-primary">Manage Portal</a>
                         @endif
                         @if($portalLoginRouteExists)
                             <a href="{{ route('client-portal.login') }}" target="_blank" class="master-btn master-btn-soft">Open Login</a>

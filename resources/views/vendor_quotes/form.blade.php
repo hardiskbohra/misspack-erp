@@ -169,7 +169,7 @@
                                             value="{{ $price['selling_price_inr'] ?? '' }}"></td>
                                     <td><input class="master-input" name="prices[{{ $i }}][remarks]"
                                             value="{{ $price['remarks'] ?? '' }}"></td>
-                                    <td><button type="button" class="master-remove"
+                                    <td><button type="button" class="master-remove-row"
                                             onclick="removeQuotePriceRow(this)">×</button></td>
                                 </tr>
                             @endforeach
@@ -187,7 +187,6 @@
 
                         <label class="master-chip green-chip">
                             <input
-                                type="radio"
                                 name="sample_available"
                                 value="1"
                                 {{ old('sample_available', $quote->sample_available) == 1 ? 'checked' : '' }}
@@ -201,7 +200,6 @@
                     
                         <label class="master-chip red-chip">
                             <input
-                                type="radio"
                                 name="sample_available"
                                 value="0"
                                 {{ old('sample_available', $quote->sample_available) == 0 ? 'checked' : '' }}
@@ -221,7 +219,6 @@
 
                         <label class="master-chip green-chip">
                             <input
-                                type="radio"
                                 name="ready_stock_available"
                                 value="1"
                                 {{ old('ready_stock_available', $quote->ready_stock_available) == 1 ? 'checked' : '' }}
@@ -235,7 +232,6 @@
                     
                         <label class="master-chip red-chip">
                             <input
-                                type="radio"
                                 name="ready_stock_available"
                                 value="0"
                                 {{ old('ready_stock_available', $quote->ready_stock_available) == 0 ? 'checked' : '' }}
@@ -280,7 +276,7 @@
             <td><input class="master-input" type="number" step="0.01" name="prices[__INDEX__][landing_cost_inr]"></td>
             <td><input class="master-input" type="number" step="0.01" name="prices[__INDEX__][selling_price_inr]"></td>
             <td><input class="master-input" name="prices[__INDEX__][remarks]"></td>
-            <td><button type="button" class="master-remove" onclick="removeQuotePriceRow(this)">×</button></td>
+            <td><button type="button" class="master-remove-row" onclick="removeQuotePriceRow(this)">×</button></td>
         </tr>
     </template>
 @push('scripts')

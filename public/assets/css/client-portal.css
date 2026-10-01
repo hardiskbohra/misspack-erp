@@ -10,16 +10,11 @@
 
 :root {
     --cp-primary:#4f83f1;
-    --cp-primary2:#6366f1;
-    --cp-red:#ef4770;
-    --cp-green:#10b981;
-    --cp-orange:#f59e0b;
-    --cp-dark:#17233b;
+                    --cp-dark:#17233b;
     --cp-muted:#687386;
     --cp-border:#dfe7f3;
     --cp-bg:#eef3ff;
-    --cp-soft:#edf5ff;
-    --cp-sidebar:#162238;
+        --cp-sidebar:#162238;
     --cp-shadow:0 14px 35px rgba(25,42,70,.08);
 }
 
@@ -213,53 +208,6 @@ body {
     box-shadow:var(--cp-shadow);
 }
 
-.cp-btn {
-    border:0;
-    border-radius:14px;
-    padding:10px 15px;
-    font-weight:600;
-    text-decoration:none;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    cursor:pointer;
-    transition:.2s;
-    white-space:nowrap;
-}
-
-.cp-btn:hover {
-    transform:translateY(-1px);
-    text-decoration:none;
-}
-
-.cp-btn-primary {
-    background:var(--cp-red);
-    color:#fff;
-    box-shadow:0 10px 24px rgba(239,71,112,.24);
-}
-
-.cp-btn-soft {
-    background:#eef3ff;
-    color:var(--cp-primary);
-}
-
-.cp-btn-light {
-    background:#f3f6fb;
-    color:var(--cp-dark);
-}
-
-.cp-btn-green {
-    background:#e8fff7;
-    color:#0e9f6e;
-}
-
-.cp-btn-sm {
-    padding:8px 11px;
-    border-radius:12px;
-    font-size:12px;
-}
-
 .cp-alert {
     border-radius:16px;
     padding:13px 15px;
@@ -435,41 +383,6 @@ body {
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
     gap:12px;
-}
-
-.cp-field {
-    display:flex;
-    flex-direction:column;
-    gap:7px;
-}
-
-.cp-field label {
-    font-size:12px;
-    color:#536079;
-    font-weight:600;
-}
-
-.cp-field input,
-.cp-field select,
-.cp-field textarea {
-    width:100%;
-    border:1px solid #d8e2ef;
-    border-radius:13px;
-    padding:11px;
-    background:#fff;
-    outline:none;
-}
-
-.cp-field textarea {
-    min-height:90px;
-    resize:vertical;
-}
-
-.cp-field input:focus,
-.cp-field select:focus,
-.cp-field textarea:focus {
-    border-color:var(--cp-primary);
-    box-shadow:0 0 0 3px rgba(79,131,241,.12);
 }
 
 .cp-empty {

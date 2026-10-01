@@ -146,7 +146,7 @@
                                                     @csrf
                                                     @method('DELETE')
                                     
-                                                    <button type="submit" class="danger">
+                                                    <button type="submit" class="master-btn master-btn-danger master-btn-sm">
                                                         <i class="fas fa-trash"></i>
                                                         Delete Quote
                                                     </button>

@@ -11,7 +11,7 @@
                     payments in one place.</p>
             </div>
             <div class="projects-hero-actions">
-                <button type="button" class="projects-btn projects-btn-light" data-open-modal="quickProjectModal">
+                <button type="button" class="master-btn master-btn-light" data-open-modal="quickProjectModal">
                     <i class="fa-solid fa-bolt"></i> Quick Project
                 </button>
                 <a href="{{ route('projects.create') }}" class="master-btn master-btn-primary">
@@ -45,14 +45,14 @@
 
         <div class="projects-card projects-filter-card">
             <form method="GET" action="{{ route('projects.index') }}" class="projects-filter-form">
-                <div class="projects-field projects-search-field">
-                    <label>Search</label>
-                    <input type="text" name="search" value="{{ $search }}"
+                <div class="master-field projects-search-field">
+                    <label class="master-label">Search</label>
+                    <input class="master-input" type="text" name="search" value="{{ $search }}"
                         placeholder="Search project no, name, status, scope...">
                 </div>
-                <div class="projects-field">
-                    <label>Status</label>
-                    <select name="status">
+                <div class="master-field">
+                    <label class="master-label">Status</label>
+                    <select class="master-select" name="status">
                         <option value="all" {{ $status === 'all' ? 'selected' : '' }}>All Status</option>
                         @foreach ($statusOptions as $key => $label)
                             <option value="{{ $key }}" {{ $status === $key ? 'selected' : '' }}>
@@ -60,9 +60,9 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="projects-field">
-                    <label>Client</label>
-                    <select name="client_id">
+                <div class="master-field">
+                    <label class="master-label">Client</label>
+                    <select class="master-select" name="client_id">
                         <option value="all" {{ $clientId === 'all' ? 'selected' : '' }}>All Clients</option>
                         @foreach ($clients as $client)
                             <option value="{{ $client->id }}"
@@ -71,9 +71,9 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="projects-field">
-                    <label>Health</label>
-                    <select name="health">
+                <div class="master-field">
+                    <label class="master-label">Health</label>
+                    <select class="master-select" name="health">
                         <option value="all" {{ $health === 'all' ? 'selected' : '' }}>All Health</option>
                         @foreach ($healthOptions as $key => $label)
                             <option value="{{ $key }}" {{ $health === $key ? 'selected' : '' }}>
@@ -82,7 +82,7 @@
                     </select>
                 </div>
                 <div class="projects-filter-actions">
-                    <button class="projects-btn projects-btn-primary" type="submit"><i class="fa-solid fa-filter"></i>
+                    <button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-filter"></i>
                         Filter</button>
                     <a class="master-btn master-btn-soft" href="{{ route('projects.index') }}">Reset</a>
                 </div>
@@ -180,9 +180,9 @@
                         </div>
                         <div class="projects-footer-actions">
                             <a href="{{ route('projects.show', $project) }}"
-                                class="projects-btn projects-btn-primary projects-btn-sm">Open</a>
+                                class="master-btn master-btn-primary master-btn-sm">Open</a>
                             <a href="{{ route('projects.edit', $project) }}"
-                                class="projects-btn projects-btn-soft projects-btn-sm"><i class="fa-solid fa-pen"></i></a>
+                                class="master-btn master-btn-soft master-btn-sm"><i class="fa-solid fa-pen"></i></a>
                                     
                             <form method="POST"
                                   action="{{ route('projects.destroy', $project) }}"
@@ -191,7 +191,7 @@
                                 @csrf
                                 @method('DELETE')
                             
-                                <button type="submit" class="projects-btn projects-btn-soft projects-btn-sm">
+                                <button type="submit" class="master-btn master-btn-soft master-btn-sm">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             
@@ -204,7 +204,7 @@
                     <div class="projects-empty-icon"><i class="fa-solid fa-briefcase"></i></div>
                     <h3>No projects found</h3>
                     <p>Create your first project/deal once a client finalises the quote.</p><br>
-                    <button type="button" class="projects-btn projects-btn-primary"
+                    <button type="button" class="master-btn master-btn-primary"
                         data-open-modal="quickProjectModal">Quick Project</button>
                 </div>
             @endforelse
@@ -221,22 +221,22 @@
                     <p class="projects-eyebrow">Fast entry</p>
                     <h3>Create Quick Project</h3>
                 </div>
-                <button type="button" class="projects-icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button>
+                <button type="button" class="master-icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button>
             </div>
             <form method="POST" action="{{ route('projects.quickStore') }}" class="projects-modal-body">
                 @csrf
-                <div class="projects-field">
-                    <label>Client <span>*</span></label>
-                    <select name="client_id" required>
+                <div class="master-field">
+                    <label class="master-label">Client <span>*</span></label>
+                    <select class="master-select" name="client_id" required>
                         <option value="">Select client</option>
                         @foreach ($clients as $client)
                             <option value="{{ $client->id }}">{{ $client->company_name }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="projects-field">
-                    <label>Accepted Quote (optional)</label>
-                    <select name="customer_quote_id">
+                <div class="master-field">
+                    <label class="master-label">Accepted Quote (optional)</label>
+                    <select class="master-select" name="customer_quote_id">
                         <option value="">No quote mapping</option>
                         @foreach ($quotes as $quote)
                             <option value="{{ $quote->id }}">{{ $quote->quote_number }} - {{ $quote->title }}
@@ -245,33 +245,33 @@
                     </select>
                     <small>If selected, quote products will be imported automatically.</small>
                 </div>
-                <div class="projects-field">
-                    <label>Project Name <span>*</span></label>
-                    <input type="text" name="name" placeholder="e.g. MissPack Bottle Order - July" required>
+                <div class="master-field">
+                    <label class="master-label">Project Name <span>*</span></label>
+                    <input class="master-input" type="text" name="name" placeholder="e.g. MissPack Bottle Order - July" required>
                 </div>
                 <div class="projects-two-col">
-                    <div class="projects-field">
-                        <label>Start Date</label>
-                        <input type="date" name="start_date" value="{{ now()->toDateString() }}">
+                    <div class="master-field">
+                        <label class="master-label">Start Date</label>
+                        <input class="master-input" type="date" name="start_date" value="{{ now()->toDateString() }}">
                     </div>
-                    <div class="projects-field">
-                        <label>Target Date</label>
-                        <input type="date" name="target_date" value="{{ now()->addDays(30)->toDateString() }}">
+                    <div class="master-field">
+                        <label class="master-label">Target Date</label>
+                        <input class="master-input" type="date" name="target_date" value="{{ now()->addDays(30)->toDateString() }}">
                     </div>
                 </div>
                 <div class="projects-two-col">
-                    <div class="projects-field">
-                        <label>Assignee</label>
-                        <select name="assigned_to">
+                    <div class="master-field">
+                        <label class="master-label">Assignee</label>
+                        <select class="master-select" name="assigned_to">
                             <option value="">Unassigned</option>
                             @foreach ($users as $user)
                                 <option value="{{ $user->id }}">{{ $user->name }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="projects-field">
-                        <label>Priority</label>
-                        <select name="priority">
+                    <div class="master-field">
+                        <label class="master-label">Priority</label>
+                        <select class="master-select" name="priority">
                             @foreach ($priorityOptions as $key => $label)
                                 <option value="{{ $key }}" {{ $key === 'normal' ? 'selected' : '' }}>
                                     {{ $label }}</option>
@@ -280,8 +280,8 @@
                     </div>
                 </div>
                 <div class="projects-modal-actions">
-                    <button type="button" class="projects-btn projects-btn-soft" data-close-modal>Cancel</button>
-                    <button type="submit" class="projects-btn projects-btn-primary">Create Project</button>
+                    <button type="button" class="master-btn master-btn-soft" data-close-modal>Cancel</button>
+                    <button type="submit" class="master-btn master-btn-primary">Create Project</button>
                 </div>
             </form>
         </div>

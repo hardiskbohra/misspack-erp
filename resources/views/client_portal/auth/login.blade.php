@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Client Portal Login | MissPack</title>
 @push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/client-portal-login.css') }}">
 @endpush
 </head>
@@ -24,9 +25,9 @@
         @if($errors->any())<div class="alert alert-error">{{ $errors->first() }}</div>@endif
         <form method="POST" action="{{ route('client-portal.login.submit') }}">
             @csrf
-            <div class="field"><label>Username or Email</label><input type="text" name="login" value="{{ old('login') }}" required autofocus></div>
-            <div class="field"><label>Password</label><input type="password" name="password" required></div>
-            <button class="btn" type="submit">Login to Portal</button>
+            <div class="master-field"><label class="master-label">Username or Email</label><input class="master-input" type="text" name="login" value="{{ old('login') }}" required autofocus></div>
+            <div class="master-field"><label class="master-label">Password</label><input class="master-input" type="password" name="password" required></div>
+            <button class="master-btn-primary" type="submit">Login to Portal</button>
         </form>
         <div class="help">Having trouble? Contact your MissPack coordinator.</div>
     </div>

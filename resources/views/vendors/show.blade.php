@@ -35,8 +35,8 @@
                 </div>
             </div>
             <div class="vendor-actions">
-                <a href="{{ route('vendors.index') }}" class="vendor-btn vendor-btn-light">Back</a>
-                <a href="{{ route('vendors.edit', $vendor) }}" class="vendor-btn vendor-btn-primary">Edit Vendor</a>
+                <a href="{{ route('vendors.index') }}" class="master-btn master-btn-light">Back</a>
+                <a href="{{ route('vendors.edit', $vendor) }}" class="master-btn master-btn-primary">Edit Vendor</a>
             </div>
         </div>
 
@@ -981,7 +981,7 @@
                                         placeholder="Add internal vendor comment, payment note, follow-up, issue, reminder..."></textarea>
                                 </div>
                                 <div class="master-field full">
-                                    <label class="master-label"><input class="master-check" type="checkbox" name="is_pinned" value="1"> Pin this
+                                    <label class="master-check"><input class="master-check" type="checkbox" name="is_pinned" value="1"> Pin this
                                     comment</label>
                                 </div>
                             </div>

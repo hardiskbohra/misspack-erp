@@ -11,8 +11,8 @@
             <p>Create invoices with multiple linked products, clients, projects and client portal visibility.</p>
         </div>
         <div class="si-actions">
-            <a href="{{ route('sales-invoices.create', ['type' => 'proforma']) }}" class="si-btn si-btn-primary">New PI</a>
-            <a href="{{ route('sales-invoices.create', ['type' => 'tax']) }}" class="si-btn si-btn-light">New Tax Invoice</a>
+            <a href="{{ route('sales-invoices.create', ['type' => 'proforma']) }}" class="master-btn master-btn-primary">New PI</a>
+            <a href="{{ route('sales-invoices.create', ['type' => 'tax']) }}" class="master-btn master-btn-light">New Tax Invoice</a>
         </div>
     </div>
 
@@ -26,12 +26,12 @@
 
     <div class="si-card si-filter-card">
         <form method="GET" action="{{ route('sales-invoices.index') }}" class="si-filter-form">
-            <div class="si-field search"><label>Search</label><input name="search" value="{{ $search }}" placeholder="Search invoice, client, GSTIN, PO..."></div>
-            <div class="si-field"><label>Type</label><select name="type"><option value="all">All Types</option>@foreach($typeOptions as $key => $label)<option value="{{ $key }}" {{ $type === $key ? 'selected' : '' }}>{{ $label }}</option>@endforeach</select></div>
-            <div class="si-field"><label>Status</label><select name="status"><option value="all">All Status</option>@foreach($statusOptions as $key => $label)<option value="{{ $key }}" {{ $status === $key ? 'selected' : '' }}>{{ $label }}</option>@endforeach</select></div>
-            <div class="si-field"><label>Client</label><select name="client_id"><option value="all">All Clients</option>@foreach($clients as $client)<option value="{{ $client->id }}" {{ (string)$clientId === (string)$client->id ? 'selected' : '' }}>{{ $client->company_name }}</option>@endforeach</select></div>
-            <div class="si-field"><label>Project</label><select name="project_id"><option value="all">All Projects</option>@foreach($projects as $project)<option value="{{ $project->id }}" {{ (string)$projectId === (string)$project->id ? 'selected' : '' }}>{{ $project->project_number }} - {{ $project->name }}</option>@endforeach</select></div>
-            <div class="si-filter-actions"><button class="si-btn si-btn-primary" type="submit">Filter</button><a class="si-btn si-btn-soft" href="{{ route('sales-invoices.index') }}">Reset</a></div>
+            <div class="master-field search"><label class="master-label">Search</label><input class="master-input" name="search" value="{{ $search }}" placeholder="Search invoice, client, GSTIN, PO..."></div>
+            <div class="master-field"><label class="master-label">Type</label><select class="master-select" name="type"><option value="all">All Types</option>@foreach($typeOptions as $key => $label)<option value="{{ $key }}" {{ $type === $key ? 'selected' : '' }}>{{ $label }}</option>@endforeach</select></div>
+            <div class="master-field"><label class="master-label">Status</label><select class="master-select" name="status"><option value="all">All Status</option>@foreach($statusOptions as $key => $label)<option value="{{ $key }}" {{ $status === $key ? 'selected' : '' }}>{{ $label }}</option>@endforeach</select></div>
+            <div class="master-field"><label class="master-label">Client</label><select class="master-select" name="client_id"><option value="all">All Clients</option>@foreach($clients as $client)<option value="{{ $client->id }}" {{ (string)$clientId === (string)$client->id ? 'selected' : '' }}>{{ $client->company_name }}</option>@endforeach</select></div>
+            <div class="master-field"><label class="master-label">Project</label><select class="master-select" name="project_id"><option value="all">All Projects</option>@foreach($projects as $project)<option value="{{ $project->id }}" {{ (string)$projectId === (string)$project->id ? 'selected' : '' }}>{{ $project->project_number }} - {{ $project->name }}</option>@endforeach</select></div>
+            <div class="si-filter-actions"><button class="master-btn master-btn-primary" type="submit">Filter</button><a class="master-btn master-btn-soft" href="{{ route('sales-invoices.index') }}">Reset</a></div>
         </form>
     </div>
 
@@ -58,7 +58,7 @@
                             <td>{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}</td>
                             <td><span class="si-badge {{ $invoice->show_client_portal ? 'public' : 'private' }}">{{ $invoice->show_client_portal ? 'Visible' : 'Hidden' }}</span></td>
                             <td><span class="si-badge status-{{ $invoice->status }}">{{ $invoice->statusLabel() }}</span></td>
-                            <td><div class="si-row-actions"><a class="si-icon" href="{{ route('sales-invoices.show', $invoice) }}" title="Open">👁</a><a class="si-icon" href="{{ route('sales-invoices.print', $invoice) }}" target="_blank" title="Print">🖨</a><a class="si-icon" href="{{ route('sales-invoices.edit', $invoice) }}" title="Edit">✎</a><form method="POST" action="{{ route('sales-invoices.destroy', $invoice) }}" onsubmit="return confirm('Delete invoice?')">@csrf @method('DELETE')<button class="si-icon danger" type="submit">🗑</button></form></div></td>
+                            <td><div class="si-row-actions"><a class="master-icon-btn" href="{{ route('sales-invoices.show', $invoice) }}" title="Open">👁</a><a class="master-icon-btn" href="{{ route('sales-invoices.print', $invoice) }}" target="_blank" title="Print">🖨</a><a class="master-icon-btn" href="{{ route('sales-invoices.edit', $invoice) }}" title="Edit">✎</a><form method="POST" action="{{ route('sales-invoices.destroy', $invoice) }}" onsubmit="return confirm('Delete invoice?')">@csrf @method('DELETE')<button class="master-icon-btn danger" type="submit">🗑</button></form></div></td>
                         </tr>
                     @empty
                         <tr><td colspan="10"><div class="si-empty">No invoices found.</div></td></tr>

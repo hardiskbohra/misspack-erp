@@ -142,11 +142,11 @@
                 <div class="section-head"><div><p class="eyebrow">Comments</p><h2>Discussion</h2></div></div>
                 <form method="POST" action="{{ route('projects.public.comments.store', $project->public_token) }}" class="portal-form">
                     @csrf
-                    <div class="field"><label>Your Name</label><input type="text" name="client_name" required value="{{ old('client_name') }}"></div>
-                    <div class="field"><label>Email (optional)</label><input type="email" name="client_email" value="{{ old('client_email') }}"></div>
-                    <div class="field"><label>Related Product (optional)</label><select name="project_product_id"><option value="">Project level</option>@foreach($project->products as $projectProduct)<option value="{{ $projectProduct->id }}">{{ $projectProduct->product_name }}</option>@endforeach</select></div>
-                    <div class="field"><label>Comment</label><textarea name="body" rows="4" required>{{ old('body') }}</textarea></div>
-                    <button class="btn" type="submit">Submit Comment</button>
+                    <div class="master-field"><label class="master-label">Your Name</label><input class="master-input" type="text" name="client_name" required value="{{ old('client_name') }}"></div>
+                    <div class="master-field"><label class="master-label">Email (optional)</label><input class="master-input" type="email" name="client_email" value="{{ old('client_email') }}"></div>
+                    <div class="master-field"><label class="master-label">Related Product (optional)</label><select class="master-select" name="project_product_id"><option value="">Project level</option>@foreach($project->products as $projectProduct)<option value="{{ $projectProduct->id }}">{{ $projectProduct->product_name }}</option>@endforeach</select></div>
+                    <div class="master-field"><label class="master-label">Comment</label><textarea class="master-textarea" name="body" rows="4" required>{{ old('body') }}</textarea></div>
+                    <button class="master-btn-primary" type="submit">Submit Comment</button>
                 </form>
                 <div class="comment-list" style="margin-top:14px;">
                     @forelse($project->publicComments as $comment)
@@ -161,12 +161,12 @@
                 <div class="section-head"><div><p class="eyebrow">Upload</p><h2>Send Document</h2></div></div>
                 <form method="POST" action="{{ route('projects.public.attachments.store', $project->public_token) }}" enctype="multipart/form-data" class="portal-form">
                     @csrf
-                    <div class="field"><label>Your Name</label><input type="text" name="client_name" required></div>
-                    <div class="field"><label>Related Product</label><select name="project_product_id"><option value="">Project level</option>@foreach($project->products as $projectProduct)<option value="{{ $projectProduct->id }}">{{ $projectProduct->product_name }}</option>@endforeach</select></div>
-                    <div class="field"><label>Title</label><input type="text" name="title" placeholder="Artwork approval / document / photo"></div>
-                    <div class="field"><label>Files</label><input type="file" name="attachments[]" multiple required accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.zip"></div>
-                    <div class="field"><label>Notes</label><textarea name="notes" rows="3"></textarea></div>
-                    <button class="btn" type="submit">Upload Document</button>
+                    <div class="master-field"><label class="master-label">Your Name</label><input class="master-input" type="text" name="client_name" required></div>
+                    <div class="master-field"><label class="master-label">Related Product</label><select class="master-select" name="project_product_id"><option value="">Project level</option>@foreach($project->products as $projectProduct)<option value="{{ $projectProduct->id }}">{{ $projectProduct->product_name }}</option>@endforeach</select></div>
+                    <div class="master-field"><label class="master-label">Title</label><input class="master-input" type="text" name="title" placeholder="Artwork approval / document / photo"></div>
+                    <div class="master-field"><label class="master-label">Files</label><input class="master-input" type="file" name="attachments[]" multiple required accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.zip"></div>
+                    <div class="master-field"><label class="master-label">Notes</label><textarea class="master-textarea" name="notes" rows="3"></textarea></div>
+                    <button class="master-btn-primary" type="submit">Upload Document</button>
                 </form>
             </section>
         </aside>

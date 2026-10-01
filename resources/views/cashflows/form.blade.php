@@ -36,7 +36,6 @@
                         @foreach($transactionTypeOptions as $key => $label)
                             <label class="master-chip {{ $key === 'credit' ? 'credit-chip' : 'debit-chip' }}">
                                 <input
-                                    type="radio"
                                     name="transaction_type"
                                     value="{{ $key }}"
                                     {{ old('transaction_type', $entry->transaction_type ?? 'debit') === $key ? 'checked' : '' }}

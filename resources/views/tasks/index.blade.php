@@ -147,7 +147,7 @@
                                                     <button type="submit"><i class="fa-solid fa-check"></i>
                                                         {{ $task->isCompleted() ? 'Move to New' : 'Complete' }}</button>
                                                 </form>
-                                                <button type="button" class="danger" data-delete-task
+                                                <button type="button" class="master-btn master-btn-danger master-btn-sm" data-delete-task
                                                     data-delete-url="{{ route('tasks.destroy', $task) }}"
                                                     data-title="{{ $task->title }}"><i class="fa-solid fa-trash"></i>
                                                     Delete</button>

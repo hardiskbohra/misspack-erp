@@ -82,7 +82,7 @@
                 </div>
                 <div class="projects-footer-actions">
                     <a href="{{ route('client-portal.projects.show', $project->id) }}"
-                        class="projects-btn projects-btn-primary projects-btn-sm">Open</a>
+                        class="master-btn master-btn-primary master-btn-sm">Open</a>
                 </div>
             </div>
         </div>
@@ -91,7 +91,7 @@
             <div class="projects-empty-icon"><i class="fa-solid fa-briefcase"></i></div>
             <h3>No projects found</h3>
             <p>Create your first project/deal once a client finalises the quote.</p><br>
-            <button type="button" class="projects-btn projects-btn-primary"
+            <button type="button" class="master-btn master-btn-primary"
                 data-open-modal="quickProjectModal">Quick Project</button>
         </div>
     @endforelse

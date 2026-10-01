@@ -43,7 +43,6 @@
                     <div class="master-chip-group">
                         <label class="master-chip green-chip">
                             <input
-                                type="radio"
                                 name="ready_stock_available"
                                 value="1"
                                 {{ old('ready_stock_available', $product->ready_stock_available) == 1 ? 'checked' : '' }}
@@ -57,7 +56,6 @@
                 
                         <label class="master-chip red-chip">
                             <input
-                                type="radio"
                                 name="ready_stock_available"
                                 value="0"
                                 {{ old('ready_stock_available', $product->ready_stock_available) == 0 ? 'checked' : '' }}
@@ -76,7 +74,6 @@
                     <div class="master-chip-group">
                         <label class="master-chip green-chip">
                             <input
-                                type="radio"
                                 name="show_price_ladder_public"
                                 value="1"
                                 {{ old('show_price_ladder_public', $product->show_price_ladder_public) == 1 ? 'checked' : '' }}
@@ -90,7 +87,6 @@
                 
                         <label class="master-chip red-chip">
                             <input
-                                type="radio"
                                 name="show_price_ladder_public"
                                 value="0"
                                 {{ old('show_price_ladder_public', $product->show_price_ladder_public) == 0 ? 'checked' : '' }}
@@ -164,7 +160,7 @@
                             </div>
             
                             <label class="master-remove-media">
-                                <input type="checkbox"
+                                <input
                                        name="remove_attachments[]"
                                        value="{{ $attachment->id }}">
                                 Remove

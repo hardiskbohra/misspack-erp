@@ -11,9 +11,9 @@
 <body>
     <div class="toolbar">
         @if (!$publicMode)
-        <a class="btn" href="{{ route('sales-invoices.show', $invoice) }}">Back</a>@else<span></span>
+        <a class="master-btn" href="{{ route('sales-invoices.show', $invoice) }}">Back</a>@else<span></span>
         @endif
-        <button class="btn" onclick="window.print()">
+        <button class="master-btn" onclick="window.print()">
             Print Invoice</button>
     </div>
     <div class="page">

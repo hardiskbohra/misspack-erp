@@ -166,9 +166,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div><input class="master-input" type="datetime-local" name="next_follow_up_at"></div><label
-                                style="display:flex;gap:8px;align-items:center;font-weight:800;color:#536079;"><input
-                                    type="checkbox" name="is_pinned" value="1"> Pin comment</label>
+                            <div><input class="master-input" type="datetime-local" name="next_follow_up_at"></div><label class="master-check"><input name="is_pinned" value="1"> Pin comment</label>
                             <div><button class="master-btn master-btn-primary" type="submit">Add Comment</button></div>
                         </div>
                     </form>

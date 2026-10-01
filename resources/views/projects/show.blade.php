@@ -24,12 +24,12 @@
                 </div>
             </div>
             <div class="pd-hero-actions">
-                <a href="{{ route('projects.index') }}" class="pd-btn pd-btn-light"><i class="fa-solid fa-arrow-left"></i>
+                <a href="{{ route('projects.index') }}" class="master-btn master-btn-light"><i class="fa-solid fa-arrow-left"></i>
                     Back</a>
-                <a href="{{ route('projects.edit', $project) }}" class="pd-btn pd-btn-light"><i class="fa-solid fa-pen"></i>
+                <a href="{{ route('projects.edit', $project) }}" class="master-btn master-btn-light"><i class="fa-solid fa-pen"></i>
                     Edit</a>
                 @if ($project->show_client_portal)
-                    <a href="{{ $portalUrl }}" target="_blank" class="pd-btn pd-btn-primary"><i
+                    <a href="{{ $portalUrl }}" target="_blank" class="master-btn master-btn-primary"><i
                             class="fa-solid fa-eye"></i> Client Portal</a>
                 @endif
             </div>
@@ -51,8 +51,8 @@
                     <div class="pd-progress"><span style="width: {{ $project->progress_percent }}%"></span></div>
                     @if ($project->show_client_portal)
                         <div class="pd-copy-row">
-                            <input type="text" value="{{ $portalUrl }}" readonly id="portalLinkInput">
-                            <button type="button" class="pd-btn pd-btn-soft pd-btn-sm" id="copyPortalLink"><i
+                            <input class="master-input" type="text" value="{{ $portalUrl }}" readonly id="portalLinkInput">
+                            <button type="button" class="master-btn master-btn-soft master-btn-sm" id="copyPortalLink"><i
                                     class="fa-solid fa-copy"></i> Copy</button>
                         </div>
                     @endif
@@ -62,7 +62,7 @@
                 @csrf
                 @method('PATCH')
                 <div class="master-field">
-                    <select name="status">
+                    <select class="master-select" name="status">
                         @foreach ($statusOptions as $key => $label)
                             <option value="{{ $key }}" {{ $project->status === $key ? 'selected' : '' }}>
                                 {{ $label }}</option>
@@ -70,7 +70,7 @@
                     </select>
                 </div>
                 <div class="master-field">
-                    <select name="stage">
+                    <select class="master-select" name="stage">
                         @foreach ($stageOptions as $key => $label)
                             <option value="{{ $key }}" {{ $project->stage === $key ? 'selected' : '' }}>
                                 {{ $label }}</option>
@@ -78,7 +78,7 @@
                     </select>
                 </div>
                 <div class="master-field">
-                    <select name="health">
+                    <select class="master-select" name="health">
                         @foreach ($healthOptions as $key => $label)
                             <option value="{{ $key }}" {{ $project->health === $key ? 'selected' : '' }}>
                                 {{ $label }}</option>
@@ -86,11 +86,11 @@
                     </select>
                 </div>
                 <div class="master-field">
-                    <input type="number" name="progress_percent" min="0" max="100"
+                    <input class="master-input" type="number" name="progress_percent" min="0" max="100"
                         value="{{ $project->progress_percent }}">
                 </div>
                 <div class="pd-actions">
-                    <button class="pd-btn pd-btn-primary" type="submit">Update</button>
+                    <button class="master-btn master-btn-primary" type="submit">Update</button>
                 </div>
             </form>
         </div>
@@ -335,8 +335,8 @@
                             <div class="master-modal-body">
                                 <div class="master-modal-grid">
                                     <div class="master-field">
-                                        <label>Mapped Product</label>
-                                        <select name="product_id" required>
+                                        <label class="master-label">Mapped Product</label>
+                                        <select class="master-select" name="product_id" required>
                                             <option value="">Manual product</option>
                                             @foreach($products as $product)
                                                 <option value="{{ $product->id }}">{{ $product->product_number }} - {{ $product->name }}</option>
@@ -344,32 +344,32 @@
                                         </select>
                                     </div>
                                     <div class="master-field" style="display:none;">
-                                        <label>Product Name</label>
-                                        <input type="text" name="product_name" placeholder="Required if product not selected">
+                                        <label class="master-label">Product Name</label>
+                                        <input class="master-input" type="text" name="product_name" placeholder="Required if product not selected">
                                     </div>
                                     <div class="master-field small">
-                                        <label>Qty</label>
-                                        <input type="number" step="0.001" min="0.001" name="quantity" value="1" required>
+                                        <label class="master-label">Qty</label>
+                                        <input class="master-input" type="number" step="0.001" min="0.001" name="quantity" value="1" required>
                                     </div>
                                     <div class="master-field small" style="display:none;">
-                                        <label>Unit</label>
-                                        <input type="text" name="unit" value="pcs">
+                                        <label class="master-label">Unit</label>
+                                        <input class="master-input" type="text" name="unit" value="pcs">
                                     </div>
                                     <div class="master-field small">
-                                        <label>Unit Price</label>
-                                        <input type="number" step="0.01" min="0" name="unit_price" value="0">
+                                        <label class="master-label">Unit Price</label>
+                                        <input class="master-input" type="number" step="0.01" min="0" name="unit_price" value="0">
                                     </div>
                                     <div class="master-field">
-                                        <label>Status</label>
-                                        <select name="status">
+                                        <label class="master-label">Status</label>
+                                        <select class="master-select" name="status">
                                             @foreach($productStatusOptions as $key => $label)
                                                 <option value="{{ $key }}">{{ $label }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="master-field">
-                                        <label>Vendor</label>
-                                        <select name="vendor_id">
+                                        <label class="master-label">Vendor</label>
+                                        <select class="master-select" name="vendor_id">
                                             <option value="">Unassigned</option>
                                             @foreach ($vendors as $vendor)
                                                 <option value="{{ $vendor->id }}">{{ $vendor->contact_person_name }} ({{ $vendor->vendor_name }})</option>
@@ -377,16 +377,16 @@
                                         </select>
                                     </div>
                                     <div class="master-field">
-                                        <label>Vendor Invoice Number</label>
-                                        <input type="text" name="vendor_invoice_number">
+                                        <label class="master-label">Vendor Invoice Number</label>
+                                        <input class="master-input" type="text" name="vendor_invoice_number">
                                     </div>
                                     <div class="master-field">
-                                        <label>Expected Ready</label>
-                                        <input type="date" name="expected_ready_date">
+                                        <label class="master-label">Expected Ready</label>
+                                        <input class="master-input" type="date" name="expected_ready_date">
                                     </div>
                                     <div class="master-field pd-span-2">
-                                        <label>Notes</label>
-                                        <textarea rows="5" name="notes" placeholder="Artwork, production, packaging notes"></textarea>
+                                        <label class="master-label">Notes</label>
+                                        <textarea class="master-textarea" rows="5" name="notes" placeholder="Artwork, production, packaging notes"></textarea>
                                     </div>
                                     <input type="hidden" name="currency" value="{{ $project->currency }}">
                                 </div>
@@ -413,8 +413,8 @@
                                 <div class="master-modal-grid">
                         
                                     <div class="master-field"> 
-                                        <label>Mapped Product</label> 
-                                        <select name="product_id"> 
+                                        <label class="master-label">Mapped Product</label> 
+                                        <select class="master-select" name="product_id"> 
                                             <option value="">Manual product</option> 
                                             @foreach ($products as $product) 
                                                 <option value="{{ $product->id }}"> {{ $product->name }}{{ $product->sku ? ' - ' . $product->sku : '' }}</option> 
@@ -422,20 +422,20 @@
                                         </select> 
                                     </div> 
                                     <div class="master-field small">
-                                        <label>Qty</label>
-                                        <input type="number" step="0.001" min="0.001" name="quantity" value="1" required>
+                                        <label class="master-label">Qty</label>
+                                        <input class="master-input" type="number" step="0.001" min="0.001" name="quantity" value="1" required>
                                     </div> 
                                     <div class="master-field small">
-                                        <label>Unit Price</label>
-                                        <input type="number" step="0.01" min="0" name="unit_price" value="0">
+                                        <label class="master-label">Unit Price</label>
+                                        <input class="master-input" type="number" step="0.01" min="0" name="unit_price" value="0">
                                     </div> 
                                     <div class="master-field">
-                                        <label>Expected Ready</label>
-                                        <input type="date" name="expected_ready_date">
+                                        <label class="master-label">Expected Ready</label>
+                                        <input class="master-input" type="date" name="expected_ready_date">
                                     </div>
                                     <!--<div class="master-field">-->
-                                    <!--    <label>Assignee</label>-->
-                                    <!--    <select name="assigned_to">-->
+                                    <!--    <label class="master-label">Assignee</label>-->
+                                    <!--    <select class="master-select" name="assigned_to">-->
                                     <!--        <option value="">Unassigned</option>-->
                                     <!--        @foreach ($users as $user)-->
                                     <!--            <option value="{{ $user->id }}">{{ $user->name }}</option>-->
@@ -443,8 +443,8 @@
                                     <!--    </select>-->
                                     <!--</div>-->
                                     <div class="master-field">
-                                        <label>Vendor</label>
-                                        <select name="vendor_id">
+                                        <label class="master-label">Vendor</label>
+                                        <select class="master-select" name="vendor_id">
                                             <option value="">Unassigned</option>
                                             @foreach ($vendors as $vendor)
                                                 <option value="{{ $vendor->id }}">{{ $vendor->contact_person_name }} ({{ $vendor->vendor_name }})</option>
@@ -452,24 +452,24 @@
                                         </select>
                                     </div>
                                     <div class="master-field">
-                                        <label>Vendor Invoice Number</label>
-                                        <input type="text" name="vendor_invoice_number">
+                                        <label class="master-label">Vendor Invoice Number</label>
+                                        <input class="master-input" type="text" name="vendor_invoice_number">
                                     </div>
                                     <div class="master-field">
-                                        <label>Status</label>
-                                        <select name="status"> 
+                                        <label class="master-label">Status</label>
+                                        <select class="master-select" name="status"> 
                                             @foreach ($productStatusOptions as $key => $label) 
                                                 <option value="{{ $key }}">{{ $label }}</option> 
                                             @endforeach 
                                         </select> 
                                     </div> 
                                     <div class="master-field pd-span-2">
-                                        <label>Notes</label>
-                                        <textarea rows="5" name="notes" placeholder="Artwork, production, packaging notes"></textarea>
+                                        <label class="master-label">Notes</label>
+                                        <textarea class="master-textarea" rows="5" name="notes" placeholder="Artwork, production, packaging notes"></textarea>
                                     </div>
                                     <!--<div class="master-field">-->
-                                    <!--    <label>Stage</label>-->
-                                    <!--    <select name="stage"> -->
+                                    <!--    <label class="master-label">Stage</label>-->
+                                    <!--    <select class="master-select" name="stage"> -->
                                     <!--        @foreach ($productStageOptions as $key => $label) -->
                                     <!--            <option value="{{ $key }}">{{ $label }}</option> -->
                                     <!--        @endforeach -->
@@ -570,7 +570,7 @@
                             </div>
                             <div class="master-modal-body">
                                 <div class="master-modal-grid">
-                                    <div class="master-field"><label>Product (optional)</label><select name="project_product_id">
+                                    <div class="master-field"><label class="master-label">Product (optional)</label><select class="master-select" name="project_product_id">
                                             <option value="">Project level</option>
                                             @foreach ($project->products as $projectProduct)
                                                 <option value="{{ $projectProduct->id }}">{{ $projectProduct->product_name }}
@@ -578,25 +578,25 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="master-field"><label>Title</label><input type="text" name="title"
+                                    <div class="master-field"><label class="master-label">Title</label><input class="master-input" type="text" name="title"
                                             placeholder="e.g. Artwork approved" required></div>
-                                    <div class="master-field"><label>Status</label><select name="status">
+                                    <div class="master-field"><label class="master-label">Status</label><select class="master-select" name="status">
                                             @foreach ($trackingStatusOptions as $key => $label)
                                                 <option value="{{ $key }}">{{ $label }}</option>
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="master-field small"><label>Progress %</label><input type="number"
+                                    <div class="master-field small"><label class="master-label">Progress %</label><input class="master-input" type="number"
                                             name="progress_percent" min="0" max="100"
                                             value="{{ $project->progress_percent }}"></div>
-                                    <div class="master-field"><label>Activity By</label><input type="text" name="location"
+                                    <div class="master-field"><label class="master-label">Activity By</label><input class="master-input" type="text" name="location"
                                             placeholder="MP / Client / Vendor etc."></div>
-                                    <div class="master-field"><label>Date & Time</label><input type="datetime-local"
+                                    <div class="master-field"><label class="master-label">Date & Time</label><input class="master-input" type="datetime-local"
                                             name="occurred_at" value="{{ now()->format('Y-m-d\TH:i') }}"></div>
-                                    <label class="pd-check"><input type="checkbox" name="is_public" value="1" checked>
+                                    <label class="master-check"><input name="is_public" value="1" checked>
                                         Public for client</label>
-                                    <div class="master-field pd-span-2"><label>Notes</label>
-                                        <textarea name="notes" rows="2" placeholder="Detailed tracking message"></textarea>
+                                    <div class="master-field pd-span-2"><label class="master-label">Notes</label>
+                                        <textarea class="master-textarea" name="notes" rows="2" placeholder="Detailed tracking message"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -625,8 +625,8 @@
                                 <div class="master-modal-grid">
                         
                                     <div class="master-field">
-                                        <label>Product (optional)</label>
-                                        <select name="project_product_id">
+                                        <label class="master-label">Product (optional)</label>
+                                        <select class="master-select" name="project_product_id">
                                             <option value="">Project level</option>
                                             @foreach ($project->products as $projectProduct)
                                                 <option value="{{ $projectProduct->id }}">{{ $projectProduct->product_name }}
@@ -635,28 +635,28 @@
                                         </select>
                                     </div>
                                     <div class="master-field">
-                                        <label>Title</label>
-                                        <input type="text" name="title" placeholder="e.g. Artwork approved" required>
+                                        <label class="master-label">Title</label>
+                                        <input class="master-input" type="text" name="title" placeholder="e.g. Artwork approved" required>
                                     </div>
                                     <div class="master-field">
-                                        <label>Status</label>
-                                        <select name="status">
+                                        <label class="master-label">Status</label>
+                                        <select class="master-select" name="status">
                                             @foreach ($trackingStatusOptions as $key => $label)
                                                 <option value="{{ $key }}">{{ $label }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="master-field small">
-                                        <label>Progress %</label>
-                                        <input type="number" name="progress_percent" min="0" max="100" value="{{ $project->progress_percent }}">
+                                        <label class="master-label">Progress %</label>
+                                        <input class="master-input" type="number" name="progress_percent" min="0" max="100" value="{{ $project->progress_percent }}">
                                     </div>
                                     <div class="master-field">
-                                        <label>Location</label>
-                                        <input type="text" name="location" placeholder="Factory / Ahmedabad / etc.">
+                                        <label class="master-label">Location</label>
+                                        <input class="master-input" type="text" name="location" placeholder="Factory / Ahmedabad / etc.">
                                     </div>
                                     <div class="master-field">
-                                        <label>Date & Time</label>
-                                        <input type="datetime-local"
+                                        <label class="master-label">Date & Time</label>
+                                        <input class="master-input" type="datetime-local"
                                             name="occurred_at" value="{{ now()->format('Y-m-d\TH:i') }}">
                                     </div>
                                     <label class="master-check">
@@ -664,8 +664,8 @@
                                         Public for client
                                     </label>
                                     <div class="master-field pd-span-2">
-                                        <label>Notes</label>
-                                        <textarea name="notes" rows="2" placeholder="Detailed tracking message"></textarea>
+                                        <label class="master-label">Notes</label>
+                                        <textarea class="master-textarea" name="notes" rows="2" placeholder="Detailed tracking message"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -739,8 +739,8 @@
                             <div class="master-modal-body">
                                 <div class="master-modal-grid">
                                     <div class="master-field">
-                                        <label>Product (optional)</label>
-                                        <select name="project_product_id">
+                                        <label class="master-label">Product (optional)</label>
+                                        <select class="master-select" name="project_product_id">
                                             <option value="">Project level</option>
                                             @foreach ($project->products as $projectProduct)
                                                 <option value="{{ $projectProduct->id }}">{{ $projectProduct->product_name }}
@@ -749,25 +749,25 @@
                                         </select>
                                     </div>
                                     <div class="master-field full">
-                                        <label>Comment</label>
-                                        <textarea name="body" rows="3" required placeholder="Add internal/client-visible comment..."></textarea>
+                                        <label class="master-label">Comment</label>
+                                        <textarea class="master-textarea" name="body" rows="3" required placeholder="Add internal/client-visible comment..."></textarea>
                                     </div>
                                     <div class="master-field">
                                         <div class="master-toggle-group" style="display:block">
-                                            <label>Public for Client</label><br>
+                                            <label class="master-label">Public for Client</label><br>
                                         
                                             <label class="master-switch">
-                                                <input type="checkbox" name="is_public" value="1">
+                                                <input name="is_public" value="1">
                                                 <span class="master-slider"></span>
                                             </label>
                                         </div>
                                     </div>
                                     <div class="master-field">
                                         <div class="master-toggle-group" style="display:block">
-                                            <label>Pin Comment</label><br>
+                                            <label class="master-label">Pin Comment</label><br>
                                         
                                             <label class="master-switch">
-                                                <input type="checkbox" name="is_pinned" value="1">
+                                                <input name="is_pinned" value="1">
                                                 <span class="master-slider"></span>
                                             </label>
                                         </div>
@@ -799,8 +799,8 @@
                             <div class="master-modal-body">
                                 <div class="master-modal-grid">
                                     <div class="master-field">
-                                        <label>Product (optional)</label>
-                                        <select name="project_product_id">
+                                        <label class="master-label">Product (optional)</label>
+                                        <select class="master-select" name="project_product_id">
                                             <option value="">Project level</option>
                                             @foreach ($project->products as $projectProduct)
                                                 <option value="{{ $projectProduct->id }}">{{ $projectProduct->product_name }}
@@ -809,25 +809,25 @@
                                         </select>
                                     </div>
                                     <div class="master-field full">
-                                        <label>Comment</label>
-                                        <textarea name="body" rows="3" required placeholder="Add internal/client-visible comment..."></textarea>
+                                        <label class="master-label">Comment</label>
+                                        <textarea class="master-textarea" name="body" rows="3" required placeholder="Add internal/client-visible comment..."></textarea>
                                     </div>
                                     <div class="master-field">
                                         <div class="master-toggle-group" style="display:block">
-                                            <label>Public for Client</label><br>
+                                            <label class="master-label">Public for Client</label><br>
                                         
                                             <label class="master-switch">
-                                                <input type="checkbox" name="is_public" value="1">
+                                                <input name="is_public" value="1">
                                                 <span class="master-slider"></span>
                                             </label>
                                         </div>
                                     </div>
                                     <div class="master-field">
                                         <div class="master-toggle-group" style="display:block">
-                                            <label>Pin Comment</label><br>
+                                            <label class="master-label">Pin Comment</label><br>
                                         
                                             <label class="master-switch">
-                                                <input type="checkbox" name="is_pinned" value="1">
+                                                <input name="is_pinned" value="1">
                                                 <span class="master-slider"></span>
                                             </label>
                                         </div>
@@ -906,8 +906,8 @@
                             <div class="master-modal-body">
                                 <div class="master-modal-grid">
                                     <div class="master-field">
-                                        <label>Product (optional)</label>
-                                        <select name="project_product_id">
+                                        <label class="master-label">Product (optional)</label>
+                                        <select class="master-select" name="project_product_id">
                                             <option value="">Project level</option>
                                             @foreach ($project->products as $projectProduct)
                                                 <option value="{{ $projectProduct->id }}">{{ $projectProduct->product_name }}
@@ -916,36 +916,36 @@
                                         </select>
                                     </div>
                                     <div class="master-field">
-                                        <label>Category</label>
-                                        <select name="category">
+                                        <label class="master-label">Category</label>
+                                        <select class="master-select" name="category">
                                             @foreach ($attachmentCategoryOptions as $key => $label)
                                                 <option value="{{ $key }}">{{ $label }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="master-field">
-                                        <label>Title</label>
-                                        <input type="text" name="title"
+                                        <label class="master-label">Title</label>
+                                        <input class="master-input" type="text" name="title"
                                             placeholder="Vendor invoice / packing list / etc."></div>
                                     <div class="master-field">
-                                        <label>Files</label>
-                                        <input type="file" name="attachments[]" multiple
+                                        <label class="master-label">Files</label>
+                                        <input class="master-input" type="file" name="attachments[]" multiple
                                             required
                                             accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.zip">
                                     </div>
                                     <div class="master-field">
                                         <div class="master-toggle-group" style="display:block">
-                                            <label>Public for Client</label><br>
+                                            <label class="master-label">Public for Client</label><br>
                                         
                                             <label class="master-switch">
-                                                <input type="checkbox" name="is_public" value="1">
+                                                <input name="is_public" value="1">
                                                 <span class="master-slider"></span>
                                             </label>
                                         </div>
                                     </div>
                                     <div class="master-field pd-span-2">
-                                        <label>Notes</label>
-                                        <textarea name="notes" rows="2"></textarea>
+                                        <label class="master-label">Notes</label>
+                                        <textarea class="master-textarea" name="notes" rows="2"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -1077,24 +1077,24 @@
                             <div class="master-modal-body">
                                 <div class="master-modal-grid">
                                     <div class="master-field">
-                                        <label>Type</label>
-                                        <select name="transaction_type">
+                                        <label class="master-label">Type</label>
+                                        <select class="master-select" name="transaction_type">
                                             @foreach ($paymentTypeOptions as $key => $label)
                                                 <option value="{{ $key }}">{{ $label }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="master-field">
-                                        <label>Date</label>
-                                        <input type="date" name="payment_date"
+                                        <label class="master-label">Date</label>
+                                        <input class="master-input" type="date" name="payment_date"
                                             value="{{ now()->toDateString() }}" required></div>
                                     <div class="master-field">
-                                        <label>Amount</label>
-                                        <input type="number" step="0.01"
+                                        <label class="master-label">Amount</label>
+                                        <input class="master-input" type="number" step="0.01"
                                             min="0.01" name="amount" required></div>
                                     <div class="master-field">
-                                        <label>Currency</label>
-                                        <select name="currency">
+                                        <label class="master-label">Currency</label>
+                                        <select class="master-select" name="currency">
                                             @foreach ($currencyOptions as $key => $label)
                                                 <option value="{{ $key }}"
                                                     {{ $project->currency === $key ? 'selected' : '' }}>{{ $label }}
@@ -1103,8 +1103,8 @@
                                         </select>
                                     </div>
                                     <div class="master-field">
-                                        <label>Mode</label>
-                                        <select name="payment_mode">
+                                        <label class="master-label">Mode</label>
+                                        <select class="master-select" name="payment_mode">
                                             <option value="">Select mode</option>
                                             @foreach ($paymentModeOptions as $key => $label)
                                                 <option value="{{ $key }}">{{ $label }}</option>
@@ -1112,26 +1112,26 @@
                                         </select>
                                     </div>
                                     <div class="master-field">
-                                        <label>Reference No.</label>
-                                        <input type="text"
+                                        <label class="master-label">Reference No.</label>
+                                        <input class="master-input" type="text"
                                             name="reference_number"></div>
                                     <div class="master-field">
-                                        <label>Category</label>
-                                        <input type="text" name="category"
+                                        <label class="master-label">Category</label>
+                                        <input class="master-input" type="text" name="category"
                                             placeholder="Advance / Vendor / Freight"></div>
                                     <div class="master-field">
                                         <div class="master-toggle-group" style="display:block">
-                                            <label>Public for Client</label><br>
+                                            <label class="master-label">Public for Client</label><br>
                                         
                                             <label class="master-switch">
-                                                <input type="checkbox" name="is_public" value="1">
+                                                <input name="is_public" value="1">
                                                 <span class="master-slider"></span>
                                             </label>
                                         </div>
                                     </div>
                                     <div class="master-field pd-span-2">
-                                        <label>Notes</label>
-                                        <textarea name="notes" rows="2"></textarea>
+                                        <label class="master-label">Notes</label>
+                                        <textarea class="master-textarea" name="notes" rows="2"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -1160,23 +1160,23 @@
                             <div class="master-modal-body">
                                 <div class="master-modal-grid">
                                     <div class="master-field">
-                                        <label>Type</label>
-                                        <select name="transaction_type">
+                                        <label class="master-label">Type</label>
+                                        <select class="master-select" name="transaction_type">
                                             @foreach ($paymentTypeOptions as $key => $label)
                                                 <option value="{{ $key }}">{{ $label }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="master-field">
-                                        <label>Date</label>
-                                        <input type="date" name="payment_date" required></div>
+                                        <label class="master-label">Date</label>
+                                        <input class="master-input" type="date" name="payment_date" required></div>
                                     <div class="master-field">
-                                        <label>Amount</label>
-                                        <input type="number" step="0.01"
+                                        <label class="master-label">Amount</label>
+                                        <input class="master-input" type="number" step="0.01"
                                             min="0.01" name="amount" required></div>
                                     <div class="master-field">
-                                        <label>Currency</label>
-                                        <select name="currency">
+                                        <label class="master-label">Currency</label>
+                                        <select class="master-select" name="currency">
                                             @foreach ($currencyOptions as $key => $label)
                                                 <option value="{{ $key }}"
                                                     {{ $project->currency === $key ? 'selected' : '' }}>{{ $label }}
@@ -1185,8 +1185,8 @@
                                         </select>
                                     </div>
                                     <div class="master-field">
-                                        <label>Mode</label>
-                                        <select name="payment_mode">
+                                        <label class="master-label">Mode</label>
+                                        <select class="master-select" name="payment_mode">
                                             <option value="">Select mode</option>
                                             @foreach ($paymentModeOptions as $key => $label)
                                                 <option value="{{ $key }}">{{ $label }}</option>
@@ -1194,26 +1194,26 @@
                                         </select>
                                     </div>
                                     <div class="master-field">
-                                        <label>Reference No.</label>
-                                        <input type="text"
+                                        <label class="master-label">Reference No.</label>
+                                        <input class="master-input" type="text"
                                             name="reference_number"></div>
                                     <div class="master-field">
-                                        <label>Category</label>
-                                        <input type="text" name="category"
+                                        <label class="master-label">Category</label>
+                                        <input class="master-input" type="text" name="category"
                                             placeholder="Advance / Vendor / Freight"></div>
                                     <div class="master-field">
                                         <div class="master-toggle-group" style="display:block">
-                                            <label>Public for Client</label><br>
+                                            <label class="master-label">Public for Client</label><br>
                                         
                                             <label class="master-switch">
-                                                <input type="checkbox" name="is_public" value="1">
+                                                <input name="is_public" value="1">
                                                 <span class="master-slider"></span>
                                             </label>
                                         </div>
                                     </div>
                                     <div class="master-field pd-span-2">
-                                        <label>Notes</label>
-                                        <textarea name="notes" rows="2"></textarea>
+                                        <label class="master-label">Notes</label>
+                                        <textarea class="master-textarea" name="notes" rows="2"></textarea>
                                     </div>
                                 </div>
                             </div>

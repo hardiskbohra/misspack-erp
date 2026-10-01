@@ -51,49 +51,6 @@
     flex-wrap: wrap;
 }
 
-.projects-btn {
-    border: 0;
-    border-radius: 14px;
-    padding: 10px 16px;
-    font-weight: 500;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: .2s;
-    white-space: nowrap;
-}
-
-.projects-btn:hover {
-    transform: translateY(-1px);
-    text-decoration: none;
-}
-
-.projects-btn-primary {
-    background: #ef4770;
-    color: #fff;
-    box-shadow: 0 10px 24px rgba(239, 71, 112, .24);
-}
-
-.projects-btn-light {
-    background: rgba(255, 255, 255, .18);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, .35);
-}
-
-.projects-btn-soft {
-    background: #eef3ff;
-    color: #4f83f1;
-}
-
-.projects-btn-sm {
-    padding: 8px 12px;
-    border-radius: 12px;
-    font-size: 14px;
-}
-
 .projects-stats {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -156,43 +113,8 @@
     align-items: end;
 }
 
-.projects-field {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-}
-
-.projects-field label {
-    font-size: 13px;
-    color: #5d6b82;
-    font-weight: 600;
-}
-
 .projects-field label span {
     color: #ef4770;
-}
-
-.projects-field input,
-.projects-field select,
-.projects-field textarea {
-    width: 100%;
-    border: 1px solid #dfe5f2;
-    border-radius: 14px;
-    padding: 11px 12px;
-    background: #fff;
-    color: #1e2a3b;
-    outline: none;
-}
-
-.projects-field input:focus,
-.projects-field select:focus,
-.projects-field textarea:focus {
-    border-color: #4f83f1;
-    box-shadow: 0 0 0 4px rgba(79, 131, 241, .1);
-}
-
-.projects-field small {
-    color: #8a94a6;
 }
 
 .projects-filter-actions {
@@ -489,16 +411,6 @@
     color: #172033;
 }
 
-.projects-icon-btn {
-    border: 0;
-    background: #f2f5fa;
-    color: #64748b;
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
-    cursor: pointer;
-}
-
 .projects-modal-body {
     padding: 18px 20px;
     display: flex;
@@ -553,8 +465,8 @@
         width: 100%;
     }
 
-    .projects-hero-actions .projects-btn,
-    .projects-footer-actions .projects-btn {
+    .projects-hero-actions .master-btn,
+    .projects-footer-actions .master-btn {
         flex: 1;
     }
 

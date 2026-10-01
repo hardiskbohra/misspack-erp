@@ -528,9 +528,9 @@
                     </div>
                     <div class="master-modal-body">
                         <div>
-                            <div class="cp-field" style="margin-bottom:15px;">
-                                <label>Product (optional)</label>
-                                <select name="project_product_id">
+                            <div class="master-field" style="margin-bottom:15px;">
+                                <label class="master-label">Product (optional)</label>
+                                <select class="master-select" name="project_product_id">
                                     <option value="">Project level</option>
                                     @foreach ($project->products as $projectProduct)
                                         <option value="{{ $projectProduct->id }}">{{ $projectProduct->product_name }}
@@ -538,10 +538,10 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="cp-field full">
-                                <label>Comment</label>
-                                <textarea name="body" rows="3" required placeholder="Add internal/client-visible comment..."></textarea>
-                                <input type="checkbox" name="is_public" value="1" hidden>
+                            <div class="master-field full">
+                                <label class="master-label">Comment</label>
+                                <textarea class="master-textarea" name="body" rows="3" required placeholder="Add internal/client-visible comment..."></textarea>
+                                <input name="is_public" value="1" hidden>
                             </div>
                         </div>
                     </div>
@@ -569,9 +569,9 @@
                     </div>
                     <div class="master-modal-body">
                         <div>
-                            <div class="cp-field" style="margin-bottom:15px;">
-                                <label>Product (optional)</label>
-                                <select name="project_product_id">
+                            <div class="master-field" style="margin-bottom:15px;">
+                                <label class="master-label">Product (optional)</label>
+                                <select class="master-select" name="project_product_id">
                                     <option value="">Project level</option>
                                     @foreach ($project->products as $projectProduct)
                                         <option value="{{ $projectProduct->id }}">{{ $projectProduct->product_name }}
@@ -579,9 +579,9 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="cp-field full">
-                                <label>Comment</label>
-                                <textarea name="body" rows="3" required placeholder="Add internal/client-visible comment..."></textarea>
+                            <div class="master-field full">
+                                <label class="master-label">Comment</label>
+                                <textarea class="master-textarea" name="body" rows="3" required placeholder="Add internal/client-visible comment..."></textarea>
                             </div>
                         </div>
                     </div>
@@ -655,9 +655,9 @@
                     </div>
                     <div class="master-modal-body">
                         <div class="master-modal-grid">
-                            <div class="cp-field">
-                                <label>Product (optional)</label>
-                                <select name="project_product_id">
+                            <div class="master-field">
+                                <label class="master-label">Product (optional)</label>
+                                <select class="master-select" name="project_product_id">
                                     <option value="">Project level</option>
                                     @foreach ($project->products as $projectProduct)
                                         <option value="{{ $projectProduct->id }}">{{ $projectProduct->product_name }}
@@ -665,29 +665,29 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="cp-field">
-                                <label>Category</label>
-                                <select name="category">
+                            <div class="master-field">
+                                <label class="master-label">Category</label>
+                                <select class="master-select" name="category">
                                     <option value="client_document">Client Document</option>
                                     <option value="artwork">Artwork</option>
                                     <option value="payment_proof">Payment Proof</option>
                                     <option value="other">Other</option>
                                 </select>
                             </div>
-                            <div class="cp-field">
-                                <label>Title</label>
-                                <input type="text" name="title"
+                            <div class="master-field">
+                                <label class="master-label">Title</label>
+                                <input class="master-input" type="text" name="title"
                                     placeholder="Document name"></div>
-                            <div class="cp-field">
-                                <label>Files</label>
-                                <input type="file" name="attachments[]" multiple
+                            <div class="master-field">
+                                <label class="master-label">Files</label>
+                                <input class="master-input" type="file" name="attachments[]" multiple
                                     required
                                     accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.zip">
-                                <input type="checkbox" name="is_public" value="1" hidden>
+                                <input name="is_public" value="1" hidden>
                             </div>
-                            <div class="cp-field pd-span-2">
-                                <label>Notes</label>
-                                <textarea name="notes" rows="2"></textarea>
+                            <div class="master-field pd-span-2">
+                                <label class="master-label">Notes</label>
+                                <textarea class="master-textarea" name="notes" rows="2"></textarea>
                             </div>
                         </div>
                     </div>

@@ -12,13 +12,13 @@
 </div>
 <div class="cp-card" style="padding:18px;margin-bottom:18px;">
     <form method="GET" class="cp-form-grid">
-        <div class="cp-field">
-            <label>Search</label>
-            <input name="search" value="{{ $search }}" placeholder="Search shipment, tracking, partner...">
+        <div class="master-field">
+            <label class="master-label">Search</label>
+            <input class="master-input" name="search" value="{{ $search }}" placeholder="Search shipment, tracking, partner...">
         </div>
         <div style="display:flex;align-items:end;gap:10px;">
-            <button class="cp-btn cp-btn-primary">Filter</button>
-            <a class="cp-btn cp-btn-light" href="{{ route('client-portal.shipments.index') }}" style="padding:8px 15px;">Reset</a>
+            <button class="master-btn master-btn-primary">Filter</button>
+            <a class="master-btn master-btn-light" href="{{ route('client-portal.shipments.index') }}" style="padding:8px 15px;">Reset</a>
         </div>
     </form>
 </div>
@@ -51,7 +51,7 @@
                         <td><span
                                 class="cp-badge status-{{ $shipment->status }}">{{ $shipment->statusLabel() }}</span>
                         </td>
-                        <td><a class="cp-btn cp-btn-soft cp-btn-sm"
+                        <td><a class="master-btn master-btn-soft master-btn-sm"
                                 href="{{ route('client-portal.shipments.show', $shipment->id) }}">Open</a></td>
                 </tr>@empty<tr>
                         <td colspan="6">

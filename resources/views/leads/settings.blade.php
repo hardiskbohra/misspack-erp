@@ -15,8 +15,8 @@
             <p>Manage lead and vendor quote dropdown master data.</p>
         </div>
         <div class="ls-actions">
-            <a href="{{ route('leads.index') }}" class="ls-btn ls-btn-light">Back to Leads</a>
-            <a href="{{ route('vendor-quotes.index') }}" class="ls-btn ls-btn-light">Vendor Quotes</a>
+            <a href="{{ route('leads.index') }}" class="master-btn master-btn-light">Back to Leads</a>
+            <a href="{{ route('vendor-quotes.index') }}" class="master-btn master-btn-light">Vendor Quotes</a>
         </div>
     </div>
 
@@ -69,31 +69,31 @@
 
                     <div class="ls-form-grid">
                         <div>
-                            <label class="ls-label">Key</label>
-                            <input class="ls-input" name="key" required placeholder="{{ in_array($activeTab, ['currency', 'incoterm']) ? 'INR' : 'new_option' }}">
+                            <label class="master-label">Key</label>
+                            <input class="master-input" name="key" required placeholder="{{ in_array($activeTab, ['currency', 'incoterm']) ? 'INR' : 'new_option' }}">
                         </div>
                         <div>
-                            <label class="ls-label">Label</label>
-                            <input class="ls-input" name="label" required placeholder="Display label">
+                            <label class="master-label">Label</label>
+                            <input class="master-input" name="label" required placeholder="Display label">
                         </div>
                         <div>
-                            <label class="ls-label">Color</label>
-                            <input class="ls-input" type="color" name="color" value="#4f83f1">
+                            <label class="master-label">Color</label>
+                            <input class="master-input" type="color" name="color" value="#4f83f1">
                         </div>
                         <div>
-                            <label class="ls-label">Sort</label>
-                            <input class="ls-input" type="number" min="0" name="sort_order" value="10">
+                            <label class="master-label">Sort</label>
+                            <input class="master-input" type="number" min="0" name="sort_order" value="10">
                         </div>
                         <div>
-                            <label class="ls-check">
-                                <input type="checkbox" name="is_active" value="1" checked>
+                            <label class="master-check">
+                                <input name="is_active" value="1" checked>
                                 Active
                             </label>
                         </div>
                     </div>
 
                     <div style="margin-top:14px;">
-                        <button class="ls-btn ls-btn-primary" type="submit">Create Option</button>
+                        <button class="master-btn master-btn-primary" type="submit">Create Option</button>
                     </div>
                 </form>
             </div>
@@ -105,34 +105,34 @@
                         <input type="hidden" name="group" value="{{ $option->group }}">
 
                         <div>
-                            <label class="ls-label">Key</label>
-                            <input class="ls-input" name="key" value="{{ $option->key }}" required>
+                            <label class="master-label">Key</label>
+                            <input class="master-input" name="key" value="{{ $option->key }}" required>
                         </div>
                         <div>
-                            <label class="ls-label">Label</label>
-                            <input class="ls-input" name="label" value="{{ $option->label }}" required>
+                            <label class="master-label">Label</label>
+                            <input class="master-input" name="label" value="{{ $option->label }}" required>
                         </div>
                         <div>
-                            <label class="ls-label">Color</label>
-                            <input class="ls-input" type="color" name="color" value="{{ $option->color ?: '#4f83f1' }}">
+                            <label class="master-label">Color</label>
+                            <input class="master-input" type="color" name="color" value="{{ $option->color ?: '#4f83f1' }}">
                             <div class="ls-color-preview" style="margin-top:6px;">
                                 <span class="ls-color-dot" style="background:{{ $option->color ?: '#4f83f1' }}"></span>
                                 {{ $option->color ?: '#4f83f1' }}
                             </div>
                         </div>
                         <div>
-                            <label class="ls-label">Sort</label>
-                            <input class="ls-input" type="number" min="0" name="sort_order" value="{{ $option->sort_order }}">
+                            <label class="master-label">Sort</label>
+                            <input class="master-input" type="number" min="0" name="sort_order" value="{{ $option->sort_order }}">
                         </div>
                         <div>
-                            <label class="ls-check">
-                                <input type="checkbox" name="is_active" value="1" {{ $option->is_active ? 'checked' : '' }}>
+                            <label class="master-check">
+                                <input name="is_active" value="1" {{ $option->is_active ? 'checked' : '' }}>
                                 Active
                             </label>
                         </div>
                         <div class="ls-row-actions">
-                            <button class="ls-btn ls-btn-primary" type="submit" name="_method" value="PUT">Save</button>
-                            <button class="ls-btn ls-btn-danger"
+                            <button class="master-btn master-btn-primary" type="submit" name="_method" value="PUT">Save</button>
+                            <button class="master-btn master-btn-danger"
                                     type="submit"
                                     name="_method"
                                     value="DELETE"

@@ -457,46 +457,6 @@ body {
     gap:10px;
 }
 
-.field {
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-}
-
-.field label {
-    font-size:12px;
-    font-weight:900;
-    color:#5d6b82;
-}
-
-.field input,
-.field select,
-.field textarea {
-    border:1px solid #dfe5f2;
-    border-radius:14px;
-    padding:11px;
-    background:#fff;
-    outline:none;
-    width:100%;
-}
-
-.field input:focus,
-.field select:focus,
-.field textarea:focus {
-    border-color:var(--primary);
-    box-shadow:0 0 0 4px rgba(79,131,241,.1);
-}
-
-.btn {
-    border:0;
-    border-radius:14px;
-    background:var(--accent);
-    color:#fff;
-    font-weight:900;
-    padding:11px 15px;
-    cursor:pointer;
-}
-
 .empty {
     padding:16px;
     text-align:center;

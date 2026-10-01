@@ -65,28 +65,6 @@
     align-items:end;
 }
 
-.master-field {
-    display:flex;
-    flex-direction:column;
-    gap:5px;
-}
-
-.master-field label {
-    font-size:11px;
-    text-transform:uppercase;
-    font-weight:600;
-    opacity:.82;
-}
-
-.master-field select {
-    height:42px;
-    border:0;
-    border-radius:12px;
-    padding:8px 11px;
-    font-weight:600;
-    color:#17233b;
-}
-
 .master-filter-btn {
     height:42px;
     border:0;

@@ -9,15 +9,11 @@
 
 :root {
     --cq-primary:#4f83f1;
-    --cq-primary-2:#6366f1;
     --cq-dark:#17233b;
     --cq-muted:#687386;
     --cq-border:#dfe7f3;
     --cq-bg:#eef3ff;
-    --cq-soft:#edf5ff;
     --cq-red:#ef4770;
-    --cq-green:#10b981;
-    --cq-orange:#f59e0b;
     --cq-shadow:0 14px 35px rgba(25,42,70,.08);
 }
 
@@ -66,13 +62,13 @@
     margin-bottom:24px;
 }
 
-.cq-search {
+master-search-form {
     position:relative;
     flex:1 1 320px;
     max-width:520px;
 }
 
-.cq-search span {
+master-search-form span {
     position:absolute;
     left:15px;
     top:50%;
@@ -80,21 +76,7 @@
     color:#8792a5;
 }
 
-.cq-input,
-.cq-select {
-    height:44px;
-    padding:10px 14px;
-    border:1px solid #d8e2ef;
-    border-radius:12px;
-    background:#fff;
-    color:var(--cq-dark);
-    font-size:14px;
-    font-weight:600;
-    outline:none;
-    width:100%;
-}
-
-.cq-search .cq-input {
+master-search-form .master-input {
     padding-left:44px;
 }
 
@@ -102,31 +84,6 @@
     display:flex;
     gap:12px;
     flex-wrap:wrap;
-}
-
-.cq-btn {
-    min-height:42px;
-    border:0;
-    border-radius:12px;
-    padding:11px 18px;
-    font-size:14px;
-    font-weight:900;
-    text-decoration:none;
-    cursor:pointer;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-}
-
-.cq-btn-primary {
-    background:linear-gradient(135deg,var(--cq-primary),var(--cq-primary-2));
-    color:#fff;
-}
-
-.cq-btn-light {
-    background:#f3f6fb;
-    color:var(--cq-dark);
 }
 
 .cq-filter-row {
@@ -137,7 +94,7 @@
     margin-top:-8px;
 }
 
-.cq-filter-row .cq-select {
+.cq-filter-row .master-select {
     flex:1 1 180px;
 }
 
@@ -237,30 +194,6 @@
     gap:8px;
 }
 
-.cq-icon {
-    width:36px;
-    height:36px;
-    border:0;
-    border-radius:10px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:#eef5ff;
-    color:var(--cq-primary);
-    text-decoration:none;
-    cursor:pointer;
-}
-
-.cq-icon.green {
-    background:#e8fff7;
-    color:#0e9f6e;
-}
-
-.cq-icon.danger {
-    background:#fff0f4;
-    color:var(--cq-red);
-}
-
 .cq-pagination {
     padding:18px 20px;
 }
@@ -275,9 +208,9 @@
         flex-direction:column;
     }
 
-    .cq-search,
+    master-search-form,
     .cq-actions,
-    .cq-actions .cq-btn {
+    .cq-actions .master-btn {
         width:100%;
         max-width:100%;
     }

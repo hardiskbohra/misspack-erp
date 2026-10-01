@@ -151,34 +151,6 @@
     justify-content: flex-end;
 }
 
-.vendor-btn {
-    min-height: 42px;
-    border: 0;
-    border-radius: 14px;
-    padding: 11px 16px;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    white-space: nowrap;
-}
-
-.vendor-btn-primary {
-    background: #ef4770;
-    color: #fff;
-    box-shadow: 0 10px 24px rgba(239, 71, 112, .24);
-}
-
-.vendor-btn-light {
-    background: rgba(255, 255, 255, .16);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, .3);
-}
-
 /* ---------------- KPI strip ---------------- */
 
 .vendor-kpi-grid {
@@ -743,11 +715,6 @@
     padding: 16px;
 }
 
-.vendor-comment-form label {
-    font-weight: 600;
-    color: #536079;
-}
-
 /* ---------------- Responsive: vendor detail ---------------- */
 
 @media (max-width: 1500px) {
@@ -777,7 +744,7 @@
     }
 
     .vendor-actions,
-    .vendor-actions .vendor-btn {
+    .vendor-actions .master-btn {
         width: 100%;
     }
 
@@ -818,7 +785,7 @@
     overflow-x: auto;
 }
 
-.vendor-quote-form .master-remove {
+.vendor-quote-form .master-remove-row {
     width: 34px;
     height: 34px;
     border: 0;
@@ -886,37 +853,6 @@
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
-}
-
-.image-btn {
-    min-height: 42px;
-    border: 0;
-    border-radius: 12px;
-    padding: 11px 18px;
-    font-size: 14px;
-    font-weight: 900;
-    text-decoration: none;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    white-space: nowrap;
-}
-
-.image-btn-primary {
-    background: linear-gradient(135deg, var(--img-primary), var(--img-primary-2));
-    color: #fff;
-}
-
-.image-btn-soft {
-    background: var(--img-soft);
-    color: var(--img-primary);
-}
-
-.image-btn-light {
-    background: #f3f6fb;
-    color: var(--img-dark);
 }
 
 .image-stage {
@@ -1011,7 +947,7 @@
     }
 
     .image-actions,
-    .image-actions .image-btn {
+    .image-actions .master-btn {
         width: 100%;
     }
 

@@ -12,13 +12,13 @@
     </div>
     <div class="master-card" style="padding:18px;margin-bottom:18px;">
         <form method="GET" class="cp-grid-4">
-            <div class="cp-field">
-                <label>Search</label>
-                <input name="search" value="{{ $search }}" placeholder="Search product, SKU, category...">
+            <div class="master-field">
+                <label class="master-label">Search</label>
+                <input class="master-input" name="search" value="{{ $search }}" placeholder="Search product, SKU, category...">
             </div>
-            <div class="cp-field">
-                <label>Category</label>
-                <select name="category">
+            <div class="master-field">
+                <label class="master-label">Category</label>
+                <select class="master-select" name="category">
                     <option value="all">All Categories</option>
                     @foreach ($categories as $cat)
                         <option value="{{ $cat }}" {{ $category === $cat ? 'selected' : '' }}>{{ $cat }}
@@ -27,8 +27,8 @@
                 </select>
             </div>
             <div style="display:flex;align-items:end;gap:10px;">
-                <button class="cp-btn cp-btn-primary">Filter</button>
-                <a class="cp-btn cp-btn-light" style="padding:8px 15px;" href="{{ route('client-portal.products.index') }}">Reset</a>
+                <button class="master-btn master-btn-primary">Filter</button>
+                <a class="master-btn master-btn-light" style="padding:8px 15px;" href="{{ route('client-portal.products.index') }}">Reset</a>
             </div>
         </form>
     </div>

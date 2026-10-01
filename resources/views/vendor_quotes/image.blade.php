@@ -14,10 +14,10 @@
             <p>{{ $subtitle }}</p>
         </div>
         <div class="image-actions">
-            <a href="{{ $backUrl }}" class="image-btn image-btn-light">Back</a>
+            <a href="{{ $backUrl }}" class="master-btn master-btn-light">Back</a>
             @if($imagePath)
-                <a href="{{ asset('storage/'.$imagePath) }}" target="_blank" class="image-btn image-btn-soft">Open Original</a>
-                <a href="{{ asset('storage/'.$imagePath) }}" download class="image-btn image-btn-primary">Download Image</a>
+                <a href="{{ asset('storage/'.$imagePath) }}" target="_blank" class="master-btn master-btn-soft">Open Original</a>
+                <a href="{{ asset('storage/'.$imagePath) }}" download class="master-btn master-btn-primary">Download Image</a>
             @endif
         </div>
     </div>

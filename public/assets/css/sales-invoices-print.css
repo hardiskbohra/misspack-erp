@@ -57,7 +57,7 @@ body {
     gap: 10px;
 }
 
-.btn {
+.master-btn {
     appearance: none;
     border: 0;
     border-radius: 7px;
@@ -72,7 +72,7 @@ body {
     box-shadow: 0 3px 10px rgba(118, 87, 217, .18);
 }
 
-.btn:hover {
+.master-btn:hover {
     background: var(--purple-dark);
 }
 

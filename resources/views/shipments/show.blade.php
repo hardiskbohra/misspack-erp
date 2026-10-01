@@ -201,7 +201,7 @@
                     <div class="row"><select class="master-select" name="status">@foreach($statusOptions as $key=>$label)<option value="{{ $key }}" @selected($shipment->status === $key)>{{ $label }}</option>@endforeach</select><input class="master-input" name="location" placeholder="Location"></div>
                     <input class="master-input" type="datetime-local" name="event_time" value="{{ now('Asia/Kolkata')->format('Y-m-d\TH:i') }}">
                     <textarea class="master-textarea" name="remarks" placeholder="Tracking remarks"></textarea>
-                    <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:#536079;"><input type="checkbox" name="is_public" value="1" checked> Visible on public tracking link</label>
+                    <label class="master-check"><input name="is_public" value="1" checked></label>
                     <button class="master-btn master-btn-primary" type="submit">Add History</button>
                 </form>
             </div>

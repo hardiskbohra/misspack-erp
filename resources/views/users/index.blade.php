@@ -13,10 +13,10 @@
     <div class="master-toolbar" style="padding:0;padding-bottom:18px;">
         <form method="GET" action="{{ route('users.index') }}" class="master-search-form">
             <div class="master-search">
-                <i class="fas fa-search master-search-icon"></i>
+                <span><i class="fas fa-search"></i></span>
                 <input type="text"
                        name="search"
-                       class="master-search-input"
+                       class="master-input"
                        placeholder="Search by name, email, department…"
                        value="{{ $search }}">
             </div>
@@ -239,7 +239,7 @@
                         <div class="master-avatar-actions">
                             <label class="master-upload-btn" for="addAvatarFile">
                                 <i class="fas fa-upload"></i> Choose file
-                                <input type="file" id="addAvatarFile" name="avatar" accept="image/*" hidden>
+                                <input class="master-input" type="file" id="addAvatarFile" name="avatar" accept="image/*" hidden>
                             </label>
                             <span class="master-file-name" id="addAvName">No file chosen</span>
                         </div>
@@ -248,25 +248,25 @@
 
                 <div class="master-section-label">Basic Information</div>
                 <div class="master-form-grid">
-                    <div class="master-form-field">
+                    <div class="master-field">
                         <label class="master-label">Full Name <span class="master-required">*</span></label>
                         <input type="text" name="name" class="master-input {{ $errors->has('name') ? 'is-invalid' : '' }}" placeholder="e.g. Jonathan Deo" value="{{ old('name') }}" required>
                         @error('name')<span class="master-error">{{ $message }}</span>@enderror
                     </div>
-                    <div class="master-form-field">
+                    <div class="master-field">
                         <label class="master-label">Email Address <span class="master-required">*</span></label>
                         <input type="email" name="email" class="master-input {{ $errors->has('email') ? 'is-invalid' : '' }}" placeholder="user@misspack.com" value="{{ old('email') }}" required>
                         @error('email')<span class="master-error">{{ $message }}</span>@enderror
                     </div>
-                    <div class="master-form-field">
+                    <div class="master-field">
                         <label class="master-label">Mobile Number</label>
                         <input type="text" name="mobile" class="master-input" placeholder="+91 9876543210" value="{{ old('mobile') }}">
                     </div>
-                    <div class="master-form-field">
+                    <div class="master-field">
                         <label class="master-label">Department</label>
                         <input type="text" name="department" class="master-input" placeholder="Technology" value="{{ old('department') }}">
                     </div>
-                    <div class="master-form-field full">
+                    <div class="master-field full">
                         <label class="master-label">Designation</label>
                         <input type="text" name="designation" class="master-input" placeholder="Senior Developer" value="{{ old('designation') }}">
                     </div>
@@ -274,7 +274,7 @@
 
                 <div class="master-section-label">Account Security</div>
                 <div class="master-form-grid">
-                    <div class="master-form-field">
+                    <div class="master-field">
                         <label class="master-label">Password <span class="master-required">*</span></label>
                         <div class="master-password-wrap">
                             <input type="password" name="password" id="addPw1" class="master-input {{ $errors->has('password') ? 'is-invalid' : '' }}" placeholder="Min. 6 characters" required>
@@ -282,7 +282,7 @@
                         </div>
                         @error('password')<span class="master-error">{{ $message }}</span>@enderror
                     </div>
-                    <div class="master-form-field">
+                    <div class="master-field">
                         <label class="master-label">Confirm Password <span class="master-required">*</span></label>
                         <div class="master-password-wrap">
                             <input type="password" name="password_confirmation" id="addPw2" class="master-input" placeholder="Repeat password" required>
@@ -327,7 +327,7 @@
                         <div class="master-avatar-actions">
                             <label class="master-upload-btn" for="editAvatarFile">
                                 <i class="fas fa-upload"></i> Change Photo
-                                <input type="file" id="editAvatarFile" name="avatar" accept="image/*" hidden>
+                                <input class="master-input" type="file" id="editAvatarFile" name="avatar" accept="image/*" hidden>
                             </label>
                             <button type="button" class="master-remove-avatar-btn" id="editRemoveBtn" style="display:none;">
                                 <i class="fas fa-trash-alt"></i> Remove
@@ -339,23 +339,23 @@
 
                 <div class="master-section-label">Basic Information</div>
                 <div class="master-form-grid">
-                    <div class="master-form-field">
+                    <div class="master-field">
                         <label class="master-label">Full Name <span class="master-required">*</span></label>
                         <input type="text" name="name" id="editName" class="master-input" required>
                     </div>
-                    <div class="master-form-field">
+                    <div class="master-field">
                         <label class="master-label">Email Address <span class="master-required">*</span></label>
                         <input type="email" name="email" id="editEmail" class="master-input" required>
                     </div>
-                    <div class="master-form-field">
+                    <div class="master-field">
                         <label class="master-label">Mobile Number</label>
                         <input type="text" name="mobile" id="editMobile" class="master-input">
                     </div>
-                    <div class="master-form-field">
+                    <div class="master-field">
                         <label class="master-label">Department</label>
                         <input type="text" name="department" id="editDepartment" class="master-input">
                     </div>
-                    <div class="master-form-field full">
+                    <div class="master-field full">
                         <label class="master-label">Designation</label>
                         <input type="text" name="designation" id="editDesignation" class="master-input">
                     </div>
@@ -367,14 +367,14 @@
                     Leave both fields blank to keep the current password unchanged.
                 </div>
                 <div class="master-form-grid">
-                    <div class="master-form-field">
+                    <div class="master-field">
                         <label class="master-label">New Password</label>
                         <div class="master-password-wrap">
                             <input type="password" name="password" id="editPw1" class="master-input" placeholder="Min. 6 characters">
                             <button type="button" class="master-password-toggle" data-toggle-password="editPw1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
                         </div>
                     </div>
-                    <div class="master-form-field">
+                    <div class="master-field">
                         <label class="master-label">Confirm New Password</label>
                         <div class="master-password-wrap">
                             <input type="password" name="password_confirmation" id="editPw2" class="master-input" placeholder="Repeat new password">
