@@ -14,6 +14,9 @@
             var optionsCount = $sel.find('option').length;
             $sel.select2({
                 width: '100%',
+                // copy the original select's classes onto the rendered
+                // selection element so module CSS hooks still reach it
+                selectionCssClass: ':all:',
                 // keep dropdowns inside modals (fixed-positioned ancestors)
                 dropdownParent: $sel.closest('.master-modal-box, .master-modal-card').length
                     ? $sel.closest('.master-modal-box, .master-modal-card')
@@ -30,10 +33,29 @@
                     return data.text;
                 }
             });
+            // Select2 4.1 wraps the control in a generated .select2-container
+            // span — that span is the flex/flow item in filter rows, but it
+            // does not carry the original select's classes. Mirror them onto
+            // the container so module layout rules (e.g.
+            // .master-filter-row .master-select flex sizing) keep working.
+            // select2-theme.css strips the native-control geometry from
+            // span.select2-container.master-select, so the inner
+            // .select2-selection remains the only visible (44px) control.
+            var $container = $sel.next('.select2-container'); // Select2 4.x inserts it after the select
+            if (!$container.length) $container = $sel.prev('.select2-container');
+            // Mirror only the app's own classes — never Select2 internals
+            // (e.g. select2-hidden-accessible, which would clip the control)
+            var cls = ($sel.attr('class') || '').split(/\s+/).filter(function (c) {
+                return !!c && c.indexOf('select2') !== 0;
+            });
+            if (cls.length) $container.addClass(cls.join(' '));
         }
 
         function initAll() {
-            $('select.master-select').not('[data-no-select2]').not(':disabled').each(function () {
+            // [hidden] (attribute) is honoured — legacy hidden filter selects
+            // stay native and invisible; CSS-hidden selects (e.g. inside
+            // .master-modal { display:none }) are still initialised.
+            $('select.master-select').not('[data-no-select2]').not(':disabled').not('[hidden]').each(function () {
                 decorate($(this));
             });
         }

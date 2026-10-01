@@ -8,6 +8,28 @@
     font-family: inherit;
 }
 
+/* Select2 4.1 is initialised with selectionCssClass: ':all:' — it copies
+   the original select's classes (e.g. .master-select) onto the generated
+   container span. The module layout rules that target .master-select
+   (flex sizing in filter rows, .two-btn-row, …) must keep applying to the
+   container, but the native-control geometry must not: the inner
+   .select2-selection is the visible control. Strip the geometry so the
+   container is a transparent, zero-padding wrapper. */
+span.select2-container.master-select,
+span.select2-container.master-input,
+span.select2-container.master-textarea {
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
 /* --- single selection --- */
 
 .select2-container--default .select2-selection--single {
