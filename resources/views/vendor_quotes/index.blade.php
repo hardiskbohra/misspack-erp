@@ -141,7 +141,7 @@
                                     
                                                 <form method="POST"
                                                       action="{{ route('vendor-quotes.destroy', $quote) }}"
-                                                      onsubmit="return confirm('Delete this Quote?')">
+                                                      data-confirm="Delete this Quote?"">
                                     
                                                     @csrf
                                                     @method('DELETE')

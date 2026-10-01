@@ -70,24 +70,15 @@
         forms.forEach(function (form) {
             form.addEventListener('submit', function (event) {
                 event.preventDefault();
-                if (typeof window.Swal === 'undefined') {
+                if (typeof window.MasterAlert === 'undefined') {
                     form.submit();
                     return;
                 }
-                window.Swal.fire({
-                    title: 'Delete Project?',
-                    text: 'This action cannot be undone.',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#dc3545',
-                    cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'Yes, Delete',
-                    cancelButtonText: 'Cancel',
-                    reverseButtons: true
-                }).then(function (result) {
-                    if (result.isConfirmed) {
-                        form.submit();
-                    }
+                MasterAlert.confirm(
+                    'This action cannot be undone.',
+                    { title: 'Delete Project?', confirmText: 'Yes, Delete', cancelText: 'Cancel', danger: true }
+                ).then(function (ok) {
+                    if (ok) form.submit();
                 });
             });
         });

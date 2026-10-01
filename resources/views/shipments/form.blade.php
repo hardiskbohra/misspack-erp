@@ -404,7 +404,7 @@
                 
                             <form method="POST"
                                   action="{{ route('shipments.history.destroy', $history) }}"
-                                  onsubmit="return confirm('Delete this tracking history entry?')">
+                                  data-confirm="Delete this tracking history entry?"">
                                 @csrf
                                 @method('DELETE')
                 

@@ -9,6 +9,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('assets/css/leads-public-create.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/select2/css/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/select2-theme.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/master-alert.css') }}">
 </head>
 <body>
 <div class="public-page">
@@ -215,7 +218,6 @@
     </footer>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     window.leadPublicFlash = @json([
         'success' => session('success'),
@@ -223,5 +225,9 @@
     ]);
 </script>
 <script src="{{ asset('assets/js/leads-public.js') }}"></script>
+    <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
+    <script src="{{ asset('assets/js/master-alert.js') }}"></script>
+    <script src="{{ asset('assets/js/master-selects.js') }}"></script>
 </body>
 </html>

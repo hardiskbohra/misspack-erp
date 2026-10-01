@@ -501,7 +501,7 @@
                         <div class="pd-row-actions">
                             <button type="button" class="master-btn master-btn-soft editCommentBtn" data-comment='@json($comment)'>Edit</button>
                             <form method="POST" action="{{ route('projects.comments.destroy', $comment) }}"
-                                onsubmit="return confirm('Delete this comment?');">
+                                data-confirm="Delete this comment?"">
                                 @csrf @method('DELETE')
                                     <button type="submit" class="pd-link-danger">Delete</button>
                             </form>
@@ -627,7 +627,7 @@
                                         target="_blank">Open</a>
                                     <form method="POST"
                                         action="{{ route('projects.attachments.destroy', $attachment) }}"
-                                        onsubmit="return confirm('Delete attachment?');">@csrf
+                                        data-confirm="Delete attachment?"">@csrf
                                         @method('DELETE')<button type="submit"
                                             class="pd-link-danger">Delete</button></form>
                                 </div>

@@ -2,7 +2,7 @@
    CLIENT-PORTAL-KYC.JS — Client Portal module
    --------------------------------------------------------------------------
    KYC status page: copy the verification link to the clipboard
-   (prompt() fallback). Exposed on window because the button uses an
+   (MasterAlert fallback). Exposed on window because the button uses an
    inline onclick in the view markup.
    ========================================================================== */
 (function () {
@@ -26,7 +26,7 @@
                     message.style.display = 'none';
                 }, 2000);
             }).catch(function () {
-                prompt('Copy link', link);
+                MasterAlert.alert(link, { title: 'Copy KYC link — select and copy manually', type: 'info' });
             });
         };
     });

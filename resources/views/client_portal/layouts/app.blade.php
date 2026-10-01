@@ -23,6 +23,9 @@
     <link rel="stylesheet" href="{{ asset('assets/css/master-index.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-show.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/select2/css/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/select2-theme.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/master-alert.css') }}">
 
     @stack('styles')
 </head>
@@ -103,6 +106,10 @@
         </div>
     </main>
 </div>
+    <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
+    <script src="{{ asset('assets/js/master-alert.js') }}"></script>
+    <script src="{{ asset('assets/js/master-selects.js') }}"></script>
     <script src="{{ asset('assets/js/client-portal.js') }}"></script>
 @stack('scripts')
 </body>

@@ -37,6 +37,9 @@
     <link rel="stylesheet" href="{{ asset('assets/css/master-index.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-show.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/select2/css/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/select2-theme.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/master-alert.css') }}">
 
     @stack('styles')
 </head>
@@ -157,48 +160,30 @@
     </div>
 
     {{-- Vendor Scripts --}}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
 
     {{-- App Scripts --}}
+    <script src="{{ asset('assets/js/master-alert.js') }}"></script>
+    <script src="{{ asset('assets/js/master-selects.js') }}"></script>
     <script src="{{ asset('assets/js/app-layout.js') }}"></script>
 
-    {{-- Flash Messages --}}
+    {{-- Flash Messages (custom alerts) --}}
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             @if(session('success'))
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: @json(session('success')),
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true
-                });
+                MasterAlert.toast(@json(session('success')), 'success', { title: 'Success' });
             @endif
 
             @if(session('error'))
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: @json(session('error')),
-                    confirmButtonColor: '#ef4770'
-                });
+                MasterAlert.alert(@json(session('error')), { title: 'Error', type: 'error', danger: true });
             @endif
 
             @if($errors->any())
                 var validationErrors = @json($errors->all());
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Validation Error',
-                    html: '<ul style="text-align:left;margin:0;padding-left:18px;">' +
-                        validationErrors.map(function (error) {
-                            return '<li>' + escapeHtml(error) + '</li>';
-                        }).join('') +
-                        '</ul>',
-                    confirmButtonColor: '#ef4770'
-                });
+                MasterAlert.alert('<ul>' + validationErrors.map(function (error) {
+                    return '<li>' + escapeHtml(error) + '</li>';
+                }).join('') + '</ul>', { title: 'Validation Error', type: 'error', html: true, danger: true });
             @endif
         });
 

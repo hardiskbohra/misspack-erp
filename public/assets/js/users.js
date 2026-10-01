@@ -112,11 +112,7 @@
                 openModal('editModal');
             })
             .catch(function () {
-                if (window.Swal) {
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Could not load user data. Please try again.' });
-                } else {
-                    alert('Could not load user data. Please try again.');
-                }
+                MasterAlert.alert('Could not load user data. Please try again.', { title: 'Error', type: 'error', danger: true });
             });
     }
 

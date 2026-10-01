@@ -339,7 +339,8 @@
     document.getElementById('printQuoteBottom')?.addEventListener('click', printQuote);
 
     document.getElementById('resetCalculator').addEventListener('click', function () {
-        if (!confirm('Reset browser cached calculator data?')) return;
+        MasterAlert.confirm('Reset browser cached calculator data?', { title: 'Reset calculator', confirmText: 'Reset', danger: true }).then(function (ok) {
+            if (!ok) return;
         localStorage.removeItem(storageKey);
         state = defaultState();
         activeStep = 1;
@@ -348,7 +349,8 @@
         updateAll();
         saveState();
         goStep(1);
-    });
+            });
+        });
 
     applyStateToFields();
     bindFields();

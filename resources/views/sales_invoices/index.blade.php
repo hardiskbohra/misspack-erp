@@ -58,7 +58,7 @@
                             <td>{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}</td>
                             <td><span class="si-badge {{ $invoice->show_client_portal ? 'public' : 'private' }}">{{ $invoice->show_client_portal ? 'Visible' : 'Hidden' }}</span></td>
                             <td><span class="si-badge status-{{ $invoice->status }}">{{ $invoice->statusLabel() }}</span></td>
-                            <td><div class="si-row-actions"><a class="master-icon-btn" href="{{ route('sales-invoices.show', $invoice) }}" title="Open">👁</a><a class="master-icon-btn" href="{{ route('sales-invoices.print', $invoice) }}" target="_blank" title="Print">🖨</a><a class="master-icon-btn" href="{{ route('sales-invoices.edit', $invoice) }}" title="Edit">✎</a><form method="POST" action="{{ route('sales-invoices.destroy', $invoice) }}" onsubmit="return confirm('Delete invoice?')">@csrf @method('DELETE')<button class="master-icon-btn danger" type="submit">🗑</button></form></div></td>
+                            <td><div class="si-row-actions"><a class="master-icon-btn" href="{{ route('sales-invoices.show', $invoice) }}" title="Open">👁</a><a class="master-icon-btn" href="{{ route('sales-invoices.print', $invoice) }}" target="_blank" title="Print">🖨</a><a class="master-icon-btn" href="{{ route('sales-invoices.edit', $invoice) }}" title="Edit">✎</a><form method="POST" action="{{ route('sales-invoices.destroy', $invoice) }}" data-confirm="Delete invoice?"">@csrf @method('DELETE')<button class="master-icon-btn danger" type="submit">🗑</button></form></div></td>
                         </tr>
                     @empty
                         <tr><td colspan="10"><div class="si-empty">No invoices found.</div></td></tr>

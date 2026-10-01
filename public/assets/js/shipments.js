@@ -83,10 +83,10 @@
     window.copyShipmentLink = function (url) {
         if (navigator.clipboard) {
             navigator.clipboard.writeText(url).then(function () {
-                alert('Public tracking link copied.');
+                MasterAlert.toast('Public tracking link copied.', 'success');
             });
         } else {
-            prompt('Copy public tracking link:', url);
+            MasterAlert.alert(url, { title: 'Copy public tracking link', type: 'info' });
         }
     };
 
@@ -99,9 +99,8 @@
 
     /** Remove an attachment via AJAX (form page). */
     window.removeAttachment = function (id, btn) {
-        if (!confirm('Remove this attachment?')) {
-            return;
-        }
+        MasterAlert.confirm('Remove this attachment?', { title: 'Remove attachment', confirmText: 'Remove', danger: true }).then(function (ok) {
+            if (!ok) return;
 
         fetch('/shipments/attachments/' + id, {
             method: 'DELETE',
@@ -126,6 +125,7 @@
         .catch(function (err) {
             console.error(err);
         });
+            });
     };
 
     /** Toggle an attachment's public visibility via AJAX (form page). */
@@ -145,12 +145,12 @@
         .then(function (data) {
             if (!data.success) {
                 checkbox.checked = !checkbox.checked;
-                alert('Unable to update attachment.');
+                MasterAlert.toast('Unable to update attachment.', 'error');
             }
         })
         .catch(function () {
             checkbox.checked = !checkbox.checked;
-            alert('Something went wrong.');
+            MasterAlert.toast('Something went wrong.', 'error');
         });
     };
 })();

@@ -6,7 +6,8 @@
    (app-layout.js) owns open/close state, backdrop, Escape and
    [data-close-modal] buttons, so this file only carries the open triggers.
    (The old delete-confirm dialog had no trigger in the markup and was
-   removed; row delete uses a native confirm() form submit.)
+   removed; row delete confirms via <form data-confirm> handled by
+   master-alert.js.)
    The other cashflow views (form, pdf, reports, settings, show) are static.
    ========================================================================== */
 (function () {

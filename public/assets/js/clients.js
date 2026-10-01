@@ -21,4 +21,4 @@ document.addEventListener('DOMContentLoaded', function () {
     [quickModal, deleteModal].forEach(function (modal) { modal?.addEventListener('click', function (event) { if (event.target === modal) closeModal(modal); }); });
     document.addEventListener('keydown', function (event) { if (event.key !== 'Escape') return; closeModal(quickModal); closeModal(deleteModal); });
 });
-function copyClientKycLink(url) { if (navigator.clipboard) { navigator.clipboard.writeText(url).then(() => alert('KYC link copied.')); } else { prompt('Copy KYC link:', url); } }
+function copyClientKycLink(url) { if (navigator.clipboard) { navigator.clipboard.writeText(url).then(function () { MasterAlert.toast('KYC link copied.', 'success'); }).catch(function () { MasterAlert.toast('Could not copy link.', 'error'); }); } else { MasterAlert.alert(url, { title: 'Copy KYC link', type: 'info' }); } }

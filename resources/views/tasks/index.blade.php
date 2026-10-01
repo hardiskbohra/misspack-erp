@@ -20,7 +20,7 @@
                 </div>
                 <div class="master-toolbar-right">
                     <form method="POST" action="{{ route('tasks.markAll') }}" class="desktop-only"
-                        onsubmit="return confirm('Mark all open tasks as completed?');">
+                        data-confirm="Mark all open tasks as completed?"">
                         @csrf
                         @method('PATCH')
                         <input type="hidden" name="scope" value="{{ $scope }}">

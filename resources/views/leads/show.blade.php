@@ -188,7 +188,7 @@
                                         {{ $comment->next_follow_up_at->format('d M Y, h:i A') }}</div>
                                 @endif
                                 <form method="POST" action="{{ route('leads.comments.destroy', $comment) }}"
-                                    onsubmit="return confirm('Delete this comment?')" style="margin-top:10px;">
+                                    data-confirm="Delete this comment?" style="margin-top:10px;">
                                     @csrf @method('DELETE')<button class="master-btn master-btn-danger"
                                         type="submit">Delete</button></form>
                         </div>@empty<p style="color:#687386;font-weight:800;">No comments yet.</p>

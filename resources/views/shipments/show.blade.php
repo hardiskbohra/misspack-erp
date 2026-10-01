@@ -190,7 +190,7 @@
                 <h3 class="master-section-title">Public Readonly Link</h3>
                 <div class="public-box">
                     <input class="master-input" id="publicTrackingLink" readonly value="{{ route('shipments.publicTrack', $shipment->public_token) }}">
-                    <button type="button" class="master-btn master-btn-soft" onclick="navigator.clipboard ? navigator.clipboard.writeText(document.getElementById('publicTrackingLink').value) : prompt('Copy link', document.getElementById('publicTrackingLink').value)">Copy</button>
+                    <button type="button" class="master-btn master-btn-soft" onclick="maCopy('publicTrackingLink', 'Copy tracking link')">Copy</button>
                 </div>
             </div>
 

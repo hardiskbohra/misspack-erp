@@ -137,7 +137,7 @@
                                     name="_method"
                                     value="DELETE"
                                     formaction="{{ route('leads.settings.destroy', $option) }}"
-                                    onclick="return confirm('Delete this option? Existing records using this key will keep their saved value.')">
+                                    data-confirm="Delete this option? Existing records using this key will keep their saved value."">
                                 Delete
                             </button>
                         </div>

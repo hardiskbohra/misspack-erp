@@ -236,7 +236,7 @@
                                         <div class="vendor-row-actions">
                                             <a href="{{ $attachment->fileUrl() }}" target="_blank" class="master-btn master-btn-primary">Open</a>
                                             @if(\Illuminate\Support\Facades\Route::has('vendors.attachments.destroy'))
-                                                <form method="POST" action="{{ route('vendors.attachments.destroy', $attachment) }}" onsubmit="return confirm('Delete this vendor document?')">@csrf @method('DELETE')<button class="master-btn master-btn-primary vendor-row-delete" type="submit">Delete</button></form>
+                                                <form method="POST" action="{{ route('vendors.attachments.destroy', $attachment) }}" data-confirm="Delete this vendor document?"">@csrf @method('DELETE')<button class="master-btn master-btn-primary vendor-row-delete" type="submit">Delete</button></form>
                                             @endif
                                         </div>
                                     </div>
@@ -446,7 +446,7 @@
                                                 @if (\Illuminate\Support\Facades\Route::has('vendors.payments.destroy'))
                                                     <form method="POST"
                                                         action="{{ route('vendors.payments.destroy', $entry) }}"
-                                                        onsubmit="return confirm('Delete this vendor payment entry?')">
+                                                        data-confirm="Delete this vendor payment entry?"">
                                                         @csrf @method('DELETE')<button class="master-icon-btn danger"><i class="fas fa-trash"></i></button>
                                                     </form>
                                                 @endif
@@ -944,7 +944,7 @@
                                     @if (\Illuminate\Support\Facades\Route::has('vendors.comments.destroy'))
                                         <form method="POST"
                                             action="{{ route('vendors.comments.destroy', $comment) }}"
-                                            onsubmit="return confirm('Delete comment?')">@csrf @method('DELETE')<button
+                                            data-confirm="Delete comment?"">@csrf @method('DELETE')<button
                                             type="submit">Delete</button></form>
                                     @endif
                                 </div>

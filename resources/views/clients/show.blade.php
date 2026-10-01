@@ -155,7 +155,7 @@
                 <div class="public-box"><input class="master-input" id="clientKycLink" readonly
                         value="{{ route('clients.publicKyc', $client->public_token) }}"><button type="button"
                         class="master-btn master-btn-soft"
-                        onclick="navigator.clipboard ? navigator.clipboard.writeText(document.getElementById('clientKycLink').value) : prompt('Copy link', document.getElementById('clientKycLink').value)">Copy</button>
+                        onclick="maCopy('clientKycLink', 'Copy KYC link')">Copy</button>
                 </div>
                 <form method="POST" action="{{ route('clients.sendKyc', $client) }}" style="margin-top:12px;">@csrf
                     @method('PATCH')<button class="master-btn master-btn-primary" type="submit">Mark KYC Link

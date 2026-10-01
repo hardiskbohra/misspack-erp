@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $project->name }} | Project Progress</title>
     <link rel="stylesheet" href="{{ asset('assets/css/projects-public.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/select2/css/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/select2-theme.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/master-alert.css') }}">
 </head>
 <body>
 <div class="portal-shell">
@@ -174,5 +177,9 @@
 
     <div class="footer">This secure project portal is shared by MissPack for project progress visibility.</div>
 </div>
+    <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
+    <script src="{{ asset('assets/js/master-alert.js') }}"></script>
+    <script src="{{ asset('assets/js/master-selects.js') }}"></script>
 </body>
 </html>

@@ -118,7 +118,7 @@
                                             <div class="master-dropdown-menu">
                                                 <a href="{{ route('cashflows.show', $entry) }}"><i class="fas fa-eye"></i>View Entry</a>
                                                 <a href="{{ route('cashflows.edit', $entry) }}"><i class="fas fa-pen"></i>Edit Entry</a>
-                                                <form method="POST" action="{{ route('cashflows.destroy', $entry) }}" onsubmit="return confirm('Delete this cashflows entry?')">
+                                                <form method="POST" action="{{ route('cashflows.destroy', $entry) }}" data-confirm="Delete this cashflows entry?"">
                                     
                                                     @csrf
                                                     @method('DELETE')

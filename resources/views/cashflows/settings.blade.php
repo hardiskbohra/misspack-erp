@@ -68,7 +68,7 @@
                             <div class="cf-row-actions">
                                 <input type="checkbox" name="is_active" value="1" @checked($account->is_active) hidden>
                                 <button class="master-btn master-btn-primary" type="submit" name="_method" value="PUT">Save</button>
-                                <button class="master-btn master-btn-danger" type="submit" name="_method" value="DELETE" formaction="{{ route('cashflows.settings.accounts.destroy', $account) }}" onclick="return confirm('Delete this account?')">Delete</button>
+                                <button class="master-btn master-btn-danger" type="submit" name="_method" value="DELETE" formaction="{{ route('cashflows.settings.accounts.destroy', $account) }}" data-confirm="Delete this account?"">Delete</button>
                             </div>
                         </form>
                     @empty
@@ -101,7 +101,7 @@
                             <div><label class="master-check"><input type="checkbox" name="is_active" value="1" @checked($category->is_active)> Active</label></div>
                             <div class="cf-row-actions">
                                 <button class="master-btn master-btn-primary" type="submit" name="_method" value="PUT">Save</button>
-                                <button class="master-btn master-btn-danger" type="submit" name="_method" value="DELETE" formaction="{{ route('cashflows.settings.categories.destroy', $category) }}" onclick="return confirm('Delete this category? Existing entries will become uncategorized.')">Delete</button>
+                                <button class="master-btn master-btn-danger" type="submit" name="_method" value="DELETE" formaction="{{ route('cashflows.settings.categories.destroy', $category) }}" data-confirm="Delete this category? Existing entries will become uncategorized."">Delete</button>
                             </div>
                         </form>
                     @empty
@@ -139,7 +139,7 @@
                             <div><label class="master-check"><input type="checkbox" name="is_active" value="1" @checked($master->is_active)> Active</label></div>
                             <div class="cf-row-actions">
                                 <button class="master-btn master-btn-primary" type="submit" name="_method" value="PUT">Save</button>
-                                <button class="master-btn master-btn-danger" type="submit" name="_method" value="DELETE" formaction="{{ route('cashflows.settings.masters.destroy', $master) }}" onclick="return confirm('Delete this master option?')">Delete</button>
+                                <button class="master-btn master-btn-danger" type="submit" name="_method" value="DELETE" formaction="{{ route('cashflows.settings.masters.destroy', $master) }}" data-confirm="Delete this master option?"">Delete</button>
                             </div>
                         </form>
                     @empty

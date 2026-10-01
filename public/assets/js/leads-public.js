@@ -26,22 +26,12 @@
     function initCreatePage() {
         var flash = window.leadPublicFlash;
 
-        if (flash) {
-            if (flash.success && typeof window.Swal !== 'undefined') {
-                window.Swal.fire({
-                    icon: 'success',
-                    title: 'Requirement Submitted',
-                    text: flash.success,
-                    confirmButtonColor: '#4f83f1'
-                });
+        if (flash && window.MasterAlert) {
+            if (flash.success) {
+                MasterAlert.toast(flash.success, 'success', { title: 'Requirement Submitted' });
             }
-            if (flash.error && typeof window.Swal !== 'undefined') {
-                window.Swal.fire({
-                    icon: 'error',
-                    title: 'Please check the form',
-                    text: flash.error,
-                    confirmButtonColor: '#ef4770'
-                });
+            if (flash.error) {
+                MasterAlert.alert(flash.error, { title: 'Please check the form', type: 'error', danger: true });
             }
         }
 
@@ -50,24 +40,15 @@
 
         form.addEventListener('submit', function (event) {
             event.preventDefault();
-            if (typeof window.Swal === 'undefined') {
+            if (typeof window.MasterAlert === 'undefined') {
                 form.submit();
                 return;
             }
-            window.Swal.fire({
-                title: 'Submit requirement?',
-                text: 'Please confirm that your product requirement details are correct.',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, Submit',
-                cancelButtonText: 'Review Again',
-                confirmButtonColor: '#4f83f1',
-                cancelButtonColor: '#ef4770',
-                reverseButtons: true
-            }).then(function (result) {
-                if (result.isConfirmed) {
-                    form.submit();
-                }
+            MasterAlert.confirm(
+                'Please confirm that your product requirement details are correct.',
+                { title: 'Submit requirement?', confirmText: 'Yes, Submit', cancelText: 'Review Again', danger: false }
+            ).then(function (ok) {
+                if (ok) form.submit();
             });
         });
     }

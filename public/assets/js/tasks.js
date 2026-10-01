@@ -219,7 +219,7 @@
                     statusChip.textContent = statusLabel(status);
                 }
             }).catch(function () {
-                alert('Task could not be moved. Please refresh and try again.');
+                MasterAlert.toast('Task could not be moved. Please refresh and try again.', 'error');
                 window.location.reload();
             });
         }
