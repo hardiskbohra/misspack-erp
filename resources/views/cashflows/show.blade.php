@@ -16,6 +16,26 @@
         <div class="master-actions"><a href="{{ route('cashflows.index') }}" class="master-btn master-btn-light">Back</a><a
                 href="{{ route('cashflows.edit', $entry) }}" class="master-btn master-btn-primary">Edit Entry</a></div>
     </div>
+    @if (! empty($linkedShipmentCost))
+        <div class="master-card master-section cf-sync-note">
+            <h3 class="master-section-title">Linked Shipment Cost</h3>
+            <p style="margin:0 0 6px;font-weight:700;">
+                This INR entry is generated from a shipment cost head
+                @if (\Illuminate\Support\Facades\Route::has('shipments.show') && $linkedShipmentCost->shipment)
+                    — <a href="{{ route('shipments.show', $linkedShipmentCost->shipment) }}">open the shipment</a>
+                @endif
+            </p>
+            <p style="margin:0;font-weight:600;color:#687386;">
+                {{ $linkedShipmentCost->shipment?->shipment_number }}
+                · {{ $linkedShipmentCost->headLabel() }}
+                · {{ $linkedShipmentCost->amountLabel() }}
+                @if ($linkedShipmentCost->exchange_rate)
+                    @ {{ rtrim(rtrim(number_format((float) $linkedShipmentCost->exchange_rate, 2), '0'), '.') }}
+                @endif
+                · edit or delete it from the shipment page and this entry follows automatically.
+            </p>
+        </div>
+    @endif
     @if (! empty($linkedVendorPayment))
         <div class="master-card master-section cf-sync-note">
             <h3 class="master-section-title">Linked Vendor Payment</h3>

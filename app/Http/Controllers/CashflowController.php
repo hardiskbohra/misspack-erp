@@ -41,13 +41,16 @@ class CashflowController extends Controller
         ];
         $stats['net'] = $stats['credit'] - $stats['debit'];
 
-        // Which rows on this page are mirrors of a vendor payment (one query).
+        // Which rows on this page are mirrors of a vendor payment / shipment
+        // cost (one query each, never one per row).
         $mirroredPayments = app(VendorPaymentCashflowSync::class)->linkedMapFor($entries->pluck('id'));
+        $mirroredShipmentCosts = app(\App\Services\ShipmentCostCashflowSync::class)->linkedShipmentMapFor($entries->pluck('id'));
 
         return view('cashflows.index', array_merge($this->sharedData(), [
             'entries' => $entries,
             'stats' => $stats,
             'mirroredPayments' => $mirroredPayments,
+            'mirroredShipmentCosts' => $mirroredShipmentCosts,
             ...$filters,
         ]));
     }
@@ -129,6 +132,7 @@ class CashflowController extends Controller
         return view('cashflows.show', array_merge($this->sharedData(), [
             'entry' => $cashflow,
             'linkedVendorPayment' => app(VendorPaymentCashflowSync::class)->linkedPaymentFor($cashflow),
+            'linkedShipmentCost' => app(\App\Services\ShipmentCostCashflowSync::class)->linkedCostFor($cashflow),
         ]));
     }
 
@@ -159,8 +163,9 @@ class CashflowController extends Controller
     {
         $accountId = $cashflow->account_id;
         $detached = DB::transaction(function () use ($cashflow, $accountId) {
-            // Never leave a vendor payment pointing at a deleted entry.
+            // Never leave a vendor payment or shipment cost pointing at a deleted entry.
             $detached = app(VendorPaymentCashflowSync::class)->detach($cashflow);
+            $detached += app(\App\Services\ShipmentCostCashflowSync::class)->detach($cashflow);
             $cashflow->delete();
             $this->recalculateAccountLedger($accountId);
 
@@ -170,7 +175,7 @@ class CashflowController extends Controller
         return redirect()->route('cashflows.index')->with(
             'success',
             $detached
-                ? 'Cashflow entry deleted. The linked vendor payment was unlinked — add it again from the vendor page if the payment still stands.'
+                ? 'Cashflow entry deleted. The linked vendor payment / shipment cost was unlinked — set its paid account again if the payment still stands.'
                 : 'Cashflow entry deleted successfully.'
         );
     }

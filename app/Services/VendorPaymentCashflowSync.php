@@ -29,21 +29,8 @@ use Illuminate\Support\Facades\Schema;
  */
 class VendorPaymentCashflowSync
 {
-    /**
-     * Vendor payment modes mapped onto the cashflow module's vocabulary.
-     * A null value means there is no matching cashflow mode (adjustments are
-     * book entries, not bank movements).
-     */
-    private const PAYMENT_MODE_MAP = [
-        'bank_transfer' => 'neft',
-        'wire' => 'rtgs',
-        'cash' => 'cash',
-        'upi' => 'upi',
-        'cheque' => 'cheque',
-        'card' => 'card',
-        'other' => 'other',
-        'adjustment' => null,
-    ];
+    // Payment modes are mapped by CashflowEntry::normalisePaymentMode(), shared
+    // with shipment costs and any future module that writes a cashflow entry.
 
     /**
      * Whether the vendor ledger and cashflow module are both available.
@@ -111,7 +98,7 @@ class VendorPaymentCashflowSync
         $mirror->balance = $mirror->balance ?? null;
         $mirror->currency = 'INR';
         $mirror->account_id = $entry->paid_account_id;
-        $mirror->payment_mode = self::PAYMENT_MODE_MAP[$entry->payment_mode] ?? null;
+        $mirror->payment_mode = CashflowEntry::normalisePaymentMode($entry->payment_mode);
         $mirror->vendor_id = $entry->vendor_id;
         $mirror->client_id = null;
         $mirror->expense_head = $entry->entry_category;

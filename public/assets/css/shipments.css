@@ -654,3 +654,421 @@
 .ship-order-hint strong {
     color: var(--mc-text-1);
 }
+
+/* ---------------- Attention chips & saved views (list) ---------------- */
+
+.ship-chip-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 16px 16px 0;
+}
+
+.ship-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ship-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    border: 1px solid var(--mc-border);
+    border-radius: 999px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.ship-chip:hover {
+    border-color: var(--mc-accent, #4f8ef7);
+    color: var(--mc-text-1);
+}
+
+.ship-chip.is-active {
+    border-color: var(--mc-accent, #4f8ef7);
+    background: #eaf1fe;
+    color: #1d4ed8;
+}
+
+.ship-chip-count {
+    min-width: 22px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.ship-saved-views {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ship-saved-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 8px 5px 10px;
+    border: 1px dashed var(--mc-border);
+    border-radius: 999px;
+    background: #fff;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ship-saved-chip a {
+    color: var(--mc-text-2);
+    text-decoration: none;
+}
+
+.ship-saved-chip form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.ship-saved-chip button {
+    border: 0;
+    background: none;
+    padding: 0 2px;
+    color: #98a2b3;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.ship-saved-chip button:hover {
+    color: #d92d20;
+}
+
+.ship-save-view {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ship-save-view .master-input {
+    max-width: 180px;
+}
+
+.ship-save-view[hidden] {
+    display: none !important;
+}
+
+/* ---------------- ETA states ---------------- */
+
+.ship-eta {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.ship-eta-overdue {
+    background: #fff0f1;
+    color: #d92d20;
+    border: 1px solid #fecdca;
+}
+
+.ship-eta-due_soon {
+    background: #fffaeb;
+    color: #b54708;
+    border: 1px solid #fedf89;
+}
+
+.ship-eta-on_track {
+    background: #ecfdf3;
+    color: #067647;
+    border: 1px solid #abefc6;
+}
+
+.ship-eta-none {
+    background: var(--mc-card-soft);
+    color: var(--mc-text-3);
+    border: 1px solid var(--mc-border);
+}
+
+/* ---------------- E-way bill warnings ---------------- */
+
+.ship-eway {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.ship-eway-expiring {
+    color: #b54708;
+}
+
+.ship-eway-expired {
+    color: #d92d20;
+}
+
+/* ---------------- Tracking stepper ---------------- */
+
+.ship-track {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: ship-stage;
+}
+
+.ship-track li {
+    position: relative;
+    flex: 1 1 110px;
+    min-width: 96px;
+    padding: 9px 10px 9px 30px;
+    border: 1px solid var(--mc-border);
+    border-radius: 10px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-3);
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+.ship-track li::before {
+    counter-increment: ship-stage;
+    content: counter(ship-stage);
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-3);
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 14px;
+    text-align: center;
+}
+
+.ship-track li.is-done {
+    border-color: #abefc6;
+    background: #f6fef9;
+    color: #067647;
+}
+
+.ship-track li.is-done::before {
+    content: '✓';
+    border-color: #abefc6;
+    background: #d1fadf;
+    color: #067647;
+}
+
+.ship-track li.is-current {
+    border-color: var(--mc-accent, #4f8ef7);
+    background: #eaf1fe;
+    color: #1d4ed8;
+    box-shadow: 0 2px 8px rgba(79, 142, 247, .18);
+}
+
+.ship-track li.is-current::before {
+    border-color: var(--mc-accent, #4f8ef7);
+    background: var(--mc-accent, #4f8ef7);
+    color: #fff;
+}
+
+.ship-track-note {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #d92d20;
+}
+
+.ship-track-cancelled {
+    padding: 10px 12px;
+    border: 1px solid #fecdca;
+    border-radius: 10px;
+    background: #fff0f1;
+    color: #b42318;
+    font-weight: 700;
+}
+
+/* ---------------- Paperwork checklist ---------------- */
+
+.ship-doc-list {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.ship-doc {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: 1px solid var(--mc-border);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.ship-doc.is-done {
+    border-color: #abefc6;
+    background: #f6fef9;
+}
+
+.ship-doc.is-missing {
+    border-color: #fedf89;
+    background: #fffdf5;
+}
+
+.ship-doc-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-weight: 900;
+    flex: 0 0 auto;
+}
+
+.ship-doc.is-done .ship-doc-mark {
+    background: #d1fadf;
+    color: #067647;
+}
+
+.ship-doc.is-missing .ship-doc-mark {
+    background: #fef0c7;
+    color: #b54708;
+}
+
+.ship-doc-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.ship-doc-body strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--mc-text-1);
+}
+
+.ship-doc-upload {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 12px;
+    border: 1px dashed var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+}
+
+.ship-doc-upload .master-select {
+    max-width: 220px;
+}
+
+.ship-doc-upload input[type="file"] {
+    flex: 1;
+    min-width: 200px;
+}
+
+/* ---------------- Cost breakdown ---------------- */
+
+.ship-cost-totals {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.ship-cost-totals > div {
+    padding: 10px 12px;
+    border: 1px solid var(--mc-border);
+    border-radius: 10px;
+    background: var(--mc-card-soft);
+}
+
+.ship-cost-totals span {
+    display: block;
+    color: var(--mc-text-3);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.ship-cost-totals strong {
+    display: block;
+    margin-top: 3px;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--mc-text-1);
+    overflow-wrap: anywhere;
+}
+
+.ship-cost-table td {
+    vertical-align: top;
+}
+
+.ship-cost-table .master-row-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.ship-margin {
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+    padding-top: 12px;
+}
+
+.ship-margin span {
+    display: block;
+    color: var(--mc-text-3);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.ship-margin strong {
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.ship-margin .is-positive {
+    color: #067647;
+}
+
+.ship-margin .is-negative {
+    color: #d92d20;
+}
+
+/* the old "status-pending" badge used on cost rows */
+.ship .master-badge.status-pending {
+    background: var(--mc-card-soft);
+    color: var(--mc-text-3);
+    border: 1px solid var(--mc-border);
+}

@@ -101,6 +101,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/shipments/quick', [ShipmentController::class, 'quickStore'])->name('shipments.quickStore');
     Route::get('/shipments/party-lookup', [ShipmentController::class, 'partyLookup'])->name('shipments.party-lookup');
     Route::get('/shipments/{shipment}/shipping-mark', [ShipmentController::class, 'shippingMark'])->name('shipments.shipping-mark');
+    Route::get('/shipments/{shipment}/print/{document}', [ShipmentController::class, 'printPack'])->name('shipments.print');
+    Route::post('/shipments/saved-views', [ShipmentController::class, 'storeSavedView'])->name('shipments.saved-views.store');
+    Route::delete('/shipments/saved-views/{savedView}', [ShipmentController::class, 'destroySavedView'])->name('shipments.saved-views.destroy');
+    Route::get('/shipments/stickers', [ShipmentController::class, 'stickers'])->name('shipments.stickers');
+    Route::post('/shipments/{shipment}/costs', [ShipmentController::class, 'storeCost'])->name('shipments.costs.store');
+    Route::put('/shipments/costs/{cost}', [ShipmentController::class, 'updateCost'])->name('shipments.costs.update');
+    Route::delete('/shipments/costs/{cost}', [ShipmentController::class, 'destroyCost'])->name('shipments.costs.destroy');
     Route::post('/shipments/{shipment}/history', [ShipmentController::class, 'storeHistory'])->name('shipments.history.store');
     Route::put('/shipments/history/{history}', [ShipmentController::class, 'updateHistory'])->name('shipments.history.update');
     Route::delete('/shipments/history/{history}', [ShipmentController::class, 'destroyHistory'])->name('shipments.history.destroy');

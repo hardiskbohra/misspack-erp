@@ -178,6 +178,10 @@
                 MasterAlert.toast(@json(session('success')), 'success', { title: 'Success' });
             @endif
 
+            @if(session('warning'))
+                MasterAlert.toast(@json(session('warning')), 'warning', { title: 'Check paperwork' });
+            @endif
+
             @if(session('error'))
                 MasterAlert.alert(@json(session('error')), { title: 'Error', type: 'error', danger: true });
             @endif

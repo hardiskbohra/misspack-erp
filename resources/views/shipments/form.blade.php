@@ -65,6 +65,18 @@
                             name="drop_date"
                             value="{{ old('drop_date', optional($shipment->drop_date)->format('Y-m-d')) }}"></div>
                     <div class="master-field">
+                        <label class="master-label">Expected Delivery (ETA)</label>
+                        <input class="master-input" type="date" name="eta_date"
+                            value="{{ old('eta_date', optional($shipment->eta_date)->format('Y-m-d')) }}">
+                        <small class="master-sub">Drives the "due in / overdue" chips on the shipment list.</small>
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label">Delay Reason</label>
+                        <input class="master-input" name="delay_reason" maxlength="60"
+                            value="{{ old('delay_reason', $shipment->delay_reason) }}"
+                            placeholder="Customs query / port congestion / ...">
+                    </div>
+                    <div class="master-field">
                         <label class="master-label">Mapped Vendor</label>
                         <select name="vendor_id" class="master-select">
                             <option value="">No vendor portal mapping</option>
@@ -180,6 +192,13 @@
                             name="bill_of_entry_number"
                             value="{{ old('bill_of_entry_number', $shipment->bill_of_entry_number) }}"
                             placeholder="For import shipments"></div>
+                    <div class="master-field desktop-only"><label class="master-label">E-way Bill Number</label><input class="master-input"
+                            name="eway_bill_number" value="{{ old('eway_bill_number', $shipment->eway_bill_number) }}"
+                            maxlength="40" placeholder="Transport document number"></div>
+                    <div class="master-field"><label class="master-label">E-way Bill Valid Till</label><input class="master-input"
+                            type="date" name="eway_bill_valid_until"
+                            value="{{ old('eway_bill_valid_until', optional($shipment->eway_bill_valid_until)->format('Y-m-d')) }}">
+                        <span class="master-sub">The list flags this shipment 3 days before the bill lapses.</span></div>
                     <div class="master-field desktop-only"><label class="master-label">Origin Port</label><input class="master-input"
                             name="origin_port" value="{{ old('origin_port', $shipment->origin_port) }}"></div>
                     <div class="master-field desktop-only"><label class="master-label">Destination Port</label><input class="master-input"
@@ -205,6 +224,27 @@
                     <div class="master-field desktop-only"><label class="master-label">Chargeable Weight</label><input class="master-input"
                             type="number" min="0" step="0.001" name="chargeable_weight"
                             value="{{ old('chargeable_weight', $shipment->chargeable_weight) }}"></div>
+                    <div class="master-field">
+                        <label class="master-label">Sales Invoice</label>
+                        <select class="master-select" name="sales_invoice_id">
+                            <option value="">Not linked</option>
+                            @foreach ($invoiceOptions as $invoice)
+                                <option value="{{ $invoice->id }}" @selected((int) old('sales_invoice_id', $shipment->sales_invoice_id) === (int) $invoice->id)>
+                                    {{ $invoice->invoice_number }} · {{ $invoice->currency }} {{ number_format((float) $invoice->total_amount, 2) }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="master-sub">Links freight to what the shipment earned, so the margin is visible.</small>
+                    </div>
+                    @if ($isEdit)
+                        <div class="master-field">
+                            <label class="master-label">Notify Client</label>
+                            <label class="master-check">
+                                <input type="checkbox" name="notify_client" value="1" checked>
+                                Email-portal notification if the status changes on save
+                            </label>
+                        </div>
+                    @endif
                     <div class="master-field desktop-only full"><label class="master-label">Notes</label><textarea class="master-textarea"
                             name="notes">{{ old('notes', $shipment->notes) }}</textarea></div>
                 </div>
@@ -261,10 +301,29 @@
             </div>
             
             <div class="master-section">
-                <h3 class="master-section-title">Shipment Photo Attachments</h3>
+                <h3 class="master-section-title">Shipment Photos &amp; Documents</h3>
+                <p class="master-sub" style="margin:-4px 0 10px;">
+                    Pick a document type to file paperwork (packing list, BOE, e-way bill…) into the shipment's
+                    checklist instead of the photo gallery.
+                </p>
                 <div class="master-photo-upload-box">
                     <div class="master-photo-upload-grid">
                 
+                        <div>
+                            <label class="master-label">Document Type (for paperwork)</label>
+
+                            <select class="master-select" name="document_type">
+                                <option value="">Photos / general files</option>
+                                @foreach ($documentTypes as $key => $label)
+                                    <option value="{{ $key }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+
+                            <div class="master-photo-help">
+                                Filing a document type adds it to the shipment's paperwork checklist.
+                            </div>
+                        </div>
+
                         <div>
                             <label class="master-label">Upload Shipment Photos</label>
                 

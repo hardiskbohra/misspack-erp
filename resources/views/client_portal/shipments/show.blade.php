@@ -24,12 +24,27 @@
                 <div class="master-info-grid">
                     <div class="master-info"><span>Status</span><strong class="master-badge status-{{ $statusClass }}">{{ $shipment->statusLabel() }}</strong></div>
                     <div class="master-info"><span>Pickup Date</span><strong>{{ $shipment->pickup_date ? $shipment->pickup_date->format('d M Y') : '-' }}</strong></div>
+                    <div class="master-info">
+                        <span>Expected Delivery</span>
+                        <strong class="ship-eta ship-eta-{{ $shipment->etaState() }}">{{ $shipment->eta_date ? $shipment->eta_date->format('d M Y') : 'Not set' }}</strong>
+                        @if ($shipment->eta_date)
+                            <span>{{ $shipment->etaLabel() }}</span>
+                        @endif
+                    </div>
                     <div class="master-info"><span>Logistic Partner</span><strong>{{ $shipment->logistic_partner ?: '-' }}</strong></div>
                     <div class="master-info"><span>Tracking Number</span><strong>{{ $shipment->tracking_number ?: '-' }}</strong></div>
                     <div class="master-info"><span>Project</span><strong>{{ $shipment->project->name ?? '-' }}</strong>
                         <span>{{ $shipment->project->project_number ?? '-' }}</span></div>
                     <div class="master-info"><span>Cost Borne By</span><strong>{{ $costBorneByOptions[$shipment->cost_borne_by] ?? '-' }}</strong></div>
                 </div>
+            </div>
+
+            <div class="master-card master-section">
+                <h3 class="master-section-title">Tracking Progress</h3>
+                @include('shipments.partials.tracker', ['shipment' => $shipment])
+                @if ($shipment->delay_reason)
+                    <p class="master-sub" style="margin-top:8px;">Delay reason: {{ $shipment->delay_reason }}</p>
+                @endif
             </div>
 
             <div class="master-card master-section">

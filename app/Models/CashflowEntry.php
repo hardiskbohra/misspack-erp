@@ -100,6 +100,36 @@ class CashflowEntry extends Model
         ];
     }
 
+    /**
+     * Map any module's payment-mode key onto this module's vocabulary.
+     *
+     * Every writer of cashflow entries (vendor payments, shipment costs, and
+     * whatever comes next) funnels through here, so a payment always shows how
+     * it moved instead of silently losing the mode.
+     */
+    public static function normalisePaymentMode(?string $mode): ?string
+    {
+        $mode = $mode !== null ? strtolower(trim($mode)) : '';
+
+        if ($mode === '') {
+            return null;
+        }
+
+        $aliases = [
+            'bank_transfer' => 'neft',
+            'bank' => 'neft',
+            'wire' => 'rtgs',
+            'tt' => 'rtgs',
+            'adjustment' => null, // book entry, not a bank movement
+        ];
+
+        if (array_key_exists($mode, $aliases)) {
+            return $aliases[$mode];
+        }
+
+        return array_key_exists($mode, self::paymentModeOptions()) ? $mode : 'other';
+    }
+
     public static function paymentModeOptions(): array
     {
         return [

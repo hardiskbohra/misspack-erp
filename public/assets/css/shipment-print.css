@@ -1,0 +1,339 @@
+/* ==========================================================================
+   SHIPMENT PRINT PACK — packing list, delivery challan, shipment summary
+   --------------------------------------------------------------------------
+   A4 documents meant to be printed or "Save as PDF" from the browser. The
+   toolbar is screen-only; everything inside .print-sheet is the paper.
+   ========================================================================== */
+
+@page {
+    size: A4 portrait;
+    margin: 12mm;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 14px;
+    background: #eef2f9;
+    color: #101828;
+    font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* ---------------- toolbar (screen only) ---------------- */
+
+.print-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    max-width: 210mm;
+    margin: 0 auto 12px;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid #dfe7f3;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .07);
+}
+
+.print-toolbar-links {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.print-btn {
+    padding: 8px 12px;
+    border: 1px solid #dfe7f3;
+    border-radius: 9px;
+    background: #f8fafc;
+    color: #1d2939;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.print-btn:hover {
+    background: #eef2f9;
+}
+
+.print-btn.is-active {
+    border-color: #4f8ef7;
+    background: #eaf1fe;
+    color: #1d4ed8;
+}
+
+.print-btn-primary {
+    border-color: #4f8ef7;
+    background: #4f8ef7;
+    color: #fff;
+}
+
+.print-note {
+    max-width: 210mm;
+    margin: 0 auto 10px;
+    color: #667085;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+/* ---------------- the sheet ---------------- */
+
+.print-sheet {
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 12mm;
+    background: #fff;
+    border: 1px solid #dfe7f3;
+    border-radius: 6px;
+}
+
+.print-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 8px;
+    border-bottom: 3px solid #101828;
+}
+
+.print-brand {
+    display: block;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: #667085;
+}
+
+.print-head h1 {
+    margin: 2px 0 0;
+    font-size: 21px;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+}
+
+.print-head-meta {
+    text-align: right;
+    font-size: 11px;
+}
+
+.print-head-meta strong {
+    display: block;
+    font-size: 14px;
+}
+
+/* meta grid */
+
+.print-meta {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #e4e7ec;
+}
+
+.print-meta span {
+    display: block;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #667085;
+}
+
+.print-meta strong {
+    font-weight: 700;
+}
+
+/* parties */
+
+.print-parties {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid #e4e7ec;
+}
+
+.print-party strong {
+    display: block;
+    margin-top: 2px;
+    font-size: 13px;
+}
+
+.print-party p {
+    margin: 4px 0 0;
+}
+
+.print-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #667085;
+}
+
+.print-contact {
+    font-weight: 600;
+}
+
+/* tables */
+
+.print-table {
+    width: 100%;
+    margin-top: 12px;
+    border-collapse: collapse;
+}
+
+.print-table th,
+.print-table td {
+    padding: 6px 8px;
+    border: 1px solid #d0d5dd;
+    text-align: left;
+    vertical-align: top;
+}
+
+.print-table thead th {
+    background: #f2f4f7;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #475467;
+}
+
+.print-table .num {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.print-table tfoot td {
+    background: #f8fafc;
+}
+
+.print-table-compact th,
+.print-table-compact td {
+    padding: 5px 7px;
+}
+
+.print-sub {
+    display: block;
+    color: #667085;
+    font-size: 10.5px;
+}
+
+.print-empty {
+    text-align: center;
+    color: #667085;
+    font-weight: 600;
+}
+
+/* notes / blocks / checklists */
+
+.print-notes,
+.print-block {
+    margin-top: 14px;
+}
+
+.print-notes p {
+    margin: 4px 0;
+}
+
+.print-block h2 {
+    margin: 0 0 6px;
+    font-size: 12px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #475467;
+}
+
+.print-columns {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 16px;
+}
+
+.print-checklist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.print-checklist li {
+    padding: 3px 0;
+    font-weight: 600;
+}
+
+.print-checklist li.is-done {
+    color: #0e9f6e;
+}
+
+.print-checklist li.is-missing {
+    color: #d92d20;
+}
+
+.print-checklist em {
+    color: #667085;
+    font-style: normal;
+    font-size: 10.5px;
+}
+
+.print-fine {
+    color: #667085;
+    font-size: 10.5px;
+}
+
+.print-signs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 34px;
+}
+
+.print-signs div {
+    padding-top: 26px;
+    border-top: 1px solid #101828;
+}
+
+.print-signs span {
+    font-size: 10px;
+    font-weight: 700;
+    color: #475467;
+}
+
+/* ---------------- print ---------------- */
+
+@media print {
+    body {
+        padding: 0;
+        background: #fff;
+        font-size: 11px;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    .print-sheet {
+        max-width: none;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .print-table,
+    .print-parties,
+    .print-block {
+        break-inside: avoid;
+    }
+
+    .print-table tr {
+        break-inside: avoid;
+    }
+}

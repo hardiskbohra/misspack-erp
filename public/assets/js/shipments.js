@@ -91,6 +91,107 @@
 
     var PARTY_DETAILS = ['email', 'mobile', 'address', 'city', 'state', 'country', 'pincode'];
 
+    /* ------------------------------------------------------------------
+       Saved views + cost heads
+       ------------------------------------------------------------------ */
+
+    function initShipmentIndexExtras() {
+        var toggle = document.getElementById('toggleSaveView');
+        var form = document.getElementById('saveViewForm');
+
+        if (toggle && form) {
+            toggle.addEventListener('click', function () {
+                form.hidden = !form.hidden;
+                if (!form.hidden) {
+                    form.querySelector('input[name="name"]').focus();
+                }
+            });
+        }
+    }
+
+    function initCostModal() {
+        var modal = document.getElementById('costModal');
+        if (!modal || typeof window.MasterModal === 'undefined') return;
+
+        var form = document.getElementById('costForm');
+        var method = document.getElementById('costMethod');
+        var title = document.getElementById('costModalTitle');
+        var submit = document.getElementById('costSubmit');
+        var head = document.getElementById('costHead');
+        var labelWrap = document.getElementById('costLabelField');
+        var currency = document.getElementById('costCurrency');
+        var rateWrap = document.getElementById('costRateField');
+        var rate = document.getElementById('costRate');
+        if (!form) return;
+
+        var storeAction = form.getAttribute('action');
+        var updateUrl = modal.getAttribute('data-update-url') || '';
+
+        function syncHead() {
+            if (head && labelWrap) {
+                labelWrap.hidden = head.value !== 'other';
+            }
+        }
+
+        function syncCurrency() {
+            if (!currency || !rateWrap) return;
+            var foreign = currency.value !== 'INR';
+            rateWrap.hidden = !foreign;
+            if (rate) rate.required = foreign;
+        }
+
+        function resetForm() {
+            form.reset();
+            syncHead();
+            syncCurrency();
+        }
+
+        if (head) head.addEventListener('change', syncHead);
+        if (currency) currency.addEventListener('change', syncCurrency);
+
+        var openBtn = document.getElementById('openCostModal');
+        if (openBtn) {
+            openBtn.addEventListener('click', function () {
+                resetForm();
+                form.setAttribute('action', storeAction);
+                if (method) method.value = 'POST';
+                if (title) title.textContent = 'Add Cost Head';
+                if (submit) submit.textContent = 'Add Cost';
+                window.MasterModal.open(modal);
+            });
+        }
+
+        Array.prototype.forEach.call(document.querySelectorAll('.edit-cost'), function (btn) {
+            btn.addEventListener('click', function () {
+                var data = {};
+                try {
+                    data = JSON.parse(btn.getAttribute('data-cost') || '{}');
+                } catch (error) {
+                    data = {};
+                }
+
+                resetForm();
+
+                Object.keys(data).forEach(function (key) {
+                    var field = form.querySelector('[name="' + key + '"]');
+                    if (field && data[key] !== null && data[key] !== undefined) {
+                        field.value = data[key];
+                    }
+                });
+
+                if (updateUrl && data.id) {
+                    form.setAttribute('action', updateUrl.replace('COST_ID', data.id));
+                }
+                if (method) method.value = 'PUT';
+                if (title) title.textContent = 'Edit Cost Head';
+                if (submit) submit.textContent = 'Save Cost';
+                syncHead();
+                syncCurrency();
+                window.MasterModal.open(modal);
+            });
+        });
+    }
+
     function initPartyMemory() {
         var form = document.querySelector('[data-party-lookup-url]');
         if (!form || form.dataset.partyMemoryReady) return;
@@ -281,5 +382,7 @@
 
     };
 
+    document.addEventListener('DOMContentLoaded', initShipmentIndexExtras);
+    document.addEventListener('DOMContentLoaded', initCostModal);
     document.addEventListener('DOMContentLoaded', initPartyMemory);
 })();

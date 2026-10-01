@@ -20,6 +20,9 @@
             <a href="{{ route('shipments.index') }}" class="master-btn master-btn-light">Back</a>
             <a href="{{ route('shipments.edit', $shipment) }}" class="master-btn master-btn-soft">Edit Shipment</a>
             <a href="{{ route('shipments.shipping-mark', $shipment) }}" target="_blank" class="master-btn master-btn-soft"><i class="fa-solid fa-tag"></i> Shipping Mark</a>
+            <a href="{{ route('shipments.print', [$shipment, 'packing-list']) }}" target="_blank" class="master-btn master-btn-soft"><i class="fas fa-print"></i> Packing List</a>
+            <a href="{{ route('shipments.print', [$shipment, 'delivery-challan']) }}" target="_blank" class="master-btn master-btn-soft"><i class="fas fa-print"></i> Challan</a>
+            <a href="{{ route('shipments.print', [$shipment, 'summary']) }}" target="_blank" class="master-btn master-btn-soft"><i class="fas fa-print"></i> Summary</a>
             <a href="{{ route('shipments.publicTrack', $shipment->public_token) }}" target="_blank" class="master-btn master-btn-primary">Public Tracking</a>
         </div>
     </div>
@@ -33,8 +36,49 @@
                     <div class="master-info"><span>Label</span><strong class="master-badge {{ $shipment->labelColorClass() }}">{{ $shipment->shipment_label ?? '-' }}</strong></div>
                     <div class="master-info"><span>Pickup Date</span><strong>{{ $shipment->pickup_date ? $shipment->pickup_date->format('d M Y') : '-' }}</strong></div>
                     <div class="master-info"><span>Drop Date</span><strong>{{ $shipment->drop_date ? $shipment->drop_date->format('d M Y') : '-' }}</strong></div>
+                    <div class="master-info">
+                        <span>Expected Delivery</span>
+                        <strong class="ship-eta ship-eta-{{ $shipment->etaState() }}">{{ $shipment->eta_date ? $shipment->eta_date->format('d M Y') : 'Not set' }}</strong>
+                        @if ($shipment->eta_date)
+                            <span>{{ $shipment->etaLabel() }}</span>
+                        @endif
+                    </div>
+                    <div class="master-info">
+                        <span>Paperwork</span>
+                        <strong>
+                            @if ($documentSummary['complete'])
+                                <span class="master-badge status-delivered">Complete</span>
+                            @else
+                                <span class="master-badge status-delayed">{{ $documentSummary['done'] }}/{{ $documentSummary['required'] }}</span>
+                            @endif
+                        </strong>
+                        @if (! $documentSummary['complete'])
+                            <span>Missing: {{ implode(', ', $documentSummary['missing']) }}</span>
+                        @endif
+                    </div>
+                    @if ($shipment->delay_reason)
+                        <div class="master-info">
+                            <span>Delay Reason</span>
+                            <strong>{{ $shipment->delay_reason }}</strong>
+                        </div>
+                    @endif
                     <div class="master-info"><span>Logistic Partner</span><strong>{{ $shipment->logistic_partner ?: '-' }}</strong></div>
                     <div class="master-info"><span>Bill of Entry</span><strong>{{ $shipment->bill_of_entry_number ?: '-' }}</strong></div>
+                    <div class="master-info">
+                        <span>E-way Bill</span>
+                        <strong>
+                            @if ($shipment->eway_bill_number)
+                                <span class="master-badge {{ in_array($shipment->ewayState(), ['expiring', 'expired'], true) ? 'status-delayed' : 'status-delivered' }}">{{ $shipment->eway_bill_number }}</span>
+                            @else
+                                -
+                            @endif
+                        </strong>
+                        @if ($shipment->eway_bill_valid_until)
+                            <span class="ship-eway ship-eway-{{ in_array($shipment->ewayState(), ['expiring', 'expired'], true) ? $shipment->ewayState() : 'expiring' }}">
+                                {{ $shipment->eway_bill_valid_until->format('d M Y') }} · {{ $shipment->ewayLabel() }}
+                            </span>
+                        @endif
+                    </div>
                     <div class="master-info"><span>Client Name</span><strong>{{ $shipment->client->company_name ?? '-' }}</strong></div>
                     <div class="master-info"><span>Project</span><strong>{{ $shipment->project->name ?? '-' }}</strong>
                         <span>{{ $shipment->project->project_number ?? '-' }}</span></div>
@@ -46,6 +90,16 @@
                     <div class="master-info"><span>Cost Borne By</span><strong>{{ $costBorneByOptions[$shipment->cost_borne_by] ?? '-' }}</strong></div>
                 </div>
             </div>
+
+            <div class="master-card master-section">
+                <h3 class="master-section-title">Tracking Progress</h3>
+                @include('shipments.partials.tracker', ['shipment' => $shipment])
+                <p class="master-sub" style="margin-top:8px;">
+                    The same steps are shown to the client on the portal and on the public tracking page.
+                </p>
+            </div>
+
+            @include('shipments.partials.costs-card')
 
             <div class="master-card master-section">
                 <h3 class="master-section-title">Route Details</h3>
@@ -206,11 +260,14 @@
                     <div class="row"><select class="master-select" name="status">@foreach($statusOptions as $key=>$label)<option value="{{ $key }}" @selected($shipment->status === $key)>{{ $label }}</option>@endforeach</select><input class="master-input" name="location" placeholder="Location"></div>
                     <input class="master-input" type="datetime-local" name="event_time" value="{{ now('Asia/Kolkata')->format('Y-m-d\TH:i') }}">
                     <textarea class="master-textarea" name="remarks" placeholder="Tracking remarks"></textarea>
-                    <label class="master-check"><input type="checkbox" name="is_public" value="1" checked></label>
+                    <label class="master-check"><input type="checkbox" name="is_public" value="1" checked> Show on public tracking</label>
+                    <label class="master-check"><input type="checkbox" name="notify_client" value="1" @checked($shipment->client_id && $shipment->show_client_portal)> Notify client on status change</label>
                     <button class="master-btn master-btn-primary" type="submit">Add History</button>
                 </form>
             </div>
             
+            @include('shipments.partials.documents-card')
+
             <div class="master-card master-section">
                 <h3 class="master-section-title">Shipment Photos</h3>
                 <div class="photo-grid">

@@ -97,6 +97,10 @@
                                         <a class="cf-sync-chip" href="{{ route('vendors.show', $entry->vendor_id) }}#payments"
                                             title="Auto-synced from a vendor payment — open the vendor ledger">↔ Vendor payment</a>
                                     @endif
+                                    @if (! empty($mirroredShipmentCosts[$entry->id] ?? null))
+                                        <a class="cf-sync-chip" href="{{ route('shipments.show', $mirroredShipmentCosts[$entry->id]) }}"
+                                            title="Auto-synced from a shipment cost head — open the shipment">↔ Shipment cost</a>
+                                    @endif
                                     <span
                                         class="master-sub">{{ $relatedPartyOptions[$entry->related_party_type] ?? 'Other' }}:
                                         {{ $entry->client?->company_name ?? $entry->vendor?->vendor_name ?? $entry->related_party_name ?? $entry->expense_head ?? '-' }}</span>

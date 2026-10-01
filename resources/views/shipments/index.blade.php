@@ -26,6 +26,60 @@
     </div>
 
     <div class="master-card">
+        @php($baseFilters = request()->except(['attention', 'page', 'saved_view']))
+        <div class="ship-chip-bar">
+            <div class="ship-chips">
+                <a class="ship-chip {{ ! $attention ? 'is-active' : '' }}" href="{{ route('shipments.index', $baseFilters) }}">All shipments</a>
+                <a class="ship-chip {{ $attention === 'needs_attention' ? 'is-active' : '' }}"
+                    href="{{ route('shipments.index', $baseFilters + ['attention' => 'needs_attention']) }}">
+                    Needs attention <span class="ship-chip-count">{{ $attentionCounts['needs_attention'] ?? 0 }}</span>
+                </a>
+                <a class="ship-chip {{ $attention === 'overdue' ? 'is-active' : '' }}"
+                    href="{{ route('shipments.index', $baseFilters + ['attention' => 'overdue']) }}">
+                    Overdue ETA <span class="ship-chip-count">{{ $attentionCounts['overdue'] ?? 0 }}</span>
+                </a>
+                <a class="ship-chip {{ $attention === 'due_soon' ? 'is-active' : '' }}"
+                    href="{{ route('shipments.index', $baseFilters + ['attention' => 'due_soon']) }}">
+                    Arriving &le; 7 days <span class="ship-chip-count">{{ $attentionCounts['due_soon'] ?? 0 }}</span>
+                </a>
+                <a class="ship-chip {{ $attention === 'hold' ? 'is-active' : '' }}"
+                    href="{{ route('shipments.index', $baseFilters + ['attention' => 'hold']) }}">
+                    Hold / delayed <span class="ship-chip-count">{{ $attentionCounts['hold'] ?? 0 }}</span>
+                </a>
+                <a class="ship-chip {{ $attention === 'docs_pending' ? 'is-active' : '' }}"
+                    href="{{ route('shipments.index', $baseFilters + ['attention' => 'docs_pending']) }}">
+                    Docs pending <span class="ship-chip-count">{{ $attentionCounts['docs_pending'] ?? 0 }}</span>
+                </a>
+                <a class="ship-chip {{ $attention === 'eway_expiring' ? 'is-active' : '' }}"
+                    href="{{ route('shipments.index', $baseFilters + ['attention' => 'eway_expiring']) }}">
+                    E-way expiring <span class="ship-chip-count">{{ $attentionCounts['eway_expiring'] ?? 0 }}</span>
+                </a>
+            </div>
+
+            <div class="ship-saved-views">
+                @foreach ($savedViews as $view)
+                    <span class="ship-saved-chip">
+                        <a href="{{ route('shipments.index', ['saved_view' => $view->id]) }}"
+                            title="{{ $view->is_shared ? 'Shared view' : 'Your view' }}">{{ $view->name }}</a>
+                        @if ((int) $view->user_id === (int) auth()->id())
+                            <form method="POST" action="{{ route('shipments.saved-views.destroy', $view) }}">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" title="Remove saved view">×</button>
+                            </form>
+                        @endif
+                    </span>
+                @endforeach
+                <button type="button" class="master-btn master-btn-soft master-btn-sm" id="toggleSaveView">☆ Save this view</button>
+                <form method="POST" action="{{ route('shipments.saved-views.store', $baseFilters) }}" class="ship-save-view" id="saveViewForm" hidden>
+                    @csrf
+                    <input class="master-input" name="name" placeholder="View name" maxlength="60" required>
+                    <label class="master-check"><input type="checkbox" name="is_shared" value="1"> Share</label>
+                    <button class="master-btn master-btn-primary master-btn-sm">Save</button>
+                </form>
+            </div>
+        </div>
+
         <form method="GET" action="{{ route('shipments.index') }}">
 
             <div class="master-filter-row" style="padding-top:22px;">
@@ -65,6 +119,7 @@
                         <th>Shipment</th>
                         <th>Route</th>
                         <th>Logistic</th>
+                        <th>ETA</th>
                         <th>Charges</th>
                         <th>Status</th>
                         <th>Action</th>
@@ -77,7 +132,7 @@
                         @if (! $closedDividerShown && $shipment->isClosed())
                             @php($closedDividerShown = true)
                             <tr class="ship-group-row">
-                                <td colspan="7">
+                                <td colspan="8">
                                     <span>Closed — delivered / cancelled</span>
                                 </td>
                             </tr>
@@ -117,8 +172,33 @@
                                 <span class="master-sub">{{ $shipment->tracking_number ?: 'No tracking' }}</span>
                             </td>
                             <td style="font-weight:500">
-                                {{ $shipment->currency ?: '' }} {{ $shipment->shipment_cost ?: '0' }}
-                                <span class="master-sub">{{ $shipment->cost_borne_by ?: '' }}</span>
+                                @if ($shipment->eta_date)
+                                    <span class="ship-eta ship-eta-{{ $shipment->etaState() }}">{{ $shipment->eta_date->format('d M') }}</span>
+                                    <span class="master-sub">{{ $shipment->etaLabel() }}</span>
+                                @else
+                                    <span class="master-sub">No ETA</span>
+                                @endif
+                                @if ($shipment->delay_reason)
+                                    <span class="master-sub">{{ $shipment->delay_reason }}</span>
+                                @endif
+                                @if (in_array($shipment->ewayState(), ['expiring', 'expired'], true))
+                                    <span class="ship-eway ship-eway-{{ $shipment->ewayState() }}">
+                                        E-way {{ $shipment->ewayLabel() }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td style="font-weight:500">
+                                @if ((int) $shipment->costs_count > 0)
+                                    @if ((float) $shipment->cost_same_currency > 0)
+                                        {{ \App\Models\Shipment::formatAmount($shipment->currency, $shipment->cost_same_currency) }}
+                                    @else
+                                        ≈ {{ \App\Models\Shipment::formatAmount('INR', $shipment->cost_inr_total) }}
+                                    @endif
+                                    <span class="master-sub">{{ $shipment->costs_count }} cost head{{ (int) $shipment->costs_count === 1 ? '' : 's' }} · {{ $shipment->cost_borne_by ?: '' }}</span>
+                                @else
+                                    {{ $shipment->currency ?: '' }} {{ $shipment->shipment_cost ?: '0' }}
+                                    <span class="master-sub">{{ $shipment->cost_borne_by ?: '' }}</span>
+                                @endif
                             </td>
                             <td style="font-weight:500"><span class="master-badge status-{{ $statusClass }}">{{ $shipment->statusLabel() }}</span></td>
                             <td style="font-weight:500">
@@ -145,6 +225,16 @@
                                                 <i class="fa-solid fa-tag"></i>
                                                 Shipping Mark / Stickers
                                             </a>
+
+                                            <a href="{{ route('shipments.print', [$shipment, 'packing-list']) }}" target="_blank">
+                                                <i class="fas fa-print"></i>
+                                                Packing List
+                                            </a>
+
+                                            <a href="{{ route('shipments.print', [$shipment, 'summary']) }}" target="_blank">
+                                                <i class="fas fa-print"></i>
+                                                Shipment Summary
+                                            </a>
                                             
                                             <button type="button" class="master-btn master-btn-soft master-btn-sm" onclick="copyShipmentLink('{{ route('shipments.publicTrack', $shipment->public_token) }}')">Public Link</button>
                                 
@@ -169,12 +259,12 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9"><div class="master-empty">No shipments found. Create your first shipment.</div></td></tr>
+                        <tr><td colspan="10"><div class="master-empty">No shipments found. Create your first shipment.</div></td></tr>
                     @endforelse
                 </tbody>
                 <tfoot>
                     <tr class="ship-total-row">
-                        <td colspan="4">
+                        <td colspan="5">
                             <strong>Total — {{ $shipments->count() }} {{ \Illuminate\Support\Str::plural('entry', $shipments->count()) }} shown</strong>
                             <span class="master-sub">Charges recorded on the shipments on this page</span>
                         </td>
