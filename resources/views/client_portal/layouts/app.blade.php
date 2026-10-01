@@ -28,6 +28,9 @@
     <link rel="stylesheet" href="{{ asset('assets/css/master-alert.css') }}">
 
     @stack('styles')
+
+    {{-- Central responsive layer (must load last so it can fill module gaps) --}}
+    <link rel="stylesheet" href="{{ asset('assets/css/responsive.css') }}">
 </head>
 <body style="line-height:1.5;">
 @php
