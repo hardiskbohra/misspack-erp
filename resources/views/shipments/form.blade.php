@@ -26,7 +26,8 @@
         </div>
 
         <form method="POST" action="{{ $isEdit ? route('shipments.update', $shipment) : route('shipments.store') }}"
-            class="master-card master-form-card" enctype="multipart/form-data">
+            class="master-card master-form-card" enctype="multipart/form-data"
+            data-party-lookup-url="{{ route('shipments.party-lookup') }}">
             @csrf
             @if($isEdit) @method('PUT') @endif
 
@@ -103,11 +104,21 @@
                 </div>
             </div>
 
-            <div class="master-section">
+            <div class="master-section" data-party-block="from">
                 <h3 class="master-section-title">From / Shipper Details</h3>
                 <div class="master-detail-grid">
-                    <div class="master-field"><label class="master-label">Name</label><input class="master-input" name="from_name"
-                            value="{{ old('from_name', $shipment->from_name) }}" placeholder="Shipper Name"></div>
+                    <div class="master-field">
+                        <label class="master-label">Name</label>
+                        <input class="master-input" name="from_name" list="fromPartyNames"
+                            value="{{ old('from_name', $shipment->from_name) }}" placeholder="Shipper Name"
+                            data-party-name="from" autocomplete="off">
+                        <datalist id="fromPartyNames">
+                            @foreach ($partyNames['from'] as $partyName)
+                                <option value="{{ $partyName }}"></option>
+                            @endforeach
+                        </datalist>
+                        <small class="party-prefill-note" data-party-note="from" hidden></small>
+                    </div>
                     <div class="master-field"><label class="master-label">Email</label><input class="master-input" type="email"
                             name="from_email" value="{{ old('from_email', $shipment->from_email) }}" placeholder="Shipper Email"></div>
                     <div class="master-field"><label class="master-label">Mobile</label><input class="master-input"
@@ -125,11 +136,21 @@
                 </div>
             </div>
 
-            <div class="master-section">
+            <div class="master-section" data-party-block="to">
                 <h3 class="master-section-title">To / Receiver Details</h3>
                 <div class="master-detail-grid">
-                    <div class="master-field"><label class="master-label">Name</label><input class="master-input" name="to_name"
-                            value="{{ old('to_name', $shipment->to_name) }}" placeholder="Receiver Name"></div>
+                    <div class="master-field">
+                        <label class="master-label">Name</label>
+                        <input class="master-input" name="to_name" list="toPartyNames"
+                            value="{{ old('to_name', $shipment->to_name) }}" placeholder="Receiver Name"
+                            data-party-name="to" autocomplete="off">
+                        <datalist id="toPartyNames">
+                            @foreach ($partyNames['to'] as $partyName)
+                                <option value="{{ $partyName }}"></option>
+                            @endforeach
+                        </datalist>
+                        <small class="party-prefill-note" data-party-note="to" hidden></small>
+                    </div>
                     <div class="master-field"><label class="master-label">Email</label><input class="master-input" type="email"
                             name="to_email" value="{{ old('to_email', $shipment->to_email) }}" placeholder="Receiver Email"></div>
                     <div class="master-field"><label class="master-label">Mobile</label><input class="master-input"

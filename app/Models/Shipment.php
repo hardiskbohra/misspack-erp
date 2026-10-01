@@ -91,6 +91,69 @@ class Shipment extends Model
         return self::typeOptions()[$this->shipment_type] ?? Str::headline($this->shipment_type);
     }
 
+    /**
+     * Statuses that mean the shipment is still moving. Everything else is
+     * either finished (delivered / cancelled) or not yet dispatched.
+     */
+    public static function closedStatuses(): array
+    {
+        return [self::STATUS_DELIVERED, self::STATUS_CANCELLED];
+    }
+
+    public function isClosed(): bool
+    {
+        return in_array($this->status, self::closedStatuses(), true);
+    }
+
+    /**
+     * Operational list order: shipments still in motion come first, finished
+     * ones (delivered / cancelled) drop below them; inside each group the
+     * newest pickup date wins, then newest record.
+     *
+     * Kept as a scope so every shipment list (index, project tab, vendor tab)
+     * can share the same ordering instead of each writing its own.
+     */
+    public function scopePriorityOrder(Builder $query): Builder
+    {
+        return $query
+            ->orderByRaw(
+                'CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END',
+                self::closedStatuses()
+            )
+            ->orderByRaw('pickup_date IS NULL')
+            ->orderByDesc('pickup_date')
+            ->orderByDesc('id');
+    }
+
+    /**
+     * "INR 12,340.00" / "USD 2,400.00" — one place for money formatting so
+     * lists, totals and the shipping mark always agree.
+     */
+    public static function formatAmount(?string $currency, $amount): string
+    {
+        return ($currency ?: 'INR').' '.number_format((float) $amount, 2);
+    }
+
+    /**
+     * Turn [currency => total] into a compact display string,
+     * e.g. "INR 1,20,000.00 · USD 2,400.00". Currency codes are never summed
+     * together because rates differ per shipment.
+     */
+    public static function formatTotals(array $totals): string
+    {
+        $parts = [];
+
+        foreach ($totals as $currency => $total) {
+            if ((float) $total == 0.0) {
+                continue;
+            }
+
+            $parts[] = self::formatAmount((string) $currency, $total);
+        }
+
+        return $parts ? implode(' · ', $parts) : '—';
+    }
+
     public static function statusOptions(): array
     {
         return [

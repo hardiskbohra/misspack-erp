@@ -14,6 +14,15 @@
         <div class="master-stat purple"><span class="icon">✈</span><div><p class="master-stat-title">In Transit</p><p class="master-stat-value">{{ $stats['in_transit'] + $stats['out_for_delivery'] }}</p></div></div>
         <div class="master-stat teal"><span class="icon">✓</span><div><p class="master-stat-title">Delivered</p><p class="master-stat-value">{{ $stats['delivered'] }}</p></div></div>
         <div class="master-stat orange"><span class="icon">!</span><div><p class="master-stat-title">Hold / Delayed</p><p class="master-stat-value">{{ $stats['custom_hold'] + $stats['delayed'] }}</p></div></div>
+        <div class="master-stat green tooltip-container">
+            <span class="icon">₹</span>
+            <div>
+                <p class="master-stat-title">Spent (filtered)</p>
+                <p class="master-stat-value ship-spend-total">{{ \App\Models\Shipment::formatTotals($spendByCurrency) }}</p>
+                <p class="master-sub">{{ $spendEntries }} costed {{ \Illuminate\Support\Str::plural('entry', $spendEntries) }} in this filter</p>
+                <span class="tooltip-text">Charges recorded on the shipments currently listed by the filters above. Currencies stay separate — they are never added together.</span>
+            </div>
+        </div>
     </div>
 
     <div class="master-card">
@@ -45,6 +54,9 @@
     </div>
 
     <div class="master-card master-table-card">
+        <p class="ship-order-hint">
+            Order: <strong>open shipments first</strong> (newest pickup date on top) &mdash; delivered &amp; cancelled sit in a closed block below, also newest first.
+        </p>
         <div class="master-table-wrap">
             <table class="master-table">
                 <thead>
@@ -59,9 +71,18 @@
                     </tr>
                 </thead>
                 <tbody>
+                    @php($closedDividerShown = false)
                     @forelse($shipments as $shipment)
                         @php($statusClass = str_replace('_', '-', $shipment->status))
-                        <tr style="line-height:1.5;">
+                        @if (! $closedDividerShown && $shipment->isClosed())
+                            @php($closedDividerShown = true)
+                            <tr class="ship-group-row">
+                                <td colspan="7">
+                                    <span>Closed — delivered / cancelled</span>
+                                </td>
+                            </tr>
+                        @endif
+                        <tr style="line-height:1.5;" @class(['ship-row-closed' => $shipment->isClosed()])>
                             <td style="font-weight:500">
                                 {{ $shipment->pickup_date ? $shipment->pickup_date->format('d M') : '-' }}
                                 <span class="master-sub">
@@ -119,6 +140,11 @@
                                                 <i class="fas fa-pen"></i>
                                                 Edit Shipment
                                             </a>
+
+                                            <a href="{{ route('shipments.shipping-mark', $shipment) }}" target="_blank">
+                                                <i class="fa-solid fa-tag"></i>
+                                                Shipping Mark / Stickers
+                                            </a>
                                             
                                             <button type="button" class="master-btn master-btn-soft master-btn-sm" onclick="copyShipmentLink('{{ route('shipments.publicTrack', $shipment->public_token) }}')">Public Link</button>
                                 
@@ -146,6 +172,18 @@
                         <tr><td colspan="9"><div class="master-empty">No shipments found. Create your first shipment.</div></td></tr>
                     @endforelse
                 </tbody>
+                <tfoot>
+                    <tr class="ship-total-row">
+                        <td colspan="4">
+                            <strong>Total — {{ $shipments->count() }} {{ \Illuminate\Support\Str::plural('entry', $shipments->count()) }} shown</strong>
+                            <span class="master-sub">Charges recorded on the shipments on this page</span>
+                        </td>
+                        <td colspan="3">
+                            <strong>{{ \App\Models\Shipment::formatTotals($pageSpendByCurrency) }}</strong>
+                            <span class="master-sub">Filtered total (all pages): {{ \App\Models\Shipment::formatTotals($spendByCurrency) }}</span>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
 
@@ -182,8 +220,24 @@
                             </select>
                         </div>
                         <div class="master-field"><label class="master-label">Pickup Date</label><input class="master-input" type="date" name="pickup_date" value="{{ now()->toDateString() }}"></div>
-                        <div class="master-field"><label class="master-label">From Name</label><input class="master-input" name="from_name" placeholder="Shipper name"></div>
-                        <div class="master-field"><label class="master-label">To Name</label><input class="master-input" name="to_name" placeholder="Receiver name"></div>
+                        <div class="master-field">
+                            <label class="master-label">From Name</label>
+                            <input class="master-input" name="from_name" list="quickFromNames" placeholder="Shipper name" autocomplete="off">
+                            <datalist id="quickFromNames">
+                                @foreach ($partyNames['from'] as $partyName)
+                                    <option value="{{ $partyName }}"></option>
+                                @endforeach
+                            </datalist>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label">To Name</label>
+                            <input class="master-input" name="to_name" list="quickToNames" placeholder="Receiver name" autocomplete="off">
+                            <datalist id="quickToNames">
+                                @foreach ($partyNames['to'] as $partyName)
+                                    <option value="{{ $partyName }}"></option>
+                                @endforeach
+                            </datalist>
+                        </div>
                         <div class="master-field"><label class="master-label">Logistic Partner</label><input class="master-input" name="logistic_partner" placeholder="DHL / FedEx / BlueDart"></div>
                         <div class="master-field"><label class="master-label">Tracking Number</label><input class="master-input" name="tracking_number" placeholder="Tracking number"></div>
                     </div>

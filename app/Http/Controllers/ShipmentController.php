@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Shipment;
 use App\Models\ShipmentAttachment;
 use App\Models\ShipmentTrackingHistory;
+use App\Services\ShipmentPartyDirectory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Illuminate\Validation\ValidationException;
@@ -25,20 +27,33 @@ class ShipmentController extends Controller
         $fromDate = $request->query('from_date');
         $toDate = $request->query('to_date');
 
-        $shipmentsQuery = Shipment::query()
+        // Open shipments first, finished ones below; date is the tie-breaker
+        // inside each group (see Shipment::scopePriorityOrder).
+        $shipments = $this->filteredQuery($request)
             ->with('creator')
             ->withCount('items')
-            ->search($search)
-            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
-            ->when($type !== 'all', fn ($q) => $q->where('shipment_type', $type))
-            ->when($currency !== 'all', fn ($q) => $q->where('currency', $currency))
-            ->when($fromDate, fn ($q) => $q->whereDate('pickup_date', '>=', $fromDate))
-            ->when($toDate, fn ($q) => $q->whereDate('pickup_date', '<=', $toDate));
-
-        $shipments = $shipmentsQuery
-            ->latest('id')
+            ->priorityOrder()
             ->paginate(50)
             ->withQueryString();
+
+        // Total spent "as per the shown entries": everything matching the
+        // current filters (not just this page), kept per currency because
+        // shipments bill in INR / USD / RMB and must not be summed together.
+        $spendByCurrency = $this->filteredQuery($request)
+            ->whereNotNull('shipment_cost')
+            ->selectRaw("COALESCE(NULLIF(currency, ''), 'INR') as currency, SUM(shipment_cost) as total")
+            ->groupByRaw("COALESCE(NULLIF(currency, ''), 'INR')")
+            ->pluck('total', 'currency')
+            ->map(fn ($total) => (float) $total)
+            ->all();
+
+        $spendEntries = (int) $this->filteredQuery($request)->whereNotNull('shipment_cost')->count();
+
+        // And the same total for the rows actually on screen, for the footer.
+        $pageSpendByCurrency = $shipments->getCollection()
+            ->groupBy(fn (Shipment $shipment) => $shipment->currency ?: 'INR')
+            ->map(fn ($group) => (float) $group->sum(fn (Shipment $shipment) => (float) $shipment->shipment_cost))
+            ->all();
 
         $stats = [
             'total' => Shipment::count(),
@@ -54,6 +69,11 @@ class ShipmentController extends Controller
         return view('shipments.index', [
             'shipments' => $shipments,
             'stats' => $stats,
+            'spendByCurrency' => $spendByCurrency,
+            'spendEntries' => $spendEntries,
+            'pageSpendByCurrency' => $pageSpendByCurrency,
+            'partyFields' => ShipmentPartyDirectory::PARTIES,
+            'partyNames' => $this->partyNames(),
             'search' => $search,
             'status' => $status,
             'type' => $type,
@@ -491,6 +511,75 @@ class ShipmentController extends Controller
         return $number;
     }
 
+    /**
+     * Printable shipping marks (carton stickers) for a shipment.
+     *
+     * One mark per package by default — a 10-package shipment prints 10
+     * stickers — and the operator can override the count with ?copies=N.
+     */
+    public function shippingMark(Request $request, Shipment $shipment): View
+    {
+        $default = max(1, (int) ($shipment->package_count ?: 1));
+        $copies = (int) $request->query('copies', $default);
+        $copies = max(1, min(48, $copies ?: 1));
+
+        return view('shipments.shipping-mark', [
+            'shipment' => $shipment,
+            'copies' => $copies,
+            'perPage' => 8,
+            'modeOptions' => Shipment::modeOptions(),
+        ]);
+    }
+
+    /**
+     * From / To memory for the shipment form.
+     *
+     * GET /shipments/party-lookup?field=from&name=MissPack
+     *   → the best known contact + address block for that name, plus the list
+     *     of party names already used (for the datalist).
+     */
+    public function partyLookup(Request $request, ShipmentPartyDirectory $directory): JsonResponse
+    {
+        $field = $directory->normaliseField($request->query('field'));
+
+        return response()->json($directory->payload($field, $request->query('name')));
+    }
+
+    /**
+     * From / To names already used, for the form and quick-create datalists.
+     */
+    private function partyNames(): array
+    {
+        $directory = app(ShipmentPartyDirectory::class);
+
+        return [
+            'from' => $directory->names('from'),
+            'to' => $directory->names('to'),
+        ];
+    }
+
+    /**
+     * The list query shared by the index, its counters and its money totals,
+     * so a new filter only has to be added in one place.
+     */
+    private function filteredQuery(Request $request)
+    {
+        $search = $request->query('search');
+        $status = $request->query('status', 'all');
+        $type = $request->query('type', 'all');
+        $currency = $request->query('currency', 'all');
+        $fromDate = $request->query('from_date');
+        $toDate = $request->query('to_date');
+
+        return Shipment::query()
+            ->search($search)
+            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
+            ->when($type !== 'all', fn ($q) => $q->where('shipment_type', $type))
+            ->when($currency !== 'all', fn ($q) => $q->where('currency', $currency))
+            ->when($fromDate, fn ($q) => $q->whereDate('pickup_date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->whereDate('pickup_date', '<=', $toDate));
+    }
+
     private function formData(Shipment $shipment): array
     {
         return [
@@ -500,6 +589,9 @@ class ShipmentController extends Controller
             'currencyOptions' => Shipment::currencyOptions(),
             'costBorneByOptions' => Shipment::costBorneByOptions(),
             'modeOptions' => Shipment::modeOptions(),
+            // From / To memory: names already used, so the form can suggest
+            // and prefill them without another round trip on page load.
+            'partyNames' => $this->partyNames(),
         ];
     }
 }

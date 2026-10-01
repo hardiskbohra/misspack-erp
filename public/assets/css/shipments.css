@@ -563,3 +563,94 @@
         }
     
     }
+
+/* ---------------- Priority order groups (open first, closed below) ---------------- */
+
+.ship-index .ship-group-row td {
+    padding: 10px 14px;
+    background: var(--mc-card-soft);
+    border-top: 1px solid var(--mc-border);
+    border-bottom: 1px solid var(--mc-border);
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.ship-index .ship-row-closed td {
+    /* finished shipments read as done without dropping out of the list */
+    opacity: .68;
+}
+
+.ship-index .ship-row-closed .master-id,
+.ship-index .ship-row-closed strong {
+    font-weight: 600;
+}
+
+/* ---------------- Spend totals ---------------- */
+
+.ship-spend-total {
+    font-size: 18px !important;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.ship-total-row td {
+    padding: 12px 14px;
+    background: var(--mc-card-soft);
+    border-top: 2px solid var(--mc-border);
+    font-weight: 800;
+    vertical-align: top;
+}
+
+.ship-total-row strong {
+    display: block;
+    font-size: 13.5px;
+}
+
+.ship-total-row .master-sub {
+    display: block;
+    margin-top: 3px;
+    font-weight: 600;
+}
+
+/* ---------------- From / To memory ---------------- */
+
+.party-prefill-note {
+    display: block;
+    margin-top: 6px;
+    color: #0e9f6e;
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.party-prefill-note .party-prefill-undo {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: #4f83f1;
+    font: inherit;
+    font-weight: 800;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.party-prefilled {
+    border-color: #46d488 !important;
+    background: #f2fff9;
+}
+
+.ship-order-hint {
+    margin: 0;
+    padding: 14px 16px 0;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+.ship-order-hint strong {
+    color: var(--mc-text-1);
+}

@@ -80,6 +80,132 @@
     /* ---------------- Global helpers (used by inline onclick) ---------------- */
 
     /** Copy the public tracking link to the clipboard (list page). */
+    /* ------------------------------------------------------------------
+       From / To memory
+       ------------------------------------------------------------------
+       Parties repeat between shipments (a shipper is usually the same
+       company with the same address). When a name is picked or typed that
+       we have shipped before, fill only the fields that are still empty and
+       say where the values came from — with a one-click undo.
+       ------------------------------------------------------------------ */
+
+    var PARTY_DETAILS = ['email', 'mobile', 'address', 'city', 'state', 'country', 'pincode'];
+
+    function initPartyMemory() {
+        var form = document.querySelector('[data-party-lookup-url]');
+        if (!form || form.dataset.partyMemoryReady) return;
+
+        /* idempotent: a second DOMContentLoaded must not double-bind */
+        form.dataset.partyMemoryReady = '1';
+
+        var lookupUrl = form.getAttribute('data-party-lookup-url');
+        var namesLoaded = {};
+
+        function loadNames(field, input) {
+            var listId = input.getAttribute('list');
+            var datalist = listId ? document.getElementById(listId) : null;
+            if (!datalist || namesLoaded[field]) return;
+
+            namesLoaded[field] = true;
+            fetch(lookupUrl + '?field=' + encodeURIComponent(field), { headers: { 'Accept': 'application/json' } })
+                .then(function (res) { return res.ok ? res.json() : null; })
+                .then(function (payload) {
+                    if (!payload || !payload.names) return;
+                    payload.names.forEach(function (name) {
+                        var option = document.createElement('option');
+                        option.value = name;
+                        datalist.appendChild(option);
+                    });
+                })
+                .catch(function () { /* suggestions are optional */ });
+        }
+
+        function partyInputs(block, field) {
+            return PARTY_DETAILS
+                .map(function (suffix) { return block.querySelector('[name="' + field + '_' + suffix + '"]'); })
+                .filter(Boolean);
+        }
+
+        function restore(values) {
+            values.forEach(function (entry) {
+                entry.field.value = entry.value;
+            });
+        }
+
+        function applyDetails(field, name, block, note) {
+            if (!name) return;
+
+            fetch(lookupUrl + '?field=' + encodeURIComponent(field) + '&name=' + encodeURIComponent(name), {
+                headers: { 'Accept': 'application/json' }
+            })
+                .then(function (res) { return res.ok ? res.json() : null; })
+                .then(function (payload) {
+                    var details = (payload && payload.details) ? payload.details : {};
+
+                    /* a name we have never shipped for is not an error — stay quiet */
+                    if (!Object.keys(details).length) {
+                        note.hidden = true;
+                        return;
+                    }
+
+                    var filled = [];
+                    var skipped = 0;
+
+                    Object.keys(details).forEach(function (suffix) {
+                        var input = block.querySelector('[name="' + field + '_' + suffix + '"]');
+                        if (!input) return;
+
+                        if (String(input.value || '').trim() !== '') {
+                            skipped++;
+                            return;
+                        }
+
+                        filled.push({ field: input, value: input.value });
+                        input.value = details[suffix];
+                        input.classList.add('party-prefilled');
+                    });
+
+                    if (!filled.length) {
+                        note.hidden = false;
+                        note.textContent = 'All ' + field + ' details for “' + name + '” are already filled.';
+                        return;
+                    }
+
+                    var source = payload.source && payload.source.shipment_number
+                        ? ' from ' + payload.source.shipment_number
+                        : ' from a previous shipment';
+                    note.hidden = false;
+                    note.innerHTML = 'Prefilled ' + filled.length + ' field' + (filled.length === 1 ? '' : 's') + source
+                        + (skipped ? ' (' + skipped + ' already filled)' : '')
+                        + ' — <button type="button" class="party-prefill-undo">undo</button>';
+
+                    note.querySelector('.party-prefill-undo').addEventListener('click', function () {
+                        restore(filled);
+                        filled.forEach(function (entry) { entry.field.classList.remove('party-prefilled'); });
+                        note.hidden = true;
+                    });
+                })
+                .catch(function () { /* prefill is a convenience, never an error */ });
+        }
+
+        ['from', 'to'].forEach(function (field) {
+            var input = form.querySelector('[data-party-name="' + field + '"]');
+            if (!input) return;
+
+            var block = form.querySelector('[data-party-block="' + field + '"]') || form;
+            var note = block.querySelector('[data-party-note="' + field + '"]');
+
+            loadNames(field, input);
+            input.addEventListener('focus', function () { loadNames(field, input); });
+
+            /* 'change' fires when a datalist suggestion is chosen or the field
+               is left; typing alone never overwrites anything. */
+            input.addEventListener('change', function () {
+                if (note) applyDetails(field, input.value.trim(), block, note);
+            });
+        });
+    }
+
     window.copyShipmentLink = function (url) {
         if (navigator.clipboard) {
             navigator.clipboard.writeText(url).then(function () {
@@ -152,5 +278,8 @@
             checkbox.checked = !checkbox.checked;
             MasterAlert.toast('Something went wrong.', 'error');
         });
+
     };
+
+    document.addEventListener('DOMContentLoaded', initPartyMemory);
 })();

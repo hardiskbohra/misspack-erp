@@ -19,6 +19,7 @@
         <div class="master-actions">
             <a href="{{ route('shipments.index') }}" class="master-btn master-btn-light">Back</a>
             <a href="{{ route('shipments.edit', $shipment) }}" class="master-btn master-btn-soft">Edit Shipment</a>
+            <a href="{{ route('shipments.shipping-mark', $shipment) }}" target="_blank" class="master-btn master-btn-soft"><i class="fa-solid fa-tag"></i> Shipping Mark</a>
             <a href="{{ route('shipments.publicTrack', $shipment->public_token) }}" target="_blank" class="master-btn master-btn-primary">Public Tracking</a>
         </div>
     </div>
@@ -37,7 +38,11 @@
                     <div class="master-info"><span>Client Name</span><strong>{{ $shipment->client->company_name ?? '-' }}</strong></div>
                     <div class="master-info"><span>Project</span><strong>{{ $shipment->project->name ?? '-' }}</strong>
                         <span>{{ $shipment->project->project_number ?? '-' }}</span></div>
-                    <div class="master-info"><span>Cost</span><strong>{{ $shipment->shipment_cost ? $shipment->currency.' '.number_format((float)$shipment->shipment_cost, 2) : '-' }}</strong></div>
+                    <div class="master-info">
+                        <span>Cost</span>
+                        <strong>{{ $shipment->shipment_cost ? \App\Models\Shipment::formatAmount($shipment->currency, $shipment->shipment_cost) : '-' }}</strong>
+                        <span>{{ $shipment->package_count ? $shipment->package_count.' package(s) · print '.$shipment->package_count.' sticker(s)' : 'No package count recorded' }}</span>
+                    </div>
                     <div class="master-info"><span>Cost Borne By</span><strong>{{ $costBorneByOptions[$shipment->cost_borne_by] ?? '-' }}</strong></div>
                 </div>
             </div>

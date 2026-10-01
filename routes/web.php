@@ -99,7 +99,8 @@ Route::middleware('auth')->group(function () {
 
     // Shipment Management
     Route::post('/shipments/quick', [ShipmentController::class, 'quickStore'])->name('shipments.quickStore');
-    Route::post('/shipments/{shipment}/history', [ShipmentController::class, 'storeHistory'])->name('shipments.history.store');
+    Route::get('/shipments/party-lookup', [ShipmentController::class, 'partyLookup'])->name('shipments.party-lookup');
+    Route::get('/shipments/{shipment}/shipping-mark', [ShipmentController::class, 'shippingMark'])->name('shipments.shipping-mark');
     Route::post('/shipments/{shipment}/history', [ShipmentController::class, 'storeHistory'])->name('shipments.history.store');
     Route::put('/shipments/history/{history}', [ShipmentController::class, 'updateHistory'])->name('shipments.history.update');
     Route::delete('/shipments/history/{history}', [ShipmentController::class, 'destroyHistory'])->name('shipments.history.destroy');
