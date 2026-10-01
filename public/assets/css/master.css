@@ -14,7 +14,7 @@
     --master-orange: #f59e0b;
     --master-red: #ef4770;
     --master-green: #10b981;
-    --master-dark: #17233b;
+    --master-dark: var(--mc-text);
     --master-muted: #687386;
     --master-border: var(--mc-border);
     --master-bg: var(--mc-soft);
@@ -37,7 +37,6 @@
 /* Dark theme — re-map the master surface/text tokens (accent colours
    intentionally stay the same in both themes). */
 :root[data-theme="dark"] {
-    --master-dark: var(--mc-border);
     --master-muted: #aab6c9;
     --master-border: #2a3854;
     --master-bg: #0f1628;

@@ -18,7 +18,7 @@
     --bg-card: #1a2540;
     --bg-sidebar: #0d1526;
     --bg-input: #1e2d47;
-    --text-primary: var(--mc-border);
+    --text-primary: #e2e8f0;
     --text-secondary: #8892a4;
     --text-muted: #5a6478;
     --border: #253047;
@@ -39,7 +39,7 @@
     --mc-soft: #1d2c4d;
     --mc-hover: rgba(255, 255, 255, 0.05);
     --mc-border: #2a3854;
-    --mc-text: var(--mc-border);
+    --mc-text: #e8edf6;
     --mc-text-2: #aab6c9;
     --mc-text-3: #7f8ba1;
     --mc-shadow: 0 14px 35px rgba(0, 0, 0, 0.35);
@@ -47,14 +47,14 @@
 
 :root[data-theme="light"] {
     --bg-primary: #f0f4ff;
-    --bg-secondary: var(--mc-card);
-    --bg-card: var(--mc-card);
+    --bg-secondary: #ffffff;
+    --bg-card: #ffffff;
     --bg-sidebar: #1a2540;
     --bg-input: #f4f7ff;
     --text-primary: #1a2540;
     --text-secondary: #5a6478;
     --text-muted: #8892a4;
-    --border: var(--mc-border);
+    --border: #e2e8f0;
     --accent: #4f8ef7;
     --accent-hover: #3b7de8;
     --accent-light: rgba(79, 142, 247, 0.1);
@@ -67,11 +67,11 @@
     --scrollbar-thumb: #cbd5e0;
 
     /* Component (master-*/module) surface tokens — light */
-    --mc-card: var(--mc-card);
-    --mc-card-soft: var(--mc-card-soft);
-    --mc-soft: var(--mc-soft);
-    --mc-hover: var(--mc-hover);
-    --mc-border: var(--mc-border);
+    --mc-card: #ffffff;
+    --mc-card-soft: #f8fbff;
+    --mc-soft: #eef3ff;
+    --mc-hover: #f7f9fc;
+    --mc-border: #dfe7f3;
     --mc-text: #17233b;
     --mc-text-2: #536079;
     --mc-text-3: #7d8aa0;

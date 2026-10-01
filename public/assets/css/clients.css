@@ -11,6 +11,10 @@
    Page wrappers used for scoping (badge palettes differ per screen):
      .client-index  — clients list
      .client-show   — client detail
+
+:root {
+    --client-border: var(--mc-border);
+}
    The portal management screen (clients/portal) is fully self-contained
    under the cpa-* namespace (no collisions possible).
    ========================================================================== */

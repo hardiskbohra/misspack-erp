@@ -49,7 +49,7 @@
     --core-danger: #e11d48;
     --core-success: #0e9f6e;
     --core-warning: #d97706;
-    --core-ink: #17233b;
+    --core-ink: var(--mc-text);
     --core-muted: #687386;
     --core-border: var(--mc-border);
     --core-field-border: var(--mc-border);

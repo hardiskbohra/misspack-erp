@@ -9,7 +9,7 @@
    ========================================================================== */
 
 :root {
-    --cq-dark:#17233b;
+    --cq-dark: var(--mc-text);
     --cq-border: var(--mc-border);
     --cq-bg: var(--mc-soft);
     --cq-shadow:0 14px 35px rgba(25,42,70,.08);

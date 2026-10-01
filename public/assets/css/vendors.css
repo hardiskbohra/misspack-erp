@@ -76,7 +76,7 @@
 .vendor-show {
     --vendor-primary: #4f83f1;
     --vendor-primary-2: #6366f1;
-    --vendor-dark: #17233b;
+    --vendor-dark: var(--mc-text);
     --vendor-muted: #687386;
     --vendor-border: var(--mc-border);
     --vendor-bg: var(--mc-soft);
@@ -801,7 +801,7 @@
 .image-view-page {
     --img-primary: #4f83f1;
     --img-primary-2: #6366f1;
-    --img-dark: #17233b;
+    --img-dark: var(--mc-text);
     --img-muted: #687386;
     --img-border: var(--mc-border);
     --img-bg: var(--mc-soft);

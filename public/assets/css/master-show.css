@@ -4,7 +4,7 @@
 :root {
     --master-primary:#4f83f1;
     --master-primary-2:#6366f1;
-    --master-dark:#17233b;
+    --master-dark: var(--mc-text);
     --master-muted:#687386;
     --master-border: var(--mc-border);
     --master-bg: var(--mc-soft);

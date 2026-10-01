@@ -7,7 +7,7 @@
     --master-orange: #f59e0b;
     --master-red: #ef4770;
     --master-green: #10b981;
-    --master-dark: #17233b;
+    --master-dark: var(--mc-text);
     --master-muted: #687386;
     --master-border: var(--mc-border);
     --master-bg: var(--mc-soft);

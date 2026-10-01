@@ -8,7 +8,7 @@
    ========================================================================== */
 
 :root {
-    --cq-dark:#17233b;
+    --cq-dark: var(--mc-text);
     --cq-muted:#687386;
     --cq-border: var(--mc-border);
     --cq-bg: var(--mc-soft);

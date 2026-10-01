@@ -19,7 +19,7 @@
 :root {
     --cf-primary: #4f83f1;
     --cf-green: #10b981;
-    --cf-dark: #17233b;
+    --cf-dark: var(--mc-text);
     --cf-muted: #687386;
     --cf-border: var(--mc-border);
     --cf-bg: var(--mc-soft);

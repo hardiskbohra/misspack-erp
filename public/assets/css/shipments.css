@@ -12,6 +12,12 @@
    as the inline <style> blocks they replaced.
    ===================================================================== */
 
+:root {
+    --ship-primary: #4f83f1;
+    --ship-primary-2: #6366f1;
+    --ship-muted: #687386;
+}
+
 /* =====================================================================
    1. Shipment List (index)
    Badge colours + mobile table-card layout.

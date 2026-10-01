@@ -9,7 +9,7 @@
 
 :root {
     --cq-primary:#4f83f1;
-    --cq-dark:#17233b;
+    --cq-dark: var(--mc-text);
     --cq-muted:#687386;
     --cq-border: var(--mc-border);
     --cq-bg: var(--mc-soft);
