@@ -71,28 +71,29 @@
         </div>
     </div>
 
-    <div class="pmile-modal" id="editMilestoneModal" aria-hidden="true">
-        <div class="pmile-modal-backdrop" data-close-milestone-modal></div>
-        <div class="pmile-modal-card">
+    {{-- Edit milestone — shared master-modal (same vocabulary/styling as every other module) --}}
+    <div class="master-modal" id="editMilestoneModal" aria-hidden="true">
+        <div class="master-modal-card" role="dialog" aria-modal="true"
+            aria-labelledby="editMilestoneModalTitle">
             <form method="POST" action="#" id="editMilestoneForm">
                 @csrf
                 @method('PATCH')
                 <input type="hidden" name="milestone_key" id="edit_milestone_key">
                 <input type="hidden" name="project_product_id" id="edit_project_product_id">
 
-                <div class="pmile-modal-head">
-                    <div>
-                        <p class="pd-eyebrow">Edit Timeline Step</p>
-                        <h3 id="editMilestoneModalTitle">Edit Milestone</h3>
+                <div class="master-modal-header">
+                    <div class="master-modal-heading">
+                        <span class="master-modal-icon"><i class="fa-solid fa-diagram-project"></i></span>
+                        <div>
+                            <h3 class="master-modal-title" id="editMilestoneModalTitle">Edit Milestone</h3>
+                            <p class="master-modal-subtitle">Timeline step</p>
+                        </div>
                     </div>
-                    <div>
-                        <button type="button" class="pmile-modal-close" data-close-milestone-modal><i
-                            class="fa-solid fa-xmark"></i></button>
-                    </div>
+                    <button type="button" class="master-modal-close" data-close-modal>×</button>
                 </div>
 
-                <div class="pmile-modal-body">
-                    <div class="pmile-modal-grid">
+                <div class="master-modal-body">
+                    <div class="master-modal-grid">
                         <div class="master-field full">
                             <label class="master-label">Title</label>
                             <input class="master-input" type="text" name="title" id="edit_title" required>
@@ -175,19 +176,42 @@
                     </div>
                 </div>
 
-                <div class="pmile-modal-footer">
-                    <button type="button" class="master-btn master-btn-soft" data-close-milestone-modal>Cancel</button>
+                <div class="master-modal-footer">
+                    <button type="button" class="master-btn master-btn-soft pmile-delete-action"
+                        id="openDeleteMilestoneModal"><i class="fa-solid fa-trash"></i> Delete</button>
+                    <button type="button" class="master-btn master-btn-light" data-close-modal>Cancel</button>
                     <button type="submit" class="master-btn master-btn-primary">Save Milestone</button>
                 </div>
             </form>
-            <div class="pmile-modal-delete-wrap">
-                <form method="POST" action="#" id="deleteMilestoneForm" class="pmile-modal-delete-form"
-                    data-confirm="Delete this milestone?">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="pd-link-danger"><i class="fa-solid fa-trash"></i> Delete Milestone</button>
-                </form>
+        </div>
+    </div>
+
+    {{-- Delete milestone — themed confirmation modal (same pattern as tasks / clients / vendors) --}}
+    <div class="master-modal" id="deleteMilestoneModal" aria-hidden="true">
+        <div class="master-modal-card" style="max-width:440px;" role="dialog" aria-modal="true"
+            aria-labelledby="deleteMilestoneTitle">
+            <div class="master-modal-header">
+                <div class="master-modal-heading">
+                    <span class="master-modal-icon" style="background:#fff0f4;color:var(--master-red);">🗑</span>
+                    <div>
+                        <h3 class="master-modal-title" id="deleteMilestoneTitle">Delete Milestone</h3>
+                        <p class="master-modal-subtitle">This action cannot be undone</p>
+                    </div>
+                </div>
+                <button type="button" class="master-modal-close" data-close-modal>×</button>
             </div>
+            <div class="master-modal-body">
+                <p id="deleteMilestoneDesc" style="margin:0;font-weight:700;color:#536079;">Are you sure you want to delete
+                    this milestone?</p>
+            </div>
+            <form method="POST" action="#" id="deleteMilestoneForm">
+                @csrf
+                @method('DELETE')
+                <div class="master-modal-footer">
+                    <button type="button" class="master-btn master-btn-light" data-close-modal>Cancel</button>
+                    <button type="submit" class="master-btn master-btn-danger">Delete Milestone</button>
+                </div>
+            </form>
         </div>
     </div>
 </section>

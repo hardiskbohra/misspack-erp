@@ -334,27 +334,41 @@
     }
 
     /* ------------------------------------------------------------------
-       Milestones tab — timeline editor modal (pmile-*, module design)
+       Milestones tab — timeline editor modal
+       Uses the shared master-modal layer (app-layout.js) so it matches
+       every other module: same card, header, close button and footer.
+       Destructive actions open a separate themed confirmation modal.
        ------------------------------------------------------------------ */
     function initMilestoneModal() {
         var editModal = document.getElementById('editMilestoneModal');
         if (!editModal) return;
 
+        var deleteModal = document.getElementById('deleteMilestoneModal');
         var editForm = document.getElementById('editMilestoneForm');
         var deleteForm = document.getElementById('deleteMilestoneForm');
 
-        function openMilestoneModal() {
-            editModal.classList.add('is-open');
-            editModal.setAttribute('aria-hidden', 'false');
-            document.body.classList.add('task-modal-open');
-            document.body.style.overflow = 'hidden';
+        function openModal(modal) {
+            if (!modal) return;
+            if (typeof window.MasterModal !== 'undefined') {
+                window.MasterModal.open(modal);
+                return;
+            }
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('master-modal-open');
         }
 
-        function closeMilestoneModal() {
-            editModal.classList.remove('is-open');
-            editModal.setAttribute('aria-hidden', 'true');
-            document.body.classList.remove('task-modal-open');
-            document.body.style.overflow = '';
+        function closeModal(modal) {
+            if (!modal) return;
+            if (typeof window.MasterModal !== 'undefined') {
+                window.MasterModal.close(modal);
+                return;
+            }
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+            if (!document.querySelector('.master-modal.open')) {
+                document.body.classList.remove('master-modal-open');
+            }
         }
 
         function setField(id, value) {
@@ -382,6 +396,13 @@
                     modalTitle.textContent = milestone.title ? 'Edit ' + milestone.title : 'Edit Milestone';
                 }
 
+                var deleteDesc = document.getElementById('deleteMilestoneDesc');
+                if (deleteDesc) {
+                    deleteDesc.textContent = milestone.title
+                        ? 'Are you sure you want to delete "' + milestone.title + '"? This action cannot be undone.'
+                        : 'Are you sure you want to delete this milestone? This action cannot be undone.';
+                }
+
                 setField('edit_milestone_key', milestone.milestone_key);
                 setField('edit_project_product_id', milestone.project_product_id);
                 setField('edit_title', milestone.title);
@@ -400,25 +421,21 @@
                 setChecked('edit_is_public', milestone.is_public);
                 setChecked('edit_is_required', milestone.is_required);
 
-                openMilestoneModal();
+                openModal(editModal);
             });
         });
 
-        document.querySelectorAll('[data-close-milestone-modal]').forEach(function (button) {
-            button.addEventListener('click', closeMilestoneModal);
-        });
+        /* Footer "Delete" hands over to the themed confirmation modal. */
+        var openDelete = document.getElementById('openDeleteMilestoneModal');
+        if (openDelete) {
+            openDelete.addEventListener('click', function () {
+                closeModal(editModal);
+                openModal(deleteModal);
+            });
+        }
 
-        editModal.addEventListener('click', function (event) {
-            if (event.target.classList.contains('pmile-modal-backdrop')) {
-                closeMilestoneModal();
-            }
-        });
-
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape' && editModal.classList.contains('is-open')) {
-                closeMilestoneModal();
-            }
-        });
+        /* Close/backdrop/Escape handling is owned by the shared modal layer
+           (app-layout.js) through [data-close-modal]. */
     }
 
     onReady(function () {
