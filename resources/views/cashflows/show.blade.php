@@ -16,6 +16,25 @@
         <div class="master-actions"><a href="{{ route('cashflows.index') }}" class="master-btn master-btn-light">Back</a><a
                 href="{{ route('cashflows.edit', $entry) }}" class="master-btn master-btn-primary">Edit Entry</a></div>
     </div>
+    @if (! empty($linkedVendorPayment))
+        <div class="master-card master-section cf-sync-note">
+            <h3 class="master-section-title">Linked Vendor Payment</h3>
+            <p style="margin:0 0 6px;font-weight:700;">
+                This INR entry is generated from a vendor payment
+                @if (\Illuminate\Support\Facades\Route::has('vendors.show'))
+                    — <a href="{{ route('vendors.show', $linkedVendorPayment->vendor_id) }}#payments">open the vendor ledger</a>
+                @endif
+            </p>
+            <p style="margin:0;font-weight:600;color:#687386;">
+                {{ $linkedVendorPayment->relationLoaded('vendor') && $linkedVendorPayment->vendor ? $linkedVendorPayment->vendor->vendor_name : 'Vendor' }}
+                · {{ $linkedVendorPayment->foreign_currency }} {{ number_format((float) $linkedVendorPayment->foreign_amount, 2) }}
+                @if ($linkedVendorPayment->exchange_rate)
+                    @ {{ rtrim(rtrim(number_format((float) $linkedVendorPayment->exchange_rate, 2), '0'), '.') }}
+                @endif
+                · edit or delete it from the vendor page and this entry follows automatically.
+            </p>
+        </div>
+    @endif
     <div class="master-grid">
         <div>
             <div class="master-card master-section">

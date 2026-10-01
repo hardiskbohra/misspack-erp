@@ -6,6 +6,8 @@ use App\Models\CashflowAccount;
 use App\Models\CashflowCategory;
 use App\Models\CashflowEntry;
 use App\Models\CashflowMasterOption;
+use App\Services\CashflowLedger;
+use App\Services\VendorPaymentCashflowSync;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,9 +41,13 @@ class CashflowController extends Controller
         ];
         $stats['net'] = $stats['credit'] - $stats['debit'];
 
+        // Which rows on this page are mirrors of a vendor payment (one query).
+        $mirroredPayments = app(VendorPaymentCashflowSync::class)->linkedMapFor($entries->pluck('id'));
+
         return view('cashflows.index', array_merge($this->sharedData(), [
             'entries' => $entries,
             'stats' => $stats,
+            'mirroredPayments' => $mirroredPayments,
             ...$filters,
         ]));
     }
@@ -120,12 +126,18 @@ class CashflowController extends Controller
         if ($this->vendorModelAvailable()) $with[] = 'vendor';
         $cashflow->load($with);
 
-        return view('cashflows.show', array_merge($this->sharedData(), ['entry' => $cashflow]));
+        return view('cashflows.show', array_merge($this->sharedData(), [
+            'entry' => $cashflow,
+            'linkedVendorPayment' => app(VendorPaymentCashflowSync::class)->linkedPaymentFor($cashflow),
+        ]));
     }
 
     public function edit(CashflowEntry $cashflow): View
     {
-        return view('cashflows.form', array_merge($this->sharedData(), ['entry' => $cashflow]));
+        return view('cashflows.form', array_merge($this->sharedData(), [
+            'entry' => $cashflow,
+            'linkedVendorPayment' => app(VendorPaymentCashflowSync::class)->linkedPaymentFor($cashflow),
+        ]));
     }
 
     public function update(Request $request, CashflowEntry $cashflow): RedirectResponse
@@ -146,12 +158,21 @@ class CashflowController extends Controller
     public function destroy(CashflowEntry $cashflow): RedirectResponse
     {
         $accountId = $cashflow->account_id;
-        DB::transaction(function () use ($cashflow, $accountId) {
+        $detached = DB::transaction(function () use ($cashflow, $accountId) {
+            // Never leave a vendor payment pointing at a deleted entry.
+            $detached = app(VendorPaymentCashflowSync::class)->detach($cashflow);
             $cashflow->delete();
             $this->recalculateAccountLedger($accountId);
+
+            return $detached;
         });
 
-        return redirect()->route('cashflows.index')->with('success', 'Cashflow entry deleted successfully.');
+        return redirect()->route('cashflows.index')->with(
+            'success',
+            $detached
+                ? 'Cashflow entry deleted. The linked vendor payment was unlinked — add it again from the vendor page if the payment still stands.'
+                : 'Cashflow entry deleted successfully.'
+        );
     }
 
     public function storeAccount(Request $request): RedirectResponse
@@ -379,29 +400,7 @@ class CashflowController extends Controller
 
     private function recalculateAccountLedger(int $accountId): void
     {
-        $account = CashflowAccount::find($accountId);
-        if (! $account) {
-            return;
-        }
-
-        $runningBalance = (float) $account->opening_balance;
-
-        CashflowEntry::query()
-            ->where('account_id', $accountId)
-            ->orderBy('entry_date')
-            ->orderBy('id')
-            ->get(['id', 'credit_amount', 'debit_amount'])
-            ->each(function (CashflowEntry $entry) use (&$runningBalance) {
-                $runningBalance += (float) $entry->credit_amount - (float) $entry->debit_amount;
-
-                CashflowEntry::whereKey($entry->id)->update([
-                    'balance' => round($runningBalance, 2),
-                ]);
-            });
-
-        $account->update([
-            'current_balance' => round($runningBalance, 2),
-        ]);
+        CashflowLedger::recalculateAccount($accountId);
     }
 
     private function sharedData(): array

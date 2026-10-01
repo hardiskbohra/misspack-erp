@@ -119,13 +119,21 @@
                 });
             });
 
-            try {
-                var savedTab = localStorage.getItem(tabKey);
-                if (savedTab) {
-                    var savedBtn = vendorShow.querySelector('.vendor-tab[data-tab="' + savedTab + '"]');
-                    if (savedBtn) savedBtn.click();
+            /* A hash (e.g. #payments from the cashflow module) wins over the
+               remembered tab so cross-module links land on the right panel. */
+            var hashTab = (window.location.hash || '').replace('#', '');
+            var requestedTab = hashTab || null;
+            if (!requestedTab) {
+                try {
+                    requestedTab = localStorage.getItem(tabKey);
+                } catch (e) {
+                    requestedTab = null;
                 }
-            } catch (e) {}
+            }
+            var requestedBtn = requestedTab
+                ? vendorShow.querySelector('.vendor-tab[data-tab="' + requestedTab + '"]')
+                : null;
+            if (requestedBtn) requestedBtn.click();
         }
 
         /* ---------- vendors/show: payment modals + INR auto-calc ---------- */
@@ -164,6 +172,57 @@
             foreignAmount.addEventListener('input', calculateInrAmount);
             exchangeRate.addEventListener('input', calculateInrAmount);
             foreignCurrency.addEventListener('change', calculateInrAmount);
+        });
+
+        /* ---------- vendor payment -> INR cashflow sync (one entry, both ledgers) ----------
+
+           A payment (debit) is mirrored into the cashflow module automatically,
+           so the checkbox is on by default and only matters for payments. Bills
+           (credit) do not move cash, so nothing is mirrored for them unless the
+           user deliberately ticks the box. */
+
+        document.querySelectorAll('.vendor-payment-form').forEach(function (form) {
+            var typeSelect = form.querySelector('select[name="transaction_type"]');
+            var syncCheckbox = form.querySelector('input[type="checkbox"][name="also_create_cashflow"]');
+            var hint = form.querySelector('.vendor-sync-hint');
+            var accountSelect = form.querySelector('select[name="paid_account_id"]');
+            if (!typeSelect || !syncCheckbox) return;
+
+            var defaultHint = hint ? hint.textContent : '';
+
+            function applySyncState(initial) {
+                var isPayment = typeSelect.value === 'debit';
+
+                if (!initial) {
+                    // Only auto-flip the box when the type actually changes, so a
+                    // deliberate untick survives while the user edits other fields.
+                    syncCheckbox.checked = isPayment;
+                }
+
+                if (accountSelect) {
+                    accountSelect.required = isPayment && syncCheckbox.checked;
+                }
+
+                if (hint) {
+                    if (!isPayment) {
+                        hint.textContent = 'A bill creates a payable, not a cash movement — tick the box only if money also left the account.';
+                    } else if (!syncCheckbox.checked) {
+                        hint.textContent = 'Cashflow entry will be skipped for this payment.';
+                    } else {
+                        hint.textContent = defaultHint;
+                    }
+                }
+            }
+
+            applySyncState(true);
+
+            typeSelect.addEventListener('change', function () {
+                applySyncState(false);
+            });
+
+            syncCheckbox.addEventListener('change', function () {
+                applySyncState(true);
+            });
         });
 
         /* Edit-entry prefill from the row's data-payment payload. */
@@ -206,7 +265,14 @@
                 setField(editPaymentForm, 'payment_mode', payment.payment_mode);
                 setField(editPaymentForm, 'bank_reference_number', payment.bank_reference_number);
                 setField(editPaymentForm, 'remarks', payment.remarks ?? '');
-                setField(editPaymentForm, 'also_create_cashflow', payment.also_create_cashflow);
+
+                /* The mirror is what matters, not a form flag: keep the box in
+                   step with whether a cashflow entry is actually linked. */
+                var syncBox = editPaymentForm.querySelector('input[type="checkbox"][name="also_create_cashflow"]');
+                if (syncBox) {
+                    syncBox.checked = !!payment.cashflow_entry_id;
+                    syncBox.dispatchEvent(new Event('change'));
+                }
 
                 openModal(editPaymentModal);
             });

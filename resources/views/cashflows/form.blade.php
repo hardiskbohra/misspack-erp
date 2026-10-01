@@ -14,6 +14,21 @@
                 class="active">{{ $isEdit ? 'Edit' : 'Add' }}</span></div>
     </div>
     
+    @if ($isEdit && ! empty($linkedVendorPayment))
+        <div class="master-card master-section cf-sync-note">
+            <p style="margin:0;font-weight:700;">
+                Auto-synced from vendor payment #{{ $linkedVendorPayment->id }}
+                ({{ $linkedVendorPayment->relationLoaded('vendor') && $linkedVendorPayment->vendor ? $linkedVendorPayment->vendor->vendor_name : 'Vendor' }}).
+                Amount, date, reference and account come from the vendor ledger —
+                @if (\Illuminate\Support\Facades\Route::has('vendors.show'))
+                    <a href="{{ route('vendors.show', $linkedVendorPayment->vendor_id) }}#payments">edit the vendor payment</a> to change them here as well.
+                @else
+                    edit the vendor payment to change them here as well.
+                @endif
+            </p>
+        </div>
+    @endif
+
     <form method="POST" action="{{ $isEdit ? route('cashflows.update', $entry) : route('cashflows.store') }}"
         class="master-card master-form-card">
         @csrf

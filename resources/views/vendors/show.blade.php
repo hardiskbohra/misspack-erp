@@ -430,7 +430,12 @@
                                                 {{ $entry->bank_reference_number ? '· ' . $entry->bank_reference_number : '' }}</small>
                                         </td>
                                         <td>{{ $entry->statusLabel() }}@if ($entry->cashflow_entry_id)
-                                                <small>Cashflow #{{ $entry->cashflow_entry_id }}</small>
+                                                @if (\Illuminate\Support\Facades\Route::has('cashflows.show'))
+                                                    <a class="vendor-sync-link" href="{{ route('cashflows.show', $entry->cashflow_entry_id) }}"
+                                                        title="Open the linked INR cashflow entry">↔ Cashflow #{{ $entry->cashflow_entry_id }}</a>
+                                                @else
+                                                    <small>Cashflow #{{ $entry->cashflow_entry_id }}</small>
+                                                @endif
                                             @endif
                                         </td>
                                         <td>
@@ -634,8 +639,14 @@
                                     <input class="master-input" type="file" name="attachments[]" multiple
                                         accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip">
                                 </div>
-                                <label class="master-check full"><input class="master-check" type="checkbox" name="also_create_cashflow"
-                                        value="1"> Also create linked INR cashflow entry</label>
+                                <div class="master-field full vendor-sync-field">
+                                    <label class="master-check">
+                                        <input type="hidden" name="also_create_cashflow" value="0">
+                                        <input type="checkbox" name="also_create_cashflow" value="1" class="vendor-cashflow-sync" checked>
+                                        Record this payment in the INR cashflow
+                                    </label>
+                                    <small class="vendor-sync-hint">One entry here also creates the INR entry in the Cashflow module — it stays in sync when you edit or delete this payment.</small>
+                                </div>
                             </div>
                         </div>
                         <div class="master-modal-footer">
@@ -767,8 +778,14 @@
                                     <input class="master-input" type="file" name="attachments[]" multiple
                                         accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip">
                                 </div>
-                                <label class="master-check full"><input class="master-check" type="checkbox" name="also_create_cashflow"
-                                        value="1"> Also create linked INR cashflow entry</label>
+                                <div class="master-field full vendor-sync-field">
+                                    <label class="master-check">
+                                        <input type="hidden" name="also_create_cashflow" value="0">
+                                        <input type="checkbox" name="also_create_cashflow" value="1" class="vendor-cashflow-sync" checked>
+                                        Record this payment in the INR cashflow
+                                    </label>
+                                    <small class="vendor-sync-hint">One entry here also creates the INR entry in the Cashflow module — it stays in sync when you edit or delete this payment.</small>
+                                </div>
                             </div>
                         </div>
                         <div class="master-modal-footer">
