@@ -593,7 +593,7 @@
                                             placeholder="MP / Client / Vendor etc."></div>
                                     <div class="master-field"><label class="master-label">Date & Time</label><input class="master-input" type="datetime-local"
                                             name="occurred_at" value="{{ now()->format('Y-m-d\TH:i') }}"></div>
-                                    <label class="master-check"><input name="is_public" value="1" checked>
+                                    <label class="master-check"><input type="checkbox" name="is_public" value="1" checked>
                                         Public for client</label>
                                     <div class="master-field pd-span-2"><label class="master-label">Notes</label>
                                         <textarea class="master-textarea" name="notes" rows="2" placeholder="Detailed tracking message"></textarea>
@@ -757,7 +757,7 @@
                                             <label class="master-label">Public for Client</label><br>
                                         
                                             <label class="master-switch">
-                                                <input name="is_public" value="1">
+                                                <input type="checkbox" name="is_public" value="1">
                                                 <span class="master-slider"></span>
                                             </label>
                                         </div>
@@ -767,7 +767,7 @@
                                             <label class="master-label">Pin Comment</label><br>
                                         
                                             <label class="master-switch">
-                                                <input name="is_pinned" value="1">
+                                                <input type="checkbox" name="is_pinned" value="1">
                                                 <span class="master-slider"></span>
                                             </label>
                                         </div>
@@ -817,7 +817,7 @@
                                             <label class="master-label">Public for Client</label><br>
                                         
                                             <label class="master-switch">
-                                                <input name="is_public" value="1">
+                                                <input type="checkbox" name="is_public" value="1">
                                                 <span class="master-slider"></span>
                                             </label>
                                         </div>
@@ -827,7 +827,7 @@
                                             <label class="master-label">Pin Comment</label><br>
                                         
                                             <label class="master-switch">
-                                                <input name="is_pinned" value="1">
+                                                <input type="checkbox" name="is_pinned" value="1">
                                                 <span class="master-slider"></span>
                                             </label>
                                         </div>
@@ -938,7 +938,7 @@
                                             <label class="master-label">Public for Client</label><br>
                                         
                                             <label class="master-switch">
-                                                <input name="is_public" value="1">
+                                                <input type="checkbox" name="is_public" value="1">
                                                 <span class="master-slider"></span>
                                             </label>
                                         </div>
@@ -1124,7 +1124,7 @@
                                             <label class="master-label">Public for Client</label><br>
                                         
                                             <label class="master-switch">
-                                                <input name="is_public" value="1">
+                                                <input type="checkbox" name="is_public" value="1">
                                                 <span class="master-slider"></span>
                                             </label>
                                         </div>
@@ -1206,7 +1206,7 @@
                                             <label class="master-label">Public for Client</label><br>
                                         
                                             <label class="master-switch">
-                                                <input name="is_public" value="1">
+                                                <input type="checkbox" name="is_public" value="1">
                                                 <span class="master-slider"></span>
                                             </label>
                                         </div>

@@ -86,7 +86,7 @@
                         </div>
                         <div>
                             <label class="master-check">
-                                <input name="is_active" value="1" checked>
+                                <input type="checkbox" name="is_active" value="1" checked>
                                 Active
                             </label>
                         </div>
@@ -126,7 +126,7 @@
                         </div>
                         <div>
                             <label class="master-check">
-                                <input name="is_active" value="1" {{ $option->is_active ? 'checked' : '' }}>
+                                <input type="checkbox" name="is_active" value="1" {{ $option->is_active ? 'checked' : '' }}>
                                 Active
                             </label>
                         </div>

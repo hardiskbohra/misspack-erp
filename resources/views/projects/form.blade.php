@@ -102,7 +102,7 @@
 
             @if ($quote && !$isEdit)
                 <label class="pf-checkbox-card">
-                    <input name="import_quote_items" value="1" checked>
+                    <input type="checkbox" name="import_quote_items" value="1" checked>
                     <span>
                         <strong>Import quote products into this project</strong>
                         <small>All accepted quote items will become project products with quantity and price.</small>
@@ -191,7 +191,7 @@
                         value="{{ old('budget_amount', $project->budget_amount) }}">
                 </div>
                 <label class="pf-toggle-card">
-                    <input name="show_client_portal" value="1"
+                    <input type="checkbox" name="show_client_portal" value="1"
                         {{ old('show_client_portal', $project->show_client_portal) ? 'checked' : '' }}>
                     <span>
                         <strong>Client Portal</strong>

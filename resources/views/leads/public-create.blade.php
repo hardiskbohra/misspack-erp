@@ -125,11 +125,11 @@
                     </select>
                 </div>
                 <label class="master-check">
-                    <input name="ready_stock_required" value="1" {{ old('ready_stock_required') ? 'checked' : '' }}>
+                    <input type="checkbox" name="ready_stock_required" value="1" {{ old('ready_stock_required') ? 'checked' : '' }}>
                     <span>Need ready stock options?</span>
                 </label>
                 <label class="master-check">
-                    <input name="custom_color_required" value="1" {{ old('custom_color_required') ? 'checked' : '' }}>
+                    <input type="checkbox" name="custom_color_required" value="1" {{ old('custom_color_required') ? 'checked' : '' }}>
                     <span>Need custom color?</span>
                 </label>
                 <div class="master-field full">

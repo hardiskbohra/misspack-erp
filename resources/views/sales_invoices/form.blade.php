@@ -1,6 +1,6 @@
 <label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><input class="master-input" name="place_of_supply"
                             value="{{ old('place_of_supply', $invoice->place_of_supply) }}"></div>
-                    <label class="master-check"><input name="show_client_portal" value="1"
+                    <label class="master-check"><input type="checkbox" name="show_client_portal" value="1"
                             {{ old('show_client_portal', $invoice-></label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><input class="master-input" type="file" name="attachments[]"
                                 multiple></div>
                     </div>

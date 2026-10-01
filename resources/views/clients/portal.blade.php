@@ -1,10 +1,10 @@
 <label</label><label</label><label</label><label</label><label</label><input class="master-input" name="password" placeholder="Leave blank to keep existing / auto generate"></div>
                 <div class="cpa-checks">
-                    <label class="master-check"><input name="generate_password" value="1" {{ ! $portalUser ? 'checked' : '' }}></label>
-                    <label class="master-check"><input name="portal_enabled" value="1" {{ old('portal_enabled', $portalUser-></label>
-                    <label class="master-check"><input name="is_active" value="1" {{ old('is_active', $portalUser-></label>
-                    <label class="master-check"><input name="must_change_password" value="1" {{ old('must_change_password', $portalUser-></label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><input class="master-input" type="file" name="file"></div>
-                <label class="master-check"><input name="is_public_to_client" value="1" checked></label><label</label><label</label><label</label><label</label><label</label><textarea class="master-textarea" name="message"></textarea></div>
+                    <label class="master-check"><input type="checkbox" name="generate_password" value="1" {{ ! $portalUser ? 'checked' : '' }}></label>
+                    <label class="master-check"><input type="checkbox" name="portal_enabled" value="1" {{ old('portal_enabled', $portalUser-></label>
+                    <label class="master-check"><input type="checkbox" name="is_active" value="1" {{ old('is_active', $portalUser-></label>
+                    <label class="master-check"><input type="checkbox" name="must_change_password" value="1" {{ old('must_change_password', $portalUser-></label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><input class="master-input" type="file" name="file"></div>
+                <label class="master-check"><input type="checkbox" name="is_public_to_client" value="1" checked></label><label</label><label</label><label</label><label</label><label</label><textarea class="master-textarea" name="message"></textarea></div>
                 <div class="cpa-submit"><button class="master-btn master-btn-primary">Send Notification</button></div>
             </form>
         </div>

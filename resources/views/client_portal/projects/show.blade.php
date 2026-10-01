@@ -541,7 +541,7 @@
                             <div class="master-field full">
                                 <label class="master-label">Comment</label>
                                 <textarea class="master-textarea" name="body" rows="3" required placeholder="Add internal/client-visible comment..."></textarea>
-                                <input name="is_public" value="1" hidden>
+                                <input type="checkbox" name="is_public" value="1" hidden>
                             </div>
                         </div>
                     </div>
@@ -683,7 +683,7 @@
                                 <input class="master-input" type="file" name="attachments[]" multiple
                                     required
                                     accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.zip">
-                                <input name="is_public" value="1" hidden>
+                                <input type="checkbox" name="is_public" value="1" hidden>
                             </div>
                             <div class="master-field pd-span-2">
                                 <label class="master-label">Notes</label>

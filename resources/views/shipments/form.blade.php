@@ -97,7 +97,7 @@
                         </select>
                     </div>
                     <label class="master-chip green-chip"><label class="master-label">Show in Client Portal</label>
-                        <input name="show_client_portal" value="1" {{ old('show_client_portal', $shipment->show_client_portal ?? false) ? 'checked' : '' }}>
+                        <input type="checkbox" name="show_client_portal" value="1" {{ old('show_client_portal', $shipment->show_client_portal ?? false) ? 'checked' : '' }}>
                         <span><i class="fa-solid fa-eye"></i> Show</span>
                     </label>
                 </div>
@@ -274,7 +274,7 @@
                             <label class="master-label">Public Tracking Link</label>
                             <div class="master-photo-public">
                                 <label class="ship-public-toggle">
-                                    <input name="is_public" value="1">
+                                    <input type="checkbox" name="is_public" value="1">
                     
                                     <span class="ship-public-switch"></span>
                     
@@ -319,7 +319,7 @@
                                         </small>
                                         
                                         <label class="ship-public-toggle">
-                                            <input
+                                            <input type="checkbox"
                                                 value="1"
                                                 @checked($attachment->is_public)
                                                 onchange="toggleAttachmentPublic({{ $attachment->id }}, this)">
@@ -371,7 +371,7 @@
                         <div><label class="master-label">Location</label><input class="master-input" name="location" placeholder="Current location"></div>
                         <div><label class="master-label">Event Time</label><input class="master-input" type="datetime-local" name="event_time" value="{{ now()->format('Y-m-d\TH:i') }}"></div>
                         <div class="master-field two"><label class="master-label">Remarks</label><input class="master-input" name="remarks" placeholder="Tracking remarks"></div>
-                        <div class="master-field"><label class="master-label">Public Tracking Link</label><label class="master-public-check"><input name="is_public" value="1" checked> Visible</label></div>
+                        <div class="master-field"><label class="master-label">Public Tracking Link</label><label class="master-public-check"><input type="checkbox" name="is_public" value="1" checked> Visible</label></div>
                     </div>
                     <div class="master-history-actions"><button class="master-btn master-btn-primary" type="submit">Add Tracking Stage</button></div>
                 </form>
@@ -394,7 +394,7 @@
                             <div><label class="master-label">Location</label><input class="master-input" name="location" value="{{ $history->location }}"></div>
                             <div><label class="master-label">Event Time</label><input class="master-input" type="datetime-local" name="event_time" value="{{ $history->event_time ? $history->event_time->format('Y-m-d\TH:i') : '' }}"></div>
                             <div class="master-field two"><label class="master-label">Remarks</label><input class="master-input" name="remarks" value="{{ $history->remarks }}"></div>
-                            <div class="master-field"><label class="master-label">Public Tracking Link</label><label class="master-public-check"><input name="is_public" value="1" @checked($history->is_public)> Visible</label></div>
+                            <div class="master-field"><label class="master-label">Public Tracking Link</label><label class="master-public-check"><input type="checkbox" name="is_public" value="1" @checked($history->is_public)> Visible</label></div>
                         </div>
                         <div class="master-history-footer">
                             <button class="master-btn master-btn-primary" type="submit">

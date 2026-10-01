@@ -1,7 +1,7 @@
 <label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><input class="master-input"
                             name="billing_pincode" value="{{ old('billing_pincode', $client->billing_pincode) }}"
                             required @readonly($readonly)></div>
-                    <label class="master-check"><input name="shipping_same_as_billing" value="1"
+                    <label class="master-check"><input type="checkbox" name="shipping_same_as_billing" value="1"
                             @checked(old('shipping_same_as_billing', $client-></label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><label</label><input class="master-input" name="notes"-->
             <!--                @readonly($readonly) value="{{ old('notes', $client->notes) }}"></div>-->
             <!--    </div>-->

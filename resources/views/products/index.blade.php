@@ -193,7 +193,7 @@
 
                                 <div class="master-chip-group">
                                     <label class="master-chip green-chip">
-                                        <input name="ready_stock_available" value="1" required checked>
+                                        <input type="radio" name="ready_stock_available" value="1" required checked>
                                         <span>
                                             <i class="fa-solid fa-check"></i>
                                             Yes
@@ -201,7 +201,7 @@
                                     </label>
 
                                     <label class="master-chip red-chip">
-                                        <input name="ready_stock_available" value="0" required>
+                                        <input type="radio" name="ready_stock_available" value="0" required>
                                         <span>
                                             <i class="fa-solid fa-times"></i>
                                             No
@@ -215,7 +215,7 @@
 
                                 <div class="master-chip-group">
                                     <label class="master-chip green-chip">
-                                        <input name="show_price_ladder_public" value="1" required>
+                                        <input type="radio" name="show_price_ladder_public" value="1" required>
                                         <span>
                                             <i class="fa-solid fa-check"></i>
                                             Yes
@@ -223,7 +223,7 @@
                                     </label>
 
                                     <label class="master-chip red-chip">
-                                        <input name="show_price_ladder_public" value="0" required checked>
+                                        <input type="radio" name="show_price_ladder_public" value="0" required checked>
                                         <span>
                                             <i class="fa-solid fa-times"></i>
                                             No

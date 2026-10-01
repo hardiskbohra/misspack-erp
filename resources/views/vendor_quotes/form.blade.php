@@ -186,7 +186,7 @@
                     <div class="master-chip-group">
 
                         <label class="master-chip green-chip">
-                            <input
+                            <input type="radio"
                                 name="sample_available"
                                 value="1"
                                 {{ old('sample_available', $quote->sample_available) == 1 ? 'checked' : '' }}
@@ -199,7 +199,7 @@
                         </label>
                     
                         <label class="master-chip red-chip">
-                            <input
+                            <input type="radio"
                                 name="sample_available"
                                 value="0"
                                 {{ old('sample_available', $quote->sample_available) == 0 ? 'checked' : '' }}
@@ -218,7 +218,7 @@
                     <div class="master-chip-group">
 
                         <label class="master-chip green-chip">
-                            <input
+                            <input type="radio"
                                 name="ready_stock_available"
                                 value="1"
                                 {{ old('ready_stock_available', $quote->ready_stock_available) == 1 ? 'checked' : '' }}
@@ -231,7 +231,7 @@
                         </label>
                     
                         <label class="master-chip red-chip">
-                            <input
+                            <input type="radio"
                                 name="ready_stock_available"
                                 value="0"
                                 {{ old('ready_stock_available', $quote->ready_stock_available) == 0 ? 'checked' : '' }}

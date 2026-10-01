@@ -4,7 +4,7 @@
                                     @foreach ($printingOptions as $key => $label)
                                         <option value="{{ $key }}">{{ $label }}</option>
                                     @endforeach
-                                </select></div><label class="master-check"><input
+                                </select></div><label class="master-check"><input type="checkbox"
                                     name="ready_stock_required" value="1"></label><label</label>
                                 <textarea class="master-textarea" name="sales_notes"
                                     placeholder="Requirement summary, quote quantities, colors, stock question..."></textarea>
