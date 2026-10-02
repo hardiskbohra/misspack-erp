@@ -135,6 +135,49 @@
     }
 
     /* ------------------------------------------------------------------
+       Delivery date (form page + tracking history)
+       ------------------------------------------------------------------
+       A shipment that is marked delivered has a delivery date: the server
+       fills in today when none is given, so this only makes that visible —
+       the field appears with today in it, the operator can change it, and a
+       date the record already has is never overwritten.
+       ------------------------------------------------------------------ */
+
+    function bindDeliveryDateDefault() {
+        document.querySelectorAll('form').forEach(function (form) {
+            var status = form.querySelector('select[name="status"]');
+            var date = form.querySelector('input[name="drop_date"]');
+            if (!status || !date) return;
+
+            var optional = date.closest('[data-delivery-optional]');
+            var today = date.getAttribute('data-today') || new Date().toISOString().slice(0, 10);
+
+            function sync() {
+                var delivered = status.value === 'delivered';
+
+                if (optional) optional.hidden = !delivered;
+
+                if (!delivered) {
+                    /* only undo what we filled in ourselves */
+                    if (date.dataset.autoFilled === '1') {
+                        date.value = '';
+                        delete date.dataset.autoFilled;
+                    }
+                    return;
+                }
+
+                if (!date.value) {
+                    date.value = today;
+                    date.dataset.autoFilled = '1';
+                }
+            }
+
+            status.addEventListener('change', sync);
+            sync();
+        });
+    }
+
+    /* ------------------------------------------------------------------
        Row density (list page)
        ------------------------------------------------------------------
        Comfortable / compact is a preference, not data, so it is remembered
@@ -484,6 +527,7 @@
         bindRowDensity();
     }
 
+    document.addEventListener('DOMContentLoaded', bindDeliveryDateDefault);
     document.addEventListener('DOMContentLoaded', initShipmentIndexExtras);
     document.addEventListener('DOMContentLoaded', initCostModal);
     document.addEventListener('DOMContentLoaded', initPartyMemory);

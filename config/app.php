@@ -69,6 +69,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Business Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Timestamps are stored in UTC, but the office does not work in UTC: a
+    | delivery marked delivered at 2 AM in India belongs to that Indian day.
+    | Anything that has to answer "what is today for the office?" — a delivery
+    | date recorded from a status change, for one — reads it from here.
+    |
+    */
+
+    'business_timezone' => env('APP_BUSINESS_TIMEZONE', 'Asia/Kolkata'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

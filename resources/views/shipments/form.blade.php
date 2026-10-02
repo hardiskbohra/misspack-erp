@@ -63,7 +63,10 @@
                             value="{{ old('pickup_date', optional($shipment->pickup_date)->format('Y-m-d')) }}"></div>
                     <div class="master-field"><label class="master-label">Drop Date</label><input class="master-input" type="date"
                             name="drop_date"
-                            value="{{ old('drop_date', optional($shipment->drop_date)->format('Y-m-d')) }}"></div>
+                            data-today="{{ now(config('app.business_timezone'))->toDateString() }}"
+                            value="{{ old('drop_date', optional($shipment->drop_date)->format('Y-m-d')) }}">
+                        <small class="master-sub">Marking the shipment delivered records today here when it is empty.</small>
+                    </div>
                     <div class="master-field">
                         <label class="master-label">Expected Delivery (ETA)</label>
                         <input class="master-input" type="date" name="eta_date"

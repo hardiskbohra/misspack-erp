@@ -302,10 +302,22 @@
                         </div>
                     </div>
 
+                    {{-- Marking it delivered records a delivery date: the field
+                         appears with today in it, and leaving it empty records
+                         today anyway. --}}
+                    <div class="ship-form-field" data-delivery-optional
+                        @if ($shipment->status !== \App\Models\Shipment::STATUS_DELIVERED) hidden @endif>
+                        <label class="ship-form-label" for="historyDropDate">Delivery (drop) date</label>
+                        <input class="master-input" id="historyDropDate" type="date" name="drop_date"
+                            data-today="{{ now(config('app.business_timezone'))->toDateString() }}"
+                            value="{{ old('drop_date', now(config('app.business_timezone'))->toDateString()) }}">
+                        <small class="master-sub">Used only when the status becomes delivered. An existing delivery date on the shipment is never overwritten.</small>
+                    </div>
+
                     <div class="ship-form-field">
                         <label class="ship-form-label" for="historyTime">When</label>
                         <input class="master-input" id="historyTime" type="datetime-local" name="event_time"
-                            value="{{ now('Asia/Kolkata')->format('Y-m-d\TH:i') }}">
+                            value="{{ now(config('app.business_timezone'))->format('Y-m-d\TH:i') }}">
                     </div>
 
                     <div class="ship-form-field">

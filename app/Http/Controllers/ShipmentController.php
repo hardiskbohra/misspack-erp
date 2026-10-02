@@ -18,6 +18,7 @@ use App\Services\ShipmentDocuments;
 use App\Services\ShipmentPartyDirectory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -155,6 +156,10 @@ class ShipmentController extends Controller
         $items = $data['items'] ?? [];
         unset($data['items'], $data['attachment_photos'], $data['notify_client'], $data['document_type']);
 
+        /* a shipment can be created already delivered: same rule, same default */
+        $data = Shipment::withDeliveryDefaults($data);
+        $this->assertDeliveryDateAllowed($data['drop_date'] ?? null, $data['pickup_date'] ?? null);
+
         $shipment = DB::transaction(function () use ($request, $data, $items) {
             $data['shipment_number'] = $data['shipment_number'] ?: $this->makeShipmentNumber();
             $data['show_client_portal'] = $request->boolean('show_client_portal');
@@ -236,8 +241,16 @@ class ShipmentController extends Controller
         $items = $data['items'] ?? [];
         unset($data['items'], $data['attachment_photos'], $data['notify_client'], $data['document_type']);
 
+        /* Marking it delivered without a date records today rather than
+           refusing the change, so the operator is never blocked by it. */
+        $data = Shipment::withDeliveryDefaults($data, $shipment);
+
+        $this->assertDeliveryDateAllowed(
+            $data['drop_date'] ?? null,
+            $data['pickup_date'] ?? optional($shipment->pickup_date)->toDateString()
+        );
+
         $this->assertStatusChangeAllowed($shipment, $data['status'], [
-            'drop_date' => $data['drop_date'] ?? null,
             'remarks' => $request->input('delay_reason') ?: $request->input('remarks'),
         ]);
 
@@ -292,33 +305,71 @@ class ShipmentController extends Controller
     public function storeHistory(Request $request, Shipment $shipment): RedirectResponse
     {
         $data = $this->validatedHistoryData($request);
+
+        /* The delivery date belongs to the shipment, not to the history row, so
+           it is validated on its own: the history form offers the field, an
+           empty one means today, and nothing lands on the history table. */
+        $deliveryDate = $request->validate([
+            'drop_date' => ['nullable', 'date'],
+        ])['drop_date'] ?? null;
+
+        /* the field is only about becoming delivered: a date left over from
+           another status is ignored rather than silently recorded */
+        if ($data['status'] !== Shipment::STATUS_DELIVERED) {
+            $deliveryDate = null;
+        }
+
+        $this->assertDeliveryDateAllowed($deliveryDate, optional($shipment->pickup_date)->toDateString());
+
         $data['event_time'] = $data['event_time'] ?? now();
         $data['is_public'] = $request->boolean('is_public', true);
         $data['created_by'] = Auth::id();
 
-        $this->assertStatusChangeAllowed($shipment, $data['status'], [
+        /* Marking it delivered records the day it happened: no date given means
+           today, not a validation error. */
+        $attributes = ['status' => $data['status']];
+
+        if (filled($deliveryDate)) {
+            $attributes['drop_date'] = $deliveryDate;
+        }
+
+        $attributes = Shipment::withDeliveryDefaults($attributes, $shipment);
+        $recordedDate = $attributes['drop_date'] ?? null;
+        $wasDefaulted = ! filled($deliveryDate) && $recordedDate !== null;
+
+        $this->assertStatusChangeAllowed($shipment, $data['status'], $attributes + [
             'remarks' => $data['remarks'] ?? null,
         ]);
 
         $oldStatus = $shipment->status;
         $notify = $request->boolean('notify_client', true);
 
-        DB::transaction(function () use ($shipment, $data, $oldStatus, $notify) {
+        DB::transaction(function () use ($shipment, $data, $attributes, $oldStatus, $notify) {
             $shipment->histories()->create($data);
-            $shipment->update(['status' => $data['status']]);
+            $shipment->update($attributes);
 
             if ($oldStatus !== $shipment->status) {
                 $this->notifyClientOfStatus($shipment, $oldStatus, $notify);
             }
         });
 
-        return back()->with('success', 'Tracking history added successfully.');
+        $message = 'Tracking history added successfully.';
+
+        if ($wasDefaulted) {
+            $message .= ' The delivery date was recorded as '
+                .Carbon::parse($recordedDate)->format('d M Y')
+                .' because none was given — edit the shipment to correct it.';
+        }
+
+        return back()->with('success', $message);
     }
 
     /**
-     * Industry rule of thumb: a shipment cannot be "delivered" without a
-     * delivery date, and a hold/delay without a reason is noise. Enforcing it
-     * here keeps every report downstream honest.
+     * A delivery date is *not* enforced here — a status change to delivered
+     * fills today's date in instead (Shipment::withDeliveryDefaults), so the
+     * operator is never blocked by a field they did not fill. What is still
+     * refused is a hold or a delay with no explanation: that is noise in every
+     * report downstream.
      *
      * @param  array<string, mixed>  $context
      */
@@ -326,16 +377,6 @@ class ShipmentController extends Controller
     {
         if ($status === $shipment->status) {
             return;
-        }
-
-        if ($status === Shipment::STATUS_DELIVERED) {
-            $dropDate = $context['drop_date'] ?? $shipment->drop_date;
-
-            if (! $dropDate) {
-                throw ValidationException::withMessages([
-                    'status' => 'Add the delivery (drop) date before marking this shipment delivered.',
-                ]);
-            }
         }
 
         if (in_array($status, [Shipment::STATUS_CUSTOM_HOLD, Shipment::STATUS_DELAYED], true)
@@ -464,6 +505,23 @@ class ShipmentController extends Controller
         ]);
     }
 
+    /**
+     * A date the operator typed has to make sense: a delivery cannot happen
+     * before the pickup it followed. An empty one is fine — it becomes today.
+     */
+    private function assertDeliveryDateAllowed(?string $deliveryDate, ?string $pickupDate): void
+    {
+        if (! filled($deliveryDate) || ! filled($pickupDate)) {
+            return;
+        }
+
+        if (Carbon::parse($deliveryDate)->lt(Carbon::parse($pickupDate))) {
+            throw ValidationException::withMessages([
+                'drop_date' => 'The delivery date cannot be before the pickup date.',
+            ]);
+        }
+    }
+
     private function syncShipmentStatusFromLatestHistory(?Shipment $shipment): void
     {
         if (! $shipment) {
@@ -473,7 +531,12 @@ class ShipmentController extends Controller
         $latestHistory = $shipment->histories()->first();
 
         if ($latestHistory) {
-            $shipment->update(['status' => $latestHistory->status]);
+            /* the status is derived from history here, so the delivery default
+               has to follow it: a history edit can make the row delivered */
+            $shipment->update(Shipment::withDeliveryDefaults(
+                ['status' => $latestHistory->status],
+                $shipment
+            ));
         }
     }
 

@@ -14,6 +14,8 @@ node tools/checks/blade-check.cjs     # templates parse: directives, includes, c
 node tools/checks/mark-check.cjs      # shipping-mark geometry + QR payloads
 node tools/checks/list-check.cjs      # one index page: chips, columns, toolbar, row actions,
                                       # applied filters, density, the pinned grid
+node tools/checks/status-check.cjs    # the rules a shipment status change keeps: the delivery
+                                      # date it fills in, the hold/delay reason it still refuses
 ```
 
 Every check is dependency-free. `mark-check.cjs` additionally decodes the QR
@@ -29,7 +31,8 @@ pre-push hook:
 
 ```bash
 node tools/checks/design-check.cjs && node tools/checks/blade-check.cjs \
-  && node tools/checks/mark-check.cjs && node tools/checks/list-check.cjs
+  && node tools/checks/mark-check.cjs && node tools/checks/list-check.cjs \
+  && node tools/checks/status-check.cjs
 ```
 
 ## What they cover
@@ -64,3 +67,6 @@ node tools/checks/design-check.cjs && node tools/checks/blade-check.cjs \
 | A row menu inside a scrolling table | a panel in a table cell paints in its row's pass, so the rows after it cover it: the open row is raised, the panel is capped or flipped, and no sheet may re-declare the menu after `master-index.css` owns it |
 | Translucent rows | `opacity` on a row or a cell makes a stacking context and swallows the row's own menu — muting a finished row belongs in colour, not in alpha |
 | Themed row menu | the shared kebab menu is drawn on the card colour, so it must not paint fixed light-theme values — on the dark card they are invisible |
+| Delivered means dated | a shipment marked delivered gets a delivery date — today when none was given — and the date is filled, never overwritten, on every path that writes a status: the edit form, the tracking history form, a shipment created delivered, and a status derived from a history edit. The office's timezone (not UTC) decides what "today" is |
+| Still refused, on purpose | a hold or a delay with no reason, and a delivery date that precedes its pickup — both are data errors, not empty fields, so they keep their validation error |
+| A date the form shows | the history form offers the delivery date only when the status can use it, prefilled with today and cleared again only if the script filled it — a value already on the shipment is never touched |

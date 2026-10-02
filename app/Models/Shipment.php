@@ -226,6 +226,41 @@ class Shipment extends Model
         return in_array($this->status, self::closedStatuses(), true);
     }
 
+    /** Today in the office's timezone — the app stores UTC, the office does not. */
+    public static function businessToday(): string
+    {
+        return now(config('app.business_timezone', 'Asia/Kolkata'))->toDateString();
+    }
+
+    /**
+     * A delivered shipment has a delivery date: the paperwork, the e-way bills
+     * and every report downstream read it, so the status change is not allowed
+     * to leave it empty. When nobody gave a date, the day of the change is the
+     * honest answer.
+     *
+     * It only ever *fills* the date — an existing one, on the record or in the
+     * submitted attributes, is never overwritten, so a delivery recorded late
+     * keeps the date it was recorded with and correcting one stays an explicit
+     * edit.
+     *
+     * @param  array<string, mixed>  $attributes  the attributes about to be saved
+     * @return array<string, mixed>
+     */
+    public static function withDeliveryDefaults(array $attributes, ?self $shipment = null): array
+    {
+        if (($attributes['status'] ?? null) !== self::STATUS_DELIVERED) {
+            return $attributes;
+        }
+
+        if (filled($attributes['drop_date'] ?? null) || filled($shipment?->drop_date)) {
+            return $attributes;
+        }
+
+        $attributes['drop_date'] = static::businessToday();
+
+        return $attributes;
+    }
+
     /**
      * Operational list order: shipments still in motion come first, finished
      * ones (delivered / cancelled) drop below them; inside each group the
