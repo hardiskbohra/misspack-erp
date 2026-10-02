@@ -38,6 +38,26 @@
     border: 1px solid var(--mc-border);
 }
 
+/* --- last-resort fallbacks -------------------------------------------
+   The theme tokens are declared on :root, but if a page ever renders without
+   the theme attribute (or with an unexpected value) an unresolved var() makes
+   the surface transparent — the card and the fields then show the page behind
+   them, which reads as "the card and the fields are the same colour". These
+   two rules cost nothing when the tokens resolve and keep the light look
+   otherwise; dark mode still wins because the token is defined there. */
+
+.master-card,
+.master-section {
+    background: var(--mc-card, #ffffff);
+}
+
+.master-input,
+.master-select,
+.master-textarea,
+.master-search .master-input {
+    background: var(--mc-card, #ffffff);
+}
+
 /* --- list tables -----------------------------------------------------
    The header band used to be painted with the soft surface (a blue-grey
    #f8fbff in the light theme), which made the table look tinted next to a

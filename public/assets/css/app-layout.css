@@ -48,6 +48,7 @@
     --mc-table-head: var(--mc-card-soft);
 }
 
+:root,
 :root[data-theme="light"] {
     --bg-primary: #f0f4ff;
     --bg-secondary: #ffffff;

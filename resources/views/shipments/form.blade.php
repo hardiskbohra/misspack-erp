@@ -18,7 +18,7 @@
     @endphp
 
     <div class="master-form">
-        <div class="master-card master-header">
+        <div class="master-card master-card--flat master-header">
             <h1>{{ $isEdit ? 'Edit Shipment' : 'Add Shipment' }}</h1>
             <div class="master-breadcrumb"><a href="{{ url('/') }}">Home</a><span>•</span><a
                     href="{{ route('shipments.index') }}">Shipments</a><span>•</span><span
@@ -26,7 +26,7 @@
         </div>
 
         <form method="POST" action="{{ $isEdit ? route('shipments.update', $shipment) : route('shipments.store') }}"
-            class="master-card master-form-card" enctype="multipart/form-data"
+            class="master-card master-card--flat master-form-card" enctype="multipart/form-data"
             data-party-lookup-url="{{ route('shipments.party-lookup') }}">
             @csrf
             @if($isEdit) @method('PUT') @endif
@@ -436,7 +436,7 @@
             </div>
         </form>
     @if($isEdit)
-        <div class="master-card master-history-card">
+        <div class="master-card master-card--flat master-history-card">
             <h3 class="master-section-title">Shipment Tracking History Management</h3>
             <p class="master-history-note" style="margin-bottom:16px;">Add, edit or delete shipment tracking stages from this edit page. The shipment current status is automatically synced with the latest tracking history entry.</p>
 
