@@ -62,11 +62,10 @@ class ShipmentController extends Controller
         $ledger = app(ShipmentCostLedger::class);
 
         // Total spent "as per the shown entries": everything matching the
-        // current filters (not just this page). Cost heads are summed in the
-        // currency they were billed in; shipments that still carry only the
-        // single legacy figure contribute that instead. Currencies are listed
-        // side by side and never added into one number.
-        $spendByCurrency = $this->spendByCurrency($request);
+        // current filters (not just this page), in rupees. Every cost head
+        // already carries the rupee value it was booked at, so the total is the
+        // sum of those numbers — rates are never re-applied or averaged.
+        $spendInr = $this->spendInr($request);
         $spendEntries = $this->filteredQuery($request)
             ->where(function ($query) {
                 $query->whereHas('costs')
@@ -75,23 +74,19 @@ class ShipmentController extends Controller
             ->count();
 
         // And the same total for the rows actually on screen, for the footer.
-        $pageSpendByCurrency = [];
+        $pageSpendInr = 0.0;
         foreach ($shipments->getCollection() as $shipment) {
             if ((int) $shipment->costs_count > 0) {
-                $totals = $ledger->totals($shipment);
-
-                foreach ($totals['by_currency'] as $code => $amount) {
-                    $pageSpendByCurrency[$code] = round(($pageSpendByCurrency[$code] ?? 0) + $amount, 2);
-                }
+                $pageSpendInr += (float) $ledger->totals($shipment)['inr'];
 
                 continue;
             }
 
-            if ($shipment->shipment_cost !== null) {
-                $code = strtoupper((string) ($shipment->currency ?: 'INR'));
-                $pageSpendByCurrency[$code] = round(($pageSpendByCurrency[$code] ?? 0) + (float) $shipment->shipment_cost, 2);
+            if ($shipment->shipment_cost !== null && strtoupper((string) ($shipment->currency ?: 'INR')) === 'INR') {
+                $pageSpendInr += (float) $shipment->shipment_cost;
             }
         }
+        $pageSpendInr = round($pageSpendInr, 2);
 
         $stats = [
             'total' => Shipment::count(),
@@ -109,9 +104,9 @@ class ShipmentController extends Controller
         return view('shipments.index', [
             'shipments' => $shipments,
             'stats' => $stats,
-            'spendByCurrency' => $spendByCurrency,
+            'spendInr' => $spendInr,
             'spendEntries' => $spendEntries,
-            'pageSpendByCurrency' => $pageSpendByCurrency,
+            'pageSpendInr' => $pageSpendInr,
             'partyFields' => ShipmentPartyDirectory::PARTIES,
             'partyNames' => $this->partyNames(),
             'attention' => $attention,
@@ -948,7 +943,7 @@ class ShipmentController extends Controller
 
         if ($data['currency'] !== 'INR' && (float) ($data['exchange_rate'] ?? 0) <= 0) {
             throw ValidationException::withMessages([
-                'exchange_rate' => 'Enter the exchange rate this bill was raised at, so the INR value is right.',
+                'exchange_rate' => 'Enter the exchange rate this bill was raised at, so the rupee value is right.',
             ]);
         }
 
@@ -1102,38 +1097,33 @@ class ShipmentController extends Controller
     }
 
     /**
-     * Money spent as per the entries currently being listed: cost heads in the
-     * currency they were billed in, plus the legacy single figure for
-     * shipments that have no breakdown yet.
+     * Money spent as per the entries currently being listed, in rupees.
      *
-     * @return array<string, float>
+     * Every cost head carries the rupee value it was booked at (the ledger writes
+     * it at the rate used on the day), so the total is the sum of those numbers
+     * — no rate is re-applied here and two currencies are never added as bare
+     * figures.
+     *
+     * A shipment that still carries only the old single "Shipment Cost" figure
+     * has no per-head rate to convert with, so it counts once it is billed in
+     * rupees; a foreign legacy figure stays out of the total until its heads
+     * are captured, rather than being converted at a rate nobody recorded.
      */
-    private function spendByCurrency(Request $request): array
+    private function spendInr(Request $request): float
     {
-        $totals = [];
-
         $shipmentIds = $this->filteredQuery($request)->select('id');
 
-        ShipmentCost::query()
+        $inr = (float) ShipmentCost::query()
             ->whereIn('shipment_id', $shipmentIds)
-            ->selectRaw("COALESCE(NULLIF(currency, ''), 'INR') as currency, SUM(amount) as total")
-            ->groupByRaw("COALESCE(NULLIF(currency, ''), 'INR')")
-            ->pluck('total', 'currency')
-            ->each(function ($total, $currency) use (&$totals) {
-                $totals[$currency] = round(($totals[$currency] ?? 0) + (float) $total, 2);
-            });
+            ->sum('amount_in_inr');
 
-        $this->filteredQuery($request)
+        $legacyInr = (float) $this->filteredQuery($request)
             ->whereDoesntHave('costs')
             ->whereNotNull('shipment_cost')
-            ->selectRaw("COALESCE(NULLIF(currency, ''), 'INR') as currency, SUM(shipment_cost) as total")
-            ->groupByRaw("COALESCE(NULLIF(currency, ''), 'INR')")
-            ->pluck('total', 'currency')
-            ->each(function ($total, $currency) use (&$totals) {
-                $totals[$currency] = round(($totals[$currency] ?? 0) + (float) $total, 2);
-            });
+            ->whereRaw("COALESCE(NULLIF(currency, ''), 'INR') = 'INR'")
+            ->sum('shipment_cost');
 
-        return $totals;
+        return round($inr + $legacyInr, 2);
     }
 
     private function formData(Shipment $shipment): array

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * Every head is entered in the currency it is actually billed in (a freight
  * invoice may arrive in USD while the CHA bills in INR), so each row keeps an
- * INR value at the rate used on the day. That single number is what the
+ * rupee value at the rate used on the day. That single number is what the
  * cashflow mirror, the paid-so-far figure and the landed-cost view all use —
  * there is no second conversion anywhere.
  */
@@ -23,7 +23,7 @@ class ShipmentCostLedger
     }
 
     /**
-     * Fill the INR value of a head from its own amount + rate.
+     * Fill the rupee value of a head from its own amount + rate.
      *
      * The rate in the form is editable in every case, and this follows what the
      * row carries: a foreign bill converts at the rate it was raised at, and a

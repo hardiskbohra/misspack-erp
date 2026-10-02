@@ -90,7 +90,7 @@
                     @if ($costSummary['inr'] > 0)
                         <tfoot>
                             <tr>
-                                <td><strong>Total (INR)</strong></td>
+                                <td><strong>Total (₹)</strong></td>
                                 <td class="num"><strong>₹ {{ number_format($costSummary['inr'], 2) }}</strong></td>
                             </tr>
                         </tfoot>

@@ -4,7 +4,7 @@
        is part of the amount — not a detail produced on request. It is always on
        screen and always editable: it starts from the last rate used for the
        currency and the operator can type the rate this bill was actually
-       raised at, with the INR value it produces shown underneath. */
+       raised at, with the rupee value it produces shown underneath. */
     $costCurrency = strtoupper((string) old('currency', $shipment->currency ?: 'INR'));
     $costIsBase = $costCurrency === 'INR';
     $costLastRate = $lastCostRates[$costCurrency] ?? null;
@@ -62,10 +62,10 @@
                         <input class="master-input" type="number" step="0.000001" min="0" name="exchange_rate" id="costRate"
                             value="{{ $costRateValue }}"
                             @if ($costLastRate && ! old('exchange_rate')) data-auto-filled="1" @endif
-                            placeholder="{{ $costIsBase ? '1 for an INR bill' : 'INR per 1 '.$costCurrency }}">
+                            placeholder="{{ $costIsBase ? '1 — the bill is in ₹' : '₹ per 1 '.$costCurrency }}">
                         <small class="master-sub" id="costRateNote">{{ $costIsBase
-                            ? 'INR bill — the amount is already in rupees, so the ledger keeps the rate at 1.'
-                            : 'The INR value is frozen at this rate: amount × rate.' }}
+                            ? '₹ bill — the amount is already in rupees, so the ledger keeps the rate at 1.'
+                            : 'The rupee value is frozen at this rate: amount × rate.' }}
                             <span class="ship-cost-rate-preview" id="costRatePreview"></span></small>
                     </div>
 
@@ -95,7 +95,7 @@
                                 <option value="{{ $account->id }}">{{ $account->account_name }}</option>
                             @endforeach
                         </select>
-                        <small class="master-sub">Setting this posts the INR entry to cashflow.</small>
+                        <small class="master-sub">Setting this posts the rupee entry to cashflow.</small>
                     </div>
                     <div class="master-field">
                         <label class="master-label" for="costMode">Payment Mode</label>

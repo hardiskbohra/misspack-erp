@@ -45,9 +45,9 @@
             <span class="icon">₹</span>
             <div>
                 <p class="master-stat-title">Spent (filtered)</p>
-                <p class="master-stat-value ship-spend-total">{{ \App\Models\Shipment::formatTotals($spendByCurrency) }}</p>
+                <p class="master-stat-value ship-spend-total">{{ \App\Models\Shipment::formatInr($spendInr) }}</p>
                 <p class="master-sub">{{ $spendEntries }} costed {{ \Illuminate\Support\Str::plural('entry', $spendEntries) }} in this filter</p>
-                <span class="tooltip-text">Charges recorded on the shipments currently listed by the filters above. Currencies stay separate — they are never added together.</span>
+                <span class="tooltip-text">Charges on the shipments currently listed, each one converted to rupees at the rate recorded on the day it was entered. A shipment still on the old single “Shipment Cost” figure counts here while it is billed in rupees.</span>
             </div>
         </div>
     </div>
@@ -311,11 +311,11 @@
                                     @if ((float) $shipment->cost_same_currency > 0)
                                         {{ \App\Models\Shipment::formatAmount($shipment->currency, $shipment->cost_same_currency) }}
                                     @else
-                                        ≈ {{ \App\Models\Shipment::formatAmount('INR', $shipment->cost_inr_total) }}
+                                        ≈ {{ \App\Models\Shipment::formatInr($shipment->cost_inr_total) }}
                                     @endif
                                     <span class="master-sub">{{ $shipment->costs_count }} cost head{{ (int) $shipment->costs_count === 1 ? '' : 's' }} · {{ $shipment->cost_borne_by ?: '' }}</span>
                                 @else
-                                    {{ $shipment->currency ?: '' }} {{ $shipment->shipment_cost ?: '0' }}
+                                    {{ $shipment->shipment_cost ? \App\Models\Shipment::formatAmount($shipment->currency, $shipment->shipment_cost) : '—' }}
                                     <span class="master-sub">{{ $shipment->cost_borne_by ?: '' }}</span>
                                 @endif
                             </td>
@@ -415,8 +415,8 @@
                         {{-- the money sits in the Charges column so it lines up
                              with the figures above it --}}
                         <td class="is-num">
-                            <strong>{{ \App\Models\Shipment::formatTotals($pageSpendByCurrency) }}</strong>
-                            <span class="master-sub">Filtered total (all pages): {{ \App\Models\Shipment::formatTotals($spendByCurrency) }}</span>
+                            <strong>{{ \App\Models\Shipment::formatInr($pageSpendInr) }}</strong>
+                            <span class="master-sub">Filtered total (all pages): {{ \App\Models\Shipment::formatInr($spendInr) }}</span>
                         </td>
                         <td colspan="2"></td>
                     </tr>

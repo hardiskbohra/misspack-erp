@@ -19,20 +19,16 @@
 
     <div class="ship-cost-totals">
         <div>
-            <span>Total (as billed)</span>
-            <strong>{{ \App\Models\Shipment::formatTotals($costTotals['by_currency']) }}</strong>
-        </div>
-        <div>
-            <span>Total in INR</span>
-            <strong>{{ $costTotals['inr'] > 0 ? '₹ '.number_format($costTotals['inr'], 2) : '—' }}</strong>
+            <span>Total spent</span>
+            <strong>{{ $costTotals['inr'] > 0 ? \App\Models\Shipment::formatInr($costTotals['inr']) : '—' }}</strong>
         </div>
         <div>
             <span>Paid so far</span>
-            <strong>{{ $costTotals['paid_inr'] > 0 ? '₹ '.number_format($costTotals['paid_inr'], 2) : 'Nothing paid yet' }}</strong>
+            <strong>{{ $costTotals['paid_inr'] > 0 ? \App\Models\Shipment::formatInr($costTotals['paid_inr']) : 'Nothing paid yet' }}</strong>
         </div>
         <div>
             <span>Cost per kg</span>
-            <strong>{{ $shipment->costPerKg() ? '₹ '.number_format($shipment->costPerKg(), 2) : '—' }}</strong>
+            <strong>{{ $shipment->costPerKg() ? \App\Models\Shipment::formatInr($shipment->costPerKg()) : '—' }}</strong>
         </div>
     </div>
 
@@ -49,7 +45,7 @@
                         <th>Head</th>
                         <th>Vendor</th>
                         <th class="is-num">Amount</th>
-                        <th class="is-num">INR</th>
+                        <th class="is-num">₹</th>
                         <th>Payment</th>
                         <th class="ship-col-actions">Action</th>
                     </tr>
@@ -72,7 +68,7 @@
                                 @endif
                             </td>
                             <td class="is-num">
-                                {{ $cost->amount_in_inr ? '₹ '.number_format((float) $cost->amount_in_inr, 2) : '—' }}
+                                {{ $cost->amount_in_inr ? \App\Models\Shipment::formatInr($cost->amount_in_inr) : '—' }}
                             </td>
                             <td>
                                 @if ($cost->isPaid())

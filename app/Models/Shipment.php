@@ -282,18 +282,43 @@ class Shipment extends Model
     }
 
     /**
-     * "INR 12,340.00" / "USD 2,400.00" — one place for money formatting so
-     * lists, totals and the shipping mark always agree.
+     * The rupee sign. Money in the base currency is written with it — the bare
+     * code "INR" is never used as a symbol anywhere in the app, which is also
+     * why every formatter below goes through here.
      */
-    public static function formatAmount(?string $currency, $amount): string
+    public const INR_SYMBOL = '₹';
+
+    /**
+     * A rupee amount, e.g. "₹ 1,20,000.00". Used wherever a figure is money
+     * spent, because the ledger keeps every charge in rupees at the rate it
+     * was raised at.
+     */
+    public static function formatInr($amount): string
     {
-        return ($currency ?: 'INR').' '.number_format((float) $amount, 2);
+        return self::INR_SYMBOL.' '.number_format((float) $amount, 2);
     }
 
     /**
-     * Turn [currency => total] into a compact display string,
-     * e.g. "INR 1,20,000.00 · USD 2,400.00". Currency codes are never summed
-     * together because rates differ per shipment.
+     * "₹ 12,340.00" / "USD 2,400.00" — one place for money formatting so lists,
+     * totals and the shipping mark always agree. The rupee sign is only put in
+     * front of a rupee amount; a dollar figure keeps its code, because a ₹ in
+     * front of it would say the wrong thing.
+     */
+    public static function formatAmount(?string $currency, $amount): string
+    {
+        $code = strtoupper((string) ($currency ?: 'INR'));
+
+        return $code === 'INR' ? self::formatInr($amount) : $code.' '.number_format((float) $amount, 2);
+    }
+
+    /**
+     * Turn [currency => total] into a compact display string, e.g.
+     * "USD 2,400.00 · RMB 8,000.00".
+     *
+     * Only for a sum that spans documents whose own currency is the subject —
+     * the declared values on the packing list. Money *spent* is always totalled
+     * in ₹ from the ledger's own rupee value, so two rates are never blended into
+     * one number that was never actually paid.
      */
     public static function formatTotals(array $totals): string
     {
@@ -390,7 +415,7 @@ class Shipment extends Model
 
     /**
      * Money summary used by the show page, the print pack and the portal:
-     * per-currency cost heads, INR total, paid-so-far and margin against the
+     * per-currency cost heads, rupee total, paid-so-far and margin against the
      * linked sales invoice.
      *
      * @return array{by_currency: array<string, float>, inr: float, paid_inr: float, rows: int, invoice_total: ?float, invoice_currency: ?string, margin: ?float, margin_percent: ?float}

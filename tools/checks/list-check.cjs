@@ -57,7 +57,7 @@ check('no cell spans more columns than the table has',
 check('the charges column is marked as numeric',
     /<th scope="col" class="is-num">Charges<\/th>/.test(view)
     && /class="ship-money is-num"/.test(view)
-    && /<td class="is-num">\s*<strong>\{\{ \\App\\Models\\Shipment::formatTotals/.test(view));
+    && /<td class="is-num">\s*<strong>\{\{ \\App\\Models\\Shipment::formatInr\(\$pageSpendInr\)/.test(view));
 check('the totals row keeps the money in the charges column',
     /<td class="is-num">[\s\S]{0,200}Filtered total/.test(view));
 

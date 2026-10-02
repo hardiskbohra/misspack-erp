@@ -295,7 +295,7 @@
 
         /* What the ledger will freeze, shown while it is typed: the operator
            never has to work out what the rate does to the amount. The rate is
-           editable in every case, so the INR value follows it in every case. */
+           editable in every case, so the rupee value follows it in every case. */
         function paintRate() {
             var foreign = ! isBaseCurrency();
             var rateValue = parseFloat((rate && rate.value) || 0) || 0;
@@ -312,8 +312,8 @@
 
             if (note) {
                 note.textContent = foreign
-                    ? 'The INR value is frozen at this rate: amount × rate.'
-                    : 'INR bill — the amount is already in rupees, so the ledger keeps the rate at 1.';
+                    ? 'The rupee value is frozen at this rate: amount × rate.'
+                    : '₹ bill — the amount is already in rupees, so the ledger keeps the rate at 1.';
             }
 
             if (!preview) return;
@@ -347,7 +347,7 @@
 
             rateWrap.classList.toggle('is-base', !foreign);
             rate.required = foreign;
-            rate.placeholder = foreign ? 'INR per 1 ' + code : '1 for an INR bill';
+            rate.placeholder = foreign ? '₹ per 1 ' + code : '1 — the bill is in ₹';
 
             if (!foreign) {
                 /* the rupee amount is already in rupees: the ledger stores the

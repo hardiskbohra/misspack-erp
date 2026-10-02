@@ -567,7 +567,7 @@
                                 <div class="master-field">
                                     <label class="master-label">Exchange Rate</label>
                                     <input class="master-input" type="number" step="0.000001" min="0" name="exchange_rate" id="exchangeRate"
-                                        placeholder="INR per currency"></div>
+                                        placeholder="₹ per 1 unit"></div>
                                 <div class="master-field">
                                     <label class="master-label">Amount in INR</label>
                                     <input class="master-input" type="number" step="0.01" min="0" name="amount_in_inr" id="amountInInr"
@@ -706,7 +706,7 @@
                                 <div class="master-field">
                                     <label class="master-label">Exchange Rate</label>
                                     <input class="master-input" type="number" step="0.1" min="0" name="exchange_rate" id="exchangeRate"
-                                        placeholder="INR per currency"></div>
+                                        placeholder="₹ per 1 unit"></div>
                                 <div class="master-field">
                                     <label class="master-label">Amount in INR</label>
                                     <input class="master-input" type="number" step="1" min="0" name="amount_in_inr" id="amountInInr"

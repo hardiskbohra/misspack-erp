@@ -30,11 +30,23 @@ const read = file => fs.readFileSync(path.join(ROOT, file), 'utf8');
 const out = [];
 const check = (name, ok, detail = '') => out.push([name, !!ok, detail]);
 
+const walk = (dir, acc = []) => {
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+        const rel = dir + '/' + entry.name;
+        entry.isDirectory() ? walk(rel, acc) : acc.push(rel);
+    }
+
+    return acc;
+};
+
 const modal = read('resources/views/shipments/partials/cost-modal.blade.php');
 const js = read('public/assets/js/shipments.js');
 const css = read('public/assets/css/shipments.css');
 const controller = read('app/Http/Controllers/ShipmentController.php');
 const ledger = read('app/Services/ShipmentCostLedger.php');
+const shipment = read('app/Models/Shipment.php');
+const index = read('resources/views/shipments/index.blade.php');
+const costsCard = read('resources/views/shipments/partials/costs-card.blade.php');
 
 /* ------------------------------------------------------------- 1. the field */
 
@@ -61,8 +73,8 @@ check('the base currency still starts at 1 and asks for no conversion',
 
 check('the required marker and hint say which case the row is in',
     /aria-hidden="true">\*<\/span>/.test(modal)
-    && /INR bill — the amount is already in rupees, so the ledger keeps the rate at 1\./.test(modal)
-    && /The INR value is frozen at this rate: amount × rate\./.test(modal));
+    && /₹ bill — the amount is already in rupees, so the ledger keeps the rate at 1\./.test(modal)
+    && /The rupee value is frozen at this rate: amount × rate\./.test(modal));
 
 /* --------------------------------------------------------- 2. the default */
 
@@ -123,7 +135,59 @@ check('the ledger is recalculated on both save and update',
 
 check('a foreign cost without a rate is refused with a way forward',
     /if \(\$data\['currency'\] !== 'INR' && \(float\) \(\$data\['exchange_rate'\] \?\? 0\) <= 0\)/.test(controller)
-    && /Enter the exchange rate this bill was raised at, so the INR value is right\./.test(controller));
+    && /Enter the exchange rate this bill was raised at, so the rupee value is right\./.test(controller));
+
+/* ------------------------------------------------ 8. money is written in ₹ */
+
+/* The reader sees money as ₹, never as a currency code in front of a figure.
+   "INR" may still *name* the currency — a select option, a comparison, a
+   column header saying which currency a figure is in — but it may never be the
+   symbol that prefixes an amount, a rate or a formatter. */
+const inrAsSymbol = /\bINR\s*(?=[\d$@{₹])|\bINR\s*(?=['"]\s*[.+])|\bINR\s*&#8377;|\bINR\s+per\b|\bINR\s+bill\b|\bINR\s+(value|amount|total|figure|equivalent)\b/;
+
+const moneyFiles = [
+    ...walk('resources/views').filter(file => file.endsWith('.blade.php')),
+    ...walk('public/assets/js').filter(file => file.endsWith('.js')),
+];
+
+const symbolHits = [];
+
+for (const file of moneyFiles) {
+    fs.readFileSync(path.join(ROOT, file), 'utf8').split('\n').forEach((line, i) => {
+        if (inrAsSymbol.test(line)) symbolHits.push(`${file}:${i + 1}`);
+    });
+}
+
+check('no rupee amount, rate or field is written with the code "INR"',
+    symbolHits.length === 0, symbolHits.join(' | '));
+
+check('the rupee sign lives in one place and every rupee figure goes through it',
+    /const INR_SYMBOL = '₹';/.test(shipment)
+    && /return self::INR_SYMBOL\.' '\.number_format\(\(float\) \$amount, 2\);/.test(shipment)
+    && /return \$code === 'INR' \? self::formatInr\(\$amount\) : \$code\.' '\.number_format/.test(shipment));
+
+const phpLiterals = walk('app')
+    .filter(file => file.endsWith('.php'))
+    .filter(file => /['"]INR\s/.test(read(file)));
+
+check('no PHP string literal builds money as "INR …"',
+    phpLiterals.length === 0, phpLiterals.join(' | '));
+
+check('the spend totals on the list are rupees, not a list of currencies',
+    /formatInr\(\$spendInr\)/.test(index)
+    && /formatInr\(\$pageSpendInr\)/.test(index)
+    && !/formatTotals/.test(index)
+    && !/spendByCurrency/.test(index));
+
+check('the filtered total is the ledger\'s own INR snapshot, never a re-conversion',
+    /->sum\('amount_in_inr'\);/.test(controller)
+    && /'spendInr' => \$spendInr,/.test(controller)
+    && /'pageSpendInr' => \$pageSpendInr,/.test(controller)
+    && !/spendByCurrency/.test(controller));
+
+check('the cost card headlines the rupee total too',
+    !/formatTotals/.test(costsCard)
+    && /App\\Models\\Shipment::formatInr\(\$costTotals\['inr'\]\)/.test(costsCard));
 
 /* ---------------------------------------------------------------- report */
 
