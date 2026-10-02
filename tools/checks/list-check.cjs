@@ -184,6 +184,74 @@ const lightLiterals = [...listSection.matchAll(/#[0-9a-f]{3,8}\b/gi)]
 check('the list rules use theme tokens rather than fixed colours',
     lightLiterals.length === 0, lightLiterals.join(', '));
 
+/* --------------------------------------------- 4. the working surface */
+
+/* applied filters — a filter nobody can see is a filter nobody can undo */
+const appliedChips = [...view.matchAll(/\$chipUrl\('(\w+)'\)/g)].map(m => m[1]);
+check('every filter the page can hold is shown as an applied chip',
+    ['search', 'status', 'currency', 'from_date', 'attention'].every(key => appliedChips.includes(key)),
+    appliedChips.join(', '));
+check('an applied chip removes only its own filter and keeps the rest',
+    /request\(\)->except\(\[\$key, 'page', 'saved_view'\]\)/.test(view)
+    && /'saved_view'/.test(view));
+check('the applied strip carries a clear-all escape',
+    /class="ship-applied-clear"/.test(view) && /Clear all filters/.test(view));
+check('the applied strip is themed rather than light-only',
+    /\.ship-index \.ship-applied-chip \{[\s\S]{0,400}var\(--mc-card-soft\)/.test(css)
+    && /\.ship-applied-x:hover \{[\s\S]{0,80}var\(--danger-light\)/.test(css));
+
+/* row density — a long list should let the reader decide how long */
+check('the density control states and carries its own state',
+    /class="ship-density desktop-only" role="group" aria-label="Row density"/.test(view)
+    && (view.match(/class="ship-density-btn"/g) || []).length === 2
+    && (view.match(/aria-pressed="(true|false)"/g) || []).length >= 2);
+check('the density choice is remembered on the device',
+    /misspack\.shipments\.density/.test(js) && /localStorage/.test(js)
+    && /setAttribute\('data-density'/.test(js) || /attribute\('data-density'/.test(js));
+check('both densities actually change the row geometry',
+    /\[data-density="compact"\] \.master-table th,[\s\S]{0,120}padding: 7px 14px/.test(css)
+    && /--ship-line: 18px/.test(css));
+check('the density is applied before the table paints',
+    /document\.readyState === 'loading'/.test(js));
+
+/* the desktop grid — header and totals stay with the reader */
+check('the desktop list scrolls with a pinned header and pinned totals',
+    /@media \(min-width: 1200px\) \{[\s\S]{0,260}\.ship-index \.master-table-wrap \{[\s\S]{0,120}max-height: calc\(100vh - 320px\)/.test(css)
+    && /\.ship-index \.master-table thead th \{[\s\S]{0,160}position: sticky;\s*\n?\s*top: 0/.test(css)
+    && /\.ship-index \.master-table tfoot td \{[\s\S]{0,160}position: sticky;\s*\n?\s*bottom: 0/.test(css));
+check('the sticky header keeps its hairline (borders separated, not collapsed)',
+    /@media \(min-width: 1200px\)[\s\S]{0,600}border-collapse: separate/.test(css));
+check('the header lifts off the rows once the list is scrolled',
+    /addEventListener\('scroll', sync, \{ passive: true \}\)/.test(js)
+    && /\.is-scrolled thead th/.test(css));
+
+/* the stacked mobile card: the same row, still labelled */
+const mobileLabels = [...view.matchAll(/data-label="([^"]+)"/g)].map(m => m[1]);
+check('the stacked rows keep their column names',
+    mobileLabels.length >= 6 && /content:attr\(data-label\)/.test(css),
+    mobileLabels.join(', '));
+/* the one placeholder rule left in the file belongs to the *form* page's items
+   table, so this looks for the list-page signature specifically */
+check('the mobile card no longer relies on empty ::before placeholders',
+    /attr\(data-label\)/.test(css)
+    && !/\.master-table td:nth-child\(\d\)::before\{content:"";\}/.test(css));
+check('the mobile card shadow is a theme token, not a fixed black',
+    !/box-shadow:0 4px 18px rgba\(0,0,0,\.06\)/.test(css));
+
+/* one rhythm: every first line on the same baseline, every second line too */
+const lineUsers = (() => {
+    const at = css.indexOf('min-height: var(--ship-line)');
+    if (at < 0) return 0;
+    const brace = css.lastIndexOf('{', at);
+    if (brace < 0) return 0;
+    const selectors = css.slice(Math.max(css.lastIndexOf('}', brace), 0) + 1, brace);
+    return selectors.split(',').filter(sel => sel.trim()).length;
+})();
+check('every first line in a row shares one line box',
+    /--ship-line: 20px/.test(css) && lineUsers >= 6, `${lineUsers} cells`);
+check('every second line shares its own line box',
+    /--ship-sub: 16px/.test(css) && /\.ship-index td \.master-sub \{[\s\S]{0,80}line-height: var\(--ship-sub\)/.test(css));
+
 /* ---------------------------------------------------------------- report */
 
 const failed = out.filter(([, ok]) => !ok);

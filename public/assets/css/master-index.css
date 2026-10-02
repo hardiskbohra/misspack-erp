@@ -924,12 +924,12 @@
     align-items:center;
     justify-content:center;
     font-size:16px;
-    color:#55627a;
+    color: var(--mc-text-2);
     transition:.2s;
 }
 
 .master-dropdown-toggle:hover{
-    background:#e9efff;
+    background: var(--mc-hover);
 }
 
 .master-dropdown-menu{
@@ -961,7 +961,7 @@
     align-items:center;
     gap:12px;
     text-decoration:none;
-    color:#2b3445;
+    color: var(--mc-text);
     font-size:14px;
     font-weight: 400;
     cursor:pointer;
@@ -975,6 +975,10 @@
 
 .master-dropdown-menu .danger{
     color:#dc2626;
+}
+
+:root[data-theme="dark"] .master-dropdown-menu .danger{
+    color:#fda4af;
 }
 
 .master-dropdown-menu form{

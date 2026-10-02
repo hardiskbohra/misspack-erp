@@ -130,6 +130,76 @@
                 }
             });
         }
+
+        bindGridScrollShadow();
+    }
+
+    /* ------------------------------------------------------------------
+       Row density (list page)
+       ------------------------------------------------------------------
+       Comfortable / compact is a preference, not data, so it is remembered
+       on the device: the buttons write it to localStorage and the page
+       reads it before first paint of the table. aria-pressed carries the
+       state for anyone not looking at the highlight.
+       ------------------------------------------------------------------ */
+
+    var DENSITY_KEY = 'misspack.shipments.density';
+
+    function applyRowDensity(root, value) {
+        var next = value === 'compact' ? 'compact' : 'comfortable';
+
+        root.setAttribute('data-density', next);
+
+        root.querySelectorAll('.ship-density-btn').forEach(function (button) {
+            var active = button.getAttribute('data-density') === next;
+            button.classList.toggle('is-active', active);
+            button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+    }
+
+    function bindRowDensity() {
+        var root = document.querySelector('.ship-index');
+        if (!root || !root.querySelector('.ship-density-btn')) return;
+
+        var stored = null;
+        try {
+            stored = window.localStorage.getItem(DENSITY_KEY);
+        } catch (e) {
+            /* private mode: the buttons still work, the choice just is not kept */
+        }
+
+        applyRowDensity(root, stored);
+
+        root.querySelectorAll('.ship-density-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var value = button.getAttribute('data-density');
+                applyRowDensity(root, value);
+
+                try {
+                    window.localStorage.setItem(DENSITY_KEY, value);
+                } catch (e) { /* nothing to remember it with */ }
+            });
+        });
+    }
+
+    /* ------------------------------------------------------------------
+       Sticky header shadow (list page, desktop)
+       ------------------------------------------------------------------
+       At desktop widths the list scrolls inside its own box with the header
+       and the totals row pinned. The hairline alone is easy to miss, so the
+       header lifts as soon as the first row goes under it.
+       ------------------------------------------------------------------ */
+
+    function bindGridScrollShadow() {
+        var wrap = document.querySelector('.ship-index .master-table-wrap');
+        if (!wrap) return;
+
+        var sync = function () {
+            wrap.classList.toggle('is-scrolled', wrap.scrollTop > 0);
+        };
+
+        wrap.addEventListener('scroll', sync, { passive: true });
+        sync();
     }
 
     function initCostModal() {
@@ -404,6 +474,15 @@
         });
 
     };
+
+    /* Run now when the markup is already parsed (this file is pushed at the end
+       of the body) so the remembered density is in place before the first
+       paint; otherwise wait for it. */
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindRowDensity);
+    } else {
+        bindRowDensity();
+    }
 
     document.addEventListener('DOMContentLoaded', initShipmentIndexExtras);
     document.addEventListener('DOMContentLoaded', initCostModal);

@@ -55,7 +55,7 @@
             border-radius:16px;
             padding:18px;
             margin-bottom:18px;
-            box-shadow:0 4px 18px rgba(0,0,0,.06);
+            box-shadow:var(--master-shadow);
         }
     
         .master-table td{
@@ -68,20 +68,17 @@
             margin-bottom:0;
         }
     
-        .master-table td::before{
+        /* the label travels with the value: <td data-label="Charges"> */
+        .ship-index .master-table td[data-label]::before{
+            content:attr(data-label);
             display:block;
-            font-size:13px;
-            font-weight:600;
-            color:#64748b;
-            margin-bottom:6px;
+            margin-bottom:5px;
+            color: var(--mc-text-3);
+            font-size:10.5px;
+            font-weight:800;
+            letter-spacing:.08em;
+            text-transform:uppercase;
         }
-    
-        .master-table td:nth-child(1)::before{content:"";}
-        .master-table td:nth-child(2)::before{content:"";}
-        .master-table td:nth-child(3)::before{content:"";}
-        .master-table td:nth-child(4)::before{content:"";}
-        .master-table td:nth-child(5)::before{content:"";}
-        .master-table td:nth-child(6)::before{content:"";}
     
         /* Shipment */
     
@@ -93,7 +90,7 @@
     
         .ship-index .master-sub{
             display:block;
-            color:#64748b;
+            color: var(--mc-text-3);
             margin-top:4px;
         }
     
@@ -1658,14 +1655,108 @@
     color: #fff;
 }
 
-/* ---------------- order caption ---------------- */
+/* ---------------- applied filters ----------------
+   The controls above hold the values; this strip names what they are actually
+   filtering, one removable chip each. A filter that comes from a saved view or
+   a URL is no longer invisible — and every chip removes only its own key, so
+   undoing one filter never silently drops the others. */
+
+.ship-index .ship-applied {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--mc-border);
+}
+
+.ship-index .ship-applied-title {
+    color: var(--mc-text-3);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.ship-index .ship-applied-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 300px;
+    padding: 3px 5px 3px 10px;
+    border: 1px solid var(--mc-border);
+    border-radius: 999px;
+    background: var(--mc-card-soft);
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.ship-index .ship-applied-key {
+    color: var(--mc-text-3);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.ship-index .ship-applied-value {
+    overflow: hidden;
+    color: var(--mc-text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ship-index .ship-applied-x {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    color: var(--mc-text-3);
+    font-size: 13px;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.ship-index .ship-applied-x:hover {
+    background: var(--danger-light);
+    color: var(--danger);
+}
+
+.ship-index .ship-applied-x:focus-visible {
+    outline: 2px solid var(--master-primary);
+    outline-offset: 2px;
+}
+
+.ship-index .ship-applied-clear {
+    margin-left: auto;
+    color: var(--master-primary);
+    font-size: 11.5px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.ship-index .ship-applied-clear:hover {
+    text-decoration: underline;
+}
+
+/* ---------------- table bar: the ordering caption + row density ---------------- */
+
+.ship-index .ship-table-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px 0;
+}
 
 .ship-index .ship-order-hint {
     display: flex;
     align-items: center;
     gap: 8px;
     margin: 0;
-    padding: 12px 16px 0;
     font-size: 11.5px;
     font-weight: 600;
     letter-spacing: .01em;
@@ -1676,6 +1767,41 @@
     font-size: 12px;
     line-height: 1;
     opacity: .8;
+}
+
+/* Row density. A list an operator keeps open all day should let them decide
+   how much of it fits on screen; the state is one attribute on .ship-index
+   and assets/js/shipments.js remembers the choice. */
+.ship-index .ship-density {
+    display: inline-flex;
+    padding: 2px;
+    border: 1px solid var(--mc-border);
+    border-radius: 10px;
+    background: var(--mc-card-soft);
+}
+
+.ship-index .ship-density-btn {
+    padding: 4px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: var(--mc-text-3);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .01em;
+    cursor: pointer;
+}
+
+.ship-index .ship-density-btn.is-active {
+    background: var(--mc-card);
+    color: var(--mc-text);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .14);
+}
+
+.ship-index .ship-density-btn:focus-visible {
+    outline: 2px solid var(--master-primary);
+    outline-offset: 2px;
 }
 
 /* ---------------- table ---------------- */
@@ -1714,6 +1840,54 @@
 .ship-index .master-table th:last-child,
 .ship-index .master-table td:last-child {
     text-align: right;
+}
+
+/* Row rhythm. The old row had a 13px first line in one cell, 13.5px in the
+   next and a 22px pill in another, so the row's top line wandered. One line
+   box for the first line and one for the second makes a row read as a row. */
+.ship-index .master-table {
+    --ship-line: 20px;
+    --ship-sub: 16px;
+}
+
+.ship-index .ship-date,
+.ship-index .ship-cell-id,
+.ship-index .ship-route strong,
+.ship-index .ship-logistic,
+.ship-index .ship-money,
+.ship-index .ship-status,
+.ship-index .ship-type,
+.ship-index .ship-eta {
+    min-height: var(--ship-line);
+    line-height: var(--ship-line);
+}
+
+.ship-index td .master-sub {
+    margin-top: 4px;
+    line-height: var(--ship-sub);
+}
+
+.ship-index .ship-cell-name {
+    margin-top: 4px;
+    line-height: var(--ship-sub);
+}
+
+.ship-index .ship-tags {
+    margin-top: 4px;
+}
+
+/* the pills sit on the row's first line instead of being taller than it */
+.ship-index .ship-status,
+.ship-index .ship-type {
+    height: var(--ship-line);
+    padding: 0 10px;
+}
+
+.ship-index .ship-eta {
+    display: inline-flex;
+    align-items: center;
+    height: var(--ship-line);
+    padding: 0 9px;
 }
 
 .ship-index .master-table tbody tr.is-clickable {
@@ -1949,6 +2123,79 @@
     margin-left: auto;
     border-radius: 10px;
     font-size: 14px;
+}
+
+/* ---------------- row density variants ----------------
+   Comfortable is the default; compact fits roughly a third more rows on the
+   same screen. Scoped above the mobile breakpoint because the stacked cards
+   have their own spacing. */
+
+@media (min-width: 769px) {
+    .ship-index[data-density="compact"] .master-table th,
+    .ship-index[data-density="compact"] .master-table td {
+        padding: 7px 14px;
+    }
+
+    .ship-index[data-density="compact"] .master-table {
+        --ship-line: 18px;
+        --ship-sub: 15px;
+    }
+
+    .ship-index[data-density="compact"] .master-table td {
+        font-size: 13px;
+    }
+
+    .ship-index[data-density="compact"] .ship-date,
+    .ship-index[data-density="compact"] .ship-cell-id {
+        font-size: 12.5px;
+    }
+
+    .ship-index[data-density="compact"] .ship-cell-name,
+    .ship-index[data-density="compact"] td .master-sub {
+        font-size: 11.5px;
+    }
+}
+
+/* ---------------- desktop data grid ----------------
+   Fifty rows is a page you scroll, so at desktop widths the list gets its own
+   scroll area: the header stays put and the totals stay put, which is what
+   makes a long table comparable at a glance. .master-table normally collapses
+   its borders; a collapsed border belongs to the table rather than to the
+   sticky cell, so the header would lose its hairline as it scrolled. */
+
+@media (min-width: 1200px) {
+    .ship-index .master-table-wrap {
+        /* a bounded grid rather than a page-long column of rows; no min-height
+           so a short list still ends where its last row ends */
+        max-height: calc(100vh - 320px);
+        overflow: auto;
+    }
+
+    .ship-index .master-table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .ship-index .master-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        background: var(--mc-card-soft);
+        box-shadow: inset 0 -1px 0 var(--mc-border);
+    }
+
+    .ship-index .master-table tfoot td {
+        position: sticky;
+        bottom: 0;
+        z-index: 3;
+        background: var(--mc-card-soft);
+        box-shadow: inset 0 1px 0 var(--mc-border);
+    }
+
+    /* the header lifts off the rows once the list is scrolled */
+    .ship-index .master-table-wrap.is-scrolled thead th {
+        box-shadow: inset 0 -1px 0 var(--mc-border), 0 8px 16px -12px rgba(15, 23, 42, .45);
+    }
 }
 
 /* ---------------- narrow screens ----------------

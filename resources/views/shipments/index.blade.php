@@ -20,7 +20,18 @@
     $filtersActive = trim((string) $search) !== ''
         || ($status && $status !== 'all')
         || filled($fromDate)
-        || filled($attention);
+        || filled($attention)
+        || ($currency && $currency !== 'all');
+
+    /* One URL per removable filter: everything else stays, 'page' restarts (a
+       filter change is a new list) and 'saved_view' is dropped because the
+       result is no longer that view. */
+    $chipUrl = function (string $key) {
+        $keep = collect(request()->except([$key, 'page', 'saved_view']))
+            ->reject(fn ($value) => $value === null || $value === '' || $value === 'all');
+
+        return route('shipments.index', $keep->all());
+    };
 @endphp
 
 <div class="ship ship-index">
@@ -126,6 +137,62 @@
                     <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
                 </div>
             </div>
+
+            {{-- What is actually filtering, one removable chip each — including
+                 filters that arrived from a saved view or a URL and therefore
+                 have no visible control above. --}}
+            @if ($filtersActive)
+                <div class="ship-applied">
+                    <span class="ship-applied-title">Filtered by</span>
+
+                    @if (trim((string) $search) !== '')
+                        <span class="ship-applied-chip">
+                            <span class="ship-applied-key">Search</span>
+                            <span class="ship-applied-value">{{ $search }}</span>
+                            <a class="ship-applied-x" href="{{ $chipUrl('search') }}"
+                                aria-label="Remove the search filter" title="Remove the search filter">&times;</a>
+                        </span>
+                    @endif
+
+                    @if ($status && $status !== 'all')
+                        <span class="ship-applied-chip">
+                            <span class="ship-applied-key">Status</span>
+                            <span class="ship-applied-value">{{ $statusOptions[$status] ?? $status }}</span>
+                            <a class="ship-applied-x" href="{{ $chipUrl('status') }}"
+                                aria-label="Remove the status filter" title="Remove the status filter">&times;</a>
+                        </span>
+                    @endif
+
+                    @if ($currency && $currency !== 'all')
+                        <span class="ship-applied-chip">
+                            <span class="ship-applied-key">Currency</span>
+                            <span class="ship-applied-value">{{ $currencyOptions[$currency] ?? $currency }}</span>
+                            <a class="ship-applied-x" href="{{ $chipUrl('currency') }}"
+                                aria-label="Remove the currency filter" title="Remove the currency filter">&times;</a>
+                        </span>
+                    @endif
+
+                    @if (filled($fromDate))
+                        <span class="ship-applied-chip">
+                            <span class="ship-applied-key">Pickup from</span>
+                            <span class="ship-applied-value">{{ \Illuminate\Support\Carbon::parse($fromDate)->format('d M Y') }}</span>
+                            <a class="ship-applied-x" href="{{ $chipUrl('from_date') }}"
+                                aria-label="Remove the pickup-date filter" title="Remove the pickup-date filter">&times;</a>
+                        </span>
+                    @endif
+
+                    @if (filled($attention))
+                        <span class="ship-applied-chip">
+                            <span class="ship-applied-key">Attention</span>
+                            <span class="ship-applied-value">{{ str_replace('_', ' ', $attention) }}</span>
+                            <a class="ship-applied-x" href="{{ $chipUrl('attention') }}"
+                                aria-label="Remove the attention filter" title="Remove the attention filter">&times;</a>
+                        </span>
+                    @endif
+
+                    <a class="ship-applied-clear" href="{{ route('shipments.index') }}">Clear all filters</a>
+                </div>
+            @endif
         </form>
     </div>
 
@@ -133,10 +200,21 @@
         {{-- One quiet line instead of a sentence: the ordering is visible in the
              table itself (the closed block has its own divider), so this only
              has to name the rule. The full wording is the tooltip. --}}
-        <p class="ship-order-hint"
-            title="Open shipments first, newest pickup date on top. Delivered and cancelled shipments sit in a closed block below, also newest first.">
-            Open shipments first &middot; closed block below
-        </p>
+        <div class="ship-table-bar">
+            <p class="ship-order-hint"
+                title="Open shipments first, newest pickup date on top. Delivered and cancelled shipments sit in a closed block below, also newest first.">
+                Open shipments first &middot; closed block below
+            </p>
+
+            {{-- How much of the list fits on screen is a preference, not a
+                 filter, so it lives beside the ordering rule. --}}
+            <div class="ship-density desktop-only" role="group" aria-label="Row density">
+                <button type="button" class="ship-density-btn" data-density="comfortable"
+                    aria-pressed="true">Comfortable</button>
+                <button type="button" class="ship-density-btn" data-density="compact"
+                    aria-pressed="false">Compact</button>
+            </div>
+        </div>
         <div class="master-table-wrap">
             <table class="master-table">
                 <thead>
@@ -198,15 +276,15 @@
                                     <span class="ship-cell-name">{{ $shipment->identity_name }}</span>
                                 </a>
                             </td>
-                            <td class="ship-route">
+                            <td class="ship-route" data-label="Route">
                                 <strong>{{ $shipment->from_name ?: 'Origin' }} → {{ $shipment->to_name ?: 'Destination' }}</strong>
                                 <span class="master-sub desktop-only">{{ $shipment->from_city ?: '—' }} to {{ $shipment->to_city ?: '—' }}</span>
                             </td>
-                            <td class="ship-logistic">
+                            <td class="ship-logistic" data-label="Logistic">
                                 {{ $shipment->logistic_partner ?: '—' }}
                                 <span class="master-sub">{{ $shipment->tracking_number ?: 'No tracking' }}</span>
                             </td>
-                            <td>
+                            <td data-label="ETA">
                                 @if ($shipment->eta_date)
                                     <span class="ship-eta ship-eta-{{ $shipment->etaState() }}">{{ $shipment->eta_date->format('d M') }}</span>
                                     <span class="master-sub">{{ $shipment->etaLabel() }}</span>
@@ -222,7 +300,7 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="ship-money is-num">
+                            <td class="ship-money is-num" data-label="Charges">
                                 @if ((int) $shipment->costs_count > 0)
                                     @if ((float) $shipment->cost_same_currency > 0)
                                         {{ \App\Models\Shipment::formatAmount($shipment->currency, $shipment->cost_same_currency) }}
@@ -235,10 +313,10 @@
                                     <span class="master-sub">{{ $shipment->cost_borne_by ?: '' }}</span>
                                 @endif
                             </td>
-                            <td>
+                            <td data-label="Status">
                                 <span class="master-badge ship-status status-{{ $statusClass }}">{{ $shipment->statusLabel() }}</span>
                             </td>
-                            <td>
+                            <td data-label="Actions">
                                 <div class="master-row-actions">
 
                                     <div class="master-dropdown">

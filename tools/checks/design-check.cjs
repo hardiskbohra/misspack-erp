@@ -257,6 +257,19 @@ check('no negative margin on a title/hint pair (it overlaps the title)',
 check('the document-upload controls are field-height',
     /\.ship-doc-upload \.master-select,\s*[\s\S]{0,200}height:\s*44px/.test(shipCss));
 
+/* the shared row-action menu is drawn on --mc-card, so it must not be painted
+   with fixed light-theme values: #2b3445 menu text on the dark card is
+   invisible, and a #e9efff hover is a light chip on a dark toolbar */
+const indexCss = read(path.join(CSS, 'master-index.css'));
+const menuLiterals = [
+    /\.master-dropdown-toggle \{[\s\S]{0,240}color:\s*#[0-9a-f]{3,6}/i,
+    /\.master-dropdown-menu a,[\s\S]{0,240}color:\s*#[0-9a-f]{3,6}/i,
+].filter(re => re.test(indexCss));
+check('the shared row-action menu is themed, not fixed to a light palette',
+    menuLiterals.length === 0
+    && /:root\[data-theme="dark"\] \.master-dropdown-menu \.danger/.test(indexCss),
+    String(menuLiterals.length));
+
 /* balanced braces everywhere */
 const unbalanced = fs.readdirSync(CSS).filter(f => f.endsWith('.css')).filter(f => {
     const t = read(path.join(CSS, f));

@@ -12,7 +12,8 @@ after touching a shared stylesheet, a record view, or a print document.
 node tools/checks/design-check.cjs    # stylesheets, cascade, design rules
 node tools/checks/blade-check.cjs     # templates parse: directives, includes, components
 node tools/checks/mark-check.cjs      # shipping-mark geometry + QR payloads
-node tools/checks/list-check.cjs      # one index page: chips, columns, toolbar, row actions
+node tools/checks/list-check.cjs      # one index page: chips, columns, toolbar, row actions,
+                                      # applied filters, density, the pinned grid
 ```
 
 Every check is dependency-free. `mark-check.cjs` additionally decodes the QR
@@ -51,5 +52,12 @@ node tools/checks/design-check.cjs && node tools/checks/blade-check.cjs \
 | Rule order | the address size-step rules must come after the per-party rules they override, or they silently do nothing (same specificity) |
 | QR payload decode | a code that does not decode is not printable |
 | Index-page vocabulary | a list row and a list toolbar have one shape across modules: `scope="col"` headers, money in an `.is-num` cell that lines up with the totals, one primary action on the page, every status/type/label chip with a light **and** dark tone |
+| A list that keeps its context | the header of a long list stays in view with the totals row, and the reader decides how many rows fit — both are checked, not just styled |
 | Row linking | the row opens the record and the inner links/buttons keep their own click; the guard lives in JS and is checked, because a half-linked row is worse than none |
 | Toolbar honesty | a Reset appears only when a filter is set, the empty state offers a way out, and the closed block says how many rows it holds |
+| Applied filters | one removable chip per active filter, each removing only its own key — a filter you cannot see is a filter you cannot undo |
+| Row density | the list remembers how tight the rows are, and both densities are checked to really change the row geometry |
+| A pinned grid | above 1200px the header and the totals row stay put while the rows scroll, and the borders are separated so a sticky header keeps its hairline |
+| Stacked-row labels | on a phone the row becomes a card and every value keeps the column name it had |
+| One row rhythm | every first line and every second line shares a line box, so a row reads as a row instead of a pile of boxes |
+| Themed row menu | the shared kebab menu is drawn on the card colour, so it must not paint fixed light-theme values — on the dark card they are invisible |
