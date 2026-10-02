@@ -161,18 +161,67 @@
         const MENU_EDGE = 8;
         const MENU_MIN = 120;
 
-        /* The panel is drawn against the viewport, never against the row it
-           belongs to. A menu inside a table is painted in its own row's pass —
-           so every row after it covers it — and it is clipped by any scrolling
-           box above it. A fixed panel is outside that fight: the button is
-           measured, the panel is placed under it, flipped above it when there
-           is more room there, and capped to the room the viewport actually
-           has, so it scrolls inside itself instead of disappearing past an
-           edge. */
-        const placeMenu = (dropdown) => {
+        /* While a menu is open its panel is moved out of the table and into
+           <body>. That settles the whole class of problems at once: a panel
+           inside a table cell is painted in that row's pass — so every row
+           after it draws over it — it is clipped by any scrolling box above
+           it, and any ancestor that creates a stacking context (a sticky cell,
+           a transformed card, an opacity group, a filter) traps it, whatever
+           z-index the panel asks for. On the body it is just a fixed box above
+           everything. It goes back where it came from when it closes, so the
+           markup stays as authored and its links and forms keep working. */
+        const menuHomes = new WeakMap();
+        const dropdownMenus = new WeakMap();
+
+        document.querySelectorAll('.master-dropdown').forEach(dropdown => {
             const menu = dropdown.querySelector('.master-dropdown-menu');
+            if (menu) dropdownMenus.set(dropdown, menu);
+        });
+
+        /* once portaled the menu is no longer inside the dropdown, so it is
+           remembered rather than looked up again */
+        const menuOf = (dropdown) => dropdownMenus.get(dropdown)
+            || dropdown.querySelector('.master-dropdown-menu');
+
+        const portalMenu = (menu) => {
+            if (!menu || menu.parentNode === document.body) return;
+
+            menuHomes.set(menu, { parent: menu.parentNode, next: menu.nextSibling });
+            document.body.appendChild(menu);
+
+            /* `.master-dropdown.open …` cannot reach a portaled panel */
+            menu.style.display = 'block';
+        };
+
+        const restoreMenu = (menu) => {
+            if (!menu) return;
+
+            const home = menuHomes.get(menu);
+
+            if (home) {
+                if (home.next && home.next.parentNode === home.parent) {
+                    home.parent.insertBefore(menu, home.next);
+                } else {
+                    home.parent.appendChild(menu);
+                }
+
+                menuHomes.delete(menu);
+            }
+
+            menu.style.display = '';
+        };
+
+        /* The button is measured and the panel is placed under it,
+           right-aligned with it, kept inside the viewport, flipped above it
+           when there is more room there, and capped to the room the viewport
+           actually has so it scrolls inside itself instead of disappearing
+           past an edge. */
+        const placeMenu = (dropdown) => {
+            const menu = menuOf(dropdown);
             const toggle = dropdown.querySelector('.master-dropdown-toggle');
             if (!menu || !toggle) return;
+
+            portalMenu(menu);
 
             /* measure the panel at its full size before capping it */
             menu.style.maxHeight = 'none';
@@ -208,7 +257,6 @@
 
             menu.style.maxHeight = room + 'px';
             menu.style.overflowY = height > room ? 'auto' : 'hidden';
-
         };
 
         const setMenuState = (dropdown, open) => {
@@ -222,7 +270,8 @@
                 return;
             }
 
-            const menu = dropdown.querySelector('.master-dropdown-menu');
+            const menu = menuOf(dropdown);
+
             if (menu) {
                 menu.style.maxHeight = '';
                 menu.style.overflowY = '';
@@ -230,6 +279,7 @@
                 menu.style.bottom = '';
                 menu.style.left = '';
                 menu.style.right = '';
+                restoreMenu(menu);
             }
         };
 

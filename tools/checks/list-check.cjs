@@ -294,6 +294,24 @@ check('the panel is capped to the room it actually has',
 check('an open panel follows the page while it scrolls',
     /document\.addEventListener\('scroll', placeOpenMenus, true\)/.test(layoutJs)
     && /window\.addEventListener\('resize', placeOpenMenus\)/.test(layoutJs));
+
+/* the panel is portaled to <body> while it is open: inside the table it is
+   painted in its row's pass, clipped by the scroll box, and trapped by any
+   ancestor that creates a stacking context (a sticky cell, an opacity group),
+   whatever z-index it asks for */
+check('the open panel is moved out of the table and into the body',
+    /document\.body\.appendChild\(menu\)/.test(layoutJs)
+    && /menuHomes\.set\(menu, \{ parent: menu\.parentNode, next: menu\.nextSibling \}\)/.test(layoutJs));
+check('it goes back where it came from when it closes',
+    /home\.parent\.insertBefore\(menu, home\.next\)/.test(layoutJs)
+    && /restoreMenu\(menu\)/.test(layoutJs));
+check('a portaled panel is shown and hidden explicitly',
+    /menu\.style\.display = 'block';/.test(layoutJs)
+    && /menu\.style\.display = '';/.test(layoutJs));
+check('the panel is remembered per dropdown, not found again after portaling',
+    /const dropdownMenus = new WeakMap\(\)/.test(layoutJs)
+    && /dropdownMenus\.set\(dropdown, menu\)/.test(layoutJs)
+    && /const menuOf = \(dropdown\) => dropdownMenus\.get\(dropdown\)/.test(layoutJs));
 check('a click on the panel belongs to the panel, not to the row under it',
     /closest\('a, button, input, select, textarea, label, form, \.master-dropdown'\)/.test(js));
 check('the menu is only declared once, in master-index.css',

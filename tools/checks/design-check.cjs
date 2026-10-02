@@ -304,6 +304,10 @@ check('the row menu is placed against the viewport, above the sticky header and 
 check('the row menu needs no row-raising or flip class any more',
     !/is-menu-open/.test(indexMenu) && !/\.master-dropdown\.drop-up/.test(indexMenu));
 
+check('the floating panel is opaque, so no row can read through it',
+    /background-color:\s*var\(--mc-card,\s*#[0-9a-f]{3,6}\)/i.test(panelRule)
+    && !/opacity/.test(panelRule));
+
 /* the shared row-action menu is drawn on --mc-card, so it must not be painted
    with fixed light-theme values: #2b3445 menu text on the dark card is
    invisible, and a #e9efff hover is a light chip on a dark toolbar */

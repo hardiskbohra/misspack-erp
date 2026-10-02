@@ -940,19 +940,32 @@
    the look, so a panel that is never placed still lands in the right spot. */
 .master-dropdown-menu{
     position:fixed;
-    z-index:1200;
+    z-index:1300;
     width:220px;
     max-height:calc(100vh - 16px);
-    background: var(--mc-card);
-    border: 1px solid var(--mc-border);
+    /* Opaque on purpose, and stated as a background *colour* so nothing can
+       leave the panel see-through: it floats over the rows, and a translucent
+       panel reads as a broken menu. The fallback keeps it opaque even if the
+       token is ever missing. */
+    background-color: var(--mc-card, #ffffff);
+    border: 1px solid var(--mc-border, #dfe7f3);
     border-radius:14px;
-    box-shadow:0 15px 40px rgba(0,0,0,.12);
+    box-shadow:0 15px 40px rgba(0,0,0,.16);
     display:none;
     overflow:hidden;
 }
 
 .master-dropdown.open .master-dropdown-menu{
     display:block;
+}
+
+/* The open panel is moved to <body> by the layout script, so its focus ring
+   cannot come from a rule scoped to the table or the card it was authored in
+   — the panel carries its own. */
+.master-dropdown-menu a:focus-visible,
+.master-dropdown-menu button:focus-visible{
+    outline: 2px solid var(--master-primary);
+    outline-offset: -2px;
 }
 
 .master-dropdown-menu a,
