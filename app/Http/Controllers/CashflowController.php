@@ -6,7 +6,9 @@ use App\Models\CashflowAccount;
 use App\Models\CashflowCategory;
 use App\Models\CashflowEntry;
 use App\Models\CashflowMasterOption;
+use App\Models\SavedView;
 use App\Services\CashflowLedger;
+use App\Services\SavedViews;
 use App\Services\VendorPaymentCashflowSync;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -21,6 +23,11 @@ class CashflowController extends Controller
 {
     public function index(Request $request): View
     {
+        // Jumping back into a saved view simply re-runs its filters.
+        if ($savedQuery = $this->resolveSavedView($request)) {
+            return redirect()->route('cashflows.index', $savedQuery);
+        }
+
         $filters = $this->filters($request);
 
         $entries = $this->baseEntryQuery($filters)
@@ -46,9 +53,21 @@ class CashflowController extends Controller
         $mirroredPayments = app(VendorPaymentCashflowSync::class)->linkedMapFor($entries->pluck('id'));
         $mirroredShipmentCosts = app(\App\Services\ShipmentCostCashflowSync::class)->linkedShipmentMapFor($entries->pluck('id'));
 
+        // The totals row: what the rows on this page add up to, next to the
+        // same figures for the whole filtered set.
+        $pageTotals = [
+            'credit' => round((float) $entries->sum('credit_amount'), 2),
+            'debit' => round((float) $entries->sum('debit_amount'), 2),
+        ];
+        $pageTotals['net'] = round($pageTotals['credit'] - $pageTotals['debit'], 2);
+        $stats['net'] = round((float) $stats['credit'] - (float) $stats['debit'], 2);
+
         return view('cashflows.index', array_merge($this->sharedData(), [
             'entries' => $entries,
             'stats' => $stats,
+            'pageTotals' => $pageTotals,
+            'chipCounts' => $this->chipCounts($filters),
+            'savedViews' => app(SavedViews::class)->forUser(Auth::id(), 'cashflows'),
             'mirroredPayments' => $mirroredPayments,
             'mirroredShipmentCosts' => $mirroredShipmentCosts,
             ...$filters,
@@ -280,6 +299,83 @@ class CashflowController extends Controller
         }
     
         return $data;
+    }
+
+    /**
+     * What each quick-view chip would show: the current filters plus that
+     * chip's own dimension, so the number on a chip is the number of rows you
+     * would actually get by clicking it.
+     *
+     * @return array<string, int>
+     */
+    private function chipCounts(array $filters): array
+    {
+        $base = array_merge($filters, [
+            'transactionType' => 'all',
+            'accountingStatus' => 'all',
+            'dateFrom' => null,
+            'dateTo' => null,
+        ]);
+
+        $count = function (array $overrides) use ($base) {
+            return $this->baseEntryQuery(array_merge($base, $overrides), false)->count();
+        };
+
+        return [
+            'all' => $count([]),
+            'credit' => $count(['transactionType' => 'credit']),
+            'debit' => $count(['transactionType' => 'debit']),
+            'pending' => $count(['accountingStatus' => 'pending']),
+            'this_month' => $count([
+                'dateFrom' => Carbon::now()->startOfMonth()->toDateString(),
+                'dateTo' => Carbon::now()->endOfMonth()->toDateString(),
+            ]),
+        ];
+    }
+
+    /**
+     * When the request carries ?saved_view=ID, the saved query is what should
+     * be rendered — this turns it back into the URL the list already speaks.
+     *
+     * @return array<string, string>
+     */
+    private function resolveSavedView(Request $request): array
+    {
+        $id = (int) $request->query('saved_view', 0);
+
+        if (! $id) {
+            return [];
+        }
+
+        $view = SavedView::query()
+            ->where('module', 'cashflows')
+            ->where(function ($query) {
+                $query->where('user_id', Auth::id())->orWhere('is_shared', true);
+            })
+            ->find($id);
+
+        return $view ? app(SavedViews::class)->queryFor($view) : [];
+    }
+
+    public function storeSavedView(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:60'],
+            'is_shared' => ['nullable', 'boolean'],
+        ]);
+
+        app(SavedViews::class)->save(Auth::id(), 'cashflows', $data['name'], $request->query(), $request->boolean('is_shared'));
+
+        return back()->with('success', 'View "'.$data['name'].'" saved.');
+    }
+
+    public function destroySavedView(SavedView $savedView): RedirectResponse
+    {
+        abort_unless((int) $savedView->user_id === (int) Auth::id(), 403);
+
+        app(SavedViews::class)->delete((int) Auth::id(), (int) $savedView->id);
+
+        return back()->with('success', 'Saved view removed.');
     }
 
     private function filters(Request $request): array

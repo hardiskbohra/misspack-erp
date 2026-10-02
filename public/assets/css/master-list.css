@@ -1,0 +1,523 @@
+/* ==========================================================================
+   MASTER LIST — the one list surface
+   --------------------------------------------------------------------------
+   Every listing screen is the same surface: quick-view chips, saved views, an
+   applied-filters strip, a table bar with the density switch, a pinned grid
+   with a totals row, and an empty state that offers a way out. Those rules
+   live here once and each list opts in with `class="… master-list"`.
+
+   Loaded after the module sheet, so a module can still style its own cells —
+   dates, money columns, status tones — without fighting this file. Anything a
+   second module would need belongs here instead of being copied into it.
+
+   Rule order is the cascade: the first block is the base chrome, the blocks
+   after it are the tone and density passes that tuned it on the shipment list,
+   kept in the order they were written so the same declaration always wins.
+   ========================================================================== */
+
+/* ---------------- Priority order groups (open first, closed below) ---------------- */
+
+.master-list .master-list-group td {
+    padding: 10px 14px;
+    /* the divider strip belongs to the flat list card, so it reads as a hairline    */
+    /* band rather than a tinted block inside a white card                          */
+    background: var(--mc-card);
+    border-top: 1px solid var(--mc-border);
+    border-bottom: 1px solid var(--mc-border);
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.master-list-total td {
+    padding: 12px 14px;
+    background: var(--mc-card);
+    border-top: 2px solid var(--mc-border);
+    font-weight: 800;
+    vertical-align: top;
+}
+
+.master-list-total strong {
+    display: block;
+    font-size: 13.5px;
+}
+
+.master-list-total .master-sub {
+    display: block;
+    margin-top: 3px;
+    font-weight: 600;
+}
+
+.master-list-hint {
+    margin: 0;
+    padding: 14px 16px 0;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+.master-list-hint strong {
+    color: var(--mc-text);
+}
+
+.master-list-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 16px 16px 0;
+}
+
+.master-list-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.master-list-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    border: 1px solid var(--mc-border);
+    border-radius: 999px;
+    background: var(--mc-card);
+    color: var(--mc-text-2);
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.master-list-chip:hover {
+    background: var(--mc-card-soft);
+}
+
+.master-list-chip:hover {
+    border-color: var(--mc-accent, #4f8ef7);
+    color: var(--mc-text);
+}
+
+.master-list-chip.is-active {
+    border-color: var(--master-primary, #4f83f1);
+    background: var(--accent-light, rgba(79, 142, 247, .12));
+    color: var(--master-primary, #4f83f1);
+}
+
+.master-list-chip-count {
+    min-width: 22px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--mc-card);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.master-list-saved {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.master-list-saved-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 8px 5px 10px;
+    border: 1px dashed var(--mc-border);
+    border-radius: 999px;
+    background: var(--mc-card);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.master-list-saved-chip a {
+    color: var(--mc-text-2);
+    text-decoration: none;
+}
+
+.master-list-saved-chip form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.master-list-saved-chip button {
+    border: 0;
+    background: none;
+    padding: 0 2px;
+    color: var(--mc-text-3);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.master-list-saved-chip button:hover {
+    color: var(--master-red, #ef4770);
+}
+
+.master-list-save-view {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.master-list-save-view .master-input {
+    max-width: 180px;
+}
+
+/* ---------------- toolbar ---------------- */
+
+.master-list .master-list-bar {
+    padding: 16px;
+    border-bottom: 1px solid var(--mc-border);
+}
+
+.master-list .master-list-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+}
+
+.master-list-chip:focus-visible, .master-list-saved-chip a:focus-visible, .master-list .master-table a:focus-visible, .master-list .master-dropdown-toggle:focus-visible {
+    outline: 2px solid var(--master-primary);
+    outline-offset: 2px;
+}
+
+.master-list-chip.is-active {
+    background: var(--accent-light);
+    border-color: var(--master-primary);
+    color: var(--master-primary);
+    font-weight: 800;
+}
+
+.master-list-chip.is-active .master-list-chip-count {
+    background: var(--master-primary);
+    border-color: var(--master-primary);
+    color: #fff;
+}
+
+.master-list .master-list-applied {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--mc-border);
+}
+
+.master-list .master-list-applied-title {
+    color: var(--mc-text-3);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.master-list .master-list-applied-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 300px;
+    padding: 3px 5px 3px 10px;
+    border: 1px solid var(--mc-border);
+    border-radius: 999px;
+    background: var(--mc-card-soft);
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.master-list .master-list-applied-key {
+    color: var(--mc-text-3);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.master-list .master-list-applied-value {
+    overflow: hidden;
+    color: var(--mc-text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.master-list .master-list-applied-x {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    color: var(--mc-text-3);
+    font-size: 13px;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.master-list .master-list-applied-x:hover {
+    background: var(--danger-light);
+    color: var(--danger);
+}
+
+.master-list .master-list-applied-x:focus-visible {
+    outline: 2px solid var(--master-primary);
+    outline-offset: 2px;
+}
+
+.master-list .master-list-applied-clear {
+    margin-left: auto;
+    color: var(--master-primary);
+    font-size: 11.5px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.master-list .master-list-applied-clear:hover {
+    text-decoration: underline;
+}
+
+.master-list .master-list-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px 0;
+}
+
+.master-list .master-list-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .01em;
+}
+
+.master-list .master-list-hint::before {
+    content: "⇅";
+    font-size: 12px;
+    line-height: 1;
+    opacity: .8;
+}
+
+.master-list .master-list-density {
+    display: inline-flex;
+    padding: 2px;
+    border: 1px solid var(--mc-border);
+    border-radius: 10px;
+    background: var(--mc-card-soft);
+}
+
+.master-list .master-list-density-btn {
+    padding: 4px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: var(--mc-text-3);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .01em;
+    cursor: pointer;
+}
+
+.master-list .master-list-density-btn.is-active {
+    background: var(--mc-card);
+    color: var(--mc-text);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .14);
+}
+
+.master-list .master-list-density-btn:focus-visible {
+    outline: 2px solid var(--master-primary);
+    outline-offset: 2px;
+}
+
+/* ---------------- closed block ---------------- */
+
+.master-list .master-list-group td {
+    /* NOT display:flex — a flex cell leaves the table layout, the browser wraps
+    it in an anonymous cell in the first column and colspan="8" quietly stops
+    spanning. The strip's own layout lives in .ship-group-inner below. */
+    padding: 8px 14px;
+    font-size: 10.5px;
+    letter-spacing: .1em;
+}
+
+.master-list .master-list-group-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.master-list .master-list-group-count {
+    color: var(--mc-text-3);
+    font-weight: 800;
+}
+
+.master-list .master-list-total td {
+    padding: 12px 14px;
+    font-size: 13px;
+}
+
+.master-list .master-list-total .is-num {
+    white-space: nowrap;
+}
+
+.master-list .master-list-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 44px 20px 48px;
+    text-align: center;
+}
+
+.master-list .master-list-empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 4px;
+    border-radius: 50%;
+    background: var(--mc-soft);
+    color: var(--master-primary);
+    font-size: 18px;
+}
+
+.master-list .master-list-empty-title {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--mc-text);
+}
+
+.master-list .master-list-empty-text {
+    margin: 0;
+    max-width: 340px;
+    color: var(--mc-text-3);
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+.master-list .master-list-empty-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+/* ---------------- desktop data grid ----------------
+   Fifty rows is a page you scroll, so at desktop widths the list gets its own
+   scroll area: the header stays put and the totals stay put, which is what
+   makes a long table comparable at a glance. .master-table normally collapses
+   its borders; a collapsed border belongs to the table rather than to the
+   sticky cell, so the header would lose its hairline as it scrolled. */
+
+@media (min-width: 1200px) {
+.master-list .master-table-wrap {
+    /* a bounded grid rather than a page-long column of rows; no min-height
+    so a short list still ends where its last row ends */
+    max-height: calc(100vh - 320px);
+    overflow: auto;
+}
+
+.master-list .master-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.master-list .master-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--mc-card-soft);
+    box-shadow: inset 0 -1px 0 var(--mc-border);
+}
+
+.master-list .master-table tfoot td {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    background: var(--mc-card-soft);
+    box-shadow: inset 0 1px 0 var(--mc-border);
+}
+
+.master-list .master-table-wrap.is-scrolled thead th {
+    box-shadow: inset 0 -1px 0 var(--mc-border), 0 8px 16px -12px rgba(15, 23, 42, .45);
+}
+}
+
+/* ---------------- narrow screens ----------------
+   The card layout below 768px is in section 1; these keep the same
+   hierarchy once the table has stacked, so the cells still read as
+   label / value rather than as loose text. */
+
+@media (max-width: 768px) {
+.master-list .master-filter-row {
+    padding: 12px 16px;
+}
+
+.master-list .master-list-filter-group {
+    width: 100%;
+    margin-left: 0;
+}
+
+.master-list .master-list-filter-group .master-btn {
+    flex: 1 1 0;
+}
+
+.master-list .master-table td:last-child {
+    text-align: left;
+}
+
+.master-list .master-dropdown-toggle {
+    margin-left: 0;
+}
+
+.master-list .master-list-empty-actions {
+    flex-direction: column;
+    width: 100%;
+}
+
+.master-list .master-list-empty-actions .master-btn {
+    width: 100%;
+}
+}
+
+@media (max-width: 768px) {
+    .master-list .master-table td[data-label]::before {
+        content:attr(data-label);
+        display:block;
+        margin-bottom:5px;
+        color: var(--mc-text-3);
+        font-size:10.5px;
+        font-weight:800;
+        letter-spacing:.08em;
+        text-transform:uppercase;
+    }
+}
+
+@media (min-width: 769px) {
+    .master-list[data-density="compact"] .master-table th, .master-list[data-density="compact"] .master-table td {
+        padding: 7px 14px;
+    }
+    .master-list[data-density="compact"] .master-table td {
+        font-size: 13px;
+    }
+}

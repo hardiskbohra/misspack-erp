@@ -226,6 +226,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/cashflows/settings/masters/{master}', [CashflowSettingController::class, 'updateMaster'])->name('cashflows.settings.masters.update');
     Route::delete('/cashflows/settings/masters/{master}', [CashflowSettingController::class, 'destroyMaster'])->name('cashflows.settings.masters.destroy');
 
+    Route::post('/cashflows/saved-views', [CashflowController::class, 'storeSavedView'])->name('cashflows.saved-views.store');
+    Route::delete('/cashflows/saved-views/{savedView}', [CashflowController::class, 'destroySavedView'])->name('cashflows.saved-views.destroy');
     Route::post('/cashflows/quick', [CashflowController::class, 'quickStore'])->name('cashflows.quickStore');
     Route::post('/cashflows/accounts', [CashflowController::class, 'storeAccount'])->name('cashflows.accounts.store');
     Route::post('/cashflows/categories', [CashflowController::class, 'storeCategory'])->name('cashflows.categories.store');

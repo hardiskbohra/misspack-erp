@@ -115,6 +115,7 @@
     <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
     <script src="{{ $assetVer('assets/js/master-alert.js') }}"></script>
     <script src="{{ $assetVer('assets/js/master-selects.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/master-list.js') }}"></script>
     <script src="{{ $assetVer('assets/js/money.js') }}"></script>
     <script src="{{ $assetVer('assets/js/client-portal.js') }}"></script>
 @stack('scripts')

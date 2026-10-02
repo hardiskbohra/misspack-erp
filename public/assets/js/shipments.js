@@ -31,22 +31,15 @@
         document.body.classList.remove('master-modal-open');
     }
 
-    /* ---------------- Listing rows ----------------
-       The whole row opens the record: a 1000px target instead of a 90px link.
-       Anything interactive inside the row keeps its own click (the dropdown,
-       the links, a future checkbox), and a text selection never navigates —
-       dragging across a shipment number to copy it should not open a page. */
-    function bindRowNavigation() {
-        document.querySelectorAll('.ship-index tbody tr[data-href]').forEach(function (row) {
-            row.addEventListener('click', function (event) {
-                /* a click anywhere on an open action panel belongs to the panel,
-                   not to the row underneath it */
-                if (event.target.closest('a, button, input, select, textarea, label, form, .master-dropdown')) return;
-                if (window.getSelection && String(window.getSelection()).length > 0) return;
-
-                window.location.href = row.dataset.href;
-            });
-        });
+    /* ---------------- Listing behaviour ----------------
+       Row navigation, the density switch, the sticky-header shadow and the
+       saved-view form are the same on every list screen, so they live in
+       assets/js/master-list.js; this file only names the shipment list. */
+    function initList(root) {
+        window.MasterList.rowNavigation({ root: root });
+        window.MasterList.gridShadow({ root: root });
+        window.MasterList.density({ root: root, key: 'misspack.shipments.density' });
+        window.MasterList.saveViewToggle();
     }
 
     /* ---------------- Page initialisation ---------------- */
@@ -87,7 +80,7 @@
             closeModal(deleteModal);
         });
 
-        bindRowNavigation();
+        initList('.ship-index');
 
         [quickModal, deleteModal].forEach(function (modal) {
             modal?.addEventListener('click', function (event) {
@@ -120,21 +113,9 @@
        Saved views + cost heads
        ------------------------------------------------------------------ */
 
-    function initShipmentIndexExtras() {
-        var toggle = document.getElementById('toggleSaveView');
-        var form = document.getElementById('saveViewForm');
-
-        if (toggle && form) {
-            toggle.addEventListener('click', function () {
-                form.hidden = !form.hidden;
-                if (!form.hidden) {
-                    form.querySelector('input[name="name"]').focus();
-                }
-            });
-        }
-
-        bindGridScrollShadow();
-    }
+    /* the saved-view form and the scroll shadow are wired by initList(); this
+       hook stays for any page-level extra a future shipment view needs */
+    function initShipmentIndexExtras() {}
 
     /* ------------------------------------------------------------------
        Delivery date (form page + tracking history)
@@ -179,73 +160,7 @@
         });
     }
 
-    /* ------------------------------------------------------------------
-       Row density (list page)
-       ------------------------------------------------------------------
-       Comfortable / compact is a preference, not data, so it is remembered
-       on the device: the buttons write it to localStorage and the page
-       reads it before first paint of the table. aria-pressed carries the
-       state for anyone not looking at the highlight.
-       ------------------------------------------------------------------ */
-
-    var DENSITY_KEY = 'misspack.shipments.density';
-
-    function applyRowDensity(root, value) {
-        var next = value === 'compact' ? 'compact' : 'comfortable';
-
-        root.setAttribute('data-density', next);
-
-        root.querySelectorAll('.ship-density-btn').forEach(function (button) {
-            var active = button.getAttribute('data-density') === next;
-            button.classList.toggle('is-active', active);
-            button.setAttribute('aria-pressed', active ? 'true' : 'false');
-        });
-    }
-
-    function bindRowDensity() {
-        var root = document.querySelector('.ship-index');
-        if (!root || !root.querySelector('.ship-density-btn')) return;
-
-        var stored = null;
-        try {
-            stored = window.localStorage.getItem(DENSITY_KEY);
-        } catch (e) {
-            /* private mode: the buttons still work, the choice just is not kept */
-        }
-
-        applyRowDensity(root, stored);
-
-        root.querySelectorAll('.ship-density-btn').forEach(function (button) {
-            button.addEventListener('click', function () {
-                var value = button.getAttribute('data-density');
-                applyRowDensity(root, value);
-
-                try {
-                    window.localStorage.setItem(DENSITY_KEY, value);
-                } catch (e) { /* nothing to remember it with */ }
-            });
-        });
-    }
-
-    /* ------------------------------------------------------------------
-       Sticky header shadow (list page, desktop)
-       ------------------------------------------------------------------
-       At desktop widths the list scrolls inside its own box with the header
-       and the totals row pinned. The hairline alone is easy to miss, so the
-       header lifts as soon as the first row goes under it.
-       ------------------------------------------------------------------ */
-
-    function bindGridScrollShadow() {
-        var wrap = document.querySelector('.ship-index .master-table-wrap');
-        if (!wrap) return;
-
-        var sync = function () {
-            wrap.classList.toggle('is-scrolled', wrap.scrollTop > 0);
-        };
-
-        wrap.addEventListener('scroll', sync, { passive: true });
-        sync();
-    }
+    /* the remembered density and the pre-paint apply live in master-list.js */
 
     function initCostModal() {
         var modal = document.getElementById('costModal');
@@ -628,9 +543,9 @@
        of the body) so the remembered density is in place before the first
        paint; otherwise wait for it. */
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', bindRowDensity);
+        document.addEventListener('DOMContentLoaded', function () { initList('.ship-index'); });
     } else {
-        bindRowDensity();
+        initList('.ship-index');
     }
 
     document.addEventListener('DOMContentLoaded', bindDeliveryDateDefault);

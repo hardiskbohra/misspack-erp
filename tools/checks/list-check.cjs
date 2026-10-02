@@ -23,6 +23,12 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const VIEW = path.join(ROOT, 'resources/views/shipments/index.blade.php');
 const CSS = path.join(ROOT, 'public/assets/css/shipments.css');
+/* the list chrome is shared: chips, applied strip, density, pinned grid, the
+   mobile card, the divider row, the totals row and the empty state all live
+   here so every module list is the same surface */
+const LIST_CSS = path.join(ROOT, 'public/assets/css/master-list.css');
+const CASHFLOW_VIEW = path.join(ROOT, 'resources/views/cashflows/index.blade.php');
+const CASHFLOW_CSS = path.join(ROOT, 'public/assets/css/cashflows.css');
 const JS = path.join(ROOT, 'public/assets/js/shipments.js');
 const LAYOUT_JS = path.join(ROOT, 'public/assets/js/app-layout.js');
 const MASTER_INDEX = path.join(ROOT, 'public/assets/css/master-index.css');
@@ -34,8 +40,13 @@ const check = (name, ok, detail = '') => out.push([name, !!ok, detail]);
 const view = fs.readFileSync(VIEW, 'utf8');
 const css = fs.readFileSync(CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const js = fs.readFileSync(JS, 'utf8');
+const listJs = fs.readFileSync(path.join(ROOT, 'public/assets/js/master-list.js'), 'utf8');
+const cashflowJs = fs.readFileSync(path.join(ROOT, 'public/assets/js/cashflows.js'), 'utf8');
 const layoutJs = fs.readFileSync(LAYOUT_JS, 'utf8');
 const layoutCss = fs.readFileSync(MASTER_INDEX, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+const listCss = fs.readFileSync(LIST_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+const cashView = fs.readFileSync(CASHFLOW_VIEW, 'utf8');
+const cashCss = fs.readFileSync(CASHFLOW_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const model = fs.readFileSync(MODEL, 'utf8');
 
 /* ------------------------------------------------------- 1. markup hygiene */
@@ -71,14 +82,15 @@ check('the shipment number is the link and the identity name the second line',
 check('the row carries the record URL as a click target',
     /<tr class="ship-row[^"]*is-clickable"[\s\S]{0,120}data-href="\{\{ route\('shipments\.show'/.test(view));
 check('the row click skips interactive elements and text selections',
-    /closest\('a, button, input, select, textarea, label, form, \.master-dropdown'\)/.test(js)
-    && /getSelection\(\)[\s\S]{0,40}length/.test(js));
+    /closest\('a, button, input, select, textarea, label, form, \.master-dropdown'\)/.test(listJs)
+    && /getSelection\(\)[\s\S]{0,40}length/.test(listJs)
+    && /MasterList\.rowNavigation/.test(js));
 
 /* one primary action for the page, in the header */
 /* Modals have their own footer buttons; the rule is about the page chrome. */
 const chrome = view.slice(0, view.indexOf('id="quickShipmentModal"'));
 const header = /@section\('page-actions'\)([\s\S]*?)@endsection/.exec(chrome)?.[1] ?? '';
-const toolbar = chrome.slice(chrome.indexOf('ship-chip-bar'));
+const toolbar = chrome.slice(chrome.indexOf('master-list-bar'));
 check('the header carries the page primary action',
     (header.match(/master-btn-primary/g) || []).length === 1,
     `${(header.match(/master-btn-primary/g) || []).length} in the header`);
@@ -98,7 +110,7 @@ check('the primary action is bound by attribute, not by a single id',
 check('the filter row has no inline padding of its own',
     /\.ship-index \.master-filter-row \{[\s\S]{0,200}padding: 14px 16px/.test(css));
 check('the chips row and filter row share one inset',
-    /\.ship-index \.ship-chip-bar \{[\s\S]{0,120}padding: 16px/.test(css));
+    /\.master-list \.master-list-bar \{[\s\S]{0,120}padding: 16px/.test(listCss));
 check('Reset only renders when something is filtered',
     /\$filtersActive/.test(view) && /@if \(\$filtersActive\)\s*<a class="master-btn master-btn-soft"/.test(view));
 
@@ -128,7 +140,7 @@ check('the menu reports its state and closes on Escape',
 
 /* empty state */
 check('the empty state explains itself and offers a way out',
-    /ship-empty-title/.test(view) && /Clear filters/.test(view) && /data-quick-shipment/.test(view));
+    /master-list-empty-title/.test(view) && /Clear filters/.test(view) && /data-quick-shipment/.test(view));
 
 /* ------------------------------------------------------- 2. status colours */
 
@@ -174,14 +186,17 @@ check('the money cell uses tabular figures through .is-num',
         fs.readFileSync(path.join(ROOT, 'public/assets/css/master-detail.css'), 'utf8')));
 check('the action column is right-aligned', /\.ship-index \.master-table td:last-child \{\s*\n?\s*text-align: right/.test(css));
 check('the order caption is one short line with the full rule as a tooltip',
-    /<p class="ship-order-hint"\s*\n?\s*title="Open shipments first/.test(view)
+    /<p class="master-list-hint"\s*\n?\s*title="Open shipments first/.test(view)
     && /Open shipments first &middot; closed block below/.test(view)
     && !/Order: <strong>/.test(view));
 check('the closed divider carries a count',
-    /ship-group-count/.test(view) && /\.ship-index \.ship-group-count/.test(css));
+    /master-list-group-count/.test(view) && /\.master-list-group-count/.test(listCss));
 
 /* dark theme: every new surface uses a token, none a light-only literal */
-const listSection = css.slice(css.indexOf('4. Shipment List'));
+/* a raw colour is a fixed colour; a fallback inside var() is the token
+   system's safety net and stays allowed */
+const listSection = (listCss + css.slice(css.indexOf('4. Shipment List')))
+    .replace(/var\(\s*--[\w-]+\s*,[^()]*\)/g, 'var(--token)');
 const lightLiterals = [...listSection.matchAll(/#[0-9a-f]{3,8}\b/gi)]
     .map(m => m[0])
     .filter(hex => !/^#fff$/i.test(hex));
@@ -199,48 +214,55 @@ check('an applied chip removes only its own filter and keeps the rest',
     /request\(\)->except\(\[\$key, 'page', 'saved_view'\]\)/.test(view)
     && /'saved_view'/.test(view));
 check('the applied strip carries a clear-all escape',
-    /class="ship-applied-clear"/.test(view) && /Clear all filters/.test(view));
+    /class="master-list-applied-clear"/.test(view) && /Clear all filters/.test(view));
 check('the applied strip is themed rather than light-only',
-    /\.ship-index \.ship-applied-chip \{[\s\S]{0,400}var\(--mc-card-soft\)/.test(css)
-    && /\.ship-applied-x:hover \{[\s\S]{0,80}var\(--danger-light\)/.test(css));
+    /\.master-list \.master-list-applied-chip \{[\s\S]{0,400}var\(--mc-card-soft\)/.test(listCss)
+    && /\.master-list-applied-x:hover \{[\s\S]{0,80}var\(--danger-light\)/.test(listCss));
 
 /* row density — a long list should let the reader decide how long */
+const densityContract = view => /role="group" aria-label="Row density"/.test(view)
+    && (view.match(/class="master-list-density-btn"/g) || []).length === 2
+    && (view.match(/aria-pressed="(true|false)"/g) || []).length >= 2;
+
 check('the density control states and carries its own state',
-    /class="ship-density desktop-only" role="group" aria-label="Row density"/.test(view)
-    && (view.match(/class="ship-density-btn"/g) || []).length === 2
-    && (view.match(/aria-pressed="(true|false)"/g) || []).length >= 2);
-check('the density choice is remembered on the device',
-    /misspack\.shipments\.density/.test(js) && /localStorage/.test(js)
-    && /setAttribute\('data-density'/.test(js) || /attribute\('data-density'/.test(js));
+    densityContract(view) && /class="master-list-density desktop-only"/.test(view));
+
+/* one implementation: the module passes its root and its storage key to the
+   shared toolkit, so the two lists cannot behave differently */
+check('the density choice is remembered on the device by the shared toolkit',
+    /misspack\.shipments\.density/.test(js) && /misspack\.cashflows\.density/.test(cashflowJs)
+    && /localStorage/.test(listJs) && /setAttribute\('data-density'/.test(listJs)
+    && /MasterList\.density/.test(js) && /MasterList\.density/.test(cashflowJs));
 check('both densities actually change the row geometry',
-    /\[data-density="compact"\] \.master-table th,[\s\S]{0,120}padding: 7px 14px/.test(css)
+    /\[data-density="compact"\] \.master-table th,[\s\S]{0,120}padding: 7px 14px/.test(listCss)
     && /--ship-line: 18px/.test(css));
 check('the density is applied before the table paints',
-    /document\.readyState === 'loading'/.test(js));
+    /document\.readyState === 'loading'/.test(js + cashflowJs)
+    && /MasterList\.density/.test(js) && /MasterList\.density/.test(cashflowJs));
 
 /* the desktop grid — header and totals stay with the reader */
 check('the desktop list scrolls with a pinned header and pinned totals',
-    /@media \(min-width: 1200px\) \{[\s\S]{0,260}\.ship-index \.master-table-wrap \{[\s\S]{0,120}max-height: calc\(100vh - 320px\)/.test(css)
-    && /\.ship-index \.master-table thead th \{[\s\S]{0,160}position: sticky;\s*\n?\s*top: 0/.test(css)
-    && /\.ship-index \.master-table tfoot td \{[\s\S]{0,160}position: sticky;\s*\n?\s*bottom: 0/.test(css));
+    /@media \(min-width: 1200px\) \{[\s\S]{0,260}\.master-list \.master-table-wrap \{[\s\S]{0,120}max-height: calc\(100vh - 320px\)/.test(listCss)
+    && /\.master-list \.master-table thead th \{[\s\S]{0,160}position: sticky;\s*\n?\s*top: 0/.test(listCss)
+    && /\.master-list \.master-table tfoot td \{[\s\S]{0,160}position: sticky;\s*\n?\s*bottom: 0/.test(listCss));
 check('the sticky header keeps its hairline (borders separated, not collapsed)',
-    /@media \(min-width: 1200px\)[\s\S]{0,600}border-collapse: separate/.test(css));
+    /@media \(min-width: 1200px\)[\s\S]{0,600}border-collapse: separate/.test(listCss));
 check('the header lifts off the rows once the list is scrolled',
-    /addEventListener\('scroll', sync, \{ passive: true \}\)/.test(js)
-    && /\.is-scrolled thead th/.test(css));
+    /addEventListener\('scroll', sync, \{ passive: true \}\)/.test(listJs)
+    && /\.is-scrolled thead th/.test(listCss));
 
 /* the stacked mobile card: the same row, still labelled */
 const mobileLabels = [...view.matchAll(/data-label="([^"]+)"/g)].map(m => m[1]);
 check('the stacked rows keep their column names',
-    mobileLabels.length >= 6 && /content:attr\(data-label\)/.test(css),
+    mobileLabels.length >= 6 && /content:attr\(data-label\)/.test(listCss),
     mobileLabels.join(', '));
 /* the one placeholder rule left in the file belongs to the *form* page's items
    table, so this looks for the list-page signature specifically */
 check('the mobile card no longer relies on empty ::before placeholders',
-    /attr\(data-label\)/.test(css)
-    && !/\.master-table td:nth-child\(\d\)::before\{content:"";\}/.test(css));
+    /attr\(data-label\)/.test(listCss)
+    && !/\.master-table td:nth-child\(\d\)::before\{content:"";\}/.test(listCss));
 check('the mobile card shadow is a theme token, not a fixed black',
-    !/box-shadow:0 4px 18px rgba\(0,0,0,\.06\)/.test(css));
+    !/box-shadow:0 4px 18px rgba\(0,0,0,\.06\)/.test(listCss));
 
 /* one rhythm: every first line on the same baseline, every second line too */
 const lineUsers = (() => {
@@ -261,21 +283,21 @@ check('every second line shares its own line box',
 /* read the real bodies: a fixed-width window over the file would reach into the
    next rule and "find" the flex that legitimately sits in .ship-group-inner */
 const dividerCellBodies = [];
-for (let at = css.indexOf('.ship-index .ship-group-row td {');
+for (let at = listCss.indexOf('.master-list .master-list-group td {');
      at > -1;
-     at = css.indexOf('.ship-index .ship-group-row td {', at + 1)) {
-    dividerCellBodies.push(css.slice(at, css.indexOf('}', at)));
+     at = listCss.indexOf('.master-list .master-list-group td {', at + 1)) {
+    dividerCellBodies.push(listCss.slice(at, listCss.indexOf('}', at)));
 }
 check('the closed divider spans the whole row',
-    /<td colspan="8">[\s\S]{0,500}ship-group-inner/.test(view)
-    && /\.ship-index \.ship-group-inner \{[\s\S]{0,120}display: flex/.test(css)
+    /<td colspan="8">[\s\S]{0,500}master-list-group-inner/.test(view)
+    && /\.master-list \.master-list-group-inner \{[\s\S]{0,120}display: flex/.test(listCss)
     && dividerCellBodies.length > 0
     && dividerCellBodies.every(body => !/display\s*:\s*(inline-)?(flex|grid)/.test(body)),
     `${dividerCellBodies.length} rule(s)`);
 check('the closed divider keeps its count at the far edge',
-    /\.ship-index \.ship-group-inner \{[\s\S]{0,160}justify-content: space-between/.test(css));
+    /\.master-list \.master-list-group-inner \{[\s\S]{0,160}justify-content: space-between/.test(listCss));
 check('the divider stays a hairline band, not a tinted block',
-    /\.ship-index \.ship-group-row td \{[\s\S]{0,400}background: var\(--mc-card\)/.test(css));
+    /\.master-list \.master-list-group td \{[\s\S]{0,400}background: var\(--mc-card\)/.test(listCss));
 
 /* The row menu is placed against the viewport: a panel inside a table cell is
    painted in its row's pass and clipped by the scroll box, so the placement
@@ -313,7 +335,7 @@ check('the panel is remembered per dropdown, not found again after portaling',
     && /dropdownMenus\.set\(dropdown, menu\)/.test(layoutJs)
     && /const menuOf = \(dropdown\) => dropdownMenus\.get\(dropdown\)/.test(layoutJs));
 check('a click on the panel belongs to the panel, not to the row under it',
-    /closest\('a, button, input, select, textarea, label, form, \.master-dropdown'\)/.test(js));
+    /closest\('a, button, input, select, textarea, label, form, \.master-dropdown'\)/.test(listJs));
 check('the menu is only declared once, in master-index.css',
     /^\s*\.master-dropdown-menu\s*\{/m.test(layoutCss)
     && !/\.master-dropdown-menu/.test(
@@ -325,6 +347,162 @@ check('the menu is only declared once, in master-index.css',
 check('the closed rows are muted in colour, not in alpha',
     !/\.ship-index \.ship-row-closed td \{[\s\S]{0,300}opacity/.test(css)
     && /\.ship-index \.ship-row-closed td \{[\s\S]{0,300}color: var\(--mc-text-2\)/.test(css));
+
+/* ------------------------------------------- 5. one list standard */
+
+/* The cashflow list is the same surface as the shipment list: the same chrome
+   classes, the same behaviour from the shared toolkit, and the same
+   guarantees. A fix to one is a fix to both — and a change that only lands in
+   one of them fails here. */
+const CHROME = [
+    ['root opts in', /\bmaster-list\b/],
+    ['chip bar', /class="master-list-bar"/],
+    ['quick-view chips', /class="master-list-chip /],
+    ['chip counts', /class="master-list-chip-count"/],
+    ['saved views', /class="master-list-saved"/],
+    ['save-view form', /class="master-list-save-view"/],
+    ['applied strip', /class="master-list-applied"/],
+    ['applied chips', /class="master-list-applied-chip"/],
+    ['clear-all escape', /class="master-list-applied-clear"/],
+    ['table bar + order hint', /class="master-list-toolbar"[\s\S]{0,600}class="master-list-hint"/],
+    ['density control', /class="master-list-density desktop-only" role="group" aria-label="Row density"/],
+    ['group divider', /class="master-list-group"/],
+    ['group count', /class="master-list-group-count"/],
+    ['totals row', /class="master-list-total"/],
+    ['empty state', /class="master-list-empty-title"/],
+    ['empty-state actions', /class="master-list-empty-actions"/],
+];
+
+const missingChrome = [];
+for (const [label, rx] of CHROME) {
+    if (!rx.test(cashView)) missingChrome.push('cashflow: ' + label);
+    if (!rx.test(view)) missingChrome.push('shipment: ' + label);
+}
+check('both list screens carry the same chrome', missingChrome.length === 0,
+    missingChrome.join(' | '));
+
+/* every chrome class a view uses must exist in the shared sheet, so a list can
+   never render an unstyled block */
+const definedChrome = new Set([...listCss.matchAll(/\.(master-list[a-z-]*)/g)].map(m => m[1]));
+const usedChrome = new Set(
+    [...view.matchAll(/master-list[a-z-]+/g), ...cashView.matchAll(/master-list[a-z-]+/g)].map(m => m[0])
+);
+const undefinedChrome = [...usedChrome].filter(name => !definedChrome.has(name)).sort();
+check('every chrome class the lists use is defined in the shared sheet',
+    undefinedChrome.length === 0, undefinedChrome.join(', '));
+
+/* one owner: the module sheets keep their own cells, not a second copy of the
+   chrome */
+check('no module sheet re-declares the list chrome',
+    !/\.master-list/.test(css) && !/\.master-list/.test(cashCss));
+
+/* the same behaviour, from one toolkit */
+const toolkitCalls = ['rowNavigation', 'gridShadow', 'saveViewToggle', 'density']
+    .filter(name => js.includes('MasterList.' + name) && cashflowJs.includes('MasterList.' + name));
+check('both lists drive the shared list toolkit',
+    toolkitCalls.length === 4, 'missing in one list: ' + toolkitCalls.join(', '));
+
+/* the list is the module's front door: the pages it links to and the dialogs
+   it opens must stay reachable from it (a rebuild once shipped a list that
+   rendered two modals nobody could open) */
+const moduleRoutes = ['cashflows.create', 'cashflows.reports', 'cashflows.settings.index'];
+const missingRoutes = moduleRoutes.filter(name => !cashView.includes("route('" + name + "'"));
+check("the cashflow list keeps the module's destinations", missingRoutes.length === 0,
+    missingRoutes.join(', '));
+
+const cashModals = [...cashView.matchAll(/id="((?!open)\w*Modal)"/g)].map(m => m[1]);
+const orphanModals = cashModals.filter(id =>
+    !cashView.includes('id="open' + id[0].toUpperCase() + id.slice(1) + '"'));
+check("every dialog the cashflow list renders has a way to open it",
+    cashModals.length >= 2 && orphanModals.length === 0, orphanModals.join(', '));
+
+/* the mobile card contract: every cell keeps the column name it had */
+const cashLabels = [...cashView.matchAll(/data-label="([^"]+)"/g)].map(m => m[1]);
+check('the cashflow list keeps its column names on mobile too',
+    cashLabels.length >= 6, cashLabels.join(', '));
+
+/* the ledger's own cells: money lines up, and credit and debit are told apart
+   by colour that exists in both themes */
+check('the ledger columns line up like the shipment list',
+    /class="is-num">Credit</.test(cashView)
+    && /class="is-num">Debit</.test(cashView)
+    && (cashView.match(/class="cf-money is-num/g) || []).length === 3
+    && /tabular-nums/.test(cashCss.slice(cashCss.indexOf('.cashflow-index .cf-money'), cashCss.indexOf('.cashflow-index .cf-money') + 200)));
+
+const cashStatuses = [...fs.readFileSync(path.join(ROOT, 'app/Models/CashflowEntry.php'), 'utf8')
+    .matchAll(/function accountingStatusOptions\(\): array[\s\S]*?return \[([\s\S]*?)\];/g)]
+    .flatMap(m => [...m[1].matchAll(/'(\w+)' =>/g)].map(x => x[1]));
+
+/* plain string lookup: no escapes to get wrong, and the sheet is ours */
+const statusTone = (status, prefix) => {
+    const at = cashCss.indexOf(prefix + '.cashflow-index .cf-status.status-' + status + ' {');
+    return at === -1 ? '' : cashCss.slice(at, at + 160);
+};
+
+const missingCashStatus = cashStatuses.filter(status =>
+    !statusTone(status, '').includes('--tone-bg')
+    || !statusTone(status, ':root[data-theme="dark"] ').includes('--tone-fg'));
+
+check('every settlement status has a light and a dark tone',
+    cashStatuses.length >= 2 && missingCashStatus.length === 0,
+    cashStatuses.join(', ') + (missingCashStatus.length ? ' — missing ' + missingCashStatus.join(', ') : ''));
+
+/* and the same for the money colours: a tint that only works on white is a
+   light-theme-only fix */
+check('credit and debit keep their colour on the dark panel',
+    /\.cashflow-index \.cf-credit/.test(cashCss)
+    && cashCss.includes(':root[data-theme="dark"] .cashflow-index .cf-credit')
+    && cashCss.includes(':root[data-theme="dark"] .cashflow-index .cf-debit'));
+
+/* chrome that only makes sense at one width must stay inside that breakpoint:
+   a mobile card label that leaks onto the desktop table is exactly the kind of
+   change that used to pass review and break the list */
+const mediaBlocks = (cssText, query) => {
+    const blocks = [];
+    let from = 0;
+    for (;;) {
+        const at = cssText.indexOf('@media (' + query + ')', from);
+        if (at === -1) return blocks;
+        const open = cssText.indexOf('{', at);
+        let depth = 0;
+        for (let i = open; i < cssText.length; i++) {
+            if (cssText[i] === '{') depth++;
+            else if (cssText[i] === '}') {
+                depth--;
+                if (depth === 0) {
+                    blocks.push(cssText.slice(open, i));
+                    from = i;
+                    break;
+                }
+            }
+        }
+        if (from === 0) return blocks;
+    }
+};
+
+/* the needle must live inside a block for that width, and nowhere else */
+const onlyInMedia = (cssText, query, needle) => {
+    const blocks = mediaBlocks(cssText, query);
+    let rest = cssText;
+    blocks.forEach(b => { rest = rest.split(b).join(''); });
+    return blocks.some(b => b.includes(needle)) && !rest.includes(needle);
+};
+
+check('the mobile card labels only exist below the card breakpoint',
+    onlyInMedia(listCss, 'max-width: 768px', 'td[data-label]::before'));
+
+check('the density chrome only exists above the card breakpoint',
+    onlyInMedia(listCss, 'min-width: 769px', 'data-density="compact"'));
+
+/* each list loads the shared sheet after its own, so the chrome wins its own
+   properties without out-specifying the module cells */
+const sheetOrder = (text, moduleSheet) => {
+    const moduleAt = text.indexOf(moduleSheet);
+    const sharedAt = text.indexOf('master-list.css');
+    return moduleAt !== -1 && sharedAt > moduleAt;
+};
+check('the shared sheet loads after the module sheet on both lists',
+    sheetOrder(cashView, 'cashflows.css') && sheetOrder(view, 'shipments.css'));
 
 /* ---------------------------------------------------------------- report */
 

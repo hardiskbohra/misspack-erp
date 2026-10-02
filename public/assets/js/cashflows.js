@@ -21,16 +21,33 @@
         }
     }
 
+    /* The list behaves like every other list screen: the shared toolkit owns
+       row navigation, the density switch, the pinned-header shadow and the
+       saved-view form; this file names the cashflow list. */
+    function initList() {
+        window.MasterList.rowNavigation({ root: '.cashflow-index' });
+        window.MasterList.gridShadow({ root: '.cashflow-index' });
+        window.MasterList.density({ root: '.cashflow-index', key: 'misspack.cashflows.density' });
+        window.MasterList.saveViewToggle();
+    }
+
     onReady(function () {
+        if (typeof window.MasterList !== 'undefined') {
+            initList();
+        }
+
         if (typeof window.MasterModal === 'undefined') return;
 
-        var openQuick = document.getElementById('openQuickCashflowModal');
-        var quickModal = document.getElementById('quickCashflowModal');
-        if (openQuick && quickModal) {
-            openQuick.addEventListener('click', function () {
-                window.MasterModal.open(quickModal);
-            });
-        }
+        /* the header action and the empty state carry the same modal */
+        ['openQuickCashflowModal', 'emptyQuickCashflow'].forEach(function (id) {
+            var trigger = document.getElementById(id);
+            var quickModal = document.getElementById('quickCashflowModal');
+            if (trigger && quickModal) {
+                trigger.addEventListener('click', function () {
+                    window.MasterModal.open(quickModal);
+                });
+            }
+        });
 
         var openAccount = document.getElementById('openAccountModal');
         var accountModal = document.getElementById('accountModal');

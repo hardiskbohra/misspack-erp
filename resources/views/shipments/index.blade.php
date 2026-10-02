@@ -13,6 +13,10 @@
 @section('content')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/shipments.css') }}">
+    {{-- the shared list chrome (chips, applied strip, density, pinned grid,
+         mobile card, totals row, empty state) — after the module sheet, so the
+         chrome keeps its own properties --}}
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-list.css') }}">
 @endpush
 
 @php
@@ -34,7 +38,7 @@
     };
 @endphp
 
-<div class="ship ship-index">
+<div class="ship ship-index master-list">
 
     <div class="master-stats desktop-only">
         <div class="master-stat master-stat--flat blue"><span class="icon">⇄</span><div><p class="master-stat-title">Total Shipments</p><p class="master-stat-value">{{ $stats['total'] }}</p></div></div>
@@ -54,38 +58,38 @@
 
     <div class="master-card master-card--flat">
         @php($baseFilters = request()->except(['attention', 'page', 'saved_view']))
-        <div class="ship-chip-bar">
-            <div class="ship-chips">
-                <a class="ship-chip {{ ! $attention ? 'is-active' : '' }}" href="{{ route('shipments.index', $baseFilters) }}">All shipments</a>
-                <a class="ship-chip {{ $attention === 'needs_attention' ? 'is-active' : '' }}"
+        <div class="master-list-bar">
+            <div class="master-list-chips">
+                <a class="master-list-chip {{ ! $attention ? 'is-active' : '' }}" href="{{ route('shipments.index', $baseFilters) }}">All shipments</a>
+                <a class="master-list-chip {{ $attention === 'needs_attention' ? 'is-active' : '' }}"
                     href="{{ route('shipments.index', $baseFilters + ['attention' => 'needs_attention']) }}">
-                    Needs attention <span class="ship-chip-count">{{ $attentionCounts['needs_attention'] ?? 0 }}</span>
+                    Needs attention <span class="master-list-chip-count">{{ $attentionCounts['needs_attention'] ?? 0 }}</span>
                 </a>
-                <a class="ship-chip {{ $attention === 'overdue' ? 'is-active' : '' }}"
+                <a class="master-list-chip {{ $attention === 'overdue' ? 'is-active' : '' }}"
                     href="{{ route('shipments.index', $baseFilters + ['attention' => 'overdue']) }}">
-                    Overdue ETA <span class="ship-chip-count">{{ $attentionCounts['overdue'] ?? 0 }}</span>
+                    Overdue ETA <span class="master-list-chip-count">{{ $attentionCounts['overdue'] ?? 0 }}</span>
                 </a>
-                <a class="ship-chip {{ $attention === 'due_soon' ? 'is-active' : '' }}"
+                <a class="master-list-chip {{ $attention === 'due_soon' ? 'is-active' : '' }}"
                     href="{{ route('shipments.index', $baseFilters + ['attention' => 'due_soon']) }}">
-                    Arriving &le; 7 days <span class="ship-chip-count">{{ $attentionCounts['due_soon'] ?? 0 }}</span>
+                    Arriving &le; 7 days <span class="master-list-chip-count">{{ $attentionCounts['due_soon'] ?? 0 }}</span>
                 </a>
-                <a class="ship-chip {{ $attention === 'hold' ? 'is-active' : '' }}"
+                <a class="master-list-chip {{ $attention === 'hold' ? 'is-active' : '' }}"
                     href="{{ route('shipments.index', $baseFilters + ['attention' => 'hold']) }}">
-                    Hold / delayed <span class="ship-chip-count">{{ $attentionCounts['hold'] ?? 0 }}</span>
+                    Hold / delayed <span class="master-list-chip-count">{{ $attentionCounts['hold'] ?? 0 }}</span>
                 </a>
-                <a class="ship-chip {{ $attention === 'docs_pending' ? 'is-active' : '' }}"
+                <a class="master-list-chip {{ $attention === 'docs_pending' ? 'is-active' : '' }}"
                     href="{{ route('shipments.index', $baseFilters + ['attention' => 'docs_pending']) }}">
-                    Docs pending <span class="ship-chip-count">{{ $attentionCounts['docs_pending'] ?? 0 }}</span>
+                    Docs pending <span class="master-list-chip-count">{{ $attentionCounts['docs_pending'] ?? 0 }}</span>
                 </a>
-                <a class="ship-chip {{ $attention === 'eway_expiring' ? 'is-active' : '' }}"
+                <a class="master-list-chip {{ $attention === 'eway_expiring' ? 'is-active' : '' }}"
                     href="{{ route('shipments.index', $baseFilters + ['attention' => 'eway_expiring']) }}">
-                    E-way expiring <span class="ship-chip-count">{{ $attentionCounts['eway_expiring'] ?? 0 }}</span>
+                    E-way expiring <span class="master-list-chip-count">{{ $attentionCounts['eway_expiring'] ?? 0 }}</span>
                 </a>
             </div>
 
-            <div class="ship-saved-views">
+            <div class="master-list-saved">
                 @foreach ($savedViews as $view)
-                    <span class="ship-saved-chip">
+                    <span class="master-list-saved-chip">
                         <a href="{{ route('shipments.index', ['saved_view' => $view->id]) }}"
                             title="{{ $view->is_shared ? 'Shared view' : 'Your view' }}">{{ $view->name }}</a>
                         @if ((int) $view->user_id === (int) auth()->id())
@@ -98,7 +102,7 @@
                     </span>
                 @endforeach
                 <button type="button" class="master-btn master-btn-soft master-btn-sm" id="toggleSaveView">☆ Save this view</button>
-                <form method="POST" action="{{ route('shipments.saved-views.store', $baseFilters) }}" class="ship-save-view" id="saveViewForm" hidden>
+                <form method="POST" action="{{ route('shipments.saved-views.store', $baseFilters) }}" class="master-list-save-view" id="saveViewForm" hidden>
                     @csrf
                     <input class="master-input" name="name" placeholder="View name" maxlength="60" aria-label="Saved view name" required>
                     <label class="master-check"><input type="checkbox" name="is_shared" value="1"> Share</label>
@@ -130,7 +134,7 @@
                 <input class="master-input desktop-only" type="date" name="from_date"
                     value="{{ $fromDate }}" aria-label="Pickup date from" title="Pickup date from">
 
-                <div class="ship-filter-group">
+                <div class="master-list-filter-group">
                     @if ($filtersActive)
                         <a class="master-btn master-btn-soft" href="{{ route('shipments.index') }}">Reset</a>
                     @endif
@@ -142,55 +146,55 @@
                  filters that arrived from a saved view or a URL and therefore
                  have no visible control above. --}}
             @if ($filtersActive)
-                <div class="ship-applied">
-                    <span class="ship-applied-title">Filtered by</span>
+                <div class="master-list-applied">
+                    <span class="master-list-applied-title">Filtered by</span>
 
                     @if (trim((string) $search) !== '')
-                        <span class="ship-applied-chip">
-                            <span class="ship-applied-key">Search</span>
-                            <span class="ship-applied-value">{{ $search }}</span>
-                            <a class="ship-applied-x" href="{{ $chipUrl('search') }}"
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Search</span>
+                            <span class="master-list-applied-value">{{ $search }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('search') }}"
                                 aria-label="Remove the search filter" title="Remove the search filter">&times;</a>
                         </span>
                     @endif
 
                     @if ($status && $status !== 'all')
-                        <span class="ship-applied-chip">
-                            <span class="ship-applied-key">Status</span>
-                            <span class="ship-applied-value">{{ $statusOptions[$status] ?? $status }}</span>
-                            <a class="ship-applied-x" href="{{ $chipUrl('status') }}"
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Status</span>
+                            <span class="master-list-applied-value">{{ $statusOptions[$status] ?? $status }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('status') }}"
                                 aria-label="Remove the status filter" title="Remove the status filter">&times;</a>
                         </span>
                     @endif
 
                     @if ($currency && $currency !== 'all')
-                        <span class="ship-applied-chip">
-                            <span class="ship-applied-key">Currency</span>
-                            <span class="ship-applied-value">{{ $currencyOptions[$currency] ?? $currency }}</span>
-                            <a class="ship-applied-x" href="{{ $chipUrl('currency') }}"
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Currency</span>
+                            <span class="master-list-applied-value">{{ $currencyOptions[$currency] ?? $currency }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('currency') }}"
                                 aria-label="Remove the currency filter" title="Remove the currency filter">&times;</a>
                         </span>
                     @endif
 
                     @if (filled($fromDate))
-                        <span class="ship-applied-chip">
-                            <span class="ship-applied-key">Pickup from</span>
-                            <span class="ship-applied-value">{{ \Illuminate\Support\Carbon::parse($fromDate)->format('d M Y') }}</span>
-                            <a class="ship-applied-x" href="{{ $chipUrl('from_date') }}"
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Pickup from</span>
+                            <span class="master-list-applied-value">{{ \Illuminate\Support\Carbon::parse($fromDate)->format('d M Y') }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('from_date') }}"
                                 aria-label="Remove the pickup-date filter" title="Remove the pickup-date filter">&times;</a>
                         </span>
                     @endif
 
                     @if (filled($attention))
-                        <span class="ship-applied-chip">
-                            <span class="ship-applied-key">Attention</span>
-                            <span class="ship-applied-value">{{ str_replace('_', ' ', $attention) }}</span>
-                            <a class="ship-applied-x" href="{{ $chipUrl('attention') }}"
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Attention</span>
+                            <span class="master-list-applied-value">{{ str_replace('_', ' ', $attention) }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('attention') }}"
                                 aria-label="Remove the attention filter" title="Remove the attention filter">&times;</a>
                         </span>
                     @endif
 
-                    <a class="ship-applied-clear" href="{{ route('shipments.index') }}">Clear all filters</a>
+                    <a class="master-list-applied-clear" href="{{ route('shipments.index') }}">Clear all filters</a>
                 </div>
             @endif
         </form>
@@ -200,18 +204,18 @@
         {{-- One quiet line instead of a sentence: the ordering is visible in the
              table itself (the closed block has its own divider), so this only
              has to name the rule. The full wording is the tooltip. --}}
-        <div class="ship-table-bar">
-            <p class="ship-order-hint"
+        <div class="master-list-toolbar">
+            <p class="master-list-hint"
                 title="Open shipments first, newest pickup date on top. Delivered and cancelled shipments sit in a closed block below, also newest first.">
                 Open shipments first &middot; closed block below
             </p>
 
             {{-- How much of the list fits on screen is a preference, not a
                  filter, so it lives beside the ordering rule. --}}
-            <div class="ship-density desktop-only" role="group" aria-label="Row density">
-                <button type="button" class="ship-density-btn" data-density="comfortable"
+            <div class="master-list-density desktop-only" role="group" aria-label="Row density">
+                <button type="button" class="master-list-density-btn" data-density="comfortable"
                     aria-pressed="true">Comfortable</button>
-                <button type="button" class="ship-density-btn" data-density="compact"
+                <button type="button" class="master-list-density-btn" data-density="compact"
                     aria-pressed="false">Compact</button>
             </div>
         </div>
@@ -235,15 +239,15 @@
                         @php($statusClass = str_replace('_', '-', $shipment->status))
                         @if (! $closedDividerShown && $shipment->isClosed())
                             @php($closedDividerShown = true)
-                            <tr class="ship-group-row">
+                            <tr class="master-list-group">
                                 {{-- the cell stays a table cell: display:flex on a
                                      <td> takes it out of the table layout and the
                                      colspan stops spanning, so the row lives in a
                                      flex wrapper inside it --}}
                                 <td colspan="8">
-                                    <div class="ship-group-inner">
+                                    <div class="master-list-group-inner">
                                         <span>Closed — delivered / cancelled</span>
-                                        <span class="ship-group-count">
+                                        <span class="master-list-group-count">
                                             {{ $shipments->where('status', \App\Models\Shipment::STATUS_DELIVERED)->count() + $shipments->where('status', \App\Models\Shipment::STATUS_CANCELLED)->count() }}
                                         </span>
                                     </div>
@@ -385,17 +389,17 @@
                              8-column table, so the message hung past the card --}}
                         <tr>
                             <td colspan="8">
-                                <div class="ship-empty">
-                                    <span class="ship-empty-icon" aria-hidden="true">⇄</span>
-                                    <p class="ship-empty-title">
+                                <div class="master-list-empty">
+                                    <span class="master-list-empty-icon" aria-hidden="true">⇄</span>
+                                    <p class="master-list-empty-title">
                                         {{ $filtersActive ? 'No shipments match these filters' : 'No shipments yet' }}
                                     </p>
-                                    <p class="ship-empty-text">
+                                    <p class="master-list-empty-text">
                                         {{ $filtersActive
                                             ? 'Adjust the search or the filters above — the counts on each filter chip show what is available.'
                                             : 'Create the first shipment to start tracking pickups, documents and costs.' }}
                                     </p>
-                                    <div class="ship-empty-actions">
+                                    <div class="master-list-empty-actions">
                                         @if ($filtersActive)
                                             <a class="master-btn master-btn-soft" href="{{ route('shipments.index') }}">Clear filters</a>
                                         @endif
@@ -407,7 +411,7 @@
                     @endforelse
                 </tbody>
                 <tfoot>
-                    <tr class="ship-total-row">
+                    <tr class="master-list-total">
                         <td colspan="5">
                             <strong>Total — {{ $shipments->count() }} {{ \Illuminate\Support\Str::plural('entry', $shipments->count()) }} shown</strong>
                             <span class="master-sub">Charges recorded on the shipments on this page</span>
