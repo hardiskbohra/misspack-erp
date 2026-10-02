@@ -107,7 +107,6 @@ body {
        more reliably across browsers when each item is break-inside: avoid */
     display: flex;
     flex-wrap: wrap;
-    line-height: 1.5;
 }
 
 .mark {
@@ -121,13 +120,17 @@ body {
     flex: 0 0 100%;
     width: 100%;
     height: 129.5mm;
-    padding: 4mm;
+    padding: 3.5mm;
     border: 1px dashed #b6c2d4;
     display: flex;
     flex-direction: column;
     gap: .8mm;
     overflow: hidden;
     background: #fff;
+    /* one base leading for the whole label. At line-height 2 a party's label,
+       name, address and contact lines cost about 2mm each more than they need,
+       which is what pushed the address past three lines. */
+    line-height: 1.35;
 }
 
 /* The header, meta strip and footer are fixed; the party block is the one
@@ -154,56 +157,20 @@ body {
 /* ---------------- brand header ---------------- */
 
 .mark-head {
-    /* two rows: the wordmark and the shipment chip on the first, the document
-       title and service line on the second. All three on one row would leave
-       the title about 20mm of an 85mm label. */
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 1.5mm 3mm;
-    padding-bottom: 1mm;
+    /* the wordmark on the left, the tracking code on the right. The code is the
+       tallest thing in the row, so it sets the header's height. */
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 3mm;
+    padding-bottom: .8mm;
     border-bottom: 1.6px solid #101828;
 }
 
 .mark-brand {
-    grid-area: 1 / 1;
-    height: 6.5mm;
-    width: auto;
-}
-
-.mark-head-right {
-    grid-area: 2 / 1 / 3 / 3;
-    min-width: 0;
-}
-
-.mark-title {
-    display: block;
-    font-size: 8.5pt;
-    font-weight: 900;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    line-height: 1.1;
-}
-
-.mark-sub {
-    display: block;
-    margin-top: .4mm;
-    font-size: 6.5pt;
-    font-weight: 700;
-    color: #475467;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-}
-
-.mark-number {
-    grid-area: 1 / 2;
-    justify-self: end;
-    padding: .8mm 2mm;
-    border: 1.4px solid #101828;
-    border-radius: 1.6mm;
-    font-size: 9pt;
-    font-weight: 900;
-    white-space: nowrap;
+    /* 26.5mm ≈ the 100px the template used to carry inline */
+    width: 26.5mm;
+    height: auto;
 }
 
 /* ---------------- parties ---------------- */
@@ -238,18 +205,18 @@ body {
 }
 
 .mark-party-from strong {
-    margin-top: .5mm;
+    margin-top: .4mm;
     font-size: 9pt;
 }
 
 .mark-party-to strong {
-    margin-top: .6mm;
+    margin-top: .4mm;
     font-size: 10pt;
     line-height: 1.15;
 }
 
 .mark-party p {
-    margin: .5mm 0 0;
+    margin: .4mm 0 0;
     font-size: 9pt;
     line-height: 1.3;
     color: #344054;
@@ -269,14 +236,33 @@ body {
     font-size: 10pt;
 }
 
-/* A long address is clamped instead of pushing the branding off the label:
-   the mark has a fixed height and an overflowing block would overlap the row
-   below it. Three lines carry a full Indian address. */
+/* The address is the one block that cannot be allowed to lose its tail: the
+   city, pin code and country sit on the last line, and a courier sorts by the
+   pin code. Four lines are available, and a long address steps down a size
+   instead of being cut off — see `.mark-party.is-compact` below. The clamp
+   stays as the last resort for an address no label could carry. */
 .mark-address {
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+/* Measured against the 77mm line: the label carries about 40 characters per
+   line at the receiver's 10pt and 44 at the shipper's 9pt, and three lines are
+   what a base-size block affords (120 and 132 characters). Past that the
+   address drops to 8.5pt, where four lines hold 192 characters, and past 192 it
+   drops to 7.5pt, where four lines hold 216. The partial picks the step from
+   the address length; tools/checks/mark-check.cjs re-derives both boundaries
+   and fails if a boundary address stops fitting the label. */
+.mark-party.is-compact p,
+.mark-party.is-compact .mark-contact {
+    font-size: 8.5pt;
+}
+
+.mark-party.is-longer p,
+.mark-party.is-longer .mark-contact {
+    font-size: 7.5pt;
 }
 
 .mark-contact {
@@ -290,6 +276,7 @@ body {
 
 .mark-label {
     display: block;
+    line-height: 1.2;
     font-size: 6pt;
     font-weight: 800;
     letter-spacing: .1em;
@@ -308,16 +295,18 @@ body {
 /* ---------------- meta strip ---------------- */
 
 .mark-meta {
-    /* two columns rather than one row of four: on an 85mm label the package
-       figures, the destination and the label chip cannot share a line */
+    /* two columns: the package figures and the destination. The optional label
+       chip lives in the footer, where the codes already set the height — in
+       here it would either start a second row (~6mm) or squeeze the
+       destination onto two lines, and both cost the address a line. */
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
-    gap: 1.2mm 4mm;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 1mm 4mm;
     align-items: end;
     /* one rule above the strip and one below it: the strip's own bottom border
        is left off because the footer's top rule already closes it, and two
        rules 1mm apart read as a printing error. */
-    padding: 1.5mm 0;
+    padding: 1mm 0;
     border-top: 1px solid #d0d5dd;
 }
 
@@ -334,20 +323,21 @@ body {
     overflow-wrap: anywhere;
 }
 
+/* A size down from the other meta values: the destination carries city, state,
+   country and pin code, and at 8.5pt it is 0.6mm too wide for its column, which
+   wraps it onto a second line and costs the address a line */
 .mark-meta-destination strong {
     text-transform: uppercase;
+    font-size: 8pt;
 }
 
-.mark-label-cell {
-    text-align: left;
-}
-
-.mark-label-chip {
+ .mark-foot .mark-label-chip {
     display: inline-block;
-    padding: .5mm 2mm;
-    border: 1.4px dashed #101828;
-    border-radius: 1.6mm;
-    font-size: 9.5pt;
+    margin-top: .7mm;
+    padding: .4mm 1.6mm;
+    border: 1.2px dashed #101828;
+    border-radius: 1.4mm;
+    font-size: 7.5pt;
     font-weight: 900;
 }
 
@@ -359,7 +349,7 @@ body {
     justify-content:center;
     gap: 3mm;
     margin-top: auto;
-    padding-top: 2mm;
+    padding-top: 1.2mm;
     border-top: 1.6px solid #101828;
 }
 
@@ -419,8 +409,8 @@ body {
 }
 
 .mark-qr-social .mark-qr-code {
-    width: 14mm;
-    height: 14mm;
+    width: 13mm;
+    height: 13mm;
 }
 
 .mark-qr-code svg {
@@ -435,7 +425,7 @@ body {
    over the neighbouring block. */
 .mark-qr-hint {
     display: block;
-    margin-top: .4mm;
+    margin-top: .3mm;
     max-width: 19mm;
     margin-inline: auto;
     font-size: 5pt;

@@ -45,4 +45,6 @@ node tools/checks/design-check.cjs && node tools/checks/blade-check.cjs \
 | No length `flex-basis` on a control in a column flex | that is how the file input became 240px tall |
 | No negative margin on a title/hint pair | that is how the paperwork hint overlapped its heading |
 | Shipping-mark geometry | adds up the millimetre sizes and fails if the sticker cannot fit the 85 × 130 mm label |
+| Address fitting | re-derives the character budget per line from the font and the 77 mm line, reads the threshold numbers out of the partial, and fails if a boundary address would be cut — the last line carries the pin code and country |
+| Rule order | the address size-step rules must come after the per-party rules they override, or they silently do nothing (same specificity) |
 | QR payload decode | a code that does not decode is not printable |

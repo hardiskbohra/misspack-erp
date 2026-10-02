@@ -28,3 +28,10 @@ Homestead.json
 .env.production
 .phpactor.json
 auth.json
+
+# Editor / OS artefacts
+.DS_Store
+
+# Runtime logs and scratch work
+storage/logs/*.log
+/.work/

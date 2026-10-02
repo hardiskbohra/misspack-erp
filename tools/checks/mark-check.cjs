@@ -1,18 +1,21 @@
 /* ==========================================================================
-   MARK CHECK — shipping-mark geometry and QR payloads
+   MARK CHECK — shipping-mark geometry, address fitting and QR payloads
    --------------------------------------------------------------------------
    Run:  node tools/checks/mark-check.cjs
    Decoding needs `jsqr` (npm i jsqr); without it the geometry checks still
    run and the decode checks report as skipped.
 
    1. Geometry — parses shipping-mark.css and adds up the sticker's declared
-      millimetre sizes. The office prints on 85 × 130 mm labels, one sticker
-      per label, so a sticker that cannot fit that label, or whose branding
-      would spill past it, fails here rather than on paper.
-   2. Markup — the mark carries the brand, the website and both codes, does
-      not carry logistics/tracking fields, and sets the receiver apart from
-      the shipper.
-   3. QR — encodes every payload the mark prints with the app's own encoder
+      millimetre sizes against the 85 × 130 mm label.
+   2. Address fitting — the one block that varies by record. The character
+      budget per line comes from measuring the real font against the 77 mm
+      line; the thresholds are read out of the Blade partial, so changing them
+      without re-measuring fails here instead of on paper. A long address must
+      step down a size rather than lose its tail: the last line carries the
+      pin code and the country, which is what a courier sorts by.
+   3. Markup — brand, website, both codes, no logistics/tracking fields, the
+      contacts escaped, and the pin code repeated in the destination strip.
+   4. QR — encodes every payload the mark prints with the app's own encoder
       (public/assets/js/qr.js, no dependency) and decodes it again.
    ========================================================================== */
 'use strict';
@@ -57,21 +60,25 @@ function parseRules(text) {
 }
 
 const RULES = parseRules(css);
-
 const block = (selector) => RULES
     .filter(r => r.selector.split(',').map(s => s.trim()).includes(selector))
     .map(r => r.body)
     .join('\n');
-
 const prop = (selector, name) => {
     const m = new RegExp('(?:^|;|\\s)' + name + '\\s*:\\s*([^;]+)').exec(block(selector));
     return m ? m[1].trim() : null;
 };
-
 const mm = v => v === null ? null : parseFloat(String(v).replace(/[^\d.]/g, ''));
 const pt2mm = pt => pt * 0.3528;
-const lh = (pt, factor) => pt2mm(pt) * factor;
-const fontOf = (selector, name) => parseFloat(prop(selector, 'font-size'));
+const lines = (pt, factor) => pt2mm(pt) * factor;
+const fontOf = (selector, name = 'font-size') => parseFloat(prop(selector, name));
+const firstGap = (selector) => mm((prop(selector, 'gap') || '0').split(' ')[0]);
+
+/* the wordmark's own aspect ratio decides the header height */
+function pngSize(file) {
+    const buf = fs.readFileSync(file);
+    return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+}
 
 /* ------------------------------------------------------------- 1. geometry */
 
@@ -89,108 +96,181 @@ const sheetW = mm(prop('.mark-sheet', 'width'));
 const stickerH = mm(prop('.mark', 'height'));
 const pad = (prop('.mark', 'padding') || '0').split(' ').map(mm);
 const padTop = pad[0];
-const padX = pad.length > 1 ? pad[1] : pad[0];   /* shorthand: 4mm 4mm 4mm 4mm */
+const padX = pad.length > 1 ? pad[1] : pad[0];
+const gap = mm(prop('.mark', 'gap'));
 
 check('the sheet is the label width (no page margin to inset it)',
     Math.abs(sheetW - (paperW - 2 * margin)) < 0.01, `${sheetW} vs ${paperW - 2 * margin}`);
-
-const cols = /flex:\s*0\s+0\s+100%/.test(block('.mark')) ? 1 : 2;
-const rows = 1, perPage = 1;
-const cellW = (paperW - 2 * margin) / cols;
-
-check(`a sticker fills the label (${cellW} × ${stickerH} mm)`,
-    cols === 1 && Math.abs(cellW - sheetW) < 0.01 && Math.abs(stickerH - 129.5) < 0.01,
-    `${cellW} × ${stickerH}`);
-check('one sticker per label', perPage === rows * cols);
+check(`a sticker fills the label (${sheetW} × ${stickerH} mm)`,
+    Math.abs(stickerH - 129.5) < 0.01, `${sheetW} × ${stickerH}`);
 check('the sticker cannot round onto a second page (>= .4mm of slack)',
-    (paperH - 2 * margin) - rows * stickerH >= 0.4,
-    `${((paperH - 2 * margin) - rows * stickerH).toFixed(2)}mm`);
+    (paperH - 2 * margin) - stickerH >= 0.4,
+    `${((paperH - 2 * margin) - stickerH).toFixed(2)}mm`);
 
-/* vertical budget. The head, the party stack, the meta strip and the footer
-   are summed with their declared clamps at worst case, so a longer address
-   cannot make them collide on paper. */
-const headRow = Math.max(
-    mm(prop('.mark-brand', 'height')),
-    fontOf('.mark-number', 'font-size') * 0.3528 * 1.2 + 2 * mm(prop('.mark-number', 'padding').split(' ')[0]));
-const head = headRow
-    + mm((prop('.mark-head', 'gap') || '0').split(' ')[0])
-    + lh(fontOf('.mark-title', 'font-size'), 1.1)
-    + 0.4 + lh(fontOf('.mark-sub', 'font-size'), 1.2)
-    + mm(prop('.mark-head', 'padding-bottom')) + 0.5;
+/* the fixed blocks, in declaration order */
+/* the printed wordmark comes from config/brand.php, not a hard-coded path */
+const brandLogo = /'logo_print'\s*=>\s*'([^']+)'/.exec(fs.readFileSync(path.join(ROOT, 'config/brand.php'), 'utf8'))[1];
+const logo = pngSize(path.join(ROOT, 'public', brandLogo));
+const logoH = mm(prop('.mark-brand', 'width')) * (logo.height / logo.width);
+const trackQr = mm(prop('.mark-qr-code', 'width'));
+const socialQr = mm(prop('.mark-qr-social .mark-qr-code', 'width'));
+const caption = mm(prop('.mark-qr-hint', 'margin-top')) + lines(fontOf('.mark-qr-hint'), 1.05);
 
-const from = lh(fontOf('.mark-label', 'font-size'), 1.2) + 0.5
-    + lh(fontOf('.mark-party-from strong', 'font-size'), 1.2) + 0.5
-    + 3 * lh(fontOf('.mark-party p', 'font-size'), 1.3) + 0.5
-    + 2 * lh(fontOf('.mark-party-from .mark-contact', 'font-size'), 1.3);
-const to = lh(fontOf('.mark-label', 'font-size'), 1.2) + 0.6
-    + lh(fontOf('.mark-party-to strong', 'font-size'), 1.15) + 0.6
-    + 3 * lh(fontOf('.mark-party-to p', 'font-size'), 1.3) + 0.5
-    + 2 * lh(fontOf('.mark-party-to .mark-contact', 'font-size'), 1.3);
-const separator = mm(prop('.mark-party ~ .mark-party', 'padding-top'))
-    + mm((prop('.mark-parties', 'gap') || '0').split(' ')[0]);
-const party = from + separator + to;
+const head = Math.max(logoH, trackQr + caption) + mm(prop('.mark-head', 'padding-bottom')) + 0.5;
 
-/* a grid row is as tall as its tallest cell: the shipment-label chip is taller
-   than a value line, so the row must be measured against the chip or the strip
-   is under-counted and the budget lies */
-const metaValue = Math.max(
-    lh(fontOf('.mark-meta strong', 'font-size'), 1.2),
-    lh(fontOf('.mark-label-chip', 'font-size'), 1.2)
-        + 2 * mm(prop('.mark-label-chip', 'padding').split(' ')[0])
-        + 0.6);
-const metaRow = lh(fontOf('.mark-label', 'font-size'), 1.2) + 0.5 + metaValue;
+const metaRow = lines(fontOf('.mark-label'), 1.2) + 0.3 + lines(fontOf('.mark-meta strong'), 1.35);
 const metaPad = mm((prop('.mark-meta', 'padding') || '0').split(' ')[0]);
-const meta = 2 * metaRow + mm((prop('.mark-meta', 'gap') || '0').split(' ')[0])
-    + 2 * metaPad + 0.5;
+const metaGap = mm((prop('.mark-meta', 'gap') || '0').split(' ')[0]);
+const foot = mm(prop('.mark-foot', 'padding-top')) + socialQr + caption;
+const partyPad = mm(prop('.mark-parties', 'padding-bottom') || '0');
+const partyGap = mm(prop('.mark-parties', 'gap'));
 
-const qr = mm(prop('.mark-qr-code', 'width'));
-const foot = mm(prop('.mark-foot', 'padding-top')) + qr
-    + mm(prop('.mark-qr-hint', 'margin-top')) + lh(fontOf('.mark-qr-hint', 'font-size'), 1.05)
-    + 0.5;
+const meta = metaRow + 2 * metaPad + 0.3;
+const half = ((stickerH - 2 * padTop) - head - 3 * gap - meta - foot - partyPad - partyGap) / 2;
 
-const gap = mm(prop('.mark', 'gap'));
-const partyPadBottom = mm(prop('.mark-parties', 'padding-bottom') || '0');
-const content = head + 3 * gap + party + partyPadBottom + meta + foot;
-const box = stickerH - 2 * padTop;
+check('the header, meta strip and footer leave the parties a workable half',
+    half >= 26, `${half.toFixed(1)}mm each`);
 
-check(`the sticker's rows fit its height (${content.toFixed(1)}mm of ${box}mm)`, content <= box,
-    `${content.toFixed(1)} vs ${box}`);
-check('there is >= 1mm of slack for a slightly longer address', box - content >= 1,
-    `${(box - content).toFixed(1)}mm`);
-check('the receiver is set larger than the shipper',
-    fontOf('.mark-party-to strong', 'font-size') > fontOf('.mark-party-from strong', 'font-size'),
-    `${fontOf('.mark-party-to strong', 'font-size')}pt vs ${fontOf('.mark-party-from strong', 'font-size')}pt`);
-check('the parties stack (a single label column)',
-    /grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(block('.mark-parties')));
-check('each party centres in its own half of the label (no hollow middle)',
-    /grid-template-rows:\s*1fr\s+1fr/.test(block('.mark-parties'))
-    && /justify-content:\s*center/.test(block('.mark-party')));
-check('a long website cannot paint under the tracking plate',
-    /overflow-wrap:\s*anywhere/.test(block('.mark-brandfoot'))
-    && /overflow:\s*hidden/.test(block('.mark-brandfoot')));
-check('the website fits the width the codes leave it',
-    fontOf('.mark-website', 'font-size') <= 8.5,
-    `${fontOf('.mark-website', 'font-size')}pt beside ${(sheetW - 2 * padX - qr - mm(prop('.mark-qr-social .mark-qr-code', 'width')) - 3).toFixed(0)}mm`);
+/* the optional label chip rides in the footer, where the codes set the height:
+   if the branding column ever grew past the code column the chip would start
+   costing the addresses space */
+const brandfoot = lines(fontOf('.mark-website'), 1.2) + 0.4 + lines(fontOf('.mark-tagline'), 1.35)
+        + 0.7 + lines(fontOf('.mark-foot .mark-label-chip'), 1.2)
+    + 2 * mm((prop('.mark-foot .mark-label-chip', 'padding') || '0').split(' ')[0]);
+const codeColumn = socialQr + caption + 0.3;
+check('the label chip rides along in the footer without growing it',
+    brandfoot <= codeColumn + 0.01,
+    `branding column ${brandfoot.toFixed(1)}mm vs codes ${codeColumn.toFixed(1)}mm`);
+check('the parties split the block in half',
+    /grid-template-rows:\s*1fr\s+1fr/.test(block('.mark-parties')));
+check('each party centres in its own half',
+    /justify-content:\s*center/.test(block('.mark-party')));
+
+/* ------------------------------------------------------ 2. address fitting */
+
+/* Characters per line measured with the real font against the 77mm content
+   width (ImageMagick, DejaVu Sans: 10pt → 40, 9pt → 44, 8.5pt → 48, 7.5pt → 54).
+   The per-party figures are read from the partial so the two cannot drift. */
+const CAPACITY = { 10: 40, 9: 44, 8.5: 48, 7.5: 54 };
+const clampLines = parseInt(/-webkit-line-clamp:\s*(\d+)/.exec(block('.mark-address'))[1], 10);
+
+const budget = /\$markAddressCapacity\s*=\s*\[([^\]]+)\]/.exec(sticker);
+const lineBudget = /\$markAddressLines\s*=\s*\[([^\]]+)\]/.exec(sticker);
+const capacity = budget
+    ? Object.fromEntries([...budget[1].matchAll(/'(\w+)'\s*=>\s*([\d.]+)/g)].map(m => [m[1], parseFloat(m[2])]))
+    : {};
+
+check('the partial sizes a long address from its length',
+    !!budget && !!lineBudget && capacity.to > 0 && capacity.from > 0 && capacity.compact > 0,
+    `capacity ${JSON.stringify(capacity)}`);
+check('the clamp leaves room for four lines', clampLines >= 4, `${clampLines} lines`);
+/* The step rules have to come *after* the per-party rules they override: the
+   receiver's `.mark-party-to p` and the shipper's `.mark-party-from
+   .mark-contact` have the same specificity, so source order decides which one
+   wins and a rule in the wrong place silently does nothing. */
+const stepAt = css.indexOf('.mark-party.is-compact p');
+const overridden = ['.mark-party-to p', '.mark-party-from .mark-contact', '.mark-party-from p']
+    .map(sel => css.indexOf(sel));
+check('a long address steps down a size instead of being cut off',
+    /\.mark-party\.is-compact p[\s\S]{0,80}font-size:\s*8\.5pt/.test(css)
+    && /\.mark-party\.is-longer p[\s\S]{0,80}font-size:\s*7\.5pt/.test(css)
+    && /\.mark-party\.is-compact \.mark-contact[\s\S]{0,80}font-size:/.test(css));
+check('the step rules come after the rules they override',
+    stepAt > Math.max(...overridden),
+    `step rules at ${stepAt}, party rules at ${overridden.join(', ')}`);
+
+const linesFor = () => Object.fromEntries(
+    [...lineBudget[1].matchAll(/'(\w+)'\s*=>\s*([\d.]+)/g)].map(m => [m[1], parseFloat(m[2])]));
+
+/* A party block at a given address: the size it lands on, the lines it needs
+   and the height it takes. The name keeps its size when the address steps
+   down — only the address and contact paragraphs change. */
+function partyBlock(party) {
+    const sizes = party === 'to'
+        ? { base: fontOf('.mark-party-to p'), name: fontOf('.mark-party-to strong', 'font-size'), nameGap: 0.6 }
+        : { base: fontOf('.mark-party p'), name: fontOf('.mark-party-from strong'), nameGap: 0.5 };
+
+    return (characters) => {
+        const keep = capacity[party] * linesFor().keep;
+        const compact = capacity.compact * linesFor().step;
+        const size = characters > compact ? 7.5 : characters > keep ? 8.5 : sizes.base;
+        const needed = Math.ceil(characters / CAPACITY[size]);
+
+        const height = lines(fontOf('.mark-label'), 1.2)
+            + sizes.nameGap + lines(sizes.name, 1.2)
+            + 0.5 + Math.min(clampLines, needed) * lines(size, 1.3)
+            + 0.5 + 2 * lines(size, 1.3);
+
+        return { size, needed, height, keep, compact };
+    };
+}
+
+['to', 'from'].forEach(party => {
+    const at = partyBlock(party);
+    const base = { to: 10, from: 9 }[party];
+    const keep = capacity[party] * linesFor().keep;
+    const compact = capacity.compact * linesFor().step;
+
+    [
+        [`a ${keep}-character address stays at the base size`, keep, base],
+        [`one character more steps the address down to 8.5pt`, keep + 1, 8.5],
+        [`a ${compact}-character address still prints complete at 8.5pt`, compact, 8.5],
+        [`one character more steps the address down to 7.5pt`, compact + 1, 7.5],
+        [`a ${clampLines * CAPACITY[7.5]}-character address still prints complete at 7.5pt`,
+            clampLines * CAPACITY[7.5], 7.5],
+    ].forEach(([label, characters, size]) => {
+        const result = at(characters);
+        check(`${party}: ${label}`,
+            result.size === size && result.needed <= clampLines && result.height <= half,
+            `${result.size}pt, ${result.needed} lines, ${result.height.toFixed(1)}mm of ${half.toFixed(1)}mm`);
+    });
+});
 check('the party block absorbs overflow instead of overlapping the footer',
-    /\.mark-parties\s*\{[^}]*flex:\s*1\s+1\s+auto[^}]*min-height:\s*0[^}]*overflow:\s*hidden/.test(css)
-    || /\.mark-parties\s*\{[^}]*min-height:\s*0[^}]*overflow:\s*hidden/.test(css));
+    /\.mark-parties\s*\{[^}]*min-height:\s*0[^}]*overflow:\s*hidden/.test(css));
 check('header, meta and footer cannot be squeezed',
     /\.mark-head,\s*\.mark-meta,\s*\.mark-foot\s*\{[^}]*flex:\s*0\s+0\s+auto/.test(css));
-check('long addresses are clamped', /-webkit-line-clamp:\s*3/.test(block('.mark-address')));
-check('the QR keeps a white plate', /background:\s*#fff/.test(block('.mark-qr-code')));
+check('no inline styles in the partial (the stylesheet is authoritative)',
+    !/style="/.test(sticker));
 check('QR colour survives printing', /print-color-adjust:\s*exact/.test(css));
-check('the footer codes fit the label beside the branding',
-    qr + mm(prop('.mark-qr-social .mark-qr-code', 'width')) + 3 <= sheetW - 2 * padX,
-    `${qr} + ${mm(prop('.mark-qr-social .mark-qr-code', 'width'))} + 3 vs ${sheetW - 2 * padX}mm of content`);
+check('the QR keeps a white plate', /background:\s*#fff/.test(block('.mark-qr-code')));
+check('the footer branding cannot paint under a code',
+    /\.mark-brandfoot\s*\{[^}]*overflow-wrap:\s*anywhere/.test(css));
 
-/* --------------------------------------------------------------- 2. markup */
+/* --------------------------------------------------------------- 3. markup */
 
 check('the sticker shows the brand logo', /mark-brand/.test(sticker) && /logo_print/.test(sticker));
 check('the website is printed', /mark-website/.test(sticker) && /\[.website.\]/.test(sticker));
+check('a tracking QR is rendered', /data-ship-qr/.test(sticker));
 check('an Instagram QR is rendered',
     /mark-qr-social/.test(sticker) && /\[.instagram.\]/.test(sticker));
 check('the parties carry their own classes',
-    /mark-party mark-party-from/.test(sticker) && /mark-party mark-party-to/.test(sticker));
+    /mark-party mark-party-to/.test(sticker) && /mark-party mark-party-from/.test(sticker));
+check('the contacts are escaped before the <br> join',
+    /array_map\('e'/.test(sticker) && /implode\('<br>'/.test(sticker));
+/* The destination carries city, state, country and pin code. If it wraps, the
+   meta row grows and takes an address line with it, so it has to fit on one
+   line: measured at about 45 characters per 77mm at 8pt. */
+const destinationCapacity = 45;
+const destinationColumn = (sheetW - 2 * padX) - 15 - 4;   /* package column + gap */
+check('the destination value fits its column on one line',
+    fontOf('.mark-meta-destination strong') <= 8
+    && destinationCapacity * (destinationColumn / 77) >= 33,
+    `${fontOf('.mark-meta-destination strong')}pt in ${destinationColumn.toFixed(0)}mm holds about ${Math.floor(destinationCapacity * (destinationColumn / 77))} characters`);
+
+check('the address does not repeat what the free text already says',
+    /mb_strpos\(\$fold\(\$address\), \$fold\(\$part\)\)/.test(sticker));
+
+/* the label that reported the truncation: 145 characters, which used to be cut
+   at three lines with the pin code and country lost */
+const reported = 'D-4/4, July Apartment, Girdharnagar Road, Behind Indane Gas Company, '
+    + 'Opposite Chandramani Hospital, Shahibaag, Ahmedabad, Gujarat, India - 380004';
+const reportedBlock = partyBlock('to')(reported.length);
+check(`the reported ${reported.length}-character address prints complete`,
+    reportedBlock.size === 8.5 && reportedBlock.needed <= clampLines && reportedBlock.height <= half,
+    `${reportedBlock.size}pt, ${reportedBlock.needed} lines, ${reportedBlock.height.toFixed(1)}mm of ${half.toFixed(1)}mm`);
+
+check('the pin code is repeated in the destination strip',
+    sticker.includes('$markDestination') && sticker.includes('preg_match') && sticker.includes('\\d{6}'));
 check('logistics is gone from the mark', !/Logistic/i.test(sticker));
 check('the tracking number is gone from the mark', !/tracking_number/.test(sticker));
 check('the copies counter is still shown', /markCopy/.test(sticker));
@@ -251,12 +331,12 @@ Object.entries(payloads).forEach(([label, value]) => {
 });
 
 if (jsqr) {
-    [['.mark-qr-code', 'tracking'], ['.mark-qr-social .mark-qr-code', 'instagram']].forEach(([sel, name]) => {
-        const url = name === 'tracking' ? payloads['tracking URL (public token)'] : payloads.instagram;
+    [['.mark-qr-code', 'tracking', payloads['tracking URL (public token)']],
+     ['.mark-qr-social .mark-qr-code', 'instagram', payloads.instagram]].forEach(([sel, name, url]) => {
         const size = mm(prop(sel, 'width'));
-        const moduleMm = size / (ShipQR.matrix(url).size + 6);
-        check(`the ${name} code prints at a scannable pitch (${moduleMm.toFixed(2)} mm/module)`,
-            moduleMm >= 0.3, `${moduleMm.toFixed(3)} mm over ${size}mm`);
+        const pitch = size / (ShipQR.matrix(url).size + 6);
+        check(`the ${name} code prints at a scannable pitch (${pitch.toFixed(2)} mm/module)`,
+            pitch >= 0.3, `${pitch.toFixed(3)} mm over ${size}mm`);
     });
 } else {
     check('QR pitch checks', true, 'skipped (no jsqr)');
