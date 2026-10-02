@@ -71,7 +71,7 @@ check('the shipment number is the link and the identity name the second line',
 check('the row carries the record URL as a click target',
     /<tr class="ship-row[^"]*is-clickable"[\s\S]{0,120}data-href="\{\{ route\('shipments\.show'/.test(view));
 check('the row click skips interactive elements and text selections',
-    /closest\('a, button, input, select, textarea, label, form'\)/.test(js)
+    /closest\('a, button, input, select, textarea, label, form, \.master-dropdown'\)/.test(js)
     && /getSelection\(\)[\s\S]{0,40}length/.test(js));
 
 /* one primary action for the page, in the header */
@@ -277,19 +277,25 @@ check('the closed divider keeps its count at the far edge',
 check('the divider stays a hairline band, not a tinted block',
     /\.ship-index \.ship-group-row td \{[\s\S]{0,400}background: var\(--mc-card\)/.test(css));
 
-/* the row menu lives inside the table's scroll box: the row has to be raised
-   (a panel in a table cell paints in its row's pass) and the panel capped or
-   flipped, or the rows below and the box edge eat it */
-check('the open row is raised above the rows after it',
-    /\.master-table tbody tr\.is-menu-open\s*\{[\s\S]{0,120}z-index: 4/.test(layoutCss)
-    && /classList\.add\('is-menu-open'\)/.test(layoutJs)
-    && /classList\.remove\('is-menu-open'\)/.test(layoutJs));
-check('the panel flips when there is more room above the button',
-    /\.master-dropdown\.drop-up \.master-dropdown-menu\s*\{[\s\S]{0,80}bottom: 48px/.test(layoutCss)
-    && /classList\.toggle\('drop-up'/.test(layoutJs));
-check('the panel is capped to the room it actually has',
+/* The row menu is placed against the viewport: a panel inside a table cell is
+   painted in its row's pass and clipped by the scroll box, so the placement
+   has to measure the button and cap the panel, and it has to follow the page
+   while it scrolls — or the panel detaches from the button it belongs to. */
+check('the panel is measured and placed against the viewport, not the row',
     /getBoundingClientRect\(\)/.test(layoutJs)
-    && /menu\.style\.maxHeight = room \+ 'px'/.test(layoutJs));
+    && /menu\.style\.left = left \+ 'px'/.test(layoutJs)
+    && /menu\.style\.top = \(button\.bottom \+ MENU_GAP\)/.test(layoutJs));
+check('the panel flips above the button when there is more room there',
+    /const up = height > below && above > below/.test(layoutJs)
+    && /menu\.style\.bottom = \(viewport - button\.top \+ MENU_GAP\)/.test(layoutJs));
+check('the panel is capped to the room it actually has',
+    /menu\.style\.maxHeight = room \+ 'px'/.test(layoutJs)
+    && /Math\.max\(MENU_MIN, up \? above : below\)/.test(layoutJs));
+check('an open panel follows the page while it scrolls',
+    /document\.addEventListener\('scroll', placeOpenMenus, true\)/.test(layoutJs)
+    && /window\.addEventListener\('resize', placeOpenMenus\)/.test(layoutJs));
+check('a click on the panel belongs to the panel, not to the row under it',
+    /closest\('a, button, input, select, textarea, label, form, \.master-dropdown'\)/.test(js));
 check('the menu is only declared once, in master-index.css',
     /^\s*\.master-dropdown-menu\s*\{/m.test(layoutCss)
     && !/\.master-dropdown-menu/.test(

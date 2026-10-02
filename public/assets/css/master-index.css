@@ -932,13 +932,17 @@
     background: var(--mc-hover);
 }
 
+/* The panel is fixed, never absolute: a menu that lives inside a table row is
+   painted in that row's pass — so every row after it covers it — and it is
+   clipped by any scrolling box above it. Against the viewport it is part of
+   neither fight. The layout script measures the button and places the panel
+   (and re-places it while the page scrolls); the numbers here are the size and
+   the look, so a panel that is never placed still lands in the right spot. */
 .master-dropdown-menu{
-    position:absolute;
-    right:0;
-    top:calc(100% + 8px);
-    z-index:9999;
-    top:48px;
+    position:fixed;
+    z-index:1200;
     width:220px;
+    max-height:calc(100vh - 16px);
     background: var(--mc-card);
     border: 1px solid var(--mc-border);
     border-radius:14px;
@@ -949,22 +953,6 @@
 
 .master-dropdown.open .master-dropdown-menu{
     display:block;
-}
-
-/* A positioned panel inside a table cell is painted in its row's pass, so the
-   rows below it would cover it — raising the row it belongs to (class set by
-   app-layout.js when the menu opens) puts the whole row, panel included, above
-   its siblings. */
-.master-table tbody tr.is-menu-open{
-    position: relative;
-    z-index: 4;
-}
-
-/* ...and when the button sits near the bottom of a scrolling box, the panel
-   flips above it instead of being cut off by the edge. */
-.master-dropdown.drop-up .master-dropdown-menu{
-    top: auto;
-    bottom: 48px;
 }
 
 .master-dropdown-menu a,

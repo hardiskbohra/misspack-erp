@@ -297,9 +297,12 @@ check('only master-index.css declares the row menu (no later sheet re-declares i
     owner > -1 && reDeclared.length === 0, reDeclared.join(', '));
 
 const indexMenu = strip(read(path.join(CSS, 'master-index.css')));
-check('the open row is raised above its siblings and the panel can flip',
-    /\.master-table tbody tr\.is-menu-open\s*\{[\s\S]{0,120}position: relative/.test(indexMenu)
-    && /\.master-dropdown\.drop-up \.master-dropdown-menu\s*\{[\s\S]{0,80}bottom: 48px/.test(indexMenu));
+const panelRule = (indexMenu.match(/\.master-dropdown-menu\s*\{[\s\S]{0,400}?\}/) || [''])[0];
+const panelZ = Number((panelRule.match(/z-index:\s*(\d+)/) || [])[1]);
+check('the row menu is placed against the viewport, above the sticky header and the topbar',
+    /position:\s*fixed/.test(panelRule) && panelZ >= 1100 && panelZ < 9999, `z-index ${panelZ || '?'}`);
+check('the row menu needs no row-raising or flip class any more',
+    !/is-menu-open/.test(indexMenu) && !/\.master-dropdown\.drop-up/.test(indexMenu));
 
 /* the shared row-action menu is drawn on --mc-card, so it must not be painted
    with fixed light-theme values: #2b3445 menu text on the dark card is

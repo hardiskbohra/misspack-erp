@@ -157,55 +157,90 @@
         /* A menu button has to say whether its menu is open, and Escape has to
            close it: without that the popover is invisible to a screen reader
            and cannot be dismissed from the keyboard. */
+        const MENU_GAP = 8;
+        const MENU_EDGE = 8;
+        const MENU_MIN = 120;
+
+        /* The panel is drawn against the viewport, never against the row it
+           belongs to. A menu inside a table is painted in its own row's pass —
+           so every row after it covers it — and it is clipped by any scrolling
+           box above it. A fixed panel is outside that fight: the button is
+           measured, the panel is placed under it, flipped above it when there
+           is more room there, and capped to the room the viewport actually
+           has, so it scrolls inside itself instead of disappearing past an
+           edge. */
+        const placeMenu = (dropdown) => {
+            const menu = dropdown.querySelector('.master-dropdown-menu');
+            const toggle = dropdown.querySelector('.master-dropdown-toggle');
+            if (!menu || !toggle) return;
+
+            /* measure the panel at its full size before capping it */
+            menu.style.maxHeight = 'none';
+            menu.style.overflowY = '';
+            menu.style.top = '';
+            menu.style.bottom = '';
+            menu.style.left = '';
+            menu.style.right = '';
+
+            const button = toggle.getBoundingClientRect();
+            const width = menu.offsetWidth || 220;
+            const height = menu.offsetHeight || 0;
+            const viewport = window.innerHeight;
+
+            /* right-aligned with the button it belongs to, kept on screen */
+            const left = Math.max(MENU_EDGE, Math.min(
+                button.right - width,
+                window.innerWidth - width - MENU_EDGE
+            ));
+
+            const below = viewport - button.bottom - MENU_GAP - MENU_EDGE;
+            const above = button.top - MENU_GAP - MENU_EDGE;
+            const up = height > below && above > below;
+            const room = Math.max(MENU_MIN, up ? above : below);
+
+            menu.style.left = left + 'px';
+
+            if (up) {
+                menu.style.bottom = (viewport - button.top + MENU_GAP) + 'px';
+            } else {
+                menu.style.top = (button.bottom + MENU_GAP) + 'px';
+            }
+
+            menu.style.maxHeight = room + 'px';
+            menu.style.overflowY = height > room ? 'auto' : 'hidden';
+
+        };
+
         const setMenuState = (dropdown, open) => {
             dropdown.classList.toggle('open', open);
 
             const toggle = dropdown.querySelector('.master-dropdown-toggle');
             if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
 
-            if (open) return;
-
-            /* closing also releases everything the open state set up */
-            dropdown.classList.remove('drop-up');
+            if (open) {
+                placeMenu(dropdown);
+                return;
+            }
 
             const menu = dropdown.querySelector('.master-dropdown-menu');
             if (menu) {
                 menu.style.maxHeight = '';
                 menu.style.overflowY = '';
+                menu.style.top = '';
+                menu.style.bottom = '';
+                menu.style.left = '';
+                menu.style.right = '';
             }
-
-            const row = dropdown.closest('tr');
-            if (row) row.classList.remove('is-menu-open');
         };
 
-        /* A menu inside a scrolling table has two ways to be cut off: the rows
-           below it paint after their own row, and the box it lives in clips.
-           The row is raised (CSS) and the panel is flipped or capped to the
-           space that is actually left. */
-        const openMenu = (dropdown) => {
-            const row = dropdown.closest('tr');
-            if (row) row.classList.add('is-menu-open');
-
-            const menu = dropdown.querySelector('.master-dropdown-menu');
-            const toggle = dropdown.querySelector('.master-dropdown-toggle');
-            if (!menu || !toggle) return;
-
-            const scroller = dropdown.closest('.master-table-wrap');
-            const bounds = (scroller || document.documentElement).getBoundingClientRect();
-            const button = toggle.getBoundingClientRect();
-
-            menu.style.maxHeight = '';
-
-            const below = bounds.bottom - button.bottom - 12;
-            const above = button.top - bounds.top - 12;
-            const up = below < menu.offsetHeight && above > below;
-
-            dropdown.classList.toggle('drop-up', up);
-
-            const room = Math.max(120, up ? above : below);
-            menu.style.maxHeight = room + 'px';
-            menu.style.overflowY = 'auto';
+        /* an open panel is anchored to its button, so it follows the page */
+        const placeOpenMenus = () => {
+            document.querySelectorAll('.master-dropdown.open').forEach(placeMenu);
         };
+
+        /* capture phase: a scroll inside the table's own box does not bubble */
+        document.addEventListener('scroll', placeOpenMenus, true);
+        window.addEventListener('resize', placeOpenMenus);
 
         const closeMenus = (except) => {
             document.querySelectorAll('.master-dropdown').forEach(d => {
@@ -219,13 +254,13 @@
         
                 e.stopPropagation();
 
-                const dropdown = this.parentElement;
+                const dropdown = this.closest('.master-dropdown');
+                if (!dropdown) return;
+
                 const willOpen = ! dropdown.classList.contains('open');
 
                 closeMenus(dropdown);
                 setMenuState(dropdown, willOpen);
-
-                if (willOpen) openMenu(dropdown);
         
             });
         

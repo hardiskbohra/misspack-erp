@@ -39,7 +39,9 @@
     function bindRowNavigation() {
         document.querySelectorAll('.ship-index tbody tr[data-href]').forEach(function (row) {
             row.addEventListener('click', function (event) {
-                if (event.target.closest('a, button, input, select, textarea, label, form')) return;
+                /* a click anywhere on an open action panel belongs to the panel,
+                   not to the row underneath it */
+                if (event.target.closest('a, button, input, select, textarea, label, form, .master-dropdown')) return;
                 if (window.getSelection && String(window.getSelection()).length > 0) return;
 
                 window.location.href = row.dataset.href;
