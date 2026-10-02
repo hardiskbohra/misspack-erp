@@ -359,12 +359,15 @@
                                                 Shipment Summary
                                             </a>
                                             
-                                            <button type="button" class="master-btn master-btn-soft master-btn-sm" onclick="copyShipmentLink('{{ route('shipments.publicTrack', $shipment->public_token) }}')">Public Link</button>
+                                            <button type="button"
+                                                onclick="copyShipmentLink('{{ route('shipments.publicTrack', $shipment->public_token) }}')">
+                                                <i class="fas fa-link" aria-hidden="true"></i>
+                                                Public Link
+                                            </button>
                                 
                                             {{-- the whole module confirms deletes in
                                                  one modal, not a browser dialog --}}
-                                            <button type="button"
-                                                class="master-btn master-btn-danger master-btn-sm master-delete-btn"
+                                            <button type="button" class="danger master-delete-btn"
                                                 data-delete-url="{{ route('shipments.destroy', $shipment) }}"
                                                 data-name="{{ $shipment->shipment_number }}">
                                                 <i class="fas fa-trash" aria-hidden="true"></i>

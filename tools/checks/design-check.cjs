@@ -308,6 +308,15 @@ check('the floating panel is opaque, so no row can read through it',
     /background-color:\s*var\(--mc-card,\s*#[0-9a-f]{3,6}\)/i.test(panelRule)
     && !/opacity/.test(panelRule));
 
+/* every item in the panel has one shape: an icon slot and a label from the
+   same left edge. A `.master-btn` inside the menu centres itself and wears its
+   own background, which is how "Public Link" ended up centre-aligned and
+   icon-less among left-aligned siblings. */
+check('every row-menu item starts at the same left edge, with an icon slot',
+    /\.master-dropdown-menu a,\s*\n\.master-dropdown-menu button\{[\s\S]{0,700}justify-content:flex-start/.test(indexMenu)
+    && /\.master-dropdown-menu i\{[\s\S]{0,160}flex:0 0 18px/.test(indexMenu)
+    && /\.master-dropdown-menu a,[\s\S]{0,700}border-radius:0/.test(indexMenu));
+
 /* the shared row-action menu is drawn on --mc-card, so it must not be painted
    with fixed light-theme values: #2b3445 menu text on the dark card is
    invisible, and a #e9efff hover is a light chip on a dark toolbar */

@@ -968,6 +968,10 @@
     outline-offset: -2px;
 }
 
+/* One item shape for the whole menu: an icon slot and a label, always from
+   the same left edge, whether the item is a link or a button. A `.master-btn`
+   dropped in here used to centre itself and wear its own background, so the
+   items did not line up — the panel owns the shape, not the button. */
 .master-dropdown-menu a,
 .master-dropdown-menu button{
     width:100%;
@@ -976,6 +980,7 @@
     padding:13px 18px;
     display:flex;
     align-items:center;
+    justify-content:flex-start;
     gap:12px;
     text-decoration:none;
     color: var(--mc-text);
@@ -983,6 +988,16 @@
     font-weight: 400;
     cursor:pointer;
     text-align:left;
+    border-radius:0;
+    box-shadow:none;
+    line-height:1.35;
+}
+
+/* the icon slot is a fixed width, so every label starts at the same edge */
+.master-dropdown-menu i{
+    flex:0 0 18px;
+    width:18px;
+    text-align:center;
 }
 
 .master-dropdown-menu a:hover,

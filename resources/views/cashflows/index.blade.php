@@ -131,7 +131,7 @@
                                     
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="master-btn master-btn-danger master-btn-sm"><i class="fas fa-trash"></i>Delete Entry</button>
+                                                    <button type="submit" class="danger"><i class="fas fa-trash" aria-hidden="true"></i> Delete Entry</button>
                                                 </form>
                                             </div>
                                         </div>

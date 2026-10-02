@@ -166,6 +166,68 @@ layouts.forEach(layout => {
 check('every @push targets a stack the layouts render', missingStack.length === 0,
     [...new Set(missingStack)].join(' | '));
 
+/* ------------------------------------------------- 5. component contracts */
+
+/* A row menu is one component, and its items have one shape: an icon and a
+   label from the same left edge. A `.master-btn` dropped inside it wears its
+   own background, centres itself and lines up with nothing — that is how the
+   shipments menu came out with a centred, icon-less "Public Link" while the
+   items above it were left-aligned. The panel owns the shape, not the button. */
+const menuBlocks = [];
+
+for (const file of files) {
+    const lines = fs.readFileSync(file, 'utf8').split('\n');
+
+    lines.forEach((line, index) => {
+        if (!/class="master-dropdown-menu"/.test(line)) return;
+
+        const indent = line.match(/^\s*/)[0];
+        const body = [];
+        let closed = false;
+
+        for (let i = index + 1; i < lines.length; i++) {
+            if (lines[i] === indent + '</div>') { closed = true; break; }
+            body.push(lines[i]);
+        }
+
+        if (closed) menuBlocks.push({ file: rel(file), line: index + 1, body: body.join('\n') });
+    });
+}
+
+const menuItems = (body) => {
+    const items = [];
+
+    for (const m of body.matchAll(/<(a|button)\b[^>]*>/g)) {
+        const rest = body.slice(m.index);
+        const close = rest.indexOf('</' + m[1] + '>');
+        items.push(close === -1 ? rest : rest.slice(0, close));
+    }
+
+    return items;
+};
+
+const buttonedMenus = menuBlocks
+    .filter(menu => /master-btn/.test(menu.body))
+    .map(menu => `${menu.file}:${menu.line}`);
+
+check('no row-menu item carries button styling (the panel owns the item shape)',
+    buttonedMenus.length === 0, buttonedMenus.join(' | '));
+
+const iconless = [];
+let itemsSeen = 0;
+
+for (const menu of menuBlocks) {
+    for (const item of menuItems(menu.body)) {
+        itemsSeen++;
+        if (!/<i\s/.test(item)) iconless.push(`${menu.file}:${menu.line}`);
+    }
+}
+
+check('every row-menu item has an icon',
+    menuBlocks.length > 0 && iconless.length === 0,
+    `${menuBlocks.length} menu(s), ${itemsSeen} item(s)`
+        + (iconless.length ? ' — missing in ' + iconless.join(', ') : ''));
+
 /* ---------------------------------------------------------------- report */
 
 const failed = out.filter(([, ok]) => !ok);
