@@ -649,79 +649,159 @@
 /* ==========================================================================
    CASHFLOW LIST — resources/views/cashflows/index.blade.php
    --------------------------------------------------------------------------
-   The chrome (chips, applied strip, density, pinned grid, mobile card, totals
-   row, empty state) is master-list.css, shared with the shipment list. What
-   is left here is what only a ledger has: the date column, the particular,
-   the two money columns and the settlement state.
+   The chrome (chip bar and chips, saved views, applied strip, table bar,
+   density switch, grouped divider, pinned grid, totals row, empty state,
+   mobile card) is public/assets/css/master-list.css, shared with the shipment
+   list. What is left here is what only a ledger has — the date column, the
+   particular, the two money columns and the settlement state — measured to the
+   same geometry as the shipment list, so the two screens read as one product.
    ========================================================================== */
+
+.cashflow-index .master-filter-row {
+    /* master-index gives this row a 24px inset; the chips above it use 16px,
+       and the two rows read as one toolbar once they agree. No bottom border:
+       the card's own edge closes the toolbar. */
+    padding: 14px 16px 16px;
+    margin: 0;
+}
+
+.cashflow-index .master-filter-row .master-search {
+    flex: 2 1 260px;
+}
+
+/* The account select and the button that adds one stay together when the
+   filter row wraps. */
+.cashflow-index .cf-account-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 190px;
+    min-width: 0;
+}
+
+.cashflow-index .cf-account-filter .master-select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cashflow-index .cf-account-filter .master-btn {
+    min-width: 0;
+}
+
+/* ---------------- table ---------------- */
+
+.cashflow-index .master-table-wrap {
+    margin-top: 12px;
+}
 
 .cashflow-index .master-table th,
 .cashflow-index .master-table td {
-    padding: 10px 14px;
+    padding: 12px 14px;
+}
+
+.cashflow-index .master-table th {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    font-size: 11px;
+    color: var(--mc-text-3);
+}
+
+.cashflow-index .master-table td {
+    font-size: 13.5px;
     vertical-align: top;
 }
 
-/* one rhythm per column, the same as the shipment list */
-.cashflow-index .cf-date {
-    display: block;
-    color: var(--mc-text);
-    font-size: 13.5px;
-    font-weight: 700;
-    line-height: 18px;
+/* Column hints: the table keeps its natural layout, these only stop the
+   columns from reflowing between pages as the content changes. */
+.cashflow-index .master-table th:nth-child(1) { width: 104px; }
+.cashflow-index .master-table th:nth-child(2) { width: 260px; }
+.cashflow-index .master-table th:nth-child(3) { width: 168px; }
+.cashflow-index .master-table th:nth-child(4) { width: 132px; }
+.cashflow-index .master-table th:nth-child(5) { width: 132px; }
+.cashflow-index .master-table th:nth-child(6) { width: 150px; }
+.cashflow-index .master-table th:nth-child(7) { width: 132px; }
+.cashflow-index .master-table th:nth-child(8) { width: 72px; }
+
+.cashflow-index .master-table th:last-child,
+.cashflow-index .master-table td:last-child {
+    text-align: right;
+}
+
+/* Row rhythm. One line box for the first line and one for the second — the
+   same two values the shipment list uses, so the two tables' rows are the same
+   height and their baselines land in the same place. */
+.cashflow-index .master-table {
+    --cf-line: 20px;
+    --cf-sub: 16px;
+}
+
+.cashflow-index .cf-date,
+.cashflow-index .cf-particular strong,
+.cashflow-index .cf-account,
+.cashflow-index .cf-money,
+.cashflow-index .cf-status {
+    min-height: var(--cf-line);
+    line-height: var(--cf-line);
 }
 
 .cashflow-index td .master-sub {
-    display: block;
     margin-top: 4px;
-    font-size: 11.5px;
-    line-height: 15px;
+    line-height: var(--cf-sub);
+}
+
+/* ---------------- cells ---------------- */
+
+.cashflow-index .cf-date {
+    display: block;
+    font-weight: 700;
+    font-size: 13px;
+    white-space: nowrap;
 }
 
 .cashflow-index .cf-particular strong {
     display: block;
-    color: var(--mc-text);
-    font-size: 13.5px;
     font-weight: 600;
-    line-height: 18px;
+    font-size: 13px;
 }
 
 .cashflow-index .cf-account {
-    color: var(--mc-text-2);
-    font-size: 12.5px;
+    display: block;
+    font-size: 13px;
+}
+
+/* the row's own name behaves like the identifier it is: hovering the row
+   underlines it, the same way the shipment list marks its shipment number */
+.cashflow-index .master-table tbody tr.is-clickable:hover .cf-particular strong {
+    text-decoration: underline;
 }
 
 .cashflow-index .cf-money {
-    font-variant-numeric: tabular-nums;
     font-weight: 700;
     white-space: nowrap;
 }
 
 /* Money in reads green, money out reads red — the direction is the point of
-   the row, so it is carried by the figure itself and not only by the column. */
+   the row, so the figure itself carries it and not only the column. */
 .cashflow-index .cf-credit {
     color: var(--cf-green);
 }
 
 .cashflow-index .cf-debit {
-    color: var(--cf-red, #ef4770);
+    color: var(--cf-red);
 }
 
-.cashflow-index .master-table tbody tr.is-clickable {
-    cursor: pointer;
-}
-
-.cashflow-index .master-table tbody tr.is-clickable:hover {
-    background: var(--mc-hover);
-}
-
-.cashflow-index .master-table a:focus-visible,
-.cashflow-index .master-dropdown-toggle:focus-visible {
-    outline: 2px solid var(--master-primary);
-    outline-offset: 2px;
-}
-
-.cashflow-index .master-table td:last-child {
-    text-align: right;
+/* How the money moved, on the row's second line — the payment mode was only
+   ever visible inside the record. */
+.cashflow-index .cf-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--mc-soft);
+    color: var(--mc-text-2);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
 }
 
 /* ---------------- the settlement state ----------------
@@ -730,10 +810,11 @@
    tone and a dark foreground — list-check.cjs fails if one is missing. */
 
 .cashflow-index .cf-status {
+    /* the pill sits on the row's first line instead of being taller than it */
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    min-height: 24px;
+    height: var(--cf-line);
     padding: 0 10px;
     border-radius: 999px;
     background: var(--tone-bg);
@@ -750,6 +831,7 @@
     height: 6px;
     border-radius: 50%;
     background: currentColor;
+    flex: 0 0 auto;
 }
 
 .cashflow-index .cf-status.status-pending {
@@ -777,14 +859,6 @@
     --tone-fg: var(--mc-text-3);
 }
 
-:root[data-theme="dark"] .cashflow-index .cf-status.status-disputed {
-    --tone-fg: #ff9b9b;
-}
-
-:root[data-theme="dark"] .cashflow-index .cf-status.status-ignored {
-    --tone-fg: #94a3b8;
-}
-
 :root[data-theme="dark"] .cashflow-index .cf-status.status-pending {
     --tone-fg: #fcd34d;
 }
@@ -797,6 +871,14 @@
     --tone-fg: #6ee7b7;
 }
 
+:root[data-theme="dark"] .cashflow-index .cf-status.status-disputed {
+    --tone-fg: #ff9b9b;
+}
+
+:root[data-theme="dark"] .cashflow-index .cf-status.status-ignored {
+    --tone-fg: #94a3b8;
+}
+
 :root[data-theme="dark"] .cashflow-index .cf-credit {
     color: #6ee7b7;
 }
@@ -806,16 +888,19 @@
 }
 
 /* ---------------- density ----------------
-   The compact row tightens the ledger's own cells; the padding and the header
-   come from master-list.css. */
+   Comfortable is the default; compact fits roughly a third more rows on the
+   same screen. The padding and the header come from master-list.css; the
+   ledger's own type scale tightens here, exactly as the shipment cells do. */
 
 @media (min-width: 769px) {
-    .cashflow-index[data-density="compact"] .master-table td {
-        font-size: 12.5px;
+    .cashflow-index[data-density="compact"] .master-table {
+        --cf-line: 18px;
+        --cf-sub: 15px;
     }
 
     .cashflow-index[data-density="compact"] .cf-date,
-    .cashflow-index[data-density="compact"] .cf-particular strong {
+    .cashflow-index[data-density="compact"] .cf-particular strong,
+    .cashflow-index[data-density="compact"] .cf-account {
         font-size: 12.5px;
     }
 
@@ -825,8 +910,8 @@
 }
 
 /* ---------------- mobile ----------------
-   The row becomes a card (master-list.css labels each cell); the money pair
-   reads as one line so credit and debit stay comparable. */
+   The row becomes a card (master-list.css labels each cell); the money cells
+   read as values rather than as a right-aligned column. */
 
 @media (max-width: 768px) {
     .cashflow-index .master-table td:last-child {

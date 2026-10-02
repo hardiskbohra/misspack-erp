@@ -274,6 +274,31 @@ for (const file of files) {
 check('every {{ … }} expression has balanced brackets',
     unbalancedExpressions.length === 0, [...new Set(unbalancedExpressions)].slice(0, 3).join(' | '));
 
+/* ------------------------------------------------- 7. structural tags balance */
+
+/* A stray </div> or </td> is invisible in a diff and obvious in a browser: the
+   markup reflows, a cell appears in the wrong column, or a modal's footer lands
+   outside its card. Blade comments are stripped first — several of them talk
+   about <td> on purpose. */
+const STRUCTURAL = ['div', 'form', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th',
+    'section', 'nav', 'main', 'button', 'a'];
+const unbalancedTags = [];
+
+for (const file of files) {
+    const text = fs.readFileSync(file, 'utf8').replace(/\{\{--[\s\S]*?--\}\}/g, '').replace(/<!--[\s\S]*?-->/g, '');
+
+    for (const tag of STRUCTURAL) {
+        const opened = (text.match(new RegExp('<' + tag + '\\b', 'g')) || []).length;
+        const closed = (text.match(new RegExp('</' + tag + '>', 'g')) || []).length;
+        if (opened !== closed) {
+            unbalancedTags.push(`${rel(file)}: <${tag}> ${opened} open, ${closed} closed`);
+        }
+    }
+}
+
+check('every structural tag is opened and closed the same number of times',
+    unbalancedTags.length === 0, unbalancedTags.slice(0, 3).join(' | '));
+
 /* ---------------------------------------------------------------- report */
 
 const failed = out.filter(([, ok]) => !ok);

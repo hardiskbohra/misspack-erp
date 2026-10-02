@@ -426,8 +426,9 @@ check('the cashflow list keeps its column names on mobile too',
 check('the ledger columns line up like the shipment list',
     /class="is-num">Credit</.test(cashView)
     && /class="is-num">Debit</.test(cashView)
+    && /class="is-num">Balance</.test(cashView)
     && (cashView.match(/class="cf-money is-num/g) || []).length === 3
-    && /tabular-nums/.test(cashCss.slice(cashCss.indexOf('.cashflow-index .cf-money'), cashCss.indexOf('.cashflow-index .cf-money') + 200)));
+    && /class="ship-money is-num"/.test(view));
 
 const cashStatuses = [...fs.readFileSync(path.join(ROOT, 'app/Models/CashflowEntry.php'), 'utf8')
     .matchAll(/function accountingStatusOptions\(\): array[\s\S]*?return \[([\s\S]*?)\];/g)]
@@ -493,6 +494,105 @@ check('the mobile card labels only exist below the card breakpoint',
 
 check('the density chrome only exists above the card breakpoint',
     onlyInMedia(listCss, 'min-width: 769px', 'data-density="compact"'));
+
+/* ---- same opening strip ----
+   Both lists open with five flat tiles in the same shape: a title and a value,
+   and only the last one carries a second line. A tile that grows a sub-line is
+   a visible difference between two screens that are meant to be one design. */
+const statsBlock = text => {
+    const from = text.indexOf('<div class="master-stats');
+    const to = text.indexOf('<div class="master-card', from);
+    return from === -1 || to === -1 ? '' : text.slice(from, to);
+};
+
+const shipStats = statsBlock(view);
+const cashStats = statsBlock(cashView);
+check('both lists open with the same strip of tiles',
+    (shipStats.match(/master-stat--flat/g) || []).length === 5
+    && (cashStats.match(/master-stat--flat/g) || []).length === 5
+    && (shipStats.match(/class="master-sub"/g) || []).length === 1
+    && (cashStats.match(/class="master-sub"/g) || []).length === 1,
+    'shipments ' + (shipStats.match(/master-stat--flat/g) || []).length
+    + ' tiles / ' + (shipStats.match(/class="master-sub"/g) || []).length + ' with a sub-line'
+    + ', cashflow ' + (cashStats.match(/master-stat--flat/g) || []).length
+    + ' / ' + (cashStats.match(/class="master-sub"/g) || []).length);
+
+/* ---- the ledger keeps every door open ----
+   Both ways to record an entry, and the account an entry lands in, stay one
+   click from the list: the quick dialog, the detailed form, and the add-account
+   button sitting with the account filter it belongs to. */
+const accountFilterAt = cashView.indexOf('class="cf-account-filter"');
+const accountButtonAt = cashView.indexOf('id="openAccountModal"');
+const applyGroupAt = cashView.indexOf('class="master-list-filter-group"');
+check('the ledger keeps every door open',
+    cashView.includes("route('cashflows.create')")
+    && cashView.includes("route('cashflows.quickStore')")
+    && accountFilterAt !== -1 && accountButtonAt > accountFilterAt && accountButtonAt < applyGroupAt,
+    'add-account button sits in the control row: ' + accountFilterAt + ' < ' + accountButtonAt + ' < ' + applyGroupAt);
+
+/* ---- same composition, same order ----
+   The two lists are the same screen with different data, so they render the
+   same components in the same sequence. Blade comments are stripped (a mention
+   of a javascript file is not markup) and repeats collapse to first appearance,
+   because one list has six chips and the other five. */
+const composition = text => {
+    const markup = text.replace(/\{\{--[\s\S]*?--\}\}/g, '');
+    const seen = [];
+    for (const name of markup.match(/master-list[a-z-]*/g) || []) {
+        if (!seen.includes(name)) seen.push(name);
+    }
+    return seen;
+};
+
+const shipComposition = composition(view);
+const cashComposition = composition(cashView);
+const firstDiff = shipComposition.findIndex((name, i) => name !== cashComposition[i]);
+check('the two lists are the same composition in the same order',
+    shipComposition.length >= 25 && firstDiff === -1
+    && shipComposition.length === cashComposition.length,
+    firstDiff === -1
+        ? 'shipments ' + shipComposition.length + ' vs cashflow ' + cashComposition.length + ' components'
+        : 'first difference at ' + firstDiff + ': ' + shipComposition[firstDiff] + ' vs ' + cashComposition[firstDiff]);
+
+/* ---- same geometry ----
+   A row on one list has to be the same height, with its second line starting at
+   the same place, as a row on the other. Both module sheets carry the same
+   measurements; this compares them instead of trusting a comment. */
+const ruleBody = (text, selector) => {
+    const at = text.indexOf(selector);
+    if (at === -1) return '';
+    const open = text.indexOf('{', at);
+    const close = text.indexOf('}', open);
+    return open === -1 || close === -1 ? '' : text.slice(open + 1, close);
+};
+
+const shipCell = ruleBody(css, '.ship-index .master-table th,');
+const cashCell = ruleBody(cashCss, '.cashflow-index .master-table th,');
+
+check('both lists measure their table the same way',
+    /padding:\s*12px 14px/.test(shipCell) && /padding:\s*12px 14px/.test(cashCell)
+    && /padding:\s*14px 16px 16px/.test(ruleBody(css, '.ship-index .master-filter-row {'))
+    && /padding:\s*14px 16px 16px/.test(ruleBody(cashCss, '.cashflow-index .master-filter-row {'))
+    && /margin-top:\s*4px/.test(ruleBody(css, '.ship-index td .master-sub {'))
+    && /margin-top:\s*4px/.test(ruleBody(cashCss, '.cashflow-index td .master-sub {')));
+
+const lineToken = sheet => /--\w+-line:\s*(\d+)px/.exec(sheet)?.[1];
+const subToken = sheet => /--\w+-sub:\s*(\d+)px/.exec(sheet)?.[1];
+const compactToken = sheet => [...sheet.matchAll(/\[data-density="compact"\][\s\S]{0,200}?--\w+-line:\s*(\d+)px/g)].map(m => m[1]);
+
+check('both lists share one row rhythm',
+    lineToken(css) === lineToken(cashCss) && lineToken(css) === '20'
+    && subToken(css) === subToken(cashCss) && subToken(css) === '16'
+    && /min-height:\s*var\(--\w+-line\)/.test(css) && /min-height:\s*var\(--\w+-line\)/.test(cashCss)
+    && compactToken(css).join() === compactToken(cashCss).join() && compactToken(css).length === 1,
+    'line ' + lineToken(css) + '/' + lineToken(cashCss) + ' sub ' + subToken(css) + '/' + subToken(cashCss)
+    + ' compact ' + compactToken(css) + '/' + compactToken(cashCss));
+
+check('both lists stop their columns from reflowing',
+    (css.match(/\.master-table th:nth-child\(\d+\) \{ width:/g) || []).length >= 7
+    && (cashCss.match(/\.master-table th:nth-child\(\d+\) \{ width:/g) || []).length === 8
+    && /th:last-child,[\s\S]{0,60}td:last-child \{[\s\S]{0,40}text-align: right/.test(css)
+    && /th:last-child,[\s\S]{0,60}td:last-child \{[\s\S]{0,40}text-align: right/.test(cashCss));
 
 /* each list loads the shared sheet after its own, so the chrome wins its own
    properties without out-specifying the module cells */

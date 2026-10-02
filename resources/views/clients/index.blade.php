@@ -116,7 +116,6 @@
                         <td>{{ $client->ceo_name ?: '-' }}<span
                                 class="master-sub">{{ $client->ceo_email ?: '-' }}</span><span
                                 class="master-sub">{{ $client->ceo_contact ?: '-' }}</span></td>
-                        </td>
                         <td>{{ $client->kyc_submitted_at ? $client->kyc_submitted_at->format('d M Y') : 'Not submitted' }}<span
                                 class="master-sub">Sent:
                                 {{ $client->kyc_sent_at ? $client->kyc_sent_at->format('d M Y') : '-' }}</span></td>

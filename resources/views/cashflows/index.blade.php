@@ -12,7 +12,6 @@
         + Quick Entry
     </button>
     <a class="master-btn master-btn-soft" href="{{ route('cashflows.create') }}">Detailed Form</a>
-    <button type="button" class="master-btn master-btn-soft" id="openAccountModal">+ Account</button>
     <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.reports') }}">Reports</a>
     <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.settings.index') }}">Settings</a>
 @endsection
@@ -108,7 +107,6 @@
             <div>
                 <p class="master-stat-title">Credit (filtered)</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['credit']) }}</p>
-                <p class="master-sub">Money in, on this filter</p>
                 <span class="tooltip-text">Every credit entry matching the filters above, wherever it landed.</span>
             </div>
         </div>
@@ -117,7 +115,6 @@
             <div>
                 <p class="master-stat-title">Debit (filtered)</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['debit']) }}</p>
-                <p class="master-sub">Money out, on this filter</p>
                 <span class="tooltip-text">Every debit entry matching the filters above, including expenses paid on a client's behalf.</span>
             </div>
         </div>
@@ -126,7 +123,6 @@
             <div>
                 <p class="master-stat-title">Net (filtered)</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['net']) }}</p>
-                <p class="master-sub">{{ $stats['net'] < 0 ? 'Spent more than received' : 'Received more than spent' }}</p>
                 <span class="tooltip-text">Credit minus debit for the entries matching the filters — a period result, not an account balance.</span>
             </div>
         </div>
@@ -135,7 +131,6 @@
             <div>
                 <p class="master-stat-title">Bank &amp; Cash</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency((float) $stats['current_balance'] + (float) $stats['saving_balance'] + (float) $stats['cash_balance']) }}</p>
-                <p class="master-sub">Across every account</p>
                 <span class="tooltip-text">Current + saving + cash balances across all accounts. This is the live figure, never filtered.</span>
             </div>
         </div>
@@ -205,13 +200,19 @@
                     <input class="master-input" type="text" name="search" value="{{ $search }}"
                         placeholder="Search particular, invoice, bank reference, party..." aria-label="Search cashflow entries">
                 </div>
-                <select class="master-select" name="account_id" aria-label="Filter by account">
-                    <option value="all">All Accounts</option>
-                    @foreach($accounts as $account)
-                        <option value="{{ $account->id }}" @selected((string) $accountId === (string) $account->id)>
-                            {{ $account->account_name }}</option>
-                    @endforeach
-                </select>
+                <div class="cf-account-filter">
+                    <select class="master-select" name="account_id" aria-label="Filter by account">
+                        <option value="all">All Accounts</option>
+                        @foreach($accounts as $account)
+                            <option value="{{ $account->id }}" @selected((string) $accountId === (string) $account->id)>
+                                {{ $account->account_name }}</option>
+                        @endforeach
+                    </select>
+                    {{-- the account the entries are filtered by is the account you
+                         sometimes have to add first, so the two sit together --}}
+                    <button type="button" class="master-btn master-btn-ghost" id="openAccountModal"
+                        title="Add an account" aria-label="Add an account">+ New</button>
+                </div>
                 <select class="master-select" name="transaction_type" aria-label="Filter by credit or debit">
                     <option value="all">Credit + Debit</option>
                     @foreach($transactionTypeOptions as $key => $label)
@@ -386,6 +387,9 @@
                                     {{ $entry->client?->company_name ?? $entry->vendor?->vendor_name ?? $entry->related_party_name ?? $entry->expense_head ?? '-' }}
                                     @if ($entry->invoice_bill_number || $entry->bank_reference_number)
                                         · {{ $entry->invoice_bill_number ?: $entry->bank_reference_number }}
+                                    @endif
+                                    @if ($entry->payment_mode)
+                                        <span class="cf-tag">{{ $paymentModeOptions[$entry->payment_mode] ?? strtoupper($entry->payment_mode) }}</span>
                                     @endif
                                 </span>
                             </td>
@@ -576,6 +580,10 @@
                             <input class="master-input" id="quickPartyName" name="related_party_name">
                         </div>
                     </div>
+                    <p class="master-sub">
+                        Quick Entry covers the bank line. Need payment mode, category or notes?
+                        <a href="{{ route('cashflows.create') }}">Open the detailed form</a>.
+                    </p>
                 </div>
                 <div class="master-modal-footer">
                     <button type="button" class="master-btn master-btn-light" data-close-modal="quickCashflowModal">Cancel</button>
