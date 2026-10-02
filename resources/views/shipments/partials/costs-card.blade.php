@@ -136,7 +136,7 @@
             <div>
                 <span>Gross margin after freight</span>
                 <strong class="{{ ($costTotals['margin'] ?? 0) < 0 ? 'is-negative' : 'is-positive' }}">
-                    {{ inr($costTotals['margin']) }}
+                    {{ \App\Helpers\CommonHelper::indianCurrency($costTotals['margin']) }}
                     @if ($costTotals['margin_percent'] !== null) · {{ $costTotals['margin_percent'] }}% @endif
                 </strong>
             </div>

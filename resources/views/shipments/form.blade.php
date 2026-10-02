@@ -233,7 +233,7 @@
                             <option value="">Not linked</option>
                             @foreach ($invoiceOptions as $invoice)
                                 <option value="{{ $invoice->id }}" @selected((int) old('sales_invoice_id', $shipment->sales_invoice_id) === (int) $invoice->id)>
-                                    {{ $invoice->invoice_number }} · {{ money($invoice->total_amount, $invoice->currency) }}
+                                    {{ $invoice->invoice_number }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}
                                 </option>
                             @endforeach
                         </select>

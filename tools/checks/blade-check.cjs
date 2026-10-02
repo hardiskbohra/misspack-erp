@@ -260,6 +260,11 @@ for (const file of files) {
             if (depth < 0) { broken = true; break; }
         }
 
+        if (/\\\\[A-Z]/.test(expression)) {
+            unbalancedExpressions.push(`${rel(file)}: doubled namespace in ${m[0].slice(0, 50)}`);
+            continue;
+        }
+
         if (broken || depth !== 0) {
             unbalancedExpressions.push(`${rel(file)}: ${m[0].slice(0, 60)}`);
         }

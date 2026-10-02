@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Helpers {
+namespace App\Helpers;
 
 /**
  * Money, written the way it is read in India.
@@ -11,6 +11,12 @@ namespace App\Helpers {
  * rupees. The sales-invoice module has used this class from the start;
  * everything else goes through it too now, so the same figure cannot read
  * differently on two pages.
+ *
+ * Views call it by class name — \App\Helpers\CommonHelper::indianCurrency(…) —
+ * because a class name is resolved by the autoloader on first use. A bare
+ * global helper function only exists once something else has already loaded
+ * this file, which is how a page that never mentions the class died with
+ * "Call to undefined function".
  */
 class CommonHelper
 {
@@ -73,28 +79,4 @@ class CommonHelper
 
         return preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', $rest).','.$lastThree;
     }
-}
-
-}
-
-/* Views and controllers write money as inr($amount) / money($amount, $currency).
-   This file is already autoloaded by composer, so the short names need no
-   further wiring; braced namespaces let one file hold both the class and the
-   helpers. */
-namespace {
-
-if (! function_exists('inr')) {
-    function inr($amount, $symbol = \App\Helpers\CommonHelper::SYMBOL): string
-    {
-        return \App\Helpers\CommonHelper::indianCurrency($amount, $symbol);
-    }
-}
-
-if (! function_exists('money')) {
-    function money($amount, ?string $currency = 'INR'): string
-    {
-        return \App\Helpers\CommonHelper::amount($amount, $currency);
-    }
-}
-
 }

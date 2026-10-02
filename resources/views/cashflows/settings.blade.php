@@ -64,7 +64,7 @@
                             <div><label class="master-label">Bank</label><input class="master-input" name="bank_name" value="{{ $account->bank_name }}"></div>
                             <div><label class="master-label">Currency</label><select class="master-select" name="currency">@foreach($currencyOptions as $key => $label)<option value="{{ $key }}" @selected($account->currency === $key)>{{ $label }}</option>@endforeach</select></div>
                             <div><label class="master-label">Opening Balance</label><input class="master-input" type="number" step="0.01" name="opening_balance" value="{{ $account->opening_balance }}"></div>
-                            <div><label class="master-label">Current Balance</label><div class="current-balance">{{ money($account->current_balance, $account->currency) }}</div></div>
+                            <div><label class="master-label">Current Balance</label><div class="current-balance">{{ \App\Helpers\CommonHelper::amount($account->current_balance, $account->currency) }}</div></div>
                             <div class="cf-row-actions">
                                 <input type="checkbox" name="is_active" value="1" @checked($account->is_active) hidden>
                                 <button class="master-btn master-btn-primary" type="submit" name="_method" value="PUT">Save</button>

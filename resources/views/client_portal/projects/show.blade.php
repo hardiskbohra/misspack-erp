@@ -49,13 +49,13 @@
         <strong>{{ $project->stageLabel() }}</strong>
     </div>
     <div class="pd-metric"><span>Estimated
-            Value</span><strong>{{ money($project->estimated_value, $project->currency) }}</strong>
+            Value</span><strong>{{ \App\Helpers\CommonHelper::amount($project->estimated_value, $project->currency) }}</strong>
     </div>
     <div class="pd-metric"><span>Payments</span><strong
-            class="pd-green">{{ money($totals['inward'], $project->currency) }}</strong>
+            class="pd-green">{{ \App\Helpers\CommonHelper::amount($totals['inward'], $project->currency) }}</strong>
     </div>
     <div class="pd-metric">
-        <span>Balance</span><strong>{{ money($totals['outstanding'], $project->currency) }}</strong>
+        <span>Balance</span><strong>{{ \App\Helpers\CommonHelper::amount($totals['outstanding'], $project->currency) }}</strong>
     </div>
 </div>
 
@@ -205,7 +205,7 @@
                                 </td>
                                 <td><strong>{{ number_format($projectProduct->quantity) }} {{ $projectProduct->unit }}</strong></td>
                                 <td><strong>{{ $projectProduct->currency == 'INR' ? '₹' : $projectProduct->currency }}{{ $projectProduct->unit_price }}</strong></td>
-                                <td><strong>{{ money($projectProduct->total_amount, $projectProduct->currency) }}</strong></td>
+                                <td><strong>{{ \App\Helpers\CommonHelper::amount($projectProduct->total_amount, $projectProduct->currency) }}</strong></td>
                                 <td><strong style="font-size:10px;font-weight:500;">{!! $projectProduct?->notes ? nl2br(e($projectProduct->notes)) : '-' !!}</strong></td>
                             </tr>
                         @empty
@@ -607,11 +607,11 @@
                                     <td>
                                         @if ($entry->transaction_type === 'credit')
                                             <span style="color:red">
-                                                {{ money($entry->credit_amount, $entry->currency) }}
+                                                {{ \App\Helpers\CommonHelper::amount($entry->credit_amount, $entry->currency) }}
                                             </span>
                                         @else
                                             <span style="color:green">
-                                                {{ money($entry->debit_amount, $entry->currency) }}
+                                                {{ \App\Helpers\CommonHelper::amount($entry->debit_amount, $entry->currency) }}
                                             </span>
                                         @endif
                                     </td>

@@ -89,9 +89,9 @@
                                         <td>{{ $price->printing_type ?: '-' }}</td>
                                         <td>{{ $price->vendor_unit_price ? $quote->currency . ' ' . number_format((float) $price->vendor_unit_price, 4) : '-' }}
                                         </td>
-                                        <td>{{ $price->landing_cost_inr ? inr($price->landing_cost_inr) : '-' }}
+                                        <td>{{ $price->landing_cost_inr ? \App\Helpers\CommonHelper::indianCurrency($price->landing_cost_inr) : '-' }}
                                         </td>
-                                        <td>{{ $price->selling_price_inr ? inr($price->selling_price_inr) : '-' }}
+                                        <td>{{ $price->selling_price_inr ? \App\Helpers\CommonHelper::indianCurrency($price->selling_price_inr) : '-' }}
                                         </td>
                                         <td>{{ $price->remarks ?: '-' }}</td>
                                 </tr>@empty<tr>
@@ -124,11 +124,11 @@
                 <div class="master-card master-section">
                     <h3>Manual INR Pricing</h3>
                     <div class="price">
-                        {{ $quote->selling_price_inr ? inr($quote->selling_price_inr) : '-' }}
+                        {{ $quote->selling_price_inr ? \App\Helpers\CommonHelper::indianCurrency($quote->selling_price_inr) : '-' }}
                     </div>
                     <p style="color:#687386;font-weight:800">Selling Price</p>
                     <div class="landing">Landing Cost:
-                        {{ $quote->landing_cost_inr ? inr($quote->landing_cost_inr) : '-' }}</div>
+                        {{ $quote->landing_cost_inr ? \App\Helpers\CommonHelper::indianCurrency($quote->landing_cost_inr) : '-' }}</div>
                 </div>
                 <div class="master-card master-section">
                     <h3>Notes</h3>

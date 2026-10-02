@@ -61,15 +61,15 @@
             <div class="projects-mini-grid">
                 <div>
                     <span>Estimated</span>
-                    <h3>{{ money($project->estimated_value, $project->currency) }}</h3>
+                    <h3>{{ \App\Helpers\CommonHelper::amount($project->estimated_value, $project->currency) }}</h3>
                 </div>
                 <div>
                     <span>Paid</span>
-                    <h3 class="projects-money-green">{{ money($totals['inward'], $project->currency) }}</h3>
+                    <h3 class="projects-money-green">{{ \App\Helpers\CommonHelper::amount($totals['inward'], $project->currency) }}</h3>
                 </div>
                 <div>
                     <span>Balance</span>
-                    <h3>{{ money($totals['outstanding'], $project->currency) }}</h3>
+                    <h3>{{ \App\Helpers\CommonHelper::amount($totals['outstanding'], $project->currency) }}</h3>
                 </div>
             </div>
 

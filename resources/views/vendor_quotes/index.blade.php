@@ -110,9 +110,9 @@
                                 !!}</td>
                                 <td>
                                     {!! $quote->items->isNotEmpty()
-                                    ? $quote->items->map(fn($item) => money($item->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : ''))->implode('<br>')
+                                    ? $quote->items->map(fn($item) => \App\Helpers\CommonHelper::amount($item->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : ''))->implode('<br>')
                                     : ($quote->vendor_unit_price
-                                        ? money($quote->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : '')
+                                        ? \App\Helpers\CommonHelper::amount($quote->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : '')
                                         : '-')
                                 !!}</td>
                                 <td><span

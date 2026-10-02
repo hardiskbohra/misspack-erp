@@ -142,23 +142,23 @@
                     <div class="projects-mini-grid">
                         <div>
                             <span>Estimated</span>
-                            <strong>{{ money($project->estimated_value, $project->currency) }}</strong>
+                            <strong>{{ \App\Helpers\CommonHelper::amount($project->estimated_value, $project->currency) }}</strong>
                         </div>
                         <div>
                             <span>Inward</span>
-                            <strong class="projects-money-green">{{ money($totals['inward'], $project->currency) }}</strong>
+                            <strong class="projects-money-green">{{ \App\Helpers\CommonHelper::amount($totals['inward'], $project->currency) }}</strong>
                         </div>
                         <div>
                             <span>Expense</span>
-                            <strong class="projects-money-red">{{ money($totals['outward'], $project->currency) }}</strong>
+                            <strong class="projects-money-red">{{ \App\Helpers\CommonHelper::amount($totals['outward'], $project->currency) }}</strong>
                         </div>
                         <div>
                             <span>Outstanding</span>
-                            <strong>{{ money($totals['outstanding'], $project->currency) }}</strong>
+                            <strong>{{ \App\Helpers\CommonHelper::amount($totals['outstanding'], $project->currency) }}</strong>
                         </div>
                         <div>
                             <span>Profit/Loss</span>
-                            <strong>{{ money(($totals['inward'] - $totals['outward']), $project->currency) }}</strong>
+                            <strong>{{ \App\Helpers\CommonHelper::amount(($totals['inward'] - $totals['outward']), $project->currency) }}</strong>
                         </div>
                     </div>
 

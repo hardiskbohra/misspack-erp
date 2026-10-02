@@ -16,15 +16,15 @@
 <div class="cp-grid-4" style="margin-bottom:15px;">
     <div class="cp-card cp-stat">
         <span>Paid</span>
-        <strong>{{ inr($totals['inward']) }}</strong>
+        <strong>{{ \App\Helpers\CommonHelper::indianCurrency($totals['inward']) }}</strong>
     </div>
     <div class="cp-card cp-stat">
         <span>Invoiced</span>
-        <strong>{{ inr($totals['invoiced']) }}</strong>
+        <strong>{{ \App\Helpers\CommonHelper::indianCurrency($totals['invoiced']) }}</strong>
     </div>
     <div class="cp-card cp-stat">
         <span>Pending Invoiced Amount</span>
-        <strong>{{ inr($totals['inward'] - $totals['invoiced']) }}</strong>
+        <strong>{{ \App\Helpers\CommonHelper::indianCurrency($totals['inward'] - $totals['invoiced']) }}</strong>
     </div>
 </div>
 <div class="cp-card">
@@ -54,7 +54,7 @@
                         </td>
                         <td>
                             <span class="pd-chip pd-mode-{{ $payment->payment_mode }}" style="font-size:11px;">{{ $payment->payment_mode ? strtoupper($payment->payment_mode) : '-' }}</span></td>
-                        <td>{{ money($payment->credit_amount, $payment->currency) }}</td>
+                        <td>{{ \App\Helpers\CommonHelper::amount($payment->credit_amount, $payment->currency) }}</td>
                         <td>
                             <span class="pd-chip pd-status-{{ $payment->accounting_status }}">{{ $payment->statusLabel() }}</span>
                         </td>

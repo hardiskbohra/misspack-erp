@@ -50,7 +50,7 @@
                             <span>Source</span><strong>{{ $sourceOptions[$lead->lead_source] ?? $lead->lead_source }}</strong>
                         </div>
                         <div class="master-info"><span>Target
-                                Price</span><strong>{{ $lead->target_price ? money($lead->target_price, $lead->target_currency) : '-' }}</strong>
+                                Price</span><strong>{{ $lead->target_price ? \App\Helpers\CommonHelper::amount($lead->target_price, $lead->target_currency) : '-' }}</strong>
                         </div>
                     </div>
                 </div>
@@ -99,7 +99,7 @@
                                         <td>{{ $quote->quote_number }}<span class="master-sub">{{ $quote->title }}</span></td>
                                         <td>{{ $quote->statusLabel() }}</td>
                                         <td>{{ $quote->expiry_date ? $quote->expiry_date->format('d M Y') : '-' }}</td>
-                                        <td>{{ money($quote->total_amount, $quote->currency) }}</td>
+                                        <td>{{ \App\Helpers\CommonHelper::amount($quote->total_amount, $quote->currency) }}</td>
                                         <td><a href="{{ route('lead-quotes.show', $quote) }}">View</a></td>
                                 </tr>@empty<tr>
                                         <td colspan="5">No lead quotes given yet.</td>
@@ -136,9 +136,9 @@
                                             : ($quote->quantity ? number_format($quote->quantity) . ' ' . $quote->unit : '-')
                                         !!}</td>
                                         <td>{!! $quote->items->isNotEmpty()
-                                            ? $quote->items->map(fn($item) => money($item->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : ''))->implode('<br>')
+                                            ? $quote->items->map(fn($item) => \App\Helpers\CommonHelper::amount($item->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : ''))->implode('<br>')
                                             : ($quote->vendor_unit_price
-                                                ? money($quote->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : '')
+                                                ? \App\Helpers\CommonHelper::amount($quote->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : '')
                                                 : '-')
                                         !!}</td>
                                         <td>{{ $quote->statusLabel() }}</td>

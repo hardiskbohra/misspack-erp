@@ -4,14 +4,14 @@
 
 @section('content')
 @php
-    $money = function ($value, $currency = 'INR') { return money($value, $currency); };
+    $money = function ($value, $currency = 'INR') { return \App\Helpers\CommonHelper::amount($value, $currency); };
     $short = function ($value) {
         $value = (float) $value;
-        if (abs($value) >= 10000000) return inr($value / 10000000).' Cr';
-        if (abs($value) >= 100000) return inr($value / 100000).' L';
-        if (abs($value) >= 1000) return inr($value / 1000).' K';
+        if (abs($value) >= 10000000) return \App\Helpers\CommonHelper::indianCurrency($value / 10000000).' Cr';
+        if (abs($value) >= 100000) return \App\Helpers\CommonHelper::indianCurrency($value / 100000).' L';
+        if (abs($value) >= 1000) return \App\Helpers\CommonHelper::indianCurrency($value / 1000).' K';
 
-        return inr($value);
+        return \App\Helpers\CommonHelper::indianCurrency($value);
     };
 @endphp
 

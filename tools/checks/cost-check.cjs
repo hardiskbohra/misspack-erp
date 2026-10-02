@@ -215,7 +215,7 @@ for (const file of moneyFiles) {
 
     /* the currency and the figure are often on separate lines, so this reads
        the whole file rather than line by line */
-    for (const rx of [/\}\}\s*\{\{\s*inr\(/g, /' '\.\s*inr\(/g]) {
+    for (const rx of [/\}\}\s*\{\{\s*\\App\\Helpers\\CommonHelper::(?:indianCurrency|amount)\(/g, /' '\.\s*\\App\\Helpers\\CommonHelper::(?:indianCurrency|amount)\(/g]) {
         for (const m of text.matchAll(rx)) {
             handBuilt.push(`${file}:${lineOf(m.index)}`);
         }
@@ -224,6 +224,27 @@ for (const file of moneyFiles) {
 
 check('a money figure is never hand-built next to its own currency',
     handBuilt.length === 0, handBuilt.join(' | '));
+
+/* A bare inr($x) / money($x) only exists once something has already loaded
+   the helper class, so a page that never mentions the class dies with
+   "Call to undefined function". Views call the class name instead, which the
+   autoloader resolves on first use — and the helper file declares no global
+   functions at all. */
+const bareHelpers = [];
+const templates = walk('resources/views').filter(file => file.endsWith('.blade.php'));
+
+for (const file of templates) {
+    fs.readFileSync(path.join(ROOT, file), 'utf8').split('\n').forEach((line, i) => {
+        if (/(?<![\w$>.:])inr\(|(?<![\w$>.:])money\(/.test(line)) {
+            bareHelpers.push(`${file}:${i + 1}`);
+        }
+    });
+}
+
+check('money is called by class name, never by a global that may not be loaded',
+    bareHelpers.length === 0
+    && !/^function (inr|money)\(/m.test(helper)
+    && !/window\.misspackFormat\.inr\(/.test(helper));
 
 /* The model may not format money itself: that is the helper's job, and a
    second implementation is how two pages end up disagreeing. */
