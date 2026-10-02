@@ -51,7 +51,7 @@
                     <div class="master-field">
                         <label class="master-label">Shipment Label</label>
                         <input class="master-input" name="shipment_label"
-                            value="{{ old('identity_name', $shipment->shipment_label) }}" >
+                            value="{{ old('shipment_label', $shipment->shipment_label) }}">
                     </div>
                     <div class="master-field"><label class="master-label">Status <span
                                 class="master-required">*</span></label><select class="master-select" name="status"
