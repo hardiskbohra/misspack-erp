@@ -2038,13 +2038,19 @@
 /* ---------------- closed block ---------------- */
 
 .ship-index .ship-group-row td {
+    /* NOT display:flex — a flex cell leaves the table layout, the browser wraps
+       it in an anonymous cell in the first column and colspan="8" quietly stops
+       spanning. The strip's own layout lives in .ship-group-inner below. */
+    padding: 8px 14px;
+    font-size: 10.5px;
+    letter-spacing: .1em;
+}
+
+.ship-index .ship-group-inner {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 8px 14px;
-    font-size: 10.5px;
-    letter-spacing: .1em;
 }
 
 .ship-index .ship-group-count {

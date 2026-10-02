@@ -252,6 +252,27 @@ check('every first line in a row shares one line box',
 check('every second line shares its own line box',
     /--ship-sub: 16px/.test(css) && /\.ship-index td \.master-sub \{[\s\S]{0,80}line-height: var\(--ship-sub\)/.test(css));
 
+/* the closed divider is a row that spans the table: it must stay a table cell
+   or the browser confines it to the first column */
+/* read the real bodies: a fixed-width window over the file would reach into the
+   next rule and "find" the flex that legitimately sits in .ship-group-inner */
+const dividerCellBodies = [];
+for (let at = css.indexOf('.ship-index .ship-group-row td {');
+     at > -1;
+     at = css.indexOf('.ship-index .ship-group-row td {', at + 1)) {
+    dividerCellBodies.push(css.slice(at, css.indexOf('}', at)));
+}
+check('the closed divider spans the whole row',
+    /<td colspan="8">[\s\S]{0,500}ship-group-inner/.test(view)
+    && /\.ship-index \.ship-group-inner \{[\s\S]{0,120}display: flex/.test(css)
+    && dividerCellBodies.length > 0
+    && dividerCellBodies.every(body => !/display\s*:\s*(inline-)?(flex|grid)/.test(body)),
+    `${dividerCellBodies.length} rule(s)`);
+check('the closed divider keeps its count at the far edge',
+    /\.ship-index \.ship-group-inner \{[\s\S]{0,160}justify-content: space-between/.test(css));
+check('the divider stays a hairline band, not a tinted block',
+    /\.ship-index \.ship-group-row td \{[\s\S]{0,400}background: var\(--mc-card\)/.test(css));
+
 /* ---------------------------------------------------------------- report */
 
 const failed = out.filter(([, ok]) => !ok);

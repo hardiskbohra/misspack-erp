@@ -526,19 +526,26 @@
         }
 
         .master-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* label / value pairs. A cell that spans the table is not a pair, and
+           making it a grid would confine it to the 112px label column — the
+           empty state ("No users yet") is one of those. */
+        .master-table td:not([colspan]) {
             display: grid;
             grid-template-columns: 112px minmax(0, 1fr);
             gap: 12px;
             align-items: center;
-            padding: 12px 14px;
-            border-bottom: 1px solid var(--border);
         }
 
         .master-table td:last-child {
             border-bottom: 0;
         }
 
-        .master-table td::before {
+        /* only cells that carry a label get the label column */
+        .master-table td[data-label]::before {
             content: attr(data-label);
             color: var(--text-muted);
             font-size: 11px;

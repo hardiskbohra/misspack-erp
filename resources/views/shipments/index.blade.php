@@ -236,11 +236,17 @@
                         @if (! $closedDividerShown && $shipment->isClosed())
                             @php($closedDividerShown = true)
                             <tr class="ship-group-row">
+                                {{-- the cell stays a table cell: display:flex on a
+                                     <td> takes it out of the table layout and the
+                                     colspan stops spanning, so the row lives in a
+                                     flex wrapper inside it --}}
                                 <td colspan="8">
-                                    <span>Closed — delivered / cancelled</span>
-                                    <span class="ship-group-count">
-                                        {{ $shipments->where('status', \App\Models\Shipment::STATUS_DELIVERED)->count() + $shipments->where('status', \App\Models\Shipment::STATUS_CANCELLED)->count() }}
-                                    </span>
+                                    <div class="ship-group-inner">
+                                        <span>Closed — delivered / cancelled</span>
+                                        <span class="ship-group-count">
+                                            {{ $shipments->where('status', \App\Models\Shipment::STATUS_DELIVERED)->count() + $shipments->where('status', \App\Models\Shipment::STATUS_CANCELLED)->count() }}
+                                        </span>
+                                    </div>
                                 </td>
                             </tr>
                         @endif

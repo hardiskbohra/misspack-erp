@@ -60,4 +60,5 @@ node tools/checks/design-check.cjs && node tools/checks/blade-check.cjs \
 | A pinned grid | above 1200px the header and the totals row stay put while the rows scroll, and the borders are separated so a sticky header keeps its hairline |
 | Stacked-row labels | on a phone the row becomes a card and every value keeps the column name it had |
 | One row rhythm | every first line and every second line shares a line box, so a row reads as a row instead of a pile of boxes |
+| A spanning table cell | a cell turned into a flex or grid box leaves the table layout, and `colspan` quietly stops spanning — the closed-divider row and the users empty state both shipped that way. Outside a card breakpoint no cell may be flexed at all; inside one it has to exclude `[colspan]` |
 | Themed row menu | the shared kebab menu is drawn on the card colour, so it must not paint fixed light-theme values — on the dark card they are invisible |

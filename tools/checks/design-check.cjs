@@ -257,6 +257,23 @@ check('no negative margin on a title/hint pair (it overlaps the title)',
 check('the document-upload controls are field-height',
     /\.ship-doc-upload \.master-select,\s*[\s\S]{0,200}height:\s*44px/.test(shipCss));
 
+/* a flex/grid cell leaves the table layout: the browser wraps it in an
+   anonymous cell in the first column, so colspan quietly stops spanning and the
+   row's own layout is gone. Inside a media query it can be a deliberate stacked
+   card, so only the page layout is judged here. */
+/* every sheet, not just the shared ones: this is a module hazard too (the users
+   table grids its cells on a phone, which is where it was found) */
+const ALL_RULES = fs.readdirSync(CSS).filter(f => f.endsWith('.css'))
+    .flatMap(f => parseRules(f, strip(read(path.join(CSS, f)))));
+const flexCells = ALL_RULES.filter(r => /(^|[\s,>])t[dh](?![\w-])/.test(r.selector)
+    && /display\s*:\s*(inline-)?(flex|grid)/.test(r.body)
+    /* inside a media query a stacked card may grid its cells, but only if it
+       leaves the spanning ones alone */
+    && (!r.inAtRule || !/:not\(\[colspan\]\)/.test(r.selector)))
+    .map(r => `${r.file}: ${r.selector.replace(/\s+/g, ' ').trim()}`);
+check('no table cell is turned into a flex/grid box (a spanning cell stops spanning)',
+    flexCells.length === 0, flexCells.join(' | '));
+
 /* the shared row-action menu is drawn on --mc-card, so it must not be painted
    with fixed light-theme values: #2b3445 menu text on the dark card is
    invisible, and a #e9efff hover is a light chip on a dark toolbar */
