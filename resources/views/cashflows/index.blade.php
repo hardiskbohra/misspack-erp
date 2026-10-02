@@ -42,14 +42,18 @@
         'transaction_type', 'accounting_status', 'date_from', 'date_to', 'page', 'saved_view',
     ]))->reject(fn ($value) => $value === null || $value === '' || $value === 'all');
 
-    $monthFrom = \Illuminate\Support\Carbon::now()->startOfMonth()->toDateString();
-    $monthTo = \Illuminate\Support\Carbon::now()->endOfMonth()->toDateString();
+    /* The period chips are the shared ranges (App\Helpers\DateRanges): the
+       label, the range behind the link, the count from the controller and the
+       lit state here all read the same keys, so a chip can never claim a month
+       its link does not filter by. */
     $chipActive = [
         'credit' => $transactionType === 'credit',
         'debit' => $transactionType === 'debit',
         'pending' => $accountingStatus === 'pending',
-        'this_month' => $dateFrom === $monthFrom && $dateTo === $monthTo,
     ];
+    foreach ($dateRanges as $rangeKey => $range) {
+        $chipActive[$rangeKey] = $activeRange === $rangeKey;
+    }
     $chipActive['all'] = ! array_filter($chipActive);
 
     /* One URL per removable filter: everything else stays, 'page' restarts (a
@@ -71,7 +75,7 @@
        today, yesterday, the rest of this month, and everything older. The
        rows are already in date order, so a divider only has to mark the
        change. */
-    $dateBucket = function ($date) use ($monthFrom) {
+    $dateBucket = function ($date) use ($dateRanges) {
         if (! $date) {
             return 'Undated';
         }
@@ -87,7 +91,7 @@
             return 'Yesterday';
         }
 
-        return $day >= $monthFrom ? 'Earlier this month' : 'Older entries';
+        return $day >= $dateRanges['this_month']['from'] ? 'Earlier this month' : 'Older entries';
     };
 
     /* How many rows each divider covers, counted once — a paginator's
@@ -163,10 +167,17 @@
                     href="{{ route('cashflows.index', $chipBase->all() + ['accounting_status' => 'pending']) }}">
                     Pending <span class="master-list-chip-count">{{ $chipCounts['pending'] }}</span>
                 </a>
-                <a class="master-list-chip {{ $chipActive['this_month'] ? 'is-active' : '' }}"
-                    href="{{ route('cashflows.index', $chipBase->all() + ['date_from' => $monthFrom, 'date_to' => $monthTo]) }}">
-                    This month <span class="master-list-chip-count">{{ $chipCounts['this_month'] }}</span>
-                </a>
+                {{-- The periods read left to right, nearest first — the same
+                     four ranges every list gets from App\Helpers\DateRanges.
+                     Each one is a closed range, so the strip below can name it
+                     and clear both ends in one click. --}}
+                @foreach ($dateRanges as $rangeKey => $range)
+                    <a class="master-list-chip {{ $chipActive[$rangeKey] ? 'is-active' : '' }}"
+                        href="{{ route('cashflows.index', $chipBase->all() + ['date_from' => $range['from'], 'date_to' => $range['to']]) }}">
+                        {{ $dateRangeLabels[$rangeKey] }}
+                        <span class="master-list-chip-count">{{ $chipCounts[$rangeKey] ?? 0 }}</span>
+                    </a>
+                @endforeach
             </div>
 
             <div class="master-list-saved">
@@ -301,11 +312,18 @@
 
                     @if (filled($dateFrom) || filled($dateTo))
                         <span class="master-list-applied-chip">
-                            <span class="master-list-applied-key">Dates</span>
+                            <span class="master-list-applied-key">{{ $activeRange ? 'Period' : 'Dates' }}</span>
+                            {{-- a chip's own range is named, not spelled out: the
+                                 operator picked "Last month", so that is what is
+                                 filtering the list --}}
                             <span class="master-list-applied-value">
-                                {{ $dateFrom ? \Illuminate\Support\Carbon::parse($dateFrom)->format('d M Y') : 'start' }}
-                                →
-                                {{ $dateTo ? \Illuminate\Support\Carbon::parse($dateTo)->format('d M Y') : 'today' }}
+                                @if ($activeRange)
+                                    {{ $dateRangeLabels[$activeRange] }}
+                                @else
+                                    {{ $dateFrom ? \Illuminate\Support\Carbon::parse($dateFrom)->format('d M Y') : 'start' }}
+                                    →
+                                    {{ $dateTo ? \Illuminate\Support\Carbon::parse($dateTo)->format('d M Y') : 'today' }}
+                                @endif
                             </span>
                             <a class="master-list-applied-x" href="{{ $dateUrl }}"
                                 aria-label="Remove the period filter" title="Remove the period filter">&times;</a>

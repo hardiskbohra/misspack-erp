@@ -612,6 +612,46 @@ bladeFiles.forEach(file => {
 check('every table in a view sits in a .master-table-wrap',
     bareTables.length === 0, bareTables.join(', '));
 
+/* ---- quick date ranges ----
+   The period chips are one shared definition (App\Helpers\DateRanges): the key,
+   the label and the closed from/to pair behind the link. The count on a chip is
+   the number of rows that chip would show, and the lit state is the range that
+   is actually applied — so a chip can never name a month its link does not
+   filter by. */
+const rangeHelper = fs.readFileSync(path.join(ROOT, 'app/Helpers/DateRanges.php'), 'utf8');
+const cashController = fs.readFileSync(path.join(ROOT, 'app/Http/Controllers/CashflowController.php'), 'utf8');
+const rangeLabels = /public const LABELS = \[([\s\S]*?)\];/.exec(rangeHelper);
+
+check('the quick date ranges are declared once, in render order',
+    !!rangeLabels
+    && ['this_month', 'last_month', 'this_year', 'last_year']
+        .every((key, i, all) => rangeLabels[1].indexOf(`'${key}'`) > (i ? rangeLabels[1].indexOf(`'${all[i - 1]}'`) : -1))
+    && /public static function presets\(/.test(rangeHelper)
+    && /public static function keyOf\(/.test(rangeHelper));
+
+check('the list reads its periods from the shared helper, not from month math',
+    /DateRanges::presets\(\)/.test(cashController)
+    && /DateRanges::LABELS/.test(cashController)
+    && /DateRanges::keyOf\(/.test(cashController)
+    && !/startOfMonth|endOfMonth/.test(cashView)
+    && !/\$monthFrom|\$monthTo/.test(cashView));
+
+check('a count is computed for every period chip',
+    /foreach \(DateRanges::presets\(\) as \$key => \$range\)/.test(cashController)
+    && /\$counts\[\$key\] = \$count\(/.test(cashController));
+
+check('every period chip carries its label, its range, its count and its lit state',
+    (cashView.match(/@foreach \(\$dateRanges as /g) || []).length === 1
+    && /\$chipActive\[\$rangeKey\] = \$activeRange === \$rangeKey;/.test(cashView)
+    && /\$dateRangeLabels\[\$rangeKey\]/.test(cashView)
+    && /\['date_from' => \$range\['from'\], 'date_to' => \$range\['to'\]\]/.test(cashView)
+    && /\$chipCounts\[\$rangeKey\]/.test(cashView)
+    && /\$chipActive\[\$rangeKey\]/.test(cashView));
+
+check('the applied-filters chip names the period it stands for',
+    /\$activeRange \? 'Period' : 'Dates'/.test(cashView)
+    && /\$dateRangeLabels\[\$activeRange\]/.test(cashView));
+
 /* ---- same opening strip ----
    Both lists open with five flat tiles in the same shape: a title and a value,
    and only the last one carries a second line. A tile that grows a sub-line is

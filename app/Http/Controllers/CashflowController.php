@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\DateRanges;
 use App\Models\CashflowAccount;
 use App\Models\CashflowCategory;
 use App\Models\CashflowEntry;
@@ -67,6 +68,9 @@ class CashflowController extends Controller
             'stats' => $stats,
             'pageTotals' => $pageTotals,
             'chipCounts' => $this->chipCounts($filters),
+            'dateRanges' => DateRanges::presets(),
+            'dateRangeLabels' => DateRanges::LABELS,
+            'activeRange' => DateRanges::keyOf($filters['dateFrom'] ?? null, $filters['dateTo'] ?? null),
             'savedViews' => app(SavedViews::class)->forUser(Auth::id(), 'cashflows'),
             'mirroredPayments' => $mirroredPayments,
             'mirroredShipmentCosts' => $mirroredShipmentCosts,
@@ -321,16 +325,24 @@ class CashflowController extends Controller
             return $this->baseEntryQuery(array_merge($base, $overrides), false)->count();
         };
 
-        return [
+        $counts = [
             'all' => $count([]),
             'credit' => $count(['transactionType' => 'credit']),
             'debit' => $count(['transactionType' => 'debit']),
             'pending' => $count(['accountingStatus' => 'pending']),
-            'this_month' => $count([
-                'dateFrom' => Carbon::now()->startOfMonth()->toDateString(),
-                'dateTo' => Carbon::now()->endOfMonth()->toDateString(),
-            ]),
         ];
+
+        /* The period chips. The ranges come from the shared helper, so the
+           number on "Last month" is the number of rows that chip would show —
+           in the same month the chip is labelled with. */
+        foreach (DateRanges::presets() as $key => $range) {
+            $counts[$key] = $count([
+                'dateFrom' => $range['from'],
+                'dateTo' => $range['to'],
+            ]);
+        }
+
+        return $counts;
     }
 
     /**

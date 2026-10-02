@@ -235,30 +235,55 @@ check('every row-menu item has an icon',
    outside quoted strings, per {{ … }} expression. */
 const unbalancedExpressions = [];
 
+/* same counting for a whole @php … @endphp island: a stray bracket there is a
+   parse error on every page that renders the view, and it hides in a diff */
+/* One small scanner rather than three regexes: it knows a quoted string from a
+   comment, so an apostrophe in a comment ("the paginator's page") does not
+   silently swallow the rest of the block, and a // inside a string ("https://…")
+   is not mistaken for a comment. */
+const bracketDepth = code => {
+    let depth = 0;
+    let quote = null;
+    let comment = null;      // '//' to end of line, or '/*' to the closing */
+
+    for (let i = 0; i < code.length; i++) {
+        const char = code[i];
+        const next = code[i + 1];
+
+        if (comment === '//') {
+            if (char === '\n') comment = null;
+            continue;
+        }
+
+        if (comment === '/*') {
+            if (char === '*' && next === '/') { comment = null; i++; }
+            continue;
+        }
+
+        if (quote) {
+            if (char === '\\') { i++; continue; }
+            if (char === quote) quote = null;
+            continue;
+        }
+
+        if (char === '/' && next === '/') { comment = '//'; i++; continue; }
+        if (char === '/' && next === '*') { comment = '/*'; i++; continue; }
+        if (char === "'" || char === '"') { quote = char; continue; }
+        if (char === '(' || char === '[') depth++;
+        if (char === ')' || char === ']') depth--;
+
+        if (depth < 0) return { depth, broken: true };
+    }
+
+    return { depth, broken: false };
+};
+
 for (const file of files) {
     const text = fs.readFileSync(file, 'utf8');
 
     for (const m of text.matchAll(/\{\{(?!--)[\s\S]*?\}\}/g)) {
         const expression = m[0].slice(2, -2);
-        let depth = 0;
-        let quote = null;
-        let broken = false;
-
-        for (let i = 0; i < expression.length; i++) {
-            const char = expression[i];
-
-            if (quote) {
-                if (char === '\\') { i++; continue; }
-                if (char === quote) quote = null;
-                continue;
-            }
-
-            if (char === "'" || char === '"') { quote = char; continue; }
-            if (char === '(' || char === '[') depth++;
-            if (char === ')' || char === ']') depth--;
-
-            if (depth < 0) { broken = true; break; }
-        }
+        const { depth, broken } = bracketDepth(expression);
 
         if (/\\\\[A-Z]/.test(expression)) {
             unbalancedExpressions.push(`${rel(file)}: doubled namespace in ${m[0].slice(0, 50)}`);
@@ -273,6 +298,23 @@ for (const file of files) {
 
 check('every {{ … }} expression has balanced brackets',
     unbalancedExpressions.length === 0, [...new Set(unbalancedExpressions)].slice(0, 3).join(' | '));
+
+const unbalancedPhpBlocks = [];
+
+for (const file of files) {
+    const text = fs.readFileSync(file, 'utf8');
+
+    for (const m of text.matchAll(/@php(?!\()([\s\S]*?)@endphp/g)) {
+        const { depth, broken } = bracketDepth(m[1]);
+
+        if (broken || depth !== 0) {
+            unbalancedPhpBlocks.push(`${rel(file)}: @php block at line ${text.slice(0, m.index).split('\n').length}`);
+        }
+    }
+}
+
+check('every @php block has balanced brackets',
+    unbalancedPhpBlocks.length === 0, [...new Set(unbalancedPhpBlocks)].slice(0, 3).join(' | '));
 
 /* ------------------------------------------------- 7. structural tags balance */
 

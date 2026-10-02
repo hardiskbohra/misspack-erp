@@ -330,6 +330,68 @@ check('the shared row-action menu is themed, not fixed to a light palette',
     && /:root\[data-theme="dark"\] \.master-dropdown-menu \.danger/.test(indexCss),
     String(menuLiterals.length));
 
+/* ------------------------------------------------------- 5. modal contract
+   Every dialog in the app is .master-modal > .master-modal-card, and the card
+   is a screen-bounded column: the form fills it, and the body — the only
+   flexible child — is what scrolls. That chain used to hang on :has(); where
+   the browser does not support it, a tall quick-entry form stayed
+   content-sized, overflowed the card's hidden overflow, and the last fields
+   could not be reached at all (no scrollbar, nothing to drag). */
+
+const modalCss = indexCss.slice(indexCss.indexOf('.master-modal {'), indexCss.indexOf('.master-modal-grid'));
+
+check('the dialog card is a screen-bounded flex column',
+    winner('.master-modal-card', 'display').value === 'flex'
+    && winner('.master-modal-card', 'flex-direction').value === 'column'
+    && winner('.master-modal-card', 'overflow').value === 'hidden'
+    && /vh/.test(winner('.master-modal-card', 'max-height').value || ''));
+
+check('the card scrolls through its body: the form fills the card and may shrink',
+    winner('.master-modal-card > form', 'display').value === 'flex'
+    && winner('.master-modal-card > form', 'flex-direction').value === 'column'
+    && winner('.master-modal-card > form', 'flex').value === '1 1 auto'
+    && winner('.master-modal-card > form', 'min-height').value === '0'
+    /* both halves of the platform gate: with :has() the old rule handed the
+       form the same value, without it the tall form did not scroll. Comments
+       are stripped first — this very explanation mentions the selector. */
+    && !/:has\(/.test(strip(modalCss)));
+
+check('the dialog body is the scroll region and can shrink below its content',
+    winner('.master-modal-body', 'overflow-y').value === 'auto'
+    && winner('.master-modal-body', 'flex').value === '1 1 auto'
+    && winner('.master-modal-body', 'min-height').value === '0');
+
+check('a trailing action row stays at the bottom of the card',
+    winner('.master-modal-card > form > .master-modal-footer:last-child', 'margin-top').value === 'auto');
+
+/* the markup half of the contract: the body is a child of the card or of the
+   card's form. One level deeper and no rule can hand it the overflow. */
+const VOID_TAGS = new Set(['input', 'br', 'hr', 'img', 'meta', 'link', 'source', 'area', 'col', 'embed', 'track', 'wbr']);
+const modalShapeHazards = [];
+walk(VIEWS).filter(f => f.endsWith('.blade.php')).forEach(file => {
+    const text = read(file)
+        .replace(/\{\{--[\s\S]*?--\}\}/g, '')
+        .replace(/\{\{[\s\S]*?\}\}|\{!![\s\S]*?!!\}/g, '');
+    let m;
+    const re = /<div class="master-modal-card[^"]*"[^>]*>/g;
+    while ((m = re.exec(text)) !== null) {
+        const rest = text.slice(m.index + m[0].length);
+        const at = rest.search(/<div class="master-modal-body["']/);
+        if (at === -1) continue;
+        let depth = 0;
+        for (const tag of rest.slice(0, at).matchAll(/<(\/?)([a-z][\w-]*)((?:"[^"]*"|'[^']*'|[^>"'])*?)(\/?)>/gi)) {
+            if (VOID_TAGS.has(tag[2].toLowerCase()) || tag[4]) continue;
+            depth += tag[1] ? -1 : 1;
+        }
+        if (depth > 1) {
+            modalShapeHazards.push(`${path.relative(ROOT, file)} @${text.slice(0, m.index).split('\n').length} (body nested ${depth} deep)`);
+        }
+    }
+});
+
+check('every dialog keeps its body inside the card or the card\'s form',
+    modalShapeHazards.length === 0, modalShapeHazards.join(' | '));
+
 /* balanced braces everywhere */
 const unbalanced = fs.readdirSync(CSS).filter(f => f.endsWith('.css')).filter(f => {
     const t = read(path.join(CSS, f));

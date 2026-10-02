@@ -487,19 +487,28 @@
     flex-direction: column;
 }
 
-/* The form is the card's child that carries the layout. min-height: 0 lets it
-   shrink, which is what hands the scrolling to the body instead of letting the
-   content overflow the card. It grows only when it actually contains the body
-   — a form that wraps nothing but the action row (the delete dialogs) must
-   stay content-sized, or its buttons would float in the middle of a tall
-   sheet. :has() degrades to the plain shrink-only rule below. */
+/* The form is the card's child that carries the layout: a column that fills
+   the card, so the body — the only flexible child inside it — is what scrolls.
+   min-height: 0 is what lets it shrink and hands the overflow to the body.
+   This used to hang on :has(), which made the scroll depend on the browser:
+   where :has() is unsupported the tall form stayed content-sized, overflowed
+   the card's hidden overflow, and the last fields were simply unreachable —
+   no scrollbar, nothing to drag.
+   Growing is safe for a form that wraps nothing but the action row (the delete
+   dialogs): a column child only grows into free space, and the card is
+   content-sized unless it hits its own max-height. */
 .master-modal-card > form {
-    flex: 0 1 auto;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
     min-height: 0;
 }
 
-.master-modal-card > form:has(> .master-modal-body) {
-    flex: 1 1 auto;
+/* When the action row is the last thing in the card it stays at the bottom of
+   the sheet (the full-bleed phone layout makes the card a full screen tall)
+   instead of floating in the middle. */
+.master-modal-card > form > .master-modal-footer:last-child {
+    margin-top: auto;
 }
 
 .master-modal-card {
