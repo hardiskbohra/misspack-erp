@@ -261,6 +261,51 @@ check('the file dialog is bound, not only drawn',
     /id="fileDocumentModal"/.test(archiveView) && /'fileDocumentModal'/.test(cashflowJsFile)
     && /openFileDocumentModal/.test(cashflowJsFile));
 
+/* ------------------------------------------- the record page's card ----- */
+
+/* The card is included as a row of the record page's own grid: inside it,
+   spanning both columns. Left outside, it hangs under the columns with no
+   gutter at all — the card glued to the one above it — and its edges line up
+   with nothing on the page. The eight-space indent is the grid child's. */
+const showView = read('resources/views/cashflows/show.blade.php');
+const cardIncludeAt = showView.indexOf("@include('cashflows.partials.documents-card'");
+check('the documents card is a row of the record page grid, not its neighbour',
+    showView.indexOf('<div class="master-grid">') < cardIncludeAt
+    && /^ {8}@include\('cashflows\.partials\.documents-card'/m.test(showView)
+    && /\.cf-docs\s*\{\s*grid-column: 1 \/ -1;/.test(cashflowsCss));
+
+check('the card takes the grid gutter and keeps no margin of its own',
+    /\.cf-docs\s*\{[\s\S]{0,140}margin-bottom: 0;/.test(cashflowsCss));
+
+/* Three fields, one row. The card is as wide as the page, so type, title and
+   the file picker read as one line; the picker takes the whole row only when
+   the width can no longer hold three columns. */
+const uploadFields = cardView.slice(
+    cardView.indexOf('cf-doc-upload-fields'),
+    cardView.indexOf('cf-doc-upload-actions'));
+
+check('the upload row carries exactly three fields',
+    (uploadFields.match(/class="master-field"/g) || []).length === 3,
+    (uploadFields.match(/class="master-field"/g) || []).length + ' fields');
+
+check('the three fields share one row, and step down as the width drops',
+    /\.cf-doc-upload-fields\s*\{\s*display: grid;\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/
+        .test(cashflowsCss)
+    && /@media \(max-width: 1100px\)[\s\S]{0,240}\.cf-doc-upload-fields\s*\{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/
+        .test(cashflowsCss)
+    && /@media \(max-width: 768px\)[\s\S]{0,600}\.cf-doc-upload-fields\s*\{\s*grid-template-columns: 1fr;/
+        .test(cashflowsCss));
+
+check('the card badge is the shared badge in the document tone',
+    /class="master-badge cf-doc-state .*is-missing/.test(cardView));
+
+/* The record page's own badges use light-only colours in the detail sheet;
+   without a dark half they stayed cream on a dark card. */
+check('the record page badges carry a dark half',
+    /:root\[data-theme="dark"\] \.cf \.master-badge\.status-pending/.test(cashflowsCss)
+    && /:root\[data-theme="dark"\] \.cf \.master-badge\.status-reconciled/.test(cashflowsCss)
+    && /:root\[data-theme="dark"\] \.cf \.master-badge\.type-debit/.test(cashflowsCss));
+
 /* ------------------------------------------------------- the PHP, scanned */
 
 /* Comments and strings first, then brackets: an apostrophe inside a comment

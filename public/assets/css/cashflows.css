@@ -887,6 +887,45 @@
     color: #ff9b9b;
 }
 
+/* The record page's badges take the same tones as the ledger's pills. The
+   .status-* / .type-* rules above carry light-theme colours and nothing else,
+   so on a dark card they stayed cream-and-amber; these are the dark halves,
+   with the ledger's own values. Scoped to .cf so no other module is touched. */
+:root[data-theme="dark"] .cf .master-badge.status-pending {
+    background: rgba(245, 158, 11, .18);
+    color: #fcd34d;
+}
+
+:root[data-theme="dark"] .cf .master-badge.status-booked {
+    background: rgba(79, 131, 241, .18);
+    color: #93b4ff;
+}
+
+:root[data-theme="dark"] .cf .master-badge.status-reconciled {
+    background: rgba(16, 185, 129, .18);
+    color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .cf .master-badge.status-disputed {
+    background: rgba(225, 29, 72, .16);
+    color: #ff9b9b;
+}
+
+:root[data-theme="dark"] .cf .master-badge.status-ignored {
+    background: var(--mc-soft);
+    color: #94a3b8;
+}
+
+:root[data-theme="dark"] .cf .master-badge.type-credit {
+    background: rgba(16, 185, 129, .18);
+    color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .cf .master-badge.type-debit {
+    background: rgba(225, 29, 72, .16);
+    color: #ff9b9b;
+}
+
 /* ---------------- density ----------------
    Comfortable is the default; compact fits roughly a third more rows on the
    same screen. The padding and the header come from master-list.css; the
@@ -914,6 +953,15 @@
    record page and the archive's own cells. The tones follow the status pills
    above — one background and one foreground, both from tokens, with the dark
    theme only having to raise the foreground. */
+
+/* The documents card on the record page is a full-width row of that page's
+   grid: it spans both columns and takes the grid's own gutter, so it keeps the
+   rhythm the cards above it keep. Left outside the grid it sits flush against
+   the column above — no gutter — with edges that match nothing on the page. */
+.cf-docs {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+}
 
 .cf-doc-chip {
     display: inline-flex;
@@ -1040,19 +1088,49 @@
 }
 
 .cf-doc-upload {
-    margin-top: 16px;
+    /* the divider alone separates the upload from what is above it: the head
+       already carries a 14px bottom margin, so a top margin here read as a
+       hole in the card */
+    margin-top: 0;
     padding-top: 16px;
     border-top: 1px solid var(--mc-border);
 }
 
+/* Three fields, one row. The card is as wide as the page, so the type, the
+   title and the file picker read as one line instead of a stack; the picker
+   takes the whole row as soon as the width cannot hold three columns. */
 .cf-doc-upload-fields {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px 16px;
 }
 
-.cf-doc-upload-fields .full {
-    grid-column: 1 / -1;
+/* In a grid the row gap is the rhythm; the label's own top margin would add a
+   second one under the divider. */
+.cf-docs .master-label {
+    margin-top: 0;
+}
+
+/* The file control is the one field the browser sizes itself: without this it
+   stands taller than the two selects beside it. */
+.cf-doc-upload-fields .master-input[type="file"] {
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.cf-doc-upload-fields .master-input[type="file"]::file-selector-button,
+.cf-doc-upload-fields .master-input[type="file"]::-webkit-file-upload-button {
+    padding: 6px 12px;
+}
+
+@media (max-width: 1100px) {
+    .cf-doc-upload-fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cf-doc-upload-fields > .master-field:last-child {
+        grid-column: 1 / -1;
+    }
 }
 
 .cf-doc-upload-actions {
@@ -1065,8 +1143,8 @@
    existed. A hairline separates it from the upload, so the common action
    stays the obvious one. */
 .cf-doc-match {
-    margin-top: 18px;
-    padding-top: 18px;
+    margin-top: 16px;
+    padding-top: 16px;
     border-top: 1px solid var(--mc-border);
 }
 

@@ -111,8 +111,11 @@
                 <div class="master-muted-box">{{ $entry->notes ?: 'No notes added.' }}</div>
             </div>
         </div>
-    </div>
 
-    @include('cashflows.partials.documents-card', ['documentTypeOptions' => $documentTypeOptions])
+        {{-- The documents card is a full-width row of this grid: it takes the
+             grid's own gutter — and the 22px rhythm the columns above keep —
+             instead of hanging under them with no margin of its own. --}}
+        @include('cashflows.partials.documents-card', ['documentTypeOptions' => $documentTypeOptions])
+    </div>
 </div>
 @endsection

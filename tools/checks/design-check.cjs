@@ -212,6 +212,16 @@ const controls = [];
 });
 check('every text control has a label or an aria-label', controls.length === 0, controls.join(' | '));
 
+/* A label is one line. .master-sub is display:block, so a hint written with it
+   inside a <label> prints on the line below and pushes that field's control out
+   of line with the ones beside it — the row looks broken although nothing is
+   wrong with the grid. The app's own convention is plain text in the label:
+   "Title (optional)". */
+const blockHintInLabel = walk(VIEWS).filter(f => f.endsWith('.blade.php'))
+    .filter(f => /<label[^>]*class="[^"]*\bmaster-label\b[^"]*"[^>]*>[^<]*<span[^>]*class="[^"]*\bmaster-sub\b/.test(read(f)));
+check('no field label carries a block hint on its own line', blockHintInLabel.length === 0,
+    blockHintInLabel.map(f => path.relative(ROOT, f)).join(', '));
+
 check('no inline font styles on the record page',
     recordFiles.every(f => !/style="[^"]*font[^"]*"/.test(read(f))));
 

@@ -394,14 +394,12 @@
                         <input class="master-input" id="standaloneDate" type="date" name="document_date">
                     </div>
                     <div class="master-field full">
-                        <label class="master-label" for="standaloneTitle">Title
-                            <span class="master-sub">(optional)</span></label>
+                        <label class="master-label" for="standaloneTitle">Title (optional)</label>
                         <input class="master-input" id="standaloneTitle" name="title" maxlength="255"
                             placeholder="e.g. Bill 2418 — Shree Traders">
                     </div>
                     <div class="master-field full">
-                        <label class="master-label" for="standaloneParty">Party
-                            <span class="master-sub">(who the bill is from)</span></label>
+                        <label class="master-label" for="standaloneParty">Party (who the bill is from)</label>
                         <input class="master-input" id="standaloneParty" name="party_name" maxlength="255"
                             placeholder="e.g. Shree Traders">
                     </div>

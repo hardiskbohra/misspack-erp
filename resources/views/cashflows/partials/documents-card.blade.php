@@ -5,6 +5,10 @@
     filed while it is in hand, and month-end should have nothing left to
     chase. An entry with no document is what the ledger's "Missing documents"
     chip counts, so this card is where that number goes down.
+
+    It is included as a full-width row of the record page's own grid, so it
+    shares the page's gutters and keeps the card rhythm instead of hanging
+    under the columns with no margin of its own.
 --}}
 <section class="master-card master-section cf-docs" id="documents">
     <div class="master-section-head">
@@ -21,7 +25,9 @@
                 @endif
             </p>
         </div>
-        <span class="cf-doc-state {{ $entry->attachments->isEmpty() ? 'is-missing' : 'is-filed' }}">
+        {{-- the card-head badge: the theme's badge shape in the document's own
+             tone, the same pair the ledger's pills and the archive use --}}
+        <span class="master-badge cf-doc-state {{ $entry->attachments->isEmpty() ? 'is-missing' : 'is-filed' }}">
             {{ $entry->attachments->isEmpty() ? 'Missing' : 'Filed' }}
         </span>
     </div>
@@ -74,15 +80,18 @@
                 </select>
             </div>
             <div class="master-field">
-                <label class="master-label" for="documentTitle">Title <span class="master-sub">(optional)</span></label>
+                {{-- plain text, not a .master-sub span: the hint is display:block
+                     and would print under the label, pushing this field's input
+                     out of line with the two beside it --}}
+                <label class="master-label" for="documentTitle">Title (optional)</label>
                 <input class="master-input" id="documentTitle" name="title" maxlength="255"
                     placeholder="e.g. Bill 2418 — Shree Traders">
             </div>
-            <div class="master-field full">
+            <div class="master-field">
                 <label class="master-label" for="documentFiles">Files</label>
                 <input class="master-input" id="documentFiles" type="file" name="attachments[]" multiple required
                     accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.zip">
-                <p class="master-sub">PDF, image, Word, Excel, CSV or ZIP · up to 20 MB each.</p>
+                <p class="master-sub">PDF, image, Word, Excel, CSV or ZIP · 20 MB each</p>
             </div>
         </div>
         <div class="cf-doc-upload-actions">
@@ -96,7 +105,7 @@
     @if (($unlinkedDocuments ?? collect())->isNotEmpty())
         <form class="cf-doc-match" method="POST" action="{{ route('cashflows.attachments.link', $entry) }}">
             @csrf
-            <div class="master-field full">
+            <div class="master-field">
                 <label class="master-label" for="matchDocument">Match a document that is filed without an entry</label>
                 <select class="master-select" id="matchDocument" name="attachment_id" required>
                     <option value="">Choose a document…</option>
