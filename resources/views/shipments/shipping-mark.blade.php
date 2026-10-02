@@ -19,7 +19,7 @@
         </form>
 
         <span class="mark-hint">
-            {{ $copies }} sticker{{ $copies === 1 ? '' : 's' }} · {{ $shipment->package_count ? $shipment->package_count.' package(s) recorded' : 'no package count recorded' }} · {{ $perPage }} per A4 page
+            {{ $copies }} sticker{{ $copies === 1 ? '' : 's' }} · {{ $shipment->package_count ? $shipment->package_count.' package(s) recorded' : 'no package count recorded' }} · {{ $perPage }} per A5 page (2 × 2)
         </span>
 
         <a class="mark-btn" href="{{ route('shipments.stickers') }}">Whole open board →</a>

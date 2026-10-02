@@ -8,8 +8,8 @@
    ========================================================================== */
 
 @page {
-    size: A4 portrait;
-    margin: 8mm;
+    size: A5 landscape;
+    margin: 6mm;
 }
 
 * {
@@ -31,7 +31,8 @@ body {
     align-items: center;
     gap: 14px;
     flex-wrap: wrap;
-    max-width: 210mm;
+    /* matches the printable sheet width, so the preview and the toolbar line up */
+    max-width: 198mm;
     margin: 0 auto 14px;
     padding: 12px 14px;
     background: #fff;
@@ -88,13 +89,17 @@ body {
     color: #fff;
 }
 
-/* ---------------- the sheet ---------------- */
+/* ---------------- the sheet ----------------
+   A5 landscape (210 × 148 mm) with 6 mm margins prints 2 × 2 stickers of
+   99 × 68 mm. Sizes are in millimetres so the screen preview and the printer
+   agree; the screen width (198 mm) is the printable width, not the paper.
+   -------------------------------------------------------------------------- */
 
 .mark-sheet {
-    width: 194mm; /* A4 width minus the 8mm page margins */
+    width: 198mm; /* A5 landscape width minus the 6mm page margins */
     margin: 0 auto;
-    /* flex rows instead of grid: page breaks keep stickers whole more
-       reliably across browsers when each item is break-inside: avoid */
+    /* flex rows instead of grid: page breaks keep whole stickers together
+       more reliably across browsers when each item is break-inside: avoid */
     display: flex;
     flex-wrap: wrap;
 }
@@ -103,42 +108,67 @@ body {
     position: relative;
     flex: 0 0 50%;
     width: 50%;
-    height: 66mm; /* 4 rows fill one A4 page */
-    padding: 5mm 5mm 6mm;
+    height: 68mm; /* 2 rows × 68mm = 136mm = one A5 landscape page */
+    padding: 3mm 3.5mm;
     border: 1px dashed #b6c2d4;
     display: flex;
     flex-direction: column;
-    gap: 2mm;
+    gap: .8mm;
     overflow: hidden;
     background: #fff;
 }
 
-/* the cut line stays on screen only — printed sheets get the dashed border */
-.mark-cut {
-    display: none;
+/* The header, meta strip and footer are fixed; the party block is the one
+   flexible row. If a record's address is unusually long it is clipped inside
+   that block instead of pushing the branding off the label or overlapping the
+   row below — the mark has a fixed height and content must never collide. */
+.mark-head,
+.mark-meta,
+.mark-foot {
+    flex: 0 0 auto;
 }
+
+.mark-parties {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ---------------- brand header ---------------- */
 
 .mark-head {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 4mm;
-    padding-bottom: 1.5mm;
-    border-bottom: 2px solid #101828;
+    align-items: center;
+    gap: 3mm;
+    padding-bottom: .6mm;
+    border-bottom: 1.6px solid #101828;
+}
+
+.mark-brand {
+    height: 5.5mm;
+    width: auto;
+    flex: 0 0 auto;
+}
+
+.mark-head-right {
+    min-width: 0;
+    margin-left: auto;
+    text-align: right;
 }
 
 .mark-title {
     display: block;
-    font-size: 13pt;
+    font-size: 8.5pt;
     font-weight: 900;
-    letter-spacing: .14em;
+    letter-spacing: .1em;
     text-transform: uppercase;
+    line-height: 1.1;
 }
 
 .mark-sub {
     display: block;
-    margin-top: 1mm;
-    font-size: 8pt;
+    margin-top: .4mm;
+    font-size: 6.5pt;
     font-weight: 700;
     color: #475467;
     text-transform: uppercase;
@@ -146,49 +176,70 @@ body {
 }
 
 .mark-number {
-    padding: 1mm 2.5mm;
-    border: 1.5px solid #101828;
-    border-radius: 2mm;
-    font-size: 10pt;
+    flex: 0 0 auto;
+    padding: .7mm 1.8mm;
+    border: 1.4px solid #101828;
+    border-radius: 1.6mm;
+    font-size: 8pt;
     font-weight: 900;
     white-space: nowrap;
 }
 
+/* ---------------- parties ---------------- */
+
 .mark-parties {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
-    gap: 3mm;
+    gap: 2.5mm;
     align-items: start;
+    /* the rows centre in whatever height the flex column leaves: slack shows
+       above and below the addresses instead of as one gap under them */
+    align-content: center;
 }
 
 .mark-party {
     min-width: 0;
 }
 
-.mark-party p {
-    margin: 1mm 0 0;
+.mark-party strong {
+    display: block;
+    margin-top: .5mm;
     font-size: 8pt;
-    line-height: 1.3;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.mark-party p {
+    margin: .5mm 0 0;
+    font-size: 7pt;
+    line-height: 1.25;
     color: #344054;
     overflow-wrap: anywhere;
 }
 
-.mark-party strong {
-    display: block;
-    margin-top: 1mm;
-    font-size: 10pt;
-    line-height: 1.25;
-    overflow-wrap: anywhere;
+/* A long address is clamped instead of pushing the branding off the label:
+   the mark has a fixed height and an overflowing block would overlap the row
+   below it. Three lines carry a full Indian address. */
+.mark-address {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .mark-contact {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    font-size: 6pt;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
     font-weight: 700;
     color: #101828 !important;
 }
 
 .mark-label {
     display: block;
-    font-size: 7pt;
+    font-size: 5.5pt;
     font-weight: 800;
     letter-spacing: .1em;
     text-transform: uppercase;
@@ -197,18 +248,23 @@ body {
 
 .mark-arrow {
     align-self: center;
-    font-size: 14pt;
+    font-size: 12pt;
     font-weight: 900;
     color: #98a2b3;
 }
 
+/* ---------------- meta strip ---------------- */
+
 .mark-meta {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 2mm;
-    padding: 1.5mm 0;
+    grid-template-columns: auto auto 1fr auto;
+    gap: 3mm;
+    align-items: end;
+    /* one rule above the strip and one below it: the strip's own bottom border
+       is left off because the footer's top rule already closes it, and two
+       rules 1mm apart read as a printing error. */
+    padding: .4mm 0;
     border-top: 1px solid #d0d5dd;
-    border-bottom: 1px solid #d0d5dd;
 }
 
 .mark-meta div {
@@ -217,10 +273,31 @@ body {
 
 .mark-meta strong {
     display: block;
-    margin-top: .5mm;
-    font-size: 8.5pt;
+    margin-top: .3mm;
+    font-size: 8pt;
+    font-weight: 800;
+    line-height: 1.2;
     overflow-wrap: anywhere;
 }
+
+.mark-meta-destination strong {
+    text-transform: uppercase;
+}
+
+.mark-label-cell {
+    text-align: right;
+}
+
+.mark-label-chip {
+    display: inline-block;
+    padding: .6mm 2mm;
+    border: 1.4px dashed #101828;
+    border-radius: 1.6mm;
+    font-size: 8.5pt;
+    font-weight: 900;
+}
+
+/* ---------------- footer: branding + codes ---------------- */
 
 .mark-foot {
     display: flex;
@@ -228,69 +305,92 @@ body {
     justify-content: space-between;
     gap: 3mm;
     margin-top: auto;
+    padding-top: .8mm;
+    border-top: 1.6px solid #101828;
 }
 
-.mark-destination strong {
+.mark-brandfoot {
+    min-width: 0;
+}
+
+.mark-website {
     display: block;
-    margin-top: .5mm;
-    font-size: 11pt;
-    font-weight: 900;
-    text-transform: uppercase;
-}
-
-.mark-label-chip {
-    padding: 1mm 2.5mm;
-    border: 1.5px dashed #101828;
-    border-radius: 2mm;
-    font-size: 9pt;
-    font-weight: 900;
-}
-
-.mark-ref {
-    max-width: 34mm;
-    text-align: right;
-}
-
-.mark-ref strong {
-    display: block;
-    margin-top: .5mm;
     font-size: 8pt;
-    overflow-wrap: anywhere;
+    font-weight: 900;
+    letter-spacing: .01em;
+    color: #101828;
 }
 
-/* ---------------- QR (scan to track) ---------------- */
+.mark-tagline {
+    display: block;
+    margin-top: .3mm;
+    font-size: 6pt;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #667085;
+}
+
+.mark-codes {
+    display: flex;
+    align-items: flex-end;
+    gap: 3mm;
+    flex: 0 0 auto;
+}
+
+/* ---------------- QR codes (scan to track / Instagram) ----------------
+   The code is an SVG generated in the browser. It needs a white plate and a
+   real quiet zone to stay scannable at label size, and it must not be scaled
+   by the surrounding text rules — hence the fixed mm box and the explicit
+   svg sizing below. */
 
 .mark-qr {
-    flex: 0 0 auto;
+    margin: 0;
     text-align: center;
+    flex: 0 0 auto;
 }
 
 .mark-qr-code {
     width: 12mm;
     height: 12mm;
-    /* keep the code crisp at label-printer resolutions */
-    image-rendering: pixelated;
+    padding: .6mm;
+    background: #fff;
+    border: .3mm solid #d0d5dd;
+    border-radius: 1mm;
+    overflow: hidden;
+}
+
+.mark-qr-social .mark-qr-code {
+    width: 12mm;
+    height: 12mm;
 }
 
 .mark-qr-code svg {
     display: block;
-    width: 100%;
-    height: 100%;
-    border: .3mm solid #d0d5dd;
-    border-radius: 1mm;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none;
     background: #fff;
 }
 
+/* The caption stays inside its code's width: a nowrap caption would print
+   over the neighbouring block. */
 .mark-qr-hint {
     display: block;
-    margin-top: .8mm;
-    font-size: 5.5pt;
+    margin-top: .4mm;
+    max-width: 16mm;
+    margin-inline: auto;
+    font-size: 4pt;
     font-weight: 800;
-    letter-spacing: .04em;
+    letter-spacing: .02em;
     text-transform: uppercase;
-    color: #667085;
+    line-height: 1.05;
+    color: #475467;
+    overflow-wrap: anywhere;
 }
 
+/* If the payload cannot be encoded the place is shown as a hatch rather than
+   as an empty square, so a bad sticker is obvious before it is printed. */
 .mark-qr-code.ship-qr-failed {
     background: repeating-linear-gradient(45deg, #f2f4f7, #f2f4f7 2mm, #e4e7ec 2mm, #e4e7ec 4mm);
 }
@@ -324,5 +424,15 @@ body {
         /* keep each sticker whole so a page break never splits a mark */
         break-inside: avoid;
         page-break-inside: avoid;
+        /* the dashed edge is a cutting guide; keep it 1px on paper */
+        border-color: #c3cddd;
+    }
+
+    /* Browsers drop background colours when printing unless asked not to;
+       the white plate behind each code must survive. */
+    .mark-qr-code,
+    .mark-qr-code svg {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 }

@@ -992,16 +992,26 @@
     background: var(--mc-card);
 }
 
-.ship-doc-upload .master-select {
-    flex: 1 1 200px;
-    max-width: 220px;
+/* NOTE: the upload row used to be a flex row and these controls carried
+   `flex: 1 1 200px` / `1 1 240px`. Once the fields moved into a column flex
+   (.ship-form-field), a *length* flex-basis becomes the MAIN size — the file
+   input was 240px tall and the box was mostly empty space. Controls are sized
+   by height/width now; only min-width matters here. */
+.ship-doc-upload .master-select,
+.ship-doc-upload input[type="file"] {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    height: 44px;
 }
 
-/* the file rows sit next to a select and a checkbox, so they must be able to
-   shrink instead of pushing the submit button out of the card */
+/* the native picker keeps the field's baseline: the button sits in the middle
+   of the 44px box instead of on the first line of a tall one */
 .ship-doc-upload input[type="file"] {
-    flex: 1 1 240px;
-    min-width: 0;
+    display: flex;
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
 /* ---------------- Cost breakdown ---------------- */

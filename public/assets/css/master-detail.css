@@ -107,9 +107,11 @@
 }
 
 /* A hint that sits directly under a card title belongs to the title, not to
-   the block below it. */
+   the block below it. NOTE: this must never be a negative margin — inside a
+   .master-section-head the title's own bottom margin is reset to 0, so a
+   negative top margin on the hint pulls it up *over* the title. */
 .master-section-title + .master-sub {
-    margin: -10px 0 12px
+    margin: 2px 0 12px
 }
 
 .master-section-meta {

@@ -680,7 +680,8 @@ class ShipmentController extends Controller
         return view('shipments.shipping-mark', [
             'shipment' => $shipment,
             'copies' => $copies,
-            'perPage' => 8,
+            /* A5 landscape holds 2 × 2 stickers of 99 × 68 mm */
+            'perPage' => 4,
             'modeOptions' => Shipment::modeOptions(),
         ]);
     }
@@ -812,6 +813,7 @@ class ShipmentController extends Controller
             'statusOptions' => Shipment::statusOptions(),
             'modeOptions' => Shipment::modeOptions(),
             'limit' => self::STICKER_SHEET_LIMIT,
+            'perPage' => 4,
         ]);
     }
 
