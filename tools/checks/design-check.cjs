@@ -274,6 +274,33 @@ const flexCells = ALL_RULES.filter(r => /(^|[\s,>])t[dh](?![\w-])/.test(r.select
 check('no table cell is turned into a flex/grid box (a spanning cell stops spanning)',
     flexCells.length === 0, flexCells.join(' | '));
 
+/* opacity below 1 on a table row or cell makes a stacking context: everything
+   inside it paints in that row's turn, so a row menu is covered by the rows
+   after it and comes out see-through. Muting belongs in colour, not alpha. */
+const fadedCells = ALL_RULES.filter(r => /(^|[\s,>\.])t[dh](?![\w-])|\btr\b|\.master-table/.test(r.selector)
+    && /opacity\s*:\s*(0?\.\d+)/.test(r.body))
+    .map(r => `${r.file}: ${r.selector.replace(/\s+/g, ' ').trim()}`);
+check('no table row or cell is made translucent (it swallows the row menu)',
+    fadedCells.length === 0, fadedCells.join(' | '));
+
+/* the row menu is one component: a sheet that loads after master-index.css and
+   re-declares it silently wins the cascade (master-show.css did exactly that,
+   putting the dark-theme menu back to fixed light-theme colours) */
+const owner = LOAD_ORDER.indexOf('master-index.css');
+const laterSheets = [...new Set([
+    ...LOAD_ORDER.slice(owner + 1),
+    'master-media.css', 'shipments.css', 'shipping-mark.css', 'tasks.css',
+    'users.css', 'vendors.css', 'clients.css',
+])].filter(f => f !== 'master-index.css' && fs.existsSync(path.join(CSS, f)));
+const reDeclared = laterSheets.filter(f => /^\s*\.master-dropdown-menu\s*\{/m.test(strip(read(path.join(CSS, f)))));
+check('only master-index.css declares the row menu (no later sheet re-declares it)',
+    owner > -1 && reDeclared.length === 0, reDeclared.join(', '));
+
+const indexMenu = strip(read(path.join(CSS, 'master-index.css')));
+check('the open row is raised above its siblings and the panel can flip',
+    /\.master-table tbody tr\.is-menu-open\s*\{[\s\S]{0,120}position: relative/.test(indexMenu)
+    && /\.master-dropdown\.drop-up \.master-dropdown-menu\s*\{[\s\S]{0,80}bottom: 48px/.test(indexMenu));
+
 /* the shared row-action menu is drawn on --mc-card, so it must not be painted
    with fixed light-theme values: #2b3445 menu text on the dark card is
    invisible, and a #e9efff hover is a light chip on a dark toolbar */

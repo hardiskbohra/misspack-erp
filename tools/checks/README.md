@@ -61,4 +61,6 @@ node tools/checks/design-check.cjs && node tools/checks/blade-check.cjs \
 | Stacked-row labels | on a phone the row becomes a card and every value keeps the column name it had |
 | One row rhythm | every first line and every second line shares a line box, so a row reads as a row instead of a pile of boxes |
 | A spanning table cell | a cell turned into a flex or grid box leaves the table layout, and `colspan` quietly stops spanning — the closed-divider row and the users empty state both shipped that way. Outside a card breakpoint no cell may be flexed at all; inside one it has to exclude `[colspan]` |
+| A row menu inside a scrolling table | a panel in a table cell paints in its row's pass, so the rows after it cover it: the open row is raised, the panel is capped or flipped, and no sheet may re-declare the menu after `master-index.css` owns it |
+| Translucent rows | `opacity` on a row or a cell makes a stacking context and swallows the row's own menu — muting a finished row belongs in colour, not in alpha |
 | Themed row menu | the shared kebab menu is drawn on the card colour, so it must not paint fixed light-theme values — on the dark card they are invisible |

@@ -951,6 +951,22 @@
     display:block;
 }
 
+/* A positioned panel inside a table cell is painted in its row's pass, so the
+   rows below it would cover it — raising the row it belongs to (class set by
+   app-layout.js when the menu opens) puts the whole row, panel included, above
+   its siblings. */
+.master-table tbody tr.is-menu-open{
+    position: relative;
+    z-index: 4;
+}
+
+/* ...and when the button sits near the bottom of a scrolling box, the panel
+   flips above it instead of being cut off by the edge. */
+.master-dropdown.drop-up .master-dropdown-menu{
+    top: auto;
+    bottom: 48px;
+}
+
 .master-dropdown-menu a,
 .master-dropdown-menu button{
     width:100%;

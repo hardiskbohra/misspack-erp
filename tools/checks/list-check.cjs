@@ -24,6 +24,8 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const VIEW = path.join(ROOT, 'resources/views/shipments/index.blade.php');
 const CSS = path.join(ROOT, 'public/assets/css/shipments.css');
 const JS = path.join(ROOT, 'public/assets/js/shipments.js');
+const LAYOUT_JS = path.join(ROOT, 'public/assets/js/app-layout.js');
+const MASTER_INDEX = path.join(ROOT, 'public/assets/css/master-index.css');
 const MODEL = path.join(ROOT, 'app/Models/Shipment.php');
 
 const out = [];
@@ -32,6 +34,8 @@ const check = (name, ok, detail = '') => out.push([name, !!ok, detail]);
 const view = fs.readFileSync(VIEW, 'utf8');
 const css = fs.readFileSync(CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const js = fs.readFileSync(JS, 'utf8');
+const layoutJs = fs.readFileSync(LAYOUT_JS, 'utf8');
+const layoutCss = fs.readFileSync(MASTER_INDEX, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const model = fs.readFileSync(MODEL, 'utf8');
 
 /* ------------------------------------------------------- 1. markup hygiene */
@@ -272,6 +276,31 @@ check('the closed divider keeps its count at the far edge',
     /\.ship-index \.ship-group-inner \{[\s\S]{0,160}justify-content: space-between/.test(css));
 check('the divider stays a hairline band, not a tinted block',
     /\.ship-index \.ship-group-row td \{[\s\S]{0,400}background: var\(--mc-card\)/.test(css));
+
+/* the row menu lives inside the table's scroll box: the row has to be raised
+   (a panel in a table cell paints in its row's pass) and the panel capped or
+   flipped, or the rows below and the box edge eat it */
+check('the open row is raised above the rows after it',
+    /\.master-table tbody tr\.is-menu-open\s*\{[\s\S]{0,120}z-index: 4/.test(layoutCss)
+    && /classList\.add\('is-menu-open'\)/.test(layoutJs)
+    && /classList\.remove\('is-menu-open'\)/.test(layoutJs));
+check('the panel flips when there is more room above the button',
+    /\.master-dropdown\.drop-up \.master-dropdown-menu\s*\{[\s\S]{0,80}bottom: 48px/.test(layoutCss)
+    && /classList\.toggle\('drop-up'/.test(layoutJs));
+check('the panel is capped to the room it actually has',
+    /getBoundingClientRect\(\)/.test(layoutJs)
+    && /menu\.style\.maxHeight = room \+ 'px'/.test(layoutJs));
+check('the menu is only declared once, in master-index.css',
+    /^\s*\.master-dropdown-menu\s*\{/m.test(layoutCss)
+    && !/\.master-dropdown-menu/.test(
+        fs.readFileSync(path.join(ROOT, 'public/assets/css/master-show.css'), 'utf8')
+            .replace(/\/\*[\s\S]*?\*\//g, '')));
+
+/* a closed row is muted in colour: opacity would stack the cell and swallow
+   the row's own menu */
+check('the closed rows are muted in colour, not in alpha',
+    !/\.ship-index \.ship-row-closed td \{[\s\S]{0,300}opacity/.test(css)
+    && /\.ship-index \.ship-row-closed td \{[\s\S]{0,300}color: var\(--mc-text-2\)/.test(css));
 
 /* ---------------------------------------------------------------- report */
 

@@ -580,8 +580,19 @@
 }
 
 .ship-index .ship-row-closed td {
-    /* finished shipments read as done without dropping out of the list */
-    opacity: .68;
+    /* finished shipments read as done without dropping out of the list.
+       Not opacity: that puts a stacking context on the cell and drags the
+       row's own action menu below the rows after it (and makes it see-through). */
+    color: var(--mc-text-2);
+}
+
+.ship-index .ship-row-closed .ship-cell-id {
+    color: var(--mc-text-2);
+}
+
+.ship-index .ship-row-closed .ship-date,
+.ship-index .ship-row-closed .ship-route strong {
+    color: var(--mc-text-2);
 }
 
 .ship-index .ship-row-closed .master-id,

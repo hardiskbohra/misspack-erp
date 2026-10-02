@@ -162,6 +162,49 @@
 
             const toggle = dropdown.querySelector('.master-dropdown-toggle');
             if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+            if (open) return;
+
+            /* closing also releases everything the open state set up */
+            dropdown.classList.remove('drop-up');
+
+            const menu = dropdown.querySelector('.master-dropdown-menu');
+            if (menu) {
+                menu.style.maxHeight = '';
+                menu.style.overflowY = '';
+            }
+
+            const row = dropdown.closest('tr');
+            if (row) row.classList.remove('is-menu-open');
+        };
+
+        /* A menu inside a scrolling table has two ways to be cut off: the rows
+           below it paint after their own row, and the box it lives in clips.
+           The row is raised (CSS) and the panel is flipped or capped to the
+           space that is actually left. */
+        const openMenu = (dropdown) => {
+            const row = dropdown.closest('tr');
+            if (row) row.classList.add('is-menu-open');
+
+            const menu = dropdown.querySelector('.master-dropdown-menu');
+            const toggle = dropdown.querySelector('.master-dropdown-toggle');
+            if (!menu || !toggle) return;
+
+            const scroller = dropdown.closest('.master-table-wrap');
+            const bounds = (scroller || document.documentElement).getBoundingClientRect();
+            const button = toggle.getBoundingClientRect();
+
+            menu.style.maxHeight = '';
+
+            const below = bounds.bottom - button.bottom - 12;
+            const above = button.top - bounds.top - 12;
+            const up = below < menu.offsetHeight && above > below;
+
+            dropdown.classList.toggle('drop-up', up);
+
+            const room = Math.max(120, up ? above : below);
+            menu.style.maxHeight = room + 'px';
+            menu.style.overflowY = 'auto';
         };
 
         const closeMenus = (except) => {
@@ -181,6 +224,8 @@
 
                 closeMenus(dropdown);
                 setMenuState(dropdown, willOpen);
+
+                if (willOpen) openMenu(dropdown);
         
             });
         
