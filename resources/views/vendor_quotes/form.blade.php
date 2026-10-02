@@ -185,9 +185,9 @@
                 <div class="master-detail-grid">
                     <div class="master-field"><label class="master-label">Sample Available</label>
                             
-                    <div class="master-chip-group">
+                    <div class="master-choice-group">
 
-                        <label class="master-chip green-chip">
+                        <label class="master-choice-chip green-chip">
                             <input type="radio"
                                 name="sample_available"
                                 value="1"
@@ -200,7 +200,7 @@
                             </span>
                         </label>
                     
-                        <label class="master-chip red-chip">
+                        <label class="master-choice-chip red-chip">
                             <input type="radio"
                                 name="sample_available"
                                 value="0"
@@ -217,9 +217,9 @@
                             
                     <div class="master-field"><label class="master-label">Ready Stock Available</label>
                             
-                    <div class="master-chip-group">
+                    <div class="master-choice-group">
 
-                        <label class="master-chip green-chip">
+                        <label class="master-choice-chip green-chip">
                             <input type="radio"
                                 name="ready_stock_available"
                                 value="1"
@@ -232,7 +232,7 @@
                             </span>
                         </label>
                     
-                        <label class="master-chip red-chip">
+                        <label class="master-choice-chip red-chip">
                             <input type="radio"
                                 name="ready_stock_available"
                                 value="0"

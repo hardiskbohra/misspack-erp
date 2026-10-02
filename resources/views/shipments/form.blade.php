@@ -112,7 +112,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <label class="master-chip green-chip"><label class="master-label">Show in Client Portal</label>
+                    <label class="master-choice-chip green-chip"><label class="master-label">Show in Client Portal</label>
                         <input type="checkbox" name="show_client_portal" value="1" {{ old('show_client_portal', $shipment->show_client_portal ?? false) ? 'checked' : '' }}>
                         <span><i class="fa-solid fa-eye"></i> Show</span>
                     </label>

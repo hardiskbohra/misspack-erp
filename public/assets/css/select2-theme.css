@@ -132,7 +132,12 @@ span.select2-container.master-textarea {
     min-width: 80px;
 }
 
-/* --- dropdown --- */
+/* --- dropdown ---
+   The ladder, low to high: row menus 1300 · toasts 4000 · alert dialogs 4500 ·
+   .master-modal 9999 · this list. A select's options must clear the dialog
+   they were opened from, because the panel is portaled to <body> (see
+   master-selects.js) so that no scrolling or overflow-hidden ancestor can
+   clip it — which also means no ancestor's stacking context raises it. */
 
 .select2-dropdown {
     border: 1px solid #d8e2ef;
@@ -140,7 +145,7 @@ span.select2-container.master-textarea {
     box-shadow: 0 18px 45px rgba(23, 35, 59, .18);
     background: #fff;
     margin-top: 6px;
-    z-index: 3000;
+    z-index: 10050;
     overflow: hidden;
 }
 

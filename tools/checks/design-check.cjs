@@ -392,6 +392,70 @@ walk(VIEWS).filter(f => f.endsWith('.blade.php')).forEach(file => {
 check('every dialog keeps its body inside the card or the card\'s form',
     modalShapeHazards.length === 0, modalShapeHazards.join(' | '));
 
+/* ------------------------------------ 6. choice chips and select lists
+   Two small components, and each one has exactly one owner. `.master-chip` is
+   the record page's neutral meta chip (master-detail.css). The segmented
+   control that picks one of a few options is `.master-choice-*`, written in
+   master-form.css and master-index.css and kept identical in both. While the
+   two shared the name `master-chip`, master-detail.css loaded last and drew
+   its bordered meta box — padding, border, radius eight — around every
+   Credit/Debit choice, so the choice looked like a framed button inside a
+   box. A shared name is not a style bug you can override away: the next sheet
+   to load moves it again. */
+
+const choiceSheets = ['master-form.css', 'master-index.css'];
+const choiceOwners = SHEETS.filter(f => /\.master-choice-/.test(strip(read(path.join(CSS, f)))));
+
+check('the choice chip has exactly one owner and the meta chip keeps its name',
+    choiceOwners.length === 2 && choiceSheets.every(f => choiceOwners.includes(f)),
+    choiceOwners.join(', '));
+
+/* the old shared name must not survive anywhere — in a sheet or in a view */
+const sharedName = [read(path.join(CSS, 'master-detail.css'))]
+    .concat(walk(VIEWS).filter(f => f.endsWith('.blade.php')).map(read))
+    .filter(t => /master-chip-group|\.master-chip\s+(input|span)|(^|[\s"])master-chip-group/.test(t));
+check('no view or sheet still calls the choice chip by the meta chip\u2019s name',
+    sharedName.length === 0, sharedName.length + ' file(s)');
+
+const metaAsControl = walk(VIEWS).filter(f => f.endsWith('.blade.php')).filter(f =>
+    /<label[^>]*class="[^"]*\bmaster-chip\b[^"]*"/.test(read(f)));
+check('no choice label wears the meta chip class', metaAsControl.length === 0,
+    metaAsControl.map(f => path.relative(ROOT, f)).join(', '));
+
+/* the choice itself: no box, a themed fill, a keyboard ring */
+expect('.master-choice-chip span', 'border', v => /^0$/.test(v.trim()),
+    'the choice chip draws no border box');
+expect('.master-choice-chip span', 'background', v => /var\(--/.test(v),
+    'the unselected choice chip is filled from a theme token');
+expect('.master-choice-chip:hover span', 'background', v => /var\(--/.test(v),
+    'the hover is a themed fill step, not a literal');
+expect('.master-choice-chip input:focus-visible + span', 'outline',
+    v => /^2px solid var\(--/.test(v.trim()),
+    'the choice chip keeps a visible keyboard focus ring');
+
+/* the two copies are one component: identical rules, in the same order */
+const choiceRules = file => RULES
+    .filter(r => r.file === file && /master-choice|(credit|debit|green|yellow|blue|red)-chip/.test(r.selector))
+    .map(r => r.selector.replace(/\s+/g, ' ').trim() + '{' + r.body.replace(/\s+/g, ' ').trim() + '}');
+const copies = choiceSheets.map(choiceRules);
+check('the two copies of the choice chip are identical',
+    copies[0].length > 0 && copies[0].join('|') === copies[1].join('|'),
+    copies.map(c => c.length + ' rules').join(' vs '));
+
+/* the option list: portaled to the page, and above the dialog it belongs to */
+const selects = strip(read(path.join(ROOT, 'public/assets/js/master-selects.js')))
+    .split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
+const parentLine = (selects.match(/dropdownParent:[^\n]*/) || [''])[0];
+check('a select\u2019s option list is parented to the page, not to the dialog',
+    /\$\('body'\)/.test(parentLine) && !/master-modal/.test(parentLine), parentLine.trim());
+
+const modalZ = winner('.master-modal', 'z-index');
+const dropdownZ = winner('.select2-dropdown', 'z-index');
+check('a select\u2019s list is painted in front of the dialog it was opened from',
+    modalZ.value !== null && dropdownZ.value !== null
+    && parseInt(dropdownZ.value, 10) > parseInt(modalZ.value, 10),
+    'dropdown ' + dropdownZ.value + ' vs dialog ' + modalZ.value);
+
 /* balanced braces everywhere */
 const unbalanced = fs.readdirSync(CSS).filter(f => f.endsWith('.css')).filter(f => {
     const t = read(path.join(CSS, f));

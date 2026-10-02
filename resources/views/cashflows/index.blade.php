@@ -534,9 +534,9 @@
                         </div>
                         <div class="master-field">
                             <label class="master-label">Transaction Type <span class="master-required" aria-hidden="true">*</span></label>
-                            <div class="master-chip-group">
+                            <div class="master-choice-group">
                                 @foreach($transactionTypeOptions as $key => $label)
-                                    <label class="master-chip {{ $key === 'credit' ? 'credit-chip' : 'debit-chip' }}">
+                                    <label class="master-choice-chip {{ $key === 'credit' ? 'credit-chip' : 'debit-chip' }}">
                                         <input type="radio" name="transaction_type" value="{{ $key }}"
                                             {{ old('transaction_type', 'debit') === $key ? 'checked' : '' }} required>
                                         <span>

@@ -17,10 +17,18 @@
                 // copy the original select's classes onto the rendered
                 // selection element so module CSS hooks still reach it
                 selectionCssClass: ':all:',
-                // keep dropdowns inside modals (fixed-positioned ancestors)
-                dropdownParent: $sel.closest('.master-modal-box, .master-modal-card').length
-                    ? $sel.closest('.master-modal-box, .master-modal-card')
-                    : $('body'),
+                /* The panel goes on <body>, never inside the dialog. Inside
+                   the card it is drawn in the card's own pass: the card clips
+                   it at its edge (overflow: hidden), the action row paints
+                   over it, and the body's scroll region cuts it off — a long
+                   list of options simply disappeared behind the footer. On the
+                   body no ancestor can clip it or trap it in a stacking
+                   context, and the .select2-dropdown z-index contract in
+                   select2-theme.css keeps it in front of the dialog.
+                   Select2 still holds its place: it binds scroll to every
+                   scrolling ancestor of the control and flips the list above
+                   the field when the window leaves no room below. */
+                dropdownParent: $('body'),
                 // small option lists don't need a search box
                 minimumResultsForSearch: optionsCount <= 8 ? 0 : Infinity,
                 templateResult: function (data) {
@@ -51,6 +59,31 @@
             if (cls.length) $container.addClass(cls.join(' '));
         }
 
+        /* A dropdown on <body> outlives the dialog that opened it: anything
+           that closes the modal — a save, a script calling MasterModal.close()
+           — would leave the panel floating with nothing under it. The layout
+           toggles `.open` on the modal, so watch that class and close what was
+           open inside it. */
+        var watched = new WeakSet();
+
+        function closeInside(modal) {
+            $(modal).find('select.master-select').each(function () {
+                var instance = $(this).data('select2');
+                if (instance && instance.isOpen()) instance.close();
+            });
+        }
+
+        function watchModals() {
+            if (!window.MutationObserver) return;
+            document.querySelectorAll('.master-modal').forEach(function (modal) {
+                if (watched.has(modal)) return;
+                watched.add(modal);
+                new MutationObserver(function () {
+                    if (!modal.classList.contains('open')) closeInside(modal);
+                }).observe(modal, { attributes: true, attributeFilter: ['class'] });
+            });
+        }
+
         function initAll() {
             // [hidden] (attribute) is honoured — legacy hidden filter selects
             // stay native and invisible; CSS-hidden selects (e.g. inside
@@ -62,6 +95,7 @@
 
         $(function () {
             initAll();
+            watchModals();
 
             // Re-decorate selects injected dynamically (AJAX modal rebuilds etc.).
             if (window.MutationObserver) {
@@ -72,11 +106,11 @@
                         for (var j = 0; j < added.length; j++) {
                             var node = added[j];
                             if (node.nodeType !== 1) continue;
-                            if (node.matches && node.matches('select.master-select')) found = true;
-                            if (node.querySelector && node.querySelector('select.master-select')) found = true;
+                            if (node.matches && (node.matches('select.master-select') || node.matches('.master-modal'))) found = true;
+                            if (node.querySelector && node.querySelector('select.master-select, .master-modal')) found = true;
                         }
                     }
-                    if (found) initAll();
+                    if (found) { initAll(); watchModals(); }
                 }).observe(document.body, { childList: true, subtree: true });
             }
         });

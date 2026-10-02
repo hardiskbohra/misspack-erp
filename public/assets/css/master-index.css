@@ -824,32 +824,38 @@
     background: #fff0f4;
     color: var(--vq-red)
 }
-
-.master-chip-group {
+/* A choice chip is a segmented control, not a button: it draws no box. The
+   unselected chip is a soft fill that deepens on hover, the selected one is
+   the module colour, and the only outline either of them ever shows is the
+   keyboard focus ring — so a row of choices reads as one control instead of a
+   row of framed buttons. `.master-chip` is the record page's small neutral
+   meta chip (master-detail.css) and stays deliberately unrelated: while the
+   two shared one name, the meta chip's border drew a box around every choice. */
+.master-choice-group {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
 }
 
-.master-chip {
+.master-choice-chip {
     position: relative;
     cursor: pointer;
     user-select: none;
 }
 
-.master-chip input {
+.master-choice-chip input {
     position: absolute;
     opacity: 0;
     pointer-events: none;
 }
 
-.master-chip span {
+.master-choice-chip span {
     min-height: 42px;
     min-width: 110px;
     padding: 10px 16px;
-    border: 1px solid var(--mc-border);
+    border: 0;
     border-radius: 999px;
-    background: var(--mc-card);
+    background: var(--mc-soft);
     color: var(--mc-text-2);
     font-size: 14px;
     font-weight: 600;
@@ -860,15 +866,21 @@
     transition: 0.2s ease;
 }
 
-.master-chip:hover span {
-    background: var(--mc-card-soft);
-    border-color: #bcd3f8;
+/* with no border to tint, the fill carries the hover: one step from --mc-soft
+   to --mc-border, which reads darker in light and lighter in dark */
+.master-choice-chip:hover span {
+    background: var(--mc-border);
 }
 
-.master-chip input:checked + span {
+.master-choice-chip input:checked + span {
     color: #fff;
-    border-color: transparent;
     box-shadow: 0 8px 18px rgba(79, 131, 241, 0.22);
+}
+
+/* the control draws no box, so keyboard focus brings a ring of its own */
+.master-choice-chip input:focus-visible + span {
+    outline: 2px solid var(--master-primary);
+    outline-offset: 2px;
 }
 
 .credit-chip input:checked + span {
@@ -878,6 +890,27 @@
 .debit-chip input:checked + span {
     background: linear-gradient(135deg, #ef4770, #e11d48);
 }
+
+.green-chip input:checked + span {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.yellow-chip input:checked + span {
+    background: linear-gradient(135deg, #facc15, #eab308);
+}
+
+.blue-chip input:checked + span {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.red-chip input:checked + span {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.master-choice-chip i {
+    font-size: 13px;
+}
+
 
 .master-status-chip{
     display:inline-flex;
@@ -911,10 +944,6 @@
 
 .master-status-chip.danger i{
     color:#dc2626;
-}
-
-.master-chip i {
-    font-size: 13px;
 }
 
 .master-dropdown{
