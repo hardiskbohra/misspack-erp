@@ -772,9 +772,8 @@
     max-width: 180px;
 }
 
-.ship-save-view[hidden] {
-    display: none !important;
-}
+/* .ship-save-view[hidden] used to need its own display:none here; the global
+   [hidden] rule in core.css now covers every element. */
 
 /* ---------------- ETA states ---------------- */
 

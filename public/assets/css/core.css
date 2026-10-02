@@ -42,6 +42,19 @@
      <span class="core-badge core-badge-success">Approved</span>
    ========================================================================== */
 
+/* --------------------------------------------------------------------------
+   [hidden] must always win.
+   The browser's own rule for the hidden attribute lives in the user-agent
+   sheet, so ANY author rule that sets `display` on the same element beats it —
+   no matter how low its specificity. `.master-field { display: flex }` was
+   enough to keep a hidden field on screen, which is why the cost modal showed
+   its "Describe it" and "Exchange Rate" fields even when the code had hidden
+   them. The attribute is a statement of intent, so it wins here.
+   -------------------------------------------------------------------------- */
+[hidden] {
+    display: none !important;
+}
+
 :root {
     --core-primary: #4f83f1;
     --core-primary-2: #6366f1;

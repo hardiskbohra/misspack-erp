@@ -192,8 +192,11 @@ html {
         width: 100%;
         max-width: none;
         border-radius: 0;
-        max-height: none;
         min-height: 100%;
+        /* full-bleed sheet, but still exactly one screen tall: the body keeps
+           the scroll and the action row stays on screen */
+        max-height: 100vh;
+        max-height: 100dvh;
         box-shadow: none;
     }
 
@@ -203,5 +206,21 @@ html {
 
     .master-modal-footer {
         padding-bottom: calc(14px + env(safe-area-inset-bottom));
+    }
+
+    /* Phone behaviour belongs to the shared modal, not to one module: a
+       two-column field grid stacks and the action row becomes full-width
+       buttons with the primary action on top. */
+    .master-modal-grid,
+    .master-modal-three-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .master-modal-footer {
+        flex-direction: column-reverse;
+    }
+
+    .master-modal-footer .master-btn {
+        width: 100%;
     }
 }

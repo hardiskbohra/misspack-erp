@@ -151,7 +151,10 @@
     display: block;
     margin-top: 10px;
     margin-bottom: 10px;
-    color: #111111;
+    /* was a hard #111111: correct on a white card, but in the dark theme it
+       painted near-black labels on the dark panel. The token carries the same
+       near-black in light and the panel's own text colour in dark. */
+    color: var(--mc-text, #111111);
     font-size: 14px;
     font-weight: 700
 }
@@ -167,7 +170,10 @@
     border: 1px solid var(--mc-border);
     border-radius: 12px;
     background: var(--mc-card);
-    color: var(--dark);
+    /* --dark is a legacy name that the admin layout never defines, which left
+       this as an unresolved var() and let the text colour inherit by accident;
+       the theme text token says the same thing on purpose. */
+    color: var(--mc-text, #17233b);
     font-size: 14px;
     font-weight: 400;
     outline: none

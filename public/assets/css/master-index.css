@@ -457,13 +457,15 @@
     overflow: hidden
 }
 
+/* Overlay: the card is centred by its own auto margins, so when the viewport
+   is too short the overlay scrolls and the top of the card stays reachable
+   (flex centring would push it above the scroll origin and clip it). */
 .master-modal {
     position: fixed;
     inset: 0;
     z-index: 9999;
     display: none;
-    align-items: center;
-    justify-content: center;
+    overflow-y: auto;
     padding: 24px;
     background: rgba(9, 14, 26, .62);
     backdrop-filter: blur(7px)
@@ -473,29 +475,68 @@
     display: flex
 }
 
+/* Card: one column — fixed header, scrolling body, fixed footer. The body
+   carries the scroll instead of the card, so a long form can never push the
+   action row out of view or get clipped by the card's overflow.
+   Almost every modal wraps its header/body/footer in a <form>, and a form is
+   a block box: the flex properties on those three only work if the form is a
+   column flex container too, so the rule below covers both shapes. */
+.master-modal-card,
+.master-modal-card > form {
+    display: flex;
+    flex-direction: column;
+}
+
+/* The form is the card's child that carries the layout. min-height: 0 lets it
+   shrink, which is what hands the scrolling to the body instead of letting the
+   content overflow the card. It grows only when it actually contains the body
+   — a form that wraps nothing but the action row (the delete dialogs) must
+   stay content-sized, or its buttons would float in the middle of a tall
+   sheet. :has() degrades to the plain shrink-only rule below. */
+.master-modal-card > form {
+    flex: 0 1 auto;
+    min-height: 0;
+}
+
+.master-modal-card > form:has(> .master-modal-body) {
+    flex: 1 1 auto;
+}
+
 .master-modal-card {
+    position: relative;
+    margin: auto;
     width: min(700px, calc(100vw - 32px));
-    max-height: calc(100vh - 40px);
+    max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
     overflow: hidden;
-    background: var(--mc-card);
+    background: var(--mc-card, #ffffff);
     border: 1px solid var(--master-border);
     border-radius: 16px;
     box-shadow: 0 26px 70px rgba(13, 24, 45, .28)
 }
 
 .master-modal-header {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 14px;
-    padding: 20px 24px;
+    padding: 18px 24px;
+    background: var(--mc-card, #ffffff);
     border-bottom: 1px solid var(--master-border)
 }
 
 .master-modal-heading {
     display: flex;
     align-items: center;
-    gap: 12px
+    gap: 12px;
+    min-width: 0
+}
+
+/* A long title or subtitle wraps inside the header instead of shoving the
+   close button out of the card. */
+.master-modal-heading > div {
+    min-width: 0
 }
 
 .master-modal-icon {
@@ -513,12 +554,14 @@
 .master-modal-title {
     margin: 0;
     font-size: 16px;
+    line-height: 1.3;
     font-weight: 600
 }
 
 .master-modal-subtitle {
-    margin: 4px 0 0;
+    margin: 2px 0 0;
     font-size: 12px;
+    line-height: 1.4;
     color: var(--master-muted);
     font-weight: 600
 }
@@ -535,17 +578,26 @@
     cursor: pointer
 }
 
+/* min-height: 0 is what lets a flex child actually shrink — without it the
+   body keeps its content height and pushes the footer out of the card. The
+   old rule guessed the header/footer size (100vh - 190px), so any modal whose
+   header wrapped lost its last field under the action row. */
 .master-modal-body {
-    max-height: calc(100vh - 190px);
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
     overflow-y: auto;
-    padding: 22px 24px
+    overscroll-behavior: contain;
+    padding: 20px 24px 24px
 }
 
 .master-modal-footer {
+    flex: 0 0 auto;
     display: flex;
     justify-content: flex-end;
     gap: 12px;
-    padding: 18px 24px;
+    padding: 16px 24px;
+    background: var(--mc-card, #ffffff);
     border-top: 1px solid var(--master-border)
 }
 
@@ -560,6 +612,63 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
     margin-top:18px;
+}
+
+/* Size variant for confirm dialogs. */
+.master-modal-card.small {
+    width: min(460px, calc(100vw - 32px))
+}
+
+/* The header class some older modules ship is the same box under a shorter
+   name — supported here so no module has to restate the chrome. */
+.master-modal-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px 24px;
+    background: var(--mc-card, #ffffff);
+    border-bottom: 1px solid var(--master-border)
+}
+
+.master-modal-head h3 {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.3;
+    font-weight: 600
+}
+
+/* A modal may ship its own dim layer (with data-close-modal) instead of
+   relying on the overlay fill. Keep it behind the card and out of the flex
+   flow, so the card stays clickable and the overlay stays scrollable. */
+.master-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0
+}
+
+/* --- modal field rhythm ------------------------------------------------
+   The unified field is already a 7px flex column, but .master-label carries
+   10px top/bottom margins of its own. Inside a modal that doubles the gap
+   above every label and under every input — twelve fields added up to well
+   over a screenful, which is what turned the add-cost sheet into a scroll
+   box. Modal fields use the flex gap alone; the label keeps its size and
+   weight. */
+.master-modal .master-field > .master-label {
+    margin-top: 0;
+    margin-bottom: 0
+}
+
+.master-modal .master-field > .master-sub {
+    margin-top: 0
+}
+
+/* A hint under a field must not sit on the next row: with the grid stretched
+   to the tallest field, give the hint its own line and let the field clip its
+   own rounding rather than the row. */
+.master-modal .master-field > .master-sub {
+    line-height: 1.45
 }
 
 .master-field.full {

@@ -46,6 +46,11 @@
     /* list-table header band: dark keeps the soft panel so the header still
        separates from the rows */
     --mc-table-head: var(--mc-card-soft);
+    /* hints, field help text and modal subtitles — the sheets that use this
+       token declare their own light value, but a :root declaration there is
+       beaten by this attribute-qualified dark block, so dark stays readable
+       instead of inheriting the light grey. */
+    --master-muted: #aab6c9;
 }
 
 :root,
@@ -82,6 +87,7 @@
     --mc-shadow: 0 14px 35px rgba(25, 42, 70, 0.08);
     /* list-table header band: plain white, like the card it sits on */
     --mc-table-head: #ffffff;
+    --master-muted: #687386;
 }
 
 /* ---------- Reset / Global Font ---------- */
