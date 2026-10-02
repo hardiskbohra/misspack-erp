@@ -7,8 +7,12 @@
    operator sees is what comes out of the printer.
    ========================================================================== */
 
+/* The office prints on 14 × 20 cm paper, so the page is declared in absolute
+   millimetres rather than as a named size: a printer driver with no
+   "140 × 200" preset still gets the right box. 6mm margins leave 128 × 188mm,
+   which is three stickers of 128 × 62.3mm stacked with ~1mm to spare. */
 @page {
-    size: A5 landscape;
+    size: 140mm 200mm;
     margin: 6mm;
 }
 
@@ -32,7 +36,7 @@ body {
     gap: 14px;
     flex-wrap: wrap;
     /* matches the printable sheet width, so the preview and the toolbar line up */
-    max-width: 198mm;
+    max-width: 128mm;
     margin: 0 auto 14px;
     padding: 12px 14px;
     background: #fff;
@@ -90,13 +94,15 @@ body {
 }
 
 /* ---------------- the sheet ----------------
-   A5 landscape (210 × 148 mm) with 6 mm margins prints 2 × 2 stickers of
-   99 × 68 mm. Sizes are in millimetres so the screen preview and the printer
-   agree; the screen width (198 mm) is the printable width, not the paper.
+   14 × 20 cm paper (140 × 200 mm) with 6 mm margins prints three stickers of
+   128 × 62.3 mm, one per row. Sizes are in millimetres so the screen preview
+   and the printer agree; the sheet width (128 mm) is the printable width, not
+   the paper. @page declares absolute millimetres so a printer driver without a
+   140 × 200 preset still gets the right box.
    -------------------------------------------------------------------------- */
 
 .mark-sheet {
-    width: 198mm; /* A5 landscape width minus the 6mm page margins */
+    width: 128mm; /* 140mm paper minus the 6mm page margins */
     margin: 0 auto;
     /* flex rows instead of grid: page breaks keep whole stickers together
        more reliably across browsers when each item is break-inside: avoid */
@@ -106,14 +112,19 @@ body {
 
 .mark {
     position: relative;
-    flex: 0 0 50%;
-    width: 50%;
-    height: 68mm; /* 2 rows × 68mm = 136mm = one A5 landscape page */
+    /* one sticker per row: 3 × 62.3mm = 186.9mm of the 188mm printable height.
+       The ~1mm of slack is deliberate — at exactly 188mm a rounding difference
+       in the print engine's page box can push the third sticker onto page 2.
+       A full-width sticker is what gives the From/To columns room: two columns
+       on a 140mm sheet would leave each party about 28mm. */
+    flex: 0 0 100%;
+    width: 100%;
+    height: 62.3mm;
     padding: 3mm 3.5mm;
     border: 1px dashed #b6c2d4;
     display: flex;
     flex-direction: column;
-    gap: .8mm;
+    gap: .7mm;
     overflow: hidden;
     background: #fff;
 }
@@ -132,6 +143,11 @@ body {
     flex: 1 1 auto;
     min-height: 0;
     overflow: hidden;
+    /* clear space above the meta rule: centring alone can leave the last
+       contact line touching the hairline on a two-party block with a long
+       address, which reads as a collision on paper. Bottom only — the top is
+       already separated by the flex gap under the head rule. */
+    padding-bottom: .8mm;
 }
 
 /* ---------------- brand header ---------------- */
@@ -351,8 +367,8 @@ body {
 }
 
 .mark-qr-code {
-    width: 12mm;
-    height: 12mm;
+    width: 13mm;
+    height: 13mm;
     padding: .6mm;
     background: #fff;
     border: .3mm solid #d0d5dd;
@@ -361,8 +377,8 @@ body {
 }
 
 .mark-qr-social .mark-qr-code {
-    width: 12mm;
-    height: 12mm;
+    width: 11mm;
+    height: 11mm;
 }
 
 .mark-qr-code svg {

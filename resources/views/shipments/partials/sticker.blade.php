@@ -4,10 +4,11 @@
      | page (copies of one shipment) and the bulk sticker sheet (one sticker
      | per open shipment), so both always print the same label.
      |
-     | Geometry: A5 landscape (210 × 148 mm) with 6 mm margins prints 2 × 2 of
-     | these (99 × 74 mm each). Everything is sized in mm and the address
-     | blocks are clamped, so a record with a long address cannot push the
-     | branding off the label or overlap the row below it.
+     | Geometry: the office prints on 14 × 20 cm paper; with 6 mm margins that
+     | leaves 128 × 188 mm, which is three stickers of 128 × 62.3 mm stacked.
+     | Everything is sized in mm and the address blocks are clamped, so a record
+     | with a long address cannot push the branding off the label or overlap the
+     | row below it.
      |
      | Expects: $shipment. Optional: $markCopy (e.g. "3 of 8").
      */

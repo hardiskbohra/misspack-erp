@@ -33,7 +33,7 @@
             {{ $shipments->count() }} open shipment{{ $shipments->count() === 1 ? '' : 's' }}
             · {{ $copies }} sticker{{ $copies === 1 ? '' : 's' }} each
             · {{ $shipments->count() * $copies }} sticker{{ $shipments->count() * $copies === 1 ? '' : 's' }} total
-            · {{ $perPage }} per A5 page (2 × 2)
+            · {{ $perPage }} per page (140 × 200 mm)
             @if ($shipments->count() >= $limit)
                 · showing the first {{ $limit }}
             @endif
