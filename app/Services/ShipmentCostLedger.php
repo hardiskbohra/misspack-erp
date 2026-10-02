@@ -24,21 +24,24 @@ class ShipmentCostLedger
 
     /**
      * Fill the INR value of a head from its own amount + rate.
-     * INR rows keep their amount; a foreign row without a rate is left at 0
-     * and the form asks for the rate instead of inventing one.
+     *
+     * The rate in the form is editable in every case, and this follows what the
+     * row carries: a foreign bill converts at the rate it was raised at, and a
+     * rupee bill carries 1 — the base currency is stored at 1 whatever is typed,
+     * so a rate left over from another currency can never multiply a rupee
+     * amount. A *foreign* row without a rate is left at 0 and the form refuses
+     * it, rather than inventing a 1:1 conversion.
      */
     public function recalculateInr(ShipmentCost $cost): void
     {
         $currency = strtoupper((string) ($cost->currency ?: 'INR'));
         $amount = (float) $cost->amount;
-
-        if ($currency === 'INR') {
-            $cost->amount_in_inr = round($amount, 2);
-
-            return;
-        }
-
         $rate = (float) $cost->exchange_rate;
+
+        /* the base currency has no conversion to make: its rate is 1 */
+        if ($currency === 'INR' && $rate <= 0) {
+            $rate = 1.0;
+        }
 
         $cost->amount_in_inr = $rate > 0 ? round($amount * $rate, 2) : 0;
     }

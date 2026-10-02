@@ -46,17 +46,22 @@ check('the modal always renders the rate field, never only for a currency',
 check('its first state is decided by the server, from the shipment currency',
     /\$costCurrency = strtoupper\(\(string\) old\('currency', \$shipment->currency/.test(modal)
     && /\$costIsBase = \$costCurrency === 'INR'/.test(modal)
-    && /@if \(\$costIsBase\) readonly @endif/.test(modal)
+    && /\{\{ \$costIsBase \? ' is-base' : '' \}\}/.test(modal)
     && /value="\{\{ \$costRateValue \}\}"/.test(modal));
 
-check('the base currency is locked at 1 and reads as settled',
+check('the rate is editable in every case — nothing is locked',
+    !/readonly/.test(modal)
+    && !/readOnly/.test(js)
+    && !/#costRateField\.is-base \.master-input/.test(css));
+
+check('the base currency still starts at 1 and asks for no conversion',
     /\$costRateValue = old\('exchange_rate', \$costIsBase \? '1' :/.test(modal)
     && /#costRateField\.is-base \.master-required \{\s*display: none;/.test(css)
-    && /#costRateField\.is-base \.master-input \{/.test(css));
+    && /rate\.value = '1';\s*\n\s*rateFromLastUsed = false;/.test(js));
 
 check('the required marker and hint say which case the row is in',
     /aria-hidden="true">\*<\/span>/.test(modal)
-    && /Billed in INR — no conversion/.test(modal)
+    && /INR bill — the amount is already in rupees, so the ledger keeps the rate at 1\./.test(modal)
     && /The INR value is frozen at this rate: amount × rate\./.test(modal));
 
 /* --------------------------------------------------------- 2. the default */
@@ -89,21 +94,29 @@ check('it follows a currency change however the select was changed',
 check('a rate entered for one currency never carries over to another',
     /var known = lastRates\[code\] \|\| null;\s*\n\s*rate\.value = known \? known\.rate : '';/.test(js));
 
-check('the rate is required on a foreign currency and not on the base',
+check('the rate is required on a foreign currency and optional on the base',
     /rate\.required = foreign;/.test(js)
-    && /rate\.readOnly = !foreign;/.test(js));
+    && /rateWrap\.classList\.toggle\('is-base', !foreign\);/.test(js));
 
 check('the row shows the INR value it will freeze, while it is typed',
     /function paintRate\(\)/.test(js)
-    && /\(parseFloat\(\(amount && amount\.value\) \|\| 0\) \|\| 0\)/.test(js)
+    && /var value = \(parseFloat\(\(amount && amount\.value\) \|\| 0\) \|\| 0\) \* rateValue;/.test(js)
+    && /if \(!foreign\) \{\s*rateValue = 1;\s*\} else if \(!\(rateValue > 0\)\) \{\s*rateValue = 0;\s*\}/.test(js)
     && /posted to the ledger/.test(js)
     && /last rate used for /.test(js));
 
 /* ------------------------------------------------------------ 4. the ledger */
 
-check('the INR value is amount × rate — and never an invented 1:1',
-    /\$cost->amount_in_inr = \$rate > 0 \? round\(\$amount \* \$rate, 2\) : 0;/.test(ledger)
-    && /\$cost->amount_in_inr = round\(\$amount, 2\);/.test(ledger));
+check('the INR value follows the rate in the field, whichever currency it is',
+    /if \(\$currency === 'INR' && \$rate <= 0\) \{\s*\$rate = 1\.0;\s*\}/.test(ledger)
+    && /\$cost->amount_in_inr = \$rate > 0 \? round\(\$amount \* \$rate, 2\) : 0;/.test(ledger));
+
+check('a foreign row without a rate is never quietly converted at 1:1',
+    !/\$rate > 0 \? \$rate : 1/.test(ledger)
+    && !/round\(\$amount, 2\)/.test(ledger));
+
+check('a rupee bill is stored at 1, so a stray rate can never multiply it',
+    /if \(\$data\['currency'\] === 'INR'\) \{\s*\$data\['exchange_rate'\] = 1;\s*\}/.test(controller));
 
 check('the ledger is recalculated on both save and update',
     (controller.match(/recalculateInr\(\$cost\)/g) || []).length >= 2);

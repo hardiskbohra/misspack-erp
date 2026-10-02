@@ -2,8 +2,9 @@
     $costRow = new \App\Models\ShipmentCost(['currency' => $shipment->currency ?: 'INR']);
     /* A cost is entered in the currency it is billed in, so the exchange rate
        is part of the amount — not a detail produced on request. It is always on
-       screen: locked at 1 for the base currency, required with the last rate
-       used for any other, and the INR value shows while it is typed. */
+       screen and always editable: it starts from the last rate used for the
+       currency and the operator can type the rate this bill was actually
+       raised at, with the INR value it produces shown underneath. */
     $costCurrency = strtoupper((string) old('currency', $shipment->currency ?: 'INR'));
     $costIsBase = $costCurrency === 'INR';
     $costLastRate = $lastCostRates[$costCurrency] ?? null;
@@ -61,10 +62,9 @@
                         <input class="master-input" type="number" step="0.000001" min="0" name="exchange_rate" id="costRate"
                             value="{{ $costRateValue }}"
                             @if ($costLastRate && ! old('exchange_rate')) data-auto-filled="1" @endif
-                            @if ($costIsBase) readonly @endif
-                            placeholder="{{ $costIsBase ? 'Base currency' : 'INR per 1 '.$costCurrency }}">
+                            placeholder="{{ $costIsBase ? '1 for an INR bill' : 'INR per 1 '.$costCurrency }}">
                         <small class="master-sub" id="costRateNote">{{ $costIsBase
-                            ? 'Billed in INR — no conversion. Pick another currency to enter a rate.'
+                            ? 'INR bill — the amount is already in rupees, so the ledger keeps the rate at 1.'
                             : 'The INR value is frozen at this rate: amount × rate.' }}
                             <span class="ship-cost-rate-preview" id="costRatePreview"></span></small>
                     </div>

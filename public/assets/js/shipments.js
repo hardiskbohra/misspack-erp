@@ -294,16 +294,26 @@
         }
 
         /* What the ledger will freeze, shown while it is typed: the operator
-           never has to work out what the rate does to the amount. */
+           never has to work out what the rate does to the amount. The rate is
+           editable in every case, so the INR value follows it in every case. */
         function paintRate() {
             var foreign = ! isBaseCurrency();
-            var value = (parseFloat((amount && amount.value) || 0) || 0)
-                * (foreign ? (parseFloat((rate && rate.value) || 0) || 0) : 1);
+            var rateValue = parseFloat((rate && rate.value) || 0) || 0;
+
+            /* the base currency has no conversion to make — the ledger stores
+               it at 1 whatever is typed, so the preview says so too */
+            if (!foreign) {
+                rateValue = 1;
+            } else if (!(rateValue > 0)) {
+                rateValue = 0;
+            }
+
+            var value = (parseFloat((amount && amount.value) || 0) || 0) * rateValue;
 
             if (note) {
                 note.textContent = foreign
                     ? 'The INR value is frozen at this rate: amount × rate.'
-                    : 'Billed in INR — no conversion. Pick another currency to enter a rate.';
+                    : 'INR bill — the amount is already in rupees, so the ledger keeps the rate at 1.';
             }
 
             if (!preview) return;
@@ -323,10 +333,12 @@
             preview.textContent = parts.length ? ' ' + parts.join(' · ') : '';
         }
 
-        /* The rate box is always on screen: a field that appears and disappears
-           is a field that is missing when it is needed. The base currency locks
-           it at 1; anything else requires it, starting from the rate that
-           currency was last billed at. */
+        /* The rate box is always on screen and always editable: a field that
+           appears and disappears is a field that is missing when it is needed,
+           and a field that cannot be typed into is a field the operator has to
+           work around. It starts from the rate the currency was last billed at
+           (1 on the base currency) and the operator can type the rate this bill
+           was actually raised at. */
         function syncCurrency(suggest) {
             if (!currency || !rateWrap || !rate) return;
 
@@ -334,11 +346,13 @@
             var code = currencyCode();
 
             rateWrap.classList.toggle('is-base', !foreign);
-            rate.readOnly = !foreign;
             rate.required = foreign;
-            rate.placeholder = foreign ? 'INR per 1 ' + code : 'Base currency';
+            rate.placeholder = foreign ? 'INR per 1 ' + code : '1 for an INR bill';
 
             if (!foreign) {
+                /* the rupee amount is already in rupees: the ledger stores the
+                   rate at 1, so the field shows 1 rather than a rate left over
+                   from another currency */
                 rate.value = '1';
                 rateFromLastUsed = false;
             } else if (suggest) {

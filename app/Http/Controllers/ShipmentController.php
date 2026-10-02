@@ -938,6 +938,14 @@ class ShipmentController extends Controller
 
         $data['currency'] = strtoupper($data['currency']);
 
+        /* A bill in the base currency has no conversion to make, so it is
+           stored at 1: a rate left over from another currency must never
+           multiply a rupee amount. Entering a rate for a *foreign* bill is what
+           the field is for; on a rupee bill there is nothing to convert. */
+        if ($data['currency'] === 'INR') {
+            $data['exchange_rate'] = 1;
+        }
+
         if ($data['currency'] !== 'INR' && (float) ($data['exchange_rate'] ?? 0) <= 0) {
             throw ValidationException::withMessages([
                 'exchange_rate' => 'Enter the exchange rate this bill was raised at, so the INR value is right.',
