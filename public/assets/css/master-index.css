@@ -1034,10 +1034,43 @@
     color: var(--mc-text-2);
 }
 
-.master-table tr:hover {
-    background: var(--bg-card);
+.master-table tbody tr:hover {
+    /* --mc-hover, not --bg-card: in dark theme the card *is* --bg-card, so the
+       old rule made the hover invisible exactly where the list is hardest to
+       scan. */
+    background: var(--mc-hover);
+}
+
+/* the last row meets the totals row (or the card edge): one hairline, not two */
+.master-table tbody tr:last-child td {
+    border-bottom: 0;
 }
 
 strong, td {
     font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------
+   Modal helpers
+   A confirmation dialog is repeated across modules, so its two recurring
+   pieces — a danger-tinted icon and a body paragraph — are shared rather than
+   re-styled per module with inline values (which is where the light-only
+   #536079 came from).
+   -------------------------------------------------------------------------- */
+
+.master-modal-icon.is-danger {
+    background: rgba(239, 71, 112, .12);
+    color: var(--master-red, #ef4770);
+}
+
+.master-modal-text {
+    margin: 0;
+    color: var(--mc-text-2);
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+.master-modal-card.is-narrow {
+    max-width: 440px;
 }

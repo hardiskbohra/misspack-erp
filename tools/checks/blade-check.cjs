@@ -33,8 +33,11 @@ const rel = f => path.relative(VIEWS, f).replace(/\\/g, '/');
 
 /* ----------------------------------------------------------- 1. directives */
 
+/* Some directives share one closer: Blade closes @hasSection and
+   @sectionMissing with @endif, so they are counted with @if rather than on
+   their own or the pairing reports a false imbalance. */
 const BLOCKS = [
-    ['@if', '@endif'],
+    [['@if', '@hasSection', '@sectionMissing'], '@endif'],
     ['@foreach', '@endforeach'],
     ['@forelse', '@endforelse'],
     ['@for', '@endfor'],
@@ -94,13 +97,16 @@ function isSelfClosing(text, open, index) {
 const unbalanced = [];
 files.forEach(file => {
     const text = fs.readFileSync(file, 'utf8').replace(/@verbatim[\s\S]*?@endverbatim/g, '');
-    BLOCKS.forEach(([open, close]) => {
-        const openRe = new RegExp(open.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*(\\(|$)', 'gm');
-        const closeRe = new RegExp(close.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g');
-        const opens = [...text.matchAll(openRe)]
-            .filter(m => !['@section', '@php'].includes(open) || !isSelfClosing(text, open, m.index)).length;
-        const closes = (text.match(closeRe) || []).length;
-        if (opens !== closes) unbalanced.push(`${rel(file)}: ${open} ×${opens} vs ${close} ×${closes}`);
+    BLOCKS.forEach(([names, close]) => {
+        const list = Array.isArray(names) ? names : [names];
+        const primary = list[0];
+        const escape = name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const openRe = new RegExp('(?:' + list.map(escape).join('|') + ')\\s*(\\(|$)', 'gm');
+        const closeRe = new RegExp(escape(close) + '\\b', 'g');
+        const opened = [...text.matchAll(openRe)]
+            .filter(m => !['@section', '@php'].includes(primary) || !isSelfClosing(text, primary, m.index)).length;
+        const closed = (text.match(closeRe) || []).length;
+        if (opened !== closed) unbalanced.push(`${rel(file)}: ${primary} ×${opened} vs ${close} ×${closed}`);
     });
 });
 check('every blade directive block is balanced', unbalanced.length === 0, unbalanced.join(' | '));

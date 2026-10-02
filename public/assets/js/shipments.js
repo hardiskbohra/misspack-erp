@@ -31,6 +31,22 @@
         document.body.classList.remove('master-modal-open');
     }
 
+    /* ---------------- Listing rows ----------------
+       The whole row opens the record: a 1000px target instead of a 90px link.
+       Anything interactive inside the row keeps its own click (the dropdown,
+       the links, a future checkbox), and a text selection never navigates —
+       dragging across a shipment number to copy it should not open a page. */
+    function bindRowNavigation() {
+        document.querySelectorAll('.ship-index tbody tr[data-href]').forEach(function (row) {
+            row.addEventListener('click', function (event) {
+                if (event.target.closest('a, button, input, select, textarea, label, form')) return;
+                if (window.getSelection && String(window.getSelection()).length > 0) return;
+
+                window.location.href = row.dataset.href;
+            });
+        });
+    }
+
     /* ---------------- Page initialisation ---------------- */
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -39,8 +55,13 @@
         var deleteForm = document.getElementById('deleteShipmentForm');
         var deleteDesc = document.getElementById('deleteShipmentDesc');
 
-        document.getElementById('openQuickShipmentModal')?.addEventListener('click', function () {
-            openModal(quickModal);
+        /* The primary action is yielded into the page header, and the empty
+           state carries a copy of it, so it is bound by attribute. The old id
+           is kept for any page still using it. */
+        document.querySelectorAll('[data-quick-shipment], #openQuickShipmentModal').forEach(function (button) {
+            button.addEventListener('click', function () {
+                openModal(quickModal);
+            });
         });
         document.getElementById('closeQuickShipmentModal')?.addEventListener('click', function () {
             closeModal(quickModal);
@@ -63,6 +84,8 @@
         document.getElementById('cancelDeleteShipmentModal')?.addEventListener('click', function () {
             closeModal(deleteModal);
         });
+
+        bindRowNavigation();
 
         [quickModal, deleteModal].forEach(function (modal) {
             modal?.addEventListener('click', function (event) {

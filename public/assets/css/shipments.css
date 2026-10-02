@@ -29,20 +29,9 @@
     .master-route { max-width: 260px; }
     .master-route strong { display: block; }
 
-    .ship-index .type-domestic { background: #46d488; color: #fff; }
-    .ship-index .type-import { background: #fff4e5; color: #d97706; }
-    .ship-index .type-export { background: #ecfdf5; color: #059669; }
-    .ship-index .status-planning { background: #aab1bd; color: #FFF; }
-    .ship-index .status-picked-up { background: #dbcb3b; color: #FFF; }
-    .ship-index .status-in-transit { background: #7b99db; color: #FFF; }
-    .ship-index .status-custom-hold { background: #fff4e5; color: #d97706; }
-    .ship-index .status-delayed { background: #ffeaf0; color: #e11d48; }
-    .ship-index .status-out-for-delivery { background: #46d488; color: #FFF; }
-    .ship-index .status-delivered { background: #e8fff7; color: #0e9f6e; }
-    .ship-index .status-cancelled { background: var(--mc-soft); color: var(--mc-text-2); }
-    
-    /* Default */
-    .ship-index .label-0 { background:blue; color:#FFF; }
+    /* Status, type and label colours are tinted tones defined once in
+       section 4 of this file — a filled pill with white text (the old
+       "picked up" amber, for one) is the least readable thing on a list. */
     
     /* Mobile Responsive Shipment Table */
     @media (max-width:768px){
@@ -465,14 +454,27 @@
 
     
     
-    /* Default shipment label palette (label-0 is overridden per page
-       for the list view, see section 1). */
-    .label-0 { background:#fff4e5; color:#000; }
-    .label-1 { background:red; color:#FFF; }
-    .label-2 { background:green; color:#FFF; }
-    .label-3 { background:orange; color:black; }
-    .label-4 { background:yellow; color:red; }
-    .label-5 { background:pink; color:blue; }
+    /* Shipment label palette (FRAGILE, EXPRESS, ...). Six tinted tones rather
+       than the six pure CSS colours this started as: red/green/yellow/pink at
+       full saturation cannot carry readable text in either theme. */
+    .label-0 { --tone-bg: rgba(107, 114, 128, .16); --tone-fg: #4b5563; }
+    .label-1 { --tone-bg: rgba(225, 29, 72, .16); --tone-fg: #be123c; }
+    .label-2 { --tone-bg: rgba(16, 185, 129, .16); --tone-fg: #047857; }
+    .label-3 { --tone-bg: rgba(245, 158, 11, .18); --tone-fg: #b45309; }
+    .label-4 { --tone-bg: rgba(79, 131, 241, .16); --tone-fg: #3f6fd8; }
+    .label-5 { --tone-bg: rgba(139, 92, 246, .16); --tone-fg: #6d28d9; }
+
+    .label-0, .label-1, .label-2, .label-3, .label-4, .label-5 {
+        background: var(--tone-bg);
+        color: var(--tone-fg);
+    }
+
+    :root[data-theme="dark"] .label-0 { --tone-fg: #cbd5e1; }
+    :root[data-theme="dark"] .label-1 { --tone-fg: #fda4af; }
+    :root[data-theme="dark"] .label-2 { --tone-fg: #6ee7b7; }
+    :root[data-theme="dark"] .label-3 { --tone-fg: #fcd34d; }
+    :root[data-theme="dark"] .label-4 { --tone-fg: #93b4ff; }
+    :root[data-theme="dark"] .label-5 { --tone-fg: #c4b5fd; }
     
     
     
@@ -1581,4 +1583,407 @@
 
 :root[data-theme="dark"] .ship-eway-expired {
     color: #ff9b9b;
+}
+
+/* ==========================================================================
+   4. Shipment List — the scanning surface
+   --------------------------------------------------------------------------
+   The list is the page an operator keeps open all day, so it is built for
+   scanning rather than for decoration:
+
+     - one toolbar: the filter chips and the filter form share one card and
+       one 16px inset, so the columns of controls line up
+     - dense rows: 50 rows a page should read as a table, not a brochure
+     - the record number is the link and the product is the second line.
+       The number is what people search by; it used to be the muted line
+       while the product name was the link
+     - money is right-aligned with tabular figures, so the column is
+       comparable at a glance (th/td also carry .is-num from master-detail)
+     - status, type and label chips are tinted (a translucent background
+       with a saturated foreground) instead of filled. A solid amber pill
+       with white text fails contrast in both themes; a tint does not, and
+       the same tint works on either background.
+     - rows are click targets for the record. Anything interactive inside
+       the row keeps its own click (assets/js/shipments.js skips them).
+
+   Adding a status means adding one tone line here plus its dark override;
+   tools/checks/list-check.cjs fails if a status in Shipment::statusOptions()
+   has no tone or no dark counterpart.
+   ========================================================================== */
+
+/* ---------------- toolbar ---------------- */
+
+.ship-index .ship-chip-bar {
+    padding: 16px;
+    border-bottom: 1px solid var(--mc-border);
+}
+
+.ship-index .master-filter-row {
+    /* master-index gives this row a 24px inset; the chips above it use 16px,
+       and the two rows read as one toolbar once they agree. No bottom border:
+       the card's own edge closes the toolbar. */
+    padding: 14px 16px 16px;
+    margin: 0;
+}
+
+.ship-index .master-filter-row .master-search {
+    flex: 2 1 260px;
+}
+
+.ship-index .ship-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+}
+
+.ship-chip:focus-visible,
+.ship-saved-chip a:focus-visible,
+.ship-index .master-table a:focus-visible,
+.ship-index .master-dropdown-toggle:focus-visible {
+    outline: 2px solid var(--master-primary);
+    outline-offset: 2px;
+}
+
+.ship-chip.is-active {
+    background: var(--accent-light);
+    border-color: var(--master-primary);
+    color: var(--master-primary);
+    font-weight: 800;
+}
+
+.ship-chip.is-active .ship-chip-count {
+    background: var(--master-primary);
+    border-color: var(--master-primary);
+    color: #fff;
+}
+
+/* ---------------- order caption ---------------- */
+
+.ship-index .ship-order-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 12px 16px 0;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .01em;
+}
+
+.ship-index .ship-order-hint::before {
+    content: "⇅";
+    font-size: 12px;
+    line-height: 1;
+    opacity: .8;
+}
+
+/* ---------------- table ---------------- */
+
+.ship-index .master-table-wrap {
+    margin-top: 12px;
+}
+
+.ship-index .master-table th,
+.ship-index .master-table td {
+    padding: 12px 14px;
+}
+
+.ship-index .master-table th {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    font-size: 11px;
+    color: var(--mc-text-3);
+}
+
+.ship-index .master-table td {
+    font-size: 13.5px;
+    vertical-align: top;
+}
+
+/* Column hints: the table keeps its natural layout, these only stop the
+   columns from reflowing between pages as the content changes. */
+.ship-index .master-table th:nth-child(1) { width: 104px; }
+.ship-index .master-table th:nth-child(2) { width: 230px; }
+.ship-index .master-table th:nth-child(4) { width: 168px; }
+.ship-index .master-table th:nth-child(5) { width: 132px; }
+.ship-index .master-table th:nth-child(6) { width: 150px; }
+.ship-index .master-table th:nth-child(7) { width: 132px; }
+.ship-index .master-table th:nth-child(8) { width: 72px; }
+
+.ship-index .master-table th:last-child,
+.ship-index .master-table td:last-child {
+    text-align: right;
+}
+
+.ship-index .master-table tbody tr.is-clickable {
+    cursor: pointer;
+}
+
+.ship-index .master-table tbody tr.is-clickable:hover {
+    background: var(--mc-hover);
+}
+
+.ship-index .master-table tbody tr.is-clickable:hover .ship-cell-id {
+    text-decoration: underline;
+}
+
+/* ---------------- cells ---------------- */
+
+.ship-index .ship-date {
+    display: block;
+    font-weight: 700;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.ship-index .ship-tags {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.ship-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    background: var(--mc-soft);
+    color: var(--mc-text-2);
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.ship-index .ship-cell {
+    display: block;
+    text-decoration: none;
+    max-width: 240px;
+}
+
+.ship-index .ship-cell-id {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--master-primary);
+}
+
+.ship-index .ship-cell-name {
+    display: block;
+    margin-top: 3px;
+    overflow: hidden;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ship-index .ship-label-chip {
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 9.5px;
+    font-weight: 800;
+}
+
+.ship-index .ship-route strong {
+    display: block;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.ship-index .ship-route .master-sub,
+.ship-index .ship-logistic .master-sub,
+.ship-index .ship-money .master-sub {
+    margin-top: 4px;
+}
+
+.ship-index .ship-money {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.ship-index .ship-row-closed .ship-money {
+    font-weight: 600;
+}
+
+/* ---------------- status, type and label chips ---------------- */
+
+.ship-index .ship-status,
+.ship-index .ship-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--tone-bg);
+    color: var(--tone-fg);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
+.ship-index .ship-status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: 0 0 auto;
+}
+
+.ship-index .ship-status.status-planning { --tone-bg: rgba(107, 114, 128, .16); --tone-fg: #4b5563; }
+.ship-index .ship-status.status-picked-up { --tone-bg: rgba(217, 119, 6, .18); --tone-fg: #b45309; }
+.ship-index .ship-status.status-in-transit { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
+.ship-index .ship-status.status-custom-hold { --tone-bg: rgba(245, 158, 11, .18); --tone-fg: #b45309; }
+.ship-index .ship-status.status-delayed { --tone-bg: rgba(225, 29, 72, .16); --tone-fg: #be123c; }
+.ship-index .ship-status.status-out-for-delivery { --tone-bg: rgba(18, 203, 183, .18); --tone-fg: #0f766e; }
+.ship-index .ship-status.status-delivered { --tone-bg: rgba(16, 185, 129, .18); --tone-fg: #047857; }
+.ship-index .ship-status.status-cancelled { --tone-bg: var(--mc-soft); --tone-fg: var(--mc-text-3); }
+
+.ship-index .ship-type.type-domestic { --tone-bg: rgba(16, 185, 129, .18); --tone-fg: #047857; }
+.ship-index .ship-type.type-import { --tone-bg: rgba(245, 158, 11, .18); --tone-fg: #b45309; }
+.ship-index .ship-type.type-export { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
+
+:root[data-theme="dark"] .ship-index .ship-status.status-planning { --tone-fg: #cbd5e1; }
+:root[data-theme="dark"] .ship-index .ship-status.status-picked-up { --tone-fg: #fcd34d; }
+:root[data-theme="dark"] .ship-index .ship-status.status-in-transit { --tone-fg: #93b4ff; }
+:root[data-theme="dark"] .ship-index .ship-status.status-custom-hold { --tone-fg: #fcd34d; }
+:root[data-theme="dark"] .ship-index .ship-status.status-delayed { --tone-fg: #fda4af; }
+:root[data-theme="dark"] .ship-index .ship-status.status-out-for-delivery { --tone-fg: #5eead4; }
+:root[data-theme="dark"] .ship-index .ship-status.status-delivered { --tone-fg: #6ee7b7; }
+:root[data-theme="dark"] .ship-index .ship-status.status-cancelled { --tone-fg: #aab6c9; }
+
+:root[data-theme="dark"] .ship-index .ship-type.type-domestic { --tone-fg: #6ee7b7; }
+:root[data-theme="dark"] .ship-index .ship-type.type-import { --tone-fg: #fcd34d; }
+:root[data-theme="dark"] .ship-index .ship-type.type-export { --tone-fg: #93b4ff; }
+
+/* ---------------- closed block ---------------- */
+
+.ship-index .ship-group-row td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 14px;
+    font-size: 10.5px;
+    letter-spacing: .1em;
+}
+
+.ship-index .ship-group-count {
+    color: var(--mc-text-3);
+    font-weight: 800;
+}
+
+/* ---------------- totals ---------------- */
+
+.ship-index .ship-total-row td {
+    padding: 12px 14px;
+    font-size: 13px;
+}
+
+.ship-index .ship-total-row .is-num {
+    white-space: nowrap;
+}
+
+/* ---------------- empty state ---------------- */
+
+.ship-index .ship-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 44px 20px 48px;
+    text-align: center;
+}
+
+.ship-index .ship-empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 4px;
+    border-radius: 50%;
+    background: var(--mc-soft);
+    color: var(--master-primary);
+    font-size: 18px;
+}
+
+.ship-index .ship-empty-title {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--mc-text);
+}
+
+.ship-index .ship-empty-text {
+    margin: 0;
+    max-width: 340px;
+    color: var(--mc-text-3);
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+.ship-index .ship-empty-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+/* ---------------- delete confirmation ---------------- */
+
+.ship-index .master-modal-card.is-narrow {
+    max-width: 440px;
+}
+
+/* ---------------- row action ---------------- */
+
+.ship-index .master-dropdown-toggle {
+    width: 34px;
+    height: 34px;
+    margin-left: auto;
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+/* ---------------- narrow screens ----------------
+   The card layout below 768px is in section 1; these keep the same
+   hierarchy once the table has stacked, so the cells still read as
+   label / value rather than as loose text. */
+
+@media (max-width: 768px) {
+    .ship-index .master-filter-row {
+        padding: 12px 16px;
+    }
+
+    .ship-index .ship-filter-group {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .ship-index .ship-filter-group .master-btn {
+        flex: 1 1 0;
+    }
+
+    .ship-index .master-table td:last-child {
+        text-align: left;
+    }
+
+    .ship-index .master-dropdown-toggle {
+        margin-left: 0;
+    }
+
+    .ship-index .ship-empty-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .ship-index .ship-empty-actions .master-btn {
+        width: 100%;
+    }
 }

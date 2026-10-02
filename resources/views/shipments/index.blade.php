@@ -2,10 +2,26 @@
 
 @section('page-title', 'Shipment Tracking')
 
+@section('page-actions')
+    {{-- The page's primary action lives in the header, so it stays reachable
+         however far the list scrolls. --}}
+    <button type="button" class="master-btn master-btn-primary" data-quick-shipment>
+        + Quick Shipment
+    </button>
+@endsection
+
 @section('content')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/shipments.css') }}">
 @endpush
+
+@php
+    /* "Reset" and "clear filters" only make sense when something is filtered. */
+    $filtersActive = trim((string) $search) !== ''
+        || ($status && $status !== 'all')
+        || filled($fromDate)
+        || filled($attention);
+@endphp
 
 <div class="ship ship-index">
 
@@ -73,7 +89,7 @@
                 <button type="button" class="master-btn master-btn-soft master-btn-sm" id="toggleSaveView">☆ Save this view</button>
                 <form method="POST" action="{{ route('shipments.saved-views.store', $baseFilters) }}" class="ship-save-view" id="saveViewForm" hidden>
                     @csrf
-                    <input class="master-input" name="name" placeholder="View name" maxlength="60" required>
+                    <input class="master-input" name="name" placeholder="View name" maxlength="60" aria-label="Saved view name" required>
                     <label class="master-check"><input type="checkbox" name="is_shared" value="1"> Share</label>
                     <button class="master-btn master-btn-primary master-btn-sm">Save</button>
                 </form>
@@ -82,12 +98,13 @@
 
         <form method="GET" action="{{ route('shipments.index') }}">
 
-            <div class="master-filter-row" style="padding-top:22px;">
+            <div class="master-filter-row">
                 <div class="master-search">
-                    <span>⌕</span>
-                    <input class="master-input" type="text" name="search" value="{{ $search }}" placeholder="Search shipment, tracking, BOE, partner...">
+                    <span aria-hidden="true">⌕</span>
+                    <input class="master-input" type="text" name="search" value="{{ $search }}"
+                        placeholder="Search shipment, tracking, BOE, partner..." aria-label="Search shipments">
                 </div>
-                <select class="master-select" name="status">
+                <select class="master-select" name="status" aria-label="Filter by status">
                     <option value="all">All Status</option>
                     @foreach($statusOptions as $key => $label)
                         <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
@@ -99,30 +116,39 @@
                         <option value="{{ $key }}" @selected($currency === $key)>{{ $label }}</option>
                     @endforeach
                 </select>
-                <input class="master-input desktop-only" type="date" name="from_date" value="{{ $fromDate }}" title="Pickup date">
-                <button class="master-btn master-btn-primary" type="submit">Filter</button>
-                <a class="master-btn master-btn-soft" href="{{ route('shipments.index') }}">Reset</a>
-                <button type="button" class="master-btn master-btn-primary" id="openQuickShipmentModal">+ Quick Shipment</button>
+                <input class="master-input desktop-only" type="date" name="from_date"
+                    value="{{ $fromDate }}" aria-label="Pickup date from" title="Pickup date from">
+
+                <div class="ship-filter-group">
+                    @if ($filtersActive)
+                        <a class="master-btn master-btn-soft" href="{{ route('shipments.index') }}">Reset</a>
+                    @endif
+                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                </div>
             </div>
         </form>
     </div>
 
     <div class="master-card master-table-card master-card--flat">
-        <p class="ship-order-hint">
-            Order: <strong>open shipments first</strong> (newest pickup date on top) &mdash; delivered &amp; cancelled sit in a closed block below, also newest first.
+        {{-- One quiet line instead of a sentence: the ordering is visible in the
+             table itself (the closed block has its own divider), so this only
+             has to name the rule. The full wording is the tooltip. --}}
+        <p class="ship-order-hint"
+            title="Open shipments first, newest pickup date on top. Delivered and cancelled shipments sit in a closed block below, also newest first.">
+            Open shipments first &middot; closed block below
         </p>
         <div class="master-table-wrap">
             <table class="master-table">
                 <thead>
                     <tr>
-                        <th>Pickup / Drop</th>
-                        <th>Shipment</th>
-                        <th>Route</th>
-                        <th>Logistic</th>
-                        <th>ETA</th>
-                        <th>Charges</th>
-                        <th>Status</th>
-                        <th>Action</th>
+                        <th scope="col">Pickup</th>
+                        <th scope="col">Shipment</th>
+                        <th scope="col">Route</th>
+                        <th scope="col">Logistic</th>
+                        <th scope="col">ETA</th>
+                        <th scope="col" class="is-num">Charges</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -134,44 +160,53 @@
                             <tr class="ship-group-row">
                                 <td colspan="8">
                                     <span>Closed — delivered / cancelled</span>
+                                    <span class="ship-group-count">
+                                        {{ $shipments->where('status', \App\Models\Shipment::STATUS_DELIVERED)->count() + $shipments->where('status', \App\Models\Shipment::STATUS_CANCELLED)->count() }}
+                                    </span>
                                 </td>
                             </tr>
                         @endif
-                        <tr style="line-height:1.5;" @class(['ship-row-closed' => $shipment->isClosed()])>
-                            <td style="font-weight:500">
-                                {{ $shipment->pickup_date ? $shipment->pickup_date->format('d M') : '-' }}
-                                <span class="master-sub">
-                                    @if($shipment->project)
-                                        <span class="master-badge type-export tooltip-container" style="font-size:9px;border:1px solid grey">P
-                                            <span class="tooltip-text">{{ $shipment->project->project_number }} - {{ $shipment->project->name }}</span>
-                                        </span>
-                                    @endif
-                                    @if($shipment->client)
-                                        <span class="master-badge type-import tooltip-container" style="font-size:9px;border:1px solid grey">C
-                                            <span class="tooltip-text">{{ $shipment->client->company_name }}</span>
-                                        </span>
-                                    @endif
-                                </span>
+                        {{-- The whole row opens the record (assets/js/shipments.js);
+                             anything interactive inside it keeps its own click. --}}
+                        <tr class="ship-row {{ $shipment->isClosed() ? 'ship-row-closed' : '' }} is-clickable"
+                            data-href="{{ route('shipments.show', $shipment) }}">
+                            <td>
+                                <span class="ship-date">{{ $shipment->pickup_date ? $shipment->pickup_date->format('d M') : '—' }}</span>
+                                @if ($shipment->project || $shipment->client)
+                                    <span class="ship-tags">
+                                        @if ($shipment->project)
+                                            <span class="ship-tag" title="{{ $shipment->project->project_number }} — {{ $shipment->project->name }}"
+                                                aria-label="Project: {{ $shipment->project->name }}">P</span>
+                                        @endif
+                                        @if ($shipment->client)
+                                            <span class="ship-tag" title="{{ $shipment->client->company_name }}"
+                                                aria-label="Client: {{ $shipment->client->company_name }}">C</span>
+                                        @endif
+                                    </span>
+                                @endif
                             </td>
                             <td>
-                                <a href="{{ route('shipments.show', $shipment) }}" style="text-decoration:none;">
-                                    <span class="master-sub">{{ $shipment->shipment_number }} &nbsp;
-                                    @if($shipment->shipment_label)
-                                        <span class="master-badge {{ $shipment->labelColorClass() }}" style="margin-top:5px;font-size:9px;">{{ $shipment->shipment_label }}</span>
-                                    @endif
+                                {{-- the number is what people search by, so it is the
+                                     link and the product is the second line --}}
+                                <a class="ship-cell" href="{{ route('shipments.show', $shipment) }}">
+                                    <span class="ship-cell-id">
+                                        {{ $shipment->shipment_number }}
+                                        @if ($shipment->shipment_label)
+                                            <span class="master-badge ship-label-chip {{ $shipment->labelColorClass() }}">{{ $shipment->shipment_label }}</span>
+                                        @endif
                                     </span>
-                                    <span class="master-id">{{ $shipment->identity_name }}</span>
+                                    <span class="ship-cell-name">{{ $shipment->identity_name }}</span>
                                 </a>
                             </td>
-                            <td class="master-route">
-                                <strong style="font-weight:500">{{ $shipment->from_name ?: 'Origin' }} → {{ $shipment->to_name ?: 'Destination' }}</strong>
-                                <span class="master-sub desktop-only">{{ $shipment->from_city ?: '-' }} to {{ $shipment->to_city ?: '-' }}</span>
+                            <td class="ship-route">
+                                <strong>{{ $shipment->from_name ?: 'Origin' }} → {{ $shipment->to_name ?: 'Destination' }}</strong>
+                                <span class="master-sub desktop-only">{{ $shipment->from_city ?: '—' }} to {{ $shipment->to_city ?: '—' }}</span>
                             </td>
-                            <td style="font-weight:500">
-                                {{ $shipment->logistic_partner ?: '-' }}
+                            <td class="ship-logistic">
+                                {{ $shipment->logistic_partner ?: '—' }}
                                 <span class="master-sub">{{ $shipment->tracking_number ?: 'No tracking' }}</span>
                             </td>
-                            <td style="font-weight:500">
+                            <td>
                                 @if ($shipment->eta_date)
                                     <span class="ship-eta ship-eta-{{ $shipment->etaState() }}">{{ $shipment->eta_date->format('d M') }}</span>
                                     <span class="master-sub">{{ $shipment->etaLabel() }}</span>
@@ -187,7 +222,7 @@
                                     </span>
                                 @endif
                             </td>
-                            <td style="font-weight:500">
+                            <td class="ship-money is-num">
                                 @if ((int) $shipment->costs_count > 0)
                                     @if ((float) $shipment->cost_same_currency > 0)
                                         {{ \App\Models\Shipment::formatAmount($shipment->currency, $shipment->cost_same_currency) }}
@@ -200,13 +235,17 @@
                                     <span class="master-sub">{{ $shipment->cost_borne_by ?: '' }}</span>
                                 @endif
                             </td>
-                            <td style="font-weight:500"><span class="master-badge status-{{ $statusClass }}">{{ $shipment->statusLabel() }}</span></td>
-                            <td style="font-weight:500">
+                            <td>
+                                <span class="master-badge ship-status status-{{ $statusClass }}">{{ $shipment->statusLabel() }}</span>
+                            </td>
+                            <td>
                                 <div class="master-row-actions">
 
                                     <div class="master-dropdown">
-                                        <button type="button" class="master-dropdown-toggle">
-                                            <i class="fas fa-ellipsis-v"></i>
+                                        <button type="button" class="master-dropdown-toggle"
+                                            aria-label="Actions for {{ $shipment->shipment_number }}"
+                                            aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
                                         </button>
                                 
                                         <div class="master-dropdown-menu">
@@ -238,19 +277,15 @@
                                             
                                             <button type="button" class="master-btn master-btn-soft master-btn-sm" onclick="copyShipmentLink('{{ route('shipments.publicTrack', $shipment->public_token) }}')">Public Link</button>
                                 
-                                            <form method="POST"
-                                                  action="{{ route('shipments.destroy', $shipment) }}"
-                                                  data-confirm="Delete this shipment?">
-                                
-                                                @csrf
-                                                @method('DELETE')
-                                
-                                                <button type="submit" class="master-btn master-btn-danger master-btn-sm">
-                                                    <i class="fas fa-trash"></i>
-                                                    Delete Shipment
-                                                </button>
-                                
-                                            </form>
+                                            {{-- the whole module confirms deletes in
+                                                 one modal, not a browser dialog --}}
+                                            <button type="button"
+                                                class="master-btn master-btn-danger master-btn-sm master-delete-btn"
+                                                data-delete-url="{{ route('shipments.destroy', $shipment) }}"
+                                                data-name="{{ $shipment->shipment_number }}">
+                                                <i class="fas fa-trash" aria-hidden="true"></i>
+                                                Delete Shipment
+                                            </button>
                                 
                                         </div>
                                     </div>
@@ -259,7 +294,29 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="10"><div class="master-empty">No shipments found. Create your first shipment.</div></td></tr>
+                        {{-- colspan must match the column count: it was 10 on an
+                             8-column table, so the message hung past the card --}}
+                        <tr>
+                            <td colspan="8">
+                                <div class="ship-empty">
+                                    <span class="ship-empty-icon" aria-hidden="true">⇄</span>
+                                    <p class="ship-empty-title">
+                                        {{ $filtersActive ? 'No shipments match these filters' : 'No shipments yet' }}
+                                    </p>
+                                    <p class="ship-empty-text">
+                                        {{ $filtersActive
+                                            ? 'Adjust the search or the filters above — the counts on each filter chip show what is available.'
+                                            : 'Create the first shipment to start tracking pickups, documents and costs.' }}
+                                    </p>
+                                    <div class="ship-empty-actions">
+                                        @if ($filtersActive)
+                                            <a class="master-btn master-btn-soft" href="{{ route('shipments.index') }}">Clear filters</a>
+                                        @endif
+                                        <button type="button" class="master-btn master-btn-primary" data-quick-shipment>+ Quick Shipment</button>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
                 <tfoot>
@@ -268,10 +325,13 @@
                             <strong>Total — {{ $shipments->count() }} {{ \Illuminate\Support\Str::plural('entry', $shipments->count()) }} shown</strong>
                             <span class="master-sub">Charges recorded on the shipments on this page</span>
                         </td>
-                        <td colspan="3">
+                        {{-- the money sits in the Charges column so it lines up
+                             with the figures above it --}}
+                        <td class="is-num">
                             <strong>{{ \App\Models\Shipment::formatTotals($pageSpendByCurrency) }}</strong>
                             <span class="master-sub">Filtered total (all pages): {{ \App\Models\Shipment::formatTotals($spendByCurrency) }}</span>
                         </td>
+                        <td colspan="2"></td>
                     </tr>
                 </tfoot>
             </table>
@@ -298,21 +358,21 @@
                 <div class="master-modal-body">
                     <div class="master-modal-grid">
                         <div class="master-field full">
-                            <label class="master-label">Shipment Identity Name <span class="master-required">*</span></label>
-                            <input class="master-input" name="identity_name" placeholder="e.g. Green pigment samples from China" required>
+                            <label class="master-label" for="quickIdentityName">Shipment Identity Name <span class="master-required">*</span></label>
+                            <input class="master-input" id="quickIdentityName" name="identity_name" placeholder="e.g. Green pigment samples from China" required>
                         </div>
                         <div class="master-field">
-                            <label class="master-label">Shipment Type <span class="master-required">*</span></label>
-                            <select class="master-select" name="shipment_type" required>
+                            <label class="master-label" for="quickShipmentType">Shipment Type <span class="master-required">*</span></label>
+                            <select class="master-select" id="quickShipmentType" name="shipment_type" required>
                                 @foreach($typeOptions as $key => $label)
                                     <option value="{{ $key }}">{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="master-field"><label class="master-label">Pickup Date</label><input class="master-input" type="date" name="pickup_date" value="{{ now()->toDateString() }}"></div>
+                        <div class="master-field"><label class="master-label" for="quickPickupDate">Pickup Date</label><input class="master-input" id="quickPickupDate" type="date" name="pickup_date" value="{{ now()->toDateString() }}"></div>
                         <div class="master-field">
-                            <label class="master-label">From Name</label>
-                            <input class="master-input" name="from_name" list="quickFromNames" placeholder="Shipper name" autocomplete="off">
+                            <label class="master-label" for="quickFromName">From Name</label>
+                            <input class="master-input" id="quickFromName" name="from_name" list="quickFromNames" placeholder="Shipper name" autocomplete="off">
                             <datalist id="quickFromNames">
                                 @foreach ($partyNames['from'] as $partyName)
                                     <option value="{{ $partyName }}"></option>
@@ -320,16 +380,16 @@
                             </datalist>
                         </div>
                         <div class="master-field">
-                            <label class="master-label">To Name</label>
-                            <input class="master-input" name="to_name" list="quickToNames" placeholder="Receiver name" autocomplete="off">
+                            <label class="master-label" for="quickToName">To Name</label>
+                            <input class="master-input" id="quickToName" name="to_name" list="quickToNames" placeholder="Receiver name" autocomplete="off">
                             <datalist id="quickToNames">
                                 @foreach ($partyNames['to'] as $partyName)
                                     <option value="{{ $partyName }}"></option>
                                 @endforeach
                             </datalist>
                         </div>
-                        <div class="master-field"><label class="master-label">Logistic Partner</label><input class="master-input" name="logistic_partner" placeholder="DHL / FedEx / BlueDart"></div>
-                        <div class="master-field"><label class="master-label">Tracking Number</label><input class="master-input" name="tracking_number" placeholder="Tracking number"></div>
+                        <div class="master-field"><label class="master-label" for="quickLogisticPartner">Logistic Partner</label><input class="master-input" id="quickLogisticPartner" name="logistic_partner" placeholder="DHL / FedEx / BlueDart"></div>
+                        <div class="master-field"><label class="master-label" for="quickTrackingNumber">Tracking Number</label><input class="master-input" id="quickTrackingNumber" name="tracking_number" placeholder="Tracking number"></div>
                     </div>
                 </div>
                 <div class="master-modal-footer">
@@ -341,12 +401,12 @@
     </div>
 
     <div class="master-modal" id="deleteShipmentModal" aria-hidden="true">
-        <div class="master-modal-card" style="max-width: 440px;" role="dialog" aria-modal="true" aria-labelledby="deleteShipmentTitle">
+        <div class="master-modal-card is-narrow" role="dialog" aria-modal="true" aria-labelledby="deleteShipmentTitle">
             <div class="master-modal-header">
-                <div class="master-modal-heading"><span class="master-modal-icon" style="background:#fff0f4;color:var(--master-red);">🗑</span><div><h3 class="master-modal-title" id="deleteShipmentTitle">Delete Shipment</h3><p class="master-modal-subtitle">This action cannot be undone</p></div></div>
+                <div class="master-modal-heading"><span class="master-modal-icon is-danger">🗑</span><div><h3 class="master-modal-title" id="deleteShipmentTitle">Delete Shipment</h3><p class="master-modal-subtitle">This action cannot be undone</p></div></div>
                 <button type="button" class="master-modal-close" id="closeDeleteShipmentModal">×</button>
             </div>
-            <div class="master-modal-body"><p id="deleteShipmentDesc" style="margin:0;font-weight:700;color:#536079;">Are you sure you want to delete this shipment?</p></div>
+            <div class="master-modal-body"><p class="master-modal-text" id="deleteShipmentDesc">Are you sure you want to delete this shipment?</p></div>
             <form method="POST" action="" id="deleteShipmentForm">
                 @csrf
                 @method('DELETE')

@@ -154,28 +154,47 @@
             document.querySelectorAll('.master-modal.open').forEach(closeMasterModal);
         });
 
+        /* A menu button has to say whether its menu is open, and Escape has to
+           close it: without that the popover is invisible to a screen reader
+           and cannot be dismissed from the keyboard. */
+        const setMenuState = (dropdown, open) => {
+            dropdown.classList.toggle('open', open);
+
+            const toggle = dropdown.querySelector('.master-dropdown-toggle');
+            if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        };
+
+        const closeMenus = (except) => {
+            document.querySelectorAll('.master-dropdown').forEach(d => {
+                if (d !== except) setMenuState(d, false);
+            });
+        };
+
         document.querySelectorAll('.master-dropdown-toggle').forEach(btn => {
 
             btn.addEventListener('click', function(e){
         
                 e.stopPropagation();
-        
-                document.querySelectorAll('.master-dropdown')
-                    .forEach(d => {
-                        if(d !== this.parentElement){
-                            d.classList.remove('open');
-                        }
-                    });
-        
-                this.parentElement.classList.toggle('open');
+
+                const dropdown = this.parentElement;
+                const willOpen = ! dropdown.classList.contains('open');
+
+                closeMenus(dropdown);
+                setMenuState(dropdown, willOpen);
         
             });
         
         });
         
-        document.addEventListener('click', () => {
-            document.querySelectorAll('.master-dropdown')
-                .forEach(d => d.classList.remove('open'));
+        document.addEventListener('click', () => closeMenus());
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') return;
+
+            document.querySelectorAll('.master-dropdown.open').forEach(dropdown => {
+                setMenuState(dropdown, false);
+                dropdown.querySelector('.master-dropdown-toggle')?.focus();
+            });
         });
     });
 })();

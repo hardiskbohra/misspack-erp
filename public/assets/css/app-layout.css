@@ -516,6 +516,27 @@ html.sidebar-collapsed .main-wrap {
     flex: 1;
 }
 
+/* Page-level primary action, yielded into the topbar by @yield('page-actions').
+   Sits before the spacer, so it hugs the title rather than the utility icons. */
+.topbar-page-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 12px;
+    min-width: 0;
+}
+
+.topbar-page-actions .master-btn {
+    height: 38px;
+    white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    .topbar-page-actions {
+        display: none;
+    }
+}
+
 .topbar-actions {
     display: flex;
     align-items: center;

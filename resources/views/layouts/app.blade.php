@@ -127,6 +127,13 @@
             </button>
 
             <span class="topbar-title">@yield('page-title', 'Dashboard')</span>
+
+            {{-- A page's primary action belongs beside its title, not buried in
+                 a toolbar: it stays reachable however far the list scrolls. --}}
+            @hasSection('page-actions')
+                <div class="topbar-page-actions">@yield('page-actions')</div>
+            @endif
+
             <div class="topbar-spacer"></div>
 
             <div class="topbar-actions">
