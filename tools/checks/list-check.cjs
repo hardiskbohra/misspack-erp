@@ -69,12 +69,15 @@ check('no cell spans more columns than the table has',
     `spans ${bodyColspan.join(', ')} vs ${headers.length} columns`);
 
 /* the money column */
+/* the cell keeps the is-num class that lines the figures up; any further
+   attribute — the stacked-card label, for one — is not the guard's business,
+   so the pin reads the class and what follows it, not the exact tag text */
 check('the charges column is marked as numeric',
     /<th scope="col" class="is-num">Charges<\/th>/.test(view)
     && /class="ship-money is-num"/.test(view)
-    && /<td class="is-num">\s*<strong>\{\{ \\App\\Models\\Shipment::formatInr\(\$pageSpendInr\)/.test(view));
+    && /<td class="is-num"[^>]*>\s*<strong>\{\{ \\App\\Models\\Shipment::formatInr\(\$pageSpendInr\)/.test(view));
 check('the totals row keeps the money in the charges column',
-    /<td class="is-num">[\s\S]{0,200}Filtered total/.test(view));
+    /<td class="is-num"[^>]*>\s*<strong>[\s\S]{0,200}Filtered total/.test(view));
 
 /* the record number is the link, the product is the second line */
 const cell = /<a class="ship-cell"[\s\S]*?<\/a>/.exec(view);
@@ -255,11 +258,39 @@ check('the header lifts off the rows once the list is scrolled',
     /addEventListener\('scroll', sync, \{ passive: true \}\)/.test(listJs)
     && /\.is-scrolled thead th/.test(listCss));
 
-/* the stacked mobile card: the same row, still labelled */
-const mobileLabels = [...view.matchAll(/data-label="([^"]+)"/g)].map(m => m[1]);
-check('the stacked rows keep their column names',
-    mobileLabels.length >= 6 && /content:attr\(data-label\)/.test(listCss),
-    mobileLabels.join(', '));
+/* the stacked mobile card: the same row, still labelled — and each label has
+   to name a column the header really has. A label the head does not carry
+   prints the card with a field the table above it never showed; a head with no
+   label leaves its cell anonymous on a phone. Both lists and the archive are
+   read, so the three views cannot drift apart. */
+const labelContract = (file) => {
+    /* Blade comments are stripped first: they are invisible to the browser but
+       not to a regex, and the divider's comment literally says "<td>" */
+    const text = fs.readFileSync(file, 'utf8').replace(/\{\{--[\s\S]*?--\}\}/g, '');
+    const heads = [...text.matchAll(/<th scope="col"[^>]*>([\s\S]*?)<\/th>/g)]
+        .map(m => m[1].replace(/<[^>]*>/g, '').replace(/&middot;|&nbsp;/g, ' ').trim());
+
+    /* only the tables: a modal's markup has no cells, and a cell that spans
+       columns is a divider or a total, not a column of its own */
+    const cells = [];
+    [...text.matchAll(/<table\b[\s\S]*?<\/table>/g)].forEach(table => {
+        [...table[0].matchAll(/<td\b([^>]*)>/g)].forEach(cell => {
+            if (/\bcolspan\b/i.test(cell[1])) return;
+            cells.push(((cell[1].match(/data-label="([^"]+)"/) || [, ''])[1]).trim());
+        });
+    });
+
+    return {
+        file: path.relative(ROOT, file),
+        heads,
+        unlabelled: cells.filter(label => !label).length,
+        off: cells.filter(label => label && !heads.includes(label))
+    };
+};
+const labelledViews = [VIEW, CASHFLOW_VIEW, DOCUMENTS_VIEW].map(labelContract);
+check('every card label names a column the header really has',
+    labelledViews.every(v => v.heads.length >= 6 && v.off.length === 0 && v.unlabelled === 0),
+    labelledViews.map(v => `${v.file}: ${v.heads.length} heads, ${v.unlabelled} unlabelled, off-head [${v.off.join(', ') || '—'}]`).join(' | '));
 /* the one placeholder rule left in the file belongs to the *form* page's items
    table, so this looks for the list-page signature specifically */
 check('the mobile card no longer relies on empty ::before placeholders',

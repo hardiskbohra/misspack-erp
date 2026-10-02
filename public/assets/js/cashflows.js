@@ -56,6 +56,18 @@
             }
         });
 
+        /* the archive's own dialog: filing a document that has no entry behind
+           it. The header action and the empty state carry the same one. */
+        ['openFileDocumentModal', 'emptyFileDocument'].forEach(function (id) {
+            var trigger = document.getElementById(id);
+            var fileModal = document.getElementById('fileDocumentModal');
+            if (trigger && fileModal) {
+                trigger.addEventListener('click', function () {
+                    window.MasterModal.open(fileModal);
+                });
+            }
+        });
+
         var openAccount = document.getElementById('openAccountModal');
         var accountModal = document.getElementById('accountModal');
         if (openAccount && accountModal) {

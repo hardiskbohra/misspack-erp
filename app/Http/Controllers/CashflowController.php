@@ -156,6 +156,13 @@ class CashflowController extends Controller
         return view('cashflows.show', array_merge($this->sharedData(), [
             'entry' => $cashflow,
             'documentTypeOptions' => CashflowAttachment::documentTypeOptions(),
+            /* the newest documents filed without an entry, so this page can
+               claim one: a bill that arrived before its payment did */
+            'unlinkedDocuments' => CashflowAttachment::query()
+                ->unlinked()
+                ->orderByDesc('created_at')
+                ->limit(50)
+                ->get(),
             'linkedVendorPayment' => app(VendorPaymentCashflowSync::class)->linkedPaymentFor($cashflow),
             'linkedShipmentCost' => app(\App\Services\ShipmentCostCashflowSync::class)->linkedCostFor($cashflow),
         ]));

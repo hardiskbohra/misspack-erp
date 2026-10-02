@@ -166,7 +166,100 @@ check('its rows stack on a phone like every other list',
 const cashflowsCss = read('public/assets/css/cashflows.css');
 check('the document tones have a dark counterpart',
     /:root\[data-theme="dark"\] \.cf-doc-state\.is-filed\s*\{\s*--tone-fg:/.test(cashflowsCss)
-    && /:root\[data-theme="dark"\] \.cf-doc-state\.is-missing\s*\{\s*--tone-fg:/.test(cashflowsCss));
+    && /:root\[data-theme="dark"\] \.cf-doc-state\.is-missing\s*\{\s*--tone-fg:/.test(cashflowsCss)
+    && /:root\[data-theme="dark"\] \.cf-doc-state\.is-unlinked\s*\{\s*--tone-fg:/.test(cashflowsCss));
+
+/* ------------------------------- a document with no entry behind it ----- */
+
+/* The bill that arrives before its payment, the purchase bill booked to a
+   project, the invoice settled outside this ledger: a document has to be
+   fileable, findable and usable without an entry — and matchable later when
+   one appears. The link is optional, never a precondition. */
+
+const standaloneMigration = walk(path.join(ROOT, 'database/migrations'))
+    .map(rel).find(f => /let_cashflow_documents_stand_alone/.test(f));
+check('the entry link became optional in a migration of its own',
+    !!standaloneMigration, standaloneMigration || 'not found');
+
+const standaloneText = standaloneMigration ? read(standaloneMigration) : '';
+check('the column is rebuilt nullable only after the foreign key comes off',
+    /dropForeign\(\['cashflow_entry_id'\]\)/.test(standaloneText)
+    && /foreignId\('cashflow_entry_id'\)->nullable\(\)->change\(\)/.test(standaloneText)
+    && standaloneText.indexOf('dropForeign') < standaloneText.indexOf('->nullable()->change()'));
+const cascadeKey = /->foreign\('cashflow_entry_id'\)->references\('id'\)->on\('cashflow_entries'\)->cascadeOnDelete\(\)/g;
+check('deleting an entry still deletes the documents filed against it',
+    (standaloneText.match(cascadeKey) || []).length >= 2
+    && /->foreign\('cashflow_entry_id'\)->references\('id'\)->on\('cashflow_entries'\)->cascadeOnDelete\(\)/
+        .test(standaloneText.slice(standaloneText.indexOf('public function down'))),
+    'the key goes back on after the rebuild, and under the rollback too');
+check('a stand-alone document carries its own party, date, amount and currency',
+    /->string\('party_name'\)->nullable\(\)/.test(standaloneText)
+    && /->date\('document_date'\)->nullable\(\)/.test(standaloneText)
+    && /->decimal\('amount', 16, 2\)->nullable\(\)/.test(standaloneText)
+    && /->string\('currency', 3\)->default\('INR'\)/.test(standaloneText));
+check('the rollback clears the rows it cannot keep, before it needs the column',
+    /DB::table\('cashflow_attachments'\)->whereNull\('cashflow_entry_id'\)->delete\(\)/.test(standaloneText)
+    && standaloneText.indexOf('whereNull') < standaloneText.indexOf('nullable(false)'));
+
+check('the model can ask for the documents no entry has claimed',
+    /public function scopeUnlinked\(\$query\)[\s\S]{0,80}whereNull\('cashflow_entry_id'\)/.test(model)
+    && /public function scopeLinked\(\$query\)[\s\S]{0,80}whereNotNull\('cashflow_entry_id'\)/.test(model)
+    && /public function isLinked\(\): bool/.test(model));
+check('a matched document keeps the party written on the bill',
+    /if \(filled\(\$this->party_name\)\) \{\s*return \(string\) \$this->party_name;/.test(model));
+check('the date a month owns falls back the same way the query does',
+    /return \$this->document_date \?\? \$this->cashflowEntry\?->entry_date \?\? \$this->created_at;/.test(model));
+
+check('filing without an entry is a first-class upload path, not a second one',
+    /public function storeStandalone\(Request \$request\): RedirectResponse[\s\S]{0,80}return \$this->file\(\$request, null\);/
+        .test(controller)
+    && /private function file\(Request \$request, \?CashflowEntry \$entry\)/.test(controller));
+check('one upload path means one allowlist, one ceiling, one metadata set',
+    /\$this->validateAllowedFile\(\$file\)/.test(controller)
+    && /'currency' => \$data\['currency'\] \?\? 'INR'/.test(controller)
+    && /'standalone'/.test(controller));
+
+check('a match claims a document that is still unclaimed, and only that',
+    /CashflowAttachment::unlinked\(\)->findOrFail\(\$data\['attachment_id'\]\)/.test(controller));
+check('the archive can be asked which documents have no entry',
+    /\$state = \(string\) \$request->query\('state', 'all'\)/.test(controller)
+    && /in_array\(\$state, \['all', 'linked', 'unlinked'\]/.test(controller)
+    && /=== 'unlinked', fn \(\$q\) => \$q->unlinked\(\)/.test(controller));
+check('the two attachment routes sit with the archive, above the resource route',
+    /Route::post\('\/cashflows\/\{cashflow\}\/attachments\/link'/.test(routes)
+    && /Route::post\('\/cashflow-attachments'/.test(routes)
+    && /->name\('cashflows\.attachments\.link'\)/.test(routes)
+    && /->name\('cashflows\.attachments\.storeStandalone'\)/.test(routes)
+    && routes.indexOf("Route::post('/cashflow-attachments'") < resourceAt);
+/* the to-do list asks about *entries* with nothing filed against them; a
+   document standing on its own is not attached to any entry, so it must never
+   make an entry look answered */
+check('the month-end to-do list counts entries, not documents',
+    /private function missingCount\(array \$filters\): int[\s\S]{0,240}CashflowEntry::query\(\)[\s\S]{0,120}whereDoesntHave\('attachments'\)/
+        .test(controller));
+
+check('the archive row says whose bill it is, when, and how much — entry or not',
+    /displayDate\(\)/.test(archiveView) && /partyLabel\(\)/.test(archiveView)
+    && /amountLabel\(\)/.test(archiveView)
+    && /class="cf-doc-state is-unlinked"[^>]*>\s*Not matched/.test(archiveView));
+check('the archive counts what is still unmatched, on the chip and the card',
+    /\$chipCounts\['unlinked'\]/.test(archiveView) && /\$unlinkedCount/.test(archiveView)
+    && /'state' => 'unlinked'/.test(archiveView));
+check('the archive can file a document of its own',
+    /id="fileDocumentModal"/.test(archiveView)
+    && /route\('cashflows\.attachments\.storeStandalone'\)/.test(archiveView)
+    && /name="party_name"/.test(archiveView) && /name="currency"/.test(archiveView));
+
+const cardView = read('resources/views/cashflows/partials/documents-card.blade.php');
+check('an entry can claim a document that was filed before it existed',
+    /route\('cashflows\.attachments\.link', \$entry\)/.test(cardView)
+    && /name="attachment_id"/.test(cardView)
+    && /unlinkedDocuments/.test(cardView));
+
+const cashflowJsFile = read('public/assets/js/cashflows.js');
+check('the file dialog is bound, not only drawn',
+    /id="fileDocumentModal"/.test(archiveView) && /'fileDocumentModal'/.test(cashflowJsFile)
+    && /openFileDocumentModal/.test(cashflowJsFile));
 
 /* ------------------------------------------------------- the PHP, scanned */
 
@@ -197,6 +290,7 @@ function bracketBalance(text) {
 
 const phpFiles = [
     migration,
+    standaloneMigration,
     'app/Models/CashflowAttachment.php',
     'app/Http/Controllers/CashflowAttachmentController.php',
     'routes/web.php',

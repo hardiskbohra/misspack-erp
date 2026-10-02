@@ -262,7 +262,7 @@
                              anything interactive inside it keeps its own click. --}}
                         <tr class="ship-row {{ $shipment->isClosed() ? 'ship-row-closed' : '' }} is-clickable"
                             data-href="{{ route('shipments.show', $shipment) }}">
-                            <td>
+                            <td data-label="Pickup">
                                 <span class="ship-date">{{ $shipment->pickup_date ? $shipment->pickup_date->format('d M') : '—' }}</span>
                                 @if ($shipment->project || $shipment->client)
                                     <span class="ship-tags">
@@ -277,7 +277,7 @@
                                     </span>
                                 @endif
                             </td>
-                            <td>
+                            <td data-label="Shipment">
                                 {{-- the number is what people search by, so it is the
                                      link and the product is the second line --}}
                                 <a class="ship-cell" href="{{ route('shipments.show', $shipment) }}">
@@ -330,7 +330,7 @@
                             <td data-label="Status">
                                 <span class="master-badge ship-status status-{{ $statusClass }}">{{ $shipment->statusLabel() }}</span>
                             </td>
-                            <td data-label="Actions">
+                            <td data-label="Action">
                                 <div class="master-row-actions">
 
                                     <div class="master-dropdown">
@@ -421,8 +421,9 @@
                             <span class="master-sub">Charges recorded on the shipments on this page</span>
                         </td>
                         {{-- the money sits in the Charges column so it lines up
-                             with the figures above it --}}
-                        <td class="is-num">
+                             with the figures above it — and says so when the
+                             footer is stacked into a card on a phone --}}
+                        <td class="is-num" data-label="Charges">
                             <strong>{{ \App\Models\Shipment::formatInr($pageSpendInr) }}</strong>
                             <span class="master-sub">Filtered total (all pages): {{ \App\Models\Shipment::formatInr($spendInr) }}</span>
                         </td>

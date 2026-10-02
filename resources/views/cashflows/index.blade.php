@@ -465,7 +465,7 @@
                                     {{ $entry->statusLabel() }}
                                 </span>
                             </td>
-                            <td data-label="Actions">
+                            <td data-label="Action">
                                 <div class="master-row-actions">
                                     <div class="master-dropdown">
                                         <button type="button" class="master-dropdown-toggle"
@@ -531,15 +531,15 @@
                             <strong>Total — {{ $entries->count() }} {{ \Illuminate\Support\Str::plural('entry', $entries->count()) }} shown</strong>
                             <span class="master-sub">Filtered totals cover every page</span>
                         </td>
-                        <td class="is-num">
+                        <td class="is-num" data-label="Credit">
                             <strong class="cf-credit">{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['credit']) }}</strong>
                             <span class="master-sub">All pages: {{ \App\Helpers\CommonHelper::indianCurrency($stats['credit']) }}</span>
                         </td>
-                        <td class="is-num">
+                        <td class="is-num" data-label="Debit">
                             <strong class="cf-debit">{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['debit']) }}</strong>
                             <span class="master-sub">All pages: {{ \App\Helpers\CommonHelper::indianCurrency($stats['debit']) }}</span>
                         </td>
-                        <td class="is-num">
+                        <td class="is-num" data-label="Balance">
                             <strong>{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['net']) }}</strong>
                             <span class="master-sub">Net on this page</span>
                         </td>

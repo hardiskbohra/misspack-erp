@@ -3,10 +3,13 @@
 @section('page-title', 'Cashflow Documents')
 
 @section('page-actions')
-    <a class="master-btn master-btn-soft" href="{{ route('cashflows.index') }}">Back to Ledger</a>
-    <a class="master-btn master-btn-primary" href="{{ route('cashflows.index', ['documents' => 'missing']) }}">
+    <button type="button" class="master-btn master-btn-primary" id="openFileDocumentModal">
+        + File a document
+    </button>
+    <a class="master-btn master-btn-soft" href="{{ route('cashflows.index', ['documents' => 'missing']) }}">
         Missing documents
     </a>
+    <a class="master-btn master-btn-ghost" href="{{ route('cashflows.index') }}">Back to Ledger</a>
 @endsection
 
 @section('content')
@@ -21,20 +24,26 @@
        a new list. */
     $filtered = trim((string) $q) !== ''
         || ($documentType && $documentType !== 'all')
+        || ($state && $state !== 'all')
         || filled($dateFrom)
         || filled($dateTo);
 
-    $chipBase = collect(request()->except(['document_type', 'date_from', 'date_to', 'page']))
+    /* A chip owns one dimension and keeps the others: the state chips drop
+       'state' from their own base the same way the type chips drop the type. */
+    $chipBase = collect(request()->except(['document_type', 'state', 'date_from', 'date_to', 'page']))
         ->reject(fn ($value) => $value === null || $value === '' || $value === 'all');
 
     $chipActive = ['all' => ! $documentType || $documentType === 'all'];
     foreach ($documentTypeOptions as $key => $label) {
         $chipActive[$key] = $documentType === $key;
     }
+    $chipActive['linked'] = ($state ?? 'all') === 'linked';
+    $chipActive['unlinked'] = ($state ?? 'all') === 'unlinked';
+
     foreach ($dateRanges as $rangeKey => $range) {
         $chipActive[$rangeKey] = $activeRange === $rangeKey;
     }
-    if (filled($dateFrom) || filled($dateTo)) {
+    if (filled($dateFrom) || filled($dateTo) || (($state ?? 'all') !== 'all')) {
         $chipActive['all'] = false;
     }
 
@@ -58,7 +67,7 @@
             <div>
                 <p class="master-stat-title">Documents (filtered)</p>
                 <p class="master-stat-value">{{ number_format($chipCounts['all']) }}</p>
-                <span class="tooltip-text">Every file attached to an entry matching the filters above.</span>
+                <span class="tooltip-text">Every document filed in this view — matched to a cashflow entry, or standing on its own.</span>
             </div>
         </div>
         <div class="master-stat master-stat--flat green tooltip-container">
@@ -68,6 +77,17 @@
                 <p class="master-stat-value">{{ number_format($totalSize / 1048576, 1) }} MB</p>
                 <p class="master-sub">of documents matching the filters</p>
                 <span class="tooltip-text">Total size of the files in this view — handy before mailing a month to the accountant.</span>
+            </div>
+        </div>
+        <div class="master-stat master-stat--flat {{ $unlinkedCount > 0 ? 'purple' : 'green' }} tooltip-container">
+            <span class="icon" aria-hidden="true">✂</span>
+            <div>
+                <p class="master-stat-title">Not matched to an entry</p>
+                <p class="master-stat-value">{{ number_format($unlinkedCount) }}</p>
+                <p class="master-sub">
+                    <a href="{{ route('cashflows.documents', $chipBase->all() + ['state' => 'unlinked']) }}">see them</a>
+                </p>
+                <span class="tooltip-text">Bills and receipts filed on their own — a bill booked to a project, a document that arrived before the payment did. They wait here until an entry claims them, or stay as paperwork the ledger never needed. The count is the same one the chip above carries.</span>
             </div>
         </div>
         <div class="master-stat master-stat--flat {{ $missingCount > 0 ? 'orange' : 'green' }} tooltip-container">
@@ -90,6 +110,17 @@
             <div class="master-list-chips">
                 <a class="master-list-chip {{ $chipActive['all'] ? 'is-active' : '' }}"
                     href="{{ route('cashflows.documents', $chipBase->all()) }}">All documents</a>
+                {{-- A document does not have to belong to an entry. These two
+                     chips are how the month-end question "what is still not
+                     matched" is asked, and how a matched bill is found again. --}}
+                <a class="master-list-chip {{ $chipActive['linked'] ? 'is-active' : '' }}"
+                    href="{{ route('cashflows.documents', $chipBase->all() + ['state' => 'linked']) }}">
+                    Matched <span class="master-list-chip-count">{{ $chipCounts['linked'] ?? 0 }}</span>
+                </a>
+                <a class="master-list-chip {{ $chipActive['unlinked'] ? 'is-active' : '' }}"
+                    href="{{ route('cashflows.documents', $chipBase->all() + ['state' => 'unlinked']) }}">
+                    Not matched <span class="master-list-chip-count">{{ $chipCounts['unlinked'] ?? 0 }}</span>
+                </a>
                 @foreach ($documentTypeOptions as $key => $label)
                     <a class="master-list-chip {{ $chipActive[$key] ? 'is-active' : '' }}"
                         href="{{ route('cashflows.documents', $chipBase->all() + ['document_type' => $key]) }}">
@@ -135,6 +166,18 @@
             @if ($filtered)
                 <div class="master-list-applied">
                     <span class="master-list-applied-title">Filtered by</span>
+
+                    @if (($state ?? 'all') !== 'all')
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Entry</span>
+                            <span class="master-list-applied-value">
+                                {{ $state === 'unlinked' ? 'Not matched to one' : 'Matched to one' }}
+                            </span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('state') }}"
+                                aria-label="Remove the matched/not matched filter"
+                                title="Remove the matched/not matched filter">&times;</a>
+                        </span>
+                    @endif
 
                     @if (trim((string) $q) !== '')
                         <span class="master-list-applied-chip">
@@ -203,6 +246,7 @@
                         <th scope="col">Entry</th>
                         <th scope="col">Party</th>
                         <th scope="col">Type</th>
+                        <th scope="col" class="is-num">Amount</th>
                         <th scope="col" class="is-num">Size</th>
                         <th scope="col">Filed</th>
                         <th scope="col">Action</th>
@@ -231,16 +275,26 @@
                                         @if ($entry->invoice_bill_number) · {{ $entry->invoice_bill_number }} @endif
                                     </span>
                                 @else
-                                    <span class="master-sub">Entry deleted</span>
+                                    {{-- Filed on its own: a bill with no bank line
+                                         behind it yet. It keeps its own date until
+                                         an entry claims it — or for good. --}}
+                                    <span class="cf-doc-state is-unlinked"
+                                        title="Filed on its own. Open the entry it belongs to and match it from the Documents card there.">Not matched</span>
+                                    <span class="master-sub">{{ $document->displayDate()?->format('d M Y') ?? 'No date on the bill' }}</span>
                                 @endif
                             </td>
                             <td data-label="Party">
-                                {{ $entry?->client?->company_name ?? $entry?->vendor?->vendor_name ?? $entry?->related_party_name ?? '—' }}
-                                <span class="master-sub">{{ \App\Models\CashflowEntry::relatedPartyOptions()[$entry?->related_party_type] ?? '—' }}</span>
+                                {{ $document->partyLabel() }}
+                                @if ($entry)
+                                    <span class="master-sub">{{ \App\Models\CashflowEntry::relatedPartyOptions()[$entry->related_party_type] ?? '—' }}</span>
+                                @elseif (filled($document->party_name))
+                                    <span class="master-sub">written on the bill</span>
+                                @endif
                             </td>
                             <td data-label="Type">
                                 <span class="cf-doc-type">{{ $document->documentTypeLabel() }}</span>
                             </td>
+                            <td class="is-num" data-label="Amount">{{ $document->amountLabel() ?? '—' }}</td>
                             <td class="is-num" data-label="Size">{{ $document->sizeLabel() }}</td>
                             <td data-label="Filed">
                                 {{ $document->created_at?->format('d M Y') }}
@@ -262,7 +316,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7">
+                            <td colspan="8">
                                 <div class="master-list-empty">
                                     <span class="master-list-empty-icon" aria-hidden="true">📎</span>
                                     <p class="master-list-empty-title">
@@ -271,13 +325,14 @@
                                     <p class="master-list-empty-text">
                                         {{ $filtered
                                             ? 'Adjust the search or the filters above — the counts on each chip show what is available.'
-                                            : 'Attach the bill to a cashflow entry and it lands here, ready for the month-end pack.' }}
+                                            : 'Attach a bill to a cashflow entry, or file one on its own — a document with no entry yet still belongs in the month.' }}
                                     </p>
                                     <div class="master-list-empty-actions">
                                         @if ($filtered)
                                             <a class="master-btn master-btn-soft" href="{{ route('cashflows.documents') }}">Clear filters</a>
                                         @endif
-                                        <a class="master-btn master-btn-primary" href="{{ route('cashflows.index') }}">Open the ledger</a>
+                                        <button type="button" class="master-btn master-btn-primary" id="emptyFileDocument">File a document</button>
+                                        <a class="master-btn master-btn-soft" href="{{ route('cashflows.index') }}">Open the ledger</a>
                                     </div>
                                 </div>
                             </td>
@@ -286,11 +341,11 @@
                 </tbody>
                 <tfoot>
                     <tr class="master-list-total">
-                        <td colspan="4">
+                        <td colspan="5">
                             <strong>Total — {{ $documents->count() }} {{ \Illuminate\Support\Str::plural('document', $documents->count()) }} shown</strong>
                             <span class="master-sub">Counts and sizes cover every page</span>
                         </td>
-                        <td class="is-num">
+                        <td class="is-num" data-label="Size">
                             <strong>{{ number_format($totalSize / 1048576, 1) }} MB</strong>
                             <span class="master-sub">All pages</span>
                         </td>
@@ -301,6 +356,83 @@
         </div>
 
         <x-pagination :items="$documents" />
+    </div>
+</div>
+
+{{-- A bill that stands on its own: filed here, matched to an entry later — or
+     never, which is a valid answer for paperwork the ledger does not carry.
+     The entry card files through the same controller with the same fields. --}}
+<div class="master-modal" id="fileDocumentModal" aria-hidden="true">
+    <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="fileDocumentTitle">
+        <form method="POST" action="{{ route('cashflows.attachments.storeStandalone') }}"
+            enctype="multipart/form-data">
+            @csrf
+            <div class="master-modal-header">
+                <div class="master-modal-heading">
+                    <span class="master-modal-icon">📄</span>
+                    <div>
+                        <h3 class="master-modal-title" id="fileDocumentTitle">File a document</h3>
+                        <p class="master-modal-subtitle">A bill or receipt with no cashflow entry behind it</p>
+                    </div>
+                </div>
+                <button type="button" class="master-modal-close" data-close-modal="fileDocumentModal"
+                    aria-label="Close">&times;</button>
+            </div>
+            <div class="master-modal-body">
+                <div class="master-modal-grid">
+                    <div class="master-field">
+                        <label class="master-label" for="standaloneType">Document type
+                            <span class="master-required" aria-hidden="true">*</span></label>
+                        <select class="master-select" id="standaloneType" name="document_type" required>
+                            @foreach ($documentTypeOptions as $key => $label)
+                                <option value="{{ $key }}" @selected($key === 'bill')>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label" for="standaloneDate">Document date</label>
+                        <input class="master-input" id="standaloneDate" type="date" name="document_date">
+                    </div>
+                    <div class="master-field full">
+                        <label class="master-label" for="standaloneTitle">Title
+                            <span class="master-sub">(optional)</span></label>
+                        <input class="master-input" id="standaloneTitle" name="title" maxlength="255"
+                            placeholder="e.g. Bill 2418 — Shree Traders">
+                    </div>
+                    <div class="master-field full">
+                        <label class="master-label" for="standaloneParty">Party
+                            <span class="master-sub">(who the bill is from)</span></label>
+                        <input class="master-input" id="standaloneParty" name="party_name" maxlength="255"
+                            placeholder="e.g. Shree Traders">
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label" for="standaloneAmount">Amount</label>
+                        <input class="master-input" id="standaloneAmount" type="number" step="0.01" min="0"
+                            name="amount">
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label" for="standaloneCurrency">Currency</label>
+                        <select class="master-select" id="standaloneCurrency" name="currency">
+                            @foreach ($currencyOptions as $code => $label)
+                                <option value="{{ $code }}" @selected($code === 'INR')>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="master-field full">
+                        <label class="master-label" for="standaloneFiles">Files
+                            <span class="master-required" aria-hidden="true">*</span></label>
+                        <input class="master-input" id="standaloneFiles" type="file" name="attachments[]" multiple required
+                            accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.zip">
+                        <p class="master-sub">PDF, image, Word, Excel, CSV or ZIP · up to 20 MB each.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="master-modal-footer">
+                <button type="button" class="master-btn master-btn-light"
+                    data-close-modal="fileDocumentModal">Cancel</button>
+                <button type="submit" class="master-btn master-btn-primary">File document</button>
+            </div>
+        </form>
     </div>
 </div>
 @endsection

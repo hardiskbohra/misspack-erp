@@ -228,9 +228,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/cashflows/settings/masters/{master}', [CashflowSettingController::class, 'destroyMaster'])->name('cashflows.settings.masters.destroy');
 
     /* The bills behind the ledger. Registered before the resource route so
-       /cashflows/documents is the archive rather than a missing entry. */
+       /cashflows/documents is the archive rather than a missing entry. A
+       document does not have to belong to an entry: /cashflow-attachments
+       files one on its own, and linking it to an entry happens later. */
     Route::get('/cashflows/documents', [CashflowAttachmentController::class, 'index'])->name('cashflows.documents');
     Route::post('/cashflows/{cashflow}/attachments', [CashflowAttachmentController::class, 'store'])->name('cashflows.attachments.store');
+    Route::post('/cashflows/{cashflow}/attachments/link', [CashflowAttachmentController::class, 'link'])->name('cashflows.attachments.link');
+    Route::post('/cashflow-attachments', [CashflowAttachmentController::class, 'storeStandalone'])->name('cashflows.attachments.storeStandalone');
     Route::delete('/cashflow-attachments/{attachment}', [CashflowAttachmentController::class, 'destroy'])->name('cashflows.attachments.destroy');
 
     Route::post('/cashflows/saved-views', [CashflowController::class, 'storeSavedView'])->name('cashflows.saved-views.store');

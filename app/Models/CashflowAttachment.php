@@ -13,10 +13,13 @@ class CashflowAttachment extends Model
     protected $fillable = [
         'cashflow_entry_id', 'document_type', 'title', 'file_path',
         'original_name', 'mime_type', 'file_size', 'extension', 'uploaded_by',
+        'party_name', 'document_date', 'amount', 'currency',
     ];
 
     protected $casts = [
         'file_size' => 'integer',
+        'document_date' => 'date',
+        'amount' => 'decimal:2',
     ];
 
     public function cashflowEntry()
@@ -27,6 +30,77 @@ class CashflowAttachment extends Model
     public function uploader()
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    /**
+     * A bill does not always have a bank line behind it: a purchase bill booked
+     * to a project, a document that arrives before the payment, an invoice
+     * settled outside this ledger. Those documents stand on their own until an
+     * entry is matched to them — and if none ever is, that is a valid answer.
+     */
+    public function isLinked(): bool
+    {
+        return $this->cashflow_entry_id !== null;
+    }
+
+    public function scopeLinked($query)
+    {
+        return $query->whereNotNull('cashflow_entry_id');
+    }
+
+    public function scopeUnlinked($query)
+    {
+        return $query->whereNull('cashflow_entry_id');
+    }
+
+    public function stateLabel(): string
+    {
+        return $this->isLinked() ? 'Matched to an entry' : 'Not matched to an entry';
+    }
+
+    /**
+     * Whose bill this is. A stand-alone document carries its own party name;
+     * a matched one takes the counterparty of the entry it is matched to.
+     */
+    public function partyLabel(): string
+    {
+        if (filled($this->party_name)) {
+            return (string) $this->party_name;
+        }
+
+        $entry = $this->cashflowEntry;
+
+        return $entry?->client?->company_name
+            ?? $entry?->vendor?->vendor_name
+            ?? $entry?->related_party_name
+            ?? '—';
+    }
+
+    /**
+     * The date that matters for a month's paperwork: the document's own date
+     * when it has one, otherwise the entry's, otherwise the day it was filed.
+     */
+    public function displayDate(): ?\Carbon\CarbonInterface
+    {
+        return $this->document_date ?? $this->cashflowEntry?->entry_date ?? $this->created_at;
+    }
+
+    public function amountLabel(): ?string
+    {
+        return $this->amount === null
+            ? null
+            : \App\Helpers\CommonHelper::amount($this->amount, $this->currency);
+    }
+
+    /** One line in a picker: what it is, whose it is, when and how much. */
+    public function optionLabel(): string
+    {
+        return implode(' · ', array_filter([
+            $this->name(),
+            $this->party_name,
+            $this->displayDate()?->format('d M Y'),
+            $this->amountLabel(),
+        ]));
     }
 
     /**

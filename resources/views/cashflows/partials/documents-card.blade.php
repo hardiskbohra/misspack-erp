@@ -89,4 +89,28 @@
             <button class="master-btn master-btn-primary" type="submit">Attach documents</button>
         </div>
     </form>
+
+    {{-- The other direction: a bill that was filed before its entry existed.
+         Matching keeps the file where it is and points it at this entry, which
+         is also how the month-end chase gets closed. --}}
+    @if (($unlinkedDocuments ?? collect())->isNotEmpty())
+        <form class="cf-doc-match" method="POST" action="{{ route('cashflows.attachments.link', $entry) }}">
+            @csrf
+            <div class="master-field full">
+                <label class="master-label" for="matchDocument">Match a document that is filed without an entry</label>
+                <select class="master-select" id="matchDocument" name="attachment_id" required>
+                    <option value="">Choose a document…</option>
+                    @foreach ($unlinkedDocuments as $candidate)
+                        <option value="{{ $candidate->id }}">{{ $candidate->optionLabel() }}</option>
+                    @endforeach
+                </select>
+                <p class="master-sub">
+                    Bills filed on the <a href="{{ route('cashflows.documents', ['state' => 'unlinked']) }}">document
+                    archive</a> until an entry claims them — matching one links it to this entry.</p>
+            </div>
+            <div class="cf-doc-upload-actions">
+                <button type="submit" class="master-btn master-btn-soft">Match to this entry</button>
+            </div>
+        </form>
+    @endif
 </section>

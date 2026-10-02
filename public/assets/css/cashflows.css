@@ -962,12 +962,23 @@
     --tone-fg: #b45309;
 }
 
+/* filed on its own: not a problem to chase, so it is neutral rather than a
+   warning tone — the document exists, it simply has no entry behind it */
+.cf-doc-state.is-unlinked {
+    --tone-bg: rgba(79, 131, 241, .16);
+    --tone-fg: #3f6fd8;
+}
+
 :root[data-theme="dark"] .cf-doc-state.is-filed {
     --tone-fg: #6ee7b7;
 }
 
 :root[data-theme="dark"] .cf-doc-state.is-missing {
     --tone-fg: #fcd34d;
+}
+
+:root[data-theme="dark"] .cf-doc-state.is-unlinked {
+    --tone-fg: #93b4ff;
 }
 
 .cf-doc-list {
@@ -1050,6 +1061,15 @@
     margin-top: 14px;
 }
 
+/* The second way in: claiming a document that was filed before its entry
+   existed. A hairline separates it from the upload, so the common action
+   stays the obvious one. */
+.cf-doc-match {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--mc-border);
+}
+
 .cf-doc-type {
     display: inline-flex;
     padding: 3px 10px;
@@ -1061,16 +1081,17 @@
     white-space: nowrap;
 }
 
-/* the archive's seven columns: the file name takes the room the ledger gives
-   its particulars, the three short columns on the right stay narrow, so the
-   header and the body keep one grid as the month grows */
-.cashflow-documents .master-table th:nth-child(1) { width: 330px; }
-.cashflow-documents .master-table th:nth-child(2) { width: 280px; }
-.cashflow-documents .master-table th:nth-child(3) { width: 200px; }
+/* the archive's eight columns: the file name takes the room the ledger gives
+   its particulars, the short columns on the right stay narrow, so the header
+   and the body keep one grid as the month grows */
+.cashflow-documents .master-table th:nth-child(1) { width: 300px; }
+.cashflow-documents .master-table th:nth-child(2) { width: 250px; }
+.cashflow-documents .master-table th:nth-child(3) { width: 190px; }
 .cashflow-documents .master-table th:nth-child(4) { width: 140px; }
-.cashflow-documents .master-table th:nth-child(5) { width: 110px; }
-.cashflow-documents .master-table th:nth-child(6) { width: 130px; }
-.cashflow-documents .master-table th:nth-child(7) { width: 120px; }
+.cashflow-documents .master-table th:nth-child(5) { width: 130px; }
+.cashflow-documents .master-table th:nth-child(6) { width: 105px; }
+.cashflow-documents .master-table th:nth-child(7) { width: 125px; }
+.cashflow-documents .master-table th:nth-child(8) { width: 110px; }
 
 .cashflow-documents .master-table th:last-child,
 .cashflow-documents .master-table td:last-child {
