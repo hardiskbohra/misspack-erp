@@ -29,7 +29,7 @@
 
     <div class="master-grid">
         <div>
-            <div class="master-card master-section">
+            <div class="master-card master-card--flat master-section">
                 <h3 class="master-section-title">Shipment Overview</h3>
                 <div class="master-info-grid">
                     <div class="master-info"><span>Status</span><strong class="master-badge status-{{ $statusClass }}">{{ $shipment->statusLabel() }}</strong></div>
@@ -91,7 +91,7 @@
                 </div>
             </div>
 
-            <div class="master-card master-section">
+            <div class="master-card master-card--flat master-section">
                 <h3 class="master-section-title">Tracking Progress</h3>
                 @include('shipments.partials.tracker', ['shipment' => $shipment])
                 <p class="master-sub" style="margin-top:8px;">
@@ -101,7 +101,7 @@
 
             @include('shipments.partials.costs-card')
 
-            <div class="master-card master-section">
+            <div class="master-card master-card--flat master-section">
                 <h3 class="master-section-title">Route Details</h3>
                 <div class="master-info-grid">
                     
@@ -137,7 +137,7 @@
                 </div>
             </div>
 
-            <div class="master-card master-section">
+            <div class="master-card master-card--flat master-section">
                 <h3 class="master-section-title">Shipment Products</h3>
                 <div class="shipment-products">
 
@@ -245,7 +245,7 @@
         </div>
 
         <div>
-            <div class="master-card master-section">
+            <div class="master-card master-card--flat master-section">
                 <h3 class="master-section-title">Public Readonly Link</h3>
                 <div class="public-box">
                     <input class="master-input" id="publicTrackingLink" readonly value="{{ route('shipments.publicTrack', $shipment->public_token) }}">
@@ -253,7 +253,7 @@
                 </div>
             </div>
 
-            <div class="master-card master-section">
+            <div class="master-card master-card--flat master-section">
                 <h3 class="master-section-title">Add Tracking Update</h3>
                 <form method="POST" action="{{ route('shipments.history.store', $shipment) }}" class="history-form">
                     @csrf
@@ -268,7 +268,7 @@
             
             @include('shipments.partials.documents-card')
 
-            <div class="master-card master-section">
+            <div class="master-card master-card--flat master-section">
                 <h3 class="master-section-title">Shipment Photos</h3>
                 <div class="photo-grid">
                     
@@ -310,7 +310,7 @@
                 </div>
             </div>
 
-            <div class="master-card master-section">
+            <div class="master-card master-card--flat master-section">
                 <h3 class="master-section-title">Tracking History</h3>
                 <div class="timeline">
                     @forelse($shipment->histories as $history)

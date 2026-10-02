@@ -2,7 +2,7 @@
     $documentSummary = $documentSummary ?? app(\App\Services\ShipmentDocuments::class)->summary($shipment);
 @endphp
 
-<div class="master-card master-section">
+<div class="master-card master-card--flat master-section">
     <div class="master-section-head">
         <div>
             <h3 class="master-section-title">Paperwork Checklist</h3>

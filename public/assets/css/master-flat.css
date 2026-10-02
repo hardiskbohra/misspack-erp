@@ -1,0 +1,130 @@
+/* =========================================================
+   MASTER-FLAT — plain card surfaces
+   =========================================================
+   Loaded after master-index / master-show / master-form, so it
+   can neutralise the tinted washes those sheets apply to panels
+   (.master-stat.blue and friends) without touching module CSS.
+
+   Why this exists
+   ---------------
+   A panel should read as the theme's own surface — solid white in
+   the light theme, the deep panel colour in the dark theme — and
+   the colour should live in the small pieces: icon badges, chips,
+   status pills, ETA chips. That way one card style is correct in
+   both themes and no module needs a per-theme override.
+
+   Usage
+   -----
+     <div class="master-card master-card--flat">      panel
+     <div class="master-stat master-stat--flat blue">  standalone stat
+   ========================================================= */
+
+.master-card--flat {
+    background: var(--mc-card);
+}
+
+/* Panels nested inside a flat card inherit the same surface. */
+.master-card--flat .master-section,
+.master-card--flat .master-info,
+.master-card--flat .master-history-row,
+.master-card--flat .master-attachment-card,
+.master-card--flat .master-product-card {
+    background: var(--mc-card);
+}
+
+/* A section that sits inside another card keeps a hairline so the
+   two surfaces are still readable as separate blocks. */
+.master-card--flat .master-section {
+    border: 1px solid var(--mc-border);
+}
+
+/* --- stat cards ------------------------------------------------------ */
+
+.master-card--flat .master-stat,
+.master-stat--flat {
+    background: var(--mc-card);
+    border: 1px solid var(--mc-border);
+    box-shadow: var(--mc-shadow);
+}
+
+/* The colour that used to wash the whole panel moves onto the icon
+   badge — semantic colours stay, the panel stays theme-neutral. */
+.master-stat--flat .icon,
+.master-card--flat .master-stat .icon {
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-2);
+}
+
+.master-card--flat .master-stat.blue,
+.master-stat--flat.blue {
+    border-color: rgba(21, 159, 247, .45);
+}
+
+.master-card--flat .master-stat.purple,
+.master-stat--flat.purple {
+    border-color: rgba(139, 92, 246, .45);
+}
+
+.master-card--flat .master-stat.teal,
+.master-stat--flat.teal {
+    border-color: rgba(18, 203, 183, .45);
+}
+
+.master-card--flat .master-stat.orange,
+.master-stat--flat.orange {
+    border-color: rgba(245, 158, 11, .45);
+}
+
+.master-card--flat .master-stat.green,
+.master-stat--flat.green {
+    border-color: rgba(16, 185, 129, .45);
+}
+
+.master-card--flat .master-stat.blue .icon,
+.master-stat--flat.blue .icon {
+    background: rgba(21, 159, 247, .14);
+    border-color: rgba(21, 159, 247, .35);
+    color: var(--master-info);
+}
+
+.master-card--flat .master-stat.purple .icon,
+.master-stat--flat.purple .icon {
+    background: rgba(139, 92, 246, .14);
+    border-color: rgba(139, 92, 246, .35);
+    color: var(--master-purple);
+}
+
+.master-card--flat .master-stat.teal .icon,
+.master-stat--flat.teal .icon {
+    background: rgba(18, 203, 183, .14);
+    border-color: rgba(18, 203, 183, .35);
+    color: var(--master-teal);
+}
+
+.master-card--flat .master-stat.orange .icon,
+.master-stat--flat.orange .icon {
+    background: rgba(245, 158, 11, .16);
+    border-color: rgba(245, 158, 11, .38);
+    color: var(--master-orange);
+}
+
+.master-card--flat .master-stat.green .icon,
+.master-stat--flat.green .icon {
+    background: rgba(16, 185, 129, .14);
+    border-color: rgba(16, 185, 129, .35);
+    color: var(--master-green);
+}
+
+/* Status pills, label chips and buttons keep their own fill — the flat
+   card must not flatten the signals that carry meaning. */
+.master-card--flat .master-badge,
+.master-card--flat .master-btn,
+.master-card--flat .master-label-chip,
+.master-card--flat .tooltip-text {
+    background-color: initial;
+}
+
+.master-card--flat .master-stat-value {
+    color: var(--mc-text);
+}

@@ -37,6 +37,7 @@
     <link rel="stylesheet" href="{{ asset('assets/css/master-index.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-show.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/master-flat.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/vendor/select2/css/select2.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/select2-theme.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-alert.css') }}">

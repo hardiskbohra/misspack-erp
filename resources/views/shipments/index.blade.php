@@ -10,11 +10,11 @@
 <div class="ship ship-index">
 
     <div class="master-stats desktop-only">
-        <div class="master-stat blue"><span class="icon">⇄</span><div><p class="master-stat-title">Total Shipments</p><p class="master-stat-value">{{ $stats['total'] }}</p></div></div>
-        <div class="master-stat purple"><span class="icon">✈</span><div><p class="master-stat-title">In Transit</p><p class="master-stat-value">{{ $stats['in_transit'] + $stats['out_for_delivery'] }}</p></div></div>
-        <div class="master-stat teal"><span class="icon">✓</span><div><p class="master-stat-title">Delivered</p><p class="master-stat-value">{{ $stats['delivered'] }}</p></div></div>
-        <div class="master-stat orange"><span class="icon">!</span><div><p class="master-stat-title">Hold / Delayed</p><p class="master-stat-value">{{ $stats['custom_hold'] + $stats['delayed'] }}</p></div></div>
-        <div class="master-stat green tooltip-container">
+        <div class="master-stat master-stat--flat blue"><span class="icon">⇄</span><div><p class="master-stat-title">Total Shipments</p><p class="master-stat-value">{{ $stats['total'] }}</p></div></div>
+        <div class="master-stat master-stat--flat purple"><span class="icon">✈</span><div><p class="master-stat-title">In Transit</p><p class="master-stat-value">{{ $stats['in_transit'] + $stats['out_for_delivery'] }}</p></div></div>
+        <div class="master-stat master-stat--flat teal"><span class="icon">✓</span><div><p class="master-stat-title">Delivered</p><p class="master-stat-value">{{ $stats['delivered'] }}</p></div></div>
+        <div class="master-stat master-stat--flat orange"><span class="icon">!</span><div><p class="master-stat-title">Hold / Delayed</p><p class="master-stat-value">{{ $stats['custom_hold'] + $stats['delayed'] }}</p></div></div>
+        <div class="master-stat master-stat--flat green tooltip-container">
             <span class="icon">₹</span>
             <div>
                 <p class="master-stat-title">Spent (filtered)</p>
@@ -25,7 +25,7 @@
         </div>
     </div>
 
-    <div class="master-card">
+    <div class="master-card master-card--flat">
         @php($baseFilters = request()->except(['attention', 'page', 'saved_view']))
         <div class="ship-chip-bar">
             <div class="ship-chips">
@@ -107,7 +107,7 @@
         </form>
     </div>
 
-    <div class="master-card master-table-card">
+    <div class="master-card master-table-card master-card--flat">
         <p class="ship-order-hint">
             Order: <strong>open shipments first</strong> (newest pickup date on top) &mdash; delivered &amp; cancelled sit in a closed block below, also newest first.
         </p>

@@ -3,7 +3,7 @@
     $costRows = $shipment->relationLoaded('costs') ? $shipment->costs : $shipment->costs()->get();
 @endphp
 
-<div class="master-card master-section" id="shipmentCosts">
+<div class="master-card master-card--flat master-section" id="shipmentCosts">
     <div class="master-section-head">
         <div>
             <h3 class="master-section-title">Freight Cost Breakdown</h3>

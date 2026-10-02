@@ -39,7 +39,7 @@
     .ship-index .status-delayed { background: #ffeaf0; color: #e11d48; }
     .ship-index .status-out-for-delivery { background: #46d488; color: #FFF; }
     .ship-index .status-delivered { background: #e8fff7; color: #0e9f6e; }
-    .ship-index .status-cancelled { background: #f3f4f6; color: var(--mc-text-2); }
+    .ship-index .status-cancelled { background: var(--mc-soft); color: var(--mc-text-2); }
     
     /* Default */
     .ship-index .label-0 { background:blue; color:#FFF; }
@@ -568,7 +568,9 @@
 
 .ship-index .ship-group-row td {
     padding: 10px 14px;
-    background: var(--mc-card-soft);
+    /* the divider strip belongs to the flat list card, so it reads as a hairline    */
+    /* band rather than a tinted block inside a white card                          */
+    background: var(--mc-card);
     border-top: 1px solid var(--mc-border);
     border-bottom: 1px solid var(--mc-border);
     color: var(--mc-text-3);
@@ -598,7 +600,7 @@
 
 .ship-total-row td {
     padding: 12px 14px;
-    background: var(--mc-card-soft);
+    background: var(--mc-card);
     border-top: 2px solid var(--mc-border);
     font-weight: 800;
     vertical-align: top;
@@ -639,7 +641,7 @@
 
 .party-prefilled {
     border-color: #46d488 !important;
-    background: #f2fff9;
+    background: rgba(70, 212, 136, .12);
 }
 
 .ship-order-hint {
@@ -652,7 +654,7 @@
 }
 
 .ship-order-hint strong {
-    color: var(--mc-text-1);
+    color: var(--mc-text);
 }
 
 /* ---------------- Attention chips & saved views (list) ---------------- */
@@ -680,7 +682,7 @@
     padding: 7px 12px;
     border: 1px solid var(--mc-border);
     border-radius: 999px;
-    background: var(--mc-card-soft);
+    background: var(--mc-card);
     color: var(--mc-text-2);
     font-size: 12px;
     font-weight: 700;
@@ -689,21 +691,25 @@
 }
 
 .ship-chip:hover {
+    background: var(--mc-card-soft);
+}
+
+.ship-chip:hover {
     border-color: var(--mc-accent, #4f8ef7);
-    color: var(--mc-text-1);
+    color: var(--mc-text);
 }
 
 .ship-chip.is-active {
-    border-color: var(--mc-accent, #4f8ef7);
-    background: #eaf1fe;
-    color: #1d4ed8;
+    border-color: var(--master-primary, #4f83f1);
+    background: var(--accent-light, rgba(79, 142, 247, .12));
+    color: var(--master-primary, #4f83f1);
 }
 
 .ship-chip-count {
     min-width: 22px;
     padding: 1px 6px;
     border-radius: 999px;
-    background: #fff;
+    background: var(--mc-card-soft);
     border: 1px solid var(--mc-border);
     color: var(--mc-text-3);
     font-size: 11px;
@@ -725,7 +731,7 @@
     padding: 5px 8px 5px 10px;
     border: 1px dashed var(--mc-border);
     border-radius: 999px;
-    background: #fff;
+    background: var(--mc-card);
     font-size: 12px;
     font-weight: 700;
 }
@@ -752,7 +758,7 @@
 }
 
 .ship-saved-chip button:hover {
-    color: #d92d20;
+    color: var(--master-red, #ef4770);
 }
 
 .ship-save-view {
@@ -857,7 +863,7 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: #fff;
+    background: var(--mc-card);
     border: 1px solid var(--mc-border);
     color: var(--mc-text-3);
     font-size: 9px;
@@ -867,9 +873,9 @@
 }
 
 .ship-track li.is-done {
-    border-color: #abefc6;
-    background: #f6fef9;
-    color: #067647;
+    border-color: rgba(16, 185, 129, .45);
+    background: rgba(16, 185, 129, .10);
+    color: var(--mc-text-2);
 }
 
 .ship-track li.is-done::before {
@@ -880,15 +886,15 @@
 }
 
 .ship-track li.is-current {
-    border-color: var(--mc-accent, #4f8ef7);
-    background: #eaf1fe;
-    color: #1d4ed8;
+    border-color: var(--master-primary, #4f83f1);
+    background: var(--accent-light, rgba(79, 142, 247, .12));
+    color: var(--master-primary, #4f83f1);
     box-shadow: 0 2px 8px rgba(79, 142, 247, .18);
 }
 
 .ship-track li.is-current::before {
-    border-color: var(--mc-accent, #4f8ef7);
-    background: var(--mc-accent, #4f8ef7);
+    border-color: var(--master-primary, #4f83f1);
+    background: var(--master-primary, #4f83f1);
     color: #fff;
 }
 
@@ -924,17 +930,18 @@
     padding: 9px 12px;
     border: 1px solid var(--mc-border);
     border-radius: 10px;
-    background: #fff;
+    background: var(--mc-card);
 }
 
 .ship-doc.is-done {
-    border-color: #abefc6;
-    background: #f6fef9;
+    /* translucent tints so the text colour can stay theme-driven (light + dark) */
+    border-color: rgba(16, 185, 129, .45);
+    background: rgba(16, 185, 129, .10);
 }
 
 .ship-doc.is-missing {
-    border-color: #fedf89;
-    background: #fffdf5;
+    border-color: rgba(245, 158, 11, .45);
+    background: rgba(245, 158, 11, .10);
 }
 
 .ship-doc-mark {
@@ -970,7 +977,7 @@
     display: block;
     font-size: 13px;
     font-weight: 700;
-    color: var(--mc-text-1);
+    color: var(--mc-text);
 }
 
 .ship-doc-upload {
@@ -981,7 +988,7 @@
     padding: 12px;
     border: 1px dashed var(--mc-border);
     border-radius: 12px;
-    background: var(--mc-card-soft);
+    background: var(--mc-card);
 }
 
 .ship-doc-upload .master-select {
@@ -1006,7 +1013,7 @@
     padding: 10px 12px;
     border: 1px solid var(--mc-border);
     border-radius: 10px;
-    background: var(--mc-card-soft);
+    background: var(--mc-card);
 }
 
 .ship-cost-totals span {
@@ -1023,7 +1030,7 @@
     margin-top: 3px;
     font-size: 14px;
     font-weight: 800;
-    color: var(--mc-text-1);
+    color: var(--mc-text);
     overflow-wrap: anywhere;
 }
 
