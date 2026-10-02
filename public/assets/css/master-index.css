@@ -297,6 +297,15 @@
     padding: 0 24px 22px;
 }
 
+/* A filter row that opens a card carries its own top inset, because nothing
+   above it does. One that follows a toolbar does not: the toolbar's own 22px
+   bottom padding is already the gap, and adding another would double it. The
+   products list was patching this with an inline style="padding-top:22px"
+   before the rule existed. */
+.master-filter-row:first-child {
+    padding-top: 22px;
+}
+
 .master-filter-row .master-select,
 .master-filter-row .master-input {
     flex: 1 1 150px;

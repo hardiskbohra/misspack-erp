@@ -222,7 +222,8 @@
    not to a module: master-index's own filter row carries a 24px inset for the
    forms that use it, and a module that restated this would be the one place
    the archive could fall out of line. */
-.master-list .master-filter-row {
+.master-list .master-filter-row,
+.master-list .master-filter-row:first-child {
     padding: 14px 16px 16px;
     margin: 0;
 }

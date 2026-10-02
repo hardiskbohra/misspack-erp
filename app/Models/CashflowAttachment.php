@@ -108,11 +108,25 @@ class CashflowAttachment extends Model
      * The type is what the month-close pack sorts by, so the list is closed:
      * a value outside it would land in "Other" and silently fall out of the
      * purchase register.
+     *
+     * The order is the order of a month's paperwork: what is bought, what
+     * travels, what the bank and the tax office send back. The list covers
+     * the documents this trade actually files — a Bill of Entry and an E-way
+     * Bill are as ordinary here as a purchase bill, and filing them as
+     * "Other" is what made them impossible to find again.
      */
     public static function documentTypeOptions(): array
     {
         return [
             'bill' => 'Bill / Invoice',
+            'purchase_order' => 'Purchase Order',
+            'boe' => 'BOE / Bill of Entry',
+            'shipping_bill' => 'Shipping Bill',
+            'eway_bill' => 'E-way Bill',
+            'packing_list' => 'Packing List',
+            'delivery_challan' => 'Delivery Challan',
+            'debit_note' => 'Debit Note',
+            'credit_note' => 'Credit Note',
             'bank_slip' => 'Bank Slip / Advice',
             'receipt' => 'Receipt',
             'gst' => 'GST Document',
@@ -129,6 +143,31 @@ class CashflowAttachment extends Model
     public function name(): string
     {
         return $this->title ?: ($this->original_name ?: 'Document');
+    }
+
+    /**
+     * Where this file lands inside the accountant's pack: one folder per
+     * document type, the document's own date in front of the file name, and a
+     * path that survives being unzipped on Windows, macOS and Linux.
+     */
+    public function packName(): string
+    {
+        $stem = pathinfo($this->name(), PATHINFO_FILENAME);
+        $extension = $this->extension ?: pathinfo((string) $this->original_name, PATHINFO_EXTENSION);
+        $date = $this->displayDate()?->format('Y-m-d');
+
+        return self::safeSegment($this->documentTypeLabel())
+            .'/'.self::safeSegment(trim(($date ? $date.' ' : '').$stem))
+            .($extension ? '.'.strtolower($extension) : '');
+    }
+
+    /** Windows forbids \ / : * ? " < > | in a name; a pack is opened anywhere. */
+    private static function safeSegment(string $segment): string
+    {
+        $clean = (string) preg_replace('/[\\\\\/:*?"<>|\x00-\x1f]+/', '-', $segment);
+        $clean = trim((string) preg_replace('/\s+/', ' ', $clean), ' .-');
+
+        return $clean === '' ? 'Document' : mb_substr($clean, 0, 120);
     }
 
     public function url(): string

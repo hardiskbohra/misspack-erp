@@ -122,10 +122,19 @@ check('the chips row and filter row share one inset',
    which is the list that had nothing at all and let its controls touch the
    divider. A module that restates them is the one place a fourth list could
    fall back out of line. */
+const rowInsetBody = (text) => {
+    const at = text.indexOf('.master-list .master-filter-row,');
+    if (at === -1) return '';
+    const open = text.indexOf('{', at);
+    const close = text.indexOf('}', open);
+    return open === -1 || close === -1 ? '' : text.slice(open + 1, close);
+};
 check('the surface owns the filter row inset, and no module restates it',
-    /\.master-list \.master-filter-row \{[\s\S]{0,260}padding: 14px 16px 16px/.test(listCss)
+    /padding:\s*14px 16px 16px/.test(rowInsetBody(listCss))
+    && /\.master-list \.master-filter-row:first-child \{/.test(listCss)
     && !/\.(ship|cashflow)-index \.master-filter-row \{/.test(css)
-    && !/\.cashflow-documents \.master-filter-row \{/.test(cashCss));
+    && !/\.cashflow-documents \.master-filter-row \{/.test(cashCss),
+    rowInsetBody(listCss).replace(/\s+/g, ' ').trim());
 /* read the rule body, not a window over the file: a fixed-width window can
    stop short of the declaration that matters and pass on the one before it */
 const listRuleBody = (text, selector) => {
@@ -670,6 +679,66 @@ bladeFiles.forEach(file => {
 
 check('every table in a view sits in a .master-table-wrap',
     bareTables.length === 0, bareTables.join(', '));
+
+/* ---- one owner for the chrome ----
+   The whole chrome — not only the two rules above — belongs to the surface.
+   This is what stops a fourth list from arriving with its own idea of the bar,
+   the applied strip or the toolbar: a module sheet styles its own cells and
+   nothing that starts with .master-list. */
+const chromeOwners = CSS_SHEETS
+    .filter(f => f !== 'master-list.css')
+    .filter(f => /\.master-list\b/.test(fs.readFileSync(path.join(CSS_DIR, f), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')));
+check('no sheet but the surface styles the list chrome',
+    chromeOwners.length === 0, chromeOwners.join(', '));
+
+/* A view that carries any of the list chrome must opt into the surface: the
+   root class is what hands it the bar, the chips, the applied strip and the
+   row insets. A view that carries the chrome without the root inherits none of
+   it — which is exactly how the archive's controls ended up sitting on the
+   divider. */
+const listChromeViews = bladeFiles.filter(f =>
+    /class="[^"]*\bmaster-list-|master-list-(bar|chips|chip|applied|toolbar|table)\b/
+        .test(fs.readFileSync(f, 'utf8')));
+/* the root is the class on its own — not a chrome element that merely starts
+   with the same name (master-list-bar is not the opt-in) */
+const offSurface = listChromeViews.filter(f =>
+    !/\bclass="[^"]*\bmaster-list(?![-\w])/.test(fs.readFileSync(f, 'utf8')));
+check('every view that carries the list chrome opts into the surface',
+    listChromeViews.length >= 3 && offSurface.length === 0,
+    offSurface.map(f => path.relative(ROOT, f)).join(', ') || listChromeViews.length + ' views');
+
+/* And nobody patches the shared chrome with an inline style: that is how a
+   missing inset gets hidden — products/index carried an inline
+   padding-top:22px on its filter row until the sheet owned the rule. */
+const chromeInline = bladeFiles.filter(f =>
+    /class="[^"]*\bmaster-(filter-row|list-)[^"]*"[^>]*style="[^"]*(padding|margin)/
+        .test(fs.readFileSync(f, 'utf8')));
+check('no view patches the shared chrome with an inline style',
+    chromeInline.length === 0, chromeInline.map(f => path.relative(ROOT, f)).join(', '));
+
+/* A filter row that opens a card carries its own top inset, or its controls
+   touch the card's edge — and one that follows a toolbar must not gain a
+   second gap. */
+check('the sheet gives an opening filter row its top inset',
+    /\.master-filter-row:first-child \{[\s\S]{0,120}padding-top: 22px/.test(layoutCss)
+    && /\.master-list \.master-filter-row:first-child \{/.test(listCss));
+
+/* The chips are links, the filter row is a form: a dimension the chips own has
+   to travel through the form as a hidden field, or applying the filters below
+   silently drops the chip that is lit. */
+const chipForms = [
+    ['cashflows/index.blade.php', 'transaction_type', 'master-list-chip'],
+    ['cashflows/documents.blade.php', 'state', 'master-list-chip'],
+];
+const droppedChips = chipForms.filter(([file, key]) => {
+    const text = fs.readFileSync(path.join(ROOT, 'resources/views', file), 'utf8');
+    if (!text.includes('master-list-chip')) return false;
+    const chipSets = new RegExp("\\['" + key + "'");
+    return chipSets.test(text) && !new RegExp('type="hidden" name="' + key + '"').test(text);
+});
+check('a chip-owned filter survives the form it sits above',
+    droppedChips.length === 0, droppedChips.map(c => c[0] + ' ' + c[1]).join(', '));
 
 /* ---- quick date ranges ----
    The period chips are one shared definition (App\Helpers\DateRanges): the key,

@@ -216,6 +216,13 @@
 
         <form method="GET" action="{{ route('cashflows.index') }}">
             <div class="master-filter-row">
+                {{-- The chips own credit/debit and the missing-documents view, so
+                     the form carries them: no second control for a dimension the
+                     chips already answer with a count, and applying the filters
+                     below keeps the chip that is lit instead of dropping it. --}}
+                <input type="hidden" name="transaction_type" value="{{ $transactionType ?: 'all' }}">
+                <input type="hidden" name="documents" value="{{ $documents ?? 'all' }}">
+
                 <div class="master-search">
                     <span aria-hidden="true">⌕</span>
                     <input class="master-input" type="text" name="search" value="{{ $search }}"
@@ -234,12 +241,6 @@
                     <button type="button" class="master-btn master-btn-ghost" id="openAccountModal"
                         title="Add an account" aria-label="Add an account">+ New</button>
                 </div>
-                <select class="master-select" name="transaction_type" aria-label="Filter by credit or debit">
-                    <option value="all">Credit + Debit</option>
-                    @foreach($transactionTypeOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($transactionType === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
                 <select class="master-select" name="accounting_status" aria-label="Filter by accounting status">
                     <option value="all">All Accounting Status</option>
                     @foreach($accountingStatusOptions as $key => $label)

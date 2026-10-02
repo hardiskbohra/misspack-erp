@@ -23,6 +23,7 @@
        dimension (claim state, period), and 'page' restarts because a filter
        change is a new list. */
     $filtered = trim((string) $q) !== ''
+        || trim((string) $party) !== ''
         || ($state && $state !== 'all')
         || filled($dateFrom)
         || filled($dateTo);
@@ -132,11 +133,24 @@
 
         <form method="GET" action="{{ route('cashflows.documents') }}">
             <div class="master-filter-row">
+                {{-- The chips own the claim state; the form carries it so that
+                     applying a filter or downloading a pack keeps the chip the
+                     user clicked instead of silently dropping it. --}}
+                <input type="hidden" name="state" value="{{ $state ?? 'all' }}">
+
                 <div class="master-search">
                     <span aria-hidden="true">⌕</span>
                     <input class="master-input" type="text" name="q" value="{{ $q }}"
                         placeholder="Search file name, entry, bill number, party..." aria-label="Search documents">
                 </div>
+                {{-- Whose paperwork: a month is usually sent to the accountant one
+                     party at a time, so the party is a control of its own. --}}
+                <select class="master-select" name="party" aria-label="Filter by party">
+                    <option value="">All parties</option>
+                    @foreach ($partyOptions as $partyName)
+                        <option value="{{ $partyName }}" @selected($party === $partyName)>{{ $partyName }}</option>
+                    @endforeach
+                </select>
                 <input class="master-input desktop-only" type="date" name="date_from" value="{{ $dateFrom }}"
                     aria-label="Booked from" title="Booked from">
                 <input class="master-input desktop-only" type="date" name="date_to" value="{{ $dateTo }}"
@@ -146,6 +160,13 @@
                     @if ($filtered)
                         <a class="master-btn master-btn-soft" href="{{ route('cashflows.documents') }}">Reset</a>
                     @endif
+                    {{-- Same form, same values: what the filters above match is
+                         what lands in the pack. --}}
+                    <button class="master-btn master-btn-soft" type="submit"
+                        formaction="{{ route('cashflows.documents.pack') }}"
+                        title="Download everything the filters above match — the files themselves in a folder per type, plus an index — ready to send to the accountant">
+                        Download pack
+                    </button>
                     <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
                 </div>
             </div>
@@ -172,6 +193,15 @@
                             <span class="master-list-applied-value">{{ $q }}</span>
                             <a class="master-list-applied-x" href="{{ $chipUrl('q') }}"
                                 aria-label="Clear the search" title="Clear the search">&times;</a>
+                        </span>
+                    @endif
+
+                    @if (trim((string) $party) !== '')
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Party</span>
+                            <span class="master-list-applied-value">{{ $party }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('party') }}"
+                                aria-label="Remove the party filter" title="Remove the party filter">&times;</a>
                         </span>
                     @endif
 

@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -49,6 +50,7 @@ class CashflowAttachmentController extends Controller
         return view('cashflows.documents', [
             'documents' => $this->query($filters)->paginate(50)->withQueryString(),
             'documentTypeOptions' => CashflowAttachment::documentTypeOptions(),
+            'partyOptions' => $this->partyOptions(),
             'currencyOptions' => $this->currencyOptions(),
             'dateRanges' => DateRanges::presets(),
             'dateRangeLabels' => DateRanges::LABELS,
@@ -61,6 +63,76 @@ class CashflowAttachmentController extends Controller
             'totalSize' => (int) $this->query($filters)->sum('file_size'),
             ...$filters,
         ]);
+    }
+
+    /**
+     * The accountant's pack: everything the current filters match as one file —
+     * the documents themselves, in a folder per type and named with their own
+     * date, plus an index of what is inside. This is the answer to "send the
+     * accountant October's bills for this party": set the two filters, press
+     * the button, mail the file.
+     *
+     * A ZIP needs the zip extension; where it is missing this still returns the
+     * index as a spreadsheet rather than an error, because half the pack is
+     * still the half that says what exists.
+     */
+    public function pack(Request $request)
+    {
+        $filters = $this->filters($request);
+        $documents = $this->query($filters)->get();
+
+        /* One pass decides the name of every file and which ones the server no
+           longer holds, so the ZIP and the index agree with each other — even
+           when two documents share a title and a date. */
+        $disk = Storage::disk('public');
+        $names = [];
+        $used = [];
+        $missing = [];
+
+        foreach ($documents as $document) {
+            $names[$document->id] = $this->uniqueName($document->packName(), $used);
+
+            $file = $document->file_path ? $disk->path($document->file_path) : null;
+            if (! $file || ! is_file($file)) {
+                $missing[$document->id] = true;
+            }
+        }
+
+        $filename = $this->packFilename($filters);
+
+        $index = $this->packIndexCsv($documents, $names, $missing);
+
+        if (! class_exists(\ZipArchive::class)) {
+            return response($index, 200, [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'.csv"',
+            ]);
+        }
+
+        $path = tempnam(sys_get_temp_dir(), 'cfpack');
+        $zip = new \ZipArchive();
+
+        if ($zip->open($path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            return back()->with('error', 'The server could not open a pack file to write into.');
+        }
+
+        foreach ($documents as $document) {
+            if (isset($missing[$document->id])) {
+                continue;
+            }
+
+            $zip->addFile($disk->path($document->file_path), $names[$document->id]);
+        }
+
+        $zip->addFromString('index.csv', $index);
+        $zip->close();
+
+        if ($missing !== []) {
+            session()->flash('warning', count($missing).' file(s) in this pack are no longer on the server — they are marked in index.csv.');
+        }
+
+        return response()->download($path, $filename.'.zip', ['Content-Type' => 'application/zip'])
+            ->deleteFileAfterSend(true);
     }
 
     /** Files against an entry: the documents card on the entry's page. */
@@ -164,7 +236,7 @@ class CashflowAttachmentController extends Controller
     }
 
     /**
-     * @return array{q: string, state: string, dateFrom: ?string, dateTo: ?string}
+     * @return array{q: string, party: string, state: string, dateFrom: ?string, dateTo: ?string}
      */
     private function filters(Request $request): array
     {
@@ -172,6 +244,7 @@ class CashflowAttachmentController extends Controller
 
         return [
             'q' => trim((string) $request->query('q')),
+            'party' => trim((string) $request->query('party')),
             'state' => in_array($state, ['all', 'linked', 'unlinked'], true) ? $state : 'all',
             'dateFrom' => $request->query('date_from'),
             'dateTo' => $request->query('date_to'),
@@ -184,6 +257,21 @@ class CashflowAttachmentController extends Controller
             ->with(['cashflowEntry.account', 'cashflowEntry.client', 'cashflowEntry.vendor', 'uploader'])
             ->when(($filters['state'] ?? 'all') === 'linked', fn ($q) => $q->linked())
             ->when(($filters['state'] ?? 'all') === 'unlinked', fn ($q) => $q->unlinked())
+            /* Whose paperwork it is: the name written on a stand-alone bill, or
+               the counterparty of the entry it was filed against — the same two
+               the row prints, so the filter can never disagree with the row. */
+            ->when(($filters['party'] ?? '') !== '', function ($q) use ($filters) {
+                $term = '%'.$filters['party'].'%';
+
+                $q->where(function ($party) use ($term, $filters) {
+                    $party->where('party_name', 'like', $term)
+                        ->orWhereHas('cashflowEntry', function ($entry) use ($term, $filters) {
+                            $entry->where('related_party_name', 'like', $term)
+                                ->orWhereHas('client', fn ($client) => $client->where('company_name', 'like', $term))
+                                ->orWhereHas('vendor', fn ($vendor) => $vendor->where('vendor_name', 'like', $term));
+                        });
+                });
+            })
             ->when(($filters['q'] ?? '') !== '', function ($q) use ($filters) {
                 $term = '%'.$filters['q'].'%';
 
@@ -287,6 +375,124 @@ class CashflowAttachmentController extends Controller
             ->when($filters['dateFrom'] ?? null, fn ($q) => $q->whereDate('entry_date', '>=', $filters['dateFrom']))
             ->when($filters['dateTo'] ?? null, fn ($q) => $q->whereDate('entry_date', '<=', $filters['dateTo']))
             ->count();
+    }
+
+    /**
+     * The parties that appear in the archive, for the filter's picker: the name
+     * written on a stand-alone bill, and the counterparty of every entry that
+     * has a document. Small list on purpose — this is the set somebody can be
+     * asked to send a month to.
+     *
+     * @return array<int, string>
+     */
+    private function partyOptions(): array
+    {
+        $own = CashflowAttachment::query()
+            ->whereNotNull('party_name')
+            ->where('party_name', '!=', '')
+            ->distinct()
+            ->orderBy('party_name')
+            ->pluck('party_name');
+
+        /* a picker, not a report: the newest parties with paperwork, capped so
+           the list stays short however many years the ledger holds */
+        $linked = CashflowEntry::query()
+            ->whereHas('attachments')
+            ->with(['client:id,company_name', 'vendor:id,vendor_name'])
+            ->orderByDesc('entry_date')
+            ->limit(500)
+            ->get(['id', 'client_id', 'vendor_id', 'related_party_name'])
+            ->flatMap(fn ($entry) => [
+                $entry->client?->company_name,
+                $entry->vendor?->vendor_name,
+                $entry->related_party_name,
+            ]);
+
+        return $own->merge($linked)
+            ->filter(fn ($name) => filled($name))
+            ->map(fn ($name) => (string) $name)
+            ->unique()
+            ->sort()
+            ->values()
+            ->take(200)
+            ->all();
+    }
+
+    /** Two documents can be called the same thing; a ZIP cannot hold both. */
+    private function uniqueName(string $name, array &$used): string
+    {
+        if (! isset($used[$name])) {
+            $used[$name] = 1;
+
+            return $name;
+        }
+
+        $used[$name]++;
+        $info = pathinfo($name);
+        $suffix = ' ('.$used[$name].')';
+
+        return ($info['dirname'] !== '.' ? $info['dirname'].'/' : '')
+            .$info['filename'].$suffix
+            .(isset($info['extension']) ? '.'.$info['extension'] : '');
+    }
+
+    /** What the pack is: the period and the party, as a file name. */
+    private function packFilename(array $filters): string
+    {
+        $range = DateRanges::keyOf($filters['dateFrom'] ?? null, $filters['dateTo'] ?? null);
+        $period = $range
+            ? (DateRanges::LABELS[$range] ?? $range)
+            : (($filters['dateFrom'] ?? null) && ($filters['dateTo'] ?? null)
+                ? $filters['dateFrom'].' to '.$filters['dateTo']
+                : 'all dates');
+
+        $parts = ['cashflow documents', $period];
+
+        if (($filters['party'] ?? '') !== '') {
+            $parts[] = $filters['party'];
+        }
+
+        return Str::slug(implode(' ', $parts));
+    }
+
+    /**
+     * The index the accountant reads first: one row per document, in the
+     * columns an accountant asks for, as a UTF-8 CSV Excel opens properly.
+     */
+    private function packIndexCsv($documents, array $names, array $missing = []): string
+    {
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, "\xEF\xBB\xBF");
+
+        fputcsv($stream, [
+            'Date', 'Type', 'Party', 'Amount', 'Currency', 'Entry', 'Bill / reference',
+            'File in pack', 'Original name', 'Filed by', 'Filed on', 'Note',
+        ]);
+
+        foreach ($documents as $document) {
+            $entry = $document->cashflowEntry;
+
+            fputcsv($stream, [
+                $document->displayDate()?->format('Y-m-d') ?? '',
+                $document->documentTypeLabel(),
+                $document->partyLabel(),
+                $document->amount !== null ? number_format((float) $document->amount, 2, '.', '') : '',
+                $document->currency ?: '',
+                $entry?->particular ?? 'Not matched to an entry',
+                $entry?->invoice_bill_number ?? '',
+                $names[$document->id] ?? $document->packName(),
+                $document->original_name ?? '',
+                $document->uploader?->name ?? '',
+                $document->created_at?->format('Y-m-d H:i') ?? '',
+                isset($missing[$document->id]) ? 'File missing on the server' : '',
+            ]);
+        }
+
+        rewind($stream);
+        $csv = (string) stream_get_contents($stream);
+        fclose($stream);
+
+        return $csv;
     }
 
     private function validateAllowedFile($file): void

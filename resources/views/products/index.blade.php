@@ -10,7 +10,7 @@
     <div class="master product-index">
         <div class="master-card">
             <form method="GET" action="{{ route('products.index') }}">
-                <div class="master-filter-row" style="padding-top:22px">
+                <div class="master-filter-row">
                     <div class="master-search"><span>⌕</span><input class="master-input" name="search" value="{{ $search }}"
                             placeholder="Search product, SKU, material..."></div>
                     

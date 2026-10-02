@@ -232,6 +232,8 @@ Route::middleware('auth')->group(function () {
        document does not have to belong to an entry: /cashflow-attachments
        files one on its own, and linking it to an entry happens later. */
     Route::get('/cashflows/documents', [CashflowAttachmentController::class, 'index'])->name('cashflows.documents');
+    /* the same filters, as one file for the accountant */
+    Route::get('/cashflows/documents/pack', [CashflowAttachmentController::class, 'pack'])->name('cashflows.documents.pack');
     Route::post('/cashflows/{cashflow}/attachments', [CashflowAttachmentController::class, 'store'])->name('cashflows.attachments.store');
     Route::post('/cashflows/{cashflow}/attachments/link', [CashflowAttachmentController::class, 'link'])->name('cashflows.attachments.link');
     Route::post('/cashflow-attachments', [CashflowAttachmentController::class, 'storeStandalone'])->name('cashflows.attachments.storeStandalone');

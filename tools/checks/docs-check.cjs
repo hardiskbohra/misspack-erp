@@ -332,6 +332,77 @@ check('the record page badges carry a dark half',
     && /:root\[data-theme="dark"\] \.cf \.master-badge\.status-reconciled/.test(cashflowsCss)
     && /:root\[data-theme="dark"\] \.cf \.master-badge\.type-debit/.test(cashflowsCss));
 
+/* ------------------------------------ the trade's own paper, and the pack - */
+
+/* A Bill of Entry and an E-way Bill are as ordinary in this business as a
+   purchase bill. Filing them as "Other" is what made them impossible to find
+   again, so the list carries them — and stays the one list: the two upload
+   surfaces iterate it, the controller validates against it, the row prints it. */
+const typeKeys = [...model.matchAll(/^\s{12}'([a-z_]+)' => '/gm)].map(m => m[1]);
+check('the document types cover the trade, not just the bank',
+    typeKeys.length >= 12
+    && ['bill', 'boe', 'eway_bill', 'shipping_bill', 'packing_list', 'delivery_challan',
+        'debit_note', 'credit_note', 'purchase_order', 'bank_slip', 'receipt', 'gst', 'other']
+        .every(key => typeKeys.includes(key)),
+    typeKeys.join(', '));
+check('both upload surfaces offer that one list',
+    /@foreach \(\$documentTypeOptions as \$key => \$label\)/.test(cardView)
+    && /@foreach \(\$documentTypeOptions as \$key => \$label\)/.test(archiveView)
+    && /Rule::in\(array_keys\(CashflowAttachment::documentTypeOptions\(\)\)\)/.test(controller));
+
+/* The month, as one file somebody can mail. */
+check('a filtered month can leave as one file for the accountant',
+    /Route::get\('\/cashflows\/documents\/pack'/.test(routes)
+    && /->name\('cashflows\.documents\.pack'\)/.test(routes)
+    && routes.indexOf("Route::get('/cashflows/documents/pack'") < resourceAt
+    && /public function pack\(Request \$request\)/.test(controller)
+    && /class_exists\(\\ZipArchive::class\)/.test(controller));
+check('the pack is the files, the folders and the index',
+    /new \\ZipArchive\(\)/.test(controller)
+    && /addFile\(\$disk->path\(\$document->file_path\), \$names\[\$document->id\]\)/.test(controller)
+    && /addFromString\('index\.csv', \$index\)/.test(controller)
+    && /deleteFileAfterSend\(true\)/.test(controller));
+check('without the zip extension it is still the index, not an error',
+    /if \(! class_exists\(\\ZipArchive::class\)\) \{[\s\S]{0,400}return response\(\$index, 200, \[/.test(controller)
+    && /text\/csv; charset=UTF-8/.test(controller));
+check('the index carries the columns an accountant asks for',
+    /fputcsv\(\$stream, \[\s*'Date', 'Type', 'Party', 'Amount', 'Currency', 'Entry', 'Bill \/ reference',/.test(controller)
+    && /'Filed on', 'Note',/.test(controller)
+    && /"\\xEF\\xBB\\xBF"/.test(controller));
+check('a file the server no longer holds is marked, not silently dropped',
+    /isset\(\$missing\[\$document->id\]\) \? 'File missing on the server'/.test(controller)
+    && /count\(\$missing\).' file\(s\) in this pack are no longer on the server/.test(controller));
+check('the pack is named for its period and party',
+    /private function packFilename\(array \$filters\): string/.test(controller)
+    && /return Str::slug\(implode\(' ', \$parts\)\);/.test(controller));
+check('a packed name survives every desktop it is opened on',
+    /private static function safeSegment\(string \$segment\): string/.test(model)
+    && /public function packName\(\): string/.test(model)
+    /* the Windows-forbidden punctuation set is stripped, and the name capped */
+    && /preg_replace\('\/\[[^\]]*:\*\?"<>\|[^\]]*\]\+\/', '-', \$segment\)/.test(model)
+    && /mb_substr\(\$clean, 0, 120\)/.test(model));
+check('two documents with one name both survive the pack',
+    /private function uniqueName\(string \$name, array &\$used\): string/.test(controller));
+
+/* "Send the accountant this party's papers for this month" is two filters and
+   one button, so the party is a filter of its own — reading the same two names
+   the row prints, and named in the applied strip like every other filter. */
+check('the archive filters by party, on its own and in the URL',
+    /<select class="master-select" name="party" aria-label="Filter by party">/.test(archiveView)
+    && /'party' => trim\(\(string\) \$request->query\('party'\)\)/.test(controller)
+    && /private function partyOptions\(\): array/.test(controller)
+    && /'partyOptions' => \$this->partyOptions\(\),/.test(controller));
+check('the party filter matches the two names the row prints',
+    /party->where\('party_name', 'like', \$term\)/.test(controller)
+    && /related_party_name', 'like', \$term/.test(controller)
+    && /company_name', 'like', \$term/.test(controller)
+    && /vendor_name', 'like', \$term/.test(controller));
+check('the party is named in the applied strip, and clears on its own',
+    /master-list-applied-key">Party</.test(archiveView)
+    && /\$chipUrl\('party'\)/.test(archiveView));
+check('the pack button submits the filters above it',
+    /formaction="\{\{ route\('cashflows\.documents\.pack'\) \}\}"/.test(archiveView));
+
 /* ------------------------------------------------------- the PHP, scanned */
 
 /* Comments and strings first, then brackets: an apostrophe inside a comment
