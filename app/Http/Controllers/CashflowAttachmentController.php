@@ -39,8 +39,8 @@ class CashflowAttachmentController extends Controller
 
     /**
      * The archive: every document filed, filtered by the month it was booked
-     * in, its type, the party, whether it is matched to an entry — or by a
-     * search across the file name and the entry it belongs to.
+     * in, whether it is matched to an entry — or by a search across the file
+     * name, the party and the entry it belongs to.
      */
     public function index(Request $request): View
     {
@@ -164,7 +164,7 @@ class CashflowAttachmentController extends Controller
     }
 
     /**
-     * @return array{q: string, documentType: string, state: string, dateFrom: ?string, dateTo: ?string}
+     * @return array{q: string, state: string, dateFrom: ?string, dateTo: ?string}
      */
     private function filters(Request $request): array
     {
@@ -172,7 +172,6 @@ class CashflowAttachmentController extends Controller
 
         return [
             'q' => trim((string) $request->query('q')),
-            'documentType' => $request->query('document_type', 'all'),
             'state' => in_array($state, ['all', 'linked', 'unlinked'], true) ? $state : 'all',
             'dateFrom' => $request->query('date_from'),
             'dateTo' => $request->query('date_to'),
@@ -183,8 +182,6 @@ class CashflowAttachmentController extends Controller
     {
         $query = CashflowAttachment::query()
             ->with(['cashflowEntry.account', 'cashflowEntry.client', 'cashflowEntry.vendor', 'uploader'])
-            ->when(($filters['documentType'] ?? 'all') !== 'all',
-                fn ($q) => $q->where('document_type', $filters['documentType']))
             ->when(($filters['state'] ?? 'all') === 'linked', fn ($q) => $q->linked())
             ->when(($filters['state'] ?? 'all') === 'unlinked', fn ($q) => $q->unlinked())
             ->when(($filters['q'] ?? '') !== '', function ($q) use ($filters) {
@@ -257,7 +254,6 @@ class CashflowAttachmentController extends Controller
     private function chipCounts(array $filters): array
     {
         $base = array_merge($filters, [
-            'documentType' => 'all',
             'state' => 'all',
             'dateFrom' => null,
             'dateTo' => null,
@@ -270,10 +266,6 @@ class CashflowAttachmentController extends Controller
             'linked' => $count(['state' => 'linked']),
             'unlinked' => $count(['state' => 'unlinked']),
         ];
-
-        foreach (array_keys(CashflowAttachment::documentTypeOptions()) as $type) {
-            $counts[$type] = $count(['documentType' => $type]);
-        }
 
         foreach (DateRanges::presets() as $key => $range) {
             $counts[$key] = $count(['dateFrom' => $range['from'], 'dateTo' => $range['to']]);

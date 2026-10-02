@@ -114,10 +114,34 @@ check('the primary action is bound by attribute, not by a single id',
     /\[data-quick-shipment\]/.test(js) && (view.match(/data-quick-shipment/g) || []).length >= 2);
 
 /* toolbar */
-check('the filter row has no inline padding of its own',
-    /\.ship-index \.master-filter-row \{[\s\S]{0,200}padding: 14px 16px/.test(css));
 check('the chips row and filter row share one inset',
     /\.master-list \.master-list-bar \{[\s\S]{0,120}padding: 16px/.test(listCss));
+
+/* The filter row sits under the chip bar's hairline. Its top gap and its side
+   inset belong to the surface, so every list gets them — the archive included,
+   which is the list that had nothing at all and let its controls touch the
+   divider. A module that restates them is the one place a fourth list could
+   fall back out of line. */
+check('the surface owns the filter row inset, and no module restates it',
+    /\.master-list \.master-filter-row \{[\s\S]{0,260}padding: 14px 16px 16px/.test(listCss)
+    && !/\.(ship|cashflow)-index \.master-filter-row \{/.test(css)
+    && !/\.cashflow-documents \.master-filter-row \{/.test(cashCss));
+/* read the rule body, not a window over the file: a fixed-width window can
+   stop short of the declaration that matters and pass on the one before it */
+const listRuleBody = (text, selector) => {
+    const at = text.indexOf(selector);
+    if (at === -1) return '';
+    const open = text.indexOf('{', at);
+    const close = text.indexOf('}', open);
+    return open === -1 || close === -1 ? '' : text.slice(open + 1, close);
+};
+const searchBody = listRuleBody(listCss, '.master-list .master-filter-row .master-search {');
+
+check('the surface owns the search room, and no module restates it',
+    /flex:\s*2 1 260px/.test(searchBody) && /max-width:\s*none/.test(searchBody)
+    && !/\.(ship|cashflow)-index \.master-filter-row \.master-search \{/.test(css)
+    && !/\.cashflow-documents \.master-filter-row \.master-search \{/.test(cashCss),
+    searchBody.replace(/\s+/g, ' ').trim());
 check('Reset only renders when something is filtered',
     /\$filtersActive/.test(view) && /@if \(\$filtersActive\)\s*<a class="master-btn master-btn-soft"/.test(view));
 
@@ -763,8 +787,6 @@ const cashCell = ruleBody(cashCss, '.cashflow-index .master-table th,');
 
 check('both lists measure their table the same way',
     /padding:\s*12px 14px/.test(shipCell) && /padding:\s*12px 14px/.test(cashCell)
-    && /padding:\s*14px 16px 16px/.test(ruleBody(css, '.ship-index .master-filter-row {'))
-    && /padding:\s*14px 16px 16px/.test(ruleBody(cashCss, '.cashflow-index .master-filter-row {'))
     && /margin-top:\s*4px/.test(ruleBody(css, '.ship-index td .master-sub {'))
     && /margin-top:\s*4px/.test(ruleBody(cashCss, '.cashflow-index td .master-sub {')));
 

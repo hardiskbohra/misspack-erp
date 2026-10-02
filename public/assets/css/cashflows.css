@@ -657,18 +657,6 @@
    same geometry as the shipment list, so the two screens read as one product.
    ========================================================================== */
 
-.cashflow-index .master-filter-row {
-    /* master-index gives this row a 24px inset; the chips above it use 16px,
-       and the two rows read as one toolbar once they agree. No bottom border:
-       the card's own edge closes the toolbar. */
-    padding: 14px 16px 16px;
-    margin: 0;
-}
-
-.cashflow-index .master-filter-row .master-search {
-    flex: 2 1 260px;
-}
-
 /* The account select and the button that adds one stay together when the
    filter row wraps. */
 .cashflow-index .cf-account-filter {

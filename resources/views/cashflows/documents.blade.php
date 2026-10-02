@@ -20,23 +20,22 @@
 @endpush
 @php
     /* Every filter is one URL away from the others: the chips own their own
-       dimension (type, period), and 'page' restarts because a filter change is
-       a new list. */
+       dimension (claim state, period), and 'page' restarts because a filter
+       change is a new list. */
     $filtered = trim((string) $q) !== ''
-        || ($documentType && $documentType !== 'all')
         || ($state && $state !== 'all')
         || filled($dateFrom)
         || filled($dateTo);
 
-    /* A chip owns one dimension and keeps the others: the state chips drop
-       'state' from their own base the same way the type chips drop the type. */
-    $chipBase = collect(request()->except(['document_type', 'state', 'date_from', 'date_to', 'page']))
+    /* A chip owns one dimension and keeps the others. The document's *type* is
+       not a dimension here any more: the row prints it, and filtering by it
+       added a second set of chips that said what the row already said — the
+       month and whether an entry has claimed the file are the questions this
+       list is asked. */
+    $chipBase = collect(request()->except(['state', 'date_from', 'date_to', 'page']))
         ->reject(fn ($value) => $value === null || $value === '' || $value === 'all');
 
-    $chipActive = ['all' => ! $documentType || $documentType === 'all'];
-    foreach ($documentTypeOptions as $key => $label) {
-        $chipActive[$key] = $documentType === $key;
-    }
+    $chipActive = ['all' => true];
     $chipActive['linked'] = ($state ?? 'all') === 'linked';
     $chipActive['unlinked'] = ($state ?? 'all') === 'unlinked';
 
@@ -121,12 +120,6 @@
                     href="{{ route('cashflows.documents', $chipBase->all() + ['state' => 'unlinked']) }}">
                     Not matched <span class="master-list-chip-count">{{ $chipCounts['unlinked'] ?? 0 }}</span>
                 </a>
-                @foreach ($documentTypeOptions as $key => $label)
-                    <a class="master-list-chip {{ $chipActive[$key] ? 'is-active' : '' }}"
-                        href="{{ route('cashflows.documents', $chipBase->all() + ['document_type' => $key]) }}">
-                        {{ $label }} <span class="master-list-chip-count">{{ $chipCounts[$key] ?? 0 }}</span>
-                    </a>
-                @endforeach
                 @foreach ($dateRanges as $rangeKey => $range)
                     <a class="master-list-chip {{ $chipActive[$rangeKey] ? 'is-active' : '' }}"
                         href="{{ route('cashflows.documents', $chipBase->all() + ['date_from' => $range['from'], 'date_to' => $range['to']]) }}">
@@ -144,12 +137,6 @@
                     <input class="master-input" type="text" name="q" value="{{ $q }}"
                         placeholder="Search file name, entry, bill number, party..." aria-label="Search documents">
                 </div>
-                <select class="master-select" name="document_type" aria-label="Filter by document type">
-                    <option value="all">All Types</option>
-                    @foreach ($documentTypeOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($documentType === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
                 <input class="master-input desktop-only" type="date" name="date_from" value="{{ $dateFrom }}"
                     aria-label="Booked from" title="Booked from">
                 <input class="master-input desktop-only" type="date" name="date_to" value="{{ $dateTo }}"
@@ -185,15 +172,6 @@
                             <span class="master-list-applied-value">{{ $q }}</span>
                             <a class="master-list-applied-x" href="{{ $chipUrl('q') }}"
                                 aria-label="Clear the search" title="Clear the search">&times;</a>
-                        </span>
-                    @endif
-
-                    @if ($documentType && $documentType !== 'all')
-                        <span class="master-list-applied-chip">
-                            <span class="master-list-applied-key">Type</span>
-                            <span class="master-list-applied-value">{{ $documentTypeOptions[$documentType] ?? $documentType }}</span>
-                            <a class="master-list-applied-x" href="{{ $chipUrl('document_type') }}"
-                                aria-label="Remove the type filter" title="Remove the type filter">&times;</a>
                         </span>
                     @endif
 

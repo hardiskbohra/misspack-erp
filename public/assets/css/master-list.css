@@ -216,6 +216,26 @@
     border-bottom: 1px solid var(--mc-border);
 }
 
+/* The filter row sits under that hairline, so its top gap is the space between
+   the chips and the controls; its side inset is the chip bar's, or the two
+   rows read as two toolbars stacked on each other. Both belong to the surface,
+   not to a module: master-index's own filter row carries a 24px inset for the
+   forms that use it, and a module that restated this would be the one place
+   the archive could fall out of line. */
+.master-list .master-filter-row {
+    padding: 14px 16px 16px;
+    margin: 0;
+}
+
+/* The search box is the row's main control on every list, so it takes the room
+   it needs instead of the 480px cap the form pages give it. Same reasoning as
+   the inset above: this is the surface's, and a module restating it is how one
+   list ends up narrower than its siblings. */
+.master-list .master-filter-row .master-search {
+    flex: 2 1 260px;
+    max-width: none;
+}
+
 .master-list .master-list-filter-group {
     display: flex;
     align-items: center;

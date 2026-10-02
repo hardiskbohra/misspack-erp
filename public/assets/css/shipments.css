@@ -1434,18 +1434,6 @@
    has no tone or no dark counterpart.
    ========================================================================== */
 
-.ship-index .master-filter-row {
-    /* master-index gives this row a 24px inset; the chips above it use 16px,
-       and the two rows read as one toolbar once they agree. No bottom border:
-       the card's own edge closes the toolbar. */
-    padding: 14px 16px 16px;
-    margin: 0;
-}
-
-.ship-index .master-filter-row .master-search {
-    flex: 2 1 260px;
-}
-
 /* ---------------- applied filters ----------------
    The controls above hold the values; this strip names what they are actually
    filtering, one removable chip each. A filter that comes from a saved view or

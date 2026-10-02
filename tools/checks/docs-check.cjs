@@ -245,6 +245,32 @@ check('the archive row says whose bill it is, when, and how much — entry or no
 check('the archive counts what is still unmatched, on the chip and the card',
     /\$chipCounts\['unlinked'\]/.test(archiveView) && /\$unlinkedCount/.test(archiveView)
     && /'state' => 'unlinked'/.test(archiveView));
+
+/* One control per dimension. The type is printed on the row and sorted by the
+   accountant's eye; a filter for it meant a second set of chips saying what the
+   row already said, and a "All Types" select under them saying it a third time.
+   The claim state and the month are the two questions this list is asked. */
+/* the chip row itself, so the guard reads what the row offers rather than
+   which spelling a stray route() call happens to use */
+const chipRow = archiveView.slice(
+    archiveView.indexOf('master-list-chips'),
+    archiveView.indexOf('master-filter-row'));
+
+check('the archive filters by claim state and month, not by document type',
+    chipRow.length > 0 && !/document_type/.test(chipRow)
+    && !/name="document_type"[^>]*aria-label="Filter/.test(archiveView)
+    && !/All Types<\/option>/.test(archiveView)
+    && !/master-list-applied-key">Type</.test(archiveView),
+    chipRow.replace(/\s+/g, ' ').slice(0, 120));
+
+check('the type filter is gone from the query, not only from the markup',
+    !/'documentType' =>/.test(controller) && !/where\('document_type'/.test(controller)
+    && /private function filters\(Request \$request\): array/.test(controller)
+    && /\$state = \(string\) \$request->query\('state', 'all'\)/.test(controller));
+
+check('the paper trail still says what each document is',
+    /\$document->documentTypeLabel\(\)/.test(archiveView)
+    && /'document_type' => \['required', Rule::in\(array_keys\(CashflowAttachment::documentTypeOptions\(\)\)\)\]/.test(controller));
 check('the archive can file a document of its own',
     /id="fileDocumentModal"/.test(archiveView)
     && /route\('cashflows\.attachments\.storeStandalone'\)/.test(archiveView)
