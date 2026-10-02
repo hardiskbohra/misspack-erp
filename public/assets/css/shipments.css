@@ -992,12 +992,15 @@
 }
 
 .ship-doc-upload .master-select {
+    flex: 1 1 200px;
     max-width: 220px;
 }
 
+/* the file rows sit next to a select and a checkbox, so they must be able to
+   shrink instead of pushing the submit button out of the card */
 .ship-doc-upload input[type="file"] {
-    flex: 1;
-    min-width: 200px;
+    flex: 1 1 240px;
+    min-width: 0;
 }
 
 /* ---------------- Cost breakdown ---------------- */

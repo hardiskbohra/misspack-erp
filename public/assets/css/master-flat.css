@@ -163,14 +163,12 @@
     color: var(--master-green);
 }
 
-/* Status pills, label chips and buttons keep their own fill — the flat
-   card must not flatten the signals that carry meaning. */
-.master-card--flat .master-badge,
-.master-card--flat .master-btn,
-.master-card--flat .master-label-chip,
-.master-card--flat .tooltip-text {
-    background-color: initial;
-}
+/* Buttons, status pills, label chips and tooltips keep their own fill: the
+   flat class only neutralises panel surfaces (.master-card / .master-section /
+   .master-info), never the colour of an interactive element. Do NOT reset
+   their backgrounds here — `background-color: initial` inside a flat card left
+   every button transparent, so a primary button (white text) rendered as an
+   empty white pill with only its pink glow left behind. */
 
 .master-card--flat .master-stat-value {
     color: var(--mc-text);
