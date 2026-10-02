@@ -330,3 +330,9 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+    {{-- The detail page owns the cost modal (open / edit / close), the tracking
+         form helpers and the print-pack shortcuts — all driven by shipments.js. --}}
+    <script src="{{ $assetVer('assets/js/shipments.js') }}"></script>
+@endpush
