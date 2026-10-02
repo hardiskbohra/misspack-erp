@@ -107,6 +107,7 @@ body {
        more reliably across browsers when each item is break-inside: avoid */
     display: flex;
     flex-wrap: wrap;
+    line-height: 1.5;
 }
 
 .mark {
@@ -177,7 +178,7 @@ body {
 
 .mark-title {
     display: block;
-    font-size: 10.5pt;
+    font-size: 8.5pt;
     font-weight: 900;
     letter-spacing: .1em;
     text-transform: uppercase;
@@ -231,7 +232,7 @@ body {
 .mark-party-from strong,
 .mark-party-to strong {
     display: block;
-    font-weight: 900;
+    font-weight: 700;
     line-height: 1.2;
     overflow-wrap: anywhere;
 }
@@ -243,13 +244,13 @@ body {
 
 .mark-party-to strong {
     margin-top: .6mm;
-    font-size: 12.5pt;
+    font-size: 10pt;
     line-height: 1.15;
 }
 
 .mark-party p {
     margin: .5mm 0 0;
-    font-size: 7.5pt;
+    font-size: 9pt;
     line-height: 1.3;
     color: #344054;
     overflow-wrap: anywhere;
@@ -261,11 +262,11 @@ body {
 }
 
 .mark-party-from .mark-contact {
-    font-size: 6.5pt;
+    font-size: 8pt;
 }
 
 .mark-party-to .mark-contact {
-    font-size: 7.5pt;
+    font-size: 10pt;
 }
 
 /* A long address is clamped instead of pushing the branding off the label:
@@ -300,6 +301,7 @@ body {
    arrow, and no height spent on it. */
 .mark-party ~ .mark-party {
     padding-top: 1.5mm;
+    padding-bottom: 1.5mm;
     border-top: 1px solid #d0d5dd;
 }
 
@@ -315,7 +317,7 @@ body {
     /* one rule above the strip and one below it: the strip's own bottom border
        is left off because the footer's top rule already closes it, and two
        rules 1mm apart read as a printing error. */
-    padding: .8mm 0;
+    padding: 1.5mm 0;
     border-top: 1px solid #d0d5dd;
 }
 
@@ -353,11 +355,11 @@ body {
 
 .mark-foot {
     display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
+    align-items: center;
+    justify-content:center;
     gap: 3mm;
     margin-top: auto;
-    padding-top: 1mm;
+    padding-top: 2mm;
     border-top: 1.6px solid #101828;
 }
 

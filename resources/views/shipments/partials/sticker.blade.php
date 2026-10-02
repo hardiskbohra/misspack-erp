@@ -34,7 +34,7 @@
 
     $markContactLine = function ($party) use ($shipment) {
         return array_filter([
-            $shipment->{$party.'_mobile'} ? 'Ph: '.$shipment->{$party.'_mobile'} : null,
+            $shipment->{$party.'_mobile'} ? 'Mobile: '.$shipment->{$party.'_mobile'} : null,
             $shipment->{$party.'_email'} ? 'Email: '.$shipment->{$party.'_email'} : null,
         ]);
     };
@@ -43,47 +43,52 @@
 <div class="mark">
     <header class="mark-head">
         <img class="mark-brand" src="{{ asset($brand['logo_print']) }}"
-            alt="{{ $brand['name'] }} — {{ $brand['tagline'] }}">
-
-        <div class="mark-head-right">
-            <span class="mark-title">Shipping Mark</span>
-            <span class="mark-sub">
-                {{ ($modeOptions ?? [])[$shipment->shipment_mode] ?? $shipment->shipment_mode }}
-                · {{ $shipment->typeLabel() }}
-            </span>
-        </div>
-
-        <div class="mark-number">{{ $shipment->shipment_number }}</div>
-    </header>
-
-    <div class="mark-parties">
-        <div class="mark-party mark-party-from">
-            <span class="mark-label">From (Shipper)</span>
-            <strong>{{ $shipment->from_name ?: '—' }}</strong>
-            <p class="mark-address">{{ $markAddressLine('from') ?: '—' }}</p>
-            @if ($markContactLine('from'))
-                <p class="mark-contact">{{ implode(' · ', $markContactLine('from')) }}</p>
+            alt="{{ $brand['name'] }} — {{ $brand['tagline'] }}"
+            style="width: 100px; height: auto;">
+        
+        <div class="mark-codes">
+            @if ($markTrackingUrl)
+                <figure class="mark-qr">
+                    {{-- Filled in the browser by assets/js/qr.js — generated
+                         locally: no image service, no external request. A 3
+                         module quiet zone and a white plate keep the code
+                         scannable next to the address text. --}}
+                    <div class="mark-qr-code" data-ship-qr="{{ $markTrackingUrl }}"
+                        data-ship-qr-quiet="3" data-ship-qr-dark="#000000"
+                        data-ship-qr-caption="Track {{ $shipment->shipment_number }}"></div>
+                    <figcaption class="mark-qr-hint">Scan to track</figcaption>
+                </figure>
             @endif
         </div>
+
+        
+    </header>
+
+    <div class="mark-parties" style="line-height:2;">
 
         <div class="mark-party mark-party-to">
             <span class="mark-label">To (Receiver)</span>
             <strong>{{ $shipment->to_name ?: '—' }}</strong>
             <p class="mark-address">{{ $markAddressLine('to') ?: '—' }}</p>
             @if ($markContactLine('to'))
-                <p class="mark-contact">{{ implode(' · ', $markContactLine('to')) }}</p>
+                <p class="mark-contact">{!! implode('<br>', $markContactLine('to')) !!}</p>
+            @endif
+        </div>
+
+        <div class="mark-party mark-party-from">
+            <span class="mark-label">From (Shipper)</span>
+            <strong>{{ $shipment->from_name ?: '—' }}</strong>
+            <p class="mark-address">{{ $markAddressLine('from') ?: '—' }}</p>
+            @if ($markContactLine('from'))
+                <p class="mark-contact">{!! implode('<br>', $markContactLine('from')) !!}</p>
             @endif
         </div>
     </div>
 
-    <div class="mark-meta">
+    <div class="mark-meta" style="line-height:2;">
         <div>
             <span class="mark-label">Package</span>
             <strong>{{ $markCopy }}</strong>
-        </div>
-        <div>
-            <span class="mark-label">Gross wt.</span>
-            <strong>{{ $shipment->gross_weight ? rtrim(rtrim(number_format((float) $shipment->gross_weight, 3), '0'), '.').' kg' : '—' }}</strong>
         </div>
         <div class="mark-meta-destination">
             <span class="mark-label">Destination</span>
@@ -104,18 +109,6 @@
         </div>
 
         <div class="mark-codes">
-            @if ($markTrackingUrl)
-                <figure class="mark-qr">
-                    {{-- Filled in the browser by assets/js/qr.js — generated
-                         locally: no image service, no external request. A 3
-                         module quiet zone and a white plate keep the code
-                         scannable next to the address text. --}}
-                    <div class="mark-qr-code" data-ship-qr="{{ $markTrackingUrl }}"
-                        data-ship-qr-quiet="3" data-ship-qr-dark="#000000"
-                        data-ship-qr-caption="Track {{ $shipment->shipment_number }}"></div>
-                    <figcaption class="mark-qr-hint">Scan to track</figcaption>
-                </figure>
-            @endif
 
             <figure class="mark-qr mark-qr-social">
                 <div class="mark-qr-code" data-ship-qr="{{ $brand['instagram'] }}"
