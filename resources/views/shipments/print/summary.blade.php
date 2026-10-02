@@ -91,7 +91,7 @@
                         <tfoot>
                             <tr>
                                 <td><strong>Total (₹)</strong></td>
-                                <td class="num"><strong>₹ {{ number_format($costSummary['inr'], 2) }}</strong></td>
+                                <td class="num"><strong>{{ inr($costSummary['inr']) }}</strong></td>
                             </tr>
                         </tfoot>
                     @endif
@@ -101,7 +101,7 @@
                     <p class="print-fine">
                         Linked invoice {{ $shipment->salesInvoice->invoice_number ?? '' }}
                         ({{ \App\Models\Shipment::formatAmount($costSummary['invoice_currency'], $costSummary['invoice_total']) }})
-                        · margin after freight ₹ {{ number_format((float) $costSummary['margin'], 2) }}
+                        · margin after freight {{ inr($costSummary['margin']) }}
                         @if ($costSummary['margin_percent'] !== null) ({{ $costSummary['margin_percent'] }}%) @endif
                     </p>
                 @endif

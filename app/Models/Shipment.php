@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\CommonHelper;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -282,33 +283,24 @@ class Shipment extends Model
     }
 
     /**
-     * The rupee sign. Money in the base currency is written with it — the bare
-     * code "INR" is never used as a symbol anywhere in the app, which is also
-     * why every formatter below goes through here.
-     */
-    public const INR_SYMBOL = '₹';
-
-    /**
-     * A rupee amount, e.g. "₹ 1,20,000.00". Used wherever a figure is money
-     * spent, because the ledger keeps every charge in rupees at the rate it
-     * was raised at.
+     * A rupee amount, e.g. "₹1,20,000" — Indian grouping, the rupee sign, and
+     * paise only when the amount has them. Money is formatted in one place
+     * (CommonHelper), so a figure reads the same on the list, in the ledger
+     * and on the shipping mark.
      */
     public static function formatInr($amount): string
     {
-        return self::INR_SYMBOL.' '.number_format((float) $amount, 2);
+        return CommonHelper::indianCurrency($amount);
     }
 
     /**
-     * "₹ 12,340.00" / "USD 2,400.00" — one place for money formatting so lists,
-     * totals and the shipping mark always agree. The rupee sign is only put in
-     * front of a rupee amount; a dollar figure keeps its code, because a ₹ in
-     * front of it would say the wrong thing.
+     * "₹12,340" / "USD 2,400.00" — the rupee sign is only put in front of a
+     * rupee amount; a dollar figure keeps its code, because a ₹ in front of it
+     * would say the wrong thing.
      */
     public static function formatAmount(?string $currency, $amount): string
     {
-        $code = strtoupper((string) ($currency ?: 'INR'));
-
-        return $code === 'INR' ? self::formatInr($amount) : $code.' '.number_format((float) $amount, 2);
+        return CommonHelper::amount($amount, $currency);
     }
 
     /**

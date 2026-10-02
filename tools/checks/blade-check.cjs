@@ -228,6 +228,47 @@ check('every row-menu item has an icon',
     `${menuBlocks.length} menu(s), ${itemsSeen} item(s)`
         + (iconless.length ? ' — missing in ' + iconless.join(', ') : ''));
 
+/* ------------------------------------------------- 6. expression sanity */
+
+/* One stray bracket in an expression takes the page down at render time, and
+   a big find-and-replace is exactly when one appears. Brackets are counted
+   outside quoted strings, per {{ … }} expression. */
+const unbalancedExpressions = [];
+
+for (const file of files) {
+    const text = fs.readFileSync(file, 'utf8');
+
+    for (const m of text.matchAll(/\{\{(?!--)[\s\S]*?\}\}/g)) {
+        const expression = m[0].slice(2, -2);
+        let depth = 0;
+        let quote = null;
+        let broken = false;
+
+        for (let i = 0; i < expression.length; i++) {
+            const char = expression[i];
+
+            if (quote) {
+                if (char === '\\') { i++; continue; }
+                if (char === quote) quote = null;
+                continue;
+            }
+
+            if (char === "'" || char === '"') { quote = char; continue; }
+            if (char === '(' || char === '[') depth++;
+            if (char === ')' || char === ']') depth--;
+
+            if (depth < 0) { broken = true; break; }
+        }
+
+        if (broken || depth !== 0) {
+            unbalancedExpressions.push(`${rel(file)}: ${m[0].slice(0, 60)}`);
+        }
+    }
+}
+
+check('every {{ … }} expression has balanced brackets',
+    unbalancedExpressions.length === 0, [...new Set(unbalancedExpressions)].slice(0, 3).join(' | '));
+
 /* ---------------------------------------------------------------- report */
 
 const failed = out.filter(([, ok]) => !ok);

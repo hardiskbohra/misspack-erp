@@ -62,13 +62,13 @@
 
         <div class="cf-summary">
             <div class="cf-stat blue">
-                <p>Total Credit</p><strong>{{ number_format($summary['credit'], 2) }}</strong>
+                <p>Total Credit</p><strong>{{ inr($summary['credit']) }}</strong>
             </div>
             <div class="cf-stat purple">
-                <p>Total Debit</p><strong>{{ number_format($summary['debit'], 2) }}</strong>
+                <p>Total Debit</p><strong>{{ inr($summary['debit']) }}</strong>
             </div>
             <div class="cf-stat teal">
-                <p>Net Cashflow</p><strong>{{ number_format($summary['net'], 2) }}</strong>
+                <p>Net Cashflow</p><strong>{{ inr($summary['net']) }}</strong>
             </div>
             <div class="cf-stat orange">
                 <p>Total Entries</p><strong>{{ $summary['count'] }}</strong>
@@ -90,9 +90,9 @@
                         </thead>
                         <tbody>@forelse($accountSummary as $row)<tr>
                             <td>{{ $row['name'] }}<span class="cf-sub">{{ $row['type'] }}</span></td>
-                            <td class="credit">{{ number_format($row['credit'], 2) }}</td>
-                            <td class="debit">{{ number_format($row['debit'], 2) }}</td>
-                            <td>{{ number_format($row['credit'] - $row['debit'], 2) }}</td>
+                            <td class="credit">{{ inr($row['credit']) }}</td>
+                            <td class="debit">{{ inr($row['debit']) }}</td>
+                            <td>{{ inr($row['credit'] - $row['debit']) }}</td>
                         </tr>@empty<tr>
                                 <td colspan="4">No data.</td>
                             </tr>@endforelse</tbody>
@@ -113,9 +113,9 @@
                         </thead>
                         <tbody>@forelse($categorySummary as $row)<tr>
                             <td>{{ $row['name'] }}<span class="cf-sub">{{ $row['type'] }}</span></td>
-                            <td class="credit">{{ number_format($row['credit'], 2) }}</td>
-                            <td class="debit">{{ number_format($row['debit'], 2) }}</td>
-                            <td>{{ number_format($row['credit'] - $row['debit'], 2) }}</td>
+                            <td class="credit">{{ inr($row['credit']) }}</td>
+                            <td class="debit">{{ inr($row['debit']) }}</td>
+                            <td>{{ inr($row['credit'] - $row['debit']) }}</td>
                         </tr>@empty<tr>
                                 <td colspan="4">No data.</td>
                             </tr>@endforelse</tbody>
@@ -149,10 +149,10 @@
                         <td>{{ $entry->bank_reference_number ?: '-' }}</td>
                         <td>{{ $entry->account?->account_name }}</td>
                         <td class="credit">
-                            {{ $entry->credit_amount > 0 ? number_format((float) $entry->credit_amount, 2) : '-' }}</td>
+                            {{ $entry->credit_amount > 0 ? inr($entry->credit_amount) : '-' }}</td>
                         <td class="debit">
-                            {{ $entry->debit_amount > 0 ? number_format((float) $entry->debit_amount, 2) : '-' }}</td>
-                        <td>{{ $entry->balance !== null ? number_format((float) $entry->balance, 2) : '-' }}</td>
+                            {{ $entry->debit_amount > 0 ? inr($entry->debit_amount) : '-' }}</td>
+                        <td>{{ $entry->balance !== null ? inr($entry->balance) : '-' }}</td>
                         <td><span
                                 class="cf-badge status-{{ str_replace('_', '-', $entry->accounting_status) }}">{{ $entry->statusLabel() }}</span>
                         </td>

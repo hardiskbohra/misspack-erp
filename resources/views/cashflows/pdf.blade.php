@@ -19,9 +19,9 @@
         <div><span class="badge">{{ strtoupper($period) }}</span></div>
     </div>
     {{-- <div class="grid">
-        <div class="stat"><span>Total Credit</span><strong>{{ number_format($summary['credit'], 2) }}</strong></div>
-        <div class="stat"><span>Total Debit</span><strong>{{ number_format($summary['debit'], 2) }}</strong></div>
-        <div class="stat"><span>Net Cashflow</span><strong>{{ number_format($summary['net'], 2) }}</strong></div>
+        <div class="stat"><span>Total Credit</span><strong>{{ inr($summary['credit']) }}</strong></div>
+        <div class="stat"><span>Total Debit</span><strong>{{ inr($summary['debit']) }}</strong></div>
+        <div class="stat"><span>Net Cashflow</span><strong>{{ inr($summary['net']) }}</strong></div>
         <div class="stat"><span>Entries</span><strong>{{ $summary['count'] }}</strong></div>
     </div> --}}
     <div class="section">
@@ -39,9 +39,9 @@
             <tbody>@forelse($accountSummary as $row)<tr>
                 <td>{{ $row['name'] }}</td>
                 <td>{{ $row['type'] }}</td>
-                <td class="credit">{{ number_format($row['credit'], 2) }}</td>
-                <td class="debit">{{ number_format($row['debit'], 2) }}</td>
-                <td>{{ number_format($row['credit'] - $row['debit'], 2) }}</td>
+                <td class="credit">{{ inr($row['credit']) }}</td>
+                <td class="debit">{{ inr($row['debit']) }}</td>
+                <td>{{ inr($row['credit'] - $row['debit']) }}</td>
             </tr>@empty<tr>
                     <td colspan="5">No data.</td>
                 </tr>@endforelse</tbody>
@@ -73,9 +73,9 @@
                 <td>{{ $entry->account?->account_name }}</td>
                 <td>{{ $entry->category?->name ?: '-' }}</td>
                 <td class="credit">
-                    {{ $entry->credit_amount > 0 ? number_format((float) $entry->credit_amount, 2) : '-' }}</td>
+                    {{ $entry->credit_amount > 0 ? inr($entry->credit_amount) : '-' }}</td>
                 <td class="debit">
-                    {{ $entry->debit_amount > 0 ? number_format((float) $entry->debit_amount, 2) : '-' }}</td>
+                    {{ $entry->debit_amount > 0 ? inr($entry->debit_amount) : '-' }}</td>
                 <td>{{ $entry->statusLabel() }}</td>
             </tr>@empty<tr>
                     <td colspan="10">No entries found.</td>

@@ -101,7 +101,7 @@
                                 <td>{{ $row->capacity ? $row->capacity.' ml' : '-' }}</td>
                                 <td>{{ $row->finish_type ?: '-' }}</td>
                                 <td>{{ $row->printing_type ?: '-' }}</td>
-                                <td>{{ $row->selling_cost_inr ? '₹ ' . number_format((float) $row->selling_cost_inr, 2) : '-' }}
+                                <td>{{ $row->selling_cost_inr ? inr($row->selling_cost_inr) : '-' }}
                                 </td>
                         </tr>@empty<tr>
                                 <td colspan="5">No pricing added.</td>

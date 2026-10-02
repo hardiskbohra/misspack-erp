@@ -326,8 +326,7 @@
             }
 
             if (value > 0) {
-                parts.push('≈ ₹ ' + value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                    + ' posted to the ledger');
+                parts.push('≈ ' + window.misspackFormat.inr(value) + ' posted to the ledger');
             }
 
             preview.textContent = parts.length ? ' ' + parts.join(' · ') : '';

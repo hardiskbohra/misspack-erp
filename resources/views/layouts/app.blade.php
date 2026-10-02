@@ -178,6 +178,7 @@
     {{-- App Scripts --}}
     <script src="{{ $assetVer('assets/js/master-alert.js') }}"></script>
     <script src="{{ $assetVer('assets/js/master-selects.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/money.js') }}"></script>
     <script src="{{ $assetVer('assets/js/app-layout.js') }}"></script>
 
     {{-- Flash Messages (custom alerts) --}}

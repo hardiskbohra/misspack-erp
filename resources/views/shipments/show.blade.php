@@ -243,7 +243,7 @@
                                     <td class="ship-cell-muted">{{ $item->hs_code ?: '—' }}</td>
                                     <td class="is-num">{{ (int) $item->quantity }} {{ $item->unit }}</td>
                                     <td class="is-num">
-                                        {{ $item->declared_value ? $item->currency.' '.number_format($item->declared_value, 2) : '—' }}
+                                        {{ $item->declared_value ? money($item->declared_value, $item->currency) : '—' }}
                                     </td>
                                     <td class="is-num">{{ $item->gross_weight ?: '—' }}</td>
                                 </tr>
@@ -263,7 +263,7 @@
                                 <div class="product-grid">
                                     <div><span>HS Code</span><strong>{{ $item->hs_code ?: '—' }}</strong></div>
                                     <div><span>Qty</span><strong>{{ (int) $item->quantity }} {{ $item->unit }}</strong></div>
-                                    <div><span>Value</span><strong>{{ $item->declared_value ? $item->currency.' '.number_format($item->declared_value, 2) : '—' }}</strong></div>
+                                    <div><span>Value</span><strong>{{ $item->declared_value ? money($item->declared_value, $item->currency) : '—' }}</strong></div>
                                     <div><span>Weight</span><strong>{{ $item->gross_weight ?: '—' }}</strong></div>
                                 </div>
                             </div>

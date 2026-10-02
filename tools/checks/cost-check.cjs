@@ -161,10 +161,83 @@ for (const file of moneyFiles) {
 check('no rupee amount, rate or field is written with the code "INR"',
     symbolHits.length === 0, symbolHits.join(' | '));
 
-check('the rupee sign lives in one place and every rupee figure goes through it',
-    /const INR_SYMBOL = '₹';/.test(shipment)
-    && /return self::INR_SYMBOL\.' '\.number_format\(\(float\) \$amount, 2\);/.test(shipment)
-    && /return \$code === 'INR' \? self::formatInr\(\$amount\) : \$code\.' '\.number_format/.test(shipment));
+const helper = read('app/Helpers/CommonHelper.php');
+const moneyJs = read('public/assets/js/money.js');
+
+/* One grouping rule, written the same way in both runtimes: the last three
+   digits, then twos all the way up. */
+const GROUPING = /\\B\(\?=\(\\d\{2\}\)\+\(\?!\\d\)\)/;
+
+check('money has one formatter, and it groups digits the Indian way',
+    /public const SYMBOL = '₹';/.test(helper)
+    && /substr\(\$digits, -3\)/.test(helper)
+    && GROUPING.test(helper)
+    && /return \$sign\.\$symbol\.self::groupIndian\(/.test(helper)
+    && /App\\Models\\Shipment::formatInr\(\$pageSpendInr\)/.test(index)
+    && /CommonHelper::indianCurrency\(\$amount\)/.test(shipment)
+    && /CommonHelper::amount\(\$amount, \$currency\)/.test(shipment)
+    && !/number_format/.test(shipment));
+
+check('the browser groups and signs rupees exactly as the server does',
+    GROUPING.test(moneyJs)
+    && /assets\/js\/money\.js/.test(read('resources/views/layouts/app.blade.php'))
+    && /assets\/js\/money\.js/.test(read('resources/views/client_portal/layouts/app.blade.php'))
+    && (() => {
+        const vm = require('vm');
+        const sandbox = { window: {} };
+        vm.runInNewContext(moneyJs + ';window.misspackFormat', sandbox);
+
+        const f = sandbox.window.misspackFormat;
+        const cases = [
+            [150000, '₹1,50,000'],
+            [6163140, '₹61,63,140'],
+            [123456.5, '₹1,23,456.50'],
+            [-1234567.5, '-₹12,34,567.50'],
+            [0, '₹0'],
+            [1000, '₹1,000'],
+        ];
+
+        for (const [value, expected] of cases) {
+            if (f.inr(value) !== expected) return false;
+        }
+
+        return f.amount(150000) === '₹1,50,000' && f.amount(1200, 'USD') === 'USD 1,200.00';
+    })());
+
+/* Money carries the currency it is actually in: a currency echoed and then a
+   rupee figure prints "USD ₹1,200", and a bare amount loses the currency
+   altogether. */
+const handBuilt = [];
+
+for (const file of moneyFiles) {
+    const text = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    const lineOf = (index) => text.slice(0, index).split('\n').length;
+
+    /* the currency and the figure are often on separate lines, so this reads
+       the whole file rather than line by line */
+    for (const rx of [/\}\}\s*\{\{\s*inr\(/g, /' '\.\s*inr\(/g]) {
+        for (const m of text.matchAll(rx)) {
+            handBuilt.push(`${file}:${lineOf(m.index)}`);
+        }
+    }
+}
+
+check('a money figure is never hand-built next to its own currency',
+    handBuilt.length === 0, handBuilt.join(' | '));
+
+/* The model may not format money itself: that is the helper's job, and a
+   second implementation is how two pages end up disagreeing. */
+const handFormatted = [];
+
+for (const file of moneyFiles) {
+    fs.readFileSync(path.join(ROOT, file), 'utf8').split('\n').forEach((line, i) => {
+        if (!/number_format\(/.test(line) || /rate/i.test(line)) return;
+        if (/,\s*2\s*\)/.test(line)) handFormatted.push(`${file}:${i + 1}`);
+    });
+}
+
+check('templates do not format money by hand — only rates keep their decimals',
+    handFormatted.length === 0, handFormatted.slice(0, 6).join(' | '));
 
 const phpLiterals = walk('app')
     .filter(file => file.endsWith('.php'))

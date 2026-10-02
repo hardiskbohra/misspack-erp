@@ -10,8 +10,8 @@
     @php
         $statusClass = str_replace('_', '-', $vendor->status);
         $typeClass = str_replace('_', '-', $vendor->vendor_type);
-        $money = function ($amount, $currency = '₹') {
-            return $currency . ' ' . number_format((float) $amount, 2);
+        $money = function ($amount, $currency = 'INR') {
+            return money($amount, $currency);
         };
     @endphp
 
@@ -44,17 +44,13 @@
             <div class="vendor-kpi"><span>Running
                     Projects</span><strong>{{ $summary['running_projects'] }}</strong><small>{{ $summary['project_products_count'] }}
                     project product rows</small></div>
-            <div class="vendor-kpi blue"><span>Bill Generated</span><strong>{{ $summary['vendor_currency'] }}
-                    {{ number_format((float) $summary['vendor_bill_foreign'], 2) }}</strong><small>Vendor currency
+            <div class="vendor-kpi blue"><span>Bill Generated</span><strong>{{ money($summary['vendor_bill_foreign'], $summary['vendor_currency']) }}</strong><small>Vendor currency
                     payable</small></div>
-            <div class="vendor-kpi orange"><span>Vendor Expenses</span><strong>{{ $summary['vendor_currency'] }}
-                    {{ number_format((float) $summary['vendor_expense_foreign'], 2) }}</strong><small>INR eq:
+            <div class="vendor-kpi orange"><span>Vendor Expenses</span><strong>{{ money($summary['vendor_expense_foreign'], $summary['vendor_currency']) }}</strong><small>INR eq:
                     {{ $money($summary['expenses_on_behalf']) }}</small></div>
-            <div class="vendor-kpi green"><span>Paid To Vendor</span><strong>{{ $summary['vendor_currency'] }}
-                    {{ number_format((float) $summary['vendor_paid_foreign'], 2) }}</strong><small>INR paid:
+            <div class="vendor-kpi green"><span>Paid To Vendor</span><strong>{{ money($summary['vendor_paid_foreign'], $summary['vendor_currency']) }}</strong><small>INR paid:
                     {{ $money($summary['paid_to_vendor']) }}</small></div>
-            <div class="vendor-kpi red"><span>Need To Pay</span><strong>{{ $summary['vendor_currency'] }}
-                    {{ number_format((float) $summary['vendor_balance_foreign'], 2) }}</strong><small>INR balance:
+            <div class="vendor-kpi red"><span>Need To Pay</span><strong>{{ money($summary['vendor_balance_foreign'], $summary['vendor_currency']) }}</strong><small>INR balance:
                     {{ $money($summary['need_to_pay']) }}</small></div>
         </div>
 
@@ -109,8 +105,7 @@
                                 <div class="vendor-mini-row">
                                     <div><strong>{{ $entry->particular }}</strong><small>{{ optional($entry->entry_date)->format('d M Y') }}
                                             · {{ $entry->payment_mode ?: '-' }}</small></div><b
-                                        class="green">{{ $entry->currency }}
-                                        {{ number_format((float) $entry->debit_amount, 2) }}</b>
+                                        class="green">{{ money($entry->debit_amount, $entry->currency) }}</b>
                                 </div>
                             @empty
                                 <div class="vendor-empty small">No payment entries found.</div>
@@ -328,7 +323,7 @@
                                         </td>
                                         <td>{{ $row->product_name }}<small style="font-weight:400">Vendor Invoice: {{ $row->vendor_invoice_number ?: '-' }}</small></td>
                                         <td>{{ number_format((int)$row->quantity) }} {{ $row->unit }}</td>
-                                        <td>{{ $row->currency === 'INR' ? '₹' : $row->currency }} {{ number_format((float) $row->total_amount, 2) }}
+                                        <td>{{ money($row->total_amount, $row->currency) }}
                                         </td>
                                         <td>{{ $row->statusLabel() }}<small>{{ $row->stageLabel() }}</small></td>
                                         <td>Expected:
@@ -419,12 +414,12 @@
                                         <td><strong>{{ $entry->particular }}</strong><small>{{ $entry->relationLoaded('project') && $entry->project ? $entry->project->project_number . ' - ' . $entry->project->name : 'No project' }}</small><small>{{ $entry->remarks }}</small>
                                         </td>
                                         <td class="red">
-                                            {{ $entry->transaction_type === 'credit' ? $entry->foreign_currency . ' ' . number_format((float) $entry->foreign_amount, 2) : '-' }}
+                                            {{ $entry->transaction_type === 'credit' ? money($entry->foreign_amount, $entry->foreign_currency) : '-' }}
                                         </td>
                                         <td class="green">
-                                            {{ $entry->transaction_type === 'debit' ? $entry->foreign_currency . ' ' . number_format((float) $entry->foreign_amount, 2) : '-' }}
+                                            {{ $entry->transaction_type === 'debit' ? money($entry->foreign_amount, $entry->foreign_currency) : '-' }}
                                         </td>
-                                        <td>₹ {{ number_format((float) $entry->amount_in_inr, 2) }}<small>Rate:
+                                        <td>{{ inr($entry->amount_in_inr) }}<small>Rate:
                                                 {{ $entry->exchange_rate ? number_format($entry->exchange_rate, 2) : '-' }}</small></td>
                                         <td>{{ $entry->relationLoaded('paidAccount') && $entry->paidAccount ? $entry->paidAccount->name : '-' }}<small>{{ $entry->payment_mode ?: '-' }}
                                                 {{ $entry->bank_reference_number ? '· ' . $entry->bank_reference_number : '' }}</small>
@@ -498,10 +493,8 @@
                                         <td>{{ optional($entry->entry_date)->format('d M y') ?: '-' }}</td>
                                         <td>{{ $entry->category?->name ?? ($entry->expense_head ?? '-') }}</td>
                                         <td><strong>{{ $entry->particular }}</strong><small>{{ $entry->notes }}</small></td>
-                                        <td class="red">{{ $entry->currency }}
-                                            {{ number_format((float) $entry->credit_amount, 2) }}</td>
-                                        <td class="green">{{ $entry->currency }}
-                                            {{ number_format((float) $entry->debit_amount, 2) }}</td>
+                                        <td class="red">{{ money($entry->credit_amount, $entry->currency) }}</td>
+                                        <td class="green">{{ money($entry->debit_amount, $entry->currency) }}</td>
                                         <td>{{ $entry->account?->name ?? '-' }}</td>
                                         <td>{{ $entry->payment_mode ?: '-' }}</td>
                                         <td>{{ $entry->bank_reference_number ?: $entry->invoice_bill_number ?: '-' }}</td>
@@ -808,15 +801,11 @@
                     </div>
                     <div class="vendor-currency-summary">
                         @forelse($currencySummary as $currency => $row)
-                            <div><span>{{ $currency }} Bills</span><strong>{{ $currency }}
-                                    {{ number_format((float) $row['credit'], 2) }}</strong></div>
-                            <div><span>{{ $currency }} Paid</span><strong class="green">{{ $currency }}
-                                    {{ number_format((float) $row['debit'], 2) }}</strong></div>
-                            <div><span>{{ $currency }} Balance</span><strong class="red">{{ $currency }}
-                                    {{ number_format((float) $row['balance'], 2) }}</strong></div>
+                            <div><span>{{ $currency }} Bills</span><strong>{{ money($row['credit'], $currency) }}</strong></div>
+                            <div><span>{{ $currency }} Paid</span><strong class="green">{{ money($row['debit'], $currency) }}</strong></div>
+                            <div><span>{{ $currency }} Balance</span><strong class="red">{{ money($row['balance'], $currency) }}</strong></div>
                             <div><span>{{ $currency }} Expenses</span><strong
-                                    class="orange">{{ $currency }}
-                                    {{ number_format((float) $row['expense'], 2) }}</strong></div>
+                                    class="orange">{{ money($row['expense'], $currency) }}</strong></div>
                         @empty
                             <div><span>No Ledger</span><strong>-</strong></div>
                         @endforelse
@@ -848,15 +837,14 @@
                                         <td>{{ $paymentEntry->categoryLabel() }}<small>{{ $paymentEntry->statusLabel() }}</small>
                                         </td>
                                         <td class="red">
-                                            {{ $paymentEntry->transaction_type === 'credit' ? ($paymentEntry->foreign_currency ?: 'RMB') . ' ' . number_format((float) $paymentEntry->foreign_amount, 2) : '-' }}
+                                            {{ $paymentEntry->transaction_type === 'credit' ? money($paymentEntry->foreign_amount, $paymentEntry->foreign_currency ?: 'RMB') : '-' }}
                                         </td>
                                         <td class="green">
-                                            {{ $paymentEntry->transaction_type === 'debit' ? ($paymentEntry->foreign_currency ?: 'RMB') . ' ' . number_format((float) $paymentEntry->foreign_amount, 2) : '-' }}
+                                            {{ $paymentEntry->transaction_type === 'debit' ? money($paymentEntry->foreign_amount, $paymentEntry->foreign_currency ?: 'RMB') : '-' }}
                                         </td>
-                                        <td><strong>{{ $paymentEntry->foreign_currency ?: 'RMB' }}
-                                                {{ number_format($paymentEntry->running_balance, 2) }}</strong>
+                                        <td><strong>{{ money($paymentEntry->running_balance, $paymentEntry->foreign_currency ?: 'RMB') }}</strong>
                                         </td>
-                                        <td>₹ {{ number_format((float) $paymentEntry->amount_in_inr, 2) }}<small>Rate:
+                                        <td>{{ inr($paymentEntry->amount_in_inr) }}<small>Rate:
                                                 {{ $paymentEntry->exchange_rate ? number_format($paymentEntry->exchange_rate, 2) : '-' }}</small></td>
                                         <td>{{ $paymentEntry->relationLoaded('paidAccount') && $paymentEntry->paidAccount ? $paymentEntry->paidAccount->name : '-' }}<small>
                                                 @foreach ($paymentEntry->attachments as $attachment)
@@ -917,8 +905,7 @@
                                         </td>
                                         <td>{{ method_exists($shipment, 'statusLabel') ? $shipment->statusLabel() : $shipment->status }}
                                         </td>
-                                        <td>{{ $shipment->currency }}
-                                            {{ number_format((float) $shipment->shipment_cost, 2) }}</td>
+                                        <td>{{ money($shipment->shipment_cost, $shipment->currency) }}</td>
                                     </tr>
                                 @empty
                                     <tr>

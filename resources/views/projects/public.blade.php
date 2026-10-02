@@ -51,7 +51,7 @@
                 <div class="info-grid">
                     <div class="info"><span>Client</span><strong>{{ $project->client ? $project->client->company_name : 'Client' }}</strong></div>
                     <div class="info"><span>Products</span><strong>{{ $project->products->count() }}</strong></div>
-                    <div class="info"><span>Estimated Value</span><strong>{{ $project->currency }} {{ number_format((float) $project->estimated_value, 2) }}</strong></div>
+                    <div class="info"><span>Estimated Value</span><strong>{{ money($project->estimated_value, $project->currency) }}</strong></div>
                     <div class="info"><span>Priority</span><strong>{{ $project->priorityLabel() }}</strong></div>
                 </div>
                 @if($project->scope_summary)<div class="text-block"><span>Scope</span><p>{{ $project->scope_summary }}</p></div>@endif
@@ -134,7 +134,7 @@
                 <div class="section-head"><div><p class="eyebrow">Payments</p><h2>Public Payments</h2></div></div>
                 <div class="payment-list">
                     @forelse($project->publicPayments as $payment)
-                        <div class="payment"><div><span>{{ $payment->typeLabel() }}</span><strong>{{ optional($payment->payment_date)->format('d M Y') }}</strong></div><strong class="{{ $payment->transaction_type }}">{{ $payment->currency }} {{ number_format((float) $payment->amount, 2) }}</strong></div>
+                        <div class="payment"><div><span>{{ $payment->typeLabel() }}</span><strong>{{ optional($payment->payment_date)->format('d M Y') }}</strong></div><strong class="{{ $payment->transaction_type }}">{{ money($payment->amount, $payment->currency) }}</strong></div>
                     @empty
                         <div class="empty">No public payment entries.</div>
                     @endforelse

@@ -49,13 +49,13 @@
         <strong>{{ $project->stageLabel() }}</strong>
     </div>
     <div class="pd-metric"><span>Estimated
-            Value</span><strong>{{ $project->currency == 'INR' ? '₹' : $project->currency }}{{ number_format((float) $project->estimated_value, 2) }}</strong>
+            Value</span><strong>{{ money($project->estimated_value, $project->currency) }}</strong>
     </div>
     <div class="pd-metric"><span>Payments</span><strong
-            class="pd-green">{{ $project->currency == 'INR' ? '₹' : $project->currency }}{{ number_format($totals['inward'], 2) }}</strong>
+            class="pd-green">{{ money($totals['inward'], $project->currency) }}</strong>
     </div>
     <div class="pd-metric">
-        <span>Balance</span><strong>{{ $project->currency == 'INR' ? '₹' : $project->currency }}{{ number_format($totals['outstanding'], 2) }}</strong>
+        <span>Balance</span><strong>{{ money($totals['outstanding'], $project->currency) }}</strong>
     </div>
 </div>
 
@@ -205,7 +205,7 @@
                                 </td>
                                 <td><strong>{{ number_format($projectProduct->quantity) }} {{ $projectProduct->unit }}</strong></td>
                                 <td><strong>{{ $projectProduct->currency == 'INR' ? '₹' : $projectProduct->currency }}{{ $projectProduct->unit_price }}</strong></td>
-                                <td><strong>{{ $projectProduct->currency == 'INR' ? '₹' : $projectProduct->currency }}{{ number_format($projectProduct->total_amount,2) }}</strong></td>
+                                <td><strong>{{ money($projectProduct->total_amount, $projectProduct->currency) }}</strong></td>
                                 <td><strong style="font-size:10px;font-weight:500;">{!! $projectProduct?->notes ? nl2br(e($projectProduct->notes)) : '-' !!}</strong></td>
                             </tr>
                         @empty
@@ -607,13 +607,11 @@
                                     <td>
                                         @if ($entry->transaction_type === 'credit')
                                             <span style="color:red">
-                                                {{ $entry->currency === 'INR' ? '₹' : $entry->currency }}
-                                                {{ number_format((float) $entry->credit_amount, 2) }}
+                                                {{ money($entry->credit_amount, $entry->currency) }}
                                             </span>
                                         @else
                                             <span style="color:green">
-                                                {{ $entry->currency === 'INR' ? '₹' : $entry->currency }}
-                                                {{ number_format((float) $entry->debit_amount, 2) }}
+                                                {{ money($entry->debit_amount, $entry->currency) }}
                                             </span>
                                         @endif
                                     </td>

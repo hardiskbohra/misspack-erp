@@ -16,15 +16,15 @@
 <div class="cp-grid-4" style="margin-bottom:15px;">
     <div class="cp-card cp-stat">
         <span>Paid</span>
-        <strong>₹{{ number_format($totals['inward'], 2) }}</strong>
+        <strong>{{ inr($totals['inward']) }}</strong>
     </div>
     <div class="cp-card cp-stat">
         <span>Invoiced</span>
-        <strong>₹{{ number_format($totals['invoiced'], 2) }}</strong>
+        <strong>{{ inr($totals['invoiced']) }}</strong>
     </div>
     <div class="cp-card cp-stat">
         <span>Pending Invoiced Amount</span>
-        <strong>₹{{ number_format($totals['inward']-$totals['invoiced'], 2) }}</strong>
+        <strong>{{ inr($totals['inward'] - $totals['invoiced']) }}</strong>
     </div>
 </div>
 <div class="cp-card">
@@ -54,7 +54,7 @@
                         </td>
                         <td>
                             <span class="pd-chip pd-mode-{{ $payment->payment_mode }}" style="font-size:11px;">{{ $payment->payment_mode ? strtoupper($payment->payment_mode) : '-' }}</span></td>
-                        <td>{{ $payment->currency }} {{ number_format((float)$payment->credit_amount, 2) }}</td>
+                        <td>{{ money($payment->credit_amount, $payment->currency) }}</td>
                         <td>
                             <span class="pd-chip pd-status-{{ $payment->accounting_status }}">{{ $payment->statusLabel() }}</span>
                         </td>

@@ -136,7 +136,7 @@
             <div>
                 <span>Gross margin after freight</span>
                 <strong class="{{ ($costTotals['margin'] ?? 0) < 0 ? 'is-negative' : 'is-positive' }}">
-                    ₹ {{ number_format((float) $costTotals['margin'], 2) }}
+                    {{ inr($costTotals['margin']) }}
                     @if ($costTotals['margin_percent'] !== null) · {{ $costTotals['margin_percent'] }}% @endif
                 </strong>
             </div>

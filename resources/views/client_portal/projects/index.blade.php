@@ -61,17 +61,15 @@
             <div class="projects-mini-grid">
                 <div>
                     <span>Estimated</span>
-                    <h3>{{ $project->currency == 'INR' ? '₹' : $project->currency }}
-                        {{ number_format((float) $project->estimated_value, 2) }}</h3>
+                    <h3>{{ money($project->estimated_value, $project->currency) }}</h3>
                 </div>
                 <div>
                     <span>Paid</span>
-                    <h3 class="projects-money-green">{{ $project->currency == 'INR' ? '₹' : $project->currency }}
-                        {{ number_format($totals['inward'], 2) }}</h3>
+                    <h3 class="projects-money-green">{{ money($totals['inward'], $project->currency) }}</h3>
                 </div>
                 <div>
                     <span>Balance</span>
-                    <h3>{{ $project->currency == 'INR' ? '₹' : $project->currency }} {{ number_format($totals['outstanding'], 2) }}</h3>
+                    <h3>{{ money($totals['outstanding'], $project->currency) }}</h3>
                 </div>
             </div>
 

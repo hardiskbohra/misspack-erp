@@ -10,25 +10,25 @@
             <div class="master-stat blue"><span class="icon">₹</span>
                 <div>
                     <p class="master-stat-title">Total Credit</p>
-                    <p class="master-stat-value">{{ number_format($stats['credit'], 2) }}</p>
+                    <p class="master-stat-value">{{ inr($stats['credit']) }}</p>
                 </div>
             </div>
             <div class="master-stat purple"><span class="icon">↘</span>
                 <div>
                     <p class="master-stat-title">Total Debit</p>
-                    <p class="master-stat-value">{{ number_format($stats['debit'], 2) }}</p>
+                    <p class="master-stat-value">{{ inr($stats['debit']) }}</p>
                 </div>
             </div>
             <div class="master-stat teal"><span class="icon">=</span>
                 <div>
                     <p class="master-stat-title">Current A/c</p>
-                    <p class="master-stat-value">{{ number_format($stats['current_balance'], 2) }}</p>
+                    <p class="master-stat-value">{{ inr($stats['current_balance']) }}</p>
                 </div>
             </div>
             <div class="master-stat blue"><span class="icon">💵</span>
                 <div>
                     <p class="master-stat-title">Cash Balance</p>
-                    <p class="master-stat-value">{{ number_format($stats['cash_balance'], 2) }}</p>
+                    <p class="master-stat-value">{{ inr($stats['cash_balance']) }}</p>
                 </div>
             </div>
         </div>
@@ -108,12 +108,12 @@
                                 <td>{{ $entry->account?->account_name }}<span
                                         class="master-sub">{{ $entry->account?->typeLabel() }}</span></td>
                                 <td class="master-amount-credit" style="color:green">
-                                    {{ $entry->credit_amount > 0 ? ($entry->currency === 'INR' ? '₹' : $entry->currency) . ' ' . number_format((float) $entry->credit_amount, 2) : '-' }}
+                                    {{ $entry->credit_amount > 0 ? money($entry->credit_amount, $entry->currency) : '-' }}
                                 </td>
                                 <td class="master-amount-debit" style="color:red">
-                                    {{ $entry->debit_amount > 0 ? ($entry->currency === 'INR' ? '₹' : $entry->currency) . ' ' . number_format((float) $entry->debit_amount, 2) : '-' }}
+                                    {{ $entry->debit_amount > 0 ? money($entry->debit_amount, $entry->currency) : '-' }}
                                 </td>
-                                <td>{{ $entry->balance !== null ? ($entry->currency === 'INR' ? '₹' : $entry->currency) . ' ' . number_format((float) $entry->balance, 2) : '-' }}
+                                <td>{{ $entry->balance !== null ? money($entry->balance, $entry->currency) : '-' }}
                                 </td>
                                 <td><span
                                         class="master-badge status-{{ str_replace('_', '-', $entry->accounting_status) }}">{{ $entry->statusLabel() }}</span>

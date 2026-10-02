@@ -150,7 +150,7 @@
     <!--            <div class="cp-file-icon">▤</div>-->
     <!--            <div>-->
     <!--                <strong>{{ $invoice->invoice_number }}</strong>-->
-    <!--                <div class="cp-muted">{{ $invoice->currency }} {{ number_format((float) $invoice->total_amount, 2) }} · {{ $invoice->statusLabel() }}</div>-->
+    <!--                <div class="cp-muted">{{ money($invoice->total_amount, $invoice->currency) }} · {{ $invoice->statusLabel() }}</div>-->
     <!--                <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('client-portal.invoices.show', $invoice) }}" style="margin-top:8px;">Open</a>-->
     <!--            </div>-->
     <!--        </div>-->

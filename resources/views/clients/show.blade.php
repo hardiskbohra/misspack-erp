@@ -113,7 +113,7 @@
                             Branch</span><strong>{{ $client->ifsc_code ?: '-' }}</strong><span
                             class="master-sub">{{ $client->bank_branch ?: '-' }}</span></div>
                     <div class="master-info"><span>Credit
-                            Limit</span><strong>{{ $client->credit_limit ? $client->preferred_currency . ' ' . number_format((float) $client->credit_limit, 2) : '-' }}</strong>
+                            Limit</span><strong>{{ $client->credit_limit ? money($client->credit_limit, $client->preferred_currency) : '-' }}</strong>
                     </div>
                     <div class="master-info"><span>Credit Days</span><strong>{{ $client->credit_days ?: '-' }}</strong>
                     </div>

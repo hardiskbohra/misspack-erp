@@ -97,19 +97,19 @@
 
         <div class="pd-metrics">
             <div class="pd-metric"><span>Estimated
-                    Value</span><strong>{{ $project->currency == 'INR' ? '₹' : $project->currency }}{{ number_format((float) $project->estimated_value, 2) }}</strong>
+                    Value</span><strong>{{ money($project->estimated_value, $project->currency) }}</strong>
             </div>
             <div class="pd-metric"><span>Payment Inward</span><strong
-                    class="pd-green">{{ $project->currency == 'INR' ? '₹' : $project->currency }}{{ number_format($totals['inward'], 2) }}</strong>
+                    class="pd-green">{{ money($totals['inward'], $project->currency) }}</strong>
             </div>
             <div class="pd-metric"><span>Expenses / Outward</span><strong
-                    class="pd-red">{{ $project->currency == 'INR' ? '₹' : $project->currency }}{{ number_format($totals['outward'], 2) }}</strong>
+                    class="pd-red">{{ money($totals['outward'], $project->currency) }}</strong>
             </div>
             <div class="pd-metric">
-                <span>Outstanding</span><strong>{{ $project->currency == 'INR' ? '₹' : $project->currency }}{{ number_format($totals['outstanding'], 2) }}</strong>
+                <span>Outstanding</span><strong>{{ money($totals['outstanding'], $project->currency) }}</strong>
             </div>
             <div class="pd-metric">
-                <span>Profit/Loss</span><strong class="{{ ($totals['inward'] - $totals['outward'] > 0 ? 'pd-green' : 'pd-red') }}">{{ $project->currency == 'INR' ? '₹' : $project->currency }}{{ number_format(($totals['inward'] - $totals['outward']), 2) }}</strong>
+                <span>Profit/Loss</span><strong class="{{ ($totals['inward'] - $totals['outward'] > 0 ? 'pd-green' : 'pd-red') }}">{{ money(($totals['inward'] - $totals['outward']), $project->currency) }}</strong>
             </div>
         </div>
 
@@ -290,7 +290,7 @@
                                             </span>
                                         </td>
                                         <td><strong>{{ number_format($projectProduct->quantity) }} {{ $projectProduct->unit }}</strong></td>
-                                        <td><strong>{{ $projectProduct->currency == 'INR' ? '₹' : $projectProduct->currency }}{{ number_format($projectProduct->total_amount,2) }}</strong></td>
+                                        <td><strong>{{ money($projectProduct->total_amount, $projectProduct->currency) }}</strong></td>
                                         <td><strong style="font-size:11px">{!! $projectProduct?->notes ? nl2br(e($projectProduct->notes)) : '-' !!}</strong></td>
                                         <td><strong>{{ optional($projectProduct->vendor)->contact_person_name ?: '-' }}</strong><div class="master-sub">{{ $projectProduct->vendor_invoice_number ?: 'No Vendor Invoice' }}</div></td>
                                         <td>
@@ -1000,13 +1000,11 @@
                                             <td>
                                                 @if ($entry->transaction_type === 'credit')
                                                     <span style="color:green">
-                                                        {{ $entry->currency === 'INR' ? '₹' : $entry->currency }}
-                                                        {{ number_format((float) $entry->credit_amount, 2) }}
+                                                        {{ money($entry->credit_amount, $entry->currency) }}
                                                     </span>
                                                 @else
                                                     <span style="color:red">
-                                                        {{ $entry->currency === 'INR' ? '₹' : $entry->currency }}
-                                                        {{ number_format((float) $entry->debit_amount, 2) }}
+                                                        {{ money($entry->debit_amount, $entry->currency) }}
                                                     </span>
                                                 @endif
                                             </td>
@@ -1029,8 +1027,7 @@
                                             </td>
                                             <td><strong>{{ $payment->category }}</strong></td>
                                             <td><strong>{{ $payment->reference_number }}</strong></td>
-                                            <td><span style="{{ $payment->transaction_type === 'inward' ? 'color:green' : 'color:red' }}">{{ $payment->currency == 'INR' ? '₹' : $payment->currency }}
-                                                {{ number_format((float) $payment->amount, 2) }}</span></td>
+                                            <td><span style="{{ $payment->transaction_type === 'inward' ? 'color:green' : 'color:red' }}">{{ money($payment->amount, $payment->currency) }}</span></td>
                                             <td>    <strong>{{ $payment->payment_mode ? \Illuminate\Support\Str::title($payment->payment_mode) : '-' }}</strong></td>
                                             <td><span class="pd-chip {{ $payment->is_public ? 'pd-public' : '' }}">
                                                 {{ $payment->is_public ? 'Public' : 'Internal' }}</span></td>

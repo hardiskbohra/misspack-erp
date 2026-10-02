@@ -47,7 +47,7 @@
             </p>
             <p style="margin:0;font-weight:600;color:#687386;">
                 {{ $linkedVendorPayment->relationLoaded('vendor') && $linkedVendorPayment->vendor ? $linkedVendorPayment->vendor->vendor_name : 'Vendor' }}
-                · {{ $linkedVendorPayment->foreign_currency }} {{ number_format((float) $linkedVendorPayment->foreign_amount, 2) }}
+                · {{ money($linkedVendorPayment->foreign_amount, $linkedVendorPayment->foreign_currency) }}
                 @if ($linkedVendorPayment->exchange_rate)
                     @ {{ rtrim(rtrim(number_format((float) $linkedVendorPayment->exchange_rate, 2), '0'), '.') }}
                 @endif
@@ -101,9 +101,9 @@
             <div class="master-card master-section">
                 <h3 class="master-section-title">Amount</h3>
                 <div class="{{ $entry->transaction_type === 'credit' ? 'amount-credit' : 'amount-debit' }}">
-                    {{ $entry->currency }} {{ number_format($entry->amount(), 2) }}</div>
+                    {{ money($entry->amount(), $entry->currency) }}</div>
                 <p style="font-weight:800;color:#687386;">Balance:
-                    {{ $entry->balance !== null ? $entry->currency . ' ' . number_format((float) $entry->balance, 2) : '-' }}
+                    {{ $entry->balance !== null ? money($entry->balance, $entry->currency) : '-' }}
                 </p>
             </div>
             <div class="master-card master-section">

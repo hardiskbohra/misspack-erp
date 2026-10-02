@@ -142,26 +142,23 @@
                     <div class="projects-mini-grid">
                         <div>
                             <span>Estimated</span>
-                            <strong>{{ $project->currency == 'INR' ? '₹' : $project->currency }}
-                                {{ number_format((float) $project->estimated_value, 2) }}</strong>
+                            <strong>{{ money($project->estimated_value, $project->currency) }}</strong>
                         </div>
                         <div>
                             <span>Inward</span>
-                            <strong class="projects-money-green">{{ $project->currency == 'INR' ? '₹' : $project->currency }}
-                                {{ number_format($totals['inward'], 2) }}</strong>
+                            <strong class="projects-money-green">{{ money($totals['inward'], $project->currency) }}</strong>
                         </div>
                         <div>
                             <span>Expense</span>
-                            <strong class="projects-money-red">{{ $project->currency == 'INR' ? '₹' : $project->currency }}
-                                {{ number_format($totals['outward'], 2) }}</strong>
+                            <strong class="projects-money-red">{{ money($totals['outward'], $project->currency) }}</strong>
                         </div>
                         <div>
                             <span>Outstanding</span>
-                            <strong>{{ $project->currency == 'INR' ? '₹' : $project->currency }} {{ number_format($totals['outstanding'], 2) }}</strong>
+                            <strong>{{ money($totals['outstanding'], $project->currency) }}</strong>
                         </div>
                         <div>
                             <span>Profit/Loss</span>
-                            <strong>{{ $project->currency == 'INR' ? '₹' : $project->currency }} {{ number_format(($totals['inward'] - $totals['outward']), 2) }}</strong>
+                            <strong>{{ money(($totals['inward'] - $totals['outward']), $project->currency) }}</strong>
                         </div>
                     </div>
 
