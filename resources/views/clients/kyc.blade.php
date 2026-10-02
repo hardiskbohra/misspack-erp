@@ -15,17 +15,22 @@
 
 <body>
     @php
+        /* Plain PHP inside a @php block: a Blade directive here is compiled a
+           second time into PHP syntax inside PHP and the view dies parsing. */
         $statusClass = str_replace('_', '-', $client->status);
         $kycToast = [];
-        @if(session('success'))
+
+        if (session('success')) {
             $kycToast[] = ['type' => 'success', 'message' => session('success'), 'color' => '#4f83f1'];
-        @endif
-        @if(session('error'))
+        }
+
+        if (session('error')) {
             $kycToast[] = ['type' => 'error', 'message' => session('error'), 'color' => '#ef4770'];
-        @endif
-        @if($errors->any())
+        }
+
+        if ($errors->any()) {
             $kycToast[] = ['type' => 'validation', 'message' => $errors->first(), 'color' => '#ef4770'];
-        @endif
+        }
     @endphp
     <div class="page">
         <div class="card header" style="background:#2f3a4c;">

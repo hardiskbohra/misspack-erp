@@ -316,6 +316,57 @@ for (const file of files) {
 check('every @php block has balanced brackets',
     unbalancedPhpBlocks.length === 0, [...new Set(unbalancedPhpBlocks)].slice(0, 3).join(' | '));
 
+/* A Blade directive inside a PHP island is not a directive. Blade turns the
+   whole island into PHP first, then walks the directives it can still see — so
+   "@if" written inside @php … @endphp is compiled a second time into PHP syntax
+   inside a PHP syntax, and the view is a parse error the first time it renders.
+   Strings and comments are blanked first: "user@example.com" is not a directive. */
+const phpIslands = [];
+
+const literalFree = code => {
+    let out = '';
+    let quote = null;
+    let comment = null;
+
+    for (let i = 0; i < code.length; i++) {
+        const char = code[i];
+        const next = code[i + 1];
+
+        if (comment === '//') { if (char === '\n') { comment = null; out += char; } continue; }
+        if (comment === '/*') { if (char === '*' && next === '/') { comment = null; i++; } continue; }
+        if (quote) { if (char === '\\') { i++; continue; } if (char === quote) quote = null; continue; }
+
+        if (char === '/' && next === '/') { comment = '//'; i++; continue; }
+        if (char === '/' && next === '*') { comment = '/*'; i++; continue; }
+        if (char === "'" || char === '"') { quote = char; out += ' '; continue; }
+
+        out += char;
+    }
+
+    return out;
+};
+
+for (const file of files) {
+    const text = fs.readFileSync(file, 'utf8');
+    const islands = [
+        ...text.matchAll(/@php(?!\()([\s\S]*?)@endphp/g),
+        ...text.matchAll(/@php\(([\s\S]*?)\)(?=\s*(?:<|\n|@))/g),
+        ...text.matchAll(/\{\{(?!--)([\s\S]*?)\}\}/g),
+    ];
+
+    for (const island of islands) {
+        const found = literalFree(island[1]).match(/@[A-Za-z_]\w*/g);
+
+        if (found) {
+            const line = text.slice(0, island.index).split('\n').length;
+            phpIslands.push(`${rel(file)}:${line} has ${[...new Set(found)].join(', ')} inside PHP`);
+        }
+    }
+}
+
+check('no blade directive is written inside PHP',
+    phpIslands.length === 0, [...new Set(phpIslands)].slice(0, 3).join(' | '));
+
 /* ------------------------------------------------- 7. structural tags balance */
 
 /* A stray </div> or </td> is invisible in a diff and obvious in a browser: the

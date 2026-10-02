@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\DateRanges;
 use App\Models\CashflowAccount;
 use App\Models\CashflowCategory;
+use App\Models\CashflowAttachment;
 use App\Models\CashflowEntry;
 use App\Models\CashflowMasterOption;
 use App\Models\SavedView;
@@ -147,13 +148,14 @@ class CashflowController extends Controller
 
     public function show(CashflowEntry $cashflow): View
     {
-        $with = ['account', 'category', 'creator'];
+        $with = ['account', 'category', 'creator', 'attachments.uploader'];
         if ($this->clientModelAvailable()) $with[] = 'client';
         if ($this->vendorModelAvailable()) $with[] = 'vendor';
         $cashflow->load($with);
 
         return view('cashflows.show', array_merge($this->sharedData(), [
             'entry' => $cashflow,
+            'documentTypeOptions' => CashflowAttachment::documentTypeOptions(),
             'linkedVendorPayment' => app(VendorPaymentCashflowSync::class)->linkedPaymentFor($cashflow),
             'linkedShipmentCost' => app(\App\Services\ShipmentCostCashflowSync::class)->linkedCostFor($cashflow),
         ]));
@@ -319,6 +321,7 @@ class CashflowController extends Controller
             'accountingStatus' => 'all',
             'dateFrom' => null,
             'dateTo' => null,
+            'documents' => 'all',
         ]);
 
         $count = function (array $overrides) use ($base) {
@@ -330,6 +333,8 @@ class CashflowController extends Controller
             'credit' => $count(['transactionType' => 'credit']),
             'debit' => $count(['transactionType' => 'debit']),
             'pending' => $count(['accountingStatus' => 'pending']),
+            // the month-end to-do list: entries with no bill on file
+            'missing_documents' => $count(['documents' => 'missing']),
         ];
 
         /* The period chips. The ranges come from the shared helper, so the
@@ -404,6 +409,8 @@ class CashflowController extends Controller
             'vendorId' => $request->query('vendor_id', 'all'),
             'dateFrom' => $request->query('date_from'),
             'dateTo' => $request->query('date_to'),
+            // all · missing (no document filed) · attached
+            'documents' => $request->query('documents', 'all'),
         ];
     }
 
@@ -418,6 +425,10 @@ class CashflowController extends Controller
 
         return CashflowEntry::query()
             ->when($withRelations, fn ($q) => $q->with($with), fn ($q) => $q->with(['account', 'category']))
+            /* The paperclip on a row is this count, fetched with the page
+               instead of one query per row. Only the list asks for relations,
+               so the reports and the chip counts never pay for it. */
+            ->when($withRelations, fn ($q) => $q->withCount('attachments'))
             ->search($filters['search'] ?? null)
             ->when(($filters['accountId'] ?? 'all') !== 'all', fn ($q) => $q->where('account_id', $filters['accountId']))
             ->when(($filters['accountType'] ?? 'all') !== 'all', fn ($q) => $q->whereHas('account', fn ($a) => $a->where('account_type', $filters['accountType'])))
@@ -428,7 +439,9 @@ class CashflowController extends Controller
             ->when(($filters['clientId'] ?? 'all') !== 'all', fn ($q) => $q->where('client_id', $filters['clientId']))
             ->when(($filters['vendorId'] ?? 'all') !== 'all', fn ($q) => $q->where('vendor_id', $filters['vendorId']))
             ->when($filters['dateFrom'] ?? null, fn ($q) => $q->whereDate('entry_date', '>=', $filters['dateFrom']))
-            ->when($filters['dateTo'] ?? null, fn ($q) => $q->whereDate('entry_date', '<=', $filters['dateTo']));
+            ->when($filters['dateTo'] ?? null, fn ($q) => $q->whereDate('entry_date', '<=', $filters['dateTo']))
+            ->when(($filters['documents'] ?? 'all') === 'missing', fn ($q) => $q->whereDoesntHave('attachments'))
+            ->when(($filters['documents'] ?? 'all') === 'attached', fn ($q) => $q->whereHas('attachments'));
     }
 
     private function reportData(Request $request): array

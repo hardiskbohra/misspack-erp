@@ -28,6 +28,9 @@ const CSS = path.join(ROOT, 'public/assets/css/shipments.css');
    here so every module list is the same surface */
 const LIST_CSS = path.join(ROOT, 'public/assets/css/master-list.css');
 const CASHFLOW_VIEW = path.join(ROOT, 'resources/views/cashflows/index.blade.php');
+/* the archive is the second table of the same module: same shell, its own
+   columns, and it has to hold its grid for the same reason */
+const DOCUMENTS_VIEW = path.join(ROOT, 'resources/views/cashflows/documents.blade.php');
 const CASHFLOW_CSS = path.join(ROOT, 'public/assets/css/cashflows.css');
 const JS = path.join(ROOT, 'public/assets/js/shipments.js');
 const LAYOUT_JS = path.join(ROOT, 'public/assets/js/app-layout.js');
@@ -38,6 +41,7 @@ const out = [];
 const check = (name, ok, detail = '') => out.push([name, !!ok, detail]);
 
 const view = fs.readFileSync(VIEW, 'utf8');
+const documentsView = fs.readFileSync(DOCUMENTS_VIEW, 'utf8');
 const css = fs.readFileSync(CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const js = fs.readFileSync(JS, 'utf8');
 const listJs = fs.readFileSync(path.join(ROOT, 'public/assets/js/master-list.js'), 'utf8');
@@ -745,11 +749,31 @@ check('both lists share one row rhythm',
     'line ' + lineToken(css) + '/' + lineToken(cashCss) + ' sub ' + subToken(css) + '/' + subToken(cashCss)
     + ' compact ' + compactToken(css) + '/' + compactToken(cashCss));
 
-check('both lists stop their columns from reflowing',
-    (css.match(/\.master-table th:nth-child\(\d+\) \{ width:/g) || []).length >= 7
-    && (cashCss.match(/\.master-table th:nth-child\(\d+\) \{ width:/g) || []).length === 8
-    && /th:last-child,[\s\S]{0,60}td:last-child \{[\s\S]{0,40}text-align: right/.test(css)
-    && /th:last-child,[\s\S]{0,60}td:last-child \{[\s\S]{0,40}text-align: right/.test(cashCss));
+/* Every table names a width per column, and the widths are 1..n with no gap:
+   a column without one is the column that reflows. The count is read per root
+   rather than per sheet, so a second table in the same module — the document
+   archive — is measured on its own columns, not on its neighbour's. */
+const columnHints = (sheet, root) => [
+    ...sheet.matchAll(new RegExp('\\.' + root + ' \\.master-table th:nth-child\\((\\d+)\\) \\{ width:', 'g')),
+].map(match => Number(match[1]));
+
+const contiguous = columns => columns.length > 0
+    && columns.every((column, index) => column === index + 1);
+
+const headingCount = (source, root) => (source.match(/<th scope="col"/g) || []).length;
+
+const shipColumns = columnHints(css, 'ship-index');
+const ledgerColumns = columnHints(cashCss, 'cashflow-index');
+const archiveColumns = columnHints(cashCss, 'cashflow-documents');
+const alignsLast = sheet => /th:last-child,[\s\S]{0,60}td:last-child \{[\s\S]{0,40}text-align: right/.test(sheet);
+
+check('every list table stops its columns from reflowing',
+    shipColumns.length >= 7 && contiguous(shipColumns)
+    && contiguous(ledgerColumns) && ledgerColumns.length === headingCount(cashView, 'cashflow-index')
+    && contiguous(archiveColumns) && archiveColumns.length === headingCount(documentsView, 'cashflow-documents')
+    && alignsLast(css) && alignsLast(cashCss),
+    'ship ' + shipColumns.length + ' ledger ' + ledgerColumns.length + ' archive ' + archiveColumns.length
+    + ' headings ' + headingCount(cashView) + '/' + headingCount(documentsView));
 
 /* each list loads the shared sheet after its own, so the chrome wins its own
    properties without out-specifying the module cells */

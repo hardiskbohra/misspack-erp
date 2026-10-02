@@ -909,12 +909,202 @@
     }
 }
 
+/* ---------------- documents ----------------
+   The paperwork behind a row: the count the ledger prints, the card on the
+   record page and the archive's own cells. The tones follow the status pills
+   above — one background and one foreground, both from tokens, with the dark
+   theme only having to raise the foreground. */
+
+.cf-doc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 8px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--mc-soft);
+    color: var(--mc-text-2);
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.7;
+    text-decoration: none;
+    vertical-align: middle;
+}
+
+.cf-doc-chip:hover {
+    background: var(--mc-border);
+    color: var(--mc-text);
+}
+
+.cf-doc-chip i {
+    font-size: 10.5px;
+}
+
+.cf-doc-state {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--tone-bg, var(--mc-soft));
+    color: var(--tone-fg, var(--mc-text-2));
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.cf-doc-state.is-filed {
+    --tone-bg: rgba(16, 185, 129, .18);
+    --tone-fg: #047857;
+}
+
+.cf-doc-state.is-missing {
+    --tone-bg: rgba(245, 158, 11, .18);
+    --tone-fg: #b45309;
+}
+
+:root[data-theme="dark"] .cf-doc-state.is-filed {
+    --tone-fg: #6ee7b7;
+}
+
+:root[data-theme="dark"] .cf-doc-state.is-missing {
+    --tone-fg: #fcd34d;
+}
+
+.cf-doc-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.cf-doc {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+}
+
+.cf-doc-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--mc-soft);
+    color: var(--master-primary);
+    font-size: 14px;
+}
+
+.cf-doc-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.cf-doc-name {
+    color: var(--mc-text);
+    font-weight: 700;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.cf-doc-name:hover {
+    color: var(--master-primary);
+    text-decoration: underline;
+}
+
+.cf-doc-actions {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.cf-doc-upload {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--mc-border);
+}
+
+.cf-doc-upload-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 16px;
+}
+
+.cf-doc-upload-fields .full {
+    grid-column: 1 / -1;
+}
+
+.cf-doc-upload-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 14px;
+}
+
+.cf-doc-type {
+    display: inline-flex;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--mc-soft);
+    color: var(--mc-text-2);
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* the archive's seven columns: the file name takes the room the ledger gives
+   its particulars, the three short columns on the right stay narrow, so the
+   header and the body keep one grid as the month grows */
+.cashflow-documents .master-table th:nth-child(1) { width: 330px; }
+.cashflow-documents .master-table th:nth-child(2) { width: 280px; }
+.cashflow-documents .master-table th:nth-child(3) { width: 200px; }
+.cashflow-documents .master-table th:nth-child(4) { width: 140px; }
+.cashflow-documents .master-table th:nth-child(5) { width: 110px; }
+.cashflow-documents .master-table th:nth-child(6) { width: 130px; }
+.cashflow-documents .master-table th:nth-child(7) { width: 120px; }
+
+.cashflow-documents .master-table th:last-child,
+.cashflow-documents .master-table td:last-child {
+    text-align: right;
+}
+
+.cf-doc-cell .cf-doc-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cf-doc-cell .cf-doc-name i {
+    color: var(--mc-text-3);
+}
+
+.cf-doc-entry {
+    color: var(--mc-text);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.cf-doc-entry:hover {
+    color: var(--master-primary);
+    text-decoration: underline;
+}
+
 /* ---------------- mobile ----------------
    The row becomes a card (master-list.css labels each cell); the money cells
    read as values rather than as a right-aligned column. */
 
 @media (max-width: 768px) {
-    .cashflow-index .master-table td:last-child {
+    .cashflow-index .master-table td:last-child,
+    .cashflow-documents .master-table td:last-child {
         text-align: left;
     }
 
@@ -924,5 +1114,19 @@
 
     .cashflow-index .cf-money {
         white-space: normal;
+    }
+
+    /* the archive's cards: the actions drop under the file they belong to */
+    .cashflow-documents .cf-doc {
+        flex-wrap: wrap;
+    }
+
+    .cashflow-documents .cf-doc-actions {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .cf-doc-upload-fields {
+        grid-template-columns: 1fr;
     }
 }

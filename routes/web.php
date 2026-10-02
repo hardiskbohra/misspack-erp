@@ -7,6 +7,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\CashflowAttachmentController;
 use App\Http\Controllers\CashflowController;
 use App\Http\Controllers\CashflowSettingController;
 use App\Http\Controllers\PriceCalculatorController;
@@ -225,6 +226,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/cashflows/settings/masters', [CashflowSettingController::class, 'storeMaster'])->name('cashflows.settings.masters.store');
     Route::put('/cashflows/settings/masters/{master}', [CashflowSettingController::class, 'updateMaster'])->name('cashflows.settings.masters.update');
     Route::delete('/cashflows/settings/masters/{master}', [CashflowSettingController::class, 'destroyMaster'])->name('cashflows.settings.masters.destroy');
+
+    /* The bills behind the ledger. Registered before the resource route so
+       /cashflows/documents is the archive rather than a missing entry. */
+    Route::get('/cashflows/documents', [CashflowAttachmentController::class, 'index'])->name('cashflows.documents');
+    Route::post('/cashflows/{cashflow}/attachments', [CashflowAttachmentController::class, 'store'])->name('cashflows.attachments.store');
+    Route::delete('/cashflow-attachments/{attachment}', [CashflowAttachmentController::class, 'destroy'])->name('cashflows.attachments.destroy');
 
     Route::post('/cashflows/saved-views', [CashflowController::class, 'storeSavedView'])->name('cashflows.saved-views.store');
     Route::delete('/cashflows/saved-views/{savedView}', [CashflowController::class, 'destroySavedView'])->name('cashflows.saved-views.destroy');

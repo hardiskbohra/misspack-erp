@@ -330,6 +330,14 @@
     padding: 12px 16px 0;
 }
 
+/* The right-hand end of the toolbar: the destinations and the density switch,
+   so a list can offer a link without pushing the density switch around. */
+.master-list .master-list-toolbar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .master-list .master-list-hint {
     display: flex;
     align-items: center;

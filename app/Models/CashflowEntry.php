@@ -35,6 +35,15 @@ class CashflowEntry extends Model
         return $this->belongsTo(CashflowCategory::class, 'category_id');
     }
 
+    /**
+     * The bills and slips filed against this entry. An entry with none is
+     * what the ledger's "Missing documents" chip counts.
+     */
+    public function attachments()
+    {
+        return $this->hasMany(CashflowAttachment::class, 'cashflow_entry_id');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

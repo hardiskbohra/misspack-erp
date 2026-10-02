@@ -8,7 +8,8 @@
    (The old delete-confirm dialog had no trigger in the markup and was
    removed; row delete confirms via <form data-confirm> handled by
    master-alert.js.)
-   The other cashflow views (form, pdf, reports, settings, show) are static.
+   The ledger and the document archive share the list toolkit; the other
+   cashflow views (form, pdf, reports, settings, show) are static.
    ========================================================================== */
 (function () {
     'use strict';
@@ -23,11 +24,17 @@
 
     /* The list behaves like every other list screen: the shared toolkit owns
        row navigation, the density switch, the pinned-header shadow and the
-       saved-view form; this file names the cashflow list. */
+       saved-view form; this file names the cashflow lists. The ledger and the
+       document archive are the same surface, so the density choice is shared
+       between them. */
     function initList() {
+        ['.cashflow-index', '.cashflow-documents'].forEach(function (root) {
+            window.MasterList.gridShadow({ root: root });
+            window.MasterList.density({ root: root, key: 'misspack.cashflows.density' });
+        });
+
+        /* only the ledger's rows carry data-href */
         window.MasterList.rowNavigation({ root: '.cashflow-index' });
-        window.MasterList.gridShadow({ root: '.cashflow-index' });
-        window.MasterList.density({ root: '.cashflow-index', key: 'misspack.cashflows.density' });
         window.MasterList.saveViewToggle();
     }
 

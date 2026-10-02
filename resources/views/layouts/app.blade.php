@@ -65,7 +65,11 @@
             ['label' => 'Vendors', 'route' => 'vendors.index', 'active' => 'vendors.*', 'icon' => 'fa-solid fa-user-gear'],
             ['label' => 'Vendor Quotes', 'route' => 'vendor-quotes.index', 'active' => 'vendor-quotes.*', 'icon' => 'fa-solid fa-money-bill'],
             ['section' => 'Accounts'],
-            ['label' => 'Cashflow', 'route' => 'cashflows.index', 'active' => 'cashflows.*', 'icon' => 'fa-solid fa-scale-balanced'],
+            ['label' => 'Cashflow', 'route' => 'cashflows.index', 'active' => 'cashflows.*', 'except' => 'cashflows.documents', 'icon' => 'fa-solid fa-scale-balanced'],
+            /* The archive is a page of the module, not a second module: it sits
+               here so a month's paperwork is one click from anywhere, and the
+               Cashflow item above stays dark while it is open. */
+            ['label' => 'Document Archive', 'route' => 'cashflows.documents', 'active' => 'cashflows.documents', 'icon' => 'fa-regular fa-folder-open'],
             ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'icon' => 'fas fa-users-cog'],
         ];
     @endphp
@@ -89,8 +93,14 @@
                 @if(isset($item['section']))
                     <div class="sidebar-section">{{ $item['section'] }}</div>
                 @else
+                    @php
+                        /* One item lights up at a time: an item may exclude the
+                           routes a sibling item owns. */
+                        $itemActive = request()->routeIs($item['active'])
+                            && ! (isset($item['except']) && request()->routeIs($item['except']));
+                    @endphp
                     <a href="{{ route($item['route']) }}"
-                       class="sidebar-item {{ request()->routeIs($item['active']) ? 'active' : '' }}">
+                       class="sidebar-item {{ $itemActive ? 'active' : '' }}">
                         <i class="{{ $item['icon'] }}"></i>
                         <span class="sidebar-text">{{ $item['label'] }}</span>
                     </a>

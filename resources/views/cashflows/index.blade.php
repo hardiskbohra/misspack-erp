@@ -12,6 +12,7 @@
         + Quick Entry
     </button>
     <a class="master-btn master-btn-soft" href="{{ route('cashflows.create') }}">Detailed Form</a>
+    <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.documents') }}">Documents</a>
     <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.reports') }}">Reports</a>
     <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.settings.index') }}">Settings</a>
 @endsection
@@ -33,13 +34,14 @@
         || ($transactionType && $transactionType !== 'all')
         || ($accountingStatus && $accountingStatus !== 'all')
         || ($relatedPartyType && $relatedPartyType !== 'all')
+        || ($documents && $documents !== 'all')
         || filled($dateFrom)
         || filled($dateTo);
 
     /* The quick-view chips are filters too: clicking one replaces the chip
        dimension it owns and keeps everything else. */
     $chipBase = collect(request()->except([
-        'transaction_type', 'accounting_status', 'date_from', 'date_to', 'page', 'saved_view',
+        'transaction_type', 'accounting_status', 'date_from', 'date_to', 'documents', 'page', 'saved_view',
     ]))->reject(fn ($value) => $value === null || $value === '' || $value === 'all');
 
     /* The period chips are the shared ranges (App\Helpers\DateRanges): the
@@ -50,6 +52,7 @@
         'credit' => $transactionType === 'credit',
         'debit' => $transactionType === 'debit',
         'pending' => $accountingStatus === 'pending',
+        'missing_documents' => $documents === 'missing',
     ];
     foreach ($dateRanges as $rangeKey => $range) {
         $chipActive[$rangeKey] = $activeRange === $rangeKey;
@@ -171,6 +174,13 @@
                      four ranges every list gets from App\Helpers\DateRanges.
                      Each one is a closed range, so the strip below can name it
                      and clear both ends in one click. --}}
+                {{-- The month-end question is "what has no bill yet", so it is
+                     a filter like any other: the count comes from the same
+                     query as the rows, and the archive is one link away. --}}
+                <a class="master-list-chip {{ $chipActive['missing_documents'] ? 'is-active' : '' }}"
+                    href="{{ route('cashflows.index', $chipBase->all() + ['documents' => 'missing']) }}">
+                    Missing documents <span class="master-list-chip-count">{{ $chipCounts['missing_documents'] ?? 0 }}</span>
+                </a>
                 @foreach ($dateRanges as $rangeKey => $range)
                     <a class="master-list-chip {{ $chipActive[$rangeKey] ? 'is-active' : '' }}"
                         href="{{ route('cashflows.index', $chipBase->all() + ['date_from' => $range['from'], 'date_to' => $range['to']]) }}">
@@ -310,6 +320,17 @@
                         </span>
                     @endif
 
+                    @if ($documents && $documents !== 'all')
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Documents</span>
+                            <span class="master-list-applied-value">
+                                {{ $documents === 'missing' ? 'Missing only' : 'Attached only' }}
+                            </span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('documents') }}"
+                                aria-label="Remove the documents filter" title="Remove the documents filter">&times;</a>
+                        </span>
+                    @endif
+
                     @if (filled($dateFrom) || filled($dateTo))
                         <span class="master-list-applied-chip">
                             <span class="master-list-applied-key">{{ $activeRange ? 'Period' : 'Dates' }}</span>
@@ -343,11 +364,20 @@
                 Newest first &middot; grouped by day
             </p>
 
-            <div class="master-list-density desktop-only" role="group" aria-label="Row density">
-                <button type="button" class="master-list-density-btn" data-density="comfortable"
-                    aria-pressed="true">Comfortable</button>
-                <button type="button" class="master-list-density-btn" data-density="compact"
-                    aria-pressed="false">Compact</button>
+            {{-- The right-hand end of the toolbar is the shared slot: a
+                 module's own destinations first, then the density switch every
+                 list has in the same place. --}}
+            <div class="master-list-toolbar-actions">
+                <a class="master-btn master-btn-ghost master-btn-sm" href="{{ route('cashflows.documents') }}">
+                    <i class="fa-regular fa-folder-open" aria-hidden="true"></i> Document archive
+                </a>
+
+                <div class="master-list-density desktop-only" role="group" aria-label="Row density">
+                    <button type="button" class="master-list-density-btn" data-density="comfortable"
+                        aria-pressed="true">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact"
+                        aria-pressed="false">Compact</button>
+                </div>
             </div>
         </div>
 
@@ -392,6 +422,12 @@
                             </td>
                             <td class="cf-particular" data-label="Particular">
                                 <strong>{{ $entry->particular }}</strong>
+                                @if (($entry->attachments_count ?? 0) > 0)
+                                    <a class="cf-doc-chip" href="{{ route('cashflows.show', $entry) }}#documents"
+                                        title="{{ $entry->attachments_count }} document(s) on file — open them">
+                                        <i class="fa-solid fa-paperclip" aria-hidden="true"></i>{{ $entry->attachments_count }}
+                                    </a>
+                                @endif
                                 @if (! empty($mirroredPayments[$entry->id] ?? null))
                                     <a class="cf-sync-chip" href="{{ route('vendors.show', $entry->vendor_id) }}#payments"
                                         title="Auto-synced from a vendor payment — open the vendor ledger">↔ Vendor payment</a>
@@ -442,6 +478,10 @@
                                             <a href="{{ route('cashflows.show', $entry) }}">
                                                 <i class="fas fa-eye" aria-hidden="true"></i>
                                                 View Entry
+                                            </a>
+                                            <a href="{{ route('cashflows.show', $entry) }}#documents">
+                                                <i class="fas fa-paperclip" aria-hidden="true"></i>
+                                                Documents
                                             </a>
                                             <a href="{{ route('cashflows.edit', $entry) }}">
                                                 <i class="fas fa-pen" aria-hidden="true"></i>

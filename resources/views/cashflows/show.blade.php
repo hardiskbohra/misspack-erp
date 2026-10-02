@@ -112,5 +112,7 @@
             </div>
         </div>
     </div>
+
+    @include('cashflows.partials.documents-card', ['documentTypeOptions' => $documentTypeOptions])
 </div>
 @endsection

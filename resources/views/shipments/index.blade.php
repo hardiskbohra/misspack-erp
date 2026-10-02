@@ -211,12 +211,16 @@
             </p>
 
             {{-- How much of the list fits on screen is a preference, not a
-                 filter, so it lives beside the ordering rule. --}}
-            <div class="master-list-density desktop-only" role="group" aria-label="Row density">
-                <button type="button" class="master-list-density-btn" data-density="comfortable"
-                    aria-pressed="true">Comfortable</button>
-                <button type="button" class="master-list-density-btn" data-density="compact"
-                    aria-pressed="false">Compact</button>
+                 filter, so it lives beside the ordering rule — in the same
+                 right-hand slot every list uses, so a module can put its own
+                 destinations next to the density switch. --}}
+            <div class="master-list-toolbar-actions">
+                <div class="master-list-density desktop-only" role="group" aria-label="Row density">
+                    <button type="button" class="master-list-density-btn" data-density="comfortable"
+                        aria-pressed="true">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact"
+                        aria-pressed="false">Compact</button>
+                </div>
             </div>
         </div>
         <div class="master-table-wrap">

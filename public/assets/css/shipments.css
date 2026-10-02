@@ -1485,6 +1485,10 @@
    columns from reflowing between pages as the content changes. */
 .ship-index .master-table th:nth-child(1) { width: 104px; }
 .ship-index .master-table th:nth-child(2) { width: 230px; }
+/* Route is the one column that was left to the browser: with nothing declared
+   it took whatever the fixed columns did not, so its two-line "from → to"
+   wrapped differently on every page and the row height moved with it. */
+.ship-index .master-table th:nth-child(3) { width: 168px; }
 .ship-index .master-table th:nth-child(4) { width: 168px; }
 .ship-index .master-table th:nth-child(5) { width: 132px; }
 .ship-index .master-table th:nth-child(6) { width: 150px; }
