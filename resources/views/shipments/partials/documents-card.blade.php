@@ -2,7 +2,7 @@
     $documentSummary = $documentSummary ?? app(\App\Services\ShipmentDocuments::class)->summary($shipment);
 @endphp
 
-<div class="master-card master-card--flat master-section">
+<section class="master-card master-card--flat master-section">
     <div class="master-section-head">
         <div>
             <h3 class="master-section-title">Paperwork Checklist</h3>
@@ -46,13 +46,25 @@
 
     <form method="POST" action="{{ route('shipments.attachments.store', $shipment) }}" enctype="multipart/form-data" class="ship-doc-upload">
         @csrf
-        <select class="master-select" name="document_type" required>
-            @foreach ($documentTypes as $key => $label)
-                <option value="{{ $key }}">{{ $label }}</option>
-            @endforeach
-        </select>
-        <input class="master-input" type="file" name="attachment_photos[]" multiple required>
-        <label class="master-check"><input type="checkbox" name="is_public" value="1"> Client can see</label>
-        <button class="master-btn master-btn-primary">Upload document</button>
+        <div class="ship-doc-upload-fields">
+            <div class="ship-form-field">
+                <label class="ship-form-label" for="documentType">Document type</label>
+                <select class="master-select" id="documentType" name="document_type" required>
+                    @foreach ($documentTypes as $key => $label)
+                        <option value="{{ $key }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="ship-form-field">
+                <label class="ship-form-label" for="documentFiles">Files</label>
+                <input class="master-input" id="documentFiles" type="file" name="attachment_photos[]" multiple required>
+            </div>
+        </div>
+
+        <div class="ship-doc-upload-actions">
+            <label class="master-check"><input type="checkbox" name="is_public" value="1"> Client can see</label>
+            <button class="master-btn master-btn-primary master-btn-sm" type="submit">Upload document</button>
+        </div>
     </form>
-</div>
+</section>

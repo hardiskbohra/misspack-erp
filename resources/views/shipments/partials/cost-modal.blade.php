@@ -22,7 +22,7 @@
             <div class="master-modal-body">
                 <div class="master-modal-grid">
                     <div class="master-field">
-                        <label class="master-label">Cost Head <span class="master-required">*</span></label>
+                        <label class="master-label" for="costHead">Cost Head <span class="master-required">*</span></label>
                         <select class="master-select" name="cost_head" id="costHead" required>
                             @foreach ($costHeads as $key => $label)
                                 <option value="{{ $key }}">{{ $label }}</option>
@@ -30,16 +30,16 @@
                         </select>
                     </div>
                     <div class="master-field" id="costLabelField" hidden>
-                        <label class="master-label">Describe it</label>
+                        <label class="master-label" for="costLabel">Describe it</label>
                         <input class="master-input" name="label" id="costLabel" maxlength="120" placeholder="e.g. Port storage">
                     </div>
 
                     <div class="master-field">
-                        <label class="master-label">Amount <span class="master-required">*</span></label>
+                        <label class="master-label" for="costAmount">Amount <span class="master-required">*</span></label>
                         <input class="master-input" type="number" step="0.01" min="0" name="amount" id="costAmount" required>
                     </div>
                     <div class="master-field">
-                        <label class="master-label">Currency <span class="master-required">*</span></label>
+                        <label class="master-label" for="costCurrency">Currency <span class="master-required">*</span></label>
                         <select class="master-select" name="currency" id="costCurrency" required>
                             @foreach ($currencyOptions as $key => $label)
                                 <option value="{{ $key }}" @selected(($shipment->currency ?: 'INR') === $key)>{{ $label }}</option>
@@ -47,14 +47,14 @@
                         </select>
                     </div>
                     <div class="master-field" id="costRateField">
-                        <label class="master-label">Exchange Rate</label>
+                        <label class="master-label" for="costRate">Exchange Rate</label>
                         <input class="master-input" type="number" step="0.000001" min="0" name="exchange_rate" id="costRate"
                             placeholder="Required for non-INR bills">
                         <small class="master-sub">INR value = amount × rate (frozen at today's rate).</small>
                     </div>
 
                     <div class="master-field">
-                        <label class="master-label">Vendor / Forwarder</label>
+                        <label class="master-label" for="costVendor">Vendor / Forwarder</label>
                         <select class="master-select" name="vendor_id" id="costVendor">
                             <option value="">Not recorded</option>
                             @foreach (\App\Models\Vendor::query()->orderBy('vendor_name')->get(['id', 'vendor_name', 'contact_person_name']) as $vendor)
@@ -63,16 +63,16 @@
                         </select>
                     </div>
                     <div class="master-field">
-                        <label class="master-label">Bill / Document No.</label>
+                        <label class="master-label" for="costDocument">Bill / Document No.</label>
                         <input class="master-input" name="document_number" id="costDocument" maxlength="255">
                     </div>
                     <div class="master-field">
-                        <label class="master-label">Bill Date</label>
+                        <label class="master-label" for="costIncurredOn">Bill Date</label>
                         <input class="master-input" type="date" name="incurred_on" id="costIncurredOn">
                     </div>
 
                     <div class="master-field">
-                        <label class="master-label">Paid From Account</label>
+                        <label class="master-label" for="costAccount">Paid From Account</label>
                         <select class="master-select" name="paid_account_id" id="costAccount">
                             <option value="">Not paid yet</option>
                             @foreach ($paidAccounts as $account)
@@ -82,7 +82,7 @@
                         <small class="master-sub">Setting this posts the INR entry to cashflow.</small>
                     </div>
                     <div class="master-field">
-                        <label class="master-label">Payment Mode</label>
+                        <label class="master-label" for="costMode">Payment Mode</label>
                         <select class="master-select" name="payment_mode" id="costMode">
                             @foreach ($paymentModeOptions as $key => $label)
                                 <option value="{{ $key }}">{{ $label }}</option>
@@ -90,11 +90,11 @@
                         </select>
                     </div>
                     <div class="master-field">
-                        <label class="master-label">Paid On</label>
+                        <label class="master-label" for="costPaidOn">Paid On</label>
                         <input class="master-input" type="date" name="paid_on" id="costPaidOn">
                     </div>
                     <div class="master-field full">
-                        <label class="master-label">Notes</label>
+                        <label class="master-label" for="costNotes">Notes</label>
                         <textarea class="master-textarea" name="notes" id="costNotes" rows="2"></textarea>
                     </div>
                 </div>

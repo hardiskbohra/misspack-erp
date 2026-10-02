@@ -786,22 +786,24 @@
     white-space: nowrap;
 }
 
+/* ETA state is a tint over the panel, not a solid pastel, so the same rule
+   is legible on white and on the dark card. */
 .ship-eta-overdue {
-    background: #fff0f1;
-    color: #d92d20;
-    border: 1px solid #fecdca;
+    background: rgba(217, 45, 32, .10);
+    color: #b42318;
+    border: 1px solid rgba(217, 45, 32, .28);
 }
 
 .ship-eta-due_soon {
-    background: #fffaeb;
+    background: rgba(245, 158, 11, .12);
     color: #b54708;
-    border: 1px solid #fedf89;
+    border: 1px solid rgba(245, 158, 11, .3);
 }
 
 .ship-eta-on_track {
-    background: #ecfdf3;
+    background: rgba(16, 185, 129, .12);
     color: #067647;
-    border: 1px solid #abefc6;
+    border: 1px solid rgba(16, 185, 129, .3);
 }
 
 .ship-eta-none {
@@ -815,8 +817,8 @@
 .ship-eway {
     display: block;
     margin-top: 3px;
-    font-size: 11px;
-    font-weight: 800;
+    font-size: 11.5px;
+    font-weight: 600;
 }
 
 .ship-eway-expiring {
@@ -1080,4 +1082,493 @@
     background: var(--mc-card-soft);
     color: var(--mc-text-3);
     border: 1px solid var(--mc-border);
+}
+
+/* ==========================================================================
+   Shipment detail — the record view
+   --------------------------------------------------------------------------
+   Sits on top of master-detail.css (the shared detail-page presentation) and
+   only adds what is specific to a shipment: the header's state chips, the
+   journey stepper, the paperwork list, the cost tiles and the side rail.
+   Colour rules that need a semantic hue are written as a light/dark pair —
+   a single pastel is only correct in one of the two themes.
+   ========================================================================== */
+
+/* ---------------- Header ---------------- */
+
+.ship-head h1 {
+    font-size: 20px;
+    font-weight: 650;
+    letter-spacing: -.01em;
+    line-height: 1.25;
+}
+
+.ship-head p {
+    margin-top: 4px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--mc-text-3);
+}
+
+.ship-head-tracking {
+    color: var(--mc-text-2);
+    font-weight: 600;
+}
+
+.ship-head .record-head-actions .master-btn {
+    height: 38px;
+    padding: 0 13px;
+    border-radius: 11px;
+    font-size: 13px;
+}
+
+.ship-head .record-head-actions .master-btn i {
+    font-size: 12px;
+    opacity: .85;
+}
+
+.ship-chip-warn {
+    border-color: rgba(245, 158, 11, .4);
+    background: rgba(245, 158, 11, .12);
+    color: #b54708;
+}
+
+/* ---------------- Side rail ---------------- */
+
+.ship-side {
+    display: grid;
+    gap: 16px;
+    align-content: start;
+}
+
+.ship-side .master-section {
+    margin-bottom: 0;
+}
+
+/* ---------------- Forms inside the rail ---------------- */
+
+.ship-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.ship-form-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--mc-text-3);
+}
+
+.ship-form-checks {
+    display: grid;
+    gap: 8px;
+    padding-top: 2px;
+}
+
+.history-form .master-btn {
+    width: 100%;
+    height: 42px;
+}
+
+.ship-doc-upload-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* ---------------- Journey stepper ----------------
+   Steps sit on a connector line with the marker above the label, so the
+   journey reads left to right and the current step is the one thing that is
+   filled. The old version boxed every step, which made six cards of noise. */
+
+.ship-track {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0 6px;
+}
+
+.ship-track li {
+    position: relative;
+    flex: none;
+    min-width: 0;
+    padding: 30px 8px 0 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.ship-track li::before {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 20px;
+    text-align: center;
+}
+
+.ship-track li::after {
+    content: '';
+    position: absolute;
+    top: 11px;
+    left: 28px;
+    right: 4px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--mc-border);
+}
+
+.ship-track li:last-child::after {
+    content: none;
+}
+
+.ship-track li.is-done {
+    border: 0;
+    background: none;
+    color: var(--mc-text-2);
+}
+
+.ship-track li.is-done::before {
+    border-color: rgba(16, 185, 129, .45);
+    background: rgba(16, 185, 129, .16);
+    color: #067647;
+}
+
+.ship-track li.is-done::after {
+    background: rgba(16, 185, 129, .4);
+}
+
+.ship-track li.is-current {
+    border: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--mc-text);
+    font-weight: 700;
+}
+
+.ship-track li.is-current::before {
+    border-color: var(--master-primary, #4f83f1);
+    background: var(--master-primary, #4f83f1);
+    color: #fff;
+    box-shadow: 0 0 0 4px var(--accent-light, rgba(79, 142, 247, .12));
+}
+
+.ship-track-note {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #b54708;
+}
+
+.ship-track-hint {
+    margin-top: 14px;
+}
+
+.ship-track-cancelled {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid rgba(217, 45, 32, .28);
+    border-radius: 12px;
+    background: rgba(217, 45, 32, .08);
+    color: #b42318;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ---------------- Paperwork checklist ----------------
+   A list of requirements, not a stack of cards: hairline rows with one state
+   marker each. The row itself stays neutral so a missing document reads as a
+   to-do, not as an error banner. */
+
+.ship-doc-list {
+    display: grid;
+    gap: 0;
+    margin: 0 0 16px;
+}
+
+.ship-doc {
+    padding: 10px 0;
+    border: 0;
+    border-top: 1px solid var(--mc-border);
+    border-radius: 0;
+    background: none;
+}
+
+.ship-doc:first-child {
+    border-top: 0;
+}
+
+.ship-doc.is-done,
+.ship-doc.is-missing,
+.ship-doc.is-optional {
+    background: none;
+    border-left: 0;
+}
+
+.ship-doc-mark {
+    width: 20px;
+    height: 20px;
+    border-radius: 7px;
+    font-size: 11px;
+}
+
+.ship-doc.is-done .ship-doc-mark {
+    background: rgba(16, 185, 129, .16);
+    color: #067647;
+}
+
+.ship-doc.is-missing .ship-doc-mark {
+    background: rgba(245, 158, 11, .18);
+    color: #b54708;
+}
+
+.ship-doc-body strong {
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+.ship-doc-upload {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px dashed var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+}
+
+.ship-doc-upload-fields {
+    display: grid;
+    gap: 10px;
+}
+
+/* ---------------- Cost tiles ----------------
+   Four numbers in one band with hairline separators — quieter than four
+   bordered boxes, and the figures line up because they are tabular. */
+
+.ship-cost-totals {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    margin-bottom: 16px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.ship-cost-totals > div {
+    padding: 11px 14px 12px;
+    border: 0;
+    border-left: 1px solid var(--mc-border);
+    border-radius: 0;
+    background: var(--mc-card-soft);
+}
+
+.ship-cost-totals > div:first-child {
+    border-left: 0;
+}
+
+.ship-cost-totals strong {
+    font-size: 15px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+}
+
+.ship-cost-table td {
+    vertical-align: middle;
+}
+
+.ship-cost-table .master-row-actions {
+    justify-content: flex-end;
+}
+
+.ship-col-actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.ship-cell-muted {
+    color: var(--mc-text-2);
+}
+
+/* The ledger link on a paid cost row is a reference, not a call to action. */
+.ship-cost-table .cf-sync-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 3px 8px;
+    border: 1px solid var(--mc-border);
+    border-radius: 8px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+    font-size: 11.5px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.ship-cost-table .cf-sync-chip:hover {
+    border-color: var(--master-primary, #4f83f1);
+    color: var(--master-primary, #4f83f1);
+}
+
+.ship-margin {
+    gap: 28px;
+    padding-top: 14px;
+    margin-top: 14px;
+    border-top: 1px solid var(--mc-border);
+}
+
+.ship-margin span {
+    font-size: 11px;
+    letter-spacing: .06em;
+}
+
+.ship-margin strong {
+    font-size: 15px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+}
+
+.ship-margin-hint {
+    margin: 0;
+    padding: 2px 0 0;
+}
+
+/* ---------------- Products (mobile cards) ---------------- */
+
+.product-card {
+    border-color: var(--mc-border);
+    background: var(--mc-card);
+}
+
+.product-desc,
+.product-grid span {
+    color: var(--mc-text-3);
+}
+
+.product-grid strong {
+    color: var(--mc-text);
+}
+
+.file-icon {
+    color: var(--mc-text-3);
+}
+
+/* A file (non-image) attachment uses the same footprint as a photo. */
+.ship .photo-card .file-card {
+    height: 150px;
+    padding: 14px;
+}
+
+.ship .photo-card .file-icon {
+    font-size: 34px;
+    margin-bottom: 8px;
+}
+
+/* ---------------- Responsive ---------------- */
+
+@media (max-width: 1100px) {
+    .ship-cost-totals {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ship-cost-totals > div:nth-child(3) {
+        border-left: 0;
+        border-top: 1px solid var(--mc-border);
+    }
+
+    .ship-cost-totals > div:nth-child(4) {
+        border-top: 1px solid var(--mc-border);
+    }
+}
+
+@media (max-width: 767px) {
+    /* The journey becomes a vertical list: the marker leads, the label
+       follows, and the connector runs down the side. */
+    .ship-track {
+        grid-template-columns: 1fr;
+        gap: 14px 0;
+    }
+
+    .ship-track li {
+        padding: 0 0 0 34px;
+    }
+
+    .ship-track li::after {
+        top: 24px;
+        left: 10px;
+        right: auto;
+        bottom: -14px;
+        width: 2px;
+        height: auto;
+    }
+
+    .ship-cost-totals {
+        grid-template-columns: 1fr;
+    }
+
+    .ship-cost-totals > div {
+        border-left: 0;
+        border-top: 1px solid var(--mc-border);
+    }
+
+    .ship-cost-totals > div:first-child {
+        border-top: 0;
+    }
+}
+
+/* ---------------- Dark theme pairs ----------------
+   Semantic hues are tints of a light-theme palette; on the dark panel they
+   need their own, lighter, values or they lose contrast. */
+
+:root[data-theme="dark"] .ship-chip-warn,
+:root[data-theme="dark"] .ship-doc.is-missing .ship-doc-mark,
+:root[data-theme="dark"] .ship-track-note {
+    color: #f6ad55;
+}
+
+:root[data-theme="dark"] .ship-doc.is-done .ship-doc-mark,
+:root[data-theme="dark"] .ship-track li.is-done::before {
+    color: #38d9a9;
+}
+
+:root[data-theme="dark"] .ship-track-cancelled {
+    color: #ff9b9b;
+}
+
+:root[data-theme="dark"] .ship-eta-overdue {
+    color: #ff9b9b;
+}
+
+:root[data-theme="dark"] .ship-eta-due_soon,
+:root[data-theme="dark"] .ship-eway-expiring {
+    color: #f6ad55;
+}
+
+:root[data-theme="dark"] .ship-eta-on_track {
+    color: #38d9a9;
+}
+
+:root[data-theme="dark"] .ship-eway-expired {
+    color: #ff9b9b;
 }
