@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sticker Sheet — Open Shipments</title>
-    <link rel="stylesheet" href="{{ asset('assets/css/shipping-mark.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/shipping-mark.css') }}">
 </head>
 
 <body>
@@ -57,7 +57,7 @@
     </div>
 
     {{-- Same local QR encoder as the single-shipment mark page. --}}
-    <script src="{{ asset('assets/js/qr.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/qr.js') }}"></script>
 </body>
 
 </html>

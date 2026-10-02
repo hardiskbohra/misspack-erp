@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shipment Summary — {{ $shipment->shipment_number }}</title>
-    <link rel="stylesheet" href="{{ asset('assets/css/shipment-print.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/shipment-print.css') }}">
 </head>
 
 <body>

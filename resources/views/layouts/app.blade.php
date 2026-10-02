@@ -32,20 +32,20 @@
     </script>
 
     {{-- App CSS --}}
-    <link rel="stylesheet" href="{{ asset('assets/css/core.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/app-layout.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/master-index.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/master-show.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/master-flat.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/core.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/app-layout.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-index.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-show.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-form.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-flat.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/vendor/select2/css/select2.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/select2-theme.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/master-alert.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/select2-theme.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-alert.css') }}">
 
     @stack('styles')
 
     {{-- Central responsive layer (must load last so it can fill module gaps) --}}
-    <link rel="stylesheet" href="{{ asset('assets/css/responsive.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/responsive.css') }}">
 </head>
 <body>
     @php
@@ -168,9 +168,9 @@
     <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
 
     {{-- App Scripts --}}
-    <script src="{{ asset('assets/js/master-alert.js') }}"></script>
-    <script src="{{ asset('assets/js/master-selects.js') }}"></script>
-    <script src="{{ asset('assets/js/app-layout.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/master-alert.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/master-selects.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/app-layout.js') }}"></script>
 
     {{-- Flash Messages (custom alerts) --}}
     <script>

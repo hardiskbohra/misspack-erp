@@ -4,8 +4,8 @@
 
 @section('content')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('assets/css/master-media.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/shipments.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-media.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/shipments.css') }}">
 @endpush
 
 @php($statusClass = str_replace('_', '-', $shipment->status))

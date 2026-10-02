@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Client Portal') | MissPack</title>
-    <link rel="stylesheet" href="{{ asset('assets/css/client-portal.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/client-portal.css') }}">
 
     {{-- Favicon --}}
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
@@ -18,20 +18,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     {{-- App CSS --}}
-    <link rel="stylesheet" href="{{ asset('assets/css/core.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/app-layout.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/master-index.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/master-show.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/master-flat.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/core.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/app-layout.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-index.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-show.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-form.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-flat.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/vendor/select2/css/select2.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/select2-theme.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/master-alert.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/select2-theme.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-alert.css') }}">
 
     @stack('styles')
 
     {{-- Central responsive layer (must load last so it can fill module gaps) --}}
-    <link rel="stylesheet" href="{{ asset('assets/css/responsive.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/responsive.css') }}">
 </head>
 <body style="line-height:1.5;">
 @php
@@ -112,9 +112,9 @@
 </div>
     <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
     <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
-    <script src="{{ asset('assets/js/master-alert.js') }}"></script>
-    <script src="{{ asset('assets/js/master-selects.js') }}"></script>
-    <script src="{{ asset('assets/js/client-portal.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/master-alert.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/master-selects.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/client-portal.js') }}"></script>
 @stack('scripts')
 </body>
 </html>

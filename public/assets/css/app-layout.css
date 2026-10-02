@@ -43,6 +43,9 @@
     --mc-text-2: #aab6c9;
     --mc-text-3: #7f8ba1;
     --mc-shadow: 0 14px 35px rgba(0, 0, 0, 0.35);
+    /* list-table header band: dark keeps the soft panel so the header still
+       separates from the rows */
+    --mc-table-head: var(--mc-card-soft);
 }
 
 :root[data-theme="light"] {
@@ -76,6 +79,8 @@
     --mc-text-2: #536079;
     --mc-text-3: #7d8aa0;
     --mc-shadow: 0 14px 35px rgba(25, 42, 70, 0.08);
+    /* list-table header band: plain white, like the card it sits on */
+    --mc-table-head: #ffffff;
 }
 
 /* ---------- Reset / Global Font ---------- */

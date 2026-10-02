@@ -5,7 +5,7 @@
 @section('content')
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('assets/css/shipments.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/shipments.css') }}">
 @endpush
 
     @php
@@ -516,7 +516,7 @@
 </template>
 
 @push('scripts')
-    <script src="{{ asset('assets/js/shipments.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/shipments.js') }}"></script>
     <script>
         let shipmentItemIndex = {{ count($items) }};
         document.getElementById('addShipmentItemRow')?.addEventListener('click', function () {

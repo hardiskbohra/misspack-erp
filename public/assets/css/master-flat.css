@@ -38,6 +38,33 @@
     border: 1px solid var(--mc-border);
 }
 
+/* --- list tables -----------------------------------------------------
+   The header band used to be painted with the soft surface (a blue-grey
+   #f8fbff in the light theme), which made the table look tinted next to a
+   white card. The band now uses --mc-table-head: white in the light theme,
+   the soft panel in dark (so the header still separates from the rows).
+   Every list table in the app gets this, not just the shipment screen. */
+
+.master-table th {
+    background: var(--mc-table-head, var(--mc-card-soft));
+}
+
+/* Controls inside a flat card sit on the card, not on a soft fill. */
+.master-card--flat .master-input,
+.master-card--flat .master-select,
+.master-card--flat .master-textarea,
+.master-card--flat .master-search .master-input {
+    background: var(--mc-card);
+}
+
+/* The filter row and the table wrapper are part of the card. Rows are left
+   transparent on purpose, so a module can still colour an individual row
+   (§ closed shipments, selected rows) without fighting this sheet. */
+.master-card--flat .master-filter-row,
+.master-card--flat .master-table-wrap {
+    background: var(--mc-card);
+}
+
 /* --- stat cards ------------------------------------------------------ */
 
 .master-card--flat .master-stat,

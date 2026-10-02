@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shipping Mark — {{ $shipment->shipment_number }}</title>
-    <link rel="stylesheet" href="{{ asset('assets/css/shipping-mark.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/shipping-mark.css') }}">
 </head>
 
 <body>
@@ -38,7 +38,7 @@
 
     {{-- QR codes are generated in the browser by our own encoder (no image
          service, no external request); stickers still print fine without it. --}}
-    <script src="{{ asset('assets/js/qr.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/qr.js') }}"></script>
 </body>
 
 </html>

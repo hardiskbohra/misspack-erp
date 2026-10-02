@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Shipment Tracking - {{ $shipment->shipment_number }} to {{ $shipment->to_name }}</title>
-    <link rel="stylesheet" href="{{ asset('assets/css/shipment-public.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/shipment-public.css') }}">
 </head>
 <body>
 @php($statusClass = str_replace('_', '-', $shipment->status))

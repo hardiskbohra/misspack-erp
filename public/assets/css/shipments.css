@@ -709,7 +709,7 @@
     min-width: 22px;
     padding: 1px 6px;
     border-radius: 999px;
-    background: var(--mc-card-soft);
+    background: var(--mc-card);
     border: 1px solid var(--mc-border);
     color: var(--mc-text-3);
     font-size: 11px;
