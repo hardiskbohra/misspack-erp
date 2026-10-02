@@ -680,8 +680,8 @@ class ShipmentController extends Controller
         return view('shipments.shipping-mark', [
             'shipment' => $shipment,
             'copies' => $copies,
-            /* 14 × 20 cm paper holds 3 stickers of 128 × 62.3 mm (one column) */
-            'perPage' => 3,
+            /* the label is 85 × 130 mm: one sticker per label */
+            'perPage' => 1,
             'modeOptions' => Shipment::modeOptions(),
         ]);
     }
@@ -813,7 +813,7 @@ class ShipmentController extends Controller
             'statusOptions' => Shipment::statusOptions(),
             'modeOptions' => Shipment::modeOptions(),
             'limit' => self::STICKER_SHEET_LIMIT,
-            'perPage' => 3,
+            'perPage' => 1,
         ]);
     }
 

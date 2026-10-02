@@ -1,19 +1,20 @@
 /* ==========================================================================
-   SHIPPING MARK — carton sticker sheet
+   SHIPPING MARK — carton sticker
    --------------------------------------------------------------------------
-   Prints 8 stickers per A4 page (2 columns x 4 rows). Every sticker is
-   self-contained, so a shipment with 30 packages prints 30 cut-out marks.
-   Screen preview uses the same geometry as the printed page, so what the
-   operator sees is what comes out of the printer.
+   One sticker per label: the office prints on 85 × 130 mm label stock, so
+   every copy is its own page. Each sticker is self-contained, and the screen
+   preview uses the same geometry as the printed label, so what the operator
+   sees is what comes out of the printer.
    ========================================================================== */
 
-/* The office prints on 14 × 20 cm paper, so the page is declared in absolute
-   millimetres rather than as a named size: a printer driver with no
-   "140 × 200" preset still gets the right box. 6mm margins leave 128 × 188mm,
-   which is three stickers of 128 × 62.3mm stacked with ~1mm to spare. */
+/* The label is 85 × 130 mm, declared in absolute millimetres rather than as a
+   named size: a driver with no "85 × 130" preset still gets the right box. No
+   page margin — the label has no printable area to spare — and the sticker
+   carries its own 4 mm safe inset, which also absorbs a printer's unprintable
+   edge. */
 @page {
-    size: 140mm 200mm;
-    margin: 6mm;
+    size: 85mm 130mm;
+    margin: 0;
 }
 
 * {
@@ -35,8 +36,8 @@ body {
     align-items: center;
     gap: 14px;
     flex-wrap: wrap;
-    /* matches the printable sheet width, so the preview and the toolbar line up */
-    max-width: 128mm;
+    /* matches the label width, so the preview and the toolbar line up */
+    max-width: 85mm;
     margin: 0 auto 14px;
     padding: 12px 14px;
     background: #fff;
@@ -93,16 +94,14 @@ body {
     color: #fff;
 }
 
-/* ---------------- the sheet ----------------
-   14 × 20 cm paper (140 × 200 mm) with 6 mm margins prints three stickers of
-   128 × 62.3 mm, one per row. Sizes are in millimetres so the screen preview
-   and the printer agree; the sheet width (128 mm) is the printable width, not
-   the paper. @page declares absolute millimetres so a printer driver without a
-   140 × 200 preset still gets the right box.
+/* ---------------- the label ----------------
+   One sticker per 85 × 130 mm label, so the sticker is the label: the sheet is
+   the full 85 mm width and a mark is 129.5 mm of the 130 mm height. Sizes are
+   in millimetres so the screen preview and the printer agree.
    -------------------------------------------------------------------------- */
 
 .mark-sheet {
-    width: 128mm; /* 140mm paper minus the 6mm page margins */
+    width: 85mm; /* the label width */
     margin: 0 auto;
     /* flex rows instead of grid: page breaks keep whole stickers together
        more reliably across browsers when each item is break-inside: avoid */
@@ -112,19 +111,20 @@ body {
 
 .mark {
     position: relative;
-    /* one sticker per row: 3 × 62.3mm = 186.9mm of the 188mm printable height.
-       The ~1mm of slack is deliberate — at exactly 188mm a rounding difference
-       in the print engine's page box can push the third sticker onto page 2.
-       A full-width sticker is what gives the From/To columns room: two columns
-       on a 140mm sheet would leave each party about 28mm. */
+    /* one sticker per label: 129.5mm of the 130mm height, not the full 130.
+       Content that matches the page box exactly can round a fraction over and
+       make the print engine emit a blank label after every copy; the half
+       millimetre is invisible on paper.
+       A label is too narrow for two address columns — 4mm of side padding
+       leaves 77mm, about 35mm per party — so the parties stack. */
     flex: 0 0 100%;
     width: 100%;
-    height: 62.3mm;
-    padding: 3mm 3.5mm;
+    height: 129.5mm;
+    padding: 4mm;
     border: 1px dashed #b6c2d4;
     display: flex;
     flex-direction: column;
-    gap: .7mm;
+    gap: .8mm;
     overflow: hidden;
     background: #fff;
 }
@@ -153,28 +153,31 @@ body {
 /* ---------------- brand header ---------------- */
 
 .mark-head {
-    display: flex;
+    /* two rows: the wordmark and the shipment chip on the first, the document
+       title and service line on the second. All three on one row would leave
+       the title about 20mm of an 85mm label. */
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 3mm;
-    padding-bottom: .6mm;
+    gap: 1.5mm 3mm;
+    padding-bottom: 1mm;
     border-bottom: 1.6px solid #101828;
 }
 
 .mark-brand {
-    height: 5.5mm;
+    grid-area: 1 / 1;
+    height: 6.5mm;
     width: auto;
-    flex: 0 0 auto;
 }
 
 .mark-head-right {
+    grid-area: 2 / 1 / 3 / 3;
     min-width: 0;
-    margin-left: auto;
-    text-align: right;
 }
 
 .mark-title {
     display: block;
-    font-size: 8.5pt;
+    font-size: 10.5pt;
     font-weight: 900;
     letter-spacing: .1em;
     text-transform: uppercase;
@@ -192,11 +195,12 @@ body {
 }
 
 .mark-number {
-    flex: 0 0 auto;
-    padding: .7mm 1.8mm;
+    grid-area: 1 / 2;
+    justify-self: end;
+    padding: .8mm 2mm;
     border: 1.4px solid #101828;
     border-radius: 1.6mm;
-    font-size: 8pt;
+    font-size: 9pt;
     font-weight: 900;
     white-space: nowrap;
 }
@@ -205,32 +209,63 @@ body {
 
 .mark-parties {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    /* a half each: centring both blocks as one group over a 67mm area left a
+       hollow middle. Each half centres its own content, so the slack is split
+       into four small margins instead of two large ones. */
+    grid-template-rows: 1fr 1fr;
     gap: 2.5mm;
-    align-items: start;
-    /* the rows centre in whatever height the flex column leaves: slack shows
-       above and below the addresses instead of as one gap under them */
-    align-content: center;
+    align-items: stretch;
 }
 
 .mark-party {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     min-width: 0;
 }
 
-.mark-party strong {
+/* The receiver is the block a courier reads, so it is set a size up from the
+   shipper (which is a return address). The classes come from the shared
+   partial, so the emphasis does not depend on document order. */
+.mark-party-from strong,
+.mark-party-to strong {
     display: block;
-    margin-top: .5mm;
-    font-size: 8pt;
+    font-weight: 900;
     line-height: 1.2;
     overflow-wrap: anywhere;
 }
 
+.mark-party-from strong {
+    margin-top: .5mm;
+    font-size: 9pt;
+}
+
+.mark-party-to strong {
+    margin-top: .6mm;
+    font-size: 12.5pt;
+    line-height: 1.15;
+}
+
 .mark-party p {
     margin: .5mm 0 0;
-    font-size: 7pt;
-    line-height: 1.25;
+    font-size: 7.5pt;
+    line-height: 1.3;
     color: #344054;
     overflow-wrap: anywhere;
+}
+
+.mark-party-to p {
+    font-size: 10pt;
+    color: #101828;
+}
+
+.mark-party-from .mark-contact {
+    font-size: 6.5pt;
+}
+
+.mark-party-to .mark-contact {
+    font-size: 7.5pt;
 }
 
 /* A long address is clamped instead of pushing the branding off the label:
@@ -246,7 +281,6 @@ body {
 .mark-contact {
     display: -webkit-box;
     -webkit-line-clamp: 2;
-    font-size: 6pt;
     -webkit-box-orient: vertical;
     overflow: hidden;
     font-weight: 700;
@@ -255,31 +289,33 @@ body {
 
 .mark-label {
     display: block;
-    font-size: 5.5pt;
+    font-size: 6pt;
     font-weight: 800;
     letter-spacing: .1em;
     text-transform: uppercase;
     color: #667085;
 }
 
-.mark-arrow {
-    align-self: center;
-    font-size: 12pt;
-    font-weight: 900;
-    color: #98a2b3;
+/* The parties stack, so a rule marks the step from shipper to receiver — no
+   arrow, and no height spent on it. */
+.mark-party ~ .mark-party {
+    padding-top: 1.5mm;
+    border-top: 1px solid #d0d5dd;
 }
 
 /* ---------------- meta strip ---------------- */
 
 .mark-meta {
+    /* two columns rather than one row of four: on an 85mm label the package
+       figures, the destination and the label chip cannot share a line */
     display: grid;
-    grid-template-columns: auto auto 1fr auto;
-    gap: 3mm;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    gap: 1.2mm 4mm;
     align-items: end;
     /* one rule above the strip and one below it: the strip's own bottom border
        is left off because the footer's top rule already closes it, and two
        rules 1mm apart read as a printing error. */
-    padding: .4mm 0;
+    padding: .8mm 0;
     border-top: 1px solid #d0d5dd;
 }
 
@@ -290,7 +326,7 @@ body {
 .mark-meta strong {
     display: block;
     margin-top: .3mm;
-    font-size: 8pt;
+    font-size: 8.5pt;
     font-weight: 800;
     line-height: 1.2;
     overflow-wrap: anywhere;
@@ -301,15 +337,15 @@ body {
 }
 
 .mark-label-cell {
-    text-align: right;
+    text-align: left;
 }
 
 .mark-label-chip {
     display: inline-block;
-    padding: .6mm 2mm;
+    padding: .5mm 2mm;
     border: 1.4px dashed #101828;
     border-radius: 1.6mm;
-    font-size: 8.5pt;
+    font-size: 9.5pt;
     font-weight: 900;
 }
 
@@ -321,12 +357,16 @@ body {
     justify-content: space-between;
     gap: 3mm;
     margin-top: auto;
-    padding-top: .8mm;
+    padding-top: 1mm;
     border-top: 1.6px solid #101828;
 }
 
+/* the codes are fixed width, so the branding is what gives way: without this
+   a long website paints underneath the tracking plate */
 .mark-brandfoot {
     min-width: 0;
+    overflow: hidden;
+    overflow-wrap: anywhere;
 }
 
 .mark-website {
@@ -339,8 +379,8 @@ body {
 
 .mark-tagline {
     display: block;
-    margin-top: .3mm;
-    font-size: 6pt;
+    margin-top: .4mm;
+    font-size: 6.5pt;
     font-weight: 700;
     letter-spacing: .06em;
     text-transform: uppercase;
@@ -367,8 +407,8 @@ body {
 }
 
 .mark-qr-code {
-    width: 13mm;
-    height: 13mm;
+    width: 17mm;
+    height: 17mm;
     padding: .6mm;
     background: #fff;
     border: .3mm solid #d0d5dd;
@@ -377,8 +417,8 @@ body {
 }
 
 .mark-qr-social .mark-qr-code {
-    width: 11mm;
-    height: 11mm;
+    width: 14mm;
+    height: 14mm;
 }
 
 .mark-qr-code svg {
@@ -394,9 +434,9 @@ body {
 .mark-qr-hint {
     display: block;
     margin-top: .4mm;
-    max-width: 16mm;
+    max-width: 19mm;
     margin-inline: auto;
-    font-size: 4pt;
+    font-size: 5pt;
     font-weight: 800;
     letter-spacing: .02em;
     text-transform: uppercase;

@@ -2,7 +2,7 @@
 
 Small, dependency-free checks for the things that are easy to break and hard to
 see: CSS that lands in the wrong order, a rule that flattens a badge, a control
-that grows into empty space, a label that cannot fit its paper.
+that grows into empty space, a label that cannot fit its stock.
 
 They are **not** a test suite for business logic — they are the guard rails for
 the shared UI (`master-*.css`, the record pages, the shipping mark). Run them
@@ -44,5 +44,5 @@ node tools/checks/design-check.cjs && node tools/checks/blade-check.cjs \
 | Dark-theme pairs | every semantic hue needs a counterpart on the dark panel |
 | No length `flex-basis` on a control in a column flex | that is how the file input became 240px tall |
 | No negative margin on a title/hint pair | that is how the paperwork hint overlapped its heading |
-| Shipping-mark geometry | adds up the millimetre sizes and fails if the sticker cannot fit 140 × 200 mm |
+| Shipping-mark geometry | adds up the millimetre sizes and fails if the sticker cannot fit the 85 × 130 mm label |
 | QR payload decode | a code that does not decode is not printable |

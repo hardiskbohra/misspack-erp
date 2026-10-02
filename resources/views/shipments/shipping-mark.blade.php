@@ -19,7 +19,7 @@
         </form>
 
         <span class="mark-hint">
-            {{ $copies }} sticker{{ $copies === 1 ? '' : 's' }} · {{ $shipment->package_count ? $shipment->package_count.' package(s) recorded' : 'no package count recorded' }} · {{ $perPage }} per page (140 × 200 mm)
+            {{ $copies }} sticker{{ $copies === 1 ? '' : 's' }} · {{ $shipment->package_count ? $shipment->package_count.' package(s) recorded' : 'no package count recorded' }} · {{ $perPage }} per label (85 × 130 mm)
         </span>
 
         <a class="mark-btn" href="{{ route('shipments.stickers') }}">Whole open board →</a>

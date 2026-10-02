@@ -4,11 +4,11 @@
      | page (copies of one shipment) and the bulk sticker sheet (one sticker
      | per open shipment), so both always print the same label.
      |
-     | Geometry: the office prints on 14 × 20 cm paper; with 6 mm margins that
-     | leaves 128 × 188 mm, which is three stickers of 128 × 62.3 mm stacked.
-     | Everything is sized in mm and the address blocks are clamped, so a record
-     | with a long address cannot push the branding off the label or overlap the
-     | row below it.
+     | Geometry: the label is 85 × 130 mm, one sticker per label. Everything is
+     | sized in mm and the address blocks are clamped, so a record with a long
+     | address cannot push the branding off the label. The shipper and receiver
+     | blocks are set a size apart (the receiver larger), which is why they
+     | carry their own classes.
      |
      | Expects: $shipment. Optional: $markCopy (e.g. "3 of 8").
      */
@@ -57,7 +57,7 @@
     </header>
 
     <div class="mark-parties">
-        <div class="mark-party">
+        <div class="mark-party mark-party-from">
             <span class="mark-label">From (Shipper)</span>
             <strong>{{ $shipment->from_name ?: '—' }}</strong>
             <p class="mark-address">{{ $markAddressLine('from') ?: '—' }}</p>
@@ -66,9 +66,7 @@
             @endif
         </div>
 
-        <div class="mark-arrow" aria-hidden="true">→</div>
-
-        <div class="mark-party">
+        <div class="mark-party mark-party-to">
             <span class="mark-label">To (Receiver)</span>
             <strong>{{ $shipment->to_name ?: '—' }}</strong>
             <p class="mark-address">{{ $markAddressLine('to') ?: '—' }}</p>
