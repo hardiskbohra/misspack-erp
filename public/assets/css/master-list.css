@@ -15,6 +15,39 @@
    kept in the order they were written so the same declaration always wins.
    ========================================================================== */
 
+/* ---------------- table shell (tablet and up) ----------------
+   The list is one table box and the header and the body share its column grid,
+   which is the only reason a cell can be lined up with its heading. A module
+   sheet may style its own cells; it must not restyle the shell. Any display
+   other than the table defaults hands the row layout back to the browser's
+   block rules: thead and tbody are then wrapped in two anonymous tables and
+   the header stops lining up with the rows. */
+
+@media (min-width: 769px) {
+    .master-list .master-table {
+        display: table;
+        border-collapse: collapse;
+    }
+
+    .master-list .master-table > thead {
+        display: table-header-group;
+    }
+
+    .master-list .master-table > tbody {
+        display: table-row-group;
+    }
+
+    .master-list .master-table > thead > tr,
+    .master-list .master-table > tbody > tr {
+        display: table-row;
+    }
+
+    .master-list .master-table > thead > tr > th,
+    .master-list .master-table > tbody > tr > td {
+        display: table-cell;
+    }
+}
+
 /* ---------------- Priority order groups (open first, closed below) ---------------- */
 
 .master-list .master-list-group td {
@@ -350,8 +383,8 @@
 
 .master-list .master-list-group td {
     /* NOT display:flex — a flex cell leaves the table layout, the browser wraps
-    it in an anonymous cell in the first column and colspan="8" quietly stops
-    spanning. The strip's own layout lives in .ship-group-inner below. */
+    it in an anonymous cell in the first column and colspan stops spanning.
+    The strip's own layout lives in .master-list-group-inner below. */
     padding: 8px 14px;
     font-size: 10.5px;
     letter-spacing: .1em;
@@ -464,11 +497,47 @@
 }
 
 /* ---------------- narrow screens ----------------
-   The card layout below 768px is in section 1; these keep the same
-   hierarchy once the table has stacked, so the cells still read as
-   label / value rather than as loose text. */
+   Below 768px the eight columns cannot hold, so the row becomes a card: the
+   header goes, every cell is a block, and each cell prints its own column name
+   from data-label. The shell is restacked here and nowhere else — a table that
+   is not this list surface keeps its columns and scrolls in its wrapper. The
+   rules after the shell keep the same hierarchy once the table has stacked, so
+   the cells still read as label / value rather than as loose text. */
 
 @media (max-width: 768px) {
+.master-list .master-table,
+.master-list .master-table tbody,
+.master-list .master-table tr,
+.master-list .master-table td {
+    display: block;
+    width: 100%;
+}
+
+.master-list .master-table thead {
+    display: none;
+}
+
+.master-list .master-table tr {
+    background: var(--mc-card);
+    /* the card keeps a hairline as well as the shadow: on the dark panel a
+       shadow alone is not enough to separate card from background */
+    border: 1px solid var(--mc-border);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 18px;
+    box-shadow: var(--mc-shadow);
+}
+
+.master-list .master-table td {
+    padding: 0;
+    border: none;
+    margin-bottom: 16px;
+}
+
+.master-list .master-table td:last-child {
+    margin-bottom: 0;
+}
+
 .master-list .master-filter-row {
     padding: 12px 16px;
 }

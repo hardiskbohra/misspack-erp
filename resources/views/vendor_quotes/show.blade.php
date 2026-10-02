@@ -69,6 +69,7 @@
                 <div class="master-card master-section">
                     <h3>Price Breaks</h3>
                     <div class="master-wrap">
+                        <div class="master-table-wrap">
                         <table class="master-table">
                             <thead>
                                 <tr>
@@ -100,6 +101,7 @@
                                 @endforelse
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 </div>
                 <div class="master-card master-section">

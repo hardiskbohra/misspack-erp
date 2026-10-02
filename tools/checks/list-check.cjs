@@ -495,6 +495,123 @@ check('the mobile card labels only exist below the card breakpoint',
 check('the density chrome only exists above the card breakpoint',
     onlyInMedia(listCss, 'min-width: 769px', 'data-density="compact"'));
 
+/* ---- table shell integrity ----
+   A table lays out as one box: the header and the body share a column grid
+   only while the <table> keeps its own display. Rewriting that display to
+   block/flex/grid makes the browser wrap thead and tbody in two anonymous
+   tables, the two stop sharing a grid, and every cell lands in the wrong
+   column — the misplaced-card render. Only the phone band may restack the
+   shell; above it the table stays a table and its wrapper does the scrolling. */
+
+const CSS_DIR = path.join(ROOT, 'public/assets/css');
+const readSheet = file => fs.readFileSync(path.join(CSS_DIR, file), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+
+const cssRules = (text, query = '') => {
+    const rules = [];
+    let i = 0;
+    while (i < text.length) {
+        const at = text.indexOf('@media', i);
+        const brace = text.indexOf('{', i);
+        if (at !== -1 && (brace === -1 || at < brace)) {
+            const open = text.indexOf('{', at);
+            let depth = 0, end = open;
+            for (; end < text.length; end++) {
+                if (text[end] === '{') depth++;
+                else if (text[end] === '}') {
+                    depth--;
+                    if (depth === 0) break;
+                }
+            }
+            rules.push(...cssRules(text.slice(open + 1, end), text.slice(at + 6, open).trim()));
+            i = end + 1;
+            continue;
+        }
+        if (brace === -1) break;
+        const close = text.indexOf('}', brace);
+        if (close === -1) break;
+        rules.push({ query, sel: text.slice(i, brace).trim(), body: text.slice(brace + 1, close) });
+        i = close + 1;
+    }
+    return rules;
+};
+
+/* the shell nodes: the table itself and the boxes the browser lays out inside
+   it. A <span> inside a cell is the module's business, not the shell's — only
+   the compound a rule ends on decides which box gets the display. */
+const shellSelector = sel => sel.split(',').some(part => {
+    const p = part.trim().replace(/::?[\w-]+(\([^)]*\))?/g, '').trim();
+    if (!p) return false;
+    const last = p.split(/[\s>+~]+/).pop();
+    return /\.master-table(\.[\w-]+)*$/.test(last) || /^(table|tbody|thead|tfoot|tr|td|th)$/i.test(last);
+});
+
+/* exactly one restack is legitimate: the labelled-card layout, below the phone
+   breakpoint, owned by the shared sheet and scoped to the list surface */
+const restacked = sheet => cssRules(readSheet(sheet))
+    .filter(r => shellSelector(r.sel)
+        && /(^|;)\s*display\s*:\s*(block|flex|grid|inline-block|inline-flex|inline)\b/i.test(r.body))
+    .map(r => {
+        const max = /max-width:\s*(\d+)px/.exec(r.query);
+        return {
+            query: r.query || 'top level',
+            sel: r.sel,
+            phone: !!(max && parseInt(max[1], 10) <= 768),
+            list: /\.master-table\b/.test(r.sel)
+        };
+    });
+
+const CSS_SHEETS = fs.readdirSync(CSS_DIR).filter(f => f.endsWith('.css'));
+const wideRestacks = CSS_SHEETS
+    .flatMap(f => restacked(f).filter(r => !r.phone).map(r => f + ' ' + r.query + ' { ' + r.sel + ' }'));
+
+check('no sheet restacks the table shell outside the phone band',
+    wideRestacks.length === 0, wideRestacks.join(' | '));
+
+const moduleRestacks = restacked('shipments.css').filter(r => r.list).map(r => r.query + ' { ' + r.sel + ' }');
+
+check('the module sheet leaves the list shell alone; the shared sheet owns it',
+    moduleRestacks.length === 0
+    && onlyInMedia(listCss, 'max-width: 768px', '.master-list .master-table tbody'),
+    moduleRestacks.join(' | '));
+
+/* the shell is pinned node by node: table, then the boxes inside it. Each pin
+   is a full declaration, so `display: table-header-group` cannot answer for
+   `display: table`. */
+const SHELL_PINS = ['display: table;', 'display: table-header-group;', 'display: table-row-group;',
+    'display: table-row;', 'display: table-cell;'];
+
+check('the shared sheet pins the shell above the phone band',
+    SHELL_PINS.every(pin => onlyInMedia(listCss, 'min-width: 769px', pin)));
+
+/* a table wider than its card scrolls in its wrapper; a table without one has
+   nowhere to scroll, so the shell is part of the markup contract too */
+const bladeFiles = [];
+const walkViews = dir => fs.readdirSync(dir, { withFileTypes: true }).forEach(entry => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkViews(full);
+    else if (entry.name.endsWith('.blade.php')) bladeFiles.push(full);
+});
+walkViews(path.join(ROOT, 'resources/views'));
+
+const bareTables = [];
+bladeFiles.forEach(file => {
+    const text = fs.readFileSync(file, 'utf8');
+    let from = 0;
+    for (;;) {
+        const at = text.indexOf('<table class="master-table', from);
+        if (at === -1) break;
+        const wrapAt = text.lastIndexOf('master-table-wrap', at);
+        if (wrapAt === -1 || wrapAt < text.lastIndexOf('</table>', at)) {
+            bareTables.push(path.relative(ROOT, file) + ' line ' + (text.slice(0, at).split('\n').length));
+        }
+        from = at + 1;
+    }
+});
+
+check('every table in a view sits in a .master-table-wrap',
+    bareTables.length === 0, bareTables.join(', '));
+
 /* ---- same opening strip ----
    Both lists open with five flat tiles in the same shape: a title and a value,
    and only the last one carries a second line. A tile that grows a sub-line is

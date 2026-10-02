@@ -55,14 +55,17 @@ html {
         row-gap: 10px;
     }
 
-    /* 1 — Tables: every data table scrolls horizontally inside its card.
-          Works for wrapped (.master-table-wrap) and unwrapped tables alike;
-          on tablet the 1280px table can no longer fit the viewport. */
-    .master-table {
-        display: block;
+    /* 1 — Tables: the table keeps its own box and its container does the
+          scrolling. `display:block` on a <table> is not a scroll trick: it
+          makes the browser wrap thead and tbody in two anonymous tables, the
+          header and the rows stop sharing a column grid, and every cell lands
+          in the wrong column — the misplaced-card render. The wrapper scrolls
+          (master-index.css) and a table without one gets a .master-table-wrap
+          from its view. */
+    .master-table-wrap {
+        max-width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        max-width: 100%;
     }
 
     /* Select2 dropdowns must never bleed past the viewport */

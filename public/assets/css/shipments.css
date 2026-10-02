@@ -33,43 +33,13 @@
        section 4 of this file — a filled pill with white text (the old
        "picked up" amber, for one) is the least readable thing on a list. */
     
-    /* Mobile Responsive Shipment Table */
+    /* Mobile shipment cells — the stacked card itself is the shared list
+       layout (master-list.css, narrow screens); these rules only tune the
+       shipment cells once the row has become a card. */
     @media (max-width:768px){
 
-        .master-table,
-        .master-table tbody,
-        .master-table tr,
-        .master-table td {
-            display:block;
-            min-width: 350px;
-            width:100%;
-        }
-    
-        .master-table thead{
-            display:none;
-        }
-    
-        .master-table tr{
-            background: var(--mc-card);
-            border: 0px solid var(--mc-border);
-            border-radius:16px;
-            padding:18px;
-            margin-bottom:18px;
-            box-shadow:var(--master-shadow);
-        }
-    
-        .master-table td{
-            padding:0;
-            border:none;
-            margin-bottom:16px;
-        }
-    
-        .master-table td:last-child{
-            margin-bottom:0;
-        }
-    
         /* the label travels with the value: <td data-label="Charges"> */
-    
+
         /* Shipment */
     
         .ship-index .master-id{
