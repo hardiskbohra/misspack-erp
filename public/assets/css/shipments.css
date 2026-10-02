@@ -1058,6 +1058,27 @@
     overflow-wrap: anywhere;
 }
 
+/* The exchange-rate field is always on screen — a field that appears and
+   disappears is a field that is missing when it is needed. On the base
+   currency it is locked at 1 and reads as settled; on anything foreign it is
+   required and carries the live INR value the ledger will freeze. */
+#costRateField.is-base .master-required {
+    display: none;
+}
+
+#costRateField.is-base .master-input {
+    color: var(--mc-text-3);
+    background: var(--mc-soft);
+    cursor: default;
+}
+
+.ship-cost-rate-preview {
+    display: block;
+    margin-top: 3px;
+    color: var(--mc-text-2);
+    font-weight: 700;
+}
+
 .ship-cost-table td {
     vertical-align: top;
 }

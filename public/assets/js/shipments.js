@@ -258,9 +258,23 @@
         var head = document.getElementById('costHead');
         var labelWrap = document.getElementById('costLabelField');
         var currency = document.getElementById('costCurrency');
+        var amount = document.getElementById('costAmount');
         var rateWrap = document.getElementById('costRateField');
         var rate = document.getElementById('costRate');
+        var note = document.getElementById('costRateNote');
+        var preview = document.getElementById('costRatePreview');
         if (!form) return;
+
+        var lastRates = {};
+        try {
+            lastRates = JSON.parse((rateWrap && rateWrap.getAttribute('data-last-rates')) || '{}');
+        } catch (error) {
+            lastRates = {};
+        }
+
+        /* the server already filled the rate from the last one used for this
+           currency, when it knew one — that is what the preview reports */
+        var rateFromLastUsed = !!(rate && rate.dataset.autoFilled === '1');
 
         var storeAction = form.getAttribute('action');
         var updateUrl = modal.getAttribute('data-update-url') || '';
@@ -271,21 +285,94 @@
             }
         }
 
-        function syncCurrency() {
-            if (!currency || !rateWrap) return;
-            var foreign = currency.value !== 'INR';
-            rateWrap.hidden = !foreign;
-            if (rate) rate.required = foreign;
+        function currencyCode() {
+            return currency ? String(currency.value).trim().toUpperCase() : 'INR';
+        }
+
+        function isBaseCurrency() {
+            return currencyCode() === 'INR';
+        }
+
+        /* What the ledger will freeze, shown while it is typed: the operator
+           never has to work out what the rate does to the amount. */
+        function paintRate() {
+            var foreign = ! isBaseCurrency();
+            var value = (parseFloat((amount && amount.value) || 0) || 0)
+                * (foreign ? (parseFloat((rate && rate.value) || 0) || 0) : 1);
+
+            if (note) {
+                note.textContent = foreign
+                    ? 'The INR value is frozen at this rate: amount × rate.'
+                    : 'Billed in INR — no conversion. Pick another currency to enter a rate.';
+            }
+
+            if (!preview) return;
+
+            var parts = [];
+            var known = lastRates[currencyCode()];
+
+            if (foreign && rateFromLastUsed && known) {
+                parts.push('last rate used for ' + currencyCode() + (known.on ? ' on ' + known.on : ''));
+            }
+
+            if (value > 0) {
+                parts.push('≈ ₹ ' + value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    + ' posted to the ledger');
+            }
+
+            preview.textContent = parts.length ? ' ' + parts.join(' · ') : '';
+        }
+
+        /* The rate box is always on screen: a field that appears and disappears
+           is a field that is missing when it is needed. The base currency locks
+           it at 1; anything else requires it, starting from the rate that
+           currency was last billed at. */
+        function syncCurrency(suggest) {
+            if (!currency || !rateWrap || !rate) return;
+
+            var foreign = ! isBaseCurrency();
+            var code = currencyCode();
+
+            rateWrap.classList.toggle('is-base', !foreign);
+            rate.readOnly = !foreign;
+            rate.required = foreign;
+            rate.placeholder = foreign ? 'INR per 1 ' + code : 'Base currency';
+
+            if (!foreign) {
+                rate.value = '1';
+                rateFromLastUsed = false;
+            } else if (suggest) {
+                /* a rate entered for another currency never carries over */
+                var known = lastRates[code] || null;
+                rate.value = known ? known.rate : '';
+                rateFromLastUsed = !!known;
+            }
+
+            paintRate();
         }
 
         function resetForm() {
             form.reset();
+            rateFromLastUsed = !!(rate && rate.dataset.autoFilled === '1');
             syncHead();
-            syncCurrency();
+            syncCurrency(false);
         }
 
         if (head) head.addEventListener('change', syncHead);
-        if (currency) currency.addEventListener('change', syncCurrency);
+
+        /* delegated from the form, so the state follows the select however it
+           was changed */
+        form.addEventListener('change', function (event) {
+            if (event.target === currency) syncCurrency(true);
+        });
+
+        form.addEventListener('input', function (event) {
+            if (event.target === currency || event.target === amount || event.target === rate) paintRate();
+        });
+
+        /* and once on load, so what the server rendered and what the script
+           thinks are never two different things */
+        syncCurrency(false);
 
         var openBtn = document.getElementById('openCostModal');
         if (openBtn) {
@@ -320,11 +407,15 @@
                 if (updateUrl && data.id) {
                     form.setAttribute('action', updateUrl.replace('COST_ID', data.id));
                 }
+                /* the rate on the record is the truth for this row, not the
+                   last rate used for the currency */
+                if (data.exchange_rate) rateFromLastUsed = false;
+
                 if (method) method.value = 'PUT';
                 if (title) title.textContent = 'Edit Cost Head';
                 if (submit) submit.textContent = 'Save Cost';
                 syncHead();
-                syncCurrency();
+                syncCurrency(false);
                 window.MasterModal.open(modal);
             });
         });

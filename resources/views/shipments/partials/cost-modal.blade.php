@@ -1,5 +1,13 @@
 @php
     $costRow = new \App\Models\ShipmentCost(['currency' => $shipment->currency ?: 'INR']);
+    /* A cost is entered in the currency it is billed in, so the exchange rate
+       is part of the amount — not a detail produced on request. It is always on
+       screen: locked at 1 for the base currency, required with the last rate
+       used for any other, and the INR value shows while it is typed. */
+    $costCurrency = strtoupper((string) old('currency', $shipment->currency ?: 'INR'));
+    $costIsBase = $costCurrency === 'INR';
+    $costLastRate = $lastCostRates[$costCurrency] ?? null;
+    $costRateValue = old('exchange_rate', $costIsBase ? '1' : ($costLastRate['rate'] ?? ''));
 @endphp
 
 <div class="master-modal" id="costModal" aria-hidden="true"
@@ -42,15 +50,23 @@
                         <label class="master-label" for="costCurrency">Currency <span class="master-required">*</span></label>
                         <select class="master-select" name="currency" id="costCurrency" required>
                             @foreach ($currencyOptions as $key => $label)
-                                <option value="{{ $key }}" @selected(($shipment->currency ?: 'INR') === $key)>{{ $label }}</option>
+                                <option value="{{ $key }}" @selected($costCurrency === $key)>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="master-field" id="costRateField">
-                        <label class="master-label" for="costRate">Exchange Rate</label>
+                    <div class="master-field{{ $costIsBase ? ' is-base' : '' }}" id="costRateField"
+                        data-last-rates="{{ json_encode($lastCostRates ?? []) }}">
+                        <label class="master-label" for="costRate">Exchange Rate
+                            <span class="master-required" aria-hidden="true">*</span></label>
                         <input class="master-input" type="number" step="0.000001" min="0" name="exchange_rate" id="costRate"
-                            placeholder="Required for non-INR bills">
-                        <small class="master-sub">INR value = amount × rate (frozen at today's rate).</small>
+                            value="{{ $costRateValue }}"
+                            @if ($costLastRate && ! old('exchange_rate')) data-auto-filled="1" @endif
+                            @if ($costIsBase) readonly @endif
+                            placeholder="{{ $costIsBase ? 'Base currency' : 'INR per 1 '.$costCurrency }}">
+                        <small class="master-sub" id="costRateNote">{{ $costIsBase
+                            ? 'Billed in INR — no conversion. Pick another currency to enter a rate.'
+                            : 'The INR value is frozen at this rate: amount × rate.' }}
+                            <span class="ship-cost-rate-preview" id="costRatePreview"></span></small>
                     </div>
 
                     <div class="master-field">

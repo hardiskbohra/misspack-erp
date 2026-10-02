@@ -957,6 +957,43 @@ class ShipmentController extends Controller
     }
 
     /**
+     * The exchange rate each currency was last billed at, newest wins: the
+     * shipment's own history first, then the rest of the book. The modal uses
+     * it as the starting value for a foreign cost — the operator confirms a
+     * number instead of inventing one, and a blank rate is never the reason a
+     * freight bill cannot be entered.
+     *
+     * @return array<string, array{rate: string, on: string|null}>
+     */
+    private function lastCostRates(Shipment $shipment): array
+    {
+        $rates = [];
+
+        $collect = function ($costs) use (&$rates) {
+            foreach ($costs as $cost) {
+                $currency = strtoupper((string) $cost->currency);
+
+                if ($currency === 'INR' || (float) $cost->exchange_rate <= 0) {
+                    continue;
+                }
+
+                $rates[$currency] = [
+                    'rate' => rtrim(rtrim(number_format((float) $cost->exchange_rate, 6, '.', ''), '0'), '.'),
+                    'on' => optional($cost->incurred_on)->format('d M Y') ?: optional($cost->created_at)->format('d M Y'),
+                ];
+            }
+        };
+
+        $columns = ['currency', 'exchange_rate', 'incurred_on', 'created_at'];
+
+        /* oldest first, so the newest rate per currency is the one that stays */
+        $collect(ShipmentCost::query()->orderBy('id')->get($columns));
+        $collect($shipment->costs()->orderBy('id')->get($columns));
+
+        return $rates;
+    }
+
+    /**
      * Sales invoices this shipment can be measured against (its client's).
      */
     private function invoiceOptions(Shipment $shipment)
@@ -1111,6 +1148,9 @@ class ShipmentController extends Controller
             'invoiceOptions' => $this->invoiceOptions($shipment),
             'paymentModeOptions' => CashflowEntry::paymentModeOptions(),
             'paidAccounts' => $this->paidAccounts(),
+            /* the rate each currency was last billed at — offered as the
+               starting value so a foreign cost is confirmed, not guessed */
+            'lastCostRates' => $this->lastCostRates($shipment),
         ];
     }
 }
