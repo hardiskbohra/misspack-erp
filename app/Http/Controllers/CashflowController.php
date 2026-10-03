@@ -71,7 +71,9 @@ class CashflowController extends Controller
         $pageTotals['net'] = round($pageTotals['credit'] - $pageTotals['debit'], 2);
         $stats['net'] = round((float) $stats['credit'] - (float) $stats['debit'], 2);
 
-        return view('cashflows.index', array_merge($this->sharedData(), [
+        $shared = $this->sharedData();
+
+        return view('cashflows.index', array_merge($shared, [
             'entries' => $entries,
             'stats' => $stats,
             'pageTotals' => $pageTotals,
@@ -87,6 +89,15 @@ class CashflowController extends Controller
             'savedViews' => app(SavedViews::class)->forUser(Auth::id(), 'cashflows'),
             'mirroredPayments' => $mirroredPayments,
             'mirroredShipmentCosts' => $mirroredShipmentCosts,
+            /* Which party field the quick dialog opens on. Page state, so the
+               controller builds it: the view used to compute it in a `@php`
+               block a hundred lines above its first use, and the page 500'd with
+               `Undefined variable $quickPartyType` when that block was not in
+               the copy being served (a stale compiled view is enough). */
+            'quickPartyType' => CashflowEntry::partyTypeFor(
+                old('related_party_type'),
+                $shared['relatedPartyOptions'] ?? []
+            ),
             ...$filters,
         ]));
     }

@@ -507,14 +507,15 @@
         <x-pagination :items="$entries" />
     </div>
 
-    @php
-        /* Which party field is on screen before any script runs: the selector's
-           own value, which is what was chosen last time round if the page is
-           coming back from a failed save. The script keeps this in step when the
-           selector changes; the server keeps it right when nothing has run yet. */
-        $quickPartyType = old('related_party_type', 'client');
-    @endphp
-
+    {{-- `$quickPartyType` — which party field is on screen before any script
+         runs — is page state and arrives from the controller
+         (`CashflowEntry::partyTypeFor()`): the selector below is drawn from the
+         office's own master list, so the picker that is on screen has to be the
+         option that list shows first. A `@php` block here defined it a hundred
+         lines above its first use, and a page that has to be read top to bottom
+         to know whether a variable exists is a page that 500s the first time the
+         reading order changes — the shell keeps the compiled view, and an
+         undefined variable is an `ErrorException`, not a blank field. --}}
     <div class="master-modal" id="quickCashflowModal" aria-hidden="true">
         <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="quickCashflowTitle">
             {{-- `_dialog` is how this modal comes back after a failed save:

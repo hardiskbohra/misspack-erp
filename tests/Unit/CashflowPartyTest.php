@@ -86,6 +86,42 @@ class CashflowPartyTest extends TestCase
         $this->assertSame('client', $data['related_party_type'], 'client, vendor, employee — in that order');
     }
 
+    public function test_the_dialog_opens_on_the_option_the_selector_will_show(): void
+    {
+        /* The list is the office's, and a `<select>` with nothing marked
+           `selected` shows its first option — so the server has to name that
+           one. A name hard-coded in the class is how the picker on screen and
+           the selector above it start disagreeing. */
+        $this->assertSame('vendor', CashflowEntry::partyTypeFor(null, [
+            'vendor' => 'Vendor',
+            'client' => 'Client',
+        ]));
+    }
+
+    public function test_a_failed_save_keeps_the_party_it_was_filing(): void
+    {
+        $this->assertSame('expense', CashflowEntry::partyTypeFor('expense', [
+            'client' => 'Client',
+            'expense' => 'Cash Expense',
+        ]));
+    }
+
+    public function test_a_type_the_list_no_longer_offers_cannot_put_a_picker_on_screen(): void
+    {
+        $this->assertSame('client', CashflowEntry::partyTypeFor('owner', [
+            'client' => 'Client',
+            'vendor' => 'Vendor',
+        ]));
+    }
+
+    public function test_a_hand_made_request_cannot_name_the_field(): void
+    {
+        /* `old()` reads whatever the last request posted — an array included. */
+        $this->assertSame('client', CashflowEntry::partyTypeFor(['client' => '1'], [
+            'client' => 'Client',
+        ]));
+    }
+
     public function test_the_rule_is_the_model_s_own_list_of_columns(): void
     {
         $this->assertSame(

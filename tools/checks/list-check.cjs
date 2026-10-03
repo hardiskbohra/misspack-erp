@@ -1027,7 +1027,9 @@ check('each picker posts the column its party is decided by',
     'the picker and the column have to be the same pair the model names');
 
 check('one picker is on screen at a time, before any script runs',
-    /\$quickPartyType = old\('related_party_type', 'client'\)/.test(cashView)
+    /* Where the value comes from is the next check's business; here it only has
+       to be the thing the conditions read. */
+    /\$quickPartyType/.test(cashView)
     && /data-party-source/.test(cashView)
     /* Each picker states its own condition — counted together they can both drop
        by one and still agree, which is how a picker that always shows on the
@@ -1092,11 +1094,33 @@ check('and the page reopens the one the errors belong to',
     'the office should not retype a bank line because the amount was missing');
 
 check('and the fields hold what was typed',
-    ['entry_date', 'particular', 'amount', 'account_id', 'related_party_name', 'expense_head', 'related_party_type']
+    ['entry_date', 'particular', 'amount', 'account_id', 'related_party_name', 'expense_head']
         .every(field => cashView.includes("old('" + field))
+    /* The party selector is the one field whose value is page state: the option
+       it opens on is the one `$quickPartyType` names, so that is what has to be
+       marked selected when the dialog comes back. */
+    && /<option value="\{\{ \$key \}\}" @selected\(\$quickPartyType === \$key\)>/.test(cashView)
     && ['client_id', 'vendor_id', 'employee_id'].every(column =>
         new RegExp('name="' + column + '"[\\s\\S]{0,400}?@selected\\(\\(string\\) old\\(\'' + column + '\'\\)').test(cashView)),
     'a dialog that reopens empty is a dialog that lost the work');
+
+/* The dialog's first state is page state, and page state is built by the
+   controller: the selector is drawn from the office's own master list, so the
+   picker that is on screen has to be the option that list shows first. This
+   view used to compute it in a `@php` block a hundred lines above its first
+   use, and the page 500'd with `Undefined variable $quickPartyType` on a copy
+   that did not carry that block — a stale compiled view is enough, because the
+   shell keeps the compiled view and undefined is an `ErrorException`. */
+check('the quick dialog opens on the party its selector will show',
+    (cashView.match(/\$quickPartyType/g) || []).length >= 4
+    && ! /@php[\s\S]{0,300}\$quickPartyType/.test(cashView)
+    && /'quickPartyType' => CashflowEntry::partyTypeFor\(/.test(cashflowsController),
+    'a value the page must be read top to bottom to find is a value that can be undefined');
+
+check('and it defaults to the list\'s own first key, never a name picked here',
+    /is_string\(\$chosen\) && in_array\(\$chosen, \$keys, true\)/.test(cashflowsModel)
+    && /return \(string\) \(\$keys\[0\] \?\? ''\);/.test(cashflowsModel),
+    'a hard-coded default is a picker that disagrees with the selector above it');
 
 check('a stats row fills its width, whatever number of figures it holds',
     /\.master-stats \{\s*display: grid;\s*grid-template-columns: repeat\(auto-fit, minmax\(200px, 1fr\)\);/.test(layoutCss)

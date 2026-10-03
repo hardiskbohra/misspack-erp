@@ -193,6 +193,17 @@ vendor rather than beside their name.
   opens on its first option, so a vendor payment filed without touching it was
   labelled "Client" while linked to the vendor. Proved by
   `php artisan test --filter=CashflowPartyTest`.
+- **The first state is page state.** Which picker is on screen when nothing has
+  run yet is built by the controller (`CashflowEntry::partyTypeFor()`), not by the
+  view: the selector is drawn from the office's **master list**, and a `<select>`
+  with nothing marked `selected` shows its *first* option — so the default is that
+  list's first key, and a value the list no longer offers cannot put a picker on
+  screen. It used to be computed in a `@php` block near the top of the *view*, and
+  a copy of that view without the block (a stale compiled view is enough — the
+  shell keeps the compiled view) sent the whole ledger to a 500 with
+  `Undefined variable $quickPartyType`. A page that must be read top-to-bottom to
+  know whether a variable exists is a page that breaks the next time the reading
+  order changes; the failure is an `ErrorException`, not a blank field.
 - **A failed save comes back.** The dialog names itself (`_dialog`), the page
   reopens the one the errors belong to, and every field is server-rendered with
   `old()` — the office should not retype a bank line because the amount was

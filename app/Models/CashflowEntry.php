@@ -307,6 +307,32 @@ class CashflowEntry extends Model
         return $data;
     }
 
+    /**
+     * Which party type the Quick Entry dialog opens on.
+     *
+     * The selector is drawn from the office's own master list, and a `<select>`
+     * with nothing marked `selected` shows its **first** option — so the default
+     * has to be that list's first key. A name hard-coded here would put a picker
+     * on screen that the selector above it disagrees with, which is the whole
+     * failure this change is about. A type the form came back with is kept when
+     * the list still offers it: the office may have retired one between the two
+     * requests.
+     *
+     * `mixed`, because `old()` reads whatever the last request posted — an
+     * array included — and a hand-made request must not be able to name the
+     * field that is on screen.
+     */
+    public static function partyTypeFor(mixed $chosen, array $options): string
+    {
+        $keys = array_keys($options);
+
+        if (is_string($chosen) && in_array($chosen, $keys, true)) {
+            return $chosen;
+        }
+
+        return (string) ($keys[0] ?? '');
+    }
+
     public static function currencyOptions(): array
     {
         return ['INR' => 'INR', 'USD' => 'USD', 'RMB' => 'RMB'];
