@@ -74,13 +74,13 @@ class EmployeeWorkspaceController extends Controller
      */
     public function updateProfile(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'mobile' => ['nullable', 'string', 'max:20'],
-            'address' => ['nullable', 'string', 'max:1000'],
-            'date_of_birth' => ['nullable', 'date', 'before:today'],
-            'emergency_contact_name' => ['nullable', 'string', 'max:255'],
-            'emergency_contact_mobile' => ['nullable', 'string', 'max:20'],
-        ]);
+        /* The same five fields, the same rules and the same filter as the account
+           page (`EmployeeAccess`), because the two forms write the same record:
+           a second copy of this list is how the two pages start disagreeing. */
+        $data = array_intersect_key(
+            $request->validate($this->access->ownFieldRules()),
+            array_flip($this->access->ownEditableFields())
+        );
 
         $this->user()->update($data);
 

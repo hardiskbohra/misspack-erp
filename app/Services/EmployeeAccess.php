@@ -58,6 +58,27 @@ class EmployeeAccess
         return ['mobile', 'address', 'emergency_contact_name', 'emergency_contact_mobile', 'date_of_birth'];
     }
 
+    /**
+     * The validation rules for those fields.
+     *
+     * Here rather than in the controllers because there are now two forms that
+     * write them — the employee's own page and the account page both roles
+     * share — and two copies of a rule is one copy that is wrong. A controller
+     * validates with this list and then intersects the result with
+     * `ownEditableFields()`, so a request that posts a designation or a bank
+     * account through this door is dropped rather than saved.
+     */
+    public function ownFieldRules(): array
+    {
+        return [
+            'mobile' => ['nullable', 'string', 'max:20'],
+            'address' => ['nullable', 'string', 'max:1000'],
+            'date_of_birth' => ['nullable', 'date', 'before:today'],
+            'emergency_contact_name' => ['nullable', 'string', 'max:255'],
+            'emergency_contact_mobile' => ['nullable', 'string', 'max:20'],
+        ];
+    }
+
     /** The fields only the office may write. */
     public function officeOnlyFields(): array
     {

@@ -60,6 +60,9 @@ const layout = read('resources/views/layouts/app.blade.php');
 const nav = layout.slice(0, layout.indexOf('</nav>'));
 const userIndex = read('resources/views/users/index.blade.php');
 const userShow = read('resources/views/users/show.blade.php');
+/* declared with the rest: a `const` read above its own line is a TDZ crash, not
+   a failing check — and it takes the whole gate with it */
+const accountController = read('app/Http/Controllers/AccountController.php');
 const seeder = read('database/seeders/DatabaseSeeder.php');
 const entryModel = read('app/Models/CashflowEntry.php');
 const employeeSalary = read('resources/views/employees/salary.blade.php');
@@ -313,15 +316,64 @@ check('the profile has two owners, written down once',
     && /\['mobile', 'address', 'emergency_contact_name', 'emergency_contact_mobile', 'date_of_birth'\]/.test(access)
     && /public function officeOnlyFields\(\): array/.test(access));
 
-check('the employee\'s own form only posts the fields that are theirs',
-    (() => {
-        const form = read('resources/views/employees/profile.blade.php');
-        const block = form.slice(form.indexOf("route('my.profile.update')"), form.indexOf('</form>', form.indexOf("route('my.profile.update')")));
+/* The form and the rule, together. The two pages that edit a person's own
+   fields render one partial, and the two controllers that accept them filter
+   through one service list — so "only the fields that are theirs" is a property
+   of the code rather than of the markup on one page. */
+const ownDetails = read('resources/views/users/partials/own-details.blade.php');
+const ownPassword = read('resources/views/users/partials/own-password.blade.php');
+const accountView = read('resources/views/account/index.blade.php');
 
-        return ['name="mobile"', 'name="address"', 'name="date_of_birth"']
-            .every(field => block.includes(field))
-            && !/name="designation"|name="bank_account_number"|name="role"/.test(block);
-    })());
+check('the fields that are yours are one form, rendered by both pages',
+    /name="mobile"/.test(ownDetails)
+    && /name="address"/.test(ownDetails)
+    && /name="date_of_birth"/.test(ownDetails)
+    && /name="emergency_contact_name"/.test(ownDetails)
+    && /name="emergency_contact_mobile"/.test(ownDetails)
+    && !/name="designation"|name="bank_account_number"|name="role"|name="salary"/.test(ownDetails)
+    && (read('resources/views/employees/profile.blade.php').match(/users\.partials\.own-details/g) || []).length === 1
+    && (accountView.match(/users\.partials\.own-details/g) || []).length === 1,
+    'one partial, two pages — a second copy of the field list is how they drift');
+
+check('and both controllers validate with the service rule, then filter by the service list',
+    /ownFieldRules\(\): array/.test(access)
+    && (workspace.match(/array_intersect_key\(/g) || []).length >= 1
+    && /array_flip\(\$this->access->ownEditableFields\(\)\)/.test(workspace)
+    && /array_intersect_key\(/.test(accountController)
+    && /array_flip\(\$fields\)/.test(accountController),
+    'the door is the field list, not the names the form happens to post');
+
+/* A rule with no matching writable field is either a typo or a permission that
+   slipped in through the rule list: `designation` in `ownFieldRules()` reads as
+   "the person may set their designation", and only the intersection stops it. */
+check('the rule list and the field list are the same five names',
+    (() => {
+        const rules = access.slice(access.indexOf('ownFieldRules()'), access.indexOf('ownFieldRules()') + 900);
+        const names = [...rules.matchAll(/^\s*'(\w+)' => \[/gm)].map(m => m[1]);
+        const fields = (access.match(/return \['mobile', 'address', 'emergency_contact_name', 'emergency_contact_mobile', 'date_of_birth'\];/) || [])[0];
+
+        return fields
+            && names.length === 5
+            && ['mobile', 'address', 'emergency_contact_name', 'emergency_contact_mobile', 'date_of_birth']
+                .every(name => names.includes(name));
+    })(),
+    'the rules ask for exactly what the person may write — no more, no less');
+
+check('the password is one form too, and it asks for the current one',
+    /name="current_password"/.test(ownPassword)
+    && /name="password_confirmation"/.test(ownPassword)
+    && (accountView.match(/users\.partials\.own-password/g) || []).length === 1
+    && (read('resources/views/employees/profile.blade.php').match(/users\.partials\.own-password/g) || []).length === 1
+    /* One form, and no second one hiding behind it: a hand-written password
+       field anywhere but the partial is the copy that drifts, and a second form
+       posting to the same action is two forms for one action. */
+    && (accountView.match(/name="password"/g) || []).length === 0
+    && (accountView.match(/name="password_confirmation"/g) || []).length === 0
+    && (read('resources/views/employees/profile.blade.php').match(/name="password"/g) || []).length === 0
+    && (accountView.match(/account\.password\.update/g) || []).length === 1
+    && (read('resources/views/employees/profile.blade.php').match(/my\.password\.update/g) || []).length === 1
+    && /'current_password' => \['required', 'current_password'\]/.test(accountController),
+    'a session left open on a shared machine is what this field is for');
 
 check('a paper belongs to the person who uploaded it, and the office can tell',
     /uploaded_by/.test(read('app/Models/EmployeeDocument.php'))
@@ -1077,6 +1129,102 @@ check('and its fields still hold what was typed',
 check('the reopened edit form posts to the person, not to nowhere',
     /action="\{\{ \$reopenUserId \? route\('users\.update', \$reopenUserId\) : '' \}\}"/.test(usersIndex),
     'the form action is set by the fetch on the normal path and by the server on the failed one');
+
+/* ------------------------------- 14. the user menu (66)
+   The shell shows the person twice — a chip in the top bar and a card at the
+   foot of the sidebar — and both were labels: a link for an employee, a dead
+   `<div>` for the office, which is a menu that does nothing for the person most
+   likely to want one. One partial now renders both, and every item in it leads
+   somewhere a signed-in person may actually go.
+
+   The trap this section exists for: a panel that offers doors its reader cannot
+   open. An employee following a link into the office's half is turned around by
+   `EnsureUserIsAdmin`, so a menu item that points there is a promise the
+   middleware breaks — the layout's own comment says as much. */
+
+const menu = read('resources/views/layouts/partials/user-menu.blade.php');
+const shell = read('resources/views/layouts/app.blade.php');
+const layoutSheet = read('public/assets/css/app-layout.css');
+const webRoutes = read('routes/web.php');
+
+check('the shell shows one menu, in the two places it shows the person',
+    (shell.match(/layouts\.partials\.user-menu/g) || []).length === 2
+    && /'surface' => 'sidebar'/.test(shell)
+    && /'surface' => 'topbar'/.test(shell),
+    'the chip and the sidebar card are the same menu, not two');
+
+check('the card at the foot of the sidebar is the menu, not a logout button',
+    !/sidebar-logout-btn/.test(shell)
+    && !/sidebar-logout-btn/.test(menu)
+    && /class="master-dropdown user-menu is-\{\{ \$surface/.test(menu),
+    'one control per action: Sign out lives in the panel now');
+
+check('the panel is the shared dropdown, so the placement and the escape work',
+    /class="master-dropdown user-menu is-/.test(menu)
+    && /class="master-dropdown-toggle/.test(menu)
+    && /class="master-dropdown-menu user-menu-panel"/.test(menu),
+    'a private menu would be clipped by the sidebar and never flip upwards');
+
+check('and its own styles are written for a panel that has left the menu',
+    /\.master-dropdown-menu\.user-menu-panel \{/.test(layoutSheet)
+    && !/\.user-menu \.user-menu-panel/.test(layoutSheet)
+    && /\.user-menu-head \{/.test(layoutSheet),
+    'the layout script portals the panel to <body> — `.user-menu .panel` stops matching there');
+
+check('every item in the menu is a page the reader may open',
+    (() => {
+        /* The header is not an item: it holds the role ask, which has to name
+           both halves of the answer. The items are what is left. */
+        const items = menu
+            .replace(/@php[\s\S]*?@endphp/, '')
+            .replace(/@if \(\$menuEmployee\)[\s\S]*?@endif/, '');
+
+        const linked = [...items.matchAll(/route\('([\w.\-]+)'\)/g)].map(m => m[1]);
+        const roleSpecific = linked.filter(name => /^(my|users)\./.test(name));
+
+        return /\{\{ \$menuRecord \}\}/.test(menu)
+            && /route\('my\.dashboard'\) : route\('users\.show', \$menuUser\)/.test(menu)
+            && linked.includes('account.index')
+            && /route\('account\.index'\) \}\}#password/.test(menu)
+            && linked.includes('logout')
+            && linked.includes('theme.toggle')
+            /* the employee's doors are inside the employee branch and nowhere else */
+            && /@if \(\$menuEmployee\)[\s\S]*?my\.salary[\s\S]*?my\.documents[\s\S]*?@endif/.test(menu)
+            && roleSpecific.length === 0;
+    })(),
+    'an employee following an office link is turned around at the door — a menu item that does is a broken promise');
+
+check('the account page is reachable by both roles, not filed under the office',
+    /^    Route::get\('\/account', \[AccountController::class, 'index'\]\)->name\('account\.index'\);/m.test(webRoutes)
+    && /^    Route::put\('\/account\/profile'/m.test(webRoutes)
+    && /^    Route::put\('\/account\/password'/m.test(webRoutes),
+    'four spaces is the auth group; eight would be the office group');
+
+/* The theme switch said "for anybody signed in" in its own comment while sitting
+   inside the office group, so an employee pressing Dark was bounced with an
+   error and the control was dead on every page of their workspace. */
+check('the theme switch belongs to anybody signed in, and is registered as such',
+    /^    Route::post\('\/theme\/toggle'/m.test(webRoutes)
+    && (webRoutes.match(/theme\.toggle/g) || []).length === 1,
+    'a theme route inside the office group is a dead control for every employee');
+
+check('the account page is the person\'s, and says which half of the record is theirs',
+    /route\('account\.profile\.update'\)/.test(accountView)
+    && /route\('account\.password\.update'\)/.test(accountView)
+    && /route\('theme\.toggle'\)/.test(accountView)
+    /* Both branches say something, and each says it in its own words: an
+       employee is told which fields belong to the office, and the office is told
+       where their own record is. A page that greets one of them with the other's
+       sentence is the failure this holds shut. */
+    && /@if \(\$employee\)[\s\S]*?the office's record — ask them to[\s\S]*?@else[\s\S]*?signed in as the office[\s\S]*?@endif/.test(accountView),
+    'both roles reach this page, so both have to be addressed');
+
+check('the account page has a sheet for its own cells, and the shell owns the menu',
+    /users\.css/.test(accountView)
+    && /\.user-account \.account-head \{/.test(read('public/assets/css/users.css'))
+    && /\.user-menu\.is-topbar \.master-dropdown-toggle \{/.test(layoutSheet)
+    && /\.user-menu\.is-sidebar \.master-dropdown-toggle \{/.test(layoutSheet),
+    'the trigger geometry is the shell\'s, the page\'s cells are the module\'s');
 
 /* ---------------------------------------------------------------- report */
 

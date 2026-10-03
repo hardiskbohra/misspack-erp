@@ -351,7 +351,55 @@ by the fetch). Now:
   the page came back with errors, so the reopened dialog posts to the person it
   was editing.
 
-## 9. What is verified where
+## 9. The user menu, and the account page behind it
+
+The shell shows the person twice — a chip in the top bar and a card at the foot
+of the sidebar — and both were **labels**: for an employee the avatar was a link
+to `/my/profile`, and for the office account it was a `<div>` carrying a comment
+explaining that the office has no page, "so it keeps the same look without
+pretending to be a link". A menu that does nothing is not a menu, and the person
+most likely to want one is the office.
+
+One partial (`layouts/partials/user-menu.blade.php`) renders both surfaces, and
+both open the **shared** `.master-dropdown` panel — the one `app-layout.js`
+portals to `<body>`, measures against the trigger, flips upwards when the sidebar
+has no room below, and closes on Escape or an outside click. Its styles are
+written for the portaled panel (`.master-dropdown-menu.user-menu-panel`, never
+`.user-menu .user-menu-panel`, which stops matching once it has moved).
+
+What the menu offers, for both roles:
+
+| Item | Where it goes |
+| --- | --- |
+| **My account** | `/account` — this page |
+| **My record** | Employee: their workspace. Office: their own record in the users module. A role ask, not a preference — an employee following the office's link is turned around at the door |
+| **Salary & payslips**, **My documents** | Employee only, inside the employee branch and nowhere else |
+| **Change password** | `/account#password` |
+| **Switch to dark / light** | The same route as the top bar's button — which is hidden on a phone, so this is the only switch there |
+| **Sign out** | The card's separate logout icon is gone: one control per action |
+
+**`/account`** is the page behind "My account". It sits **outside** the `office`
+middleware group, because both roles have a name, an address, a mobile number and
+a password. It offers the five fields that belong to the person — read from
+`EmployeeAccess::ownEditableFields()`, validated with
+`EmployeeAccess::ownFieldRules()` and then filtered through the same list, so a
+hand-made request cannot put a designation or a bank account through the door
+that was opened for an address — plus the password form, the theme switch, and
+doors to the rest.
+
+The two pages that edit those fields (this one and the employee's own profile)
+render **one form each** (`users/partials/own-details.blade.php`,
+`own-password.blade.php`) and both controllers filter through one service list.
+Two copies of a field list is how two pages start asking different questions.
+
+**And one bug this uncovered.** `theme.toggle` sat inside the `office` group
+while its own comment said "for anybody signed in — an employee has a theme too".
+An employee pressing the top bar's **Dark** button was turned around at the door
+with an error, and the switch was a dead control on every page of their
+workspace. It is registered with the account routes now, and a guard holds it
+there.
+
+## 10. What is verified where
 
 `node tools/checks/employees-check.cjs` — the module's own guards, run with the
 other ten gates: the middleware is on the office group, no personal route takes

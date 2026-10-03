@@ -132,26 +132,13 @@
             @endforeach
         </nav>
 
+        {{-- The card at the foot of the sidebar is the second half of the user
+             menu, not a label with a logout icon: everything a person can do
+             about their own account is in the one panel both surfaces open. The
+             separate logout button went with it — the panel has Sign out, and two
+             controls for one action is how they drift. --}}
         <div class="sidebar-footer">
-            <div class="sidebar-user">
-                <div class="user-avatar-sm">{{ substr(Auth::user()->name ?? 'A', 0, 1) }}</div>
-
-                <div class="sidebar-user-info sidebar-text">
-                    <div class="user-name">{{ Auth::user()->name ?? 'Admin' }}</div>
-                    <div class="user-role">
-                        {{ Auth::user() && Auth::user()->isEmployee()
-                            ? (Auth::user()->designation ?: 'Employee')
-                            : 'Administrator' }}
-                    </div>
-                </div>
-
-                <form method="POST" action="{{ route('logout') }}" class="sidebar-logout-form">
-                    @csrf
-                    <button type="submit" class="sidebar-logout-btn" title="Logout" aria-label="Logout">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </button>
-                </form>
-            </div>
+            @include('layouts.partials.user-menu', ['surface' => 'sidebar'])
         </div>
     </aside>
 
@@ -195,25 +182,11 @@
                     <span class="topbar-badge">3</span>
                 </button>
 
-                {{-- The avatar is the door to your own profile. An employee has
-                     a real page behind it; the office account does not, so it
-                     keeps the same look without pretending to be a link. --}}
-                @if (Auth::user() && Auth::user()->isEmployee())
-                    <a class="topbar-user-btn" href="{{ route('my.profile') }}"
-                        title="My profile" aria-label="My profile">
-                        <div class="user-avatar-sm topbar-avatar">
-                            {{ substr(Auth::user()->name ?? 'A', 0, 1) }}
-                        </div>
-                        <span class="topbar-user-name desktop-only">{{ Auth::user()->name }}</span>
-                    </a>
-                @else
-                    <div class="topbar-user-btn">
-                        <div class="user-avatar-sm topbar-avatar">
-                            {{ substr(Auth::user()->name ?? 'A', 0, 1) }}
-                        </div>
-                        <span class="topbar-user-name desktop-only">{{ Auth::user()->name ?? 'Admin' }}</span>
-                    </div>
-                @endif
+                {{-- The avatar opens your own account — for both roles. It used
+                     to be a link only for an employee and a dead <div> for the
+                     office, which is a menu that does nothing for the person most
+                     likely to want it. --}}
+                @include('layouts.partials.user-menu', ['surface' => 'topbar'])
             </div>
         </header>
 

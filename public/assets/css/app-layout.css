@@ -976,3 +976,188 @@ html.sidebar-collapsed .main-wrap {
     visibility: visible;
     opacity: 1;
 }
+/* ==========================================================================
+   THE USER MENU — the chip in the top bar and the card in the sidebar
+   --------------------------------------------------------------------------
+   Both surfaces render the same partial and open the same panel, which is the
+   shared `.master-dropdown` (master-index owns the panel's own shape; this file
+   owns the two triggers and the header block inside it).
+
+   The panel is **moved to <body>** when it opens (the layout script portals it
+   so no scrolling box or stacking context can trap it), so nothing here may be
+   scoped to `.user-menu` — after the portal the panel is not inside it any
+   more. It carries its own class for that reason.
+   ========================================================================== */
+
+/* The top bar's chip. `.master-dropdown-toggle` is a 40px square by default —
+   right for a row's `⋮`, wrong for a name — so the geometry is restated with
+   enough specificity to win whatever the sheet order is. */
+.user-menu.is-topbar .master-dropdown-toggle {
+    width: auto;
+    height: auto;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 6px 12px 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-input);
+}
+
+.user-menu.is-topbar .master-dropdown-toggle:hover {
+    border-color: var(--accent);
+    background: var(--bg-input);
+}
+
+.user-menu .user-menu-label {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.2;
+}
+
+.user-menu.is-topbar .user-menu-role {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.user-menu-caret {
+    flex-basis: auto;
+    width: auto;
+    font-size: 10px;
+    color: var(--text-secondary);
+}
+
+/* The sidebar's card: the whole card is the trigger. It keeps the surface the
+   static card had, so the foot of the sidebar looks unchanged until it is used.
+   The label carries `.sidebar-text`, which the collapsed sidebar already hides —
+   including the media-query escape the nav uses below 992px. */
+.user-menu.is-sidebar {
+    display: block;
+    width: 100%;
+}
+
+.user-menu.is-sidebar .master-dropdown-toggle {
+    width: 100%;
+    height: auto;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 10px;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    text-align: left;
+}
+
+.user-menu.is-sidebar .master-dropdown-toggle:hover,
+.user-menu.is-sidebar .master-dropdown-toggle[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.user-menu.is-sidebar .user-menu-label {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.user-menu.is-sidebar .user-menu-role {
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.user-menu.is-sidebar .topbar-user-name {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.user-menu.is-sidebar .user-menu-caret {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+html.sidebar-collapsed .user-menu.is-sidebar .master-dropdown-toggle {
+    justify-content: center;
+    padding: 8px;
+}
+
+html.sidebar-collapsed .user-menu.is-sidebar .user-menu-caret {
+    display: none;
+}
+
+/* ---- the panel ---- */
+
+.master-dropdown-menu.user-menu-panel {
+    width: 264px;
+    padding: 0;
+}
+
+.user-menu-head {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--mc-border);
+    background: var(--mc-card-soft);
+}
+
+.user-menu-head-avatar {
+    flex: 0 0 auto;
+}
+
+.user-menu-head-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.35;
+}
+
+.user-menu-head-text strong {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--mc-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-menu-head-role {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--mc-text-3);
+}
+
+.user-menu-head-mail {
+    font-size: 11.5px;
+    color: var(--mc-text-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* A hairline between groups of items, drawn as an element so it reads as a
+   separator in the panel's own rhythm rather than as a border on an item. */
+.user-menu-sep {
+    height: 1px;
+    margin: 6px 0;
+    background: var(--mc-border);
+}
+
+/* The items are the shared `.master-dropdown-menu a/button` shape; all this adds
+   is room for the two-line item the sidebar card does not have. */
+.master-dropdown-menu.user-menu-panel a,
+.master-dropdown-menu.user-menu-panel button {
+    padding: 11px 16px;
+    font-size: 13.5px;
+}
+
+@media (max-width: 640px) {
+    /* On a phone the top bar has room for the avatar alone. */
+    .user-menu.is-topbar .user-menu-label,
+    .user-menu.is-topbar .user-menu-caret {
+        display: none;
+    }
+}

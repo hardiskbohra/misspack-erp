@@ -201,9 +201,84 @@ const appClasses = ['Helpers', 'Services'].flatMap(dir => {
         .map(entry => ({ name: entry.replace(/\.php$/, ''), dir }));
 });
 
+/* Comments are not code. A docblock that names `EmployeeAccess::ownEditableFields()`
+   while explaining a rule is not a static call, and a guard that reads it as one
+   turns prose into a failing gate — which is exactly what happened, twice, to the
+   `@media print` guard before it (a needle has to read the thing it is about).
+   This strips comments and leaves strings, heredocs, escapes and PHP 8
+   attributes (`#[…]`) alone: a stripper that is cleverer than the language is
+   how a real call gets hidden. */
+const stripPhpComments = (text) => {
+    let out = '';
+    let i = 0;
+    let quote = null;
+    let heredoc = null;
+
+    while (i < text.length) {
+        const ch = text[i];
+        const next = text[i + 1];
+
+        if (heredoc) {
+            const end = text.indexOf(heredoc, i);
+            if (end === -1) { out += text.slice(i); break; }
+            out += text.slice(i, end + heredoc.length);
+            i = end + heredoc.length;
+            heredoc = null;
+            continue;
+        }
+
+        if (quote) {
+            out += ch;
+            if (ch === '\\') { out += next === undefined ? '' : next; i += 2; continue; }
+            if (ch === quote) quote = null;
+            i += 1;
+            continue;
+        }
+
+        if (ch === "'" || ch === '"' || ch === '`') { quote = ch; out += ch; i += 1; continue; }
+
+        if (ch === '/' && next === '/') {
+            const end = text.indexOf('\n', i);
+            i = end === -1 ? text.length : end;
+            out += '\n';
+            continue;
+        }
+
+        /* `#` is a comment, `#[` is an attribute */
+        if (ch === '#' && next !== '[') {
+            const end = text.indexOf('\n', i);
+            i = end === -1 ? text.length : end;
+            out += '\n';
+            continue;
+        }
+
+        if (ch === '/' && next === '*') {
+            const end = text.indexOf('*/', i + 2);
+            i = end === -1 ? text.length : end + 2;
+            out += ' ';
+            continue;
+        }
+
+        if (text.startsWith('<<<', i)) {
+            const marker = /^<<<[ \t]*(?:'([A-Za-z_]\w*)'|"([A-Za-z_]\w*)"|([A-Za-z_]\w*))/.exec(text.slice(i));
+            if (marker) {
+                heredoc = marker[1] || marker[2] || marker[3];
+                out += text.slice(i, i + marker[0].length);
+                i += marker[0].length;
+                continue;
+            }
+        }
+
+        out += ch;
+        i += 1;
+    }
+
+    return out;
+};
+
 const unimported = [];
 for (const file of phpFiles) {
-    const text = fs.readFileSync(file, 'utf8');
+    const text = stripPhpComments(fs.readFileSync(file, 'utf8'));
     const own = (text.match(/^namespace\s+([^;]+);/m) || [, ''])[1].trim();
 
     for (const { name, dir } of appClasses) {

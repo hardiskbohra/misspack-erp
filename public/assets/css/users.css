@@ -135,3 +135,120 @@
     color: var(--emp-info-fg, #2f5fd0);
     font-weight: 600;
 }
+
+/* --------------------------------------------------------------------------
+   THE ACCOUNT PAGE — your own record, from the user menu
+   The head is the page's identity row: the same avatar the shell shows, the
+   name, the role and the one line that says which half of the record is yours.
+   -------------------------------------------------------------------------- */
+.user-account .account-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px
+}
+
+.user-account .account-head-avatar {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--emp-avatar-bg, linear-gradient(135deg, #4f83f1, #6366f1));
+    color: var(--emp-avatar-fg, #ffffff);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase
+}
+
+.user-account .account-head-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover
+}
+
+.user-account .account-head-text {
+    flex: 1 1 auto;
+    min-width: 0
+}
+
+.user-account .account-head-name {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--mc-text)
+}
+
+.user-account .account-head-meta {
+    margin: 2px 0 6px;
+    color: var(--mc-text-3);
+    font-size: 12.5px;
+    font-weight: 600
+}
+
+.user-account .account-head .master-sub {
+    margin: 0
+}
+
+.user-account .account-note {
+    margin: -6px 0 10px
+}
+
+/* Doors out of this page, each with the one line that says why it is there. */
+.user-account .account-links {
+    margin: 0;
+    padding: 0;
+    list-style: none
+}
+
+.user-account .account-links li + li {
+    margin-top: 8px
+}
+
+.user-account .account-links a {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 11px 13px;
+    border: 1px solid var(--master-border);
+    border-radius: 12px;
+    background: var(--mc-card);
+    color: var(--mc-text);
+    text-decoration: none
+}
+
+.user-account .account-links a:hover {
+    border-color: var(--master-primary, #4f83f1)
+}
+
+.user-account .account-links i {
+    flex: 0 0 18px;
+    margin-top: 2px;
+    text-align: center;
+    color: var(--master-primary, #4f83f1)
+}
+
+.user-account .account-links strong {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 600
+}
+
+.user-account .account-links em {
+    display: block;
+    margin-top: 1px;
+    color: var(--mc-text-3);
+    font-size: 12.5px;
+    font-style: normal
+}
+
+@media (max-width: 640px) {
+    .user-account .account-head {
+        align-items: flex-start;
+        flex-wrap: wrap
+    }
+}

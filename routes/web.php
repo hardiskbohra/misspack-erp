@@ -10,6 +10,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CashflowAttachmentController;
 use App\Http\Controllers\CashflowController;
 use App\Http\Controllers\CashflowSettingController;
@@ -307,7 +308,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [EmployeeWorkspaceController::class, 'dashboard'])->name('dashboard');
         Route::get('/profile', [EmployeeWorkspaceController::class, 'profile'])->name('profile');
         Route::put('/profile', [EmployeeWorkspaceController::class, 'updateProfile'])->name('profile.update');
-        Route::post('/password', [EmployeeWorkspaceController::class, 'updatePassword'])->name('password.update');
+        Route::put('/password', [EmployeeWorkspaceController::class, 'updatePassword'])->name('password.update');
         Route::get('/salary', [EmployeeWorkspaceController::class, 'salary'])->name('salary');
         Route::get('/payslips', [EmployeeWorkspaceController::class, 'payslips'])->name('payslips');
         Route::get('/payslips/{payslip}/file', [EmployeeWorkspaceController::class, 'payslipFile'])->name('payslips.file');
@@ -318,11 +319,25 @@ Route::middleware('auth')->group(function () {
         Route::delete('/documents/{document}', [EmployeeWorkspaceController::class, 'destroyDocument'])->name('documents.destroy');
     });
 
-        /* Light or dark, for anybody signed in — an employee has a theme too. */
-        Route::post('/theme/toggle', function () {
-            session(['theme' => session('theme', 'dark') === 'dark' ? 'light' : 'dark']);
-            return back();
-        })->name('theme.toggle');
+    /* Your own account, whoever you are — the page the user menu opens. It sits
+       outside the `office` group on purpose: an employee and the office both
+       have a name, an address, a mobile number and a password, and the menu in
+       the shell is shown to both. Which fields each may write is one rule
+       (`EmployeeAccess::ownEditableFields()`), asked by the controller. */
+    /* Light or dark, for anybody signed in. It sat inside the `office` group
+       while saying so in its own comment — so an employee pressing the top bar's
+       Dark button was turned around at the door with an error, and the switch was
+       a dead control on every page of their workspace. */
+    Route::post('/theme/toggle', function () {
+        session(['theme' => session('theme', 'dark') === 'dark' ? 'light' : 'dark']);
+
+        return back();
+    })->name('theme.toggle');
+
+    Route::get('/account', [AccountController::class, 'index'])->name('account.index');
+    Route::put('/account/profile', [AccountController::class, 'updateProfile'])->name('account.profile.update');
+    Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password.update');
+
 });
 
 Route::prefix('client-portal')->name('client-portal.')->group(function () {
