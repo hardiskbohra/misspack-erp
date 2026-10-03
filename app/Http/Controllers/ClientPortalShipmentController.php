@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\ClientPortalComment;
 use App\Models\ClientPortalDocument;
+use App\Models\ShipmentAttachment;
 use App\Services\ClientPortalNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -49,7 +51,18 @@ class ClientPortalShipmentController extends ClientPortalBaseController
         $shipment = $this->findShipmentForClient($request, $shipment);
         $shipment->load(['items', 'publicAttachments']);
 
-        $publicHistories = $shipment->histories()->where('is_public', true)->get();
+        if ($shipment->project_id) {
+            $publicProject = \App\Models\Project::query()
+                ->where('client_id', $this->client($request)->id)
+                ->where('show_client_portal', true)
+                ->whereKey($shipment->project_id)
+                ->first();
+            $shipment->setRelation('project', $publicProject);
+        } else {
+            $shipment->setRelation('project', null);
+        }
+
+        $publicHistories = $shipment->histories()->where('is_public', true)->latest('id')->get();
         $comments = ClientPortalComment::where('client_id', $this->client($request)->id)
             ->where('related_type', 'shipment')
             ->where('related_id', $shipment->id)
@@ -58,19 +71,52 @@ class ClientPortalShipmentController extends ClientPortalBaseController
             ->latest('id')
             ->get();
         $documents = ClientPortalDocument::where('client_id', $this->client($request)->id)
+            ->where('is_public_to_client', true)
             ->where('related_type', 'shipment')
             ->where('related_id', $shipment->id)
             ->latest('id')
             ->get();
 
-        return view('client_portal.shipments.show', compact('shipment', 'publicHistories', 'comments', 'documents'));
+        $statusOptions = \App\Models\Shipment::statusOptions();
+
+        return view('client_portal.shipments.show', compact('shipment', 'publicHistories', 'comments', 'documents', 'statusOptions'));
+    }
+
+    public function file(Request $request, int $shipment, ShipmentAttachment $attachment)
+    {
+        $visibleShipment = $this->findShipmentForClient($request, $shipment);
+        abort_unless(
+            (int) $attachment->shipment_id === (int) $visibleShipment->id
+                && $attachment->is_public
+                && $attachment->file_path,
+            404
+        );
+
+        $disk = Storage::disk('public');
+        abort_unless($disk->exists($attachment->file_path), 404);
+
+        $extension = strtolower(pathinfo($attachment->file_path, PATHINFO_EXTENSION));
+        $inlineExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+        $isSafeInlineImage = in_array($extension, $inlineExtensions, true)
+            && str_starts_with(strtolower((string) $attachment->mime_type), 'image/');
+
+        return $disk->response(
+            $attachment->file_path,
+            $attachment->original_name ?: basename($attachment->file_path),
+            [
+                'Content-Type' => $attachment->mime_type ?: 'application/octet-stream',
+                'X-Content-Type-Options' => 'nosniff',
+                'Cache-Control' => 'private, no-store',
+            ],
+            $isSafeInlineImage ? 'inline' : 'attachment'
+        );
     }
 
     public function storeComment(Request $request, int $shipment): RedirectResponse
     {
         $shipment = $this->findShipmentForClient($request, $shipment);
         $portalUser = $this->portalUser($request);
-        $data = $request->validate(['body' => ['required', 'string']]);
+        $data = $request->validate(['body' => ['required', 'string', 'max:4000']]);
 
         ClientPortalComment::create([
             'client_id' => $portalUser->client_id,
@@ -93,17 +139,17 @@ class ClientPortalShipmentController extends ClientPortalBaseController
         $portalUser = $this->portalUser($request);
         $data = $request->validate([
             'title' => ['nullable', 'string', 'max:255'],
-            'category' => ['nullable', 'string', 'max:60'],
-            'notes' => ['nullable', 'string'],
-            'attachments' => ['required', 'array'],
-            'attachments.*' => ['required', 'file', 'max:20480'],
+            'category' => ['nullable', 'string', \Illuminate\Validation\Rule::in(['shipment', 'payment_proof', 'other'])],
+            'notes' => ['nullable', 'string', 'max:4000'],
+            'attachments' => ['required', 'array', 'max:10'],
+            'attachments.*' => ['required', 'file', 'max:20480', 'mimes:jpg,jpeg,png,webp,gif,heic,heif,pdf,doc,docx,xls,xlsx,csv,ppt,pptx,txt,zip'],
         ]);
 
         $count = 0;
         foreach ((array) $request->file('attachments', []) as $file) {
             $this->validateAllowedFile($file);
             $extension = strtolower((string) $file->getClientOriginalExtension());
-            $path = $file->store('client-portal/shipments/'.$shipment->id, 'public');
+            $path = $file->store('client-portal/shipments/'.$shipment->id, 'local');
 
             ClientPortalDocument::create([
                 'client_id' => $portalUser->client_id,
@@ -111,12 +157,14 @@ class ClientPortalShipmentController extends ClientPortalBaseController
                 'related_type' => 'shipment',
                 'related_id' => $shipment->id,
                 'category' => $data['category'] ?? 'shipment',
-                'title' => $data['title'] ?: $file->getClientOriginalName(),
+                'title' => ($data['title'] ?? null) ?: $file->getClientOriginalName(),
                 'file_path' => $path,
+                'storage_disk' => 'local',
                 'original_name' => $file->getClientOriginalName(),
-                'mime_type' => $file->getClientMimeType(),
+                'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
                 'file_size' => $file->getSize(),
                 'extension' => $extension,
+                'is_public_to_client' => true,
                 'notes' => $data['notes'] ?? null,
             ]);
             $count++;

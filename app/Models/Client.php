@@ -64,6 +64,16 @@ class Client extends Model
         return $this->hasMany(\App\Models\Project::class, 'client_id');
     }
 
+    public function portalUsers()
+    {
+        return $this->hasMany(ClientPortalUser::class, 'client_id')->orderBy('id');
+    }
+
+    public function portalConversations()
+    {
+        return $this->hasMany(ClientPortalConversation::class, 'client_id')->latest('last_message_at');
+    }
+
     public function scopeSearch(Builder $query, ?string $search): Builder
     {
         return $query->when($search, function (Builder $q) use ($search) {
