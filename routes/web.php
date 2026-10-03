@@ -225,6 +225,7 @@ Route::middleware('auth')->group(function () {
     // Cashflow Management
     Route::get('/cashflows/reports', [CashflowController::class, 'reports'])->name('cashflows.reports');
     Route::get('/cashflows/reports/pdf', [CashflowController::class, 'downloadPdf'])->name('cashflows.reports.pdf');
+    Route::get('/cashflows/reports/export', [CashflowController::class, 'exportReport'])->name('cashflows.reports.export');
 
     Route::get('/cashflows/settings', [CashflowSettingController::class, 'index'])->name('cashflows.settings.index');
     Route::post('/cashflows/settings/accounts', [CashflowSettingController::class, 'storeAccount'])->name('cashflows.settings.accounts.store');

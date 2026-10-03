@@ -18,6 +18,15 @@ node tools/checks/status-check.cjs    # the rules a shipment status change keeps
                                       # date it fills in, the hold/delay reason it still refuses
 node tools/checks/cost-check.cjs      # a cost head's exchange rate: the field is always on
                                       # screen, and the INR value is amount × rate, never a guess
+node tools/checks/php-check.cjs       # the PHP files the module owns: scanned, and parsed when
+                                      # php-parser is installed (it is not, in this checkout)
+node tools/checks/docs-check.cjs      # the paperwork behind an entry: one table, the archive route
+                                      # before the resource route, one definition of "missing"
+node tools/checks/statement-check.cjs # a party statement: opening + debit − credit = closing, the
+                                      # ageing adds up to the closing, and an expiring link is real
+node tools/checks/report-check.cjs    # the report builder: a cell sums the same rows it opens,
+                                      # a bucket is dates and not a dialect, a comparison is the
+                                      # axis shifted, and "not set" is a row you can drill
 ```
 
 Every check is dependency-free. `mark-check.cjs` additionally decodes the QR
@@ -32,10 +41,15 @@ All of them exit non-zero on failure, so they can be wired into CI or a
 pre-push hook:
 
 ```bash
-node tools/checks/design-check.cjs && node tools/checks/blade-check.cjs \
-  && node tools/checks/mark-check.cjs && node tools/checks/list-check.cjs \
-  && node tools/checks/status-check.cjs && node tools/checks/cost-check.cjs
+for c in design blade php mark list status cost docs statement report; do
+  node "tools/checks/$c-check.cjs" || exit 1
+done
 ```
+
+There is no CI in this repository and no PHP runtime in the sandbox, so the
+checkers are the gate: they are run by hand before every commit, and each one is
+paired with a mutator (a plausible regression written into the tree) to prove the
+guards actually fail when the behaviour they describe is broken.
 
 ## What they cover
 
@@ -78,4 +92,10 @@ node tools/checks/design-check.cjs && node tools/checks/blade-check.cjs \
 | Rupees are written in ₹ | the reader sees money as `₹ 1,20,000.00`, never as the code `INR` in front of a figure — not in a view, not in a script, not in a placeholder or a rate hint. `INR` may still *name* the currency (a select option, a comparison, a column saying which currency a figure is in), but the symbol itself lives in exactly one place and every rupee figure goes through it. A non-rupee amount keeps its own code, because a ₹ in front of a dollar figure would state the wrong amount |
 | Totals in one currency | a spend total is the sum of the rupee values the ledger already recorded at the rate of the day (never a re-conversion, never two currencies added as bare figures), so the list's Spent card and its footer both read as one `₹` figure; a shipment still on the old single figure counts once it is billed in rupees |
 | One money format | every amount is written by one formatter: the rupee sign with lakh/crore grouping (`₹1,50,000`, never `₹ 150,000.00`), paise only when the amount really has them, and the code with thousand grouping for anything that is not rupees (`USD 2,400.00` — a ₹ in front of a dollar figure would state the wrong amount). The grouping rule is the same expression in the server helper and in the browser formatter, and the browser's half is run against fixtures |
+| A figure and its drill are one definition | a report cell is summed over a window and opened over the same window, through the same filter vocabulary — if the two ever disagree, the accountant re-adds the report by hand, which is the manual job the report exists to delete |
+| Buckets are dates, not a dialect | the dashboard's `GROUP BY DATE_FORMAT(...)` is MySQL-only; the report computes its buckets in PHP because each cell's drill link needs that bucket's exact first and last day anyway |
+| A comparison is the axis shifted | comparing April with March inside an April–June report counts March twice — once in its own column and once as April's comparison |
+| "Not set" is a row you can open | the entries nobody was named against are the ones people ask about, and a row that cannot be drilled is a row nobody trusts |
+| A mixed range says so | rupees, dollars and yuan are never dressed as one currency: the figures lose their sign and the page names the currencies it holds |
+| A statement adds up | opening + debit − credit = closing, the ageing buckets sum to the closing, and an expiring public link is a real route — not a paragraph promising one |
 | Money never hand-built | a template may not format money itself, and may never echo a currency and then a rupee figure (`USD ₹1,200`) — the currency belongs with the amount it is in, through the formatter. Only an exchange rate keeps its own decimals in a template |

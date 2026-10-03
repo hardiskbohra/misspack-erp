@@ -178,6 +178,13 @@
                         <option value="">No vendor</option>@foreach($vendors as $vendor)<option
                         value="{{ $vendor->id }}" @selected((string) old('vendor_id', $entry->vendor_id) === (string) $vendor->id)>{{ $vendor->vendor_name }}</option>@endforeach
                     </select></div>
+                {{-- The link the free-text name never had: "paid to Ramesh" becomes
+                     a row against Ramesh, so the report can group by him and the
+                     entry can be found by searching his name. --}}
+                <div class="master-field"><label class="master-label">Employee</label><select class="master-select" name="employee_id">
+                        <option value="">No employee</option>@foreach($employees as $employee)<option
+                        value="{{ $employee->id }}" @selected((string) old('employee_id', $entry->employee_id) === (string) $employee->id)>{{ $employee->name }}@if($employee->designation) — {{ $employee->designation }}@endif</option>@endforeach
+                    </select></div>
                 <div class="master-field"><label class="master-label">Expense Head</label><input class="master-input"
                         name="expense_head" value="{{ old('expense_head', $entry->expense_head) }}"
                         placeholder="Cash expense head"></div>

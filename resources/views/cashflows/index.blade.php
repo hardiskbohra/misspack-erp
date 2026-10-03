@@ -27,16 +27,25 @@
 @endpush
 
 @php
-    /* "Reset" and "clear filters" only make sense when something is filtered. */
-    $filtersActive = trim((string) $search) !== ''
-        || ($accountId && $accountId !== 'all')
-        || ($accountType && $accountType !== 'all')
-        || ($transactionType && $transactionType !== 'all')
-        || ($accountingStatus && $accountingStatus !== 'all')
-        || ($relatedPartyType && $relatedPartyType !== 'all')
-        || ($documents && $documents !== 'all')
-        || filled($dateFrom)
-        || filled($dateTo);
+    /* The strip below is drawn from the module's filter vocabulary
+       (App\Services\CashflowFilters): every dimension that narrowed the query
+       arrives here as a chip with the name it filtered by, whether it came
+       from a control on this page, a saved view, or a report cell the operator
+       clicked to see the rows behind a total. The date pair is one filter and
+       keeps its own chip (it names a period, not a value). */
+    $appliedChips = collect($appliedFilters)
+        ->reject(fn ($chip) => in_array($chip['query'], ['date_from', 'date_to'], true))
+        ->map(function ($chip) use ($appliedFilterLabels) {
+            $label = trim((string) ($appliedFilterLabels[$chip['key']] ?? ''));
+            $chip['value'] = $label !== '' ? $label : $chip['value'];
+
+            return $chip;
+        })
+        ->values();
+
+    /* "Reset" and "clear filters" only make sense when something is filtered —
+       and the same list decides that, so the two can never disagree. */
+    $filtersActive = $appliedChips->isNotEmpty() || filled($dateFrom) || filled($dateTo);
 
     /* The quick-view chips are filters too: clicking one replaces the chip
        dimension it owns and keeps everything else. */
@@ -267,70 +276,15 @@
                 <div class="master-list-applied">
                     <span class="master-list-applied-title">Filtered by</span>
 
-                    @if (trim((string) $search) !== '')
+                    @foreach ($appliedChips as $chip)
                         <span class="master-list-applied-chip">
-                            <span class="master-list-applied-key">Search</span>
-                            <span class="master-list-applied-value">{{ $search }}</span>
-                            <a class="master-list-applied-x" href="{{ $chipUrl('search') }}"
-                                aria-label="Remove the search filter" title="Remove the search filter">&times;</a>
+                            <span class="master-list-applied-key">{{ $chip['label'] }}</span>
+                            <span class="master-list-applied-value">{{ $chip['value'] }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl($chip['query']) }}"
+                                aria-label="Remove the {{ strtolower($chip['label']) }} filter"
+                                title="Remove the {{ strtolower($chip['label']) }} filter">&times;</a>
                         </span>
-                    @endif
-
-                    @if ($accountId && $accountId !== 'all')
-                        <span class="master-list-applied-chip">
-                            <span class="master-list-applied-key">Account</span>
-                            <span class="master-list-applied-value">{{ $accounts->firstWhere('id', (int) $accountId)?->account_name ?? $accountId }}</span>
-                            <a class="master-list-applied-x" href="{{ $chipUrl('account_id') }}"
-                                aria-label="Remove the account filter" title="Remove the account filter">&times;</a>
-                        </span>
-                    @endif
-
-                    @if ($accountType && $accountType !== 'all')
-                        <span class="master-list-applied-chip">
-                            <span class="master-list-applied-key">Account type</span>
-                            <span class="master-list-applied-value">{{ $accountTypeOptions[$accountType] ?? $accountType }}</span>
-                            <a class="master-list-applied-x" href="{{ $chipUrl('account_type') }}"
-                                aria-label="Remove the account-type filter" title="Remove the account-type filter">&times;</a>
-                        </span>
-                    @endif
-
-                    @if ($transactionType && $transactionType !== 'all')
-                        <span class="master-list-applied-chip">
-                            <span class="master-list-applied-key">Type</span>
-                            <span class="master-list-applied-value">{{ $transactionTypeOptions[$transactionType] ?? $transactionType }}</span>
-                            <a class="master-list-applied-x" href="{{ $chipUrl('transaction_type') }}"
-                                aria-label="Remove the type filter" title="Remove the type filter">&times;</a>
-                        </span>
-                    @endif
-
-                    @if ($accountingStatus && $accountingStatus !== 'all')
-                        <span class="master-list-applied-chip">
-                            <span class="master-list-applied-key">Status</span>
-                            <span class="master-list-applied-value">{{ $accountingStatusOptions[$accountingStatus] ?? $accountingStatus }}</span>
-                            <a class="master-list-applied-x" href="{{ $chipUrl('accounting_status') }}"
-                                aria-label="Remove the status filter" title="Remove the status filter">&times;</a>
-                        </span>
-                    @endif
-
-                    @if ($relatedPartyType && $relatedPartyType !== 'all')
-                        <span class="master-list-applied-chip">
-                            <span class="master-list-applied-key">Related to</span>
-                            <span class="master-list-applied-value">{{ $relatedPartyOptions[$relatedPartyType] ?? $relatedPartyType }}</span>
-                            <a class="master-list-applied-x" href="{{ $chipUrl('related_party_type') }}"
-                                aria-label="Remove the related-party filter" title="Remove the related-party filter">&times;</a>
-                        </span>
-                    @endif
-
-                    @if ($documents && $documents !== 'all')
-                        <span class="master-list-applied-chip">
-                            <span class="master-list-applied-key">Documents</span>
-                            <span class="master-list-applied-value">
-                                {{ $documents === 'missing' ? 'Missing only' : 'Attached only' }}
-                            </span>
-                            <a class="master-list-applied-x" href="{{ $chipUrl('documents') }}"
-                                aria-label="Remove the documents filter" title="Remove the documents filter">&times;</a>
-                        </span>
-                    @endif
+                    @endforeach
 
                     @if (filled($dateFrom) || filled($dateTo))
                         <span class="master-list-applied-chip">
@@ -439,7 +393,11 @@
                                 @endif
                                 <span class="master-sub">
                                     {{ $relatedPartyOptions[$entry->related_party_type] ?? 'Other' }}:
-                                    {{ $entry->client?->company_name ?? $entry->vendor?->vendor_name ?? $entry->related_party_name ?? $entry->expense_head ?? '-' }}
+                                    {{-- the party the row is against: the linked record
+                                         first, then whatever was typed. One accessor decides
+                                         the order, so the list, the row's own page and the
+                                         analysis builder never name the same entry differently --}}
+                                    {{ $entry->partyLabel() ?: '-' }}
                                     @if ($entry->invoice_bill_number || $entry->bank_reference_number)
                                         · {{ $entry->invoice_bill_number ?: $entry->bank_reference_number }}
                                     @endif
@@ -636,7 +594,20 @@
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="quickPartyName">Party / Expense Name</label>
-                            <input class="master-input" id="quickPartyName" name="related_party_name">
+                            <input class="master-input" id="quickPartyName" name="related_party_name"
+                                placeholder="Name on the line, if it is not linked below">
+                        </div>
+                        {{-- A person paid from the account is a party like any
+                             other: linked here, the payment shows up in the
+                             employee report instead of only in the notes. --}}
+                        <div class="master-field">
+                            <label class="master-label" for="quickEmployee">Paid to employee</label>
+                            <select class="master-select" id="quickEmployee" name="employee_id">
+                                <option value="">No employee</option>
+                                @foreach($employees as $employee)
+                                    <option value="{{ $employee->id }}">{{ $employee->name }}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
                     <p class="master-sub">

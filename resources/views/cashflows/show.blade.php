@@ -87,7 +87,7 @@
                             Type</span><strong>{{ $relatedPartyOptions[$entry->related_party_type] ?? '-' }}</strong>
                     </div>
                     <div class="master-info"><span>Related
-                            Party</span><strong>{{ $entry->client?->company_name ?? $entry->vendor?->vendor_name ?? $entry->related_party_name ?? '-' }}</strong>
+                            Party</span><strong>{{ $entry->partyLabel() ?: '-' }}</strong>
                     </div>
                     <div class="master-info"><span>Expense Head</span><strong>{{ $entry->expense_head ?: '-' }}</strong>
                     </div>

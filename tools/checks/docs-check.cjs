@@ -137,8 +137,14 @@ const cashflowController = read('app/Http/Controllers/CashflowController.php');
 check('the ledger counts documents with the page, not per row',
     /withCount\('attachments'\)/.test(cashflowController));
 
+/* The filter itself moved into the shared vocabulary (App\Services\CashflowFilters)
+   when the analysis builder started using the same dimensions: the ledger, the
+   archive and a report's drill-down now mean the same rows by "missing
+   documents". The guard follows the query rather than the file it used to live
+   in — it is still the same rule: a real query, not a label on a chip. */
+const cashflowFilters = read('app/Services/CashflowFilters.php');
 check('the to-do filter is a real query, not a label',
-    /whereDoesntHave\('attachments'\)/.test(cashflowController)
+    /whereDoesntHave\('attachments'\)/.test(cashflowFilters)
     && /'missing_documents' => \$count\(\['documents' => 'missing'\]\)/.test(cashflowController));
 
 const indexView = read('resources/views/cashflows/index.blade.php');

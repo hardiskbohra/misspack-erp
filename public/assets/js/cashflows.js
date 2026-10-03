@@ -28,9 +28,11 @@
        document archive are the same surface, so the density choice is shared
        between them. */
     function initList() {
-        /* The ledger, the archive and the statements run share one density
-           choice: they are the same surface seen from three angles. */
-        ['.cashflow-index', '.cashflow-documents', '.cashflow-statements'].forEach(function (root) {
+        /* The ledger, the archive, the statements run and the report builder
+           share one density choice and one pinned-header shadow: they are the
+           same surface seen from four angles. (The report has no density
+           buttons, so only the shadow applies to it.) */
+        ['.cashflow-index', '.cashflow-documents', '.cashflow-statements', '.cashflow-reports'].forEach(function (root) {
             window.MasterList.gridShadow({ root: root });
             window.MasterList.density({ root: root, key: 'misspack.cashflows.density' });
         });

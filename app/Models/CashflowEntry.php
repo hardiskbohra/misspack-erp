@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class CashflowEntry extends Model
@@ -14,7 +15,7 @@ class CashflowEntry extends Model
     protected $fillable = [
         'entry_date', 'particular', 'invoice_bill_number', 'bank_reference_number', 'transaction_type','project_id','sales_invoice_id',
         'credit_amount', 'debit_amount', 'balance', 'currency', 'account_id', 'category_id',
-        'accounting_status', 'payment_mode', 'client_id', 'vendor_id', 'expense_head',
+        'accounting_status', 'payment_mode', 'client_id', 'vendor_id', 'employee_id', 'expense_head',
         'related_party_type', 'related_party_name', 'notes', 'created_by',
     ];
 
@@ -54,6 +55,31 @@ class CashflowEntry extends Model
         return $this->belongsTo(\App\Models\Client::class, 'client_id');
     }
 
+    /**
+     * The employee this entry is about — a real link, not the name typed into
+     * the box (see the 2026_10_03_020000 migration: the old text is kept, so an
+     * entry that named somebody the users table does not know still reads).
+     */
+    public function employee()
+    {
+        return $this->belongsTo(User::class, 'employee_id');
+    }
+
+    /**
+     * Whose money this is, decided once: the linked party if there is one, else
+     * the name written on the entry, else the expense head. Every screen that
+     * prints a party prints this.
+     */
+    public function partyLabel(): string
+    {
+        return (string) ($this->client?->company_name
+            ?? $this->vendor?->vendor_name
+            ?? $this->employee?->name
+            ?? $this->related_party_name
+            ?? $this->expense_head
+            ?? '');
+    }
+
     public function vendor()
     {
         return $this->belongsTo(\App\Models\Vendor::class, 'vendor_id');
@@ -69,6 +95,13 @@ class CashflowEntry extends Model
                     ->orWhere('related_party_name', 'like', "%{$search}%")
                     ->orWhere('expense_head', 'like', "%{$search}%")
                     ->orWhere('notes', 'like', "%{$search}%");
+
+                /* and the employee the entry is linked to, whose name is not on
+                   the row: searching "Ramesh" has to find the payment that was
+                   filed against him by id */
+                if (class_exists(User::class) && Schema::hasColumn('cashflow_entries', 'employee_id')) {
+                    $nested->orWhereHas('employee', fn (Builder $employee) => $employee->where('name', 'like', "%{$search}%"));
+                }
             });
         });
     }

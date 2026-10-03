@@ -68,12 +68,10 @@ class CashflowAttachment extends Model
             return (string) $this->party_name;
         }
 
-        $entry = $this->cashflowEntry;
-
-        return $entry?->client?->company_name
-            ?? $entry?->vendor?->vendor_name
-            ?? $entry?->related_party_name
-            ?? '—';
+        /* Fall back to the entry's own label — the same accessor the ledger
+           prints, so a filed document is never named differently from the row
+           it was filed against. */
+        return $this->cashflowEntry?->partyLabel() ?: '—';
     }
 
     /**

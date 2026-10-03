@@ -74,7 +74,38 @@ category, then: group-by any dimension × period (month/quarter/year), compare
 save the result as a saved view, export it. Replaces the "sometimes needed" ad-hoc
 requests, because you can build them yourself in ten seconds.
 
-*Not started.*
+*Shipped, with the trade's own reading of "compare":* a comparison in a report is
+the **whole axis shifted**, never the row above it — comparing April with March
+inside an April–June report counts March twice, once in its own column and once as
+April's comparison. Delivered as:
+
+- **Cashflow → Reports** — one screen with the period range, the saved views, and
+  the builder: **Group by** any of twelve dimensions (overall, client, vendor,
+  employee, account, category, expense head, payment mode, credit/debit, accounting
+  status, project, currency) × **Period** (month / quarter / year) × **Figure** (net,
+  credit, debit) × **Compare** (nothing, the previous period of the same length, or
+  the same period last year). It opens on the year to date, and a year bucket opens
+  on five years, because "this month" is not a report.
+- **A total you can open.** Every row name, every cell and the footer are links: the
+  cell carries its dimension, its bucket's exact first and last day, and the sort, so
+  the ledger it opens sums to the figure on the page. The ledger shows what arrived
+  with it as removable chips, like any other filter.
+- **Employee is a link, not a name.** `cashflow_entries.employee_id` points at
+  `users`, the entry form and Quick Entry both offer the person (with designation),
+  and the migration matches what was already typed by exact name — anything that did
+  not match keeps its text and reads as "not set" in the report, where it can be
+  fixed rather than quietly renumbered.
+- **A mixed range says so.** Rupees, dollars and yuan are never dressed as one
+  currency: when a window holds more than one, the figures carry no sign at all and
+  the page names the currencies in it — and the currency is a dimension, so
+  filtering to one is a click away.
+- **Export** — CSV (Excel-ready, with the figure, the comparison and every period
+  column) and the print/PDF sheet, both cut to the same window as the screen.
+- **Up to 36 buckets**, and a longer range says it was cut instead of silently
+  dropping a period.
+
+*Left for 1C / 2C, not 2A:* the accountant pack and XLSX are 1C; the age-ordered
+worklist across parties is 2C.
 
 **2B. Shareable party statements.** A statement per client/vendor: opening balance,
 running balance, ageing (0–30 / 31–60 / 61–90 / 90+), and for vendors a

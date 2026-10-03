@@ -1217,3 +1217,388 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================================================
+   REPORT BUILDER — resources/views/cashflows/reports.blade.php
+   --------------------------------------------------------------------------
+   The matrix is the module's own form: money down the side, time across the
+   top, every figure a link to the rows behind it. Only the report's cells live
+   here — the chip bar, the applied strip, the saved views, the totals row and
+   the empty state all come from master-list.css, so the report is the ledger's
+   sibling rather than a second dialect.
+   ========================================================================== */
+
+/* ---------------- the builder's own row ---------------- */
+
+.cashflow-reports .cf-report-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1 1 170px;
+    min-width: 150px;
+}
+
+.cashflow-reports .cf-report-field .master-select,
+.cashflow-reports .cf-report-field .master-input {
+    width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
+}
+
+.cashflow-reports .cf-report-actions {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex: 0 0 auto;
+}
+
+/* the dimensions that narrow the rows rather than shape the report: one
+   disclosure, counted, so six controls stay on one line and a hidden filter is
+   still visible as a chip below */
+.cashflow-reports .cf-report-more {
+    flex-basis: 100%;
+    margin: 0;
+}
+
+.cashflow-reports .cf-report-more > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.cashflow-reports .cf-report-more > summary::-webkit-details-marker {
+    display: none;
+}
+
+.cashflow-reports .cf-report-more-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--accent-light, rgba(79, 142, 247, .12));
+    color: var(--master-primary, #4f83f1);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.cashflow-reports .cf-report-more-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-card-soft);
+}
+
+/* ---------------- the window, in figures ---------------- */
+
+.cashflow-reports .cf-report-headline {
+    margin: 18px 0 0;
+}
+
+.cashflow-reports .cf-report-note {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0 0;
+    padding: 12px 16px;
+    border: 1px solid var(--mc-border);
+    border-left: 3px solid var(--master-primary, #4f83f1);
+    border-radius: 12px;
+    background: var(--mc-card);
+    color: var(--mc-text-2);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+.cashflow-reports .cf-report-note strong {
+    color: var(--mc-text);
+}
+
+/* ---------------- the matrix ---------------- */
+
+.cashflow-reports .cf-report-wrap {
+    /* a matrix is wider than the page by nature: it scrolls inside its own
+       frame, and the name column stays with its row while it does */
+    overflow-x: auto;
+}
+
+.cashflow-reports .cf-report-table {
+    /* thirteen to forty columns: the table is as wide as its content, not as
+       wide as the shell's 1280px floor */
+    min-width: max-content;
+}
+
+.cashflow-reports .cf-report-table th,
+.cashflow-reports .cf-report-table td {
+    padding: 10px 12px;
+    white-space: nowrap;
+}
+
+/* the row's own name reads as text, not as a column heading */
+.cashflow-reports .cf-report-table td.cf-report-name-col {
+    font-size: 13px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* The name column stays with its row while the periods scroll past it, so a
+   figure is never read against the wrong party. It carries the card's own
+   background because a transparent sticky cell lets the columns slide under
+   it. */
+.cashflow-reports .cf-report-table .cf-report-name-col {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    min-width: 190px;
+    max-width: 320px;
+    text-align: left;
+    background: var(--mc-card);
+    box-shadow: inset -1px 0 0 var(--mc-border);
+}
+
+.cashflow-reports .cf-report-table thead .cf-report-name-col {
+    z-index: 4;
+    background: var(--mc-card-soft);
+}
+
+.cashflow-reports .cf-report-table tbody tr:hover,
+.cashflow-reports .cf-report-table tbody tr:hover .cf-report-name-col {
+    background: var(--mc-card-soft);
+}
+
+.cashflow-reports .cf-report-table .cf-report-period,
+.cashflow-reports .cf-report-table .cf-report-total-col {
+    min-width: 104px;
+    text-align: right;
+}
+
+.cashflow-reports .cf-report-table .cf-report-total-col {
+    font-weight: 800;
+}
+
+.cashflow-reports .cf-report-table thead a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.cashflow-reports .cf-report-table thead a:hover {
+    text-decoration: underline;
+}
+
+.cashflow-reports .cf-report-name {
+    display: block;
+    color: var(--mc-text);
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+a.cf-report-name:hover {
+    text-decoration: underline;
+}
+
+.cashflow-reports .cf-report-table .master-sub {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+}
+
+.cashflow-reports .cf-report-value {
+    display: inline-block;
+    color: var(--mc-text);
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+a.cf-report-value:hover {
+    text-decoration: underline;
+}
+
+/* Money in reads green and money out reads red — the same two tones the
+   ledger's own credit and debit columns use, so one figure is one colour
+   wherever the module shows it. */
+.cashflow-reports .cf-report-value.is-in {
+    color: var(--cf-green);
+}
+
+.cashflow-reports .cf-report-value.is-out {
+    color: var(--cf-red);
+}
+
+.cashflow-reports .cf-report-delta {
+    display: block;
+    margin-top: 1px;
+    font-size: 10.5px;
+    font-weight: 800;
+}
+
+.cashflow-reports .cf-report-delta.is-up {
+    color: var(--cf-green);
+}
+
+.cashflow-reports .cf-report-delta.is-down {
+    color: var(--cf-red);
+}
+
+.cashflow-reports .cf-report-dash {
+    color: var(--mc-text-3);
+    font-weight: 700;
+}
+
+.cashflow-reports .cf-report-blank {
+    padding: 30px 20px;
+    text-align: center;
+    color: var(--mc-text-3);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ---------------- the shape of the range ---------------- */
+
+.cashflow-reports .cf-report-trend {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 18px 18px 14px;
+    overflow-x: auto;
+}
+
+.cashflow-reports .cf-report-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1 0 42px;
+    min-width: 42px;
+    text-decoration: none;
+}
+
+.cashflow-reports .cf-report-bar-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    width: 100%;
+    height: 104px;
+}
+
+.cashflow-reports .cf-report-bar-in,
+.cashflow-reports .cf-report-bar-out {
+    display: block;
+    width: 13px;
+    min-height: 3px;
+    border-radius: 4px 4px 0 0;
+}
+
+.cashflow-reports .cf-report-bar-in {
+    background: var(--cf-green);
+}
+
+.cashflow-reports .cf-report-bar-out {
+    background: var(--cf-red);
+}
+
+.cashflow-reports .cf-report-bar-label {
+    color: var(--mc-text-3);
+    font-size: 10.5px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.cashflow-reports .cf-report-bar:hover .cf-report-bar-label {
+    color: var(--mc-text);
+}
+
+:root[data-theme="dark"] .cashflow-reports .cf-report-value.is-in,
+:root[data-theme="dark"] .cashflow-reports .cf-report-delta.is-up {
+    color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .cashflow-reports .cf-report-value.is-out,
+:root[data-theme="dark"] .cashflow-reports .cf-report-delta.is-down {
+    color: #ff9b9b;
+}
+
+:root[data-theme="dark"] .cashflow-reports .cf-report-bar-in {
+    background: #34d399;
+}
+
+:root[data-theme="dark"] .cashflow-reports .cf-report-bar-out {
+    background: #fb7185;
+}
+
+/* The brand blue is a light-panel blue: on the dark card it reads at about
+   3.4:1, which is not enough for a badge or a note's rule, so both take the
+   module's dark blue instead. */
+:root[data-theme="dark"] .cashflow-reports .cf-report-note {
+    border-left-color: #93b4ff;
+}
+
+:root[data-theme="dark"] .cashflow-reports .cf-report-more-count {
+    background: rgba(147, 180, 255, .16);
+    color: #93b4ff;
+}
+
+/* The list shell stacks a table's rows into cards below 768px. A matrix is not
+   a row list: stacking twelve months into one card per client produces a page
+   nobody can read across. It keeps its grid and scrolls sideways, with the
+   name column pinned — the period headers name the columns the card stack
+   would otherwise have labelled cell by cell.
+
+   Two classes plus the module root, so these win against the shell's own
+   stacking rules on specificity alone: the module never has to name a class
+   that belongs to the surface. */
+@media (max-width: 768px) {
+    .cf.cashflow-reports .cf-report-table,
+    .cf.cashflow-reports .cf-report-table thead,
+    .cf.cashflow-reports .cf-report-table tbody,
+    .cf.cashflow-reports .cf-report-table tfoot {
+        display: revert;
+    }
+
+    .cf.cashflow-reports .cf-report-table thead {
+        display: table-header-group;
+    }
+
+    .cf.cashflow-reports .cf-report-table tr {
+        display: table-row;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        padding: 0;
+        margin: 0;
+        box-shadow: none;
+    }
+
+    .cf.cashflow-reports .cf-report-table th,
+    .cf.cashflow-reports .cf-report-table td {
+        display: table-cell;
+        width: auto;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--mc-border);
+        margin: 0;
+        text-align: right;
+    }
+
+    .cf.cashflow-reports .cf-report-table .cf-report-name-col {
+        text-align: left;
+        min-width: 150px;
+    }
+
+    .cashflow-reports .cf-report-actions {
+        flex: 1 1 100%;
+    }
+
+    .cashflow-reports .cf-report-actions .master-btn {
+        flex: 1 1 0;
+    }
+}
