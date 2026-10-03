@@ -158,6 +158,8 @@ Route::middleware('auth')->group(function () {
 
         // Client Management
         Route::post('/clients/quick', [ClientController::class, 'quickStore'])->name('clients.quickStore');
+        Route::post('/clients/saved-views', [ClientController::class, 'storeSavedView'])->name('clients.saved-views.store');
+        Route::delete('/clients/saved-views/{savedView}', [ClientController::class, 'destroySavedView'])->name('clients.saved-views.destroy');
         Route::patch('/clients/{client}/send-kyc', [ClientController::class, 'sendKyc'])->name('clients.sendKyc');
         Route::patch('/clients/{client}/status', [ClientController::class, 'updateStatus'])->name('clients.status.update');
         Route::resource('clients', ClientController::class);

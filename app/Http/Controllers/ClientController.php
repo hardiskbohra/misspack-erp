@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\SavedView;
+use App\Services\SavedViews;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,8 +15,12 @@ use Illuminate\View\View;
 
 class ClientController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
+        if ($savedQuery = $this->resolveSavedView($request)) {
+            return redirect()->route('clients.index', $savedQuery);
+        }
+
         $search = $request->query('search');
         $search = is_string($search) ? trim($search) : '';
         $search = $search !== '' ? mb_substr($search, 0, 150) : null;
@@ -46,6 +52,7 @@ class ClientController extends Controller
 
         $stats = [
             'total' => (int) $statusCounts->sum(),
+            'draft' => (int) ($statusCounts[Client::STATUS_DRAFT] ?? 0),
             'under_review' => (int) ($statusCounts[Client::STATUS_UNDER_REVIEW] ?? 0),
             'approved' => (int) ($statusCounts[Client::STATUS_APPROVED] ?? 0),
             'revision' => (int) ($statusCounts[Client::STATUS_REVISION] ?? 0),
@@ -65,7 +72,55 @@ class ClientController extends Controller
             'typeOptions' => Client::typeOptions(),
             'currencyOptions' => Client::currencyOptions(),
             'portalInstalled' => $portalInstalled,
+            'savedViews' => app(SavedViews::class)->forUser(Auth::id(), 'clients'),
         ]);
+    }
+
+    /** Restore a named filter set as the normal list URL and controls. */
+    private function resolveSavedView(Request $request): array
+    {
+        $id = (int) $request->query('saved_view', 0);
+        $savedViews = app(SavedViews::class);
+
+        if (! $id || ! $savedViews->available()) {
+            return [];
+        }
+
+        $view = SavedView::query()
+            ->where('module', 'clients')
+            ->where(function ($query) {
+                $query->where('user_id', Auth::id())->orWhere('is_shared', true);
+            })
+            ->find($id);
+
+        return $view ? $savedViews->queryFor($view) : [];
+    }
+
+    public function storeSavedView(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:60'],
+            'is_shared' => ['nullable', 'boolean'],
+        ]);
+
+        app(SavedViews::class)->save(
+            (int) Auth::id(),
+            'clients',
+            $data['name'],
+            $request->query(),
+            $request->boolean('is_shared')
+        );
+
+        return back()->with('success', 'View "'.$data['name'].'" saved.');
+    }
+
+    public function destroySavedView(SavedView $savedView): RedirectResponse
+    {
+        abort_unless($savedView->module === 'clients' && (int) $savedView->user_id === (int) Auth::id(), 403);
+
+        app(SavedViews::class)->delete((int) Auth::id(), (int) $savedView->id);
+
+        return back()->with('success', 'Saved view removed.');
     }
 
     public function create(): View

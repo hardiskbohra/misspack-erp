@@ -4,11 +4,11 @@
 @section('page-title', 'Clients')
 
 @section('page-actions')
-    <button type="button" class="master-btn master-btn-soft" id="openQuickClientModal">
+    <button type="button" class="master-btn master-btn-primary" id="openQuickClientModal">
         <i class="fa-solid fa-bolt" aria-hidden="true"></i> Quick add
     </button>
-    <a href="{{ route('clients.create') }}" class="master-btn master-btn-primary">
-        <i class="fa-solid fa-plus" aria-hidden="true"></i> Add client
+    <a href="{{ route('clients.create') }}" class="master-btn master-btn-soft">
+        <i class="fa-solid fa-plus" aria-hidden="true"></i> Detailed form
     </a>
 @endsection
 
@@ -19,60 +19,102 @@
 
 @php
     $filtersActive = filled($search) || $status !== 'all' || $type !== 'all';
-    $chipBase = request()->except(['status', 'page']);
-    $statusUrl = fn ($value) => route('clients.index', array_merge($chipBase, ['status' => $value]));
+    $baseFilters = collect(request()->except(['page', 'saved_view']))
+        ->reject(fn ($value) => $value === null || $value === '' || $value === 'all');
+    $chipBase = collect(request()->except(['status', 'page', 'saved_view']))
+        ->reject(fn ($value) => $value === null || $value === '' || $value === 'all');
+    $statusUrl = function ($value) use ($chipBase) {
+        $query = $chipBase->all();
+        if ($value !== 'all') {
+            $query['status'] = $value;
+        }
+
+        return route('clients.index', $query);
+    };
+    $chipUrl = function (string $key) {
+        $keep = collect(request()->except([$key, 'page', 'saved_view']))
+            ->reject(fn ($value) => $value === null || $value === '' || $value === 'all');
+
+        return route('clients.index', $keep->all());
+    };
     $clientCount = $clients->total();
     $firstClient = $clients->firstItem() ?? 0;
     $lastClient = $clients->lastItem() ?? 0;
 @endphp
 
 <div class="client client-index master-list">
-    <div class="client-index-intro">
-        <div>
-            <h1>Client directory</h1>
-            <p>Manage company details, KYC reviews and client portal access in one place.</p>
+    <div class="master-stats desktop-only" aria-label="Client overview">
+        <div class="master-stat master-stat--flat blue">
+            <span class="icon"><i class="fa-solid fa-building" aria-hidden="true"></i></span>
+            <div><p class="master-stat-title">Total clients</p><p class="master-stat-value">{{ number_format($stats['total']) }}</p></div>
         </div>
-        <span class="client-index-count"><i class="fa-solid fa-building" aria-hidden="true"></i> {{ number_format($stats['total']) }} {{ \Illuminate\Support\Str::plural('client', $stats['total']) }}</span>
+        <div class="master-stat master-stat--flat orange">
+            <span class="icon"><i class="fa-regular fa-clock" aria-hidden="true"></i></span>
+            <div><p class="master-stat-title">Under review</p><p class="master-stat-value">{{ number_format($stats['under_review']) }}</p></div>
+        </div>
+        <div class="master-stat master-stat--flat teal">
+            <span class="icon"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></span>
+            <div><p class="master-stat-title">Approved</p><p class="master-stat-value">{{ number_format($stats['approved']) }}</p></div>
+        </div>
+        <div class="master-stat master-stat--flat purple">
+            <span class="icon"><i class="fa-solid fa-rotate" aria-hidden="true"></i></span>
+            <div><p class="master-stat-title">Needs KYC action</p><p class="master-stat-value">{{ number_format($stats['revision'] + $stats['rejected']) }}</p></div>
+        </div>
+        <div class="master-stat master-stat--flat green">
+            <span class="icon"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i></span>
+            <div><p class="master-stat-title">Portal enabled</p><p class="master-stat-value">{{ number_format($stats['portal_enabled']) }}</p></div>
+        </div>
     </div>
 
-    <section class="master-stats client-stat-grid" aria-label="Client overview">
-        <a class="master-stat master-stat--flat blue client-stat" href="{{ $statusUrl('all') }}">
-            <span class="client-stat-icon"><i class="fa-solid fa-building" aria-hidden="true"></i></span>
-            <span><span class="master-stat-title">Total clients</span><strong class="master-stat-value">{{ number_format($stats['total']) }}</strong></span>
-        </a>
-        <a class="master-stat master-stat--flat orange client-stat" href="{{ $statusUrl('under_review') }}">
-            <span class="client-stat-icon"><i class="fa-regular fa-clock" aria-hidden="true"></i></span>
-            <span><span class="master-stat-title">Under review</span><strong class="master-stat-value">{{ number_format($stats['under_review']) }}</strong></span>
-        </a>
-        <a class="master-stat master-stat--flat teal client-stat" href="{{ $statusUrl('approved') }}">
-            <span class="client-stat-icon"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></span>
-            <span><span class="master-stat-title">Approved</span><strong class="master-stat-value">{{ number_format($stats['approved']) }}</strong></span>
-        </a>
-        <a class="master-stat master-stat--flat purple client-stat" href="{{ $statusUrl('revision') }}">
-            <span class="client-stat-icon"><i class="fa-solid fa-rotate" aria-hidden="true"></i></span>
-            <span><span class="master-stat-title">Revision requested</span><strong class="master-stat-value">{{ number_format($stats['revision']) }}</strong></span>
-        </a>
-        <a class="master-stat master-stat--flat red client-stat" href="{{ $statusUrl('rejected') }}">
-            <span class="client-stat-icon"><i class="fa-solid fa-circle-xmark" aria-hidden="true"></i></span>
-            <span><span class="master-stat-title">Rejected</span><strong class="master-stat-value">{{ number_format($stats['rejected']) }}</strong></span>
-        </a>
-        <div class="master-stat master-stat--flat green client-stat client-stat--static">
-            <span class="client-stat-icon"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i></span>
-            <span><span class="master-stat-title">Portal enabled</span><strong class="master-stat-value">{{ number_format($stats['portal_enabled']) }}</strong></span>
-        </div>
-    </section>
-
-    <section class="master-card master-card--flat client-filter-card" aria-label="Search and filter clients">
+    <section class="master-card master-card--flat" aria-label="Search and filter clients">
         <div class="master-list-bar">
             <nav class="master-list-chips" aria-label="Quick client filters">
-                <a class="master-list-chip {{ $status === 'all' ? 'is-active' : '' }}" href="{{ $statusUrl('all') }}">All clients <span class="master-list-chip-count">{{ $stats['total'] }}</span></a>
-                <a class="master-list-chip {{ $status === 'under_review' ? 'is-active' : '' }}" href="{{ $statusUrl('under_review') }}">Under review <span class="master-list-chip-count">{{ $stats['under_review'] }}</span></a>
-                <a class="master-list-chip {{ $status === 'approved' ? 'is-active' : '' }}" href="{{ $statusUrl('approved') }}">Approved <span class="master-list-chip-count">{{ $stats['approved'] }}</span></a>
-                <a class="master-list-chip {{ $status === 'rejected' ? 'is-active' : '' }}" href="{{ $statusUrl('rejected') }}">Rejected <span class="master-list-chip-count">{{ $stats['rejected'] }}</span></a>
+                <a class="master-list-chip {{ $status === 'all' ? 'is-active' : '' }}" href="{{ $statusUrl('all') }}">
+                    All clients <span class="master-list-chip-count">{{ $stats['total'] }}</span>
+                </a>
+                <a class="master-list-chip {{ $status === 'draft' ? 'is-active' : '' }}" href="{{ $statusUrl('draft') }}">
+                    Draft <span class="master-list-chip-count">{{ $stats['draft'] ?? 0 }}</span>
+                </a>
+                <a class="master-list-chip {{ $status === 'under_review' ? 'is-active' : '' }}" href="{{ $statusUrl('under_review') }}">
+                    Under review <span class="master-list-chip-count">{{ $stats['under_review'] }}</span>
+                </a>
+                <a class="master-list-chip {{ $status === 'approved' ? 'is-active' : '' }}" href="{{ $statusUrl('approved') }}">
+                    Approved <span class="master-list-chip-count">{{ $stats['approved'] }}</span>
+                </a>
+                <a class="master-list-chip {{ $status === 'revision' ? 'is-active' : '' }}" href="{{ $statusUrl('revision') }}">
+                    Revision <span class="master-list-chip-count">{{ $stats['revision'] }}</span>
+                </a>
+                <a class="master-list-chip {{ $status === 'rejected' ? 'is-active' : '' }}" href="{{ $statusUrl('rejected') }}">
+                    Rejected <span class="master-list-chip-count">{{ $stats['rejected'] }}</span>
+                </a>
             </nav>
+
+            <div class="master-list-saved" aria-label="Saved client views">
+                @foreach ($savedViews as $view)
+                    <span class="master-list-saved-chip">
+                        <a href="{{ route('clients.index', ['saved_view' => $view->id]) }}"
+                            title="{{ $view->is_shared ? 'Shared view' : 'Your view' }}">{{ $view->name }}</a>
+                        @if ((int) $view->user_id === (int) auth()->id())
+                            <form method="POST" action="{{ route('clients.saved-views.destroy', $view) }}">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" title="Remove saved view" aria-label="Remove {{ $view->name }}">&times;</button>
+                            </form>
+                        @endif
+                    </span>
+                @endforeach
+                <button type="button" class="master-btn master-btn-soft master-btn-sm" id="toggleSaveView">☆ Save this view</button>
+                <form method="POST" action="{{ route('clients.saved-views.store', $baseFilters->all()) }}"
+                    class="master-list-save-view" id="saveViewForm" hidden>
+                    @csrf
+                    <input class="master-input" name="name" placeholder="View name" maxlength="60" aria-label="Saved view name" required>
+                    <label class="master-check"><input type="checkbox" name="is_shared" value="1"> Share</label>
+                    <button class="master-btn master-btn-primary master-btn-sm" type="submit">Save</button>
+                </form>
+            </div>
         </div>
 
-        <form method="GET" action="{{ route('clients.index') }}" class="client-filter-form">
+        <form method="GET" action="{{ route('clients.index') }}">
             <div class="master-filter-row">
                 <label class="master-search">
                     <span aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></span>
@@ -93,34 +135,58 @@
                 </select>
                 <div class="master-list-filter-group">
                     @if($filtersActive)
-                        <a href="{{ route('clients.index') }}" class="master-btn master-btn-soft">Clear</a>
+                        <a href="{{ route('clients.index') }}" class="master-btn master-btn-soft">Reset</a>
                     @endif
                     <button class="master-btn master-btn-primary" type="submit">
                         <i class="fa-solid fa-filter" aria-hidden="true"></i> Apply filters
                     </button>
                 </div>
             </div>
+
             @if($filtersActive)
                 <div class="master-list-applied" aria-label="Active filters">
-                    <span class="master-list-applied-title">Showing results for</span>
+                    <span class="master-list-applied-title">Filtered by</span>
                     @if(filled($search))
-                        <span class="master-list-applied-chip"><span class="master-list-applied-key">Search</span><span class="master-list-applied-value">{{ $search }}</span></span>
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Search</span>
+                            <span class="master-list-applied-value">{{ $search }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('search') }}"
+                                aria-label="Remove the search filter" title="Remove the search filter">&times;</a>
+                        </span>
                     @endif
                     @if($status !== 'all')
-                        <span class="master-list-applied-chip"><span class="master-list-applied-key">Status</span><span class="master-list-applied-value">{{ $statusOptions[$status] ?? $status }}</span></span>
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Status</span>
+                            <span class="master-list-applied-value">{{ $statusOptions[$status] ?? $status }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('status') }}"
+                                aria-label="Remove the status filter" title="Remove the status filter">&times;</a>
+                        </span>
                     @endif
                     @if($type !== 'all')
-                        <span class="master-list-applied-chip"><span class="master-list-applied-key">Type</span><span class="master-list-applied-value">{{ $typeOptions[$type] ?? $type }}</span></span>
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Type</span>
+                            <span class="master-list-applied-value">{{ $typeOptions[$type] ?? $type }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('type') }}"
+                                aria-label="Remove the client type filter" title="Remove the client type filter">&times;</a>
+                        </span>
                     @endif
-                    <a class="master-list-applied-clear" href="{{ route('clients.index') }}">Clear all</a>
+                    <a class="master-list-applied-clear" href="{{ route('clients.index') }}">Clear all filters</a>
                 </div>
             @endif
         </form>
     </section>
 
-    <section class="master-card master-table-card master-card--flat client-table-card" aria-label="Client records">
-        <div class="master-list-toolbar client-list-toolbar">
-            <p class="master-list-hint">{{ $clientCount === 0 ? 'No matching clients' : "Showing {$firstClient}–{$lastClient} of {$clientCount} clients" }}</p>
+    <section class="master-card master-table-card master-card--flat" aria-label="Client records">
+        <div class="master-list-toolbar">
+            <p class="master-list-hint" title="Client profiles are shown newest first.">
+                {{ $clientCount === 0 ? 'No matching clients' : 'Newest first · Showing '.$firstClient.'–'.$lastClient.' of '.$clientCount }}
+            </p>
+            <div class="master-list-toolbar-actions">
+                <div class="master-list-density desktop-only" role="group" aria-label="Row density">
+                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="true">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
+                </div>
+            </div>
         </div>
         <div class="master-table-wrap">
             <table class="master-table client-table">
@@ -131,7 +197,7 @@
                         <th scope="col">KYC</th>
                         <th scope="col">Portal</th>
                         <th scope="col">Status</th>
-                        <th scope="col" class="client-actions-heading">Actions</th>
+                        <th scope="col">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -145,13 +211,12 @@
                                 ->map(fn ($word) => mb_strtoupper(mb_substr($word, 0, 1)))
                                 ->take(2)
                                 ->implode('');
-                            $avatarColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
-                            $avatarColor = $avatarColors[abs(crc32($client->company_name)) % count($avatarColors)];
+                            $avatarTone = abs(crc32($client->company_name)) % 6;
                         @endphp
-                        <tr>
+                        <tr class="client-row is-clickable" data-href="{{ route('clients.show', $client) }}">
                             <td data-label="Client">
                                 <div class="client-table-identity">
-                                    <span class="client-table-avatar" style="--client-avatar-color: {{ $avatarColor }}" aria-hidden="true">{{ $initials }}</span>
+                                    <span class="client-table-avatar client-avatar-tone-{{ $avatarTone }}" aria-hidden="true">{{ $initials }}</span>
                                     <div class="client-table-copy">
                                         <a class="client-table-name" href="{{ route('clients.show', $client) }}">{{ $client->company_name }}</a>
                                         <span class="client-table-meta">{{ $client->client_number }}@if($client->brand_name) <span aria-hidden="true">·</span> {{ $client->brand_name }}@endif</span>
@@ -188,12 +253,27 @@
                             <td data-label="Status">
                                 <span class="master-badge status-{{ $statusClass }}">{{ $client->statusLabel() }}</span>
                             </td>
-                            <td data-label="Actions" class="client-table-actions-cell">
-                                <div class="master-row-actions client-row-actions">
-                                    <a href="{{ route('clients.show', $client) }}" class="master-icon-btn green" aria-label="View {{ $client->company_name }}" title="View client"><i class="fa-regular fa-eye" aria-hidden="true"></i></a>
-                                    <a href="{{ route('clients.edit', $client) }}" class="master-icon-btn" aria-label="Edit {{ $client->company_name }}" title="Edit client"><i class="fa-solid fa-pen" aria-hidden="true"></i></a>
-                                    <button type="button" class="master-icon-btn client-copy-kyc" data-kyc-url="{{ route('clients.publicKyc', $client->public_token) }}" aria-label="Copy KYC link for {{ $client->company_name }}" title="Copy KYC link"><i class="fa-solid fa-link" aria-hidden="true"></i></button>
-                                    <button type="button" class="master-icon-btn danger master-delete-btn" aria-label="Delete {{ $client->company_name }}" title="Delete client" data-name="{{ $client->company_name }}" data-delete-url="{{ route('clients.destroy', $client) }}"><i class="fa-regular fa-trash-can" aria-hidden="true"></i></button>
+                            <td data-label="Action" class="client-table-actions-cell">
+                                <div class="master-row-actions">
+                                    <div class="master-dropdown">
+                                        <button type="button" class="master-dropdown-toggle"
+                                            aria-label="Actions for {{ $client->company_name }}"
+                                            aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="master-dropdown-menu">
+                                            <a href="{{ route('clients.show', $client) }}"><i class="fas fa-eye" aria-hidden="true"></i> View client</a>
+                                            <a href="{{ route('clients.edit', $client) }}"><i class="fas fa-pen" aria-hidden="true"></i> Edit client</a>
+                                            <button type="button" class="client-copy-kyc" data-kyc-url="{{ route('clients.publicKyc', $client->public_token) }}">
+                                                <i class="fas fa-link" aria-hidden="true"></i> Copy KYC link
+                                            </button>
+                                            <button type="button" class="danger master-delete-btn"
+                                                aria-label="Delete {{ $client->company_name }}" title="Delete client"
+                                                data-name="{{ $client->company_name }}" data-delete-url="{{ route('clients.destroy', $client) }}">
+                                                <i class="far fa-trash-alt" aria-hidden="true"></i> Delete client
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -218,11 +298,7 @@
                 </tbody>
             </table>
         </div>
-        @if($clients->hasPages())
-            <div class="client-pagination">
-                <x-pagination :items="$clients" />
-            </div>
-        @endif
+        <x-pagination :items="$clients" />
     </section>
 
     <div class="master-modal" id="quickClientModal" aria-hidden="true" aria-labelledby="quickClientTitle">

@@ -1,5 +1,12 @@
 /* Client directory interactions: accessible dialogs and safe link copying. */
 document.addEventListener('DOMContentLoaded', function () {
+    if (window.MasterList) {
+        window.MasterList.rowNavigation({ root: '.client-index' });
+        window.MasterList.gridShadow({ root: '.client-index' });
+        window.MasterList.density({ root: '.client-index', key: 'misspack.clients.density' });
+        window.MasterList.saveViewToggle();
+    }
+
     const quickModal = document.getElementById('quickClientModal');
     const deleteModal = document.getElementById('deleteClientModal');
     const deleteForm = document.getElementById('deleteClientForm');
