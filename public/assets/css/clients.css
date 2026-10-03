@@ -883,3 +883,197 @@
 .cpa-billing-primary .cpa-table td strong{display:block;color:var(--mc-text)}
 .cpa-muted{font-size:11px}
 @media(max-width:767px){.cpa-secondary-actions,.cpa-secondary-actions .master-btn{width:100%}.cpa-team-grid{gap:12px}.cpa-billing-primary .cpa-section-head{align-items:flex-start;flex-direction:column}.cpa-billing-primary .cpa-section-head .master-btn{width:100%}}
+
+/* Client record: tabbed sections with the same quiet, two-column fact cards
+   used on employee and other master-detail pages. */
+.client-show .client-detail-tabs-card {
+    margin-top: 16px;
+}
+
+.client-show .client-detail-panels {
+    padding: 22px;
+}
+
+.client-show .client-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 18px;
+}
+
+.client-show .client-detail-card {
+    min-width: 0;
+    margin: 0;
+    padding: 24px 26px;
+    border-radius: 22px;
+}
+
+.client-show .client-detail-card--wide {
+    grid-column: 1 / -1;
+}
+
+.client-show .client-detail-title {
+    margin: 0 0 18px;
+    color: var(--mc-text);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -.025em;
+    line-height: 1.3;
+}
+
+.client-show .client-detail-card .master-facts {
+    column-gap: 32px;
+}
+
+.client-show .client-detail-card .master-facts > .master-info {
+    min-width: 0;
+    background: transparent;
+}
+
+.client-show .client-detail-card .master-facts .master-info > span:first-child {
+    margin-bottom: 5px;
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .055em;
+}
+
+.client-show .client-detail-card .master-facts .master-info > strong:not(.master-badge) {
+    display: block;
+    color: var(--mc-text);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.client-show .client-detail-card .master-facts .master-info > strong.master-empty-value {
+    color: var(--mc-text-3);
+    font-weight: 500;
+}
+
+.client-show .client-detail-link {
+    display: block;
+    color: var(--mc-text);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    text-decoration: none;
+}
+
+.client-show .client-detail-link:hover {
+    color: var(--master-primary, #4f83f1);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.client-show .client-detail-address,
+.client-show .client-detail-notes {
+    display: block;
+    margin: 0;
+    color: var(--mc-text);
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+}
+
+.client-show .client-detail-address.master-empty-value,
+.client-show .client-detail-notes.master-empty-value {
+    color: var(--mc-text-3);
+    font-weight: 500;
+}
+
+.client-show .client-detail-note,
+.client-show .client-detail-help {
+    display: block;
+    margin: 8px 0 0;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.client-show .client-detail-help {
+    margin: -7px 0 15px;
+}
+
+.client-show .client-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin-top: 16px;
+}
+
+.client-show .client-review-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.client-show .client-review-fields .master-field {
+    min-width: 0;
+    margin: 0;
+}
+
+.client-show .client-review-note-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.client-show .client-review-note-grid .client-review-note + .client-review-note {
+    margin-top: 0;
+}
+
+@media (max-width: 960px) {
+    .client-show .client-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .client-show .client-detail-card--wide {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 767px) {
+    .client-show .client-detail-panels {
+        padding: 12px;
+    }
+
+    .client-show .client-detail-card {
+        padding: 18px;
+        border-radius: 18px;
+    }
+
+    .client-show .client-detail-title {
+        margin-bottom: 12px;
+        font-size: 18px;
+    }
+
+    .client-show .client-detail-card .master-facts,
+    .client-show .client-review-fields,
+    .client-show .client-review-note-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .client-show .client-detail-card .master-facts {
+        column-gap: 0;
+    }
+
+    .client-show .client-detail-card .master-facts > .master-info:nth-child(2) {
+        border-top: 1px solid var(--mc-border);
+        padding-top: 12px;
+    }
+
+    .client-show .client-detail-card .master-facts .master-info.is-wide {
+        grid-column: auto;
+    }
+
+    .client-show .client-detail-actions,
+    .client-show .client-detail-actions .master-btn {
+        width: 100%;
+    }
+}

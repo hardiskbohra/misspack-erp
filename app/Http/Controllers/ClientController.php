@@ -15,6 +15,15 @@ use Illuminate\View\View;
 
 class ClientController extends Controller
 {
+    private const SHOW_TABS = [
+        'overview' => 'Overview',
+        'contacts' => 'Contacts',
+        'addresses' => 'Addresses',
+        'commercial' => 'Commercial',
+        'kyc' => 'KYC',
+        'portal' => 'Portal',
+    ];
+
     public function index(Request $request): View|RedirectResponse
     {
         if ($savedQuery = $this->resolveSavedView($request)) {
@@ -188,16 +197,20 @@ class ClientController extends Controller
             ->with('success', 'Quick client created successfully.');
     }
 
-    public function show(Client $client): View
+    public function show(Request $request, Client $client): View
     {
         $client->load('reviewer');
         $portalInstalled = Schema::hasTable('client_portal_users');
         $portalUser = $portalInstalled ? $client->portalUser()->first() : null;
+        $tab = $request->query('tab', 'overview');
+        $tab = is_string($tab) && array_key_exists($tab, self::SHOW_TABS) ? $tab : 'overview';
 
         return view('clients.show', [
             ...$this->formData($client),
             'portalInstalled' => $portalInstalled,
             'portalUser' => $portalUser,
+            'tabs' => self::SHOW_TABS,
+            'tab' => $tab,
         ]);
     }
 
