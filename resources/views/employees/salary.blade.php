@@ -62,105 +62,27 @@
         </div>
     </div>
 
-    <div class="master-card master-table-card master-card--flat">
+    {{-- One table: the months the office paid, and the payslip of each month on
+         the same row. It used to be two — the entries here, the slips in a card
+         below — listing the same months, and the reader matched them by eye.
+         The card keeps the id the old /my/payslips link lands on. --}}
+    <div class="master-card master-table-card master-card--flat" id="payslips">
         <div class="master-list-toolbar">
             <p class="master-list-hint">
                 {{ $total['entries'] }} {{ \Illuminate\Support\Str::plural('entry', $total['entries']) }} in {{ $year }}
                 · net <strong>{{ \App\Helpers\CommonHelper::indianCurrency($total['total']) }}</strong>
+                · {{ $payslips->count() }} {{ \Illuminate\Support\Str::plural('payslip', $payslips->count()) }} issued
             </p>
         </div>
 
-        <div class="master-table-wrap">
-            <table class="master-table">
-                <thead>
-                    <tr>
-                        <th scope="col">Date</th>
-                        <th scope="col">Particular</th>
-                        <th scope="col">Reference</th>
-                        <th scope="col">Way</th>
-                        <th scope="col">Mode</th>
-                        <th scope="col" class="is-num">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($entries as $entry)
-                        <tr>
-                            <td data-label="Date">{{ $entry->entry_date?->format('d M Y') }}</td>
-                            <td data-label="Particular">
-                                <strong>{{ $entry->particular ?: 'Salary' }}</strong>
-                                @if ($entry->notes)<span class="master-sub">{{ $entry->notes }}</span>@endif
-                            </td>
-                            <td data-label="Reference">{{ $entry->bank_reference_number ?: '—' }}</td>
-                            <td data-label="Way">
-                                <span class="emp-pill {{ $entry->isMoneyOut() ? 'is-ok' : 'is-off' }}">
-                                    {{ $entry->isMoneyOut() ? 'Paid to you' : 'Back to the office' }}
-                                </span>
-                            </td>
-                            <td data-label="Mode">
-                                <span class="emp-pill is-off">{{ \App\Models\CashflowEntry::paymentModeOptions()[$entry->payment_mode] ?? '—' }}</span>
-                            </td>
-                            <td class="is-num" data-label="Amount">
-                                <strong>{{ $entry->signedAmountLabel() }}</strong>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6">
-                                <div class="master-list-empty">
-                                    <span class="master-list-empty-icon" aria-hidden="true">₹</span>
-                                    <p class="master-list-empty-title">No salary paid in {{ $year }}</p>
-                                    <p class="master-list-empty-text">
-                                        When the office pays you through the cashflow ledger and files the entry
-                                        against your name, it appears here — with the reference it was paid on.
-                                    </p>
-                                    <div class="master-list-empty-actions">
-                                        @foreach (array_slice($years, 0, 3) as $option)
-                                            @if ((int) $option !== (int) $year)
-                                                <a class="master-btn master-btn-soft" href="{{ route('my.salary', ['year' => $option]) }}">{{ $option }}</a>
-                                            @endif
-                                        @endforeach
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-                @if ($entries->isNotEmpty())
-                    <tfoot>
-                        <tr class="master-list-total">
-                            <td colspan="5"><strong>Net paid in {{ $year }}</strong></td>
-                            <td class="is-num">
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($total['total']) }}</strong>
-                            </td>
-                        </tr>
-                    </tfoot>
-                @endif
-            </table>
-        </div>
+        @include('employees.partials.pay-table', [
+            'rows' => $payRows,
+            'context' => 'employee',
+            'user' => $me,
+            'year' => $year,
+            'total' => $total,
+        ])
     </div>
 
-    {{-- My payslips. They are here, on the salary page, and not on one of their
-         own: a payslip is a month of this salary, printed from these figures —
-         two pages listing the same months is two places to disagree. --}}
-    <div class="master-card master-table-card master-card--flat" id="payslips">
-        <div class="master-list-toolbar">
-            <p class="master-list-hint">
-                {{ $payslips->count() }} {{ \Illuminate\Support\Str::plural('payslip', $payslips->count()) }} issued to me
-            </p>
-        </div>
-
-        @include('employees.partials.payslip-table', ['payslips' => $payslips, 'context' => 'employee', 'user' => $me])
-    </div>
-
-    @if ($previewSlipDoc)
-        <div class="master-card master-card--flat master-section" id="payslip-sheet">
-            <h3 class="master-section-title">Payslip for {{ $previewSlip->periodLabel() }} · {{ $previewSlip->slipNumber() }}</h3>
-            <p class="master-sub user-modal-foot">
-                Printed from the office's record for that month. Use <strong>Print</strong> on the slip, or the
-                <strong>Payslip</strong> button in the list, for a copy to keep.
-            </p>
-            @include('employees.partials.payslip', ['doc' => $previewSlipDoc, 'context' => 'app', 'payslip' => $previewSlip])
-        </div>
-    @endif
 </div>
 @endsection

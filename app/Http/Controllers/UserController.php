@@ -8,12 +8,12 @@ use App\Models\EmployeePayslip;
 use App\Models\User;
 use App\Services\DocumentUpload;
 use App\Services\EmployeeProfile;
-use App\Services\PayslipDocument;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -68,15 +68,76 @@ class UserController extends Controller
     ];
 
     /**
-     * The one definition of a payslip, resolved rather than injected.
+     * What a new slip starts from, when the reader arrived from a month's row.
      *
-     * This controller answers a dozen questions about a person; the slip is
-     * needed only while somebody is looking at one, which is why it is fetched
-     * where it is used instead of being threaded through every method.
+     * The button on a ledger row says "generate the payslip for this month", so
+     * the dialog opens on that month, with the amount the ledger actually moved
+     * and the day it moved on — the three facts the office would otherwise
+     * retype from the row it just left.
+     *
+     * @param  \Illuminate\Support\Collection<int, \App\Models\CashflowEntry>  $entries
+     * @return array<string, string>
      */
-    private function slip(): PayslipDocument
+    private function payslipPrefill($entries): array
     {
-        return app(PayslipDocument::class);
+        $month = (string) request()->query('month', '');
+
+        if (! preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) {
+            return [];
+        }
+
+        $entry = $entries
+            ->filter(fn ($row) => $row->entry_date?->format('Y-m') === $month && $row->isMoneyOut())
+            ->sortByDesc('entry_date')
+            ->first();
+
+        return [
+            'period' => $month,
+            /* On the first earning line, not in the net: a slip whose net is
+               typed with nothing earned above it prints "Total earned ₹0 · Net
+               ₹1,00,000". The office can split the figure into Basic, HRA and
+               the rest from there, and the net is derived as usual. */
+            'earning_amount' => $entry ? (string) $entry->amountMoved() : '',
+            'paid_on' => $entry?->entry_date?->format('Y-m-d') ?? '',
+        ];
+    }
+
+    /**
+     * Which of the two payslip dialogs opens with the page, if either.
+     *
+     * Opened by the URL (?month= from a row's Generate, ?payslip= from its
+     * Modify) and re-opened by a validation failure — which is what makes the
+     * dialog a form the office can correct rather than one it loses its work
+     * to. The fields are the payslip's own, so a failure on another form on
+     * this page cannot open this one.
+     */
+    private function payslipDialog(?EmployeePayslip $editing): ?string
+    {
+        if ($editing) {
+            return 'edit';
+        }
+
+        if (request()->has('month')) {
+            return 'create';
+        }
+
+        $fields = ['period', 'gross_amount', 'net_amount', 'working_days', 'paid_days', 'paid_on', 'status', 'attachment', 'notes', 'earning_lines', 'deduction_lines'];
+        $errors = session('errors');
+
+        if (! $errors) {
+            return null;
+        }
+
+        /* Prefix, not equality: a line's error is filed as
+           `earning_lines.0.amount`, and a dialog that does not reopen on it is
+           a dialog that throws away what the office typed. */
+        foreach (array_keys($errors->getBag('default')->getMessages()) as $key) {
+            if (Str::startsWith($key, $fields)) {
+                return 'create';
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -228,7 +289,13 @@ class UserController extends Controller
             'checklist' => $checklist,
             'payslips' => $payslips,
             'editingPayslip' => $editingPayslip,
-            'editingPayslipDoc' => $editingPayslip ? $this->slip()->build($editingPayslip, 'app') : null,
+            /* One table on the salary tab: the ledger's months with the month's
+               payslip on the same row. The slips are read once here and handed
+               to the view, which is why the rows are built in the service
+               rather than in the template. */
+            'payRows' => $profile->payRows($year, $salaryEntries, $payslips),
+            'prefill' => $this->payslipPrefill($salaryEntries),
+            'openPayslipDialog' => $this->payslipDialog($editingPayslip),
             'payslipLines' => [
                 'earnings' => EmployeePayslip::EARNING_LINES,
                 'deductions' => EmployeePayslip::DEDUCTION_LINES,

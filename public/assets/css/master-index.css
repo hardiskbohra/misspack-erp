@@ -1162,3 +1162,10 @@ strong, td {
 .master-modal-card.is-narrow {
     max-width: 440px;
 }
+
+/* A dialog that edits a document rather than a record: the payslip's two
+   columns of line items need the room, and at 700px each line item is two
+   inputs in a space that fits one. */
+.master-modal-card.is-wide {
+    width: min(880px, calc(100vw - 32px));
+}

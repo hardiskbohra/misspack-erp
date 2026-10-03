@@ -72,6 +72,60 @@
 .user-index .user-row td:nth-child(1) { min-width: 230px; }
 .user-index .user-row td:nth-child(3) { min-width: 190px; }
 
+/* --------------------------------------------------------------------------
+   THE PAYSLIP FORM — the two columns of line items, and the total that
+   follows them. In a dialog, because the same fields on the page were a
+   fourteen-field column nobody scrolled to the end of.
+   -------------------------------------------------------------------------- */
+.user-line-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 132px;
+    gap: 8px;
+    align-items: center;
+}
+
+.user-line-row + .user-line-row {
+    margin-top: 8px;
+}
+
+.user-line-row .master-input {
+    height: 40px;
+}
+
+/* The figures the slip will print, as they are typed: the server's own
+   arithmetic, and the browser's own rupee format. */
+.pay-totals {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--master-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mc-text-2);
+}
+
+.pay-totals strong {
+    color: var(--mc-text);
+    font-weight: 700;
+}
+
+.pay-totals em {
+    font-style: normal;
+    font-weight: 500;
+    color: var(--master-muted);
+}
+
+.user-share {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
 /* A dialog hint that follows the actions in a modal body. */
 .user-modal-foot {
     margin-top: 10px;

@@ -188,6 +188,91 @@ class EmployeeProfile
     }
 
     /** The months of a year, newest first, each with the pay that landed in it. */
+    /**
+     * The salary tab in one table: a row per salary entry, each carrying the
+     * payslip of its month.
+     *
+     * There used to be two tables — the ledger entries, and the slips — listing
+     * the same months a card apart, and the reader had to match them by eye.
+     * A payslip *is* a month of the salary, so it belongs on the month's own
+     * row. A month with several entries draws its slip once, on its newest row,
+     * and the row below it says so rather than saying "no slip".
+     *
+     * A slip with no ledger entry behind it (the office filed one before the
+     * payment went out, or paid outside the ledger) still gets a row of its
+     * own: hiding a document because its month has no entry is how a payslip
+     * goes missing.
+     *
+     * Collections in, collections out — no queries — so `tests/Unit` can prove
+     * the merge without a database.
+     *
+     * @param  Collection<int, CashflowEntry>  $entries
+     * @param  Collection<int, EmployeePayslip>  $slips
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function payRows(int $year, Collection $entries, Collection $slips): Collection
+    {
+        $byPeriod = [];
+
+        foreach ($slips as $slip) {
+            $byPeriod[(string) $slip->period] = $slip;
+        }
+
+        /* Newest entry first, so the row a month's slip lands on is the row the
+           reader sees at the top of that month — not whichever the query
+           happened to return first. */
+        $ordered = $entries->sortByDesc(fn ($entry) => $entry->entry_date ? Carbon::parse($entry->entry_date)->format('Y-m-d') : '')->values();
+
+        $owned = [];
+        $rows = [];
+
+        foreach ($ordered as $entry) {
+            $date = $entry->entry_date ? Carbon::parse($entry->entry_date) : null;
+            $period = $date ? $date->format('Y-m') : 'undated';
+            $owns = ! isset($owned[$period]);
+            $owned[$period] = true;
+
+            $rows[] = [
+                'period' => $period,
+                'label' => $date ? $date->format('M Y') : 'Undated',
+                'entry' => $entry,
+                'slip' => $owns ? ($byPeriod[$period] ?? null) : null,
+                'owns_slip' => $owns,
+                /* one slip per month, and it is generated from the row that
+                   owns the month — two Generate buttons on one month is two
+                   trips to the same unique key */
+                'generatable' => $owns && $entry->isMoneyOut() && $entry->amountMoved() > 0,
+                'has_entry' => true,
+                'sort' => $date ? $date->format('Y-m-d') : '',
+                'amount' => $entry->signedAmount(),
+            ];
+        }
+
+        foreach ($byPeriod as $period => $slip) {
+            if (isset($owned[$period]) || ! str_starts_with((string) $period, (string) $year)) {
+                continue;
+            }
+
+            $rows[] = [
+                'period' => (string) $period,
+                'label' => $slip->periodLabel(),
+                'entry' => null,
+                'slip' => $slip,
+                'owns_slip' => true,
+                'generatable' => false,
+                'has_entry' => false,
+                'sort' => (string) $period.'-01',
+                'amount' => null,
+            ];
+        }
+
+        /* Newest first, and a month's own rows stay together: the slip is on the
+           first of them, so the row that carries it must be the one on top. */
+        usort($rows, fn ($a, $b) => strcmp($b['sort'], $a['sort']) ?: ($b['has_entry'] <=> $a['has_entry']));
+
+        return new Collection($rows);
+    }
+
     public function monthlyPay(User $user, int $year): array
     {
         $byMonth = collect($this->salaryByMonth($user, $year))->keyBy('period');

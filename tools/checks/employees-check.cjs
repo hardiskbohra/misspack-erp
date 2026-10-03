@@ -67,7 +67,9 @@ const payMonths = read('resources/views/employees/partials/pay-months.blade.php'
 const cashflowController = read('app/Http/Controllers/CashflowController.php');
 const payslipDoc = read('app/Services/PayslipDocument.php');
 const payslipSheet = read('resources/views/employees/partials/payslip.blade.php');
-const payslipList = read('resources/views/employees/partials/payslip-table.blade.php');
+const payTable = read('resources/views/employees/partials/pay-table.blade.php');
+const payslipForm = read('resources/views/employees/partials/payslip-form.blade.php');
+const payMonthsService = read('app/Services/EmployeeProfile.php');
 const payslipModel = read('app/Models/EmployeePayslip.php');
 const payslipPrint = read('resources/views/employees/payslip-pdf.blade.php');
 const payslipCss = read('public/assets/css/payslip.css');
@@ -76,6 +78,7 @@ const payslipCss = read('public/assets/css/payslip.css');
    that no longer prints */
 const payslipRules = payslipCss.replace(/\/\*[\s\S]*?\*\//g, '');
 const helper = read('app/Helpers/CommonHelper.php');
+const userJs = read('public/assets/js/users.js');
 
 /* ------------------------------------------------------------- 1. the door */
 
@@ -212,9 +215,10 @@ check('the menu the employee sees names no office screen, and the office keeps i
 
 check('the employee sees their salary, their payslips and their documents',
     ['my.salary', 'my.documents'].every(r => nav.includes(r))
-    && /employees\.partials\.payslip-table/.test(employeeSalary)
-    && /employees\.partials\.payslip', \['doc' => \$previewSlipDoc/.test(employeeSalary)
-    && /\$slips->firstWhere\('id', \(int\) \$request->query\('preview'\)\)/.test(workspace));
+    && /employees\.partials\.pay-table/.test(employeeSalary)
+    && /\$slips = \$this->profile->issuedPayslips\(\$this->user\(\)\);/.test(workspace)
+    && /'payRows' => \$this->profile->payRows\(\$year, \$entries, \$slips\)/.test(workspace)
+    && !/partials\.payslip-table/.test(employeeSalary));
 
 /* ------------------------------------------------- 3b. the way the money went
    A salary the office filed as a **debit** — money out of the company, the
@@ -271,8 +275,7 @@ check('the paid-this-month tile counts what a person\'s record counts',
     && ! userController.includes("'transaction_type', 'credit'"));
 
 check('the record and the employee\'s own pages print the same figures',
-    userShow.includes('$entry->signedAmountLabel()')
-    && employeeSalary.includes('$entry->signedAmountLabel()')
+    payTable.includes('$entry->signedAmountLabel()')
     && entryModel.includes('public function signedAmountLabel(): string')
     && ! (userShow + employeeSalary).includes('credit_amount')
     && payMonths.includes("$month['net']")
@@ -298,7 +301,7 @@ check('the office sees drafts on the record page',
     /\$payslips = \$profile->payslips\(\$user\);/.test(userController)
     && !/issuedPayslips/.test(userController)
     && /drafts stay private/.test(userShow)
-    && /Back to draft/.test(payslipList));
+    && /\$edit \? \$slip->status : 'issued'/.test(payslipForm));
 
 check('an employee cannot remove a paper the office marked seen',
     /if \(\$document->isVerified\(\)\) \{/.test(workspace)
@@ -403,11 +406,28 @@ check('a panel is drawn only for the tab that is open',
 /* The salary panel carries the ledger entries *and* the slips, which is the
    whole point of merging the tabs: the month and the paper for the month are
    read together, not one tab apart. */
-check('the salary tab carries both the month and its slip',
-    /users\.payslips\.store/.test(userShow)
-    && /employees\.partials\.payslip-table', \['payslips' => \$payslips, 'context' => 'office'/.test(userShow)
-    && /id="payslip-sheet"/.test(userShow)
-    && /@include\('employees\.partials\.payslip', \['doc' => \$editingPayslipDoc/.test(userShow));
+check('the salary tab is one table, and its forms are dialogs',
+    /employees\.partials\.pay-table/.test(userShow)
+    && !/partials\.payslip-table/.test(userShow)
+    && /data-payslip-open="payslipForm"/.test(userShow)
+    && (userShow.match(/master-modal-card is-wide/g) || []).length === 2
+    && /@include\('employees\.partials\.payslip-form'/.test(userShow));
+
+check('the pay table carries the month, the money and the payslip on one row',
+    /<th scope="col">Payslip<\/th>/.test(payTable)
+    && /<th scope="col" class="is-num">Amount<\/th>/.test(payTable)
+    && /route\('users\.payslips\.pdf'/.test(payTable)
+    && /route\('my\.payslips\.pdf'/.test(payTable)
+    && /slipNumber\(\)/.test(payTable));
+
+/* One row per entry, and the month's slip drawn once — on the month's newest
+   row — with the row below it pointing up rather than saying "no payslip". */
+check('a month with two entries draws its payslip once',
+    /public function payRows\(int \$year, Collection \$entries, Collection \$slips\): Collection/.test(payMonthsService)
+    && /'slip' => \$owns \? \(\$byPeriod\[\$period\] \?\? null\) : null,/.test(payMonthsService)
+    && /'owns_slip' => \$owns,/.test(payMonthsService)
+    && /Same month as the row above/.test(payTable)
+    && /No ledger entry/.test(payTable));
 
 check('the retired payslips tab is a name that resolves, not a panel',
     /private const TAB_ALIASES = \[/.test(userController)
@@ -588,18 +608,17 @@ check('the employee-code tile counts what the filter counts',
    There is one document (App\Services\PayslipDocument), one sheet (the
    partial), and the totals on it are sums of its own lines. */
 
-check('one payslip, one document, three surfaces',
+check('one payslip, one document: the paper and the download are one build',
     /public function build\(EmployeePayslip \$payslip, \?string \$context = 'app'\): array/.test(payslipDoc)
-    && /employees\.partials\.payslip', \['doc' => \$doc/.test(payslipPrint)
-    && /employees\.partials\.payslip', \['doc' => \$editingPayslipDoc/.test(userShow)
-    && /employees\.partials\.payslip', \['doc' => \$previewSlipDoc/.test(employeeSalary));
+    && /public function download\(EmployeePayslip \$payslip\): Response/.test(payslipDoc)
+    && /class_exists\(\\Barryvdh\\DomPDF\\Facade\\Pdf::class\)/.test(payslipDoc)
+    && /employees\.partials\.payslip', \['doc' => \$doc/.test(payslipPrint));
 
 check('the slip is built from the row, not read back from a stored file',
-    /class_exists\(\\Barryvdh\\DomPDF\\Facade\\Pdf::class\)/.test(payslipDoc)
-    && !/Storage::/.test(payslipDoc)
-    && /route\('users\.payslips\.pdf'/.test(payslipList)
-    && /route\('my\.payslips\.pdf'/.test(payslipList)
-    && /employees\.partials\.payslip-table/.test(userShow));
+    !/Storage::/.test(payslipDoc)
+    && /route\('users\.payslips\.pdf'/.test(payTable)
+    && /route\('my\.payslips\.pdf'/.test(payTable)
+    && !/payslips\.pdf/.test(payslipModel));
 
 check('the printed slip prints: standalone page, A4 paper, print dialog without dompdf',
     /window\.print\(\);/.test(payslipPrint)
@@ -617,8 +636,8 @@ check('the slip\'s lines and its totals are different fields, not one key twice'
     && (payslipController.match(/'deductions' => \[/g) || []).length === 1
     && /'deductions' => \['nullable', 'numeric', 'min:0'\]/.test(payslipController)
     && /array_key_exists\('earning_lines', \$data\)/.test(payslipController)
-    && /name="earning_lines\[/.test(userShow)
-    && /name="deduction_lines\[/.test(userShow));
+    && /name="\{\{ \$meta\['field'\] \}\}\[\{\{ \$i \}\}\]\[label\]"/.test(payslipForm)
+    && /'earnings' => \['field' => 'earning_lines'/.test(payslipForm));
 
 check('a slip total is the sum of the slip\'s own lines, on the page and on the paper',
     /array_sum\(array_column\(\$earnings, 'amount'\)\)/.test(payslipDoc)
@@ -642,12 +661,12 @@ check('the office hands the slip over without the figures in the message',
     && /public function mailUrl\(\?string \$email\): \?string/.test(payslipModel)
     && /'https:\/\/wa\.me\/'\.\$digits\.'\?text='\.rawurlencode\(\$this->shareMessage\(\)\)/.test(payslipModel)
     && /'mailto:'\.\$email/.test(payslipModel)
-    && /WhatsApp/.test(payslipList)
-    && /Email/.test(payslipList));
+    && /whatsappUrl\(\$user->mobile\)/.test(payTable)
+    && /mailUrl\(\$user->email\)/.test(payTable));
 
-check('one list of slips, read by the office and by the employee',
-    /employees\.partials\.payslip-table/.test(userShow)
-    && /employees\.partials\.payslip-table/.test(employeeSalary)
+check('one table of months, read by the office and by the employee',
+    /employees\.partials\.pay-table/.test(userShow)
+    && /employees\.partials\.pay-table/.test(employeeSalary)
     && /'context' => 'office'/.test(userShow)
     && /'context' => 'employee'/.test(employeeSalary));
 
@@ -655,6 +674,69 @@ check('the office on the slip is the office on the invoice, and the account is m
     /SalesInvoice::defaultSellerDetails\(\)/.test(payslipDoc)
     && times(payslipDoc, '->mask(') >= 2
     && /bank_account_number/.test(payslipDoc));
+
+/* A dialog is the shared sheet, and the shared sheet is what scrolls: the
+   card is the flex column, the body is the scroll region, and the form is the
+   card's own child. A private copy of that trio inherits none of its fixes. */
+check('the payslip dialogs are the shared sheet, and they scroll',
+    /<div class="master-modal ({{ \$openPayslipDialog === 'create'|<)/.test(userShow)
+    && /<div class="master-modal-card is-wide" role="dialog" aria-modal="true"/.test(userShow)
+    && /class="master-modal-body" data-payslip-form/.test(payslipForm)
+    && /class="master-modal-footer"/.test(payslipForm)
+    && /class="master-modal-close" data-close-modal/.test(payslipForm));
+
+check('the two dialogs are the two halves of one form',
+    /'mode' => 'create'/.test(userShow)
+    && /'mode' => 'edit'/.test(userShow)
+    && /@method\('PUT'\)/.test(userShow)
+    && /route\('users\.payslips\.store', \$user\)/.test(userShow)
+    && /route\('users\.payslips\.update'/.test(userShow)
+    && /route\('users\.payslips\.destroy'/.test(userShow)
+    && (payslipForm.match(/\$edit \?/g) || []).length >= 4);
+
+/* A dialog cannot hold a second form, so remove submits the form that waits
+   outside the card — through the button's own form attribute. */
+check('the remove button submits a form outside the dialog card',
+    /<form method="POST" id="payslipEditDelete"/.test(userShow)
+    && /form="\{\{ \$dialog \}\}Delete"/.test(payslipForm)
+    && !/payslipForm[\s\S]{0,4000}<form method="POST"[\s\S]{0,200}<form method="POST"/.test(userShow));
+
+check('a ledger row can generate its month\'s payslip, prefilled from the row',
+    /'month' => \$row\['period'\]/.test(payTable)
+    && /Generate payslip/.test(payTable)
+    && /private function payslipPrefill\(\$entries\): array/.test(userController)
+    && /\$row->entry_date\?->format\('Y-m'\) === \$month && \$row->isMoneyOut\(\)/.test(userController)
+    && /'earning_amount' => \$entry \? \(string\) \$entry->amountMoved\(\)/.test(userController)
+    && /filled\(\$prefill\['earning_amount'\] \?\? null\)/.test(payslipForm)
+    && /@method\(\\'GET\\'\)/.test('') === false);
+
+/* The dialog reopens on a validation failure — a form that loses what was
+   typed is worse than no dialog. */
+check('a failed save reopens the dialog it came from',
+    /private function payslipDialog\(\?EmployeePayslip \$editing\): \?string/.test(userController)
+    && /getBag\('default'\)->getMessages\(\)/.test(userController)
+    && /Str::startsWith\(\$key, \$fields\)/.test(userController)
+    && /'openPayslipDialog' => \$this->payslipDialog\(\$editingPayslip\)/.test(userController)
+    && /\$openPayslipDialog === 'create' \? 'open' : ''/.test(userShow));
+
+/* The totals as they are typed, in the browser's own rupee format, which is
+   the same contract as the helper the printed slip uses. */
+check('the dialog totals the lines as they are typed, in the shared format',
+    /data-payslip-amount/.test(payslipForm)
+    && /data-payslip-total="earned"/.test(payslipForm)
+    && /data-payslip-total="deducted"/.test(payslipForm)
+    && /data-payslip-total="net"/.test(payslipForm)
+    && /function payslipDialogs\(\)/.test(userJs)
+    && /window\.misspackFormat\.inr\(value\)/.test(userJs)
+    && /total\('earning_lines'\)/.test(userJs)
+    && /total\('deduction_lines'\)/.test(userJs));
+
+/* One field grid, defined once, for every dialog that names it. */
+check('the field grid a dialog lays its fields out in exists, once',
+    /^\.master-form-grid \{/m.test(read('public/assets/css/master-form.css'))
+    && /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/.test(read('public/assets/css/master-form.css'))
+    && /\.master-modal-card\.is-wide \{/.test(read('public/assets/css/master-index.css'))
+    && /master-form-grid/.test(payslipForm));
 
 check('the arithmetic of a payslip has a test that runs',
     exists('tests/Unit/EmployeePayslipTest.php')

@@ -3,9 +3,12 @@
 namespace Tests\Unit;
 
 use App\Helpers\CommonHelper;
+use App\Models\CashflowEntry;
 use App\Models\EmployeePayslip;
 use App\Models\User;
+use App\Services\EmployeeProfile;
 use App\Services\PayslipDocument;
+use Illuminate\Support\Collection;
 use Tests\TestCase;
 
 /**
@@ -194,6 +197,63 @@ class EmployeePayslipTest extends TestCase
         $this->assertSame('01 Aug 2026', $app['slip']['from']);
         $this->assertSame('31 Aug 2026', $app['slip']['to']);
         $this->assertSame('ABCDE1234F', $app['employee']['pan']);
+    }
+
+    /**
+     * The one table: a row per salary entry, and the month's payslip on the
+     * month's own row.
+     *
+     * The failure this catches is the merge that looks right and reads wrong —
+     * two rows for one month sharing a slip, or a slip disappearing because its
+     * month was listed twice.
+     */
+    public function test_the_month_and_its_payslip_are_one_row(): void
+    {
+        $entry = fn (string $type, float $amount, string $date) => new CashflowEntry([
+            'transaction_type' => $type,
+            'credit_amount' => $type === 'credit' ? $amount : 0,
+            'debit_amount' => $type === 'debit' ? $amount : 0,
+            'entry_date' => $date,
+        ]);
+
+        $rows = (new EmployeeProfile())->payRows(2026, new Collection([
+            $entry('debit', 100000, '2026-10-05'),
+            $entry('debit', 100000, '2026-09-20'),
+            $entry('debit', 40000, '2026-09-05'),
+            $entry('credit', 5000, '2026-08-11'),
+        ]), new Collection([
+            $this->slip(['period' => '2026-09']),
+            $this->slip(['period' => '2026-11']),
+        ]));
+
+        $this->assertCount(5, $rows, 'four entries and one slip with no entry behind it');
+
+        $this->assertSame(['2026-11', '2026-10', '2026-09', '2026-09', '2026-08'], $rows->pluck('period')->all());
+
+        /* the slip with no ledger entry is still a row: a document does not
+           disappear because its month has no payment filed against it */
+        $this->assertFalse($rows[0]['has_entry']);
+        $this->assertNotNull($rows[0]['slip']);
+        $this->assertFalse($rows[0]['generatable'], 'a slip that exists is not generated again');
+
+        /* October has an entry and no slip yet: the row is where the office
+           generates one, and it is prefillable because the money went out */
+        $this->assertNull($rows[1]['slip']);
+        $this->assertTrue($rows[1]['owns_slip']);
+        $this->assertTrue($rows[1]['generatable']);
+
+        /* September is listed twice — the ledger paid twice — and carries its
+           slip once, on the newer row */
+        $this->assertSame('2026-09', $rows[2]['period']);
+        $this->assertTrue($rows[2]['owns_slip']);
+        $this->assertNotNull($rows[2]['slip']);
+        $this->assertSame('2026-09', $rows[3]['period']);
+        $this->assertFalse($rows[3]['owns_slip'], 'the month draws its slip on one row only');
+        $this->assertNull($rows[3]['slip']);
+        $this->assertFalse($rows[3]['generatable'], 'the month has one slip, generated on one row');
+
+        /* a recovery is not a payment, so it is not a month to print a slip for */
+        $this->assertFalse($rows[4]['generatable']);
     }
 
     /** The account number on the paper is masked, because paper travels. */

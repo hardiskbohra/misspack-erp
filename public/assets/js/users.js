@@ -270,6 +270,69 @@
         }
     }
 
+    /* ------------------------------------------------------- payslip dialogs */
+
+    /* The office's two payslip forms live in dialogs. Opening one from a row is
+       a link with the month (or the slip) in the URL, so the server renders the
+       dialog already filled and already open — nothing here has to fetch, and a
+       validation failure comes back to the same dialog with the values typed. */
+    function payslipDialogs() {
+        document.querySelectorAll('[data-payslip-open]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                openModal(byId(button.getAttribute('data-payslip-open')));
+            });
+        });
+
+        var boards = document.querySelectorAll('[data-payslip-form]');
+
+        boards.forEach(function (body) {
+            var form = body.closest('form');
+            if (!form) return;
+
+            var amounts = body.querySelectorAll('[data-payslip-amount]');
+            var netField = body.querySelector('[data-payslip-net]');
+            var earned = body.querySelector('[data-payslip-total="earned"]');
+            var deducted = body.querySelector('[data-payslip-total="deducted"]');
+            var net = body.querySelector('[data-payslip-total="net"]');
+
+            /* The same arithmetic the server does on save, and the same rupee
+               format as the figure beside it: misspackFormat is the browser
+               half of CommonHelper, so the dialog and the printed slip cannot
+               disagree about how a number reads. */
+            var inr = function (value) {
+                return window.misspackFormat ? window.misspackFormat.inr(value) : String(Math.round(value * 100) / 100);
+            };
+
+            var total = function (side) {
+                var sum = 0;
+
+                form.querySelectorAll('[name^="' + side + '"][name$="[amount]"]').forEach(function (input) {
+                    sum += Number(input.value) || 0;
+                });
+
+                return Math.round(sum * 100) / 100;
+            };
+
+            var sync = function () {
+                var paid = total('earning_lines');
+                var taken = total('deduction_lines');
+                var typed = netField && netField.value !== '' ? Number(netField.value) : null;
+
+                if (earned) earned.textContent = inr(paid);
+                if (deducted) deducted.textContent = inr(taken);
+                if (net) net.textContent = inr(typed === null ? paid - taken : typed);
+            };
+
+            amounts.forEach(function (input) {
+                input.addEventListener('input', sync);
+            });
+
+            if (netField) netField.addEventListener('input', sync);
+
+            if (amounts.length) sync();
+        });
+    }
+
     /* ------------------------------------------------------------ wiring */
 
     function onReady(fn) {
@@ -326,6 +389,13 @@
         }
 
         list();
+        /* The record's own tables open their rows, the way the three lists do:
+           the pay table's rows carried data-href and nothing ever read it. */
+        if (document.querySelector('.employee-record') && window.MasterList) {
+            window.MasterList.rowNavigation({ root: '.employee-record' });
+        }
+
+        payslipDialogs();
         tabs();
     });
 

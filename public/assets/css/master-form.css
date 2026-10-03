@@ -139,6 +139,63 @@
     flex: 1
 }
 
+/* The grid a form (and every dialog body) lays its fields out in. Four screens
+   already name it — the user dialogs, the record's details tab, the employee's
+   own profile, the calculator — and until now it was defined in exactly one of
+   them, page-scoped, so everywhere else `.master-field.full` and `.two` were
+   no-ops and every dialog was a single column of fourteen fields. Two up on a
+   card: a form is read in pairs, and the alternative the screenshots showed was
+   one long scroll. */
+.master-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 10px
+}
+
+/* A group heading inside a dialog or a form, and the note box under it. The
+   user dialogs have named both since they were written and no sheet defined
+   either: a heading printed as ordinary text and a failed save gave its reason
+   with no box around it. */
+.master-section-label {
+    margin: 20px 0 0;
+    color: var(--master-muted);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase
+}
+
+.master-section-label:first-child {
+    margin-top: 0
+}
+
+.master-info-box {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border: 1px solid var(--master-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.6
+}
+
+.master-info-box.is-danger {
+    border-color: rgba(225, 29, 72, .3);
+    background: rgba(225, 29, 72, .08);
+    color: #b4123c
+}
+
+:root[data-theme="dark"] .master-info-box.is-danger {
+    border-color: rgba(255, 143, 171, .34);
+    background: rgba(255, 143, 171, .12);
+    color: #ffa9bf
+}
+
 .master-field.full {
     grid-column: 1/-1
 }
@@ -352,6 +409,10 @@
 }
 
 @media(max-width:767px) {
+    .master-form-grid {
+        grid-template-columns: 1fr
+    }
+
     .master-form-page {
         padding: 14px
     }

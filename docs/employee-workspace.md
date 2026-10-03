@@ -170,12 +170,56 @@ The message says which month and where to look — `shareMessage()` deliberately
 carries **no breakdown**, because the figures belong behind the login and a chat
 message is not a private place.
 
-**Where they are read.** One list,
-`resources/views/employees/partials/payslip-table.blade.php`, is drawn on both
-sides with `context="office"|"employee"`: the office sees the issue state and the
-corrections on each row, the employee sees the months and the print buttons.
-Everything else — the month, the figures, the slip number, the print link — is
-the same list.
+### One table, and the forms in dialogs
+
+The salary tab is **one table**: `EmployeeProfile::payRows()` walks the ledger
+entries and the slips together, so a row carries the month, the money that moved
+and the payslip of that month. Two tables listing the same months — the entries
+in one card, the slips in the next — meant the reader matched them by eye, and a
+payslip is not a second answer to "what did September cost", it is the same
+month written on paper.
+
+The merge rules, all of them in that one method:
+
+- **one row per salary entry**, newest first;
+- a month that paid twice draws its slip **once**, on its newest row, and the row
+  below it links up to it instead of saying "no payslip";
+- a slip whose month has **no entry** behind it still gets a row, marked *No
+  ledger entry*: hiding a document because its month is missing from the ledger
+  is how a payslip goes missing;
+- a row is **generatable** only where money actually went out — a recovery is not
+  a month to print a slip for.
+
+`resources/views/employees/partials/pay-table.blade.php` draws it on both sides
+with `context="office"|"employee"`: the office sees the issue state, the
+corrections and the share buttons; the employee sees the month, the figures, the
+slip number and Print. Everything else is the same table.
+
+**The two forms are dialogs** (`employees/partials/payslip-form.blade.php`,
+included once per mode). Recording a month and correcting one are the same
+fourteen fields, so they are written once; they open from the table — *Record a
+month* in the toolbar, **Generate payslip** on a row (which arrives with the
+month, the amount the ledger moved and the day it moved on already filled),
+**Modify** on a slip's row — with the month or the slip in the URL, so the server
+renders the dialog already filled and already open. A validation failure reopens
+the same dialog with what was typed: `UserController::payslipDialog()` reads the
+error bag, and a form that loses the office's work is worse than no dialog.
+
+Both are the shared `.master-modal > .master-modal-card > .master-modal-body`
+sheet, so the scroll, the Escape key, the backdrop and the body lock come from
+the one implementation (task 42's lesson). The dialog totals the lines as they
+are typed, in `misspackFormat` — the browser half of `CommonHelper`, so the
+figure in the dialog and the figure on the printed slip cannot be grouped
+differently.
+
+> Two shared classes the dialogs had been naming since they were written were
+> defined by no sheet at all: `.master-form-grid` existed only inside
+> `price-calculator.css`, page-scoped, so `.master-field.full` and `.two` were
+> no-ops and every dialog — users, profile, payslip — was a single column of
+> fields. It is now defined once in `master-form.css` (two columns, one on a
+> phone); `.master-section-label` and `.master-info-box` are defined beside it,
+> and the record page loads `users.css` with `employees.css`, which is where its
+> own cells live.
 
 **Documents** (`employee_documents`) are the person's own file, separate from
 `cashflow_attachments` (which are the bills behind the ledger). Required:

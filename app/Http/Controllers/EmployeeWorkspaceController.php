@@ -112,7 +112,6 @@ class EmployeeWorkspaceController extends Controller
         $year = (int) $request->query('year', date('Y'));
         $entries = $this->profile->salaryEntries($this->user(), $year.'-01-01', $year.'-12-31');
         $slips = $this->profile->issuedPayslips($this->user());
-        $preview = $slips->firstWhere('id', (int) $request->query('preview')) ?? $slips->first();
 
         return view('employees.salary', array_merge($this->shared(), [
             'year' => $year,
@@ -124,11 +123,9 @@ class EmployeeWorkspaceController extends Controller
                is a month of this salary, and a second page listing the same
                months made the reader decide which one to believe. */
             'payslips' => $slips,
-            /* The slip opens on the page as well as in its own tab: the newest
-               one by default, and whichever row was clicked (?preview=<id>) when
-               that is one of their own. */
-            'previewSlip' => $preview,
-            'previewSlipDoc' => $preview ? $this->document->build($preview, 'app') : null,
+            /* One table: the months and the slips on the same row, so the page
+               is a page rather than three answers to "what did I earn". */
+            'payRows' => $this->profile->payRows($year, $entries, $slips),
         ]));
     }
 
