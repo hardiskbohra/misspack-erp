@@ -55,12 +55,18 @@ class SalesInvoiceController extends Controller
         }
 
         $filters = app(SalesInvoiceFilters::class)->fromRequest($request);
-        $query = $this->filteredQuery($filters);
 
-        /* One aggregate for the figures and one for the page's own totals. The
-           money rule is the model's (`RECEIVED_SQL`), so the tile, the chip, the
+        /* The figures, the page totals and the rows each get a query of their own.
+           That is not tidiness: `withCount`/`withMax`/`withSum` write
+           `sales_invoices.*` and correlated subqueries into the **column list**, and
+           `selectRaw` appends to that list — an aggregate beside non-aggregated
+           columns is MySQL 1140 (`only_full_group_by`) on any host that runs with
+           the mode on, which the office's does. A query with no columns of its own
+           takes one aggregate select cleanly.
+
+           The money rule is the model's (`RECEIVED_SQL`), so the tile, the chip, the
            row and the CSV all count the same money. */
-        $figures = (clone $query)->reorder()->selectRaw(
+        $figures = $this->filteredQuery($filters)->reorder()->selectRaw(
             'coalesce(sum(sales_invoices.total_amount), 0) as invoiced'
             .', coalesce(sum('.SalesInvoice::RECEIVED_SQL.'), 0) as received'
             .', coalesce(sum(case when '.SalesInvoice::RECEIVED_SQL.' < sales_invoices.total_amount - 0.01'
@@ -84,7 +90,21 @@ class SalesInvoiceController extends Controller
             'drafts' => SalesInvoice::query()->where('status', 'draft')->count(),
         ];
 
-        $invoices = $query
+        /* What the footer says is owed: one query of its own, so the listing's own
+           reads (`withReceived`, the payment count, the reminder count) never stand
+           in front of it. */
+        $totals = $this->filteredQuery($filters)->reorder()->selectRaw(
+            'coalesce(sum(sales_invoices.total_amount), 0) as invoiced'
+            .', coalesce(sum('.SalesInvoice::RECEIVED_SQL.'), 0) as received'
+        )->first();
+
+        $pageTotals = [
+            'invoiced' => (float) ($totals->invoiced ?? 0),
+            'received' => (float) ($totals->received ?? 0),
+        ];
+        $pageTotals['outstanding'] = round($pageTotals['invoiced'] - $pageTotals['received'], 2);
+
+        $invoices = $this->filteredQuery($filters)
             ->withReceived()
             ->withCount('payments')
             ->withReminders()
@@ -92,14 +112,6 @@ class SalesInvoiceController extends Controller
             ->latest('id')
             ->paginate(25)
             ->withQueryString();
-
-        $pageTotals = [
-            'invoiced' => (float) (clone $query)->reorder()->sum('total_amount'),
-            'received' => (float) ((clone $query)->reorder()
-                ->selectRaw('coalesce(sum('.SalesInvoice::RECEIVED_SQL.'), 0) as received')
-                ->first()?->received ?? 0),
-        ];
-        $pageTotals['outstanding'] = round($pageTotals['invoiced'] - $pageTotals['received'], 2);
 
         return view('sales_invoices.index', array_merge($this->sharedData(), [
             'invoices' => $invoices,

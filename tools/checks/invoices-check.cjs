@@ -166,7 +166,11 @@ check('the figures are one aggregate over the filtered rows, not a loop',
 check('an aggregate alias is read off the row, never through value()',
     ! /selectRaw\([\s\S]{0,240}?->value\(/.test(controller)
     && ! /selectRaw\([\s\S]{0,240}?->value\(/.test(model)
-    && /->first\(\)\?->received/.test(controller)
+    /* the alias is read off the aggregate row — `$totals->received` in the list,
+       `first()?->received` in the model. `value('received')` is the one spelling
+       that lies, because it replaces the select list with the alias. */
+    && /\$totals->invoiced/.test(controller)
+    && /\$totals->received/.test(controller)
     && /->first\(\)\?->received/.test(model),
     'value() replaces the select list with the alias, which does not exist');
 
@@ -409,6 +413,31 @@ check('the form says which figure its own field is',
     && /Receipts filed\s*\n?\s*against this invoice are added on top/.test(form.replace(/\s+/g, ' '))
     && ! /Amount Paid/.test(form),
     '"Amount Paid" beside a balance changed every screen that prints it');
+
+/* The one class of SQL the host does not forgive: a select appended to a builder
+   that already carries subselects. `withCount`/`withSum`/`withMax` write the table's
+   columns plus correlated subqueries into the column list, and `selectRaw`/
+   `select` append — an aggregate beside non-aggregated columns is MySQL 1140
+   (only_full_group_by) and a 500 on the listing. Statements are what a `;` splits:
+   the eager loads and the aggregate have to be in the same chain to be this bug. */
+const selectAndAggregate = [controller, model]
+    .flatMap(text => text.split(';'))
+    .filter(statement => /selectRaw\(|->select\(/.test(statement)
+        && /withCount\(|withSum\(|withMax\(/.test(statement));
+
+check('no aggregate is appended to a builder that carries subselects',
+    selectAndAggregate.length === 0,
+    'selecting onto withCount/withSum/withMax is MySQL 1140 on a host running '
+    + 'only_full_group_by — ask a query of its own instead');
+
+check('the figures and the page totals are asked of a query of their own',
+    /* one aggregate for the tiles, one for the footer — neither off the listing's
+       own builder */
+    (controller.match(/filteredQuery\(\$filters\)->reorder\(\)->selectRaw\(/g) || []).length === 2
+    && ! /clone \$query\)->reorder\(\)->selectRaw\(/.test(controller)
+    && /'invoiced' => \(float\) \(\$totals->invoiced \?\? 0\)/.test(controller)
+    && /'received' => \(float\) \(\$totals->received \?\? 0\)/.test(controller),
+    'the footer money is a query of its own, not the page the rows were loaded with');
 
 /* ---- 6b. the chase, the sweep and the CA's file ------------------------ */
 

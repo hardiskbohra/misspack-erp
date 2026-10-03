@@ -41,6 +41,31 @@ Two consequences the list leans on:
 foreign key, because the ledger predates the invoice module and the table may not
 exist at all on an old install. Guard it (`Schema::hasTable`) wherever it is read.
 
+## One question, one query
+
+The listing asks three questions — the tiles, the footer, and the rows — and each gets
+a builder of its own:
+
+```php
+$figures  = $this->filteredQuery($filters)->reorder()->selectRaw(...)->first();
+$totals   = $this->filteredQuery($filters)->reorder()->selectRaw(...)->first();
+$invoices = $this->filteredQuery($filters)->withReceived()->withCount('payments')
+    ->withReminders()->latest('invoice_date')->paginate(25);
+```
+
+That is not tidiness. `withCount` / `withSum` / `withMax` do not only add eager loads:
+they write `sales_invoices.*` **and one correlated subquery per aggregate into the
+column list**, and `selectRaw` / `select` *append* to a column list (only a plain
+`sum()` replaces it). Appending an aggregate to those columns is an aggregate select
+sitting beside non-aggregated columns with no `GROUP BY`, and MySQL answers that with
+`1140 … incompatible with sql_mode=only_full_group_by` — the mode the office's host
+runs with. A builder with no columns of its own takes one aggregate select cleanly.
+
+`tools/checks/invoices-check.cjs` holds both halves of the rule: no statement may carry
+`withCount`/`withSum`/`withMax` **and** a `select`/`selectRaw`, and the tiles and the
+footer must be `filteredQuery($filters)->reorder()->selectRaw(...)` — a query of their
+own, never the builder the page was loaded from.
+
 ## How late it is
 
 One vocabulary, on the model: `ageingBuckets()` — `current`, `1_30`, `31_60`,
