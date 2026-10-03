@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Carbon\CarbonInterface;
 use Illuminate\Support\Str;
 
 class SalesInvoice extends Model
@@ -192,7 +191,7 @@ class SalesInvoice extends Model
      * the money yet, and asking twice for one nobody owes is how a worklist
      * stops being read.
      */
-    public function isOverdue(?CarbonInterface $today = null): bool
+    public function isOverdue(?\DateTimeInterface $today = null): bool
     {
         if (in_array($this->status, ['draft', 'cancelled'], true) || ! $this->due_date) {
             return false;
@@ -202,17 +201,21 @@ class SalesInvoice extends Model
             && $this->due_date->lt($today ?: Carbon::today());
     }
 
-    public function daysOverdue(?CarbonInterface $today = null): int
+    public function daysOverdue(?\DateTimeInterface $today = null): int
     {
         if (! $this->isOverdue($today)) {
             return 0;
         }
 
+        /* `$today` may be any date the caller has (Carbon, CarbonImmutable, a
+           plain DateTime) — normalise before asking it for Carbon's own methods. */
+        $today = $today ? Carbon::parse($today) : Carbon::today();
+
         /* Signed the way the rest of the office reads a date difference
            (`PartyStatement`): due date to today, so a passed due date is a
            positive number of days late. */
         return (int) $this->due_date->copy()->startOfDay()
-            ->diffInDays(($today ?: Carbon::today())->copy()->startOfDay(), false);
+            ->diffInDays($today->copy()->startOfDay(), false);
     }
 
     /**
@@ -221,7 +224,7 @@ class SalesInvoice extends Model
      * The keys are the filter's own vocabulary (`SalesInvoiceFilters`), so a
      * chip that says "31–60 days" filters by the bucket this method names.
      */
-    public function ageingBucket(?CarbonInterface $today = null): string
+    public function ageingBucket(?\DateTimeInterface $today = null): string
     {
         if (! $this->isOverdue($today)) {
             return 'current';
@@ -256,7 +259,7 @@ class SalesInvoice extends Model
      * else is the money's: late, paid, part paid — and when none of those, the
      * document's own state (sent, accepted) if the office set one.
      */
-    public function stateKey(?CarbonInterface $today = null): string
+    public function stateKey(?\DateTimeInterface $today = null): string
     {
         if (in_array($this->status, ['draft', 'cancelled'], true)) {
             return $this->status;
@@ -275,7 +278,7 @@ class SalesInvoice extends Model
         return in_array($this->status, ['sent', 'accepted'], true) ? $this->status : 'sent';
     }
 
-    public function stateLabel(?CarbonInterface $today = null): string
+    public function stateLabel(?\DateTimeInterface $today = null): string
     {
         return [
             'draft' => 'Draft',
@@ -314,7 +317,7 @@ class SalesInvoice extends Model
     }
 
     /** When this invoice was last chased (the row's own attribute when loaded). */
-    public function lastRemindedAt(): ?CarbonInterface
+    public function lastRemindedAt(): ?\DateTimeInterface
     {
         if (array_key_exists('last_reminded_at', $this->attributes)) {
             return $this->attributes['last_reminded_at']
@@ -360,7 +363,7 @@ class SalesInvoice extends Model
      * page exists only while the invoice is on the portal, and a reminder that
      * links to a 404 is worse than a reminder with no link at all.
      */
-    public function reminderMessage(?CarbonInterface $today = null): string
+    public function reminderMessage(?\DateTimeInterface $today = null): string
     {
         $today = $today ?: Carbon::today();
         $balance = $this->balanceDue();

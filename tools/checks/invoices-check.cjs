@@ -439,6 +439,22 @@ check('the figures and the page totals are asked of a query of their own',
     && /'received' => \(float\) \(\$totals->received \?\? 0\)/.test(controller),
     'the footer money is a query of its own, not the page the rows were loaded with');
 
+/* A date hint is `\DateTimeInterface`. This model once hinted
+   `?Illuminate\Support\Carbon\CarbonInterface` — a name no Laravel ships — and a hint
+   nothing implements rejects every date a caller passes while accepting `null` without a
+   murmur, so the 500 waits for the first caller that hands over a real date
+   (`reminderMessage()` did, and the listing went down). Carbon, CarbonImmutable, DateTime
+   and Date all satisfy `\DateTimeInterface`; it needs no import and no framework upgrade
+   can move it out from under the hint. */
+const dateParams = ['isOverdue', 'daysOverdue', 'ageingBucket', 'stateKey', 'stateLabel', 'reminderMessage'];
+
+check('every date the model is handed is a \\DateTimeInterface',
+    dateParams.every(name => model.includes('function ' + name + '(?\\DateTimeInterface $today = null)'))
+    && model.includes('public function lastRemindedAt(): ?\\DateTimeInterface')
+    && ! model.includes('CarbonInterface'),
+    'a hint nothing implements is a 500 on the first caller that passes a date — '
+    + '?Foo admits null happily and then rejects the Carbon the app hands it');
+
 /* ---- 6b. the chase, the sweep and the CA's file ------------------------ */
 
 const reminderModel = read('app/Models/SalesInvoiceReminder.php');

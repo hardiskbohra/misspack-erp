@@ -75,6 +75,13 @@ and it is **false** for a draft or a cancelled invoice (the office has already d
 about those). The chip, the filter, the figures and the CSV all use these — a second
 spelling is how the list and the statement started disagreeing.
 
+Every date these methods are handed — and the one `lastRemindedAt()` hands back — is a
+`\DateTimeInterface`, never a Carbon interface. `?CarbonInterface` reads stricter and is a
+trap: `Illuminate\Support\Carbon\CarbonInterface` names nothing Laravel ships, a hint
+nothing implements accepts `null` without a murmur and rejects every real date, so the 500
+waits quietly until the first caller passes one. Carbon, CarbonImmutable, DateTime and Date
+all satisfy `\DateTimeInterface`, it needs no import, and no framework upgrade can move it.
+
 ## What the state chip says
 
 `SalesInvoice::stateKey()` / `stateLabel()`. The chip is about the **money**:
