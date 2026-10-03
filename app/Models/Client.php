@@ -141,12 +141,7 @@ class Client extends Model
     {
         return ['INR' => 'INR', 'USD' => 'USD', 'RMB' => 'RMB'];
     }
-    
-    public function portalUsers()
-    {
-        return $this->hasMany(\App\Models\ClientPortalUser::class, 'client_id');
-    }
-    
+
     public function portalUser()
     {
         return $this->hasOne(\App\Models\ClientPortalUser::class, 'client_id');
