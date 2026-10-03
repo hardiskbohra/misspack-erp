@@ -125,6 +125,22 @@
     margin: 10px 0 0
 }
 
+/* The billing and shipping halves of the client's record, each part in its own
+   field: the printed invoice lays the parts out, and the office can correct a
+   pincode without retyping the street. The head carries the section label and
+   the one click that copies billing over to shipping. */
+.si-address-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 20px 0 10px
+}
+
+.si-address-head .master-section-label {
+    margin: 0
+}
+
 /* ==========================================================================
    THE RECORD — one invoice, read top to bottom
    --------------------------------------------------------------------------

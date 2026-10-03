@@ -211,31 +211,19 @@
                 <p class="master-section-label">Who it is for</p>
                 <div class="master-form-grid is-three">
                     <div class="master-field"><label class="master-label" for="clientSelect">Client</label><select
-                            class="master-select" name="client_id" id="clientSelect">
+                            class="master-select" name="client_id" id="clientSelect"
+                            data-snapshot-fields="{{ json_encode($clientSnapshotFields) }}">
                             <option value="">Select Client</option>
                             @foreach ($clients as $client)
-                                <option value="{{ $client->id }}" data-company="{{ $client->company_name }}"
-                                    data-brand="{{ $client->brand_name }}"
-                                    data-contact="{{ $client->account_person_name ?: $client->ceo_name }}"
-                                    data-email="{{ $client->account_person_email ?: $client->ceo_email }}"
-                                    data-mobile="{{ $client->account_person_contact ?: $client->ceo_contact }}"
-                                    data-gstin="{{ $client->gstin }}" data-pan="{{ $client->pan }}"
-                                    data-billing-address="{{ $client->billing_address }}"
-                                    data-billing-city="{{ $client->billing_city }}"
-                                    data-billing-state="{{ $client->billing_state }}"
-                                    data-billing-country="{{ $client->billing_country }}"
-                                    data-billing-pincode="{{ $client->billing_pincode }}"
-                                    data-shipping-address="{{ $client->shipping_address ?: $client->billing_address }}"
-                                    data-shipping-city="{{ $client->shipping_city ?: $client->billing_city }}"
-                                    data-shipping-state="{{ $client->shipping_state ?: $client->billing_state }}"
-                                    data-shipping-country="{{ $client->shipping_country ?: $client->billing_country }}"
-                                    data-shipping-pincode="{{ $client->shipping_pincode ?: $client->billing_pincode }}"
+                                <option value="{{ $client->id }}"
+                                    data-snapshot="{{ json_encode($clientSnapshots[$client->id] ?? []) }}"
                                     {{ (string) old('client_id', $invoice->client_id) === (string) $client->id ? 'selected' : '' }}>
                                     {{ $client->company_name }}</option>
                             @endforeach
                         </select>
-                        <p class="master-help">Picking a client fills the snapshot below — the invoice keeps its own
-                            copy, so a later edit to the client record never rewrites a sent invoice.</p>
+                        <p class="master-help">Picking a client brings its GSTIN, PAN, contact and both addresses
+                            onto the invoice, in the fields below. The invoice keeps its own copy, so a later edit
+                            to the client record never rewrites a sent invoice.</p>
                     </div>
                     <div class="master-field"><label class="master-label" for="projectSelect">Project</label><select
                             class="master-select" id="projectSelect" name="project_id">
@@ -261,11 +249,14 @@
                 </div>
 
                 <p class="master-section-label">Copied onto the invoice</p>
-                <div class="master-form-grid">
+                <div class="master-form-grid is-three">
                     <div class="master-field"><label class="master-label" for="client_company_name">Client
                             Company</label><input class="master-input" name="client_company_name"
                             id="client_company_name" value="{{ old('client_company_name', $invoice->client_company_name) }}">
                     </div>
+                    <div class="master-field"><label class="master-label" for="client_brand_name">Brand</label><input
+                            class="master-input" name="client_brand_name" id="client_brand_name"
+                            value="{{ old('client_brand_name', $invoice->client_brand_name) }}"></div>
                     <div class="master-field"><label class="master-label" for="client_contact_name">Contact</label><input
                             class="master-input" name="client_contact_name" id="client_contact_name"
                             value="{{ old('client_contact_name', $invoice->client_contact_name) }}"></div>
@@ -281,15 +272,59 @@
                     <div class="master-field"><label class="master-label" for="client_pan">PAN</label><input
                             class="master-input" name="client_pan" id="client_pan"
                             value="{{ old('client_pan', $invoice->client_pan) }}"></div>
-                    <div class="master-field full"><label class="master-label" for="billing_address">Billing
-                            Address</label>
-                        <textarea class="master-textarea" rows="3" name="billing_address"
+                </div>
+
+                {{-- The address block is kept in its parts, not as one sentence: the
+                     printed invoice lays the parts out, and the office can correct a
+                     pincode without retyping the street. --}}
+                <div class="si-address-head">
+                    <p class="master-section-label">Billing address</p>
+                </div>
+                <div class="master-form-grid">
+                    <div class="master-field full"><label class="master-label" for="billing_address">Address
+                            line</label>
+                        <textarea class="master-textarea" rows="2" name="billing_address"
                             id="billing_address">{{ old('billing_address', $invoice->billing_address) }}</textarea>
                     </div>
-                    <div class="master-field full"><label class="master-label" for="shipping_address">Shipping
-                            Address</label>
-                        <textarea class="master-textarea" rows="3" name="shipping_address"
+                    <div class="master-field"><label class="master-label" for="billing_city">City</label><input
+                            class="master-input" name="billing_city" id="billing_city"
+                            value="{{ old('billing_city', $invoice->billing_city) }}"></div>
+                    <div class="master-field"><label class="master-label" for="billing_state">State</label><input
+                            class="master-input" name="billing_state" id="billing_state"
+                            value="{{ old('billing_state', $invoice->billing_state) }}"></div>
+                    <div class="master-field"><label class="master-label" for="billing_country">Country</label><input
+                            class="master-input" name="billing_country" id="billing_country"
+                            value="{{ old('billing_country', $invoice->billing_country) }}"></div>
+                    <div class="master-field"><label class="master-label" for="billing_pincode">Pincode</label><input
+                            class="master-input" name="billing_pincode" id="billing_pincode"
+                            value="{{ old('billing_pincode', $invoice->billing_pincode) }}"></div>
+                </div>
+
+                <div class="si-address-head">
+                    <p class="master-section-label">Shipping address</p>
+                    <button type="button" class="master-btn master-btn-soft" data-copy-billing="1"><i
+                            class="fas fa-copy" aria-hidden="true"></i> Same as billing</button>
+                </div>
+                <div class="master-form-grid">
+                    <div class="master-field full"><label class="master-label" for="shipping_address">Address
+                            line</label>
+                        <textarea class="master-textarea" rows="2" name="shipping_address"
                             id="shipping_address">{{ old('shipping_address', $invoice->shipping_address) }}</textarea>
+                    </div>
+                    <div class="master-field"><label class="master-label" for="shipping_city">City</label><input
+                            class="master-input" name="shipping_city" id="shipping_city"
+                            value="{{ old('shipping_city', $invoice->shipping_city) }}"></div>
+                    <div class="master-field"><label class="master-label" for="shipping_state">State</label><input
+                            class="master-input" name="shipping_state" id="shipping_state"
+                            value="{{ old('shipping_state', $invoice->shipping_state) }}"></div>
+                    <div class="master-field"><label class="master-label" for="shipping_country">Country</label><input
+                            class="master-input" name="shipping_country" id="shipping_country"
+                            value="{{ old('shipping_country', $invoice->shipping_country) }}"></div>
+                    <div class="master-field"><label class="master-label" for="shipping_pincode">Pincode</label><input
+                            class="master-input" name="shipping_pincode" id="shipping_pincode"
+                            value="{{ old('shipping_pincode', $invoice->shipping_pincode) }}"></div>
+                    <div class="master-field full">
+                        <p class="master-help">Left empty, the invoice is dispatched to the billing address.</p>
                     </div>
                 </div>
             </div>

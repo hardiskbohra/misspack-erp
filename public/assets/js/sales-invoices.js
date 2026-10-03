@@ -4,7 +4,8 @@
    Two screens' behaviour, one file:
 
      the form   the line-item builder (add/remove rows, product autofill), the
-                live GST/discount/total preview and the client address prefill.
+                live GST/discount/total preview and the client snapshot prefill
+                (the client's own record, in one list the form carries).
                 The product options and existing items arrive through data
                 attributes on #invoiceItemsBody (Blade cannot render inside an
                 external script);
@@ -292,27 +293,64 @@
             if (el) el.addEventListener('change', calculateTotals);
         });
 
-        /* Client select → billing/shipping address prefill */
+        /* ------------------------------------------ the client's own record
+           The invoice keeps a copy of the client, and the form has a field for
+           every part of that copy. Both sides read ONE list: the controller
+           writes it onto the option as JSON, and this applies it by field name,
+           so a column added there arrives here with no edit to this file — and
+           there is no second list to fall out of step with the first. */
         var clientSelect = document.getElementById('clientSelect');
         if (clientSelect) {
-            clientSelect.addEventListener('change', function () {
-                var o = this.options[this.selectedIndex];
-                if (!o) return;
-                function set(id, value) {
-                    var el = document.getElementById(id);
-                    if (el) el.value = value || '';
+            var clientForm = clientSelect.closest('.master-form') || document;
+
+            function readJson(text) {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    return null;
                 }
-                set('client_company_name', o.dataset.company);
-                set('client_contact_name', o.dataset.contact);
-                set('client_email', o.dataset.email);
-                set('client_mobile', o.dataset.mobile);
-                set('client_gstin', o.dataset.gstin);
-                set('client_pan', o.dataset.pan);
-                set('billing_address', [o.dataset.billingAddress, o.dataset.billingCity, o.dataset.billingState, o.dataset.billingCountry, o.dataset.billingPincode]
-                    .filter(Boolean).join(', '));
-                set('shipping_address', [o.dataset.shippingAddress, o.dataset.shippingCity, o.dataset.shippingState, o.dataset.shippingCountry, o.dataset.shippingPincode]
-                    .filter(Boolean).join(', '));
+            }
+
+            var snapshotFields = readJson(clientSelect.dataset.snapshotFields) || [];
+
+            /* `onlyEmpty` is the difference between showing and choosing. An
+               invoice already holds the office's copy of the client — sometimes
+               a copy older than the client record — and a screen that rewrote it
+               on sight would change a sent invoice's address by being opened.
+               Picking a client is the office saying whose details they want now:
+               that pass fills every field, and clears what the last one had. */
+            function applySnapshot(option, onlyEmpty) {
+                var snapshot = option ? readJson(option.dataset.snapshot) : null;
+                if (!snapshot) return;
+
+                snapshotFields.forEach(function (name) {
+                    var el = clientForm.querySelector('[name="' + name + '"]');
+                    if (!el) return;
+                    if (onlyEmpty && el.value) return;
+                    el.value = snapshot[name] || '';
+                });
+            }
+
+            clientSelect.addEventListener('change', function () {
+                /* The placeholder is not a client: picking it leaves what the
+                   office has typed where it is. */
+                if (!this.value) return;
+                applySnapshot(this.options[this.selectedIndex], false);
             });
+
+            applySnapshot(clientSelect.options[clientSelect.selectedIndex], true);
+
+            /* Shipping is usually the billing address: one click, five fields. */
+            var copyBilling = clientForm.querySelector('[data-copy-billing]');
+            if (copyBilling) {
+                copyBilling.addEventListener('click', function () {
+                    ['address', 'city', 'state', 'country', 'pincode'].forEach(function (part) {
+                        var from = clientForm.querySelector('[name="billing_' + part + '"]');
+                        var to = clientForm.querySelector('[name="shipping_' + part + '"]');
+                        if (from && to) to.value = from.value;
+                    });
+                });
+            }
         }
 
         calculateTotals();

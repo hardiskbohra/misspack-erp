@@ -298,3 +298,26 @@ with the chip wrapped mid-year on every row. The money cell's second line is the
 item count. A fact nobody filled in says so in words — `No GSTIN on file`,
 `No project mapped`, `No due date` — never a dash. And a receipt on the record
 page names the cashflow entry it came from and links to it.
+
+### What a client brings onto an invoice
+
+The invoice keeps its own copy of the client — company, brand, contact, email,
+mobile, GSTIN, PAN, both addresses in their parts (address line, city, state,
+country, pincode) and the place of supply — and the printed invoice lays those
+parts out. One list decides what that copy holds: `clientSnapshot()` in
+`SalesInvoiceController`. The server fills it when the form opens with
+`?client_id=`; the form carries the same list on the client select as JSON
+(`data-snapshot` per option, `data-snapshot-fields` for the shape) and the script
+applies it by field name, so a pick always lands exactly what a link lands.
+
+Two rules keep it honest:
+
+* **loading shows, picking chooses.** On load the script fills only empty fields,
+  because the stored copy is the invoice's and a screen must not rewrite it by
+  being opened; picking a client overwrites every field in the list, and clears
+  the ones the new client does not hold, because that is the office saying whose
+  details they want now.
+* **every field in the list has an input on the form.** A value the client holds
+  and the invoice prints, with nowhere to see it, is a value the office cannot
+  check before it prints — and it would fill only on the deep-link path. Adding a
+  field to `clientSnapshot()` without a field on the form fails the module's gate.

@@ -783,7 +783,14 @@ const methodKeys = (needle) => {
     const at = controller.indexOf(needle);
     if (at === -1) return [];
 
-    const call = controller.slice(at, controller.indexOf(');', at));
+    /* A method is read to its closing brace: a statement before its `return [`
+       would otherwise cut the slice at the first `);` and empty the contract —
+       which is how `sharedData()` lost every key it hands out. A view call is
+       read to the end of the call, which is the same thing without the brace. */
+    const end = needle.startsWith('private function')
+        ? controller.indexOf('\n    }', at)
+        : controller.indexOf(');', at);
+    const call = controller.slice(at, end === -1 ? undefined : end);
     const named = [...call.matchAll(/'([a-zA-Z_][a-zA-Z0-9_]*)' =>/g)].map(m => m[1]);
     const compacted = [...call.matchAll(/compact\(([^)]*)\)/g)]
         .flatMap(m => [...m[1].matchAll(/'([a-zA-Z_][a-zA-Z0-9_]*)'/g)].map(k => k[1]));
@@ -870,6 +877,53 @@ check('the module explains itself where the next person will look',
     && /ageingBuckets\(\)/.test(read('docs/invoice-management.md'))
     && /Record payment|record a receipt/i.test(read('docs/invoice-management.md')),
     'the money rule is the part nobody can re-derive from the code in a hurry');
+
+/* ---- 8. what a client brings onto an invoice --------------------------- */
+
+/* One list decides what a client's record contributes to an invoice:
+   `clientSnapshot()`. The server copies it when the form opens with
+   `?client_id=`, the form carries it on the option so a pick lands the same
+   values in the same fields, and the script applies it **by field name** —
+   a hand-written list in the script is the same list twice, and the second copy
+   is what silently stops filling a column somebody adds. */
+const snapshotBody = controller.slice(
+    controller.indexOf('private function clientSnapshot('),
+    controller.indexOf('private function itemsFromSource(')
+);
+const snapshotFields = [...snapshotBody.matchAll(/'([a-z_]+)' => \$client->/g)].map(m => m[1]);
+const clientBlock = js.slice(
+    js.indexOf('var clientSelect = document.getElementById'),
+    js.indexOf('/* ============================================================ the list')
+);
+
+check('every part of the client snapshot has a field on the form',
+    snapshotFields.length >= 18
+    && snapshotFields.every(name => form.includes('name="' + name + '"'))
+    && /data-snapshot-fields="\{\{ json_encode\(\$clientSnapshotFields\) \}\}"/.test(form)
+    && /data-snapshot="\{\{ json_encode\(\$clientSnapshots\[\$client->id\] \?\? \[\]\) \}\}"/.test(form)
+    && /readJson\(option\.dataset\.snapshot\)/.test(clientBlock)
+    && /JSON\.parse\(text\)/.test(clientBlock)
+    && /clientForm\.querySelector\('\[name="' \+ name \+ '"\]'\)/.test(clientBlock),
+    'a value the client holds and the invoice prints, with nowhere on the form to '
+    + 'check it, is a field that fills only when the form is opened by link — and '
+    + 'a list in the script that mirrors this one is the copy that goes stale');
+
+check('the address block stays in its parts, and shipping is one click from billing',
+    ! /join\(', '\)/.test(clientBlock)
+    && /data-copy-billing/.test(form)
+    && /\[data-copy-billing\]/.test(clientBlock)
+    && /\[name="billing_' \+ part/.test(clientBlock)
+    && /\[name="shipping_' \+ part/.test(clientBlock)
+    && /\.si-address-head \{/.test(sheet),
+    'the printed invoice lays the parts out itself, so a street re-joined with its '
+    + 'city prints twice; and an office that retypes the billing address into the '
+    + 'shipping fields is an office that mistypes a pincode');
+
+check('opening an invoice shows its own copy without rewriting it',
+    /applySnapshot\(clientSelect\.options\[clientSelect\.selectedIndex\], true\)/.test(clientBlock)
+    && /applySnapshot\(this\.options\[this\.selectedIndex\], false\)/.test(clientBlock),
+    'the stored copy is the invoice\'s, and a screen that overwrites it on load '
+    + 'changes a sent invoice by being opened');
 
 /* ---------------------------------------------------------------- report */
 

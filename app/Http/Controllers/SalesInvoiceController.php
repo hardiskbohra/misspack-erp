@@ -944,6 +944,16 @@ class SalesInvoiceController extends Controller
         }
     }
 
+    private function clientSnapshots($clients): array
+    {
+        return $clients->mapWithKeys(fn ($client) => [
+            $client->id => array_filter($this->clientSnapshot($client), fn ($value) => filled($value)),
+        ])->all();
+    }
+
+    /* The invoice's own copy of the client. Every field here is a value the
+       printed invoice shows, so every field here has an input on the form: a
+       value the office cannot see is a value it cannot correct before it prints. */
     private function clientSnapshot($client): array
     {
         return [
@@ -1346,8 +1356,20 @@ class SalesInvoiceController extends Controller
 
     private function sharedData(): array
     {
+        $clients = $this->clients();
+
         return [
-            'clients' => $this->clients(),
+            'clients' => $clients,
+            /* What each client's record contributes to an invoice, keyed by id.
+               The form hands it to the screen as JSON on the option itself, so
+               the values a pick lands and the values a `?client_id=` open copies
+               come off one list and cannot drift. Only what the client actually
+               holds travels; the field list below keeps its shape either way, so
+               changing client clears what the last one had. */
+            'clientSnapshots' => $this->clientSnapshots($clients),
+            'clientSnapshotFields' => $clients->isNotEmpty()
+                ? array_keys($this->clientSnapshot($clients->first()))
+                : [],
             'projects' => $this->projects(),
             'products' => $this->products(),
             'quotes' => $this->quotes(),
