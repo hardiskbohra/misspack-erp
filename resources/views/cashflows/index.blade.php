@@ -507,9 +507,22 @@
         <x-pagination :items="$entries" />
     </div>
 
+    @php
+        /* Which party field is on screen before any script runs: the selector's
+           own value, which is what was chosen last time round if the page is
+           coming back from a failed save. The script keeps this in step when the
+           selector changes; the server keeps it right when nothing has run yet. */
+        $quickPartyType = old('related_party_type', 'client');
+    @endphp
+
     <div class="master-modal" id="quickCashflowModal" aria-hidden="true">
         <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="quickCashflowTitle">
+            {{-- `_dialog` is how this modal comes back after a failed save:
+                 a validation failure redirects here with the input kept, the
+                 marker at the foot of the page names the dialog, and the script
+                 reopens it. Nobody retypes a bank line. --}}
             <form method="POST" action="{{ route('cashflows.quickStore') }}">@csrf
+                <input type="hidden" name="_dialog" value="quickCashflowModal">
                 <div class="master-modal-header">
                     <div class="master-modal-heading"><span class="master-modal-icon">₹</span>
                         <div>
@@ -525,11 +538,12 @@
                         <div class="master-field">
                             <label class="master-label" for="quickEntryDate">Date <span class="master-required" aria-hidden="true">*</span></label>
                             <input class="master-input" id="quickEntryDate" type="date" name="entry_date"
-                                value="{{ now()->toDateString() }}" required>
+                                value="{{ old('entry_date', now()->toDateString()) }}" required>
+                            @error('entry_date')<p class="master-error">{{ $message }}</p>@enderror
                         </div>
                         <div class="master-field">
-                            <label class="master-label">Transaction Type <span class="master-required" aria-hidden="true">*</span></label>
-                            <div class="master-choice-group">
+                            <label class="master-label" id="quickTypeLabel">Transaction Type <span class="master-required" aria-hidden="true">*</span></label>
+                            <div class="master-choice-group" role="radiogroup" aria-labelledby="quickTypeLabel">
                                 @foreach($transactionTypeOptions as $key => $label)
                                     <label class="master-choice-chip {{ $key === 'credit' ? 'credit-chip' : 'debit-chip' }}">
                                         <input type="radio" name="transaction_type" value="{{ $key }}"
@@ -545,35 +559,96 @@
                         <div class="master-field full">
                             <label class="master-label" for="quickParticular">Particular <span class="master-required" aria-hidden="true">*</span></label>
                             <input class="master-input" id="quickParticular" name="particular" required
-                                placeholder="Bank statement particular">
+                                value="{{ old('particular') }}" placeholder="Bank statement particular">
+                            @error('particular')<p class="master-error">{{ $message }}</p>@enderror
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="quickAmount">Amount <span class="master-required" aria-hidden="true">*</span></label>
-                            <input class="master-input" id="quickAmount" type="number" step="0.01" min="0" name="amount" required>
+                            <input class="master-input" id="quickAmount" type="number" step="0.01" min="0" name="amount"
+                                value="{{ old('amount') }}" required>
+                            @error('amount')<p class="master-error">{{ $message }}</p>@enderror
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="quickAccount">Account <span class="master-required" aria-hidden="true">*</span></label>
                             <select class="master-select" id="quickAccount" name="account_id" required>
                                 <option value="">Select account</option>
                                 @foreach($accounts as $account)
-                                    <option value="{{ $account->id }}">{{ $account->account_name }}</option>
+                                    <option value="{{ $account->id }}" @selected((string) old('account_id') === (string) $account->id)>{{ $account->account_name }}</option>
                                 @endforeach
                             </select>
+                            @error('account_id')<p class="master-error">{{ $message }}</p>@enderror
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="quickRelatedParty">Related To</label>
-                            <select class="master-select" id="quickRelatedParty" name="related_party_type">
+                            <select class="master-select" id="quickRelatedParty" name="related_party_type"
+                                data-party-source>
                                 @foreach($relatedPartyOptions as $key => $label)
-                                    <option value="{{ $key }}">{{ $label }}</option>
+                                    <option value="{{ $key }}" @selected($quickPartyType === $key)>{{ $label }}</option>
                                 @endforeach
                             </select>
+                            @error('related_party_type')<p class="master-error">{{ $message }}</p>@enderror
+                        </div>
+
+                        {{-- One party question at a time. "Related To" says which
+                             list you are picking from, and the field below it is
+                             that list: a client, a vendor, or the head a cash
+                             expense was spent under. The free-text name stays for
+                             the cases that have no record to link to. --}}
+                        <div class="master-field party-picker" data-party-for="client"
+                            @if ($quickPartyType !== 'client') hidden @endif>
+                            <label class="master-label" for="quickClient">Client</label>
+                            <select class="master-select" id="quickClient" name="client_id">
+                                <option value="">No client linked</option>
+                                @foreach($clients as $client)
+                                    <option value="{{ $client->id }}" @selected((string) old('client_id') === (string) $client->id)>{{ $client->company_name }}</option>
+                                @endforeach
+                            </select>
+                            @error('client_id')<p class="master-error">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div class="master-field party-picker" data-party-for="vendor"
+                            @if ($quickPartyType !== 'vendor') hidden @endif>
+                            <label class="master-label" for="quickVendor">Vendor</label>
+                            <select class="master-select" id="quickVendor" name="vendor_id">
+                                <option value="">No vendor linked</option>
+                                @foreach($vendors as $vendor)
+                                    <option value="{{ $vendor->id }}" @selected((string) old('vendor_id') === (string) $vendor->id)>{{ $vendor->vendor_name }}</option>
+                                @endforeach
+                            </select>
+                            @error('vendor_id')<p class="master-error">{{ $message }}</p>@enderror
+                        </div>
+
+                        {{-- A person paid from the account is a party like any
+                             other, and the link is what files the payment against
+                             them: linked here, it shows up in the employee report
+                             and on their own record instead of only in the notes.
+                             The words are task 60's, so the office recognises the
+                             field it has been using. --}}
+                        <div class="master-field party-picker" data-party-for="employee"
+                            @if ($quickPartyType !== 'employee') hidden @endif>
+                            <label class="master-label" for="quickEmployee">Paid to employee</label>
+                            <select class="master-select" id="quickEmployee" name="employee_id">
+                                <option value="">No employee</option>
+                                @foreach($employees as $employee)
+                                    <option value="{{ $employee->id }}" @selected((string) old('employee_id') === (string) $employee->id)>{{ $employee->name }}@if($employee->designation) — {{ $employee->designation }}@endif</option>
+                                @endforeach
+                            </select>
+                            @error('employee_id')<p class="master-error">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div class="master-field party-picker" data-party-for="expense"
+                            @if ($quickPartyType !== 'expense') hidden @endif>
+                            <label class="master-label" for="quickExpenseHead">Expense head</label>
+                            <input class="master-input" id="quickExpenseHead" name="expense_head"
+                                value="{{ old('expense_head') }}" placeholder="Petrol, tea, courier …">
+                            @error('expense_head')<p class="master-error">{{ $message }}</p>@enderror
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="quickProject">Project / Deal</label>
                             <select id="quickProject" name="project_id" class="master-select">
                                 <option value="">No project mapping</option>
                                 @foreach(\App\Models\Project::query()->latest('id')->get() as $project)
-                                    <option value="{{ $project->id }}">{{ $project->project_number }} - {{ $project->name }}</option>
+                                    <option value="{{ $project->id }}" @selected((string) old('project_id') === (string) $project->id)>{{ $project->project_number }} - {{ $project->name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -582,7 +657,7 @@
                             <select class="master-select" id="quickCategory" name="category_id">
                                 <option value="">Uncategorized</option>
                                 @forelse($categories as $category)
-                                    <option value="{{ $category->id }}">{{ $category->name }} - {{ $category->typeLabel() }}</option>
+                                    <option value="{{ $category->id }}" @selected((string) old('category_id') === (string) $category->id)>{{ $category->name }} - {{ $category->typeLabel() }}</option>
                                 @empty
                                     <option value="" disabled>No categories found - add from Cashflow Settings</option>
                                 @endforelse
@@ -591,19 +666,8 @@
                         <div class="master-field">
                             <label class="master-label" for="quickPartyName">Party / Expense Name</label>
                             <input class="master-input" id="quickPartyName" name="related_party_name"
-                                placeholder="Name on the line, if it is not linked below">
-                        </div>
-                        {{-- A person paid from the account is a party like any
-                             other: linked here, the payment shows up in the
-                             employee report instead of only in the notes. --}}
-                        <div class="master-field">
-                            <label class="master-label" for="quickEmployee">Paid to employee</label>
-                            <select class="master-select" id="quickEmployee" name="employee_id">
-                                <option value="">No employee</option>
-                                @foreach($employees as $employee)
-                                    <option value="{{ $employee->id }}">{{ $employee->name }}</option>
-                                @endforeach
-                            </select>
+                                value="{{ old('related_party_name') }}"
+                                placeholder="The name on the line, when it is not linked above">
                         </div>
                     </div>
                     <p class="master-sub">
@@ -619,9 +683,16 @@
         </div>
     </div>
 
+    {{-- A failed save comes back here with the input kept and the errors on the
+         bag. `_dialog` (posted by the dialog's own form) says which one was open,
+         so the right form reopens with the office's typing still in it. One
+         marker for the page, not one per dialog. --}}
+    <span hidden data-open-dialog="{{ $errors->any() ? old('_dialog') : '' }}"></span>
+
     <div class="master-modal" id="accountModal" aria-hidden="true">
         <div class="master-modal-card is-narrow" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
             <form method="POST" action="{{ route('cashflows.accounts.store') }}">@csrf
+                <input type="hidden" name="_dialog" value="accountModal">
                 <div class="master-modal-header">
                     <div class="master-modal-heading"><span class="master-modal-icon">🏦</span>
                         <div>
@@ -636,35 +707,37 @@
                     <div class="master-modal-grid">
                         <div class="master-field">
                             <label class="master-label" for="accountName">Account Name</label>
-                            <input class="master-input" id="accountName" name="account_name" required placeholder="Hardik HDFC">
+                            <input class="master-input" id="accountName" name="account_name" required
+                                value="{{ old('account_name') }}" placeholder="Hardik HDFC">
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="accountType">Account Type</label>
                             <select class="master-select" id="accountType" name="account_type">
                                 @foreach($accountTypeOptions as $key => $label)
-                                    <option value="{{ $key }}">{{ $label }}</option>
+                                    <option value="{{ $key }}" @selected(old('account_type') === $key)>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="accountBank">Bank Name</label>
-                            <input class="master-input" id="accountBank" name="bank_name">
+                            <input class="master-input" id="accountBank" name="bank_name" value="{{ old('bank_name') }}">
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="accountOpening">Opening Balance</label>
-                            <input class="master-input" id="accountOpening" type="number" step="0.01" name="opening_balance" value="0">
+                            <input class="master-input" id="accountOpening" type="number" step="0.01" name="opening_balance"
+                                value="{{ old('opening_balance', '0') }}">
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="accountCurrency">Currency</label>
                             <select class="master-select" id="accountCurrency" name="currency">
                                 @foreach($currencyOptions as $key => $label)
-                                    <option value="{{ $key }}">{{ $label }}</option>
+                                    <option value="{{ $key }}" @selected(old('currency') === $key)>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="accountNumber">Account Number</label>
-                            <input class="master-input" id="accountNumber" name="account_number">
+                            <input class="master-input" id="accountNumber" name="account_number" value="{{ old('account_number') }}">
                         </div>
                     </div>
                 </div>

@@ -52,6 +52,11 @@ const listCss = fs.readFileSync(LIST_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '
 const cashView = fs.readFileSync(CASHFLOW_VIEW, 'utf8');
 const cashCss = fs.readFileSync(CASHFLOW_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const model = fs.readFileSync(MODEL, 'utf8');
+/* the ledger's own model and controller: the party rule and the three writers
+   that apply it (declared here with the rest — a `const` read above its own line
+   is a TDZ crash that takes the whole gate with it) */
+const cashflowsModel = fs.readFileSync(path.join(ROOT, 'app/Models/CashflowEntry.php'), 'utf8');
+const cashflowsController = fs.readFileSync(path.join(ROOT, 'app/Http/Controllers/CashflowController.php'), 'utf8');
 
 /* ------------------------------------------------------- 1. markup hygiene */
 
@@ -962,6 +967,122 @@ check("the blocks of a page keep the page's own rhythm",
     && /\.master-grid > \.master-card \+ \.master-card \{\s*margin-top: 0;/.test(listCss)
     && ! /\.master-card \+ \.master-(card|stats)/.test(cashCss)
     && ! /\.master-card \+ \.master-(card|stats)/.test(css));
+
+/* ------------------------------- 8. the quick entry dialog (67)
+   Quick Entry is the ledger's front door — one bank line, recorded in a few
+   seconds — and it asked two questions about the same party: which kind it is,
+   and its name as free text. The kinds that have a record to link to now have a
+   list to pick from, one at a time, and the link decides the label:
+
+     `CashflowEntry::partyLinkColumns()` says which column holds each link, the
+     dialog renders one picker per link (`data-party-for`), and every writer
+     aligns the label to the link. A label that disagrees with the link puts an
+     entry on a client's statement while the ledger filter for "Client" cannot
+     find it — one row answering two questions differently.
+
+   The failure this section is really about: a hidden picker still submits. A
+   client left over from the moment before is how an entry lands on the wrong
+   party's statement, so the script clears what it hides. */
+
+const partySource = cashflowsModel.slice(cashflowsModel.indexOf('partyLinkColumns'));
+
+const linkedParties = [...partySource.matchAll(/'(client|vendor|employee)' => '(\w+_id)'/g)]
+    .map(m => [m[1], m[2]]);
+
+const pickers = [...cashView.matchAll(/class="master-field party-picker" data-party-for="(\w+)"/g)]
+    .map(m => m[1]);
+
+/* Every link the ledger keeps has a picker. The dialog has one more — the head
+   a cash expense was spent under — which is not a link (there is no column to
+   file it against, so `alignPartyType()` has nothing to say about it). */
+check('the dialog offers a list for every link the ledger keeps',
+    linkedParties.length === 3
+    && linkedParties.every(([party]) => pickers.includes(party))
+    && pickers.length === 4
+    && pickers.includes('expense'),
+    'parties ' + linkedParties.map(p => p[0]).join('/') + ' vs pickers ' + pickers.join('/'));
+
+check('a cash expense asks what it was for, without pretending to be a link',
+    /data-party-for="expense"[\s\S]{0,300}?name="expense_head"/.test(cashView)
+    && !/alignPartyType[\s\S]{0,400}'expense' =>/.test(cashflowsModel),
+    'the head is typed, the party is linked — the model says so by omitting it');
+
+check('each picker posts the column its party is decided by',
+    linkedParties.every(([party, column]) =>
+        new RegExp('data-party-for="' + party + '"[\\s\\S]{0,600}?name="' + column + '"').test(cashView)),
+    'the picker and the column have to be the same pair the model names');
+
+check('one picker is on screen at a time, before any script runs',
+    /\$quickPartyType = old\('related_party_type', 'client'\)/.test(cashView)
+    && /data-party-source/.test(cashView)
+    /* Each picker states its own condition — counted together they can both drop
+       by one and still agree, which is how a picker that always shows on the
+       first render would pass. */
+    && pickers.every(party => new RegExp(
+        'data-party-for="' + party + '"\\s*\\n\\s*@if \\\(\\$quickPartyType !== \'' + party + '\'\\) hidden @endif').test(cashView)),
+    'the server states the first state; the script keeps it in step');
+
+check('and the script hides what it clears',
+    /function partyPicker\(\)/.test(cashflowJs)
+    && /field\.getAttribute\('data-party-for'\) === wanted/.test(cashflowJs)
+    && /field\.hidden = ! ?mine/.test(cashflowJs)
+    && /if \(! ?mine\) clear\(field\)/.test(cashflowJs)
+    && /data-party-for/.test(cashflowJs),
+    'a hidden select still submits — that is how an entry lands on the wrong party');
+
+check('a select2 control is cleared through select2, not behind its back',
+    /\.data\('select2'\)/.test(cashflowJs)
+    && /val\(''\)\.trigger\('change\.select2'\)/.test(cashflowJs),
+    'setting `.value` on a select2-wrapped select leaves the rendered choice on screen');
+
+check('the link decides the label, in every writer',
+    /public static function alignPartyType\(array \$data\): array/.test(cashflowsModel)
+    && (cashflowsController.match(/CashflowEntry::alignPartyType\(/g) || []).length === 3,
+    'quickStore, store and update — three writers, one rule');
+
+check('a picked client is a client entry even when the selector was left alone',
+    (() => {
+        const body = cashflowsModel.slice(cashflowsModel.indexOf('public static function alignPartyType'));
+
+        return /\$linked === \[\]/.test(body)
+            && /array_key_exists\(\$chosen, \$linked\)/.test(body)
+            && /array_key_first\(\$linked\)/.test(body);
+    })(),
+    'nothing linked: the choice stands. A link set: the link wins');
+
+check('the label and the link are held together by a test that runs',
+    fs.existsSync(path.join(ROOT, 'tests/Unit/CashflowPartyTest.php'))
+    && /test_a_linked_party_is_the_label/.test(fs.readFileSync(path.join(ROOT, 'tests/Unit/CashflowPartyTest.php'), 'utf8'))
+    && /test_the_default_first_option_does_not_overrule_the_link/.test(fs.readFileSync(path.join(ROOT, 'tests/Unit/CashflowPartyTest.php'), 'utf8')),
+    'php artisan test --filter=CashflowPartyTest');
+
+check('the pickers are lists, not text boxes',
+    ['quickClient', 'quickVendor'].every(id =>
+        new RegExp('<select class="master-select" id="' + id + '"').test(cashView))
+    && /foreach\(\$clients as \$client\)/.test(cashView)
+    && /foreach\(\$vendors as \$vendor\)/.test(cashView),
+    'a name typed by hand is a name the report cannot group by');
+
+/* ---- a failed save comes back to the dialog it came from ---- */
+
+check('every dialog in the ledger names itself on the way in',
+    (cashView.match(/<input type="hidden" name="_dialog" value="\w+">/g) || []).length === 2
+    && (documentsView.match(/<input type="hidden" name="_dialog" value="\w+">/g) || []).length === 1,
+    'quick entry and the account dialog on the ledger, the filing dialog in the archive');
+
+check('and the page reopens the one the errors belong to',
+    /data-open-dialog="\{\{ \$errors->any\(\) \? old\('_dialog'\) : '' \}\}"/.test(cashView)
+    && /data-open-dialog="\{\{ \$errors->any\(\) \? old\('_dialog'\) : '' \}\}"/.test(documentsView)
+    && /var reopen = marker \? marker\.getAttribute\('data-open-dialog'\) : ''/.test(cashflowJs)
+    && /window\.MasterModal\.open\(dialog\)/.test(cashflowJs),
+    'the office should not retype a bank line because the amount was missing');
+
+check('and the fields hold what was typed',
+    ['entry_date', 'particular', 'amount', 'account_id', 'related_party_name', 'expense_head', 'related_party_type']
+        .every(field => cashView.includes("old('" + field))
+    && ['client_id', 'vendor_id', 'employee_id'].every(column =>
+        new RegExp('name="' + column + '"[\\s\\S]{0,400}?@selected\\(\\(string\\) old\\(\'' + column + '\'\\)').test(cashView)),
+    'a dialog that reopens empty is a dialog that lost the work');
 
 check('a stats row fills its width, whatever number of figures it holds',
     /\.master-stats \{\s*display: grid;\s*grid-template-columns: repeat\(auto-fit, minmax\(200px, 1fr\)\);/.test(layoutCss)

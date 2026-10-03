@@ -107,7 +107,7 @@ class CashflowController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $this->validatedData($request);
+        $data = CashflowEntry::alignPartyType($this->validatedData($request));
         $data = $this->normalizeAmounts($data);
         $data['created_by'] = Auth::id();
 
@@ -151,6 +151,9 @@ class CashflowController extends Controller
         $data['credit_amount'] = $data['transaction_type'] === 'credit' ? $data['amount'] : 0;
         $data['debit_amount'] = $data['transaction_type'] === 'debit' ? $data['amount'] : 0;
         unset($data['amount']);
+        /* The link decides the label — a client picked in Quick Entry is a
+           client entry, whatever the selector was left on. */
+        $data = CashflowEntry::alignPartyType($data);
         $data['created_by'] = Auth::id();
 
         $entry = DB::transaction(function () use ($data) {
@@ -194,7 +197,7 @@ class CashflowController extends Controller
 
     public function update(Request $request, CashflowEntry $cashflow): RedirectResponse
     {
-        $data = $this->validatedData($request);
+        $data = CashflowEntry::alignPartyType($this->validatedData($request));
         $data = $this->normalizeAmounts($data);
         $oldAccountId = $cashflow->account_id;
 

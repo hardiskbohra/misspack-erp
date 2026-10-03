@@ -42,12 +42,70 @@
         window.MasterList.saveViewToggle();
     }
 
+    /* ------------------------------------------------------- the party picker
+       "Related To" says which list the entry is being filed against, so the field
+       under it is that list — a client, a vendor, or the head a cash expense was
+       spent under. The others are hidden *and cleared*: a hidden select still
+       submits, and a client left over from a moment ago is exactly how an entry
+       ends up on the wrong party's statement. The wiring is driven by the
+       `data-party-for` attribute, so a fourth list is markup and one word. */
+    function partyPicker() {
+        var source = document.querySelector('[data-party-source]');
+        if (!source) return;
+
+        var fields = [].slice.call(document.querySelectorAll('.party-picker[data-party-for]'));
+
+        function clear(field) {
+            var control = field.querySelector('select, input');
+
+            if (!control) return;
+
+            if (control.tagName === 'SELECT' && window.jQuery && window.jQuery(control).data('select2')) {
+                window.jQuery(control).val('').trigger('change.select2');
+            } else {
+                control.value = '';
+            }
+        }
+
+        function sync() {
+            var wanted = source.value;
+
+            fields.forEach(function (field) {
+                var mine = field.getAttribute('data-party-for') === wanted;
+
+                field.hidden = ! mine;
+
+                if (! mine) clear(field);
+            });
+        }
+
+        source.addEventListener('change', sync);
+        sync();
+    }
+
+    onReady(function () {
+        partyPicker();
+    });
+
     onReady(function () {
         if (typeof window.MasterList !== 'undefined') {
             initList();
         }
 
         if (typeof window.MasterModal === 'undefined') return;
+
+        /* A failed save redirects back with the input kept and the errors on the
+           bag; the marker names the dialog it came from, so it reopens with the
+           office's typing still in it — the modal is server-rendered with
+           `old()`, so opening is all that is left to do. */
+        var marker = document.querySelector('[data-open-dialog]');
+        var reopen = marker ? marker.getAttribute('data-open-dialog') : '';
+
+        if (reopen) {
+            var dialog = document.getElementById(reopen);
+
+            if (dialog) window.MasterModal.open(dialog);
+        }
 
         /* the header action and the empty state carry the same modal */
         ['openQuickCashflowModal', 'emptyQuickCashflow'].forEach(function (id) {

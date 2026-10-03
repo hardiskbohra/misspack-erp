@@ -368,11 +368,16 @@
 {{-- A bill that stands on its own: filed here, matched to an entry later — or
      never, which is a valid answer for paperwork the ledger does not carry.
      The entry card files through the same controller with the same fields. --}}
+{{-- A failed save reopens the dialog it came from: the marker names it, and the
+     modal is server-rendered with `old()`. --}}
+<span hidden data-open-dialog="{{ $errors->any() ? old('_dialog') : '' }}"></span>
+
 <div class="master-modal" id="fileDocumentModal" aria-hidden="true">
     <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="fileDocumentTitle">
         <form method="POST" action="{{ route('cashflows.attachments.storeStandalone') }}"
             enctype="multipart/form-data">
             @csrf
+            <input type="hidden" name="_dialog" value="fileDocumentModal">
             <div class="master-modal-header">
                 <div class="master-modal-heading">
                     <span class="master-modal-icon">📄</span>

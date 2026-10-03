@@ -169,6 +169,35 @@ bridge · branch/multi-entity ledgers.
 
 ---
 
+## 2b. Quick Entry: one question about the party, answered twice
+
+Quick Entry is the ledger's front door — one bank line, recorded in a few
+seconds — and it asked about the party twice: **Related To** (which kind) and
+**Party / Expense Name** (a free text box). The kinds that have a record to link
+to now have a list to pick from, so an entry is filed *against* the client or the
+vendor rather than beside their name.
+
+- **One picker at a time.** "Related To" chooses which list you are picking from:
+  a **client**, a **vendor**, the **employee** being paid, or the **head** a cash
+  expense was spent under. The field that does not belong to the chosen kind is
+  hidden — and **cleared**, because a hidden `<select>` still submits, and a
+  client left over from a moment ago is how an entry lands on the wrong party's
+  statement.
+- **The link decides the label.** `CashflowEntry::alignPartyType()`: the chosen
+  type stands when it names one of the links that is set; otherwise the link
+  wins, in `partyLinkColumns()` order (client, vendor, employee). A party
+  statement is built from the *column* (`PartyStatement` reads `client_id` /
+  `vendor_id`, never the label), while the ledger's filter and the report read
+  the *label* — when the two disagree, one row is on a client's statement and
+  invisible to the filter for "Client". Quick Entry made that easy: the selector
+  opens on its first option, so a vendor payment filed without touching it was
+  labelled "Client" while linked to the vendor. Proved by
+  `php artisan test --filter=CashflowPartyTest`.
+- **A failed save comes back.** The dialog names itself (`_dialog`), the page
+  reopens the one the errors belong to, and every field is server-rendered with
+  `old()` — the office should not retype a bank line because the amount was
+  missing. The archive's filing dialog and the account dialog work the same way.
+
 ## 3. UX-effectiveness, applying to every wave
 
 - **Keyboard-first entry**: Enter saves, `N` new, `/` search, arrow-key row

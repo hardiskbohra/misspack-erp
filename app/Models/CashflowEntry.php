@@ -254,6 +254,59 @@ class CashflowEntry extends Model
         ];
     }
 
+    /**
+     * Which column holds the link for each party type.
+     *
+     * The type is a label; the link is the fact. A client's statement is built
+     * from `client_id` (`PartyStatement` reads the column, never the label), so
+     * an entry linked to a client but labelled "Other" is on the client's
+     * statement while the ledger filter for "Client" does not find it. The two
+     * have to agree, and this is where that is decided.
+     */
+    public static function partyLinkColumns(): array
+    {
+        return [
+            'client' => 'client_id',
+            'vendor' => 'vendor_id',
+            'employee' => 'employee_id',
+        ];
+    }
+
+    /**
+     * Make the label agree with the link.
+     *
+     *   - nothing linked: the chosen type stands (a cash expense, an owner
+     *     drawing, a name typed in by hand);
+     *   - the chosen type is one of the links that is set: fine, leave it;
+     *   - otherwise the link wins, first match in `partyLinkColumns()` order —
+     *     a payment to a client is a client entry even if the selector was left
+     *     on its first option.
+     */
+    public static function alignPartyType(array $data): array
+    {
+        $linked = [];
+
+        foreach (static::partyLinkColumns() as $party => $column) {
+            if (! empty($data[$column])) {
+                $linked[$party] = $column;
+            }
+        }
+
+        if ($linked === []) {
+            return $data;
+        }
+
+        $chosen = $data['related_party_type'] ?? null;
+
+        if (is_string($chosen) && array_key_exists($chosen, $linked)) {
+            return $data;
+        }
+
+        $data['related_party_type'] = array_key_first($linked);
+
+        return $data;
+    }
+
     public static function currencyOptions(): array
     {
         return ['INR' => 'INR', 'USD' => 'USD', 'RMB' => 'RMB'];
