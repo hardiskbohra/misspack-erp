@@ -6,9 +6,6 @@
 @section('content')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/clients.css') }}">
-    @if($tab === 'statement')
-        <link rel="stylesheet" href="{{ $assetVer('assets/css/statement.css') }}">
-    @endif
 @endpush
 
 @php
@@ -297,6 +294,14 @@
             @elseif($tab === 'documents')
                 <section class="master-tab-panel" id="client-panel-documents" role="tabpanel" aria-labelledby="client-tab-documents">
                     @include('clients.partials.documents')
+                </section>
+            @elseif($tab === 'invoices')
+                <section class="master-tab-panel" id="client-panel-invoices" role="tabpanel" aria-labelledby="client-tab-invoices">
+                    @include('clients.partials.invoices')
+                </section>
+            @elseif($tab === 'payments')
+                <section class="master-tab-panel" id="client-panel-payments" role="tabpanel" aria-labelledby="client-tab-payments">
+                    @include('clients.partials.payments')
                 </section>
             @elseif($tab === 'statement')
                 <section class="master-tab-panel" id="client-panel-statement" role="tabpanel" aria-labelledby="client-tab-statement">

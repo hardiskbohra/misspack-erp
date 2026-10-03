@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\DateRanges;
+use App\Models\CashflowEntry;
 use App\Models\Client;
 use App\Models\ClientPortalConversation;
 use App\Models\ClientPortalDocument;
@@ -31,6 +32,8 @@ class ClientController extends Controller
         'portal' => 'Manage Portal',
         'notifications' => 'Notifications',
         'documents' => 'Documents',
+        'invoices' => 'Invoices',
+        'payments' => 'Payments',
         'statement' => 'Statement',
     ];
 
@@ -251,10 +254,12 @@ class ClientController extends Controller
         $supportCount = $portalInstalled && $tab === 'portal' && Schema::hasTable('client_portal_conversations')
             ? ClientPortalConversation::where('client_id', $client->id)->count()
             : 0;
-        $salesInvoices = $tab === 'portal' && Schema::hasTable('sales_invoices')
-            ? SalesInvoice::query()->where('client_id', $client->id)->latest('invoice_date')->latest('id')->limit(25)->get()
-            : collect();
-
+        $invoiceData = $tab === 'invoices'
+            ? $this->clientInvoiceData($request, $client, $statements)
+            : [];
+        $paymentData = $tab === 'payments'
+            ? $this->clientPaymentData($request, $client, $statements)
+            : [];
         $statementData = $tab === 'statement'
             ? $this->clientStatementData($request, $client, $statements)
             : [];
@@ -273,11 +278,198 @@ class ClientController extends Controller
             'notificationsAvailable' => $notificationsAvailable,
             'notifications' => $notifications,
             'supportCount' => $supportCount,
-            'salesInvoices' => $salesInvoices,
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
+            ...$invoiceData,
+            ...$paymentData,
             ...$statementData,
         ]);
+    }
+
+    /** Client-scoped ERP invoices with optional filters for the invoices tab. */
+    private function clientInvoiceData(Request $request, Client $client, PartyStatement $statements): array
+    {
+        $available = Schema::hasTable('sales_invoices');
+        $search = $request->query('invoice_search');
+        $search = is_string($search) ? mb_substr(trim($search), 0, 150) : '';
+        $dateFrom = DateRanges::normalise($request->query('invoice_date_from'));
+        $dateTo = DateRanges::normalise($request->query('invoice_date_to'));
+        if ($dateFrom && $dateTo && $dateFrom > $dateTo) {
+            [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+        }
+
+        $statusOptions = SalesInvoice::statusOptions();
+        $typeOptions = SalesInvoice::typeOptions();
+        $status = $request->query('invoice_status', 'all');
+        $status = is_string($status) && array_key_exists($status, $statusOptions) ? $status : 'all';
+        $type = $request->query('invoice_type', 'all');
+        $type = is_string($type) && array_key_exists($type, $typeOptions) ? $type : 'all';
+        $currencyOptions = $this->clientCurrencyOptions($client, $statements);
+        $currency = $request->query('invoice_currency', 'all');
+        $currency = is_string($currency) && in_array(strtoupper($currency), $currencyOptions, true)
+            ? strtoupper($currency)
+            : 'all';
+
+        $query = $available
+            ? SalesInvoice::query()
+                ->where('client_id', $client->id)
+                ->withReceived()
+                ->when($search !== '', fn ($builder) => $builder->search($search))
+                ->when($dateFrom, fn ($builder) => $builder->whereDate('invoice_date', '>=', $dateFrom))
+                ->when($dateTo, fn ($builder) => $builder->whereDate('invoice_date', '<=', $dateTo))
+                ->when($status !== 'all', fn ($builder) => $builder->where('status', $status))
+                ->when($type !== 'all', fn ($builder) => $builder->where('invoice_type', $type))
+                ->when($currency !== 'all', fn ($builder) => $builder->where('currency', $currency))
+                ->latest('invoice_date')->latest('id')
+            : null;
+        $invoiceEntries = $query
+            ? $query->paginate(25, ['*'], 'invoice_page')->withQueryString()
+            : collect();
+
+        return [
+            'invoiceEntriesAvailable' => $available,
+            'invoiceEntries' => $invoiceEntries,
+            'invoiceSearch' => $search,
+            'invoiceDateFrom' => $dateFrom,
+            'invoiceDateTo' => $dateTo,
+            'invoiceStatus' => $status,
+            'invoiceStatusOptions' => $statusOptions,
+            'invoiceType' => $type,
+            'invoiceTypeOptions' => $typeOptions,
+            'invoiceCurrency' => $currency,
+            'invoiceCurrencyOptions' => $currencyOptions,
+        ];
+    }
+
+    /** Client-linked cashflow rows, exposed as the payments tab. */
+    private function clientPaymentData(Request $request, Client $client, PartyStatement $statements): array
+    {
+        $available = Schema::hasTable('cashflow_entries');
+        $search = $request->query('payment_search');
+        $search = is_string($search) ? mb_substr(trim($search), 0, 150) : '';
+        $dateFrom = DateRanges::normalise($request->query('payment_date_from'));
+        $dateTo = DateRanges::normalise($request->query('payment_date_to'));
+        if ($dateFrom && $dateTo && $dateFrom > $dateTo) {
+            [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+        }
+
+        $currencyOptions = $this->clientCurrencyOptions($client, $statements);
+        $currency = $request->query('payment_currency', 'all');
+        $currency = is_string($currency) && in_array(strtoupper($currency), $currencyOptions, true)
+            ? strtoupper($currency)
+            : 'all';
+        $directionOptions = CashflowEntry::transactionTypeOptions();
+        $direction = $request->query('payment_direction', 'all');
+        $direction = is_string($direction) && array_key_exists($direction, $directionOptions) ? $direction : 'all';
+        $statusOptions = CashflowEntry::accountingStatusOptions();
+        $status = $request->query('payment_status', 'all');
+        $status = is_string($status) && array_key_exists($status, $statusOptions) ? $status : 'all';
+        $paymentModeOptions = CashflowEntry::paymentModeOptions();
+        $paymentMode = $request->query('payment_mode', 'all');
+        $paymentMode = is_string($paymentMode) && array_key_exists($paymentMode, $paymentModeOptions) ? $paymentMode : 'all';
+
+        $query = null;
+        $paymentEntries = collect();
+        $paymentTotalsByCurrency = collect();
+        if ($available) {
+            $query = CashflowEntry::query()
+                ->where(function ($party) use ($client) {
+                    $party->where('client_id', $client->id);
+                    if (Schema::hasColumn('cashflow_entries', 'related_party_type')
+                        && Schema::hasColumn('cashflow_entries', 'related_party_name')) {
+                        $party->orWhere(fn ($related) => $related
+                            ->where('related_party_type', 'client')
+                            ->where('related_party_name', $client->company_name));
+                    }
+                })
+                ->when($search !== '', function ($builder) use ($search) {
+                    $builder->where(fn ($nested) => $nested
+                        ->where('particular', 'like', '%'.$search.'%')
+                        ->orWhere('invoice_bill_number', 'like', '%'.$search.'%')
+                        ->orWhere('bank_reference_number', 'like', '%'.$search.'%'));
+                })
+                ->when($dateFrom, fn ($builder) => $builder->whereDate('entry_date', '>=', $dateFrom))
+                ->when($dateTo, fn ($builder) => $builder->whereDate('entry_date', '<=', $dateTo))
+                ->when($currency !== 'all', fn ($builder) => $builder->where('currency', $currency))
+                ->when($direction !== 'all', fn ($builder) => $builder->where('transaction_type', $direction))
+                ->when($status !== 'all', fn ($builder) => $builder->where('accounting_status', $status))
+                ->when($paymentMode !== 'all', fn ($builder) => $builder->where('payment_mode', $paymentMode));
+
+            $paymentTotalsByCurrency = (clone $query)
+                ->reorder()
+                ->select('currency')
+                ->selectRaw('COUNT(*) as entry_count, COALESCE(SUM(credit_amount), 0) as credits, COALESCE(SUM(debit_amount), 0) as debits')
+                ->groupBy('currency')
+                ->orderBy('currency')
+                ->get();
+            $paymentEntries = (clone $query)
+                ->with(['account', 'category'])
+                ->latest('entry_date')->latest('id')
+                ->paginate(25, ['*'], 'payment_page')
+                ->withQueryString();
+        }
+
+        return [
+            'paymentEntriesAvailable' => $available,
+            'paymentEntries' => $paymentEntries,
+            'paymentTotalsByCurrency' => $paymentTotalsByCurrency,
+            'paymentSearch' => $search,
+            'paymentDateFrom' => $dateFrom,
+            'paymentDateTo' => $dateTo,
+            'paymentCurrency' => $currency,
+            'paymentCurrencyOptions' => $currencyOptions,
+            'paymentDirection' => $direction,
+            'paymentDirectionOptions' => $directionOptions,
+            'paymentStatus' => $status,
+            'paymentStatusOptions' => $statusOptions,
+            'paymentMode' => $paymentMode,
+            'paymentModeOptions' => $paymentModeOptions,
+        ];
+    }
+
+    /** Keep legacy name-linked ledger rows available in currency filters too. */
+    private function clientCurrencyOptions(Client $client, PartyStatement $statements): array
+    {
+        $preferred = $statements->defaultCurrency('client', (int) $client->id);
+        $currencies = $statements->currencies('client', (int) $client->id);
+
+        if (Schema::hasTable('cashflow_entries') && Schema::hasColumn('cashflow_entries', 'currency')) {
+            $hasClientId = Schema::hasColumn('cashflow_entries', 'client_id');
+            $hasRelatedParty = Schema::hasColumn('cashflow_entries', 'related_party_type')
+                && Schema::hasColumn('cashflow_entries', 'related_party_name');
+
+            if ($hasClientId || $hasRelatedParty) {
+                $legacyCurrencies = CashflowEntry::query()
+                    ->where(function ($party) use ($client, $hasClientId, $hasRelatedParty) {
+                        if ($hasClientId) {
+                            $party->where('client_id', $client->id);
+                        }
+                        if ($hasRelatedParty) {
+                            $relatedParty = fn ($related) => $related
+                                ->where('related_party_type', 'client')
+                                ->where('related_party_name', $client->company_name);
+
+                            $hasClientId ? $party->orWhere($relatedParty) : $party->where($relatedParty);
+                        }
+                    })
+                    ->whereNotNull('currency')
+                    ->select('currency')
+                    ->distinct()
+                    ->pluck('currency')
+                    ->all();
+
+                $currencies = array_merge($currencies, $legacyCurrencies);
+            }
+        }
+
+        $currencies = array_values(array_unique(array_filter(array_map(
+            fn ($currency) => strtoupper(trim((string) $currency)),
+            $currencies
+        ))));
+        $otherCurrencies = array_values(array_diff($currencies, [$preferred]));
+        sort($otherCurrencies);
+
+        return array_merge([$preferred], $otherCurrencies);
     }
 
     /** Build the same live, currency-aware ledger statement used elsewhere. */
@@ -303,7 +495,7 @@ class ClientController extends Controller
             [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
         }
 
-        $currencyOptions = $statements->currencies('client', (int) $client->id);
+        $currencyOptions = $this->clientCurrencyOptions($client, $statements);
         $defaultCurrency = $statements->defaultCurrency('client', (int) $client->id);
         $requestedCurrency = $request->query('currency');
         $currency = strtoupper(is_string($requestedCurrency) ? trim($requestedCurrency) : $defaultCurrency);
@@ -311,10 +503,9 @@ class ClientController extends Controller
             $currency = $defaultCurrency;
         }
 
-        $ageing = $request->query('ageing', '1') !== '0';
         $statement = $statements->build('client', (int) $client->id, $dateFrom, $dateTo, [
             'currency' => $currency,
-            'ageing' => $ageing,
+            'ageing' => false,
         ]);
         abort_if($statement === null, 404);
 
@@ -332,7 +523,6 @@ class ClientController extends Controller
             'dateRangeLabels' => DateRanges::LABELS,
             'periodOptions' => DateRanges::LABELS + ['all' => 'All time', 'custom' => 'Custom dates'],
             'periodKey' => $periodKey,
-            'ageing' => $ageing,
         ];
     }
 

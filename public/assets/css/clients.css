@@ -875,14 +875,9 @@
 .cpa-support-shortcut{display:flex;flex-direction:column;align-items:flex-start;gap:5px;margin-top:18px;padding:14px;border:1px solid var(--mc-border);border-radius:15px;background:var(--mc-card-soft)}
 .cpa-support-shortcut strong{color:var(--mc-text);font-size:13px}
 .cpa-support-shortcut span{margin-bottom:4px;color:var(--mc-text-2);font-size:11px}
-.cpa-billing-primary{padding:18px 20px}
-.cpa-billing-primary .cpa-section-head p{margin:5px 0 0}
-.cpa-billing-primary .cpa-table{min-width:850px}
-.cpa-billing-primary .cpa-table th{font-size:10px}
-.cpa-billing-primary .cpa-table td{font-size:12px}
-.cpa-billing-primary .cpa-table td strong{display:block;color:var(--mc-text)}
+
 .cpa-muted{font-size:11px}
-@media(max-width:767px){.cpa-secondary-actions,.cpa-secondary-actions .master-btn{width:100%}.cpa-team-grid{gap:12px}.cpa-billing-primary .cpa-section-head{align-items:flex-start;flex-direction:column}.cpa-billing-primary .cpa-section-head .master-btn{width:100%}}
+@media(max-width:767px){.cpa-secondary-actions,.cpa-secondary-actions .master-btn{width:100%}.cpa-team-grid{gap:12px}}
 
 /* Client record: tabbed sections with the same quiet, two-column fact cards
    used on employee and other master-detail pages. */
@@ -1211,8 +1206,53 @@
     text-underline-offset: 2px;
 }
 
+/* Client documents: a full-width file room with an upload dialog. */
+.client-show .client-documents-card {
+    padding: 22px;
+}
+
+.client-show .client-documents-card .cpa-section-head {
+    align-items: center;
+}
+
+.client-show .client-documents-card .cpa-section-head h2 {
+    margin: 0;
+}
+
+.client-show .client-documents-card .cpa-section-head > div > p:last-child {
+    margin: 6px 0 0;
+}
+
+.client-show .client-document-head-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+}
+
+.client-show .client-documents-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
 .client-show .client-document-table {
-    min-width: 780px;
+    min-width: 1040px;
+}
+
+.client-show .client-document-table td:first-child strong {
+    display: block;
+    color: var(--mc-text);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.client-show .client-document-table td:first-child span {
+    display: block;
+    margin-top: 3px;
+    color: var(--mc-text-3);
+    font-size: 10px;
+    letter-spacing: .05em;
 }
 
 .client-show .client-document-visibility {
@@ -1240,6 +1280,230 @@
     font-size: 11px;
 }
 
+.client-show .client-document-modal {
+    width: min(680px, calc(100% - 28px));
+    max-width: 680px;
+    max-height: min(90vh, 850px);
+    margin: auto;
+    padding: 22px;
+    overflow-y: auto;
+    border: 1px solid var(--mc-border);
+    border-radius: 20px;
+    color: var(--mc-text);
+    background: var(--mc-card);
+    box-shadow: 0 24px 80px rgba(15, 23, 42, .26);
+}
+
+.client-show .client-document-modal::backdrop {
+    background: rgba(15, 23, 42, .56);
+    backdrop-filter: blur(3px);
+}
+
+.client-show .client-document-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.client-show .client-document-modal-head .cpa-eyebrow {
+    margin-bottom: 4px;
+}
+
+.client-show .client-document-modal-head h2 {
+    margin: 0;
+    color: var(--mc-text);
+    font-size: 17px;
+    font-weight: 650;
+}
+
+.client-show .client-document-modal-close {
+    display: inline-flex;
+    flex: 0 0 36px;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--mc-border);
+    border-radius: 11px;
+    color: var(--mc-text-2);
+    background: var(--mc-card-soft);
+    cursor: pointer;
+}
+
+.client-show .client-document-modal-help {
+    margin: 0 0 18px;
+    color: var(--mc-text-2);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.client-show .client-document-modal .cpa-form-grid {
+    gap: 14px;
+}
+
+.client-show .client-document-modal-actions {
+    display: flex;
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    gap: 9px;
+    padding-top: 4px;
+}
+
+/* Invoice and payment tabs */
+.client-show .client-entry-filters {
+    padding: 20px 22px;
+}
+
+.client-show .client-entry-toolbar-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.client-show .client-entry-toolbar-head .cpa-eyebrow {
+    margin-bottom: 4px;
+}
+
+.client-show .client-entry-toolbar-head .client-detail-title {
+    margin: 0;
+}
+
+.client-show .client-entry-filter-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+    align-items: end;
+    gap: 12px;
+}
+
+.client-show .client-entry-filter-form .master-field {
+    min-width: 0;
+    margin: 0;
+}
+
+.client-show .client-entry-filter-actions {
+    display: flex;
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.client-show .client-entry-table-card {
+    min-width: 0;
+    padding: 20px 22px;
+}
+
+.client-show .client-entry-table-card .cpa-section-head {
+    align-items: center;
+}
+
+.client-show .client-entry-table-card .cpa-section-head h2 {
+    margin: 0;
+}
+
+.client-show .client-entry-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.client-show .client-invoice-table {
+    min-width: 1240px;
+}
+
+.client-show .client-payment-table {
+    min-width: 1160px;
+}
+
+.client-show .client-entry-table-wrap .master-table th {
+    white-space: nowrap;
+}
+
+.client-show .client-entry-table-wrap .master-table td {
+    color: var(--mc-text-2);
+    font-size: 12px;
+    vertical-align: middle;
+}
+
+.client-show .client-entry-table-wrap .master-table td strong {
+    color: var(--mc-text);
+    font-size: 12px;
+}
+
+.client-show .client-entry-subline {
+    display: block;
+    margin-top: 3px;
+    color: var(--mc-text-3);
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.client-show .client-entry-pagination {
+    padding-top: 14px;
+}
+
+.client-show .client-entry-table-wrap .status-paid,
+.client-show .client-entry-table-wrap .status-approved,
+.client-show .client-entry-table-wrap .status-reconciled {
+    color: #047857;
+    background: #e8fff7;
+}
+
+.client-show .client-entry-table-wrap .status-sent,
+.client-show .client-entry-table-wrap .status-accepted,
+.client-show .client-entry-table-wrap .status-partial,
+.client-show .client-entry-table-wrap .status-overdue,
+.client-show .client-entry-table-wrap .status-pending,
+.client-show .client-entry-table-wrap .status-booked,
+.client-show .client-entry-table-wrap .status-under-review {
+    color: #9a5b07;
+    background: #fff5df;
+}
+
+.client-show .client-entry-table-wrap .status-draft,
+.client-show .client-entry-table-wrap .status-cancelled,
+.client-show .client-entry-table-wrap .status-ignored,
+.client-show .client-entry-table-wrap .status-converted {
+    color: var(--mc-text-2);
+    background: var(--mc-card-soft);
+}
+
+.client-show .client-entry-table-wrap .status-disputed,
+.client-show .client-entry-table-wrap .status-rejected {
+    color: #be123c;
+    background: #ffeaf0;
+}
+
+:root[data-theme="dark"] .client-show .client-document-visibility.is-public,
+:root[data-theme="dark"] .client-show .client-entry-table-wrap .status-paid,
+:root[data-theme="dark"] .client-show .client-entry-table-wrap .status-approved,
+:root[data-theme="dark"] .client-show .client-entry-table-wrap .status-reconciled {
+    color: #6ee7b7 !important;
+    background: rgba(16, 185, 129, .18);
+}
+
+:root[data-theme="dark"] .client-show .client-document-visibility.is-private,
+:root[data-theme="dark"] .client-show .client-entry-table-wrap .status-sent,
+:root[data-theme="dark"] .client-show .client-entry-table-wrap .status-accepted,
+:root[data-theme="dark"] .client-show .client-entry-table-wrap .status-partial,
+:root[data-theme="dark"] .client-show .client-entry-table-wrap .status-overdue,
+:root[data-theme="dark"] .client-show .client-entry-table-wrap .status-pending,
+:root[data-theme="dark"] .client-show .client-entry-table-wrap .status-booked,
+:root[data-theme="dark"] .client-show .client-entry-table-wrap .status-under-review {
+    color: #fcd34d !important;
+    background: rgba(245, 158, 11, .18);
+}
+
+:root[data-theme="dark"] .client-show .client-entry-table-wrap .status-disputed,
+:root[data-theme="dark"] .client-show .client-entry-table-wrap .status-rejected {
+    color: #fda4af !important;
+    background: rgba(225, 29, 72, .16);
+}
+
+/* Live ledger statement: filters, running-balance summary and entry table. */
 .client-show .client-statement-filters {
     padding: 20px 22px;
 }
@@ -1260,16 +1524,9 @@
     margin: 0;
 }
 
-.client-show .client-statement-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 8px;
-}
-
 .client-show .client-statement-filter-form {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
     align-items: end;
     gap: 12px;
 }
@@ -1277,20 +1534,6 @@
 .client-show .client-statement-filter-form .master-field {
     min-width: 0;
     margin: 0;
-}
-
-.client-show .client-statement-ageing {
-    display: flex;
-    align-items: center;
-    min-height: 42px;
-}
-
-.client-show .client-statement-ageing .master-check {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    color: var(--mc-text-2);
-    font-size: 12px;
 }
 
 .client-show .client-statement-filter-submit {
@@ -1305,17 +1548,165 @@
     line-height: 1.5;
 }
 
-.client-show .client-statement-sheet {
-    padding: 24px;
+.client-show .client-statement-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
 }
 
-.client-show .client-statement-scroll {
+.client-show .client-statement-metric {
+    display: flex;
     min-width: 0;
-    overflow-x: auto;
+    flex-direction: column;
+    gap: 7px;
+    padding: 16px 18px;
+    border: 1px solid var(--mc-border);
+    border-radius: 16px;
+    background: var(--mc-card);
+    box-shadow: 0 8px 22px rgba(25, 42, 70, .045);
 }
 
-.client-show .client-statement-scroll .stmt {
-    min-width: 760px;
+.client-show .client-statement-metric > span {
+    color: var(--mc-text-3);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.client-show .client-statement-metric > strong {
+    color: var(--mc-text);
+    font-size: 16px;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+}
+
+.client-show .client-statement-metric small {
+    color: var(--mc-text-3);
+    font-size: 10px;
+}
+
+.client-show .client-statement-metric.is-balance {
+    border-color: rgba(79, 131, 241, .35);
+    background: linear-gradient(135deg, rgba(79, 131, 241, .08), var(--mc-card));
+}
+
+.client-show .client-statement-other-currencies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    padding: 12px 15px;
+    border: 1px solid var(--mc-border);
+    border-radius: 13px;
+    color: var(--mc-text-2);
+    background: var(--mc-card-soft);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.client-show .client-statement-other-currencies strong {
+    color: var(--mc-text);
+}
+
+.client-show .client-statement-entries {
+    padding: 20px 22px;
+}
+
+.client-show .client-statement-table {
+    min-width: 1000px;
+}
+
+.client-show .client-statement-table th {
+    white-space: nowrap;
+}
+
+.client-show .client-statement-table td {
+    color: var(--mc-text-2);
+    font-size: 12px;
+    vertical-align: middle;
+}
+
+.client-show .client-statement-table td strong,
+.client-show .client-statement-table tfoot td {
+    color: var(--mc-text);
+}
+
+.client-show .client-statement-table .client-statement-opening-row,
+.client-show .client-statement-table tfoot tr {
+    background: var(--mc-card-soft);
+}
+
+.client-show .client-statement-table .client-statement-opening-row td,
+.client-show .client-statement-table tfoot td {
+    font-weight: 600;
+}
+
+.client-show .client-statement-table tfoot td {
+    border-bottom: 0;
+    border-top: 1px solid var(--mc-border);
+}
+
+.client-show .client-payment-summaries {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 12px;
+}
+
+.client-show .client-payment-summary {
+    padding: 16px 18px;
+}
+
+.client-show .client-payment-summary-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    color: var(--mc-text);
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.client-show .client-payment-summary-head .cpa-badge {
+    padding: 5px 8px;
+    font-size: 10px;
+}
+
+.client-show .client-payment-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.client-show .client-payment-summary-grid > div {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.client-show .client-payment-summary-grid span {
+    color: var(--mc-text-3);
+    font-size: 10px;
+}
+
+.client-show .client-payment-summary-grid strong {
+    color: var(--mc-text);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.client-show .client-payment-currency-note {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--mc-text-3);
+    font-size: 11px;
+}
+
+@media (max-width: 960px) {
+    .client-show .client-statement-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 767px) {
@@ -1324,21 +1715,40 @@
     }
 
     .client-show .client-detail-tools .cpa-card,
-    .client-show .client-statement-sheet,
-    .client-show .client-statement-filters {
+    .client-show .client-statement-filters,
+    .client-show .client-entry-filters,
+    .client-show .client-entry-table-card {
         padding: 16px;
         border-radius: 16px;
     }
 
+    .client-show .client-document-head-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .client-show .client-documents-card .cpa-section-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .client-show .client-entry-toolbar-head,
     .client-show .client-statement-toolbar-head {
         flex-direction: column;
     }
 
-    .client-show .client-statement-actions,
-    .client-show .client-statement-actions .master-btn,
+    .client-show .client-entry-filter-actions,
+    .client-show .client-entry-filter-actions .master-btn,
     .client-show .client-statement-filter-submit,
-    .client-show .client-statement-filter-submit .master-btn {
+    .client-show .client-statement-filter-submit .master-btn,
+    .client-show .client-document-modal-actions,
+    .client-show .client-document-modal-actions .master-btn {
         width: 100%;
+    }
+
+    .client-show .client-entry-filter-actions,
+    .client-show .client-document-modal-actions {
+        flex-direction: column-reverse;
     }
 
     .client-show .client-statement-filter-form {
@@ -1346,34 +1756,47 @@
     }
 
     .client-show .client-statement-filter-form .master-field:first-child,
-    .client-show .client-statement-ageing,
     .client-show .client-statement-filter-submit {
         grid-column: 1 / -1;
     }
-}
 
-@media print {
-    .client-show[data-client-tab="statement"] .master-header,
-    .client-show[data-client-tab="statement"] .master-tabs,
-    .client-show[data-client-tab="statement"] .client-statement-filters,
-    .client-show[data-client-tab="statement"] .client-record-actions,
-    .client-show[data-client-tab="statement"] .page-header,
-    .client-show[data-client-tab="statement"] .sidebar,
-    .client-show[data-client-tab="statement"] .topbar {
-        display: none !important;
+    .client-show .client-statement-metrics {
+        gap: 8px;
     }
 
-    .client-show[data-client-tab="statement"] .client-detail-panels {
-        padding: 0;
+    .client-show .client-statement-metric {
+        padding: 13px;
     }
 
-    .client-show[data-client-tab="statement"] .client-statement-sheet {
-        border: 0;
-        box-shadow: none;
+    .client-show .client-statement-metric > strong {
+        font-size: 14px;
     }
 
-    .client-show[data-client-tab="statement"] .client-statement-scroll {
-        overflow: visible;
+    .client-show .client-entry-filter-form {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .client-show .client-entry-search-field,
+    .client-show .client-entry-filter-actions {
+        grid-column: 1 / -1;
+    }
+
+    .client-show .client-payment-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .client-show .client-document-modal {
+        padding: 18px;
+        border-radius: 17px;
+    }
+
+    .client-show .client-document-modal .cpa-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .client-show .client-document-modal .cpa-field-full,
+    .client-show .client-document-modal-actions {
+        grid-column: 1;
     }
 }
 

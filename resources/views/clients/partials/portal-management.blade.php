@@ -170,32 +170,6 @@
             </section>
         </div>
 
-        <section class="cpa-card cpa-billing-primary" aria-labelledby="client-portal-invoices-heading">
-            <div class="cpa-section-head">
-                <div><p class="cpa-eyebrow">Source of truth · ERP billing</p><h2 id="client-portal-invoices-heading">Sales invoices</h2><p class="cpa-muted">New client billing is created and shared from the sales invoice workflow.</p></div>
-                <a class="master-btn master-btn-primary" href="{{ route('sales-invoices.index', ['client_id' => $client->id]) }}"><i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i> Manage sales invoices</a>
-            </div>
-            <div class="cpa-table-wrap">
-                <table class="cpa-table">
-                    <thead><tr><th>Invoice</th><th>Date</th><th>Due date</th><th>Total</th><th>State</th><th>Portal</th><th></th></tr></thead>
-                    <tbody>
-                        @forelse($salesInvoices as $salesInvoice)
-                            <tr>
-                                <td><strong>{{ $salesInvoice->invoice_number }}</strong><span>{{ $salesInvoice->typeLabel() }}</span></td>
-                                <td>{{ optional($salesInvoice->invoice_date)->format('d M Y') ?: '—' }}</td>
-                                <td>{{ optional($salesInvoice->due_date)->format('d M Y') ?: '—' }}</td>
-                                <td>{{ \App\Helpers\CommonHelper::amount($salesInvoice->total_amount, $salesInvoice->currency) }}</td>
-                                <td>{{ $salesInvoice->stateLabel() }}</td>
-                                <td>{{ $salesInvoice->show_client_portal ? 'Visible' : 'Hidden' }}</td>
-                                <td><a class="master-btn master-btn-soft master-btn-sm" href="{{ route('sales-invoices.show', $salesInvoice) }}">Manage</a></td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="7"><div class="cpa-empty">No sales invoices are currently associated with this client.</div></td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </section>
     </div>
 @else
     <div class="master-card master-card--flat client-detail-card client-detail-card--wide">
