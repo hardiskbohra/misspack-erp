@@ -313,11 +313,94 @@ check('the list wears the chrome every other listing wears',
 check('the page rhythm belongs to the shell, not to an inline style',
     /\.master-list > \.master-card \+ \.master-card/.test(listCss)
     && /\.master-list > \.master-card \+ \.master-grid/.test(listCss)
+    && /\.master-list > \.master-grid \+ \.master-grid/.test(listCss)
     && /class="si-index master-list"/.test(view)
-    && /<div class="master-list">/.test(record)
+    && /<div class="master-list si-show">/.test(record)
     && ! /style="margin-top/.test(view)
     && ! /style="margin-top/.test(record),
-    'a negative margin on a record page is a page spacing itself');
+    'a negative margin on a record page is a page spacing itself — and two grids '
+    + 'stacked on that page are two cards sharing an edge');
+
+/* ---- 4b. the record screen ------------------------------------------- */
+
+const attachment = read('app/Models/SalesInvoiceAttachment.php');
+
+/* The record page is not a hand-drawn screen: it is the same header, the same
+   figures and the same grids every other record page in the office wears. The
+   module's own hero classes (`si-head`, `si-count`) are what it looked like
+   when it drew its own, and they are gone. */
+const recordWears = [
+    'class="master-card master-header"',
+    'record-head-main',
+    'record-head-chips',
+    'record-head-actions',
+    'master-stat-title',
+    'master-stat-value',
+    'master-section-head',
+    'class="master-facts"',
+    'class="master-grid is-even"',
+];
+
+check('the record page is the shared composition, not a screen of its own',
+    recordWears.every(needle => record.includes(needle))
+    && (record.match(/class="master-stat master-stat--flat/g) || []).length === 5
+    && ! /class="si-head"/.test(record)
+    && ! /class="si-count"/.test(record),
+    'a record page that draws its own header, its own figures and its own '
+    + 'spacing is the fork growing back one screen at a time');
+
+/* `.master-empty` is the listing-level empty — 70px of vertical padding in the
+   middle of a table. A card on a record page gets `.master-empty-state`, and a
+   fact with nothing in it says so in words: this page printed `-/-` for a
+   missing GSTIN and joined four address fields with commas over the empty
+   ones. */
+check('a card with nothing in it offers a sentence and a way out',
+    ! /class="master-empty"/.test(record)
+    && ! /-\/-/.test(record)
+    && ! /<span[^>]*>\s*-\s*<\/span>/.test(record)
+    && (record.match(/master-empty-state/g) || []).length >= 5
+    && (record.match(/master-empty-value/g) || []).length >= 6,
+    'an empty record card is not an empty list: it is a sentence, an icon, the '
+    + 'button that fills it — and a dash is not a value');
+
+check('the figures on the record page are the model\'s, not the page\'s',
+    /\$invoice->receivedAmount\(\)/.test(record)
+    && /\$invoice->balanceDue\(\)/.test(record)
+    && ! /->sum\(/.test(record),
+    'the page may not add the money up itself: the receipt rows read the ledger '
+    + 'line and the balance reads the model, so the list, the record and the '
+    + 'statement cannot disagree');
+
+check('a file row reads its icon and its size from the model',
+    /public function icon\(\): string/.test(attachment)
+    && /public function sizeLabel\(\): string/.test(attachment)
+    && /\$attachment->icon\(\)/.test(record)
+    && /\$attachment->sizeLabel\(\)/.test(record)
+    && ! /\$attachment->file_size\s*\//.test(record),
+    'a view that picks an icon off a file name and divides bytes itself is '
+    + 'arithmetic in a template');
+
+check('the product cells name themselves for the stacked view',
+    /class="master-table-wrap"/.test(record)
+    && (record.match(/data-label="/g) || []).length >= 7,
+    'below 768px the shell stacks the row and prints each cell\'s own column '
+    + 'name: a cell without one stacks as loose text');
+
+check('the actions run in the order the page is read',
+    ['sales-invoices.index', 'sales-invoices.edit', 'sales-invoices.print']
+        .map(name => record.indexOf("route('" + name + "'"))
+        .every((at, i, all) => at > -1 && (i === 0 || at > all[i - 1]))
+    && record.indexOf('data-open-payment') > record.indexOf("route('sales-invoices.edit'"),
+    'back, then edit, then the two things this page is opened to do, then the '
+    + 'document: the old header was Back · Edit · Log reminder · Print · Mark '
+    + 'Sent / Portal in no order anyone could learn');
+
+check('a receipt row reads its direction from the ledger line',
+    /\$netReceipt < 0 \? 'Refunded'/.test(record)
+    && /\$payment->credit_amount/.test(record)
+    && /\$payment->debit_amount/.test(record),
+    'a debit against an invoice is money going back out, and the row has to say '
+    + 'so — the same rule the salary entries follow');
 
 check('the sheet and the script are loaded with a version',
     ['index', 'form', 'record'].every(name =>

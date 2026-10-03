@@ -10,9 +10,16 @@
    were wearing different copies of the same one. Everything shared now comes
    from the shared sheets, and this file holds only what the module owns:
 
-     .si-*          the module's prefix
-     .si-items-*    the invoice form's line-items table
-     .si-total-box  the live GST total preview under it
+     .si-*            the module's prefix
+     .si-items-*      the invoice form's line-items table
+     .si-total-box    the live GST total preview under it
+     .si-status etc.  the module's tone chips, shared by the listing and the
+                      record page
+     .si-total-row     one figure of the record's money column
+     .si-payment*      one receipt, as the ledger booked it
+     .si-file*         one attachment, with its icon and its size
+     .si-reminder*     one chase: when, how, and what was said
+     .si-note*         a note, client-facing or internal
 
    A class that is used here and not defined here is the bug to look for: the
    module's guard (`tools/checks/invoices-check.cjs`) fails on a `master-*`
@@ -140,39 +147,255 @@
 }
 
 /* ==========================================================================
-   THE RECORD — what the invoice says, row by row
+   THE RECORD — one invoice, read top to bottom
+   --------------------------------------------------------------------------
+   The composition is the shared one, and this sheet adds no page rhythm of its
+   own: a `.master-header` card, a row of `.master-stat--flat` figures, the
+   line-item table at the page's full width, then `.master-grid.is-even` rows of
+   `.master-card.master-section` cards. The shell spaces those blocks
+   (`master-list.css`, one rule) and the shared sheets space what is inside
+   them; what is left here is only what the shared system does not have.
+
+   The page used to draw its own: a `si-head` heading, five figures printed as
+   bare spans, a product cell whose name, description and HSN were three inline
+   runs in one line, three unlabelled payment boxes, and an empty card that was
+   one grey sentence. Every one of those is now a shared class or a row below.
    ========================================================================== */
 
-.si-head h2 {
-    margin: 0 0 14px
+/* A record page's cells read top-down: a two-line product next to a one-line
+   figure must not float the figure into the middle of the row. */
+.si-show .master-table td {
+    vertical-align: top
 }
+
+.si-show-sub {
+    margin: 2px 0 0;
+    font-size: 13px
+}
+
+/* Past due is a fact about the money, not a second status: the chip keeps the
+   shared chip shape and borrows the state vocabulary's red. */
+.si-chip-late {
+    border-color: rgba(225, 29, 72, .35);
+    background: rgba(225, 29, 72, .08);
+    color: #be123c
+}
+
+:root[data-theme="dark"] .si-chip-late {
+    color: #fda4af
+}
+
+/* --- the money column: a label, a figure, and one hairline between rows ---- */
 
 .si-total-row {
     display: flex;
+    align-items: baseline;
     justify-content: space-between;
-    border-bottom: 1px solid var(--mc-border);
-    padding: 10px 0
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--mc-border)
 }
 
-.si-total-row.big {
+.si-total-row:last-child {
+    border-bottom: 0
+}
+
+.si-total-row > span {
+    color: var(--mc-text-2);
+    font-size: 13px;
+    font-weight: 500
+}
+
+.si-total-row > strong {
+    font-weight: 700;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums
+}
+
+/* The figure the page exists for: separated from the heads above it and a size
+   up, so the eye lands on it last and finds it first. */
+.si-total-row.is-grand {
+    margin-top: 6px;
+    padding-top: 14px;
+    border-top: 1px solid var(--mc-border);
+    border-bottom: 0
+}
+
+.si-total-row.is-grand > span {
+    color: var(--mc-text);
+    font-size: 14px;
+    font-weight: 600
+}
+
+.si-total-row.is-grand > strong {
     font-size: 20px
 }
 
-.si-file {
-    display: flex;
-    gap: 10px;
-    border: 1px solid var(--mc-border);
-    border-radius: 14px;
-    padding: 10px;
-    margin-bottom: 10px
+.si-words {
+    margin: 12px 0 0;
+    color: var(--mc-text-2);
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.6
 }
 
-.si-file a {
-    display: block;
-    color: var(--master-primary, #4f83f1);
-    font-weight: 600;
-    text-decoration: none;
-    margin-top: 5px
+/* --- one receipt: what the ledger booked, not three loose figures --------- */
+
+.si-payment {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--mc-border)
+}
+
+.si-payment-list > .si-payment:last-child {
+    padding-bottom: 0;
+    border-bottom: 0
+}
+
+.si-payment-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--mc-soft);
+    color: var(--mc-text-3);
+    font-size: 13px;
+    flex: 0 0 auto
+}
+
+.si-payment-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 auto
+}
+
+.si-payment-main strong {
+    font-size: 13.5px
+}
+
+.si-payment-main .master-sub {
+    margin-top: 0
+}
+
+.si-payment-amount {
+    flex: 0 0 auto;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums
+}
+
+/* What the receipts add up to, at the foot of the card that lists them. */
+.si-pay-foot {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--mc-border)
+}
+
+.si-pay-foot div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0
+}
+
+.si-pay-foot span {
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase
+}
+
+.si-pay-foot strong {
+    font-size: 16px;
+    font-variant-numeric: tabular-nums
+}
+
+/* Green for settled, red for still open — the same two readings the listing's
+   balance column uses, named once so the record page can wear them too. */
+.si-clear {
+    color: #047857
+}
+
+.si-due {
+    color: #be123c
+}
+
+:root[data-theme="dark"] .si-clear {
+    color: #6ee7b7
+}
+
+:root[data-theme="dark"] .si-due {
+    color: #fda4af
+}
+
+/* --- one file: what it is, how big it is, who may see it ------------------ */
+
+.si-file {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--mc-border)
+}
+
+.si-file-list > .si-file:last-child {
+    padding-bottom: 0;
+    border-bottom: 0
+}
+
+.si-file-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: var(--mc-soft);
+    color: var(--mc-text-2);
+    font-size: 15px;
+    flex: 0 0 auto
+}
+
+.si-file-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 auto
+}
+
+.si-file-main strong {
+    font-size: 13.5px;
+    overflow-wrap: anywhere
+}
+
+.si-file-main .master-sub {
+    margin-top: 0
+}
+
+.si-file .master-btn,
+.si-file .si-portal {
+    flex: 0 0 auto
+}
+
+/* On a phone the file row keeps the icon and the name on one line and lets the
+   size and the open button fall under them. */
+@media (max-width: 767px) {
+    .si-file {
+        flex-wrap: wrap
+    }
 }
 
 /* ==========================================================================
@@ -185,9 +408,9 @@
    dark theme rather than forked.
    ========================================================================== */
 
-.si-index .si-status,
-.si-index .si-type,
-.si-index .si-portal {
+.si-status,
+.si-type,
+.si-portal {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -201,7 +424,7 @@
     white-space: nowrap
 }
 
-.si-index .si-status::before {
+.si-status::before {
     content: "";
     width: 6px;
     height: 6px;
@@ -210,33 +433,33 @@
     flex: 0 0 auto
 }
 
-.si-index .si-status.status-draft { --tone-bg: rgba(107, 114, 128, .16); --tone-fg: #4b5563; }
-.si-index .si-status.status-sent { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
-.si-index .si-status.status-accepted { --tone-bg: rgba(18, 203, 183, .18); --tone-fg: #0f766e; }
-.si-index .si-status.status-partial { --tone-bg: rgba(245, 158, 11, .18); --tone-fg: #b45309; }
-.si-index .si-status.status-paid { --tone-bg: rgba(16, 185, 129, .18); --tone-fg: #047857; }
-.si-index .si-status.status-overdue { --tone-bg: rgba(225, 29, 72, .16); --tone-fg: #be123c; }
-.si-index .si-status.status-cancelled { --tone-bg: var(--mc-soft); --tone-fg: var(--mc-text-3); }
+.si-status.status-draft { --tone-bg: rgba(107, 114, 128, .16); --tone-fg: #4b5563; }
+.si-status.status-sent { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
+.si-status.status-accepted { --tone-bg: rgba(18, 203, 183, .18); --tone-fg: #0f766e; }
+.si-status.status-partial { --tone-bg: rgba(245, 158, 11, .18); --tone-fg: #b45309; }
+.si-status.status-paid { --tone-bg: rgba(16, 185, 129, .18); --tone-fg: #047857; }
+.si-status.status-overdue { --tone-bg: rgba(225, 29, 72, .16); --tone-fg: #be123c; }
+.si-status.status-cancelled { --tone-bg: var(--mc-soft); --tone-fg: var(--mc-text-3); }
 
-.si-index .si-type.type-proforma { --tone-bg: rgba(123, 97, 255, .16); --tone-fg: #6d4bd8; }
-.si-index .si-type.type-tax { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
+.si-type.type-proforma { --tone-bg: rgba(123, 97, 255, .16); --tone-fg: #6d4bd8; }
+.si-type.type-tax { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
 
-.si-index .si-portal.is-public { --tone-bg: rgba(16, 185, 129, .16); --tone-fg: #047857; }
-.si-index .si-portal.is-private { --tone-bg: var(--mc-soft); --tone-fg: var(--mc-text-3); }
+.si-portal.is-public { --tone-bg: rgba(16, 185, 129, .16); --tone-fg: #047857; }
+.si-portal.is-private { --tone-bg: var(--mc-soft); --tone-fg: var(--mc-text-3); }
 
-:root[data-theme="dark"] .si-index .si-status.status-draft { --tone-fg: #cbd5e1; }
-:root[data-theme="dark"] .si-index .si-status.status-sent { --tone-fg: #93b4ff; }
-:root[data-theme="dark"] .si-index .si-status.status-accepted { --tone-fg: #5eead4; }
-:root[data-theme="dark"] .si-index .si-status.status-partial { --tone-fg: #fcd34d; }
-:root[data-theme="dark"] .si-index .si-status.status-paid { --tone-fg: #6ee7b7; }
-:root[data-theme="dark"] .si-index .si-status.status-overdue { --tone-fg: #fda4af; }
-:root[data-theme="dark"] .si-index .si-status.status-cancelled { --tone-fg: #aab6c9; }
+:root[data-theme="dark"] .si-status.status-draft { --tone-fg: #cbd5e1; }
+:root[data-theme="dark"] .si-status.status-sent { --tone-fg: #93b4ff; }
+:root[data-theme="dark"] .si-status.status-accepted { --tone-fg: #5eead4; }
+:root[data-theme="dark"] .si-status.status-partial { --tone-fg: #fcd34d; }
+:root[data-theme="dark"] .si-status.status-paid { --tone-fg: #6ee7b7; }
+:root[data-theme="dark"] .si-status.status-overdue { --tone-fg: #fda4af; }
+:root[data-theme="dark"] .si-status.status-cancelled { --tone-fg: #aab6c9; }
 
-:root[data-theme="dark"] .si-index .si-type.type-proforma { --tone-fg: #c4b5fd; }
-:root[data-theme="dark"] .si-index .si-type.type-tax { --tone-fg: #93b4ff; }
+:root[data-theme="dark"] .si-type.type-proforma { --tone-fg: #c4b5fd; }
+:root[data-theme="dark"] .si-type.type-tax { --tone-fg: #93b4ff; }
 
-:root[data-theme="dark"] .si-index .si-portal.is-public { --tone-fg: #6ee7b7; }
-:root[data-theme="dark"] .si-index .si-portal.is-private { --tone-fg: #aab6c9; }
+:root[data-theme="dark"] .si-portal.is-public { --tone-fg: #6ee7b7; }
+:root[data-theme="dark"] .si-portal.is-private { --tone-fg: #aab6c9; }
 
 /* The invoice cell is an identifier and a line under it: the number keeps the
    shared `.master-id` treatment, the date and the type read as the small line
@@ -300,7 +523,7 @@
     border-bottom: 1px solid var(--mc-border);
 }
 
-.si-reminder:last-child {
+.si-reminder-list > .si-reminder:last-child {
     border-bottom: 0;
 }
 
@@ -337,7 +560,7 @@
     border-bottom: 1px solid var(--mc-border);
 }
 
-.si-note:last-child {
+.si-note-list > .si-note:last-child {
     border-bottom: 0;
 }
 
@@ -352,12 +575,9 @@
     font-style: italic;
 }
 
-/* A count beside a card heading. */
-.si-count {
-    padding: 2px 9px;
-    border-radius: 999px;
-    background: var(--mc-soft);
-    color: var(--mc-text-2);
-    font-size: 11px;
-    font-weight: 700;
+/* The lists the record page builds: the last row of a list has no hairline
+   under it — the card's own edge is the line. */
+.si-reminder-list > .si-reminder:last-child,
+.si-note-list > .si-note:last-child {
+    border-bottom: 0
 }

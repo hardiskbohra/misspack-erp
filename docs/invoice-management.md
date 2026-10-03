@@ -127,6 +127,42 @@ A filter with an unknown value **widens** the list rather than narrowing it to
 nothing: a filter that fails is not a question, and showing everything is the honest
 answer to a question nobody asked.
 
+## The record screen
+
+`resources/views/sales_invoices/show.blade.php` is the shared record composition,
+the same one the shipment, employee and user record pages wear:
+
+    .master-card.master-header        the number, the state chips, the actions
+    .master-stats > .master-stat--flat five figures: total, received, GST,
+                                      balance, due date
+    .master-card.master-section       the line items, at the page's full width
+    .master-grid.is-even              billing | summary, payments | chase,
+                                      terms & notes | files
+
+Four rules hold it together:
+
+- **no fork.** The page wears the shared classes and the module sheet defines
+  no `master-*`; the only classes it adds are its own (`.si-show`, the money
+  column, a receipt row, a file row, a chase row, a note). Guarded by
+  `tools/checks/invoices-check.cjs`.
+- **the money is the model's.** `receivedAmount()` and `balanceDue()` are read
+  once, at the top; the receipt rows print the ledger lines they came from, so
+  the page cannot add up a second balance. A debit against the invoice prints as
+  a refund, because the direction comes from the entry.
+- **an empty card explains itself.** `.master-empty-state` — an icon, a
+  sentence, the button that fills it. Never `.master-empty`, which is the
+  listing-level empty, and never a bare dash: a fact the office has not filled
+  in says *Not on file*, and an address is built from the parts that exist
+  rather than joined with commas over the empty ones.
+- **the spacing is the shell's.** `master-list.css` spaces every pair of blocks
+  on a page, including two grids stacked (`grid + grid`) — the record page's
+  grid rows were flush against each other until it did. A module does not space
+  its own page, and no page carries an inline margin.
+
+The file row's icon and size come from `SalesInvoiceAttachment::icon()` and
+`sizeLabel()` — the same reading the ledger's attachments use, so no view has to
+guess an icon from a file name.
+
 ## Recording a receipt
 
 *Record payment* on a row (or on the record page) posts to

@@ -63,6 +63,12 @@
    blocks. The margins collapse with a module's own `margin-bottom`, so a block
    that already carries one is not spaced twice.
 
+   A grid that follows a grid is the same case: a record page stacks its card
+   rows one under another, and two of those grids ran flush — the invoice
+   record's billing row began exactly where its line items ended, and the
+   employee profile had the same missing line. A card after a grid is the same
+   defect from the other side.
+
    The same is true of the grid *itself* when it follows a card: a grid owns the
    gutter between its columns and never the space above itself, so a page that
    opened with a card had its columns begin exactly where that card ended — the
@@ -77,6 +83,8 @@
     .master-list > .master-card + .master-card,
     .master-list > .master-card + .master-stats,
     .master-list > .master-card + .master-grid,
+    .master-list > .master-grid + .master-grid,
+    .master-list > .master-grid + .master-card,
     .cf > .master-card + .master-card,
     .ship > .master-card + .master-card,
     .vendor-show > .master-card + .master-card,

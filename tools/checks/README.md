@@ -39,7 +39,9 @@ node tools/checks/invoices-check.cjs  # the invoice module: its sheet defines no
                                       # routes come before the resource route — and the collections
                                       # half: a reminder is a log (never a counter beside it), the
                                       # sweep only deletes drafts, and the GST file is the screen's
-                                      # rows grouped by HSN and rate
+                                      # rows grouped by HSN and rate — and the record
+                                      # page: the shared composition, five flat
+                                      # figures, a sentence where a card is empty
 ```
 
 Every check is dependency-free. `mark-check.cjs` additionally decodes the QR
