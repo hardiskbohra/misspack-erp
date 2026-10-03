@@ -913,12 +913,12 @@
 }
 
 .client-show .client-detail-title {
-    margin: 0 0 18px;
+    margin: 0 0 14px;
     color: var(--mc-text);
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: -.025em;
-    line-height: 1.3;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    line-height: 1.35;
 }
 
 .client-show .client-detail-card .master-facts {
@@ -941,9 +941,9 @@
 .client-show .client-detail-card .master-facts .master-info > strong:not(.master-badge) {
     display: block;
     color: var(--mc-text);
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 1.4;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.45;
     overflow-wrap: anywhere;
 }
 
@@ -955,9 +955,9 @@
 .client-show .client-detail-link {
     display: block;
     color: var(--mc-text);
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 1.4;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.45;
     overflow-wrap: anywhere;
     text-decoration: none;
 }
@@ -973,10 +973,10 @@
     display: block;
     margin: 0;
     color: var(--mc-text);
-    font-size: 16px;
+    font-size: 14px;
     font-style: normal;
-    font-weight: 600;
-    line-height: 1.5;
+    font-weight: 500;
+    line-height: 1.45;
     overflow-wrap: anywhere;
     white-space: pre-line;
 }
@@ -1050,7 +1050,7 @@
 
     .client-show .client-detail-title {
         margin-bottom: 12px;
-        font-size: 18px;
+        font-size: 15px;
     }
 
     .client-show .client-detail-card .master-facts,
