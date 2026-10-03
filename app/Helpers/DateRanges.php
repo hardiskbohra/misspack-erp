@@ -64,6 +64,55 @@ class DateRanges
     }
 
     /**
+     * A filter value that is a date — or nothing at all.
+     *
+     * A query string is written by hand, by links, and by saved views, and a
+     * value that names a *range* ("all", "custom", "this_month") is not a date.
+     * Handing that value to Carbon::parse() throws an InvalidFormatException and
+     * takes the whole page down with a 500 — over a filter. So a value the app
+     * cannot read as a date is read as no date: the filter widens, which is the
+     * rule the rest of the filter vocabulary already follows. One owner, because
+     * every screen reads its dates out of the query string.
+     */
+    public static function normalise($value): ?string
+    {
+        $value = is_scalar($value) ? trim((string) $value) : '';
+
+        if ($value === '') {
+            return null;
+        }
+
+        foreach (['Y-m-d', 'Y/m/d', 'd-m-Y', 'd/m/Y'] as $format) {
+            try {
+                $date = Carbon::createFromFormat('!'.$format, $value);
+            } catch (\Throwable) {
+                /* Carbon is strict and throws on a value that is not this shape
+                   at all — which is the whole point of reading it here instead
+                   of at the call site: a filter can never take a page down. */
+                continue;
+            }
+
+            /* The round trip is the real test. createFromFormat() is happy to
+               read "2026" as a date of nothing, and "0000-00-00" as a day that
+               does not exist; only a value that survives being written back in
+               the same format is a date this app meant. */
+            if ($date->format($format) === $value) {
+                return $date->toDateString();
+            }
+        }
+
+        return null;
+    }
+
+    /** The same value, written the way the module writes a date. */
+    public static function display($value, string $fallback = ''): string
+    {
+        $date = static::normalise($value);
+
+        return $date ? Carbon::parse($date)->format('d M Y') : $fallback;
+    }
+
+    /**
      * Which preset the applied range is — null when the user typed their own
      * dates. Both ends must match: half a month is not "Last month".
      */

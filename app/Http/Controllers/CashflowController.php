@@ -672,23 +672,29 @@ class CashflowController extends Controller
      */
     private function reportWindow(Request $request, string $unit): array
     {
-        $from = $request->query('date_from');
-        $to = $request->query('date_to');
+        /* Through DateRanges, never straight into Carbon: a link or a saved view
+           can carry "all" where a day belongs, and a filter must not be able to
+           take the page down. A value that is not a date is no date, so the
+           window falls back to its own default instead of throwing. */
+        $from = DateRanges::normalise($request->query('date_from'));
+        $to = DateRanges::normalise($request->query('date_to'));
 
         if ($from || $to) {
             $today = DateRanges::today();
 
             return [
-                $from ? Carbon::parse($from)->toDateString() : $today->copy()->startOfYear()->toDateString(),
-                $to ? Carbon::parse($to)->toDateString() : $today->toDateString(),
+                $from ?: $today->copy()->startOfYear()->toDateString(),
+                $to ?: $today->toDateString(),
             ];
         }
 
         $legacy = (string) $request->query('period', '');
         $base = $request->query('date');
 
+        $base = DateRanges::normalise($base);
+
         if ($base || in_array($legacy, ['day', 'week', 'month', 'quarter', 'year'], true)) {
-            $date = Carbon::parse($base ?: DateRanges::today()->toDateString());
+            $date = $base ? Carbon::parse($base) : DateRanges::today();
 
             [$start, $end] = match ($legacy) {
                 'day' => [$date->copy()->startOfDay(), $date->copy()->endOfDay()],

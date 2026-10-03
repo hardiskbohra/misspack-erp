@@ -441,9 +441,11 @@ class PartyStatement
         }
 
         /* Dates arrive from a query string; they are compared as Y-m-d strings
-           further down, so they are normalised once, here. */
-        $from = $from ? Carbon::parse($from)->toDateString() : null;
-        $to = $to ? Carbon::parse($to)->toDateString() : null;
+           further down, so they are read once, here — and a value that is not a
+           date (a range name, an empty box, a stale link) is no date at all,
+           rather than a 500 in the middle of a statement. */
+        $from = DateRanges::normalise($from);
+        $to = DateRanges::normalise($to);
 
         $currency = strtoupper((string) ($options['currency'] ?? $this->defaultCurrency($type, $id)));
         $rows = $this->statementRows($type, $party, $currency);

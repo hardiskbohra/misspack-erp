@@ -6,6 +6,7 @@ use App\Models\CashflowAccount;
 use App\Models\CashflowEntry;
 use App\Models\SalesInvoice;
 use App\Models\SavedView;
+use App\Helpers\DateRanges;
 use App\Models\Shipment;
 use App\Models\ShipmentAttachment;
 use App\Models\ShipmentCost;
@@ -43,8 +44,11 @@ class ShipmentController extends Controller
         $status = $request->query('status', 'all');
         $type = $request->query('type', 'all');
         $currency = $request->query('currency', 'all');
-        $fromDate = $request->query('from_date');
-        $toDate = $request->query('to_date');
+        /* Dates or nothing, through the module's own date reader: a filter that
+           names a range where a day belongs widens the list instead of throwing
+           a 500 at the operator. */
+        $fromDate = DateRanges::normalise($request->query('from_date'));
+        $toDate = DateRanges::normalise($request->query('to_date'));
         $attention = $request->query('attention');
 
         // Open shipments first, finished ones below; date is the tie-breaker
@@ -1066,8 +1070,8 @@ class ShipmentController extends Controller
         $status = $request->query('status', 'all');
         $type = $request->query('type', 'all');
         $currency = $request->query('currency', 'all');
-        $fromDate = $request->query('from_date');
-        $toDate = $request->query('to_date');
+        $fromDate = DateRanges::normalise($request->query('from_date'));
+        $toDate = DateRanges::normalise($request->query('to_date'));
 
         return Shipment::query()
             ->search($search)

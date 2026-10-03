@@ -296,9 +296,9 @@
                                 @if ($activeRange)
                                     {{ $dateRangeLabels[$activeRange] }}
                                 @else
-                                    {{ $dateFrom ? \Illuminate\Support\Carbon::parse($dateFrom)->format('d M Y') : 'start' }}
+                                    {{ \App\Helpers\DateRanges::display($dateFrom, 'start') }}
                                     →
-                                    {{ $dateTo ? \Illuminate\Support\Carbon::parse($dateTo)->format('d M Y') : 'today' }}
+                                    {{ \App\Helpers\DateRanges::display($dateTo, 'today') }}
                                 @endif
                             </span>
                             <a class="master-list-applied-x" href="{{ $dateUrl }}"

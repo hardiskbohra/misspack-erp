@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\DateRanges;
 use App\Models\CashflowAccount;
 use App\Models\CashflowEntry;
 use Illuminate\Database\Eloquent\Builder;
@@ -127,7 +128,15 @@ class CashflowFilters
         $filters = [];
 
         foreach (self::VIEW_KEYS as $viewKey => $queryKey) {
-            $filters[$viewKey] = $request->query($queryKey, self::DEFAULTS[$queryKey] ?? 'all');
+            $value = $request->query($queryKey, self::DEFAULTS[$queryKey] ?? 'all');
+
+            /* The two date filters are dates or nothing. Every other key has a
+               sentinel that widens the query ("all"); for a date the sentinel is
+               null, so a value that names a range — which a link or a saved view
+               can carry — must not reach Carbon as if it were a day. */
+            $filters[$viewKey] = in_array($queryKey, ['date_from', 'date_to'], true)
+                ? DateRanges::normalise($value)
+                : $value;
         }
 
         return $filters;

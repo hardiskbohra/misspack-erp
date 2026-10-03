@@ -18,8 +18,10 @@ node tools/checks/status-check.cjs    # the rules a shipment status change keeps
                                       # date it fills in, the hold/delay reason it still refuses
 node tools/checks/cost-check.cjs      # a cost head's exchange rate: the field is always on
                                       # screen, and the INR value is amount × rate, never a guess
-node tools/checks/php-check.cjs       # the PHP files the module owns: scanned, and parsed when
-                                      # php-parser is installed (it is not, in this checkout)
+node tools/checks/php-check.cjs       # the PHP files the module owns: parsed with php-parser when
+                                      # it is reachable, plus name/import guards that a parser
+                                      # cannot answer. PHP_PARSER_PATH=<dir> points at a node_modules
+                                      # that holds php-parser when it is not installed here.
 node tools/checks/docs-check.cjs      # the paperwork behind an entry: one table, the archive route
                                       # before the resource route, one definition of "missing"
 node tools/checks/statement-check.cjs # a party statement: opening + debit − credit = closing, the

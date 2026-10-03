@@ -214,7 +214,7 @@
                             </td>
                             <td class="is-num" data-label="Rows">{{ number_format($row['count']) }}</td>
                             <td data-label="Last activity">
-                                {{ $row['last_date'] ? \Illuminate\Support\Carbon::parse($row['last_date'])->format('d M Y') : '—' }}
+                                {{ \App\Helpers\DateRanges::display($row['last_date'], '—') }}
                             </td>
                             <td data-label="Action">
                                 {{-- The period travels as the preset it is, not

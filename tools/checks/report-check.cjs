@@ -221,6 +221,22 @@ check('a report row with nothing in the dimension can still be opened',
 /* The module's period vocabulary is calendar (the ledger's "This year" chip is
    January–December), so the buckets the report cuts must be calendar too: a
    window opened from that chip cannot come back labelled in financial years. */
+/* A filter value is never handed to the date parser raw. "all" is a range name,
+   not a day, and it arrives by link and by saved view: Carbon::parse('all')
+   throws and the whole ledger becomes a 500 — over a filter. Everything that
+   reads a date out of the query string reads it through DateRanges::normalise,
+   which answers "a day, or nothing". */
+check('a date out of the query string is read as a day or as nothing',
+    /DateRanges::normalise\(\$request->query\('date_from'\)\)/.test(controller)
+    && /DateRanges::normalise\(\$request->query\('date_to'\)\)/.test(controller)
+    && /DateRanges::normalise\(\$value\)/.test(filters)
+    && /Carbon::createFromFormat\('!'.\$format, \$value\)/.test(read('app/Helpers/DateRanges.php'))
+    && /\$date->format\(\$format\) === \$value/.test(read('app/Helpers/DateRanges.php'))
+    && ! /Carbon::parse\(\s*\$request/.test(controller)
+    && ! /Carbon::parse\(\s*request\(/.test(controller)
+    && ! /Carbon::parse\(\s*\$request/.test(filters)
+    && ! /Carbon::parse\(\$dateFrom\)|Carbon::parse\(\$dateTo\)/.test(ledgerView));
+
 check('the buckets are named the way the rest of the module names periods',
     /'year' => \$date->format\('Y'\),\n\s*'quarter' => 'Q'\.\$date->quarter\.' '\.\$date->format\('Y'\),\n\s*default => \$date->format\('M Y'\),/.test(service)
     && /'quarter' => 'Q'\.\$date->quarter,\n\s*default => \$date->format\('M'\),/.test(service)

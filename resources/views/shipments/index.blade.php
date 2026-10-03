@@ -179,7 +179,7 @@
                     @if (filled($fromDate))
                         <span class="master-list-applied-chip">
                             <span class="master-list-applied-key">Pickup from</span>
-                            <span class="master-list-applied-value">{{ \Illuminate\Support\Carbon::parse($fromDate)->format('d M Y') }}</span>
+                            <span class="master-list-applied-value">{{ \App\Helpers\DateRanges::display($fromDate) }}</span>
                             <a class="master-list-applied-x" href="{{ $chipUrl('from_date') }}"
                                 aria-label="Remove the pickup-date filter" title="Remove the pickup-date filter">&times;</a>
                         </span>

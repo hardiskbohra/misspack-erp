@@ -907,6 +907,16 @@ const sheetOrder = (text, moduleSheet) => {
 check('the shared sheet loads after the module sheet on both lists',
     sheetOrder(cashView, 'cashflows.css') && sheetOrder(view, 'shipments.css'));
 
+/* The list prints the date it was filtered by; it never parses it. A filter
+   value that is not a day (a range name from a link or a saved view) used to
+   reach Carbon inside the template and take the page down with a 500. */
+check('a date filter is printed by the list, never parsed by it',
+    ! /Carbon::parse\(/.test(cashView)
+    && ! /Carbon::parse\(/.test(documentsView)
+    && /DateRanges::display\(\$dateFrom, 'start'\)/.test(cashView)
+    && /DateRanges::display\(\$dateTo, 'today'\)/.test(cashView)
+    && /DateRanges::display\(\$dateFrom, 'start'\)/.test(documentsView));
+
 /* Two blocks of one list page are two blocks: the shell owns the space between
    them (any count of cards, in any module), so no module has to space its own
    page — and a stats row fills its width whether the page shows three figures,

@@ -288,8 +288,10 @@ class PartyStatementController extends Controller
 
         $presets = DateRanges::presets();
         $period = $request->query('period');
-        $dateFrom = $request->query('date_from');
-        $dateTo = $request->query('date_to');
+        /* A range can arrive as a name ("all", "custom") rather than a date;
+           DateRanges reads it, so nothing below has to guess. */
+        $dateFrom = DateRanges::normalise($request->query('date_from'));
+        $dateTo = DateRanges::normalise($request->query('date_to'));
 
         if ($period === 'all') {
             $dateFrom = $dateTo = null;
@@ -315,8 +317,8 @@ class PartyStatementController extends Controller
             'partyType' => $partyType,
             'currency' => strtoupper((string) $request->query('currency', 'INR')) ?: 'INR',
             'q' => trim((string) $request->query('q')) ?: null,
-            'dateFrom' => $dateFrom ? Carbon::parse($dateFrom)->toDateString() : null,
-            'dateTo' => $dateTo ? Carbon::parse($dateTo)->toDateString() : null,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
             'ageing' => $request->query('ageing', '1') !== '0',
             'activeRange' => $activeRange,
             'periodKey' => $periodKey,

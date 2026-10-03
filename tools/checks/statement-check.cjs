@@ -248,6 +248,17 @@ check('the surface is the module\'s own sheet plus the shared chrome',
     /assets\/css\/statement\.css/.test(preview + pdfView + publicPage + expired + portalPage)
     && /assets\/css\/master-list\.css/.test(surface)
     && /assets\/css\/cashflows\.css/.test(surface));
+/* A statement range arrives as a query string and can name a range rather than
+   a day ("all", "custom"); it is read through DateRanges::normalise — never
+   handed to Carbon raw — on the office screen, in the portal and in the service
+   that builds the document. */
+check('a statement range is read as a date or as nothing',
+    /DateRanges::normalise\(\$request->query\('date_from'\)\)/.test(read('app/Http/Controllers/PartyStatementController.php'))
+    && /DateRanges::normalise\(\$request->query\('date_from'\)\)/.test(read('app/Http/Controllers/ClientPortalStatementController.php'))
+    && /DateRanges::normalise\(\$from\)/.test(read('app/Services/PartyStatement.php'))
+    && ! /Carbon::parse\(\s*\$request/.test(read('app/Http/Controllers/PartyStatementController.php'))
+    && ! /Carbon::parse\(\s*\$request/.test(read('app/Http/Controllers/ClientPortalStatementController.php')));
+
 /* The run and its send log are two cards of one page: both sit directly on the
    list root (so the shell's own rhythm separates them) and neither carries its
    own spacing — a module that spaces its own page is a second owner. */
@@ -259,6 +270,12 @@ check('the module sheet leaves the list chrome to the surface',
     ! /\.master-list\b/.test(read('public/assets/css/statement.css').replace(/\/\*[\s\S]*?\*\//g, '')));
 
 const statementCss = read('public/assets/css/statement.css');
+/* The surface prints dates through the module's own reader rather than
+   reaching for Carbon in the template — no view in this module parses a date. */
+check('the surface prints a date, it never parses one',
+    ! /Carbon::parse\(/.test(surface)
+    && /DateRanges::display\(\$row\['last_date'\], '—'\)/.test(surface));
+
 check('the document has a dark theme of its own',
     /:root\[data-theme="dark"\] \.stmt \{/.test(statementCss));
 check('a public reader follows their own theme, and only there',

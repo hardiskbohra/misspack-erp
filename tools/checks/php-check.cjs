@@ -24,11 +24,23 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const out = [];
 const check = (name, ok, detail = '') => out.push([name, !!ok, detail]);
 
+/* The parser is a devDependency, but a machine can also have it installed
+   elsewhere (a sandbox, a global install): PHP_PARSER_PATH points at a directory
+   whose node_modules holds it. Everything below still runs without it — the
+   dependency-free guards are the fallback, and the report says which mode ran. */
 let Engine = null;
-try {
-    Engine = require('php-parser').Engine;
-} catch (error) {
-    Engine = null;
+const parserCandidates = [
+    'php-parser',
+    process.env.PHP_PARSER_PATH && path.join(process.env.PHP_PARSER_PATH, 'node_modules', 'php-parser'),
+].filter(Boolean);
+
+for (const candidate of parserCandidates) {
+    try {
+        Engine = require(candidate).Engine;
+        break;
+    } catch (error) {
+        Engine = null;
+    }
 }
 
 /* ------------------------------------------------------- what we look at */
@@ -135,6 +147,37 @@ check('every PHP file opens with a php tag',
 const closingTag = phpFiles.filter(file => /\?>\s*$/.test(fs.readFileSync(file, 'utf8')));
 check('no PHP file ends with a closing tag',
     closingTag.length === 0, closingTag.slice(0, 3).map(rel).join(' | '));
+
+/* An app class called statically has to be imported (or be in this file's own
+   namespace). php-parser checks grammar, not names: a bare `DateRanges::normalise()`
+   in a controller that forgot its `use App\Helpers\DateRanges;` parses perfectly
+   and then fatals on the first request — which is exactly how a one-line fix
+   becomes a second bug. Blade templates are not checked: they are not PHP files,
+   and the App\…\Class::… form they use is already absolute. */
+const appClasses = ['Helpers', 'Services'].flatMap(dir => {
+    const full = path.join(ROOT, 'app', dir);
+    if (!fs.existsSync(full)) return [];
+
+    return fs.readdirSync(full)
+        .filter(entry => entry.endsWith('.php'))
+        .map(entry => ({ name: entry.replace(/\.php$/, ''), dir }));
+});
+
+const unimported = [];
+for (const file of phpFiles) {
+    const text = fs.readFileSync(file, 'utf8');
+    const own = (text.match(/^namespace\s+([^;]+);/m) || [, ''])[1].trim();
+
+    for (const { name, dir } of appClasses) {
+        if (own === 'App\\' + dir) continue;
+        if (!new RegExp('(?<![\\\\\\w])' + name + '::').test(text)) continue;
+        if (!new RegExp('use\\s+[^;]*\\b' + name + '\\b[^;]*;').test(text)) {
+            unimported.push(rel(file) + ' → ' + name);
+        }
+    }
+}
+check('every app class a file calls statically is imported there',
+    unimported.length === 0, unimported.slice(0, 5).join(' | '));
 
 /* The fallback for a machine that never ran npm install: brackets per file,
    read outside strings and comments, and flagged only when they do not close. */

@@ -27,8 +27,8 @@ class ClientPortalStatementController extends ClientPortalBaseController
 
         $presets = DateRanges::presets();
         $period = $request->query('period');
-        $dateFrom = $request->query('date_from');
-        $dateTo = $request->query('date_to');
+        $dateFrom = DateRanges::normalise($request->query('date_from'));
+        $dateTo = DateRanges::normalise($request->query('date_to'));
 
         if ($period === 'all') {
             $dateFrom = $dateTo = null;
@@ -58,8 +58,8 @@ class ClientPortalStatementController extends ClientPortalBaseController
         return view('client_portal.statements.index', [
             'statement' => $statement,
             'currencyOptions' => $currencies,
-            'dateFrom' => $dateFrom ? Carbon::parse($dateFrom)->toDateString() : null,
-            'dateTo' => $dateTo ? Carbon::parse($dateTo)->toDateString() : null,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
             'dateRangeLabels' => DateRanges::LABELS,
             'activeRange' => $activeRange,
             'periodKey' => in_array($period, array_merge(array_keys($presets), ['all', 'custom']), true)

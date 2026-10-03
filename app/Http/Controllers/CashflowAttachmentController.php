@@ -246,8 +246,10 @@ class CashflowAttachmentController extends Controller
             'q' => trim((string) $request->query('q')),
             'party' => trim((string) $request->query('party')),
             'state' => in_array($state, ['all', 'linked', 'unlinked'], true) ? $state : 'all',
-            'dateFrom' => $request->query('date_from'),
-            'dateTo' => $request->query('date_to'),
+            /* dates or nothing: the same rule every other screen's filters
+               follow, because these two travel into a ledger link */
+            'dateFrom' => DateRanges::normalise($request->query('date_from')),
+            'dateTo' => DateRanges::normalise($request->query('date_to')),
         ];
     }
 
