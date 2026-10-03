@@ -1,12 +1,21 @@
 /* ==========================================================================
    SALES-INVOICES.JS — Sales invoices module
    --------------------------------------------------------------------------
-   Behaviour for the invoice form: line-item builder (add/remove rows,
-   product autofill), live GST/discount/total preview and client address
-   prefill. The product options and existing items are passed through
-   data attributes on #invoiceItemsBody (Blade cannot render inside an
-   external script).
-   The list and detail pages are static (no module JS needed).
+   Two screens' behaviour, one file:
+
+     the form   the line-item builder (add/remove rows, product autofill), the
+                live GST/discount/total preview and the client address prefill.
+                The product options and existing items arrive through data
+                attributes on #invoiceItemsBody (Blade cannot render inside an
+                external script);
+     the list   the shared list chrome every module's listing wears — clickable
+                rows, the density switch, the saved-view toggle — plus the two
+                actions that only exist here: the receipt dialog (which posts to
+                the cashflow ledger, so its form's action is filled in from the
+                row that opened it) and the client link, copied to the clipboard.
+
+   The list half is keyed off `.si-index`, so a page without the list boots
+   nothing, and the modal is opened through the shared `MasterModal`.
    ========================================================================== */
 (function () {
     'use strict';
@@ -203,5 +212,103 @@
         }
 
         calculateTotals();
+    });
+
+    /* ============================================================ the list
+       The invoice list wears the same chrome as every other listing in the
+       office: it is the module's job to boot it and the shell's job to draw it.
+       Every piece is guarded, because this same file loads on the form, which
+       has none of it. */
+    onReady(function () {
+        var list = document.querySelector('.si-index');
+        if (!list || typeof window.MasterList === 'undefined') return;
+
+        window.MasterList.rowNavigation({ root: '.si-index' });
+        window.MasterList.gridShadow({ root: '.si-index' });
+        window.MasterList.saveViewToggle();
+        window.MasterList.density({ root: '.si-index', key: 'invoiceDensity' });
+    });
+
+    /* --------------------------------------------------- the receipt dialog
+       One dialog serves the whole page; the row that opens it says which
+       invoice it is for, and the form's action comes from the template the
+       controller's route rendered (so the route lives in Blade, not here). */
+    onReady(function () {
+        var modal = document.getElementById('paymentModal');
+        var form = modal ? modal.querySelector('[data-payment-form]') : null;
+        var triggers = document.querySelectorAll('[data-open-payment]');
+
+        if (!modal || !form || !triggers.length) return;
+
+        var template = form.getAttribute('data-action-template') || '';
+        var subtitle = modal.querySelector('[data-payment-subtitle]');
+        var amount = modal.querySelector('input[name="amount"]');
+
+        triggers.forEach(function (trigger) {
+            trigger.addEventListener('click', function () {
+                var id = trigger.getAttribute('data-invoice-id');
+                var number = trigger.getAttribute('data-invoice-number') || 'this invoice';
+                var balance = trigger.getAttribute('data-invoice-balance') || '';
+
+                form.setAttribute('action', template.replace('__INVOICE__', id));
+
+                if (subtitle) {
+                    subtitle.textContent = 'Against ' + number + (balance ? ' · ' + balance + ' still owed' : '');
+                }
+
+                /* What is owed is opened ready to be confirmed, not retyped. */
+                if (amount) {
+                    amount.value = trigger.getAttribute('data-invoice-amount') || balance.replace(/[^0-9.]/g, '');
+                }
+
+                if (window.MasterModal) {
+                    window.MasterModal.open(modal);
+                }
+            });
+        });
+    });
+
+    /* ------------------------------------------------------ the client link
+       The public page is the client's copy of the invoice; the office sends it
+       by WhatsApp far more often than by email, so the link goes to the
+       clipboard and the button says so for a moment. */
+    onReady(function () {
+        document.querySelectorAll('[data-copy-link]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var link = button.getAttribute('data-copy-link');
+                var label = button.innerHTML;
+
+                var done = function () {
+                    button.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Link copied';
+
+                    window.setTimeout(function () {
+                        button.innerHTML = label;
+                    }, 1600);
+                };
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(link).then(done, function () {
+                        window.prompt('Copy this link', link);
+                    });
+
+                    return;
+                }
+
+                window.prompt('Copy this link', link);
+            });
+        });
+    });
+
+    /* A failed save comes back with the input kept and the errors on the bag:
+       the marker names the dialog it came from, so it reopens with the office's
+       typing still in it. */
+    onReady(function () {
+        var marker = document.querySelector('[data-open-dialog]');
+        var reopen = marker ? marker.getAttribute('data-open-dialog') : '';
+        var dialog = reopen ? document.getElementById(reopen) : null;
+
+        if (dialog && window.MasterModal) {
+            window.MasterModal.open(dialog);
+        }
     });
 })();

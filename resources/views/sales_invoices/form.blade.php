@@ -33,16 +33,25 @@
             ->values()
             ->all();
     @endphp
-    <div class="sif">
-        <div class="master-hero" style="margin-bottom:15px;">
+    <div class="si-form">
+        {{-- The header every office screen wears: a card, the title, the way
+             back. This page used to open with a gradient hero whose rules lived
+             in the module's own fork of the design system, which is the fork
+             this change deletes. --}}
+        <div class="master-card master-header">
             <div>
-                <p class="master-eyebrow">{{ $isEdit ? 'Update invoice' : 'Generate sales invoice' }}</p>
                 <h1>{{ $isEdit ? 'Edit' : 'Create' }}
                     {{ $invoice->invoice_type === 'tax' ? 'Tax Invoice' : 'Proforma Invoice' }}</h1>
-                <p>Client details are derived from the Client object. Add multiple products and print/share to client
-                    portal.</p>
-            </div><a href="{{ $isEdit ? route('sales-invoices.show', $invoice) : route('sales-invoices.index') }}"
-                class="master-btn master-btn-light">Back</a>
+                <div class="master-breadcrumb"><a href="{{ url('/') }}">Home</a><span>•</span><a
+                        href="{{ route('sales-invoices.index') }}">Invoices</a><span>•</span><span
+                        class="active">{{ $isEdit ? 'Edit' : 'New' }}</span></div>
+                <p class="master-sub">Client details come from the client's own record. Add products, then print or
+                    share it to the client portal.</p>
+            </div>
+            <div class="master-actions">
+                <a href="{{ $isEdit ? route('sales-invoices.show', $invoice) : route('sales-invoices.index') }}"
+                    class="master-btn master-btn-light">Back</a>
+            </div>
         </div>
 
         @if ($errors->any())
@@ -205,8 +214,8 @@
                         <h2>Invoice Products</h2>
                     </div><button type="button" class="master-btn master-btn-soft" id="addItemRow">+ Add Product</button>
                 </div>
-                <div class="master-items-wrap">
-                    <table class="master-items-table">
+                <div class="si-items-wrap">
+                    <table class="si-items-table">
                         <thead>
                             <tr>
                                 <th width="30%">Product</th>
@@ -283,13 +292,25 @@
                         <div class="master-field"><label class="master-label">Round Off</label><input class="master-input" type="number" step="0.01"
                                 name="round_off" id="roundOff" value="{{ old('round_off', $invoice->round_off) }}">
                         </div>
-                        <div class="master-field"><label class="master-label">Amount Paid</label><input class="master-input" type="number" step="0.01"
-                                name="amount_paid" id="amountPaid"
-                                value="{{ old('amount_paid', $invoice->amount_paid) }}"></div>
+                        {{-- The invoice's *opening* figure. Receipts recorded against
+                             it — from the list's "Record payment", or a cashflow
+                             entry linked to this invoice — are added to it, and
+                             the balance every screen prints is the two together
+                             (`SalesInvoice::receivedAmount()`). --}}
+                        <div class="master-field">
+                            <label class="master-label" for="amountPaid">Opening received</label>
+                            <input class="master-input" type="number" step="0.01" name="amount_paid" id="amountPaid"
+                                value="{{ old('amount_paid', $invoice->amount_paid) }}"
+                                aria-describedby="amountPaidHint">
+                            <p class="master-sub" id="amountPaidHint" style="margin:4px 0 0;">
+                                Money already received before it was recorded in the ledger. Receipts filed
+                                against this invoice are added on top.
+                            </p>
+                        </div>
                         <div class="master-field"><label class="master-label">Attachments</label><input class="master-input" type="file" name="attachments[]"
                                 multiple></div>
                     </div>
-                    <div class="master-total-box">
+                    <div class="si-total-box">
                         <div><span>Subtotal</span><strong id="previewSubtotal">₹ 0.00</strong></div>
                         <div><span>Tax</span><strong id="previewTax">₹ 0.00</strong></div>
                         <div><span>Total</span><strong id="previewTotal">₹ 0.00</strong></div>
@@ -307,7 +328,7 @@
             <input type="hidden" name="seller_company_name"
                 value="{{ old('seller_company_name', $invoice->seller_company_name ?: $sellerDefaults['seller_company_name']) }}">
 
-            <div class="master-submit"><a
+            <div class="si-submit"><a
                     href="{{ $isEdit ? route('sales-invoices.show', $invoice) : route('sales-invoices.index') }}"
                     class="master-btn master-btn-light-dark">Cancel</a><button class="master-btn master-btn-primary"
                     type="submit">{{ $isEdit ? 'Update Invoice' : 'Create Invoice' }}</button></div>
@@ -316,10 +337,10 @@
 
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('assets/css/sales-invoices.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/sales-invoices.css') }}">
 @endpush
 
 @push('scripts')
-    <script src="{{ asset('assets/js/sales-invoices.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/sales-invoices.js') }}"></script>
 @endpush
 @endsection

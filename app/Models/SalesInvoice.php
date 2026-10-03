@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Carbon\CarbonInterface;
 use Illuminate\Support\Str;
 
 class SalesInvoice extends Model
@@ -104,6 +106,188 @@ class SalesInvoice extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Money received against this invoice, as SQL.
+     *
+     * The same rule as `receivedAmount()` below, written once for the screens
+     * that must not load a row per invoice: the opening figure the office typed
+     * on the invoice, plus every receipt filed against it in the cashflow
+     * ledger. A list, a set of figures or a filter uses this string; a single
+     * invoice uses the method. Two spellings of one rule is how the ledger and
+     * the statement started disagreeing in the first place.
+     */
+    public const RECEIVED_SQL = '(coalesce(sales_invoices.amount_paid, 0) + (select coalesce(sum(credit_amount - debit_amount), 0) from cashflow_entries where cashflow_entries.sales_invoice_id = sales_invoices.id))';
+
+    /**
+     * The receipts filed against this invoice in the ledger.
+     *
+     * Three ways in, cheapest first: a loaded relation (one query for a page of
+     * invoices), the aggregates `withSum()` put on the row, or a query of its
+     * own for a single invoice fetched on its own.
+     */
+    public function ledgerReceived(): float
+    {
+        if ($this->relationLoaded('payments')) {
+            return round((float) $this->payments->sum(
+                fn ($payment) => (float) $payment->credit_amount - (float) $payment->debit_amount
+            ), 2);
+        }
+
+        if (array_key_exists('received_credit', $this->attributes) || array_key_exists('received_debit', $this->attributes)) {
+            return round(
+                (float) ($this->attributes['received_credit'] ?? 0) - (float) ($this->attributes['received_debit'] ?? 0),
+                2
+            );
+        }
+
+        if (! $this->exists) {
+            return 0.0;
+        }
+
+        return round((float) ($this->payments()
+            ->selectRaw('coalesce(sum(credit_amount - debit_amount), 0) as received')
+            ->first()?->received ?? 0), 2);
+    }
+
+    /** Everything received: the invoice's opening figure plus the ledger's receipts. */
+    public function receivedAmount(): float
+    {
+        return round((float) $this->amount_paid + $this->ledgerReceived(), 2);
+    }
+
+    /** What is still owed on it. */
+    public function balanceDue(): float
+    {
+        return round(max((float) $this->total_amount - $this->receivedAmount(), 0), 2);
+    }
+
+    /** unpaid | partial | paid — read from the money, never from a stored word. */
+    public function paymentState(): string
+    {
+        $total = round((float) $this->total_amount, 2);
+        $received = $this->receivedAmount();
+
+        if ($total > 0 && $received >= $total - 0.01) {
+            return 'paid';
+        }
+
+        return $received > 0.01 ? 'partial' : 'unpaid';
+    }
+
+    /**
+     * Late: the money was due on a date that has passed and is still owed.
+     *
+     * A draft or a cancelled invoice is never late — nobody has been asked for
+     * the money yet, and asking twice for one nobody owes is how a worklist
+     * stops being read.
+     */
+    public function isOverdue(?CarbonInterface $today = null): bool
+    {
+        if (in_array($this->status, ['draft', 'cancelled'], true) || ! $this->due_date) {
+            return false;
+        }
+
+        return $this->balanceDue() > 0.01
+            && $this->due_date->lt($today ?: Carbon::today());
+    }
+
+    public function daysOverdue(?CarbonInterface $today = null): int
+    {
+        if (! $this->isOverdue($today)) {
+            return 0;
+        }
+
+        /* Signed the way the rest of the office reads a date difference
+           (`PartyStatement`): due date to today, so a passed due date is a
+           positive number of days late. */
+        return (int) $this->due_date->copy()->startOfDay()
+            ->diffInDays(($today ?: Carbon::today())->copy()->startOfDay(), false);
+    }
+
+    /**
+     * How late, in the buckets an office chases in.
+     *
+     * The keys are the filter's own vocabulary (`SalesInvoiceFilters`), so a
+     * chip that says "31–60 days" filters by the bucket this method names.
+     */
+    public function ageingBucket(?CarbonInterface $today = null): string
+    {
+        if (! $this->isOverdue($today)) {
+            return 'current';
+        }
+
+        $days = $this->daysOverdue($today);
+
+        return match (true) {
+            $days <= 30 => '1_30',
+            $days <= 60 => '31_60',
+            $days <= 90 => '61_90',
+            default => '90_plus',
+        };
+    }
+
+    /** @return array<string, string> bucket key => the words on the chip */
+    public static function ageingBuckets(): array
+    {
+        return [
+            'current' => 'Not yet due',
+            '1_30' => '1–30 days late',
+            '31_60' => '31–60 days late',
+            '61_90' => '61–90 days late',
+            '90_plus' => 'Over 90 days late',
+        ];
+    }
+
+    /**
+     * The one word the list's state chip wears.
+     *
+     * Draft and cancelled are the office's own decision and stand. Everything
+     * else is the money's: late, paid, part paid — and when none of those, the
+     * document's own state (sent, accepted) if the office set one.
+     */
+    public function stateKey(?CarbonInterface $today = null): string
+    {
+        if (in_array($this->status, ['draft', 'cancelled'], true)) {
+            return $this->status;
+        }
+
+        if ($this->isOverdue($today)) {
+            return 'overdue';
+        }
+
+        $payment = $this->paymentState();
+
+        if ($payment !== 'unpaid') {
+            return $payment;
+        }
+
+        return in_array($this->status, ['sent', 'accepted'], true) ? $this->status : 'sent';
+    }
+
+    public function stateLabel(?CarbonInterface $today = null): string
+    {
+        return [
+            'draft' => 'Draft',
+            'cancelled' => 'Cancelled',
+            'overdue' => 'Overdue',
+            'paid' => 'Paid',
+            'partial' => 'Partly paid',
+            'accepted' => 'Accepted',
+            'sent' => 'Awaiting payment',
+        ][$this->stateKey($today)] ?? Str::headline($this->stateKey($today));
+    }
+
+    /**
+     * Load the ledger totals for a whole page of invoices in two subqueries
+     * rather than one query per row.
+     */
+    public function scopeWithReceived(Builder $query): Builder
+    {
+        return $query
+            ->withSum('payments as received_credit', 'credit_amount')
+            ->withSum('payments as received_debit', 'debit_amount');
     }
 
     public function scopeSearch(Builder $query, ?string $search): Builder

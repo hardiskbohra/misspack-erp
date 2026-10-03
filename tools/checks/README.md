@@ -33,6 +33,10 @@ node tools/checks/employees-check.cjs # the employee side of the user module: th
                                       # on the whole admin group, no personal route takes a user id,
                                       # a file is ownership-checked before it is served, a draft
                                       # payslip is invisible and a verified paper is not removable
+node tools/checks/invoices-check.cjs  # the invoice module: its sheet defines no shared class, one
+                                      # rule for the money and one for how late it is, the figures
+                                      # are one aggregate, a receipt is a ledger line, and the
+                                      # vocabulary routes are registered before the resource route
 ```
 
 Every check is dependency-free. `mark-check.cjs` additionally decodes the QR
@@ -47,7 +51,7 @@ All of them exit non-zero on failure, so they can be wired into CI or a
 pre-push hook:
 
 ```bash
-for c in design blade php mark list status cost docs statement report employees; do
+for c in design blade php mark list status cost docs statement report employees invoices; do
   node "tools/checks/$c-check.cjs" || exit 1
 done
 ```
@@ -115,6 +119,11 @@ guards actually fail when the behaviour they describe is broken.
 | A comparison is the axis shifted | comparing April with March inside an April–June report counts March twice — once in its own column and once as April's comparison |
 | "Not set" is a row you can open | the entries nobody was named against are the ones people ask about, and a row that cannot be drilled is a row nobody trusts |
 | A mixed range says so | rupees, dollars and yuan are never dressed as one currency: the figures lose their sign and the page names the currencies it holds |
+| The money is one rule | an invoice's received figure is the opening amount plus the ledger lines linked to it, expressed once (`SalesInvoice::RECEIVED_SQL` / `receivedAmount()`) for the row, the chips, the figures, the filter and the CSV. A view that adds money up is a second definition of it, and the client's statement is printed from the first |
+| One definition of "late" | `ageingBuckets()` is the model's list and the filter's arms are the same buckets, so a chip saying *31-60 days late* opens the rows that are in that bucket — a second spelling of "overdue" is how the list and the statement started disagreeing |
+| An aggregate alias is read off the row | `Builder::value('received')` replaces the select list with the alias, which is a column that does not exist — the figures and the ledger sum are fetched with `first()?->received` |
+| A receipt is a ledger line | recording a payment writes a credit `CashflowEntry` linked to the invoice and re-derives the stored balance from it; the ledger is where the bank line is reconciled, and the invoice list, the client statement and the payment filter all read the money from there |
+| The module's sheet defines no shared class | the invoice stylesheet redefined twenty-six `master-*` classes with module-tuned values, which is why the module never matched the ledger next door — a `master-*` rule in a module sheet overrides the design system for every page that loads it |
 | A statement adds up | opening + debit − credit = closing, the ageing buckets sum to the closing, and an expiring public link is a real route — not a paragraph promising one |
 | Money never hand-built | a template may not format money itself, and may never echo a currency and then a rupee figure (`USD ₹1,200`) — the currency belongs with the amount it is in, through the formatter. Only an exchange rate keeps its own decimals in a template |
 | The office door | an employee account is turned around at the door of every screen the office owns — by a middleware on the whole admin group, not by a check on one page — and lands on its own workspace with a sentence instead of a 403 |

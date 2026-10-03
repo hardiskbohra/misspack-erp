@@ -1,470 +1,290 @@
 /* ==========================================================================
-   SALES-INVOICES.CSS — Sales invoices module (form, index, show views)
+   SALES-INVOICES.CSS — the invoice module's OWN classes
    --------------------------------------------------------------------------
-   Module stylesheet for the Sales section: PI/Tax invoice list, invoice
-   form (line items + GST preview) and invoice detail.
-   Loaded on invoice screens via @push('styles') (stack renders after the
-   shared master-* sheets, so the rules below win the cascade — same as the
-   original inline <style> blocks).
+   This sheet defines no `master-*` class, and that is the point.
 
-   NOTE (design debt, kept as-is for visual fidelity): this module was built
-   as a local fork of the shared master-* design system — the same class
-   names with module-tuned values (spacing, radii, table widths). Do not
-   delete the master-* rules here expecting the shared foundation to look
-   the same; it does not. A future cleanup should rename these to a
-   module prefix (si-*) or converge on the shared component values.
+   Until now it was a fork of the shared design system: the same class names
+   with module-tuned values (spacing, radii, table widths, button sizes). The
+   fork is why the invoice screens looked like a different application from the
+   cashflow ledger next door — the two were not wearing different themes, they
+   were wearing different copies of the same one. Everything shared now comes
+   from the shared sheets, and this file holds only what the module owns:
+
+     .si-*          the module's prefix
+     .si-items-*    the invoice form's line-items table
+     .si-total-box  the live GST total preview under it
+
+   A class that is used here and not defined here is the bug to look for: the
+   module's guard (`tools/checks/invoices-check.cjs`) fails on a `master-*`
+   selector in this file, and on an `.si-*` class used in a view that this sheet
+   never defines.
    ========================================================================== */
 
 /* ==========================================================================
-   INVOICE FORM — resources/views/sales_invoices/form.blade.php
-   Form page: hero, sections, line-items table, GST total preview.
+   THE FORM — line items and the total preview
    ========================================================================== */
 
-.master-page {
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-            background: var(--mc-soft);
-            min-height: calc(100vh - 70px);
-            padding: 28px;
-            color: var(--mc-text)
-        }
+.si-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px
+}
 
-        .master-page * {
-            box-sizing: border-box
-        }
+.si-items-wrap {
+    overflow: auto
+}
 
-        .master-hero {
-            background: linear-gradient(135deg, #4f83f1, #7b61ff);
-            border-radius: 26px;
-            padding: 24px;
-            color: #fff;
-            display: flex;
-            justify-content: space-between;
-            gap: 18px;
-            box-shadow: 0 18px 45px rgba(79, 131, 241, .22)
-        }
+.si-items-table {
+    width: 100%;
+    min-width: 1050px;
+    border-collapse: collapse
+}
 
-        .master-eyebrow {
-            margin: 0 0 6px;
-            text-transform: uppercase;
-            letter-spacing: .13em;
-            font-size: 11px;
-            font-weight: 600;
-            opacity: .78
-        }
+.si-items-table th,
+.si-items-table td {
+    padding: 9px;
+    border-bottom: 1px solid var(--mc-border);
+    text-align: left
+}
 
-        .master-hero h1 {
-            margin: 0;
-            font-size: 30px;
-            font-weight: 600
-        }
+.si-items-table th {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--mc-text-3);
+    background: var(--mc-soft)
+}
 
-        .master-hero p {
-            margin: 8px 0 0;
-            max-width: 780px;
-            opacity: .9
-        }
+.si-items-table .master-input,
+.si-items-table .master-textarea {
+    height: 40px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 13.5px
+}
 
-        .master-alert {
-            border-radius: 16px;
-            padding: 13px 15px;
-            font-weight: 600
-        }
+.si-items-table .master-textarea {
+    height: auto;
+    min-height: 64px;
+    resize: vertical
+}
 
-        .master-alert.error {
-            background: #fff0f4;
-            color: #be123c;
-            border: 1px solid #fecdd3
-        }
+.si-items-table .select2-selection--single {
+    min-height: 40px;
+    border-radius: 10px
+}
 
-        .master-form {
-            display: flex;
-            flex-direction: column;
-            gap: 18px
-        }
+.si-items-table .select2-selection--single .select2-selection__rendered {
+    padding: 9px 34px 9px 12px;
+    font-size: 13.5px
+}
 
-        .master-card {
-            background: var(--mc-card);
-            border: 1px solid var(--mc-border);
-            border-radius: 22px;
-            padding: 20px;
-            box-shadow: 0 14px 35px rgba(25, 42, 70, .08)
-        }
+.si-items-table .select2-selection--single .select2-selection__arrow {
+    height: 38px;
+    width: 34px
+}
 
-        .master-section-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 12px;
-            margin-bottom: 14px
-        }
+.si-items-table .line-total {
+    display: inline-block;
+    margin-bottom: 6px
+}
 
-        .master-section-head h2 {
-            margin: 0
-        }
+.si-total-box {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 14px
+}
 
-        .master-grid {
-            display: grid;
-            gap: 12px
-        }
+.si-total-box div {
+    background: var(--mc-soft);
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    padding: 12px
+}
 
-        .master-grid.two {
-            grid-template-columns: repeat(2, minmax(0, 1fr))
-        }
+.si-total-box span {
+    display: block;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase
+}
 
-        .master-grid.three {
-            grid-template-columns: repeat(3, minmax(0, 1fr))
-        }
+.si-total-box strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 18px
+}
 
-        .master-grid.four {
-            grid-template-columns: repeat(4, minmax(0, 1fr))
-        }
+/* The form's action bar: the same left-to-right order as every other form in
+   the office, right-aligned, and it stacks on a phone. `master-form.html` owns
+   `.master-actions`; this is the wider invoice form's own footer. */
+.si-submit {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px
+}
 
-        .master-items-wrap {
-            overflow: auto
-        }
+@media (max-width: 767px) {
+    .si-submit {
+        flex-direction: column
+    }
 
-        .master-items-table {
-            width: 100%;
-            min-width: 1050px;
-            border-collapse: collapse
-        }
+    .si-submit .master-btn {
+        width: 100%
+    }
 
-        .master-items-table th,
-        .master-items-table td {
-            padding: 9px;
-            border-bottom: 1px solid var(--mc-border);
-            text-align: left
-        }
-
-        .master-items-table th {
-            font-size: 11px;
-            text-transform: uppercase;
-            color: var(--mc-text-3);
-            background: var(--mc-card-soft)
-        }
-
-        .master-total-box {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-            margin-top: 14px
-        }
-
-        .master-total-box div {
-            background: var(--mc-card-soft);
-            border: 1px solid var(--mc-border);
-            border-radius: 14px;
-            padding: 12px
-        }
-
-        .master-total-box span {
-            display: block;
-            color: var(--mc-text-2);
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase
-        }
-
-        .master-total-box strong {
-            display: block;
-            margin-top: 5px;
-            font-size: 18px
-        }
-
-        .master-submit {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px
-        }
-
-        .master-product-select {
-            min-width: 180px
-        }
-
-        .master-items-table .master-input,
-        .master-items-table .master-textarea {
-            height: 40px;
-            padding: 8px 12px;
-            border-radius: 10px;
-            font-size: 13.5px
-        }
-
-        .master-items-table .master-textarea {
-            height: auto;
-            min-height: 64px;
-            resize: vertical
-        }
-
-        .master-items-table .select2-selection--single {
-            min-height: 40px;
-            border-radius: 10px
-        }
-
-        .master-items-table .select2-selection--single .select2-selection__rendered {
-            padding: 9px 34px 9px 12px;
-            font-size: 13.5px
-        }
-
-        .master-items-table .select2-selection--single .select2-selection__arrow {
-            height: 38px;
-            width: 34px
-        }
-
-        .master-items-table .line-total {
-            display: inline-block;
-            margin-bottom: 6px
-        }
-
-        @media(max-width:1200px) {
-
-            .master-grid.four,
-            .master-grid.three {
-                grid-template-columns: repeat(2, minmax(0, 1fr))
-            }
-        }
-
-        @media(max-width:767px) {
-            .master-page {
-                padding: 14px
-            }
-
-            .master-hero,
-            .master-section-head,
-            .master-submit {
-                flex-direction: column
-            }
-
-            .master-grid.two,
-            .master-grid.three,
-            .master-grid.four,
-            .master-total-box {
-                grid-template-columns: 1fr
-            }
-
-            .master-btn,
-            .master-submit .master-btn {
-                width: 100%
-            }
-
-            .master-card {
-                padding: 15px
-            }
-        }
+    .si-total-box {
+        grid-template-columns: 1fr
+    }
+}
 
 /* ==========================================================================
-   INVOICE LIST — resources/views/sales_invoices/index.blade.php
-   List page: status badges and table tweaks.
+   THE RECORD — what the invoice says, row by row
    ========================================================================== */
 
-.si-page{display:flex;flex-direction:column;gap:18px;background: var(--mc-soft);min-height:calc(100vh - 70px);padding:28px;color: var(--mc-text)}.si-page *{box-sizing:border-box}.si-hero{background:linear-gradient(135deg,#4f83f1,#7b61ff);border-radius:26px;padding:24px;color:#fff;display:flex;justify-content:space-between;gap:18px;box-shadow:0 18px 45px rgba(79,131,241,.22)}.si-eyebrow{margin:0 0 6px;text-transform:uppercase;letter-spacing:.13em;font-size:11px;font-weight:600;opacity:.78}.si-hero h1{margin:0;font-size:30px;font-weight:600}.si-hero p{margin:8px 0 0;max-width:780px;opacity:.9}.si-actions,.si-row-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.si-alert{border-radius:16px;padding:13px 15px;font-weight:600}.si-alert.success{background:#e8fff7;color:#047857;border:1px solid #a7f3d0}.si-alert.error{background:#fff0f4;color:#be123c;border:1px solid #fecdd3}.si-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}.si-stat,.si-card{background: var(--mc-card);border: 1px solid var(--mc-border);border-radius:22px;box-shadow:0 14px 35px rgba(25,42,70,.08)}.si-stat{padding:16px}.si-stat span{display:block;color: var(--mc-text-2);font-size:12px;font-weight:600;text-transform:uppercase}.si-stat strong{display:block;margin-top:7px;font-size:24px}.si-stat.blue strong{color:#4f83f1}.si-stat.purple strong{color:#7c3aed}.si-stat.green strong{color:#0e9f6e}.si-stat.orange strong{color:#d97706}.si-filter-card{padding:16px}.si-filter-form{display:grid;grid-template-columns:minmax(220px,1.3fr) repeat(4,minmax(140px,.8fr)) auto;gap:12px;align-items:end}.si-filter-actions{display:flex;gap:8px}.si-table-wrap{overflow:auto}.si-table{width:100%;min-width:1180px;border-collapse:collapse}.si-table th,.si-table td{padding:15px 17px;border-bottom: 1px solid var(--mc-border);text-align:left;vertical-align:top}.si-table th{font-size:12px;color: var(--mc-text-3);text-transform:uppercase;letter-spacing:.07em;background: var(--mc-card-soft)}.si-table span{display:block;color: var(--mc-text-2);font-size:12px;margin-top:3px;font-weight:700}.si-id{color:#4f83f1}.si-badge{display:inline-flex!important;border-radius:999px;padding:6px 10px;font-size:11px!important;font-weight:600!important;text-transform:uppercase;margin:0!important}.si-badge.public,.status-paid,.status-accepted{background:#e8fff7;color:#0e9f6e!important}.si-badge.private,.status-draft{background: var(--mc-card-soft);color: var(--mc-text-2)!important}.status-sent,.status-partial{background:#eaf1ff;color:#3f7cf4!important}.status-overdue,.status-cancelled{background:#ffeaf0;color:#e11d48!important}.si-empty{padding:50px;text-align:center;color: var(--mc-text-2);font-weight:600}.si-pagination{padding:16px}@media(max-width:1400px){.si-filter-form{grid-template-columns:1fr 1fr}.master-field.search{grid-column:1/-1}.si-filter-actions{grid-column:1/-1}.si-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:767px){.si-page{padding:14px}.si-hero{flex-direction:column}.si-actions,.si-actions .master-btn{width:100%}.si-filter-form,.si-stats{grid-template-columns:1fr}.si-filter-actions .master-btn{flex:1}.si-card{border-radius:18px}}
+.si-head h2 {
+    margin: 0 0 14px
+}
+
+.si-total-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--mc-border);
+    padding: 10px 0
+}
+
+.si-total-row.big {
+    font-size: 20px
+}
+
+.si-file {
+    display: flex;
+    gap: 10px;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    padding: 10px;
+    margin-bottom: 10px
+}
+
+.si-file a {
+    display: block;
+    color: var(--master-primary, #4f83f1);
+    font-weight: 600;
+    text-decoration: none;
+    margin-top: 5px
+}
 
 /* ==========================================================================
-   INVOICE DETAIL — resources/views/sales_invoices/show.blade.php
-   Detail page: stats, items table, info panel, totals, files.
+   THE LIST — the invoice's own chips
+   --------------------------------------------------------------------------
+   The row's state is two facts the ledger owns: how much has been received
+   (`SalesInvoice::receivedAmount()`) and when the money was due. The chip has to
+   answer both at a glance, and the tones below are the shared vocabulary every
+   module's status chip uses: `--tone-bg` and `--tone-fg`, re-declared for the
+   dark theme rather than forked.
    ========================================================================== */
 
-.master-page {
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-            background: var(--mc-soft);
-            min-height: calc(100vh - 70px);
-            padding: 28px;
-            color: var(--mc-text)
-        }
+.si-index .si-status,
+.si-index .si-type,
+.si-index .si-portal {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--tone-bg, var(--mc-soft));
+    color: var(--tone-fg, var(--mc-text-2));
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    white-space: nowrap
+}
 
-        .master-page * {
-            box-sizing: border-box
-        }
+.si-index .si-status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: 0 0 auto
+}
 
-        .master-hero {
-            background: linear-gradient(135deg, #4f83f1, #7b61ff);
-            border-radius: 26px;
-            padding: 24px;
-            color: #fff;
-            display: flex;
-            justify-content: space-between;
-            gap: 18px
-        }
+.si-index .si-status.status-draft { --tone-bg: rgba(107, 114, 128, .16); --tone-fg: #4b5563; }
+.si-index .si-status.status-sent { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
+.si-index .si-status.status-accepted { --tone-bg: rgba(18, 203, 183, .18); --tone-fg: #0f766e; }
+.si-index .si-status.status-partial { --tone-bg: rgba(245, 158, 11, .18); --tone-fg: #b45309; }
+.si-index .si-status.status-paid { --tone-bg: rgba(16, 185, 129, .18); --tone-fg: #047857; }
+.si-index .si-status.status-overdue { --tone-bg: rgba(225, 29, 72, .16); --tone-fg: #be123c; }
+.si-index .si-status.status-cancelled { --tone-bg: var(--mc-soft); --tone-fg: var(--mc-text-3); }
 
-        .master-eyebrow {
-            margin: 0 0 6px;
-            text-transform: uppercase;
-            letter-spacing: .13em;
-            font-size: 11px;
-            font-weight: 600;
-            opacity: .78
-        }
+.si-index .si-type.type-proforma { --tone-bg: rgba(123, 97, 255, .16); --tone-fg: #6d4bd8; }
+.si-index .si-type.type-tax { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
 
-        .master-hero h1 {
-            margin: 0;
-            font-size: 30px
-        }
+.si-index .si-portal.is-public { --tone-bg: rgba(16, 185, 129, .16); --tone-fg: #047857; }
+.si-index .si-portal.is-private { --tone-bg: var(--mc-soft); --tone-fg: var(--mc-text-3); }
 
-        .master-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center
-        }
+:root[data-theme="dark"] .si-index .si-status.status-draft { --tone-fg: #cbd5e1; }
+:root[data-theme="dark"] .si-index .si-status.status-sent { --tone-fg: #93b4ff; }
+:root[data-theme="dark"] .si-index .si-status.status-accepted { --tone-fg: #5eead4; }
+:root[data-theme="dark"] .si-index .si-status.status-partial { --tone-fg: #fcd34d; }
+:root[data-theme="dark"] .si-index .si-status.status-paid { --tone-fg: #6ee7b7; }
+:root[data-theme="dark"] .si-index .si-status.status-overdue { --tone-fg: #fda4af; }
+:root[data-theme="dark"] .si-index .si-status.status-cancelled { --tone-fg: #aab6c9; }
 
-        .master-alert {
-            border-radius: 16px;
-            padding: 13px 15px;
-            font-weight: 600
-        }
+:root[data-theme="dark"] .si-index .si-type.type-proforma { --tone-fg: #c4b5fd; }
+:root[data-theme="dark"] .si-index .si-type.type-tax { --tone-fg: #93b4ff; }
 
-        .master-alert.success {
-            background: #e8fff7;
-            color: #047857
-        }
+:root[data-theme="dark"] .si-index .si-portal.is-public { --tone-fg: #6ee7b7; }
+:root[data-theme="dark"] .si-index .si-portal.is-private { --tone-fg: #aab6c9; }
 
-        .master-stats {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 14px
-        }
+/* The invoice cell is an identifier and a line under it: the number keeps the
+   shared `.master-id` treatment, the date and the type read as the small line
+   every list uses under its first column. */
+.si-index .si-number {
+    display: block;
+    color: var(--mc-text);
+    font-weight: 700;
+    text-decoration: none
+}
 
-        .master-stats div,
-        .master-card {
-            background: var(--mc-card);
-            border: 1px solid var(--mc-border);
-            border-radius: 22px;
-            padding: 18px;
-            box-shadow: 0 14px 35px rgba(25, 42, 70, .08)
-        }
+.si-index .si-number:hover {
+    color: var(--master-primary, #4f83f1)
+}
 
-        .master-stats span {
-            display: block;
-            color: var(--mc-text-2);
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase
-        }
+.si-index .si-client {
+    display: block;
+    color: var(--mc-text);
+    font-weight: 600
+}
 
-        .master-stats strong {
-            display: block;
-            margin-top: 6px;
-            font-size: 20px
-        }
+.si-index .si-balance {
+    font-weight: 700
+}
 
-        .master-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1.4fr) minmax(320px, .6fr);
-            gap: 18px
-        }
+.si-index .si-balance.is-due {
+    color: #be123c
+}
 
-        .master-head h2 {
-            margin: 0 0 14px
-        }
+:root[data-theme="dark"] .si-index .si-balance.is-due {
+    color: #fda4af
+}
 
-        .master-table-wrap {
-            overflow: auto
-        }
+.si-index .si-balance.is-clear {
+    color: #047857
+}
 
-        .master-table {
-            width: 100%;
-            min-width: 780px;
-            border-collapse: collapse
-        }
+:root[data-theme="dark"] .si-index .si-balance.is-clear {
+    color: #6ee7b7
+}
 
-        .master-table th,
-        .master-table td {
-            padding: 12px;
-            border-bottom: 1px solid var(--mc-border);
-            text-align: left;
-            vertical-align: top
-        }
+/* The row's own money columns keep the tabular alignment the shared grid gives
+   them; nothing here re-times the table's geometry. */
+.si-index td.is-num,
+.si-index th.is-num {
+    text-align: right
+}
 
-        .master-table th {
-            font-size: 11px;
-            text-transform: uppercase;
-            color: var(--mc-text-3)
-        }
-
-        .master-table span,
-        .master-info span {
-            display: block;
-            color: var(--mc-text-2);
-            font-size: 12px;
-            margin-top: 3px
-        }
-
-        .master-info {
-            background: var(--mc-card-soft);
-            border: 1px solid var(--mc-border);
-            border-radius: 14px;
-            padding: 12px;
-            margin-bottom: 10px
-        }
-
-        .master-info strong {
-            display: block;
-            margin-top: 5px
-        }
-
-        .master-total-row {
-            display: flex;
-            justify-content: space-between;
-            border-bottom: 1px solid var(--mc-border);
-            padding: 10px 0
-        }
-
-        .master-total-row.big {
-            font-size: 20px
-        }
-
-        .master-file {
-            display: flex;
-            gap: 10px;
-            border: 1px solid var(--mc-border);
-            border-radius: 14px;
-            padding: 10px;
-            margin-bottom: 10px
-        }
-
-        .master-file a {
-            display: block;
-            color: #4f83f1;
-            font-weight: 600;
-            text-decoration: none;
-            margin-top: 5px
-        }
-
-        .master-empty {
-            text-align: center;
-            padding: 25px;
-            color: var(--mc-text-2);
-            border: 1px dashed var(--mc-border);
-            border-radius: 16px
-        }
-
-        @media(max-width:991px) {
-
-            .master-grid,
-            .master-stats {
-                grid-template-columns: 1fr 1fr
-            }
-        }
-
-        @media(max-width:767px) {
-            .master-page {
-                padding: 14px
-            }
-
-            .master-hero {
-                flex-direction: column
-            }
-
-            .master-actions,
-            .master-actions .master-btn {
-                width: 100%
-            }
-
-            .master-grid,
-            .master-stats {
-                grid-template-columns: 1fr
-            }
-        }
+.si-index .master-dropdown-toggle {
+    margin-left: auto
+}

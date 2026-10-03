@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\DateRanges;
+use App\Models\CashflowAccount;
+use App\Models\CashflowEntry;
 use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceAttachment;
+use App\Models\SavedView;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,63 +18,414 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Services\SalesInvoiceFilters;
+use App\Services\SavedViews;
 
 class SalesInvoiceController extends Controller
 {
+    /** Saved views belong to the screen that saved them. */
+    private const VIEW_MODULE = 'sales-invoices';
+
+    /** The saved view a link asked for, as the query string it was saved with. */
     public function index(Request $request): View
     {
-        $search = $request->query('search');
-        $type = $request->query('type', 'all');
-        $status = $request->query('status', 'all');
-        $clientId = $request->query('client_id', 'all');
-        $projectId = $request->query('project_id', 'all');
+        // Jumping back into a saved view re-runs its filters.
+        if ($savedQuery = $this->resolveSavedView($request)) {
+            return redirect()->route('sales-invoices.index', $savedQuery);
+        }
 
-        $with = ['items', 'creator'];
+        $filters = app(SalesInvoiceFilters::class)->fromRequest($request);
+        $query = $this->filteredQuery($filters);
+
+        /* One aggregate for the figures and one for the page's own totals. The
+           money rule is the model's (`RECEIVED_SQL`), so the tile, the chip, the
+           row and the CSV all count the same money. */
+        $figures = (clone $query)->reorder()->selectRaw(
+            'coalesce(sum(sales_invoices.total_amount), 0) as invoiced'
+            .', coalesce(sum('.SalesInvoice::RECEIVED_SQL.'), 0) as received'
+            .', coalesce(sum(case when '.SalesInvoice::RECEIVED_SQL.' < sales_invoices.total_amount - 0.01'
+                ." and sales_invoices.status not in ('draft', 'cancelled') then sales_invoices.total_amount - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
+            .', coalesce(sum(case when sales_invoices.due_date is not null and sales_invoices.due_date < ?'
+                ." and sales_invoices.status not in ('draft', 'cancelled')"
+                .' and '.SalesInvoice::RECEIVED_SQL.' < sales_invoices.total_amount - 0.01'
+                .' then sales_invoices.total_amount - '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as overdue'
+        )
+            ->addBinding([now()->toDateString()], 'select')
+            ->first();
+
+        $stats = [
+            'invoiced' => (float) ($figures->invoiced ?? 0),
+            'received' => (float) ($figures->received ?? 0),
+            'outstanding' => (float) ($figures->outstanding ?? 0),
+            'overdue' => (float) ($figures->overdue ?? 0),
+            /* How many are still drafts — across the module, not the filtered
+               set, because the chip that asks for drafts is the one that makes
+               them the filtered set. */
+            'drafts' => SalesInvoice::query()->where('status', 'draft')->count(),
+        ];
+
+        $invoices = $query
+            ->withReceived()
+            ->withCount('payments')
+            ->latest('invoice_date')
+            ->latest('id')
+            ->paginate(25)
+            ->withQueryString();
+
+        $pageTotals = [
+            'invoiced' => (float) (clone $query)->reorder()->sum('total_amount'),
+            'received' => (float) ((clone $query)->reorder()
+                ->selectRaw('coalesce(sum('.SalesInvoice::RECEIVED_SQL.'), 0) as received')
+                ->first()?->received ?? 0),
+        ];
+        $pageTotals['outstanding'] = round($pageTotals['invoiced'] - $pageTotals['received'], 2);
+
+        return view('sales_invoices.index', array_merge($this->sharedData(), [
+            'invoices' => $invoices,
+            'stats' => $stats,
+            'pageTotals' => $pageTotals,
+            'chipCounts' => $this->chipCounts($filters),
+            'appliedChips' => app(SalesInvoiceFilters::class)->applied($filters),
+            'dateRanges' => DateRanges::presets(),
+            'dateRangeLabels' => DateRanges::LABELS,
+            'activeRange' => DateRanges::keyOf($filters['dateFrom'] ?? null, $filters['dateTo'] ?? null),
+            'savedViews' => app(SavedViews::class)->forUser(Auth::id(), self::VIEW_MODULE),
+            'ageingBuckets' => SalesInvoice::ageingBuckets(),
+            'paymentLabels' => SalesInvoiceFilters::PAYMENT_LABELS,
+            'accounts' => $this->accounts(),
+            ...$filters,
+        ]));
+    }
+
+    /**
+     * The rows the filters ask for.
+     *
+     * One query builder, used by the list, the figures and the CSV — a file
+     * exported from a screen has to contain the rows that screen is showing.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function filteredQuery(array $filters)
+    {
+        $with = ['items'];
         if ($this->clientAvailable()) { $with[] = 'client'; }
         if ($this->projectAvailable()) { $with[] = 'project'; }
 
-        $invoices = SalesInvoice::query()
-            ->with($with)
-            ->search($search)
-            ->when($type !== 'all', function ($query) use ($type) { $query->where('invoice_type', $type); })
-            ->when($status !== 'all', function ($query) use ($status) { $query->where('status', $status); })
-            ->when($clientId !== 'all', function ($query) use ($clientId) { $query->where('client_id', $clientId); })
-            ->when($projectId !== 'all', function ($query) use ($projectId) { $query->where('project_id', $projectId); })
-            ->latest('id')
-            ->paginate(12)
-            ->withQueryString();
+        return app(SalesInvoiceFilters::class)->apply(SalesInvoice::query()->with($with), $filters);
+    }
 
-        $stats = [
-            'total' => SalesInvoice::where('status', '!=', 'draft')->count(),
-            'proforma' => SalesInvoice::where('status', '!=', 'draft')->where('invoice_type', 'proforma')->count(),
-            'tax' => SalesInvoice::where('status', '!=', 'draft')->where('invoice_type', 'tax')->count(),
-            'sent' => (float) SalesInvoice::where('status', '!=', 'draft')
-                ->with('payments')
-                ->get()
-                ->sum(function ($invoice) {
-                    return (float) $invoice->total_amount;
-                }),
-            'paid' => (float) SalesInvoice::where('status', '!=', 'draft')
-                ->with('payments')
-                ->get()
-                ->sum(function ($invoice) {
-                    $paidAmount = $invoice->payments->sum('credit_amount')
-                        - $invoice->payments->sum('debit_amount');
-            
-                    return (float) $paidAmount;
-                }),
-            'outstanding' => (float) SalesInvoice::where('status', '!=', 'draft')
-                ->with('payments')
-                ->get()
-                ->sum(function ($invoice) {
-                    $paidAmount = $invoice->payments->sum('credit_amount')
-                        - $invoice->payments->sum('debit_amount');
-            
-                    return (float) $invoice->total_amount - (float) $paidAmount;
-                }),
+    /**
+     * The list as the accountant's spreadsheet.
+     *
+     * Raw numbers (two decimals, no symbols, no grouping), a UTF-8 byte-order
+     * mark so Excel reads the rupee sign, and a header that says what the file
+     * is and which filters were on when it was taken — a file that leaves the
+     * app has to explain itself a year later.
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $filters = app(SalesInvoiceFilters::class)->fromRequest($request);
+        $rows = $this->filteredQuery($filters)->withReceived()->latest('invoice_date')->latest('id')->get();
+        $labels = app(SalesInvoiceFilters::class)->labels($filters);
+        $applied = app(SalesInvoiceFilters::class)->applied($filters);
+
+        return response()->streamDownload(function () use ($rows, $applied, $labels) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+
+            $row = fn (array $cells) => fputcsv($out, $cells);
+
+            $row(['Sales invoices']);
+            $row(['Taken', now()->format('d M Y H:i')]);
+            $row(['Rows', $rows->count()]);
+            $row(['Filtered by', $applied === [] ? 'Everything' : implode(' · ', array_map(
+                fn ($chip) => $chip['label'].': '.($labels[$chip['key']] ?? $chip['value']),
+                $applied
+            ))]);
+            $row([]);
+
+            $row([
+                'Invoice', 'Type', 'Date', 'Due', 'Client', 'GSTIN', 'Project', 'Currency',
+                'Total', 'Received', 'Balance', 'State', 'Days late', 'Portal',
+            ]);
+
+            $money = fn ($value) => number_format((float) $value, 2, '.', '');
+
+            foreach ($rows as $invoice) {
+                $row([
+                    $invoice->invoice_number,
+                    $invoice->typeLabel(),
+                    optional($invoice->invoice_date)->format('Y-m-d'),
+                    optional($invoice->due_date)->format('Y-m-d'),
+                    $invoice->client_company_name,
+                    $invoice->client_gstin,
+                    $invoice->project?->project_number,
+                    $invoice->currency,
+                    $money($invoice->total_amount),
+                    $money($invoice->receivedAmount()),
+                    $money($invoice->balanceDue()),
+                    $invoice->stateLabel(),
+                    $invoice->daysOverdue() ?: '',
+                    $invoice->show_client_portal ? 'Visible' : 'Hidden',
+                ]);
+            }
+        }, 'sales-invoices-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /**
+     * Record a receipt against the invoice.
+     *
+     * The money lives in the cashflow ledger — that is where the bank line is
+     * reconciled and where the client's statement is built from — so this writes
+     * an entry linked to the invoice (`sales_invoice_id`) instead of a second,
+     * private number on the invoice itself. The invoice's balance is then what
+     * the ledger says, here and on the client's statement.
+     */
+    public function recordPayment(Request $request, SalesInvoice $salesInvoice): RedirectResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'entry_date' => ['required', 'date'],
+            'account_id' => ['nullable', 'integer'],
+            'payment_mode' => ['nullable', 'string', 'max:40'],
+            'bank_reference_number' => ['nullable', 'string', 'max:191'],
+            'particular' => ['nullable', 'string', 'max:191'],
+        ]);
+
+        $entry = new CashflowEntry();
+        $entry->entry_date = $data['entry_date'];
+        $entry->particular = $data['particular'] ?: 'Receipt against '.$salesInvoice->invoice_number;
+        $entry->transaction_type = 'credit';
+        $entry->credit_amount = round((float) $data['amount'], 2);
+        $entry->debit_amount = 0;
+        $entry->currency = in_array($salesInvoice->currency, array_keys(CashflowEntry::currencyOptions()), true)
+            ? $salesInvoice->currency
+            : 'INR';
+        $entry->account_id = $data['account_id'] ?? null;
+        $entry->payment_mode = CashflowEntry::normalisePaymentMode($data['payment_mode'] ?? null);
+        $entry->bank_reference_number = $data['bank_reference_number'] ?? null;
+        $entry->invoice_bill_number = $salesInvoice->invoice_number;
+        $entry->client_id = $salesInvoice->client_id;
+        $entry->related_party_type = 'client';
+        $entry->related_party_name = $salesInvoice->client_company_name;
+        $entry->sales_invoice_id = $salesInvoice->id;
+        $entry->accounting_status = 'pending';
+        $entry->created_by = Auth::id();
+
+        if (Schema::hasColumn('cashflow_entries', 'project_id')) {
+            $entry->project_id = $salesInvoice->project_id;
+        }
+
+        $entry->save();
+
+        $this->refreshInvoiceMoney($salesInvoice);
+
+        return back()->with('success', 'Receipt of '.number_format($entry->credit_amount, 2)
+            .' recorded against '.$salesInvoice->invoice_number.'.');
+    }
+
+    /** The list's own "make it visible / hide it" switch. */
+    public function togglePortal(SalesInvoice $salesInvoice): RedirectResponse
+    {
+        $salesInvoice->update(['show_client_portal' => ! $salesInvoice->show_client_portal]);
+
+        return back()->with('success', $salesInvoice->show_client_portal
+            ? $salesInvoice->invoice_number.' is visible in the client portal.'
+            : $salesInvoice->invoice_number.' is hidden from the client portal.');
+    }
+
+    /**
+     * A copy of the invoice, as a fresh draft.
+     *
+     * Same client, same items, same terms — a new number and no money against
+     * it. This is how a repeating order is billed, and how a wrong invoice is
+     * re-issued without retyping eight line items.
+     */
+    public function duplicate(SalesInvoice $salesInvoice): RedirectResponse
+    {
+        $copy = $this->copyInvoice($salesInvoice, [
+            'invoice_number' => $this->makeInvoiceNumber($salesInvoice->invoice_type),
+            'status' => 'draft',
+            'amount_paid' => 0,
+            'balance_amount' => (float) $salesInvoice->total_amount,
+            'public_token' => null,
+            'sent_at' => null,
+            'accepted_at' => null,
+            'cancelled_at' => null,
+            'notes' => trim('Copy of '.$salesInvoice->invoice_number.'. '.($salesInvoice->notes ?? '')),
+        ]);
+
+        return redirect()->route('sales-invoices.edit', $copy)
+            ->with('success', $copy->invoice_number.' created as a draft copy of '.$salesInvoice->invoice_number.'.');
+    }
+
+    /**
+     * A proforma becomes a tax invoice.
+     *
+     * The office raises a proforma to ask for the money and a tax invoice once
+     * it is agreed; making the second one by hand is where the two start
+     * disagreeing about quantities. The proforma is left alone (it is the
+     * document the client was shown) and the tax invoice opens for review.
+     */
+    public function convert(Request $request, SalesInvoice $salesInvoice): RedirectResponse
+    {
+        if ($salesInvoice->invoice_type === 'tax') {
+            return back()->with('error', $salesInvoice->invoice_number.' is already a tax invoice.');
+        }
+
+        $tax = $this->copyInvoice($salesInvoice, [
+            'invoice_type' => 'tax',
+            'invoice_number' => $this->makeInvoiceNumber('tax'),
+            'status' => 'draft',
+            'amount_paid' => 0,
+            'balance_amount' => (float) $salesInvoice->total_amount,
+            'public_token' => null,
+            'sent_at' => null,
+            'accepted_at' => null,
+            'cancelled_at' => null,
+            'notes' => trim('Converted from '.$salesInvoice->invoice_number.'. '.($salesInvoice->notes ?? '')),
+        ]);
+
+        return redirect()->route('sales-invoices.edit', $tax)
+            ->with('success', $tax->invoice_number.' created from proforma '.$salesInvoice->invoice_number.'.');
+    }
+
+    /** Everything but the money and the documents, carried onto a new invoice. */
+    private function copyInvoice(SalesInvoice $source, array $overrides): SalesInvoice
+    {
+        $copy = $source->replicate(['created_at', 'updated_at']);
+        $copy->fill($overrides);
+        $copy->created_by = Auth::id();
+        $copy->save();
+
+        foreach ($source->items as $item) {
+            $line = $item->replicate(['created_at', 'updated_at']);
+            $line->sales_invoice_id = $copy->id;
+            $line->save();
+        }
+
+        return $copy;
+    }
+
+    /** Keep the stored balance in step with the money rule. */
+    private function refreshInvoiceMoney(SalesInvoice $invoice): void
+    {
+        $invoice->unsetRelation('payments')->refresh();
+
+        $balance = $invoice->balanceDue();
+
+        if (abs((float) $invoice->balance_amount - $balance) > 0.001) {
+            $invoice->forceFill(['balance_amount' => $balance])->saveQuietly();
+        }
+    }
+
+    public function storeSavedView(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:60'],
+            'is_shared' => ['nullable', 'boolean'],
+        ]);
+
+        app(SavedViews::class)->save(
+            Auth::id(),
+            self::VIEW_MODULE,
+            $data['name'],
+            $request->query(),
+            $request->boolean('is_shared')
+        );
+
+        return back()->with('success', 'View "'.$data['name'].'" saved.');
+    }
+
+    public function destroySavedView(Request $request, SavedView $savedView): RedirectResponse
+    {
+        abort_unless((int) $savedView->user_id === (int) Auth::id(), 403);
+
+        app(SavedViews::class)->delete(Auth::id(), $savedView->id);
+
+        return back()->with('success', 'Saved view removed.');
+    }
+
+    /**
+     * When the request carries ?saved_view=ID, the saved query is what should be
+     * rendered — this turns it back into the URL the list already speaks.
+     *
+     * @return array<string, string>
+     */
+    private function resolveSavedView(Request $request): array
+    {
+        $id = (int) $request->query('saved_view', 0);
+
+        if (! $id) {
+            return [];
+        }
+
+        $view = SavedView::query()
+            ->where('module', self::VIEW_MODULE)
+            ->where(function ($query) {
+                $query->where('user_id', Auth::id())->orWhere('is_shared', true);
+            })
+            ->find($id);
+
+        return $view ? app(SavedViews::class)->queryFor($view) : [];
+    }
+
+    /**
+     * How many rows each chip would show — asked of the same query the rows
+     * come from, with that chip's own dimension reset.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<string, int>
+     */
+    private function chipCounts(array $filters): array
+    {
+        $base = array_merge($filters, [
+            'type' => 'all',
+            'status' => 'all',
+            'payment' => 'all',
+            'ageing' => 'all',
+            'dateFrom' => null,
+            'dateTo' => null,
+        ]);
+
+        $count = fn (array $overrides) => $this->filteredQuery(array_merge($base, $overrides))->count();
+
+        $counts = [
+            'all' => $count([]),
+            'proforma' => $count(['type' => 'proforma']),
+            'tax' => $count(['type' => 'tax']),
+            'draft' => $count(['status' => 'draft']),
+            'unpaid' => $count(['payment' => 'unpaid']),
+            'partial' => $count(['payment' => 'partial']),
+            'paid' => $count(['payment' => 'paid']),
+            'overdue' => $count(['ageing' => 'overdue']),
         ];
 
-        return view('sales_invoices.index', array_merge($this->sharedData(), compact('invoices', 'stats', 'search', 'type', 'status', 'clientId', 'projectId')));
+        foreach (array_keys(SalesInvoice::ageingBuckets()) as $bucket) {
+            $counts['ageing_'.$bucket] = $count(['ageing' => $bucket]);
+        }
+
+        /* The period chips: the number on "Last month" is the number of rows that
+           chip would show, in the month the chip is labelled with. */
+        foreach (DateRanges::presets() as $key => $range) {
+            $counts[$key] = $count([
+                'dateFrom' => $range['from'],
+                'dateTo' => $range['to'],
+            ]);
+        }
+
+        return $counts;
+    }
+
+    /** The accounts a receipt can land in. */
+    private function accounts()
+    {
+        if (! Schema::hasTable('cashflow_accounts')) {
+            return collect();
+        }
+
+        return CashflowAccount::query()->orderBy('account_name')->get();
     }
 
     public function create(Request $request): View
@@ -147,7 +502,12 @@ class SalesInvoiceController extends Controller
         if ($this->clientAvailable()) { $salesInvoice->load('client'); }
         if ($this->projectAvailable()) { $salesInvoice->load('project'); }
 
-        return view('sales_invoices.show', ['invoice' => $salesInvoice]);
+        /* `accounts` is not decoration: the record page carries the receipt
+           dialog, and a dialog whose account list is missing is a 500. */
+        return view('sales_invoices.show', [
+            'invoice' => $salesInvoice,
+            'accounts' => $this->accounts(),
+        ]);
     }
 
     public function edit(SalesInvoice $salesInvoice): View
@@ -415,7 +775,11 @@ class SalesInvoiceController extends Controller
 
         $charges = (float) $invoice->freight_amount + (float) $invoice->packing_amount + (float) $invoice->other_charges;
         $total = round($taxableAfterInvoiceDiscount + $cgstTotal + $sgstTotal + $igstTotal + $charges + (float) $invoice->round_off, 2);
-        $balance = max($total - (float) $invoice->amount_paid, 0);
+        /* The balance is the money rule's: what the invoice says was received
+           before it was recorded in the ledger, plus every receipt filed against
+           it. `PartyStatement` prints this column on a client's statement, so it
+           has to agree with the list the client is chased from. */
+        $balance = max($total - round((float) $invoice->amount_paid + $invoice->ledgerReceived(), 2), 0);
 
         $invoice->update([
             'subtotal' => round($subtotal, 2),
@@ -637,11 +1001,6 @@ class SalesInvoiceController extends Controller
             'gstTypeOptions' => SalesInvoice::gstTypeOptions(),
             'sellerDefaults' => SalesInvoice::defaultSellerDetails(),
             'defaultTerms' => SalesInvoice::defaultTerms(),
-            'routes' => [
-                'clients' => Route::has('clients.index') ? route('clients.index') : '#',
-                'projects' => Route::has('projects.index') ? route('projects.index') : '#',
-                'products' => Route::has('products.index') ? route('products.index') : '#',
-            ],
         ];
     }
 
