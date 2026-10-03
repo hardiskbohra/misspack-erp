@@ -185,6 +185,11 @@ Route::middleware('auth')->group(function () {
         /* The list's own vocabulary routes come first: `/sales-invoices/export`
            read by the resource route below is an invoice whose id is "export". */
         Route::get('/sales-invoices/export', [SalesInvoiceController::class, 'export'])->name('sales-invoices.export');
+        /* the month-end paperwork: the same filters, grouped by HSN and rate */
+        Route::get('/sales-invoices/gst-export', [SalesInvoiceController::class, 'gstExport'])->name('sales-invoices.gstExport');
+        /* one action, many rows — the row menu's own actions, in a loop */
+        Route::post('/sales-invoices/bulk', [SalesInvoiceController::class, 'bulk'])->name('sales-invoices.bulk');
+        Route::post('/sales-invoices/{salesInvoice}/reminders', [SalesInvoiceController::class, 'logReminder'])->name('sales-invoices.reminders.store');
         Route::post('/sales-invoices/saved-views', [SalesInvoiceController::class, 'storeSavedView'])->name('sales-invoices.saved-views.store');
         Route::delete('/sales-invoices/saved-views/{savedView}', [SalesInvoiceController::class, 'destroySavedView'])->name('sales-invoices.saved-views.destroy');
         Route::get('/sales-invoices/{salesInvoice}/print', [SalesInvoiceController::class, 'print'])->name('sales-invoices.print');

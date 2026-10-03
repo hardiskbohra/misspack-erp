@@ -138,6 +138,16 @@
                     href="{{ route('sales-invoices.index', $chipBase->all() + ['ageing' => 'overdue']) }}">
                     Overdue <span class="master-list-chip-count">{{ $chipCounts['overdue'] }}</span>
                 </a>
+                {{-- Who to chase today: still owed, and either due this week or
+                     a week without a word. Each chip carries the count it would
+                     show, asked the same way the rows are. --}}
+                @foreach ($chaseLabels as $chaseKey => $chaseLabel)
+                    <a class="master-list-chip {{ $chase === $chaseKey ? 'is-active' : '' }}"
+                        href="{{ route('sales-invoices.index', $chipBase->all() + ['chase' => $chaseKey]) }}">
+                        {{ $chaseLabel }} <span class="master-list-chip-count">{{ $chipCounts['chase_'.$chaseKey] ?? 0 }}</span>
+                    </a>
+                @endforeach
+
                 {{-- The periods read left to right, nearest first — the same four
                      ranges every list gets from App\Helpers\DateRanges. --}}
                 @foreach ($dateRanges as $rangeKey => $range)
@@ -214,6 +224,12 @@
                         <option value="{{ $key }}" @selected($payment === $key)>{{ $label }}</option>
                     @endforeach
                 </select>
+                <select class="master-select" name="chase" aria-label="Filter by what to chase">
+                    <option value="all">Nothing to chase</option>
+                    @foreach($chaseLabels as $chaseKey => $chaseLabel)
+                        <option value="{{ $chaseKey }}" @selected($chase === $chaseKey)>{{ $chaseLabel }}</option>
+                    @endforeach
+                </select>
                 <select class="master-select" name="ageing" aria-label="Filter by how late">
                     <option value="all">Any age</option>
                     <option value="overdue" @selected($ageing === 'overdue')>Late (all of it)</option>
@@ -262,8 +278,37 @@
             </p>
 
             <div class="master-list-toolbar-actions">
+                {{-- One action, many rows. The checkboxes in the table point at
+                     this form by id (`form="bulkForm"`): a form wrapping the
+                     table would nest the row menus' own forms inside it, and a
+                     nested form never submits. --}}
+                <form id="bulkForm" method="POST" action="{{ route('sales-invoices.bulk') }}"
+                    class="master-list-bulk" data-bulk-bar hidden>
+                    @csrf
+                    <span class="master-list-bulk-count" data-bulk-count>0 selected</span>
+                    <select class="master-select" name="action" aria-label="Action for the selected invoices">
+                        @foreach ($bulkActions as $actionKey => $actionLabel)
+                            <option value="{{ $actionKey }}">{{ $actionLabel }}</option>
+                        @endforeach
+                    </select>
+                    <button class="master-btn master-btn-primary master-btn-sm" type="submit">Apply</button>
+                    <a class="master-btn master-btn-soft master-btn-sm" data-bulk-export
+                        href="{{ route('sales-invoices.export') }}">
+                        <i class="fas fa-file-csv" aria-hidden="true"></i> Export selected
+                    </a>
+                    <a class="master-btn master-btn-soft master-btn-sm" data-bulk-gst
+                        href="{{ route('sales-invoices.gstExport') }}">
+                        <i class="fas fa-percent" aria-hidden="true"></i> GST summary
+                    </a>
+                    <button class="master-btn master-btn-light master-btn-sm" type="button" data-bulk-clear>Clear</button>
+                </form>
+
                 <a class="master-btn master-btn-ghost master-btn-sm" href="{{ route('sales-invoices.export', request()->query()) }}">
                     <i class="fas fa-file-csv" aria-hidden="true"></i> Export CSV
+                </a>
+                <a class="master-btn master-btn-ghost master-btn-sm desktop-only"
+                    href="{{ route('sales-invoices.gstExport', request()->query()) }}">
+                    <i class="fas fa-percent" aria-hidden="true"></i> GST summary
                 </a>
 
                 <div class="master-list-density desktop-only" role="group" aria-label="Row density">
@@ -279,6 +324,9 @@
             <table class="master-table">
                 <thead>
                     <tr>
+                        <th scope="col" class="master-list-pick">
+                            <input type="checkbox" data-bulk-all aria-label="Select every invoice on this page">
+                        </th>
                         <th scope="col">Invoice</th>
                         <th scope="col">Client</th>
                         <th scope="col">Project</th>
@@ -302,6 +350,10 @@
                             $daysLate = $invoice->daysOverdue();
                         @endphp
                         <tr data-href="{{ route('sales-invoices.show', $invoice) }}">
+                            <td data-label="Pick" class="master-list-pick">
+                                <input type="checkbox" name="ids[]" value="{{ $invoice->id }}" form="bulkForm"
+                                    data-bulk-pick aria-label="Select {{ $invoice->invoice_number }}">
+                            </td>
                             <td data-label="Invoice">
                                 <a class="si-number" href="{{ route('sales-invoices.show', $invoice) }}">{{ $invoice->invoice_number }}</a>
                                 <span class="master-sub">
@@ -381,6 +433,15 @@
                                                     <i class="fas fa-indian-rupee-sign" aria-hidden="true"></i> Record payment
                                                 </button>
                                             @endif
+                                            <button type="button" data-open-reminder
+                                                data-invoice-id="{{ $invoice->id }}"
+                                                data-invoice-number="{{ $invoice->invoice_number }}"
+                                                data-invoice-message="{{ $invoice->reminderMessage() }}">
+                                                <i class="fas fa-bell" aria-hidden="true"></i> Log reminder
+                                            </button>
+                                            <button type="button" data-copy-text="{{ $invoice->reminderMessage() }}">
+                                                <i class="fas fa-comment-dots" aria-hidden="true"></i> Copy reminder text
+                                            </button>
                                             <a href="{{ route('sales-invoices.print', $invoice) }}" target="_blank">
                                                 <i class="fas fa-print" aria-hidden="true"></i> Print
                                             </a>
@@ -459,7 +520,7 @@
                 @if ($invoices->isNotEmpty())
                     <tfoot>
                         <tr class="master-list-total">
-                            <td colspan="3">
+                            <td colspan="4">
                                 <strong>Total — {{ $invoices->count() }} {{ \Illuminate\Support\Str::plural('invoice', $invoices->count()) }} shown</strong>
                                 <span class="master-sub">Filtered totals cover every page</span>
                             </td>
@@ -486,6 +547,7 @@
     </div>
 
     @include('sales_invoices.partials.payment-modal')
+    @include('sales_invoices.partials.reminder-modal')
 </div>
 @endsection
 

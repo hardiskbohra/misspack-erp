@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\CommonHelper;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -81,6 +82,14 @@ class SalesInvoice extends Model
     public function attachments()
     {
         return $this->hasMany(SalesInvoiceAttachment::class)->latest('id');
+    }
+
+    /** Every chase, newest first — the record page's own timeline. */
+    public function reminders()
+    {
+        return $this->hasMany(SalesInvoiceReminder::class)
+            ->orderByDesc('reminded_at')
+            ->orderByDesc('id');
     }
 
     public function publicAttachments()
@@ -288,6 +297,108 @@ class SalesInvoice extends Model
         return $query
             ->withSum('payments as received_credit', 'credit_amount')
             ->withSum('payments as received_debit', 'debit_amount');
+    }
+
+    /**
+     * The chase columns for a page of invoices, in two subqueries.
+     *
+     * "How many times" and "when last" are asked of the log, never stored on the
+     * invoice: a stored counter drifts the first time a log row is deleted, and
+     * the office would then be chased about the chasing.
+     */
+    public function scopeWithReminders(Builder $query): Builder
+    {
+        return $query
+            ->withCount('reminders')
+            ->withMax('reminders as last_reminded_at', 'reminded_at');
+    }
+
+    /** When this invoice was last chased (the row's own attribute when loaded). */
+    public function lastRemindedAt(): ?CarbonInterface
+    {
+        if (array_key_exists('last_reminded_at', $this->attributes)) {
+            return $this->attributes['last_reminded_at']
+                ? Carbon::parse($this->attributes['last_reminded_at'])
+                : null;
+        }
+
+        if ($this->relationLoaded('reminders')) {
+            return $this->reminders->first()?->reminded_at;
+        }
+
+        if (! $this->exists) {
+            return null;
+        }
+
+        $last = $this->reminders()->max('reminded_at');
+
+        return $last ? Carbon::parse($last) : null;
+    }
+
+    /** How many times the office has asked for this money. */
+    public function reminderCount(): int
+    {
+        if (array_key_exists('reminders_count', $this->attributes)) {
+            return (int) $this->attributes['reminders_count'];
+        }
+
+        if ($this->relationLoaded('reminders')) {
+            return $this->reminders->count();
+        }
+
+        return $this->exists ? $this->reminders()->count() : 0;
+    }
+
+    /**
+     * The text the office sends when it chases this invoice.
+     *
+     * Written by the model, not by a screen: the list, the record page and the
+     * reminder dialog all send the same words, and the amount in them is the same
+     * `balanceDue()` every other surface prints.
+     *
+     * The link is only in the message when the client can open it — the public
+     * page exists only while the invoice is on the portal, and a reminder that
+     * links to a 404 is worse than a reminder with no link at all.
+     */
+    public function reminderMessage(?CarbonInterface $today = null): string
+    {
+        $today = $today ?: Carbon::today();
+        $balance = $this->balanceDue();
+        /* one formatter for money in either currency: rupees keep the symbol and
+           lakh grouping, anything else keeps its own code (never a ₹ in front of a
+           dollar figure). */
+        $currency = fn (float $amount) => CommonHelper::amount($amount, $this->currency);
+
+        $lines = ['Dear '.($this->client_contact_name ?: $this->client_company_name ?: 'Sir/Madam').',', ''];
+
+        $lines[] = 'Invoice '.$this->invoice_number
+            .($this->invoice_date ? ' dated '.$this->invoice_date->format('d M Y') : '')
+            .' for '.$currency((float) $this->total_amount).'.';
+
+        if ($balance > 0.01) {
+            $lines[] = $currency($balance).' is still outstanding'
+                .($this->due_date
+                    ? ($this->isOverdue($today)
+                        ? ', '.$this->daysOverdue($today).' days past the due date of '.$this->due_date->format('d M Y')
+                        : ', due on '.$this->due_date->format('d M Y'))
+                    : '')
+                .'.';
+        } else {
+            $lines[] = 'This invoice is fully settled — thank you.';
+        }
+
+        if ($this->show_client_portal && $this->public_token) {
+            $lines[] = '';
+            $lines[] = 'View the invoice here: '.route('sales-invoices.public', $this->public_token);
+        }
+
+        $lines[] = '';
+        $lines[] = trim(implode(' · ', array_filter([
+            $this->seller_company_name,
+            $this->seller_mobile,
+        ]))) ?: 'Thank you.';
+
+        return implode("\n", $lines);
     }
 
     public function scopeSearch(Builder $query, ?string $search): Builder

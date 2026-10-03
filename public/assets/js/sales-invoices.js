@@ -268,35 +268,159 @@
         });
     });
 
-    /* ------------------------------------------------------ the client link
-       The public page is the client's copy of the invoice; the office sends it
-       by WhatsApp far more often than by email, so the link goes to the
-       clipboard and the button says so for a moment. */
+    /* ----------------------------------------------------------- clipboard
+       The office sends an invoice by WhatsApp far more often than by email, so
+       the link, and the words that ask for the money, go to the clipboard. Two
+       sources, one helper: the button may carry the text (`data-copy-text`), or
+       name the field whose *current* value to copy (`data-copy-target`) — the
+       reminder dialog's message, which the office may have edited a moment ago.
+       Neither works on plain HTTP, so both fall back to selecting the text. */
+    function copyText(text, button) {
+        var label = button.innerHTML;
+        var done = function () {
+            button.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Copied';
+
+            window.setTimeout(function () {
+                button.innerHTML = label;
+            }, 1600);
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () {
+                window.prompt('Copy', text);
+            });
+
+            return;
+        }
+
+        window.prompt('Copy', text);
+    }
+
     onReady(function () {
-        document.querySelectorAll('[data-copy-link]').forEach(function (button) {
+        document.querySelectorAll('[data-copy-link], [data-copy-text]').forEach(function (button) {
             button.addEventListener('click', function () {
-                var link = button.getAttribute('data-copy-link');
-                var label = button.innerHTML;
-
-                var done = function () {
-                    button.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Link copied';
-
-                    window.setTimeout(function () {
-                        button.innerHTML = label;
-                    }, 1600);
-                };
-
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(link).then(done, function () {
-                        window.prompt('Copy this link', link);
-                    });
-
-                    return;
-                }
-
-                window.prompt('Copy this link', link);
+                copyText(button.getAttribute('data-copy-link') || button.getAttribute('data-copy-text') || '', button);
             });
         });
+
+        document.querySelectorAll('[data-copy-target]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var field = document.getElementById(button.getAttribute('data-copy-target'));
+                if (!field) return;
+
+                /* a field the office is editing is copied as it stands */
+                copyText(field.value || field.textContent || '', button);
+            });
+        });
+    });
+
+    /* --------------------------------------------------- the reminder dialog
+       One dialog for the page, exactly like the receipt dialog beside it: the
+       row says which invoice, the words come from the model, and the office may
+       edit them before sending — the copy button then copies what they wrote. */
+    onReady(function () {
+        var modal = document.getElementById('reminderModal');
+        var form = modal ? modal.querySelector('[data-reminder-form]') : null;
+        var triggers = document.querySelectorAll('[data-open-reminder]');
+
+        if (!modal || !form || !triggers.length) return;
+
+        var template = form.getAttribute('data-action-template') || '';
+        var subtitle = modal.querySelector('[data-reminder-subtitle]');
+        var message = modal.querySelector('[data-reminder-message]');
+
+        triggers.forEach(function (trigger) {
+            trigger.addEventListener('click', function () {
+                var id = trigger.getAttribute('data-invoice-id');
+                var number = trigger.getAttribute('data-invoice-number') || 'this invoice';
+
+                form.setAttribute('action', template.replace('__INVOICE__', id));
+
+                if (subtitle) {
+                    subtitle.textContent = 'Against ' + number + ' — what was asked, and when';
+                }
+
+                if (message) {
+                    message.value = trigger.getAttribute('data-invoice-message') || '';
+                }
+
+                if (window.MasterModal) {
+                    window.MasterModal.open(modal);
+                }
+            });
+        });
+    });
+
+    /* ---------------------------------------------------------- the sweep
+       Ticking rows is the month-end move: mark a batch sent, push it to the
+       portal, log one reminder for a dozen clients, or take the selection to the
+       CSV and the GST summary. The checkboxes are attached to the bulk form by
+       id, so the bar can live in the toolbar while the boxes live in the table. */
+    onReady(function () {
+        var form = document.getElementById('bulkForm');
+        var bar = document.querySelector('[data-bulk-bar]');
+        var picks = document.querySelectorAll('[data-bulk-pick]');
+
+        if (!form || !bar || !picks.length) return;
+
+        var count = form.querySelector('[data-bulk-count]');
+        var all = document.querySelector('[data-bulk-all]');
+        var exportLink = form.querySelector('[data-bulk-export]');
+        var gstLink = form.querySelector('[data-bulk-gst]');
+        var clear = form.querySelector('[data-bulk-clear]');
+
+        var selected = function () {
+            return Array.prototype.filter.call(picks, function (pick) { return pick.checked; });
+        };
+
+        var withIds = function (link, ids) {
+            if (!link) return;
+
+            var url = link.getAttribute('href').split('?')[0];
+            var query = ids.map(function (id) { return 'ids[]=' + encodeURIComponent(id); });
+
+            link.setAttribute('href', query.length ? url + '?' + query.join('&') : url);
+        };
+
+        var sync = function () {
+            var ids = selected().map(function (pick) { return pick.value; });
+
+            bar.hidden = ids.length === 0;
+
+            if (count) {
+                count.textContent = ids.length === 1 ? '1 selected' : ids.length + ' selected';
+            }
+
+            /* "export the selected rows" is the screen's own exporter, narrowed */
+            withIds(exportLink, ids);
+            withIds(gstLink, ids);
+
+            if (all) {
+                all.checked = ids.length > 0 && ids.length === picks.length;
+                all.indeterminate = ids.length > 0 && ids.length < picks.length;
+            }
+        };
+
+        picks.forEach(function (pick) {
+            pick.addEventListener('change', sync);
+        });
+
+        if (all) {
+            all.addEventListener('change', function () {
+                picks.forEach(function (pick) { pick.checked = all.checked; });
+                sync();
+            });
+        }
+
+        if (clear) {
+            clear.addEventListener('click', function () {
+                picks.forEach(function (pick) { pick.checked = false; });
+                if (all) all.checked = false;
+                sync();
+            });
+        }
+
+        sync();
     });
 
     /* A failed save comes back with the input kept and the errors on the bag:

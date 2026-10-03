@@ -108,6 +108,65 @@ One dialog serves the whole listing. The row that opens it says which invoice it
 for; the form action is filled in from the `data-action-template` the route rendered
 (`__INVOICE__`), and the amount opens prefilled with what is still owed.
 
+## Chasing the money
+
+A bill that has been sent is not money in the bank, and the office's real work is
+the second half of the month: ringing, WhatsApp-ing and emailing. That is recorded
+here rather than remembered.
+
+**A reminder is a log row, not a flag.** `sales_invoice_reminders` holds one row
+per chase — the invoice, the channel, the day, the words that were sent and what
+came back, and who logged it. There is deliberately **no `reminded_at` or
+`reminders_count` column on the invoice**: a counter kept beside a log drifts the
+first time a log row is deleted, so the listing reads both through
+`SalesInvoice::scopeWithReminders()` (`withCount` + `withMax`) — the same two
+subqueries-per-page trick the money rule uses.
+
+**The words come from the model.** `SalesInvoice::reminderMessage()` writes the
+message: what is owed (`balanceDue()`), how late it is, and the client's link — but
+only when `show_client_portal` is on, because the public page exists only then and
+a reminder that links to a 404 is worse than one with no link at all. The office
+may edit the text in the dialog before sending; the model's version is what is
+logged when they do not.
+
+**The chase worklist** is a filter like any other (`SalesInvoiceFilters::CHASE_KEYS`),
+with a chip and a count for each:
+
+| Chip | The question |
+| --- | --- |
+| Due within 7 days | still owed, and falling due this week — the diary |
+| Not nudged in a week | still owed, and nobody has asked in seven days — the conscience |
+| Nudged this week | still owed, and already asked — so nobody is rung twice |
+
+## Sweeping a selection
+
+The toolbar's bulk bar acts on ticked rows. Each action is the **same** change the
+row menu makes, in a loop — there is no second implementation of "mark sent" here.
+
+- **Log a reminder** for a whole selection (the model's words, today, WhatsApp);
+- **mark sent** (which also puts the invoice on the portal);
+- **show / hide in the client portal**;
+- **delete drafts only** — and it says so: a sent invoice is a document the client
+  already holds, so anything past draft is skipped and counted in the reply;
+- **export the selection**, and its **GST summary**, through the same two exporters
+  the screen uses (`?ids[]=` — capped at 500, because a GET URL is not a place for
+  ten thousand ids).
+
+The checkboxes hang off the bulk form by id (`form="bulkForm"`) instead of being
+wrapped in it: a form around the table would nest the row menus' own forms inside
+it, and a nested form never submits.
+
+## The CA's file
+
+`GET sales-invoices/gst-export` is the month-end summary: the invoice **items**
+grouped by HSN/SAC and rate, with taxable, CGST, SGST, IGST and total — for the
+filters the screen is showing, or for the ticked selection. It reads the items
+because that is where HSN and rate actually live (the header only carries totals),
+and it leaves **drafts and cancellations out**: they are not tax documents, and a
+summary that counted them would state a liability the office never incurred. Both
+this file and the invoice CSV describe their filters in the same words, from
+`SalesInvoiceFilters::applied()` / `labels()`.
+
 ## The sheet
 
 `public/assets/css/sales-invoices.css` defines **no `master-*` class**. It was once a

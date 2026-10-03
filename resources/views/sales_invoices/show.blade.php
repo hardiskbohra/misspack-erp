@@ -21,6 +21,19 @@
                     {{ optional($invoice->invoice_date)->format('d M Y') }}</p>
             </div>
             <div class="master-actions">
+                {{-- The screen an accountant opens when the client rings: what was
+                     asked, when, and what came back — plus the same chase the list
+                     offers. --}}
+                <button type="button" class="master-btn master-btn-soft" data-open-reminder
+                    data-invoice-id="{{ $invoice->id }}"
+                    data-invoice-number="{{ $invoice->invoice_number }}"
+                    data-invoice-message="{{ $invoice->reminderMessage() }}">
+                    <i class="fas fa-bell" aria-hidden="true"></i> Log reminder
+                </button>
+                <button type="button" class="master-btn master-btn-light"
+                    data-copy-text="{{ $invoice->reminderMessage() }}">
+                    <i class="fas fa-comment-dots" aria-hidden="true"></i> Copy reminder text
+                </button>
                 <a href="{{ route('sales-invoices.index') }}" class="master-btn master-btn-light">Back</a>
                 <a href="{{ route('sales-invoices.edit', $invoice) }}" class="master-btn master-btn-light">Edit</a>
 
@@ -131,6 +144,54 @@
             </div>
             <div class="master-card">
                 <div class="si-head">
+                    <h2>Chase</h2>
+                    <span class="si-count">{{ $invoice->reminderCount() }}</span>
+                </div>
+                @forelse($invoice->reminders as $reminder)
+                    <div class="si-reminder">
+                        <div class="si-reminder-when">
+                            <strong>{{ optional($reminder->reminded_at)->format('d M Y') }}</strong>
+                            <span class="master-sub">{{ $reminder->channelLabel() }}</span>
+                        </div>
+                        <div class="si-reminder-what">
+                            @if ($reminder->note)
+                                <strong>{{ $reminder->note }}</strong>
+                            @endif
+                            <span class="master-sub">
+                                {{ $reminder->creator?->name ? 'by '.$reminder->creator->name : 'logged' }}
+                                @if ($reminder->message) · {{ \Illuminate\Support\Str::limit($reminder->message, 90) }} @endif
+                            </span>
+                        </div>
+                    </div>
+                @empty
+                    <div class="master-empty">
+                        Nobody has asked for this money yet.
+                        @if ($balanceAmount > 0) Ring, WhatsApp or email the client, then log it here. @endif
+                    </div>
+                @endforelse
+            </div>
+            <div class="master-card">
+                <div class="si-head">
+                    <h2>Notes</h2>
+                </div>
+                @if (filled($invoice->notes))
+                    <div class="si-note">
+                        <span class="master-sub">On the invoice (the client may see it)</span>
+                        <p>{{ $invoice->notes }}</p>
+                    </div>
+                @endif
+                @if (filled($invoice->internal_notes))
+                    <div class="si-note is-internal">
+                        <span class="master-sub">Internal — never printed, never on the portal</span>
+                        <p>{{ $invoice->internal_notes }}</p>
+                    </div>
+                @endif
+                @if (blank($invoice->notes) && blank($invoice->internal_notes))
+                    <div class="master-empty">No notes on this invoice. Edit it to add one.</div>
+                @endif
+            </div>
+            <div class="master-card">
+                <div class="si-head">
                     <h2>Files</h2>
                 </div>
                 @forelse($invoice->attachments as $attachment)
@@ -144,6 +205,7 @@
     </div>
 
     @include('sales_invoices.partials.payment-modal')
+    @include('sales_invoices.partials.reminder-modal')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/sales-invoices.css') }}">
 @endpush

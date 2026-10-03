@@ -35,8 +35,11 @@ node tools/checks/employees-check.cjs # the employee side of the user module: th
                                       # payslip is invisible and a verified paper is not removable
 node tools/checks/invoices-check.cjs  # the invoice module: its sheet defines no shared class, one
                                       # rule for the money and one for how late it is, the figures
-                                      # are one aggregate, a receipt is a ledger line, and the
-                                      # vocabulary routes are registered before the resource route
+                                      # are one aggregate, a receipt is a ledger line, the vocabulary
+                                      # routes come before the resource route — and the collections
+                                      # half: a reminder is a log (never a counter beside it), the
+                                      # sweep only deletes drafts, and the GST file is the screen's
+                                      # rows grouped by HSN and rate
 ```
 
 Every check is dependency-free. `mark-check.cjs` additionally decodes the QR

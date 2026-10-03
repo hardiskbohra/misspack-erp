@@ -43,6 +43,7 @@ class SalesInvoiceFilters
         'portal' => 'all',
         'payment' => 'all',
         'ageing' => 'all',
+        'chase' => 'all',
         'date_from' => null,
         'date_to' => null,
         'due_from' => null,
@@ -61,6 +62,7 @@ class SalesInvoiceFilters
         'portal' => 'Client portal',
         'payment' => 'Payment',
         'ageing' => 'How late',
+        'chase' => 'Chase',
     ];
 
     /** The camelCase names the views use, mapped onto the query keys. */
@@ -75,6 +77,7 @@ class SalesInvoiceFilters
         'portal' => 'portal',
         'payment' => 'payment',
         'ageing' => 'ageing',
+        'chase' => 'chase',
         'dateFrom' => 'date_from',
         'dateTo' => 'date_to',
         'dueFrom' => 'due_from',
@@ -89,6 +92,21 @@ class SalesInvoiceFilters
     public const RANGE_LABELS = [
         'dateFrom' => ['label' => 'Period', 'keys' => ['dateFrom', 'dateTo']],
         'dueFrom' => ['label' => 'Due', 'keys' => ['dueFrom', 'dueTo']],
+    ];
+
+    /**
+     * The chase worklist: the money, and the last time anybody asked for it.
+     *
+     * `due_7` is the diary — what falls due this week; `stale` is the conscience —
+     * what is owed and has gone a week without a word; `nudged` is the record of
+     * what the office already chased this week, so nobody is rung twice.
+     */
+    public const CHASE_KEYS = ['due_7', 'stale', 'nudged'];
+
+    public const CHASE_LABELS = [
+        'due_7' => 'Due within 7 days',
+        'stale' => 'Not nudged in a week',
+        'nudged' => 'Nudged this week',
     ];
 
     /** The three money states, in the order money arrives. */
@@ -313,6 +331,24 @@ class SalesInvoiceFilters
                     default => $q,
                 };
             })
+            /* who to chase today: still owed, and either due this week or a week
+               without a word. "Asked" is the reminder log — a week is the office's
+               own rhythm, and the same week the chip counts use. */
+            ->when(in_array((string) $value('chase'), self::CHASE_KEYS, true), function (Builder $q) use ($value, $open, $today) {
+                $q->where($open);
+
+                $week = $today->copy()->subDays(7);
+
+                return match ((string) $value('chase')) {
+                    'due_7' => $q->whereNotNull('due_date')
+                        ->whereDate('due_date', '>=', $today)
+                        ->whereDate('due_date', '<=', $today->copy()->addDays(7)),
+                    'stale' => $q->whereDoesntHave('reminders',
+                        fn ($reminders) => $reminders->whereDate('reminded_at', '>=', $week)),
+                    default => $q->whereHas('reminders',
+                        fn ($reminders) => $reminders->whereDate('reminded_at', '>=', $week)),
+                };
+            })
             ->when($value('dateFrom'), fn (Builder $q) => $q->whereDate('invoice_date', '>=', $value('dateFrom')))
             ->when($value('dateTo'), fn (Builder $q) => $q->whereDate('invoice_date', '<=', $value('dateTo')))
             ->when($value('dueFrom'), fn (Builder $q) => $q->whereDate('due_date', '>=', $value('dueFrom')))
@@ -342,6 +378,7 @@ class SalesInvoiceFilters
             'portal' => ($filters['portal'] ?? '') === 'visible' ? 'Visible to client' : 'Hidden from client',
             'payment' => $lookup(self::PAYMENT_LABELS, $filters['payment'] ?? ''),
             'ageing' => $lookup(SalesInvoice::ageingBuckets(), $filters['ageing'] ?? '') ?: 'Late',
+            'chase' => $lookup(self::CHASE_LABELS, $filters['chase'] ?? '') ?: 'Chase',
             'dateFrom' => $this->rangeLabel($filters['dateFrom'] ?? null, $filters['dateTo'] ?? null),
             'dueFrom' => $this->rangeLabel($filters['dueFrom'] ?? null, $filters['dueTo'] ?? null),
         ];

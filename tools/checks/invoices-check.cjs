@@ -147,11 +147,20 @@ check('the list does no money arithmetic of its own',
     && /\$invoice->balanceDue\(\)/.test(view),
     'a view that adds money up is a second definition of it');
 
+/* The figures are read in `index()` and nowhere else: a sum over hydrated rows
+   there is the regression this names (the bulk sweep's own `get()` of the ticked
+   ids is a different question and not this guard's business). */
+const indexBody = controller.slice(
+    controller.indexOf('public function index('),
+    controller.indexOf('public function export(')
+);
+
 check('the figures are one aggregate over the filtered rows, not a loop',
-    /selectRaw\(/.test(controller)
-    && /coalesce\(sum\(/.test(controller)
-    && ! /->get\(\)\s*->sum\(/.test(controller)
-    && ! /SalesInvoice::[^;]*->get\(\)/.test(controller),
+    /selectRaw\(/.test(indexBody)
+    && /coalesce\(sum\(/.test(indexBody)
+    && ! /->get\(\)\s*->sum\(/.test(indexBody)
+    && ! /->get\(\)/.test(indexBody.replace(/->first\(\)/g, ''))
+    && /SalesInvoice::RECEIVED_SQL/.test(indexBody),
     'the old figures hydrated every invoice three times');
 
 check('an aggregate alias is read off the row, never through value()',
@@ -194,17 +203,29 @@ check('the state is the money\'s, and a draft or a cancellation is the office\'s
 
 /* ---- 3. the vocabulary and the query ----------------------------------- */
 
-const keysBlock = service.slice(service.indexOf('public const DEFAULTS'), service.indexOf('public const LABELS'));
-const labelBlock = service.slice(service.indexOf('public const LABELS'), service.indexOf('public const VIEW_KEYS'));
-const viewKeysBlock = service.slice(service.indexOf('public const VIEW_KEYS'), service.indexOf('public const PAYMENT_KEYS'));
+/* A constant block, from its own line to the `];` that closes it — never "from
+   here to the next constant", which silently grows when a constant is added
+   between the two. */
+const constBlock = (name) => {
+    const at = service.indexOf('public const ' + name);
+    if (at === -1) return '';
+
+    return service.slice(at, service.indexOf('];', at) + 2);
+};
+
+const keysBlock = constBlock('DEFAULTS');
+const labelBlock = constBlock('LABELS');
+const viewKeysBlock = constBlock('VIEW_KEYS');
 const queryKeys = [...keysBlock.matchAll(/^\s*'([a-z_]+)' =>/gm)].map(m => m[1]);
 const labelKeys = [...labelBlock.matchAll(/^\s*'([a-zA-Z]+)' =>/gm)].map(m => m[1]);
 const viewKeyNames = [...viewKeysBlock.matchAll(/^\s*'([a-zA-Z]+)' => '([a-z_]+)'/gm)].map(m => [m[1], m[2]]);
 
 const viewKeySet = new Set(viewKeyNames.map(([camel]) => camel));
-const rangeKeyNames = [...service
-    .slice(service.indexOf('public const RANGE_LABELS'), service.indexOf('public const PAYMENT_KEYS'))
-    .matchAll(/^\s*'([a-zA-Z]+)' =>/gm)].map(m => m[1]);
+const rangeKeyNames = [...constBlock('RANGE_LABELS').matchAll(/^\s*'([a-zA-Z]+)' =>/gm)].map(m => m[1]);
+
+/* the chase worklist's own vocabulary, held to the chips the view draws */
+const chaseKeyNames = [...constBlock('CHASE_KEYS').matchAll(/'([a-z0-9_]+)'/g)].map(m => m[1]);
+const chaseLabelNames = [...constBlock('CHASE_LABELS').matchAll(/^\s*'([a-z0-9_]+)' =>/gm)].map(m => m[1]);
 
 check('every dimension the screen reads is declared in the vocabulary',
     viewKeyNames.length >= 13
@@ -232,6 +253,24 @@ check('a filter that is present is the filter, even when it is empty',
     && /function default\(string \$key\)/.test(service)
     && ! /\?\? self::DEFAULTS/.test(service),
     '`?? default` reads a declared null as a missing key — the bug that shipped twice');
+
+check('the chase worklist is one vocabulary too',
+    chaseKeyNames.length === 3
+    && chaseKeyNames.every(key => chaseLabelNames.includes(key))
+    /* one loop draws the three chips, from the labels the controller passes and
+       the counts the same query produced */
+    && /@foreach \(\$chaseLabels as \$chaseKey => \$chaseLabel\)/.test(view)
+    && /\['chase' => \$chaseKey\]/.test(view)
+    && /\$chipCounts\['chase_'\.[^\]]*\]/.test(view)
+    && /'chaseLabels' => SalesInvoiceFilters::CHASE_LABELS/.test(controller)
+    /* and the question is asked of the log, in SQL, both ways */
+    && /whereDoesntHave\('reminders'/.test(service)
+    && /whereHas\('reminders'/.test(service)
+    && /withCount\('reminders'\)/.test(model)
+    && /withMax\('reminders as last_reminded_at', 'reminded_at'\)/.test(model)
+    && /->withReminders\(\)/.test(controller),
+    'a chip that says "not nudged in a week" has to ask the reminder log — and the '
+    + 'list has to read that log without a query per row');
 
 check('a value the module does not know widens the list',
     /array_merge\(\['overdue'\], array_keys\(SalesInvoice::ageingBuckets\(\)\)\), true\)/.test(service)
@@ -370,6 +409,104 @@ check('the form says which figure its own field is',
     && /Receipts filed\s*\n?\s*against this invoice are added on top/.test(form.replace(/\s+/g, ' '))
     && ! /Amount Paid/.test(form),
     '"Amount Paid" beside a balance changed every screen that prints it');
+
+/* ---- 6b. the chase, the sweep and the CA's file ------------------------ */
+
+const reminderModel = read('app/Models/SalesInvoiceReminder.php');
+const reminderPartial = 'resources/views/sales_invoices/partials/reminder-modal.blade.php';
+const reminderDialog = read(reminderPartial);
+const migrations = fs.readdirSync(path.join(ROOT, 'database/migrations'));
+const reminderMigration = migrations.find(file => /create_sales_invoice_reminders_table/.test(file)) || '';
+const reminderMigrationText = reminderMigration ? read('database/migrations/' + reminderMigration) : '';
+
+check('a reminder is a log, never a counter beside one',
+    reminderMigrationText !== ''
+    && /foreignId\('sales_invoice_id'\)->constrained\('sales_invoices'\)->cascadeOnDelete\(\)/.test(reminderMigrationText)
+    && /index\(\['sales_invoice_id', 'reminded_at'\]\)/.test(reminderMigrationText)
+    /* the invoice carries no "nudged" column at all: the log is the definition */
+    && ! migrations
+        .filter(file => /_(create|add_.*to)_sales_invoices_table/.test(file))
+        .some(file => /reminded_at|reminders_count/.test(read('database/migrations/' + file))),
+    'a counter kept beside a log drifts the first time a log row is deleted');
+
+check('one channel vocabulary, shared by the dialog and the validation',
+    /public static function channelOptions\(\): array/.test(reminderModel)
+    && /'whatsapp' =>/.test(reminderModel)
+    && reminderDialog.includes('$reminderChannels')
+    && /'reminderChannels' => SalesInvoiceReminder::channelOptions\(\)/.test(controller)
+    && (controller.match(/SalesInvoiceReminder::channelOptions\(\)/g) || []).length >= 3,
+    'a channel the dialog offers that the controller refuses is a form that cannot save');
+
+check('a chase is linked, stamped and says what was sent',
+    /\$reminder->sales_invoice_id = \$salesInvoice->id;/.test(controller)
+    && /\$reminder->reminded_at = \$data\['reminded_at'\] \?\? now\(\)->toDateString\(\);/.test(controller)
+    && /\$reminder->message = \$data\['message'\] \?\? \$salesInvoice->reminderMessage\(\);/.test(controller)
+    && /\$reminder->created_by = Auth::id\(\);/.test(controller)
+    && /public function reminders\(\)/.test(model)
+    && /orderByDesc\('reminded_at'\)/.test(model),
+    'the log exists so that "when did we last ask" has an answer — an unlinked or '
+    + 'unstamped row answers nothing');
+
+check('the reminder words are the model\'s, and the link is only there when it opens',
+    /public function reminderMessage\(/.test(model)
+    && /\$balance = \$this->balanceDue\(\);/.test(model)
+    && /CommonHelper::amount\(\$amount, \$this->currency\)/.test(model)
+    && /if \(\$this->show_client_portal && \$this->public_token\)/.test(model)
+    && /data-invoice-message="\{\{ \$invoice->reminderMessage\(\) \}\}"/.test(view)
+    && /data-invoice-message="\{\{ \$invoice->reminderMessage\(\) \}\}"/.test(record),
+    'a reminder that links to a page the client cannot open is worse than one with no link');
+
+check('the dialog is written once and both screens open it',
+    reminderDialog !== ''
+    && /@include\('sales_invoices\.partials\.reminder-modal'\)/.test(view)
+    && /@include\('sales_invoices\.partials\.reminder-modal'\)/.test(record)
+    && reminderDialog.split('data-reminder-form').length === 2
+    && (view + record).split('data-reminder-form').length === 1
+    && /data-open-reminder/.test(view)
+    && /data-open-reminder/.test(record)
+    /* the dialog's copy button copies the field the office is editing, not the
+       model's original words — what they wrote is what goes out, and the script
+       alone cannot say that */
+    && /data-copy-target="reminderMessage"/.test(reminderDialog)
+    && /\[data-copy-target\]/.test(js),
+    'one dialog: the row says which invoice, and the copy button copies what the office wrote');
+
+check('the sweep keeps every promise the bar makes',
+    /private const BULK_ACTIONS = \[/.test(controller)
+    && ['remind', 'mark_sent', 'portal_on', 'portal_off', 'delete_drafts']
+        .every(action => new RegExp("'" + action + "' =>").test(controller))
+    && /case 'delete_drafts':[\s\S]{0,220}?if \(\$invoice->status === 'draft'\)/.test(controller)
+    /* a cancelled document is not dragged back to sent by a sweep of the page */
+    && /case 'mark_sent':[\s\S]{0,240}?if \(\$invoice->status === 'cancelled'\)/.test(controller)
+    && /\$skipped\+\+;/.test(controller)
+    && /'bulkActions' => self::BULK_ACTIONS/.test(controller)
+    && /@foreach \(\$bulkActions as \$actionKey => \$actionLabel\)/.test(view)
+    /* the boxes hang off the form by id: a form round the table would nest the row
+       menus' own forms inside it, and a nested form never submits */
+    && /form="bulkForm"/.test(view)
+    && /<form id="bulkForm"/.test(view)
+    && /action="\{\{ route\('sales-invoices\.bulk'\) \}\}"/.test(view),
+    'a bulk delete that takes a sent invoice is a document the client holds, deleted');
+
+check('the sweep is capped and the export takes a selection',
+    /array_slice\(array_values\(array_unique\(array_filter\(\$ids\)\)\), 0, 500\)/.test(controller)
+    && /\$selected !== \[\]/.test(controller)
+    && /whereIn\('sales_invoices\.id', \$selected\)/.test(controller)
+    && /'Selected on screen \('/.test(controller),
+    'a GET URL is not a place for ten thousand ids, and "export selected" must be '
+    + "the screen's own exporter");
+
+check('the CA\'s file is the screen\'s rows, grouped by HSN and rate',
+    /public function gstExport\(Request \$request\): StreamedResponse/.test(controller)
+    && /whereNotIn\('sales_invoices\.status', \['draft', 'cancelled'\]\)/.test(controller)
+    && /groupBy\('hsn_sac', 'gst_percent'\)/.test(controller)
+    && /sum\(taxable_amount\) as taxable/.test(controller)
+    && /SalesInvoiceItem::query\(\)/.test(controller)
+    && /Drafts and cancelled invoices are excluded/.test(controller)
+    && /\$this->filteredByLine\(\$selected, \$applied, \$labels\)/.test(controller)
+    && (controller.match(/filteredByLine\(/g) || []).length >= 3
+    && /sales-invoices\.gstExport/.test(view),
+    'a summary that counted drafts would state a GST liability the office never incurred');
 
 /* ---- 6. the paperwork -------------------------------------------------- */
 

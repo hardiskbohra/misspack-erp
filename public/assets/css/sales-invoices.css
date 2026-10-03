@@ -288,3 +288,76 @@
 .si-index .master-dropdown-toggle {
     margin-left: auto
 }
+
+/* ---------------------------------------------------------------- the chase
+   The record page's own card: when the office last asked for this money, how,
+   and what came back. A list of small rows, not a table — two columns of the
+   same reading (when, and what was said). */
+.si-reminder {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--mc-border);
+}
+
+.si-reminder:last-child {
+    border-bottom: 0;
+}
+
+.si-reminder-when {
+    flex: 0 0 108px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.si-reminder-when strong {
+    font-size: 13px;
+}
+
+.si-reminder-what {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.si-reminder-what strong {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.si-reminder-what .master-sub {
+    overflow-wrap: anywhere;
+}
+
+/* The two notes: the one the client may see, and the one that never leaves. */
+.si-note {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--mc-border);
+}
+
+.si-note:last-child {
+    border-bottom: 0;
+}
+
+.si-note p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.si-note.is-internal p {
+    color: var(--mc-text-2);
+    font-style: italic;
+}
+
+/* A count beside a card heading. */
+.si-count {
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--mc-soft);
+    color: var(--mc-text-2);
+    font-size: 11px;
+    font-weight: 700;
+}

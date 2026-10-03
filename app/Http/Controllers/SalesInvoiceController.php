@@ -7,6 +7,8 @@ use App\Models\CashflowAccount;
 use App\Models\CashflowEntry;
 use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceAttachment;
+use App\Models\SalesInvoiceItem;
+use App\Models\SalesInvoiceReminder;
 use App\Models\SavedView;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,6 +28,23 @@ class SalesInvoiceController extends Controller
 {
     /** Saved views belong to the screen that saved them. */
     private const VIEW_MODULE = 'sales-invoices';
+
+    /**
+     * What the listing's bulk bar can do to a selection.
+     *
+     * Each is the same change a row action makes, applied to many rows — there is
+     * no second implementation of "mark sent" or "show in portal" here, only a
+     * loop around the same one. `delete_drafts` is the odd one out and says so:
+     * it refuses anything that has left draft, because a sent invoice is a
+     * document the client already has.
+     */
+    private const BULK_ACTIONS = [
+        'remind' => 'Log a reminder',
+        'mark_sent' => 'Mark sent (and show in portal)',
+        'portal_on' => 'Show in client portal',
+        'portal_off' => 'Hide from client portal',
+        'delete_drafts' => 'Delete drafts only',
+    ];
 
     /** The saved view a link asked for, as the query string it was saved with. */
     public function index(Request $request): View
@@ -68,6 +87,7 @@ class SalesInvoiceController extends Controller
         $invoices = $query
             ->withReceived()
             ->withCount('payments')
+            ->withReminders()
             ->latest('invoice_date')
             ->latest('id')
             ->paginate(25)
@@ -93,7 +113,10 @@ class SalesInvoiceController extends Controller
             'savedViews' => app(SavedViews::class)->forUser(Auth::id(), self::VIEW_MODULE),
             'ageingBuckets' => SalesInvoice::ageingBuckets(),
             'paymentLabels' => SalesInvoiceFilters::PAYMENT_LABELS,
+            'chaseLabels' => SalesInvoiceFilters::CHASE_LABELS,
+            'reminderChannels' => SalesInvoiceReminder::channelOptions(),
             'accounts' => $this->accounts(),
+            'bulkActions' => self::BULK_ACTIONS,
             ...$filters,
         ]));
     }
@@ -126,7 +149,17 @@ class SalesInvoiceController extends Controller
     public function export(Request $request): StreamedResponse
     {
         $filters = app(SalesInvoiceFilters::class)->fromRequest($request);
-        $rows = $this->filteredQuery($filters)->withReceived()->latest('invoice_date')->latest('id')->get();
+        $selected = $this->selectedIds($request);
+
+        $query = $this->filteredQuery($filters)->withReceived();
+
+        /* "Export the selected rows" is the same file as the screen's, narrowed to
+           what was ticked — a second exporter is how the two files start disagreeing. */
+        if ($selected !== []) {
+            $query->whereIn('sales_invoices.id', $selected);
+        }
+
+        $rows = $query->latest('invoice_date')->latest('id')->get();
         $labels = app(SalesInvoiceFilters::class)->labels($filters);
         $applied = app(SalesInvoiceFilters::class)->applied($filters);
 
@@ -139,10 +172,7 @@ class SalesInvoiceController extends Controller
             $row(['Sales invoices']);
             $row(['Taken', now()->format('d M Y H:i')]);
             $row(['Rows', $rows->count()]);
-            $row(['Filtered by', $applied === [] ? 'Everything' : implode(' · ', array_map(
-                fn ($chip) => $chip['label'].': '.($labels[$chip['key']] ?? $chip['value']),
-                $applied
-            ))]);
+            $row(['Filtered by', $this->filteredByLine($selected, $applied, $labels)]);
             $row([]);
 
             $row([
@@ -406,6 +436,12 @@ class SalesInvoiceController extends Controller
             $counts['ageing_'.$bucket] = $count(['ageing' => $bucket]);
         }
 
+        /* The chase chips are money *and* time, so their counts are asked the same
+           way: with the chip's own dimension reset. */
+        foreach (SalesInvoiceFilters::CHASE_KEYS as $chase) {
+            $counts['chase_'.$chase] = $count(['chase' => $chase]);
+        }
+
         /* The period chips: the number on "Last month" is the number of rows that
            chip would show, in the month the chip is labelled with. */
         foreach (DateRanges::presets() as $key => $range) {
@@ -498,7 +534,7 @@ class SalesInvoiceController extends Controller
 
     public function show(SalesInvoice $salesInvoice): View
     {
-        $salesInvoice->load(['items.product', 'attachments', 'creator']);
+        $salesInvoice->load(['items.product', 'attachments', 'creator', 'reminders.creator']);
         if ($this->clientAvailable()) { $salesInvoice->load('client'); }
         if ($this->projectAvailable()) { $salesInvoice->load('project'); }
 
@@ -507,6 +543,7 @@ class SalesInvoiceController extends Controller
         return view('sales_invoices.show', [
             'invoice' => $salesInvoice,
             'accounts' => $this->accounts(),
+            'reminderChannels' => SalesInvoiceReminder::channelOptions(),
         ]);
     }
 
@@ -986,6 +1023,233 @@ class SalesInvoiceController extends Controller
         }
 
         return implode(' ', array_filter($parts));
+    }
+
+
+    /**
+     * Record a chase.
+     *
+     * The office rings, WhatsApps and emails all month; this is where that gets
+     * written down — which invoice, which channel, which day, what was said and
+     * what came back. The list reads "last nudged" from these rows, so a chase
+     * nobody logged is a client who will be rung twice.
+     */
+    public function logReminder(Request $request, SalesInvoice $salesInvoice): RedirectResponse
+    {
+        $data = $request->validate([
+            'channel' => ['nullable', Rule::in(array_keys(SalesInvoiceReminder::channelOptions()))],
+            'reminded_at' => ['nullable', 'date'],
+            'note' => ['nullable', 'string', 'max:2000'],
+            'message' => ['nullable', 'string', 'max:4000'],
+        ]);
+
+        $reminder = new SalesInvoiceReminder();
+        $reminder->sales_invoice_id = $salesInvoice->id;
+        $reminder->channel = $data['channel'] ?? 'whatsapp';
+        $reminder->reminded_at = $data['reminded_at'] ?? now()->toDateString();
+        // what was sent, unless the office says it sent something else
+        $reminder->message = $data['message'] ?? $salesInvoice->reminderMessage();
+        $reminder->note = $data['note'] ?? null;
+        $reminder->created_by = Auth::id();
+        $reminder->save();
+
+        return back()->with('success', 'Reminder logged against '.$salesInvoice->invoice_number
+            .' ('.$reminder->channelLabel().'). '.$salesInvoice->reminderCount().' in total.');
+    }
+
+    /**
+     * One action, many rows — the month-end sweep.
+     *
+     * Each action is the same change the row menu makes, applied in a loop: there
+     * is no second implementation of "mark sent" here. `delete_drafts` refuses
+     * anything that has left draft, because a sent invoice is a document the
+     * client already holds.
+     */
+    public function bulk(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'action' => ['required', Rule::in(array_keys(self::BULK_ACTIONS))],
+            'ids' => ['required', 'array', 'min:1', 'max:500'],
+            'ids.*' => ['integer'],
+            'channel' => ['nullable', Rule::in(array_keys(SalesInvoiceReminder::channelOptions()))],
+        ]);
+
+        $invoices = SalesInvoice::query()->whereIn('id', $data['ids'])->get();
+        $done = 0;
+        $skipped = 0;
+
+        DB::transaction(function () use ($data, $invoices, &$done, &$skipped) {
+            foreach ($invoices as $invoice) {
+                switch ($data['action']) {
+                    case 'mark_sent':
+                        /* a cancelled document was withdrawn on purpose: it is not
+                           dragged back to sent by a sweep of the page */
+                        if ($invoice->status === 'cancelled') {
+                            $skipped++;
+                            break;
+                        }
+
+                        $invoice->update(['status' => 'sent', 'sent_at' => now(), 'show_client_portal' => true]);
+                        $done++;
+                        break;
+
+                    case 'portal_on':
+                    case 'portal_off':
+                        $invoice->update(['show_client_portal' => $data['action'] === 'portal_on']);
+                        $done++;
+                        break;
+
+                    case 'remind':
+                        $reminder = new SalesInvoiceReminder();
+                        $reminder->sales_invoice_id = $invoice->id;
+                        $reminder->channel = $data['channel'] ?? 'whatsapp';
+                        $reminder->reminded_at = now()->toDateString();
+                        $reminder->message = $invoice->reminderMessage();
+                        $reminder->created_by = Auth::id();
+                        $reminder->save();
+                        $done++;
+                        break;
+
+                    case 'delete_drafts':
+                        // only what never left the desk
+                        if ($invoice->status === 'draft') {
+                            $invoice->delete();
+                            $done++;
+                        } else {
+                            $skipped++;
+                        }
+                        break;
+                }
+            }
+        });
+
+        $message = $done.' '.Str::plural('invoice', $done).' — '
+            .mb_strtolower(self::BULK_ACTIONS[$data['action']]).' done.';
+
+        if ($skipped) {
+            $why = $data['action'] === 'delete_drafts'
+                ? 'left alone — already past draft, so the client holds it'
+                : 'left alone — cancelled';
+
+            $message .= ' '.$skipped.' '.Str::plural('invoice', $skipped).' '.$why.'.';
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * The file the CA asks for: HSN and rate-wise, for the period on screen.
+     *
+     * Drafts and cancellations are left out on purpose — they are not tax
+     * documents, and a summary that counted them would state a GST liability the
+     * office never incurred. The rows come from the invoice **items**, which is
+     * where HSN and rate actually live; the invoice header only carries the
+     * totals.
+     */
+    public function gstExport(Request $request): StreamedResponse
+    {
+        $filters = app(SalesInvoiceFilters::class)->fromRequest($request);
+        $selected = $this->selectedIds($request);
+
+        $invoices = $this->filteredQuery($filters)
+            ->whereNotIn('sales_invoices.status', ['draft', 'cancelled']);
+
+        if ($selected !== []) {
+            $invoices->whereIn('sales_invoices.id', $selected);
+        }
+
+        $rows = SalesInvoiceItem::query()
+            ->whereIn('sales_invoice_id', (clone $invoices)->reorder()->select('sales_invoices.id'))
+            ->selectRaw('coalesce(hsn_sac, "") as hsn_sac, gst_percent, count(distinct sales_invoice_id) as invoices'
+                .', sum(quantity) as quantity, sum(taxable_amount) as taxable, sum(cgst_amount) as cgst'
+                .', sum(sgst_amount) as sgst, sum(igst_amount) as igst, sum(line_total) as total')
+            ->groupBy('hsn_sac', 'gst_percent')
+            ->orderBy('hsn_sac')
+            ->orderBy('gst_percent')
+            ->get();
+
+        $labels = app(SalesInvoiceFilters::class)->labels($filters);
+        $applied = app(SalesInvoiceFilters::class)->applied($filters);
+        $filteredBy = $this->filteredByLine($selected, $applied, $labels);
+
+        return response()->streamDownload(function () use ($rows, $filteredBy) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+
+            $row = fn (array $cells) => fputcsv($out, $cells);
+            $money = fn ($value) => number_format((float) $value, 2, '.', '');
+
+            $row(['GST summary — sales invoices']);
+            $row(['Taken', now()->format('d M Y H:i')]);
+            $row(['Filtered by', $filteredBy]);
+            $row(['Rows are the invoice items, grouped by HSN/SAC and rate. Drafts and cancelled invoices are excluded.']);
+            $row([]);
+
+            $row(['HSN / SAC', 'GST %', 'Invoices', 'Quantity', 'Taxable', 'CGST', 'SGST', 'IGST', 'Total']);
+
+            $totals = ['taxable' => 0.0, 'cgst' => 0.0, 'sgst' => 0.0, 'igst' => 0.0, 'total' => 0.0];
+
+            foreach ($rows as $line) {
+                foreach ($totals as $key => $value) {
+                    $totals[$key] = $value + (float) $line->{$key};
+                }
+
+                $row([
+                    $line->hsn_sac,
+                    number_format((float) $line->gst_percent, 2, '.', ''),
+                    $line->invoices,
+                    number_format((float) $line->quantity, 3, '.', ''),
+                    $money($line->taxable),
+                    $money($line->cgst),
+                    $money($line->sgst),
+                    $money($line->igst),
+                    $money($line->total),
+                ]);
+            }
+
+            $row([]);
+            $row(['Total', '', '', '', $money($totals['taxable']), $money($totals['cgst']),
+                $money($totals['sgst']), $money($totals['igst']), $money($totals['total'])]);
+        }, 'gst-summary-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /**
+     * The row of ids a listing had ticked, for "export the selected rows" — the
+     * same exporter as the screen's, narrowed. Capped, because a GET URL is not a
+     * place to put ten thousand ids.
+     *
+     * @return array<int, int>
+     */
+    private function selectedIds(Request $request): array
+    {
+        $ids = array_map('intval', (array) $request->query('ids', []));
+
+        return array_slice(array_values(array_unique(array_filter($ids))), 0, 500);
+    }
+
+    /**
+     * One spelling of "what this file was filtered by", used by the invoice CSV
+     * and the GST summary — two files that describe the same screen must describe
+     * it in the same words.
+     *
+     * @param  array<int, int>  $selected
+     * @param  array<int, array{key: string, label: string, value: string}>  $applied
+     * @param  array<string, string>  $labels
+     */
+    private function filteredByLine(array $selected, array $applied, array $labels): string
+    {
+        if ($selected !== []) {
+            return 'Selected on screen ('.count($selected).')';
+        }
+
+        if ($applied === []) {
+            return 'Everything';
+        }
+
+        return implode(' · ', array_map(
+            fn ($chip) => $chip['label'].': '.($labels[$chip['key']] ?? $chip['value']),
+            $applied
+        ));
     }
 
     private function sharedData(): array
