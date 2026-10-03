@@ -33,7 +33,7 @@ node tools/checks/employees-check.cjs # the employee side of the user module: th
                                       # on the whole admin group, no personal route takes a user id,
                                       # a file is ownership-checked before it is served, a draft
                                       # payslip is invisible and a verified paper is not removable
-node tools/checks/invoices-check.cjs  # the invoice module: its sheet defines no shared class, one
+node tools/checks/invoices-check.cjs  # the invoice module: its sheet defines no shared class, one conversion per proforma, sales and potential revenue apart, one
                                       # rule for the money and one for how late it is, the figures
                                       # are one aggregate, a receipt is a ledger line, the vocabulary
                                       # routes come before the resource route — and the collections

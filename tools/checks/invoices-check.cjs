@@ -169,7 +169,7 @@ check('an aggregate alias is read off the row, never through value()',
     /* the alias is read off the aggregate row — `$totals->received` in the list,
        `first()?->received` in the model. `value('received')` is the one spelling
        that lies, because it replaces the select list with the alias. */
-    && /\$totals->invoiced/.test(controller)
+    && /\$totals->counted/.test(controller)
     && /\$totals->received/.test(controller)
     && /->first\(\)\?->received/.test(model),
     'value() replaces the select list with the alias, which does not exist');
@@ -185,7 +185,7 @@ check('how late is one vocabulary: the model\'s buckets are the filter\'s',
     && /public function isOverdue\(/.test(model),
     'a chip that says "31-60 days late" has to filter by the bucket the row is in');
 
-const stateKeys = ['draft', 'sent', 'accepted', 'partial', 'paid', 'overdue', 'cancelled'];
+const stateKeys = ['draft', 'sent', 'accepted', 'partial', 'paid', 'overdue', 'cancelled', 'converted'];
 
 /* A state is drawn when a rule gives it a tone; the dark sheet only re-tints it. */
 const drawn = (key) => sheetRules.some(rule => rule.sel.split(',').some(sel =>
@@ -261,12 +261,16 @@ check('a filter that is present is the filter, even when it is empty',
 check('the chase worklist is one vocabulary too',
     chaseKeyNames.length === 3
     && chaseKeyNames.every(key => chaseLabelNames.includes(key))
-    /* one loop draws the three chips, from the labels the controller passes and
-       the counts the same query produced */
-    && /@foreach \(\$chaseLabels as \$chaseKey => \$chaseLabel\)/.test(view)
-    && /\['chase' => \$chaseKey\]/.test(view)
-    && /\$chipCounts\['chase_'\.[^\]]*\]/.test(view)
+    /* one loop draws the chase filter, from the labels the controller passes —
+       it is a select in the filter row now; the chips that used to carry it
+       were removed from the strip at the office's request, and with them the
+       counts they asked for */
+    && /@foreach\s*\(\$chaseLabels as \$chaseKey => \$chaseLabel\)/.test(view)
+    && /<option value="\{\{ \$chaseKey \}\}" @selected\(\$chase === \$chaseKey\)>/.test(view)
     && /'chaseLabels' => SalesInvoiceFilters::CHASE_LABELS/.test(controller)
+    && ! /chipCounts\['chase_/.test(view)
+    && ! /\['payment' => 'unpaid'\]/.test(view)
+    && ! /\['ageing' => 'overdue'\]/.test(view)
     /* and the question is asked of the log, in SQL, both ways */
     && /whereDoesntHave\('reminders'/.test(service)
     && /whereHas\('reminders'/.test(service)
@@ -409,6 +413,43 @@ check('the sheet and the script are loaded with a version',
     && ! /asset\('assets\/(css|js)\/sales-invoices/.test(view + form + record),
     'without a version the browser keeps serving the fork after it is gone');
 
+/* ---- 4c. one document, one claim on the money -------------------------- */
+
+/* The office's rule: a proforma becomes a tax invoice once, and after that the
+   proforma is history — it is not sales, it is not a second receivable, and it
+   is not late. Each half of that rule is enforced in one place: the link on the
+   proforma (with a row lock, because a conversion is two clicks apart), the
+   scopes, and the statement's own reads. */
+const statementService = read('app/Services/PartyStatement.php');
+
+check('a proforma becomes exactly one tax invoice',
+    /\$already = \$salesInvoice->convertedInvoice/.test(controller)
+    && /lockForUpdate\(\)/.test(controller)
+    && /\$proforma->converted_invoice_id = \$tax->id;/.test(controller)
+    && /->moveAdvanceTo\(/.test(controller),
+    'the second conversion is refused by the proforma\'s own link, not by a '
+    + 'count: without locking the row, two tabs convert the same proforma twice');
+
+check('a converted proforma is out of sales, out of the ageing and out of the statement',
+    /if \(\$this->isSuperseded\(\)\) \{\s*\n\s*return 0\.0;/.test(model)
+    && /public function scopeNotSuperseded/.test(model)
+    && (statementService.match(/->notSuperseded\(\)/g) || []).length === 4
+    && /Moved to/.test(record)
+    && /Moved to/.test(view),
+    'the tax invoice stands for that money: a proforma that has become one owes '
+    + 'nothing, and every read that would count it twice says so');
+
+check('sales and potential revenue are two figures, and one document is never in both',
+    /'sales' => \(float\) \(\$figures->sales \?\? 0\)/.test(controller)
+    && /'potential' => \(float\) \(\$figures->potential \?\? 0\)/.test(controller)
+    && /invoice_type = \\'tax\\'/.test(controller)
+    && (controller.match(/converted_invoice_id is null/g) || []).length >= 2
+    && /Sales \(filtered\)/.test(view)
+    && /Potential revenue \(filtered\)/.test(view),
+    'a proforma is potential revenue until a tax invoice is raised from it and '
+    + 'nothing after that; adding the two into one "invoiced" figure is how the '
+    + 'same 50,000 was counted twice');
+
 /* ---- 5. the actions that make it a module ------------------------------ */
 
 const PARTIAL = 'resources/views/sales_invoices/partials/payment-modal.blade.php';
@@ -491,6 +532,39 @@ check('the action cell is a menu, not a row of buttons',
     && ! /master-dropdown-menu[\s\S]{0,900}?class="master-btn/.test(view),
     'a row menu item is an icon and a label, never a framed button');
 
+/* Every field the server sums with has to be a field the form posts. The line
+   discount was the exception: the row had no `discount_percent` input, the
+   controller recomputes each line from the posted value, so the discount went
+   in and was written back as zero by the next save. */
+const itemMethod = controller.slice(
+    controller.indexOf('private function syncItemsAndTotals'),
+    controller.indexOf('private function storeAttachments')
+);
+const itemKeys = [...new Set([...itemMethod.matchAll(/\$item\['([a-z_]+)'\]/g)].map(m => m[1]))];
+
+check('the form posts every field the server sums with',
+    itemKeys.length >= 10
+    && itemKeys.every(key => js.includes('][' + key + ']'))
+    && /Disc %/.test(form)
+    && /discount_percent/.test(form),
+    'a field the server reads and the form does not post is data the office '
+    + 'typed and lost: the line discount column is the one this guard exists for');
+
+/* A money preview is only honest while it fills the ledger the office reads.
+   One row nobody fills prints ₹ 0.00 for ever — and a preview that does not know
+   about the receipts already filed against the invoice shows a balance the save
+   will not print. */
+const previewIds = [...form.matchAll(/id="(preview[A-Za-z]+)"/g)].map(m => m[1]);
+
+check('the live preview fills every line of the ledger it draws',
+    previewIds.length >= 10
+    && previewIds.every(id => new RegExp("'" + id + "'").test(js))
+    && /data-ledger-received="\{\{ \$ledgerReceived \}\}"/.test(form)
+    && /\bledgerReceived\b/.test(js)
+    && /syncItemsAndTotals/.test(js),
+    'the ledger and the preview are one rule: the view draws the lines, the '
+    + 'script fills them, and the balance reads the same receipts the model reads');
+
 check('the form says which figure its own field is',
     /Opening received/.test(form)
     && /Receipts filed\s*\n?\s*against this invoice are added on top/.test(form.replace(/\s+/g, ' '))
@@ -518,7 +592,7 @@ check('the figures and the page totals are asked of a query of their own',
        own builder */
     (controller.match(/filteredQuery\(\$filters\)->reorder\(\)->selectRaw\(/g) || []).length === 2
     && ! /clone \$query\)->reorder\(\)->selectRaw\(/.test(controller)
-    && /'invoiced' => \(float\) \(\$totals->invoiced \?\? 0\)/.test(controller)
+    && /'counted' => \(float\) \(\$totals->counted \?\? 0\)/.test(controller)
     && /'received' => \(float\) \(\$totals->received \?\? 0\)/.test(controller),
     'the footer money is a query of its own, not the page the rows were loaded with');
 

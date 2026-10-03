@@ -11,8 +11,9 @@
    from the shared sheets, and this file holds only what the module owns:
 
      .si-*            the module's prefix
-     .si-items-*      the invoice form's line-items table
-     .si-total-box    the live GST total preview under it
+     .si-items        the invoice form's line-item editor (on the shared table)
+     .si-ledger       the live money preview under the charges — the same
+                      `.si-total-row` the record page reads
      .si-status etc.  the module's tone chips, shared by the listing and the
                       record page
      .si-total-row     one figure of the record's money column
@@ -28,122 +29,100 @@
    ========================================================================== */
 
 /* ==========================================================================
-   THE FORM — line items and the total preview
+   THE FORM — the line-item editor, the ledger, and the footer
+   --------------------------------------------------------------------------
+   The form wears the office's own form vocabulary: `.master-card.master-section`
+   cards, `.master-form-grid` for the fields (two up, three up on a wide screen),
+   `.master-section-label` for a group inside a card, `.master-table` for the
+   items, `.master-actions` as the footer. None of that is drawn here.
+
+   What is left is the density of a table whose cells are inputs, and the scope
+   in front of every rule: `.si-items` and `.si-ledger` are what stop these from
+   re-timing the ledger's tables and money rows on the page next door.
    ========================================================================== */
 
+/* The form page is a stack of cards, and the gap is the shell's own rhythm —
+   the 16px `.master-section` puts between two cards on every other form in the
+   office. It has to be said out loud here because the page is a flex column,
+   where the cards' margins do not collapse: without it the last field of one
+   card sits against the first field of the next. */
 .si-form {
     display: flex;
     flex-direction: column;
-    gap: 18px
+    gap: 16px
 }
 
-.si-items-wrap {
-    overflow: auto
+.si-items {
+    overflow-x: auto
 }
 
-.si-items-table {
-    width: 100%;
-    min-width: 1050px;
-    border-collapse: collapse
+/* A cell may hold a product select, a name and a description: the row reads
+   from the top rather than from the middle of its tallest cell. */
+.si-items .master-table td {
+    vertical-align: top
 }
 
-.si-items-table th,
-.si-items-table td {
-    padding: 9px;
-    border-bottom: 1px solid var(--mc-border);
-    text-align: left
-}
-
-.si-items-table th {
-    font-size: 11px;
-    text-transform: uppercase;
-    color: var(--mc-text-3);
-    background: var(--mc-soft)
-}
-
-.si-items-table .master-input,
-.si-items-table .master-textarea {
+.si-items .master-input,
+.si-items .master-textarea {
     height: 40px;
     padding: 8px 12px;
     border-radius: 10px;
     font-size: 13.5px
 }
 
-.si-items-table .master-textarea {
+.si-items .master-textarea {
     height: auto;
-    min-height: 64px;
+    min-height: 62px;
+    margin-top: 8px;
     resize: vertical
 }
 
-.si-items-table .select2-selection--single {
+.si-items .master-product-select {
+    margin-bottom: 8px
+}
+
+.si-items .select2-selection--single {
     min-height: 40px;
     border-radius: 10px
 }
 
-.si-items-table .select2-selection--single .select2-selection__rendered {
+.si-items .select2-selection--single .select2-selection__rendered {
     padding: 9px 34px 9px 12px;
     font-size: 13.5px
 }
 
-.si-items-table .select2-selection--single .select2-selection__arrow {
+.si-items .select2-selection--single .select2-selection__arrow {
     height: 38px;
     width: 34px
 }
 
-.si-items-table .line-total {
+.si-items .line-total {
     display: inline-block;
-    margin-bottom: 6px
+    padding-top: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap
 }
 
-.si-total-box {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 14px
+.si-items .master-remove {
+    height: 40px;
+    width: 40px;
+    padding: 0;
+    justify-content: center
 }
 
-.si-total-box div {
-    background: var(--mc-soft);
-    border: 1px solid var(--mc-border);
-    border-radius: 14px;
-    padding: 12px
+/* --- the money preview: the same `.si-total-row`s the record page reads ---- */
+
+.si-ledger {
+    margin-top: 16px
 }
 
-.si-total-box span {
-    display: block;
-    color: var(--mc-text-3);
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase
+.si-ledger .si-total-row:first-child {
+    padding-top: 0
 }
 
-.si-total-box strong {
-    display: block;
-    margin-top: 5px;
-    font-size: 18px
-}
-
-/* The form's action bar: the same left-to-right order as every other form in
-   the office, right-aligned, and it stacks on a phone. `master-form.html` owns
-   `.master-actions`; this is the wider invoice form's own footer. */
-.si-submit {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px
-}
-
-@media (max-width: 767px) {
-    .si-submit {
-        flex-direction: column
-    }
-
-    .si-submit .master-btn {
-        width: 100%
-    }
-
-    .si-total-box {
-        grid-template-columns: 1fr
-    }
+.si-ledger .master-help {
+    margin: 10px 0 0
 }
 
 /* ==========================================================================
@@ -390,6 +369,23 @@
     flex: 0 0 auto
 }
 
+/* The link a converted proforma wears beside its state chip: where the money
+   went. A chip-sized sentence, not a second chip — there is one state here. */
+.si-converted-link {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    text-decoration: none
+}
+
+.si-converted-link:hover {
+    text-decoration: underline
+}
+
+.si-chip-converted {
+    text-decoration: none
+}
+
 /* On a phone the file row keeps the icon and the name on one line and lets the
    size and the open button fall under them. */
 @media (max-width: 767px) {
@@ -440,6 +436,7 @@
 .si-status.status-paid { --tone-bg: rgba(16, 185, 129, .18); --tone-fg: #047857; }
 .si-status.status-overdue { --tone-bg: rgba(225, 29, 72, .16); --tone-fg: #be123c; }
 .si-status.status-cancelled { --tone-bg: var(--mc-soft); --tone-fg: var(--mc-text-3); }
+.si-status.status-converted { --tone-bg: rgba(123, 97, 255, .16); --tone-fg: #6d4bd8; }
 
 .si-type.type-proforma { --tone-bg: rgba(123, 97, 255, .16); --tone-fg: #6d4bd8; }
 .si-type.type-tax { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
@@ -454,6 +451,7 @@
 :root[data-theme="dark"] .si-status.status-paid { --tone-fg: #6ee7b7; }
 :root[data-theme="dark"] .si-status.status-overdue { --tone-fg: #fda4af; }
 :root[data-theme="dark"] .si-status.status-cancelled { --tone-fg: #aab6c9; }
+:root[data-theme="dark"] .si-status.status-converted { --tone-fg: #c4b5fd; }
 
 :root[data-theme="dark"] .si-type.type-proforma { --tone-fg: #c4b5fd; }
 :root[data-theme="dark"] .si-type.type-tax { --tone-fg: #93b4ff; }

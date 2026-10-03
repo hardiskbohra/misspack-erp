@@ -96,9 +96,66 @@ class SalesInvoice extends Model
         return $this->hasMany(SalesInvoiceAttachment::class)->where('is_public', true)->latest('id');
     }
 
+    /**
+     * The tax invoice this proforma became.
+     *
+     * The link is one column on the proforma, which is what makes "a proforma
+     * becomes a tax invoice once" structural rather than a rule somebody has to
+     * remember: there is one place to write it and one place to read it.
+     */
+    public function convertedInvoice()
+    {
+        return $this->belongsTo(self::class, 'converted_invoice_id');
+    }
+
+    /** The proforma a tax invoice was raised from, when there was one. */
+    public function sourceInvoice()
+    {
+        return $this->hasOne(self::class, 'converted_invoice_id');
+    }
+
+    /**
+     * A proforma that has become a tax invoice.
+     *
+     * It is history: the client was shown it, it stays readable, and it is not a
+     * second receivable — the tax invoice stands for that money now.
+     */
+    public function isSuperseded(): bool
+    {
+        return $this->invoice_type === 'proforma' && (int) $this->converted_invoice_id > 0;
+    }
+
+    /**
+     * The documents that stand for money.
+     *
+     * Everything that counts receivable — the figures, the statement, the
+     * ageing — reads this scope. Without it, one advance is claimed by two
+     * documents and the office's own totals say the client owes twice.
+     */
+    public function scopeNotSuperseded(Builder $query): Builder
+    {
+        return $query->where(fn ($query) => $query
+            ->where('invoice_type', '!=', 'proforma')
+            ->orWhereNull('converted_invoice_id'));
+    }
+
+    /** Sales: tax invoices, cancellations aside. A proforma is never sales. */
+    public function scopeSales(Builder $query): Builder
+    {
+        return $query->where('invoice_type', 'tax')->where('status', '!=', 'cancelled');
+    }
+
+    /** Potential revenue: proformas no tax invoice has been raised from yet. */
+    public function scopePotential(Builder $query): Builder
+    {
+        return $query->where('invoice_type', 'proforma')
+            ->whereNull('converted_invoice_id')
+            ->where('status', '!=', 'cancelled');
+    }
+
     public function client()
     {
-        return $this->belongsTo(\App\Models\Client::class, 'client_id');
+        return $this->belongsTo(Client::class, 'client_id');
     }
 
     public function project()
@@ -168,6 +225,14 @@ class SalesInvoice extends Model
     /** What is still owed on it. */
     public function balanceDue(): float
     {
+        /* A proforma that has become a tax invoice owes nothing: the opening
+           figure and the receipts moved to the tax invoice with it, and that is
+           the document the client pays. Reading "total − received" here would
+           put the same 50,000 back on the books as the day it was raised. */
+        if ($this->isSuperseded()) {
+            return 0.0;
+        }
+
         return round(max((float) $this->total_amount - $this->receivedAmount(), 0), 2);
     }
 
@@ -261,8 +326,18 @@ class SalesInvoice extends Model
      */
     public function stateKey(?\DateTimeInterface $today = null): string
     {
-        if (in_array($this->status, ['draft', 'cancelled'], true)) {
-            return $this->status;
+        if ($this->status === 'cancelled') {
+            return 'cancelled';
+        }
+
+        /* Before draft and before the money: a converted proforma is history,
+           and "paid" on it would be the wrong sentence twice over. */
+        if ($this->isSuperseded()) {
+            return 'converted';
+        }
+
+        if ($this->status === 'draft') {
+            return 'draft';
         }
 
         if ($this->isOverdue($today)) {
@@ -283,6 +358,7 @@ class SalesInvoice extends Model
         return [
             'draft' => 'Draft',
             'cancelled' => 'Cancelled',
+            'converted' => 'Converted',
             'overdue' => 'Overdue',
             'paid' => 'Paid',
             'partial' => 'Partly paid',

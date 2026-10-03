@@ -291,6 +291,9 @@ class PartyStatement
             SalesInvoice::query()
                 ->whereIn('client_id', $ids)
                 ->where('status', '!=', 'cancelled')
+                /* A proforma that has become a tax invoice is not a second
+                   receivable: the tax invoice stands for that money. */
+                ->notSuperseded()
                 ->selectRaw('client_id, currency, invoice_date, total_amount')
                 ->chunk(500, function ($invoices) use ($add) {
                     foreach ($invoices as $invoice) {
@@ -519,6 +522,7 @@ class PartyStatement
             $invoices = SalesInvoice::query()
                 ->where('client_id', $client->id)
                 ->where('status', '!=', 'cancelled')
+                ->notSuperseded()
                 ->orderBy('invoice_date')->orderBy('id')
                 ->get();
 
@@ -731,7 +735,8 @@ class PartyStatement
             }
         } else {
             if (Schema::hasTable('sales_invoices')) {
-                $collect(SalesInvoice::where('client_id', $party->id)->where('status', '!=', 'cancelled')->get()
+                $collect(SalesInvoice::where('client_id', $party->id)->where('status', '!=', 'cancelled')
+                    ->notSuperseded()->get()
                     ->map(fn ($invoice) => [
                         'currency' => strtoupper((string) ($invoice->currency ?: 'INR')),
                         'date' => $invoice->invoice_date,
@@ -813,6 +818,7 @@ class PartyStatement
         $items = [];
 
         foreach (SalesInvoice::where('client_id', $id)->where('status', '!=', 'cancelled')
+            ->notSuperseded()
             ->orderBy('invoice_date')->orderBy('id')->get() as $invoice) {
             if (strtoupper((string) ($invoice->currency ?: 'INR')) !== $currency) {
                 continue;

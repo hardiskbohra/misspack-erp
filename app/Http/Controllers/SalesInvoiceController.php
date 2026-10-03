@@ -66,13 +66,23 @@ class SalesInvoiceController extends Controller
 
            The money rule is the model's (`RECEIVED_SQL`), so the tile, the chip, the
            row and the CSV all count the same money. */
+        /* One document, one claim on the money: a proforma that has become a
+           tax invoice is not a receivable, and this clause is what every sum
+           below says that with. */
+        $live = "(sales_invoices.invoice_type <> 'proforma' or sales_invoices.converted_invoice_id is null)";
+
         $figures = $this->filteredQuery($filters)->reorder()->selectRaw(
-            'coalesce(sum(sales_invoices.total_amount), 0) as invoiced'
-            .', coalesce(sum('.SalesInvoice::RECEIVED_SQL.'), 0) as received'
-            .', coalesce(sum(case when '.SalesInvoice::RECEIVED_SQL.' < sales_invoices.total_amount - 0.01'
+            'coalesce(sum(case when sales_invoices.invoice_type = \'tax\''
+                ." and sales_invoices.status <> 'cancelled' then sales_invoices.total_amount else 0 end), 0) as sales"
+            .', coalesce(sum(case when sales_invoices.invoice_type = \'proforma\''
+                ." and sales_invoices.converted_invoice_id is null and sales_invoices.status <> 'cancelled'"
+                .' then sales_invoices.total_amount else 0 end), 0) as potential'
+            .', coalesce(sum(case when '.$live.' then '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as received'
+            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < sales_invoices.total_amount - 0.01'
                 ." and sales_invoices.status not in ('draft', 'cancelled') then sales_invoices.total_amount - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
             .', coalesce(sum(case when sales_invoices.due_date is not null and sales_invoices.due_date < ?'
                 ." and sales_invoices.status not in ('draft', 'cancelled')"
+                .' and '.$live
                 .' and '.SalesInvoice::RECEIVED_SQL.' < sales_invoices.total_amount - 0.01'
                 .' then sales_invoices.total_amount - '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as overdue'
         )
@@ -80,7 +90,10 @@ class SalesInvoiceController extends Controller
             ->first();
 
         $stats = [
-            'invoiced' => (float) ($figures->invoiced ?? 0),
+            /* Sales are the tax invoices. A proforma is potential revenue until
+               one is raised from it, and neither after that. */
+            'sales' => (float) ($figures->sales ?? 0),
+            'potential' => (float) ($figures->potential ?? 0),
             'received' => (float) ($figures->received ?? 0),
             'outstanding' => (float) ($figures->outstanding ?? 0),
             'overdue' => (float) ($figures->overdue ?? 0),
@@ -94,15 +107,17 @@ class SalesInvoiceController extends Controller
            reads (`withReceived`, the payment count, the reminder count) never stand
            in front of it. */
         $totals = $this->filteredQuery($filters)->reorder()->selectRaw(
-            'coalesce(sum(sales_invoices.total_amount), 0) as invoiced'
-            .', coalesce(sum('.SalesInvoice::RECEIVED_SQL.'), 0) as received'
+            'coalesce(sum(case when '.$live.' then sales_invoices.total_amount else 0 end), 0) as counted'
+            .', coalesce(sum(case when '.$live.' then '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as received'
+            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < sales_invoices.total_amount - 0.01'
+                ." and sales_invoices.status not in ('draft', 'cancelled') then sales_invoices.total_amount - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
         )->first();
 
         $pageTotals = [
-            'invoiced' => (float) ($totals->invoiced ?? 0),
+            'counted' => (float) ($totals->counted ?? 0),
             'received' => (float) ($totals->received ?? 0),
+            'outstanding' => (float) ($totals->outstanding ?? 0),
         ];
-        $pageTotals['outstanding'] = round($pageTotals['invoiced'] - $pageTotals['received'], 2);
 
         $invoices = $this->filteredQuery($filters)
             ->withReceived()
@@ -117,7 +132,7 @@ class SalesInvoiceController extends Controller
             'invoices' => $invoices,
             'stats' => $stats,
             'pageTotals' => $pageTotals,
-            'chipCounts' => $this->chipCounts($filters),
+            'chipCounts' => $this->chipCounts($filters, $invoices->total()),
             'appliedChips' => app(SalesInvoiceFilters::class)->applied($filters),
             'dateRanges' => DateRanges::presets(),
             'dateRangeLabels' => DateRanges::LABELS,
@@ -316,27 +331,87 @@ class SalesInvoiceController extends Controller
             return back()->with('error', $salesInvoice->invoice_number.' is already a tax invoice.');
         }
 
-        $tax = $this->copyInvoice($salesInvoice, [
-            'invoice_type' => 'tax',
-            'invoice_number' => $this->makeInvoiceNumber('tax'),
-            'status' => 'draft',
-            'amount_paid' => 0,
-            'balance_amount' => (float) $salesInvoice->total_amount,
-            'public_token' => null,
-            'sent_at' => null,
-            'accepted_at' => null,
-            'cancelled_at' => null,
-            'notes' => trim('Converted from '.$salesInvoice->invoice_number.'. '.($salesInvoice->notes ?? '')),
-        ]);
+        if ($already = $salesInvoice->convertedInvoice) {
+            return back()->with('error', $salesInvoice->invoice_number.' has already become '
+                .$already->invoice_number.'. A proforma becomes one tax invoice — edit that one, '
+                .'or duplicate this proforma as a draft if a second document is really needed.');
+        }
+
+        /* The check above is the message; this one is the rule. A conversion is
+           two clicks apart at worst, and the lock is what stops the second one
+           from raising a second tax invoice from the same proforma. */
+        $tax = DB::transaction(function () use ($salesInvoice) {
+            $proforma = SalesInvoice::query()->whereKey($salesInvoice->getKey())->lockForUpdate()->first();
+
+            if (! $proforma || $proforma->invoice_type === 'tax' || $proforma->converted_invoice_id) {
+                return null;
+            }
+
+            $tax = $this->copyInvoice($proforma, [
+                'invoice_type' => 'tax',
+                'invoice_number' => $this->makeInvoiceNumber('tax'),
+                'status' => 'draft',
+                'amount_paid' => 0,
+                'public_token' => null,
+                'sent_at' => null,
+                'accepted_at' => null,
+                'cancelled_at' => null,
+                'notes' => trim('Converted from '.$proforma->invoice_number.'. '.($proforma->notes ?? '')),
+            ]);
+
+            $this->moveAdvanceTo($proforma, $tax);
+
+            $proforma->converted_invoice_id = $tax->id;
+            $proforma->save();
+
+            return $tax;
+        });
+
+        if (! $tax) {
+            return back()->with('error', 'A tax invoice already exists for '.$salesInvoice->invoice_number.'.');
+        }
 
         return redirect()->route('sales-invoices.edit', $tax)
-            ->with('success', $tax->invoice_number.' created from proforma '.$salesInvoice->invoice_number.'.');
+            ->with('success', $tax->invoice_number.' created from proforma '.$salesInvoice->invoice_number
+                .'. The advance and every receipt filed against the proforma moved to it.');
+    }
+
+    /**
+     * One advance, one document.
+     *
+     * The proforma asked for the money; the tax invoice is what is owed. So the
+     * opening figure the office typed on the proforma and every receipt filed
+     * against it in the ledger move across, and both balances are recomputed from
+     * the one money rule (`receivedAmount()`), because a stored balance that
+     * disagrees with the rule is the whole bug this module keeps having.
+     */
+    private function moveAdvanceTo(SalesInvoice $proforma, SalesInvoice $tax): void
+    {
+        $opening = round((float) $proforma->amount_paid, 2);
+
+        if ($opening > 0) {
+            $tax->amount_paid = round((float) $tax->amount_paid + $opening, 2);
+            $proforma->amount_paid = 0;
+            $tax->save();
+            $proforma->save();
+        }
+
+        if (Schema::hasColumn('cashflow_entries', 'sales_invoice_id')) {
+            CashflowEntry::query()
+                ->where('sales_invoice_id', $proforma->id)
+                ->update(['sales_invoice_id' => $tax->id]);
+        }
+
+        $this->refreshInvoiceMoney($tax);
+        $this->refreshInvoiceMoney($proforma);
     }
 
     /** Everything but the money and the documents, carried onto a new invoice. */
     private function copyInvoice(SalesInvoice $source, array $overrides): SalesInvoice
     {
-        $copy = $source->replicate(['created_at', 'updated_at']);
+        /* The link is never copied: a duplicate is a new document, and a
+           proforma copy is not "already converted" to anything. */
+        $copy = $source->replicate(['created_at', 'updated_at', 'converted_invoice_id']);
         $copy->fill($overrides);
         $copy->created_by = Auth::id();
         $copy->save();
@@ -420,42 +495,30 @@ class SalesInvoiceController extends Controller
      * @param  array<string, mixed>  $filters
      * @return array<string, int>
      */
-    private function chipCounts(array $filters): array
+    /**
+     * The number each chip in the strip carries.
+     *
+     * A chip's count is the number of rows that chip would show, asked with the
+     * rest of the view kept: "Proforma 12" on a month view is twelve proformas
+     * in that month. Only the dimension the chip itself replaces is reset, so
+     * the counts and the click agree. The strip is four chips plus the periods,
+     * so this is four count queries — the payment, ageing and chase chips were
+     * removed from the strip, and the thirteen counts behind them with them.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function chipCounts(array $filters, int $all): array
     {
-        $base = array_merge($filters, [
-            'type' => 'all',
-            'status' => 'all',
-            'payment' => 'all',
-            'ageing' => 'all',
-            'dateFrom' => null,
-            'dateTo' => null,
-        ]);
-
-        $count = fn (array $overrides) => $this->filteredQuery(array_merge($base, $overrides))->count();
+        $count = fn (array $overrides) => $this->filteredQuery(array_merge($filters, $overrides))->count();
 
         $counts = [
-            'all' => $count([]),
+            'all' => $all,
             'proforma' => $count(['type' => 'proforma']),
             'tax' => $count(['type' => 'tax']),
             'draft' => $count(['status' => 'draft']),
-            'unpaid' => $count(['payment' => 'unpaid']),
-            'partial' => $count(['payment' => 'partial']),
-            'paid' => $count(['payment' => 'paid']),
-            'overdue' => $count(['ageing' => 'overdue']),
         ];
 
-        foreach (array_keys(SalesInvoice::ageingBuckets()) as $bucket) {
-            $counts['ageing_'.$bucket] = $count(['ageing' => $bucket]);
-        }
-
-        /* The chase chips are money *and* time, so their counts are asked the same
-           way: with the chip's own dimension reset. */
-        foreach (SalesInvoiceFilters::CHASE_KEYS as $chase) {
-            $counts['chase_'.$chase] = $count(['chase' => $chase]);
-        }
-
-        /* The period chips: the number on "Last month" is the number of rows that
-           chip would show, in the month the chip is labelled with. */
+        /* The period chips replace the dates they own, and keep everything else. */
         foreach (DateRanges::presets() as $key => $range) {
             $counts[$key] = $count([
                 'dateFrom' => $range['from'],

@@ -42,6 +42,7 @@
         } catch (e) { /* ignore malformed payload */ }
 
         var rowIndex = 0;
+        var ledgerReceived = parseFloat(body.getAttribute('data-ledger-received')) || 0;
 
         function money(v) {
             return '₹ ' + (Number(v || 0)).toLocaleString('en-IN', {
@@ -50,99 +51,198 @@
             });
         }
 
+        /* A figure that moves the total down is written as a subtraction, not as
+           a negative amount: "− ₹ 1,000.00", never "₹ -1,000.00". */
+        function minus(v) {
+            var amount = round2(Math.abs(Number(v) || 0));
+            return amount === 0 ? money(0) : '− ' + money(amount);
+        }
+
+        /* The same rounding the server does, so a preview and a save agree to
+           the paisa. */
+        function round2(v) {
+            return Math.round((Number(v || 0) + Number.EPSILON) * 100) / 100;
+        }
+
+        /* Everything the office types into a field ends up inside an attribute
+           or a text node: a product description with a quote in it must not be
+           able to break the row it is typed into. */
+        function esc(value) {
+            return String(value === undefined || value === null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        /* An empty field is not a zero: `val(item.quantity, 1)` keeps the row's
+           own default, where `item.quantity || 1` would turn a typed 0 into 1. */
+        function val(value, fallback) {
+            return (value === undefined || value === null || value === '') ? fallback : value;
+        }
+
+        function fieldValue(id) {
+            var el = document.getElementById(id);
+            return el ? (parseFloat(el.value) || 0) : 0;
+        }
+
+        function fieldText(id) {
+            var el = document.getElementById(id);
+            return el ? (el.value || '') : '';
+        }
+
+        function setText(id, text) {
+            var el = document.getElementById(id);
+            if (el) el.textContent = text;
+        }
+
+        /* One line of the money ledger: the value, and whether the line applies
+           at all. A ledger of eleven rows of ₹ 0.00 hides the two that matter. */
+        function setRow(rowId, valueId, text, show) {
+            var row = document.getElementById(rowId);
+            if (row) row.hidden = !show;
+            setText(valueId, text);
+        }
+
         function productSelect(name, selected) {
             var html = '<select class="master-select master-product-select" name="' + name + '"><option value="">Manual</option>';
             productOptions.forEach(function (p) {
-                html += '<option value="' + p.id + '"' + (String(selected || '') === String(p.id) ? ' selected' : '') + '>' + p.no + ' : ' + p.name + '</option>';
+                html += '<option value="' + esc(p.id) + '"' + (String(selected || '') === String(p.id) ? ' selected' : '') + '>' + esc(p.no) + ' : ' + esc(p.name) + '</option>';
             });
             return html + '</select>';
         }
 
+        /* ------------------------------------------------------------- the money
+           The office sees the invoice before it is saved, and the figures they
+           see have to be the figures that get stored. This mirrors
+           `SalesInvoiceController::syncItemsAndTotals()` step for step: gross,
+           the line's own discount, taxable, the invoice discount, the tax
+           scaled by the discount's ratio, the charges, the round off, the total
+           — and then the model's balance rule, with the receipts already in the
+           ledger (handed over in `data-ledger-received`) on the same side of the
+           subtraction. A preview that adds up a different invoice is how the
+           office learns not to trust either figure. */
         function calculateTotals() {
-            var subtotal = 0;
+            var gstType = fieldText('gstType');
+            var exportSale = gstType === 'export';
+
+            var gross = 0;
             var taxable = 0;
-            var tax = 0;
+            var cgst = 0;
+            var sgst = 0;
+            var igst = 0;
 
             body.querySelectorAll('tr').forEach(function (row) {
-                var qtyInput = row.querySelector('input[name$="[quantity]"]');
-                var rateInput = row.querySelector('input[name$="[unit_price]"]');
-                var gstInput = row.querySelector('input[name$="[gst_percent]"]');
+                var qty = parseFloat((row.querySelector('input[name$="[quantity]"]') || {}).value) || 0;
+                var rate = parseFloat((row.querySelector('input[name$="[unit_price]"]') || {}).value) || 0;
+                var discount = parseFloat((row.querySelector('input[name$="[discount_percent]"]') || {}).value) || 0;
+                var gst = parseFloat((row.querySelector('input[name$="[gst_percent]"]') || {}).value) || 0;
 
-                var qty = parseFloat(qtyInput && qtyInput.value) || 0;
-                var rate = parseFloat(rateInput && rateInput.value) || 0;
-                var gst = parseFloat(gstInput && gstInput.value) || 0;
+                var lineGross = round2(qty * rate);
+                var lineTaxable = Math.max(round2(lineGross - round2(lineGross * discount / 100)), 0);
+                var lineTax = 0;
 
-                var gross = qty * rate;
-                var taxableLine = gross;
-
-                var gstTypeEl = document.getElementById('gstType');
-                var taxLine = (gstTypeEl && gstTypeEl.value === 'export') ?
-                    0 :
-                    taxableLine * gst / 100;
-
-                var lineTotal = taxableLine + taxLine;
-
-                subtotal += gross;
-                taxable += taxableLine;
-                tax += taxLine;
-
-                var lineTotalElement = row.querySelector('.line-total');
-                if (lineTotalElement) {
-                    lineTotalElement.textContent = money(lineTotal);
+                if (!exportSale) {
+                    if (gstType === 'inter_state') {
+                        lineTax = round2(lineTaxable * gst / 100);
+                    } else {
+                        var half = round2(lineTaxable * (gst / 200));
+                        lineTax = round2(half * 2);
+                    }
                 }
+
+                gross += lineGross;
+                taxable += lineTaxable;
+
+                if (!exportSale) {
+                    if (gstType === 'inter_state') {
+                        igst += lineTax;
+                    } else {
+                        cgst += round2(lineTax / 2);
+                        sgst += round2(lineTax - round2(lineTax / 2));
+                    }
+                }
+
+                var total = row.querySelector('.line-total');
+                if (total) total.textContent = money(round2(lineTaxable + lineTax));
             });
 
-            var discountValueEl = document.getElementById('discountValue');
-            var discountTypeEl = document.getElementById('discountType');
-            var freightEl = document.getElementById('freightAmount');
-            var packingEl = document.getElementById('packingAmount');
-            var otherEl = document.getElementById('otherCharges');
-            var roundOffEl = document.getElementById('roundOff');
-            var paidEl = document.getElementById('amountPaid');
+            var discountValue = fieldValue('discountValue');
+            var discountType = fieldText('discountType') || 'amount';
+            var invoiceDiscount = discountType === 'percent'
+                ? round2(taxable * discountValue / 100)
+                : Math.min(discountValue, taxable);
 
-            var discountValue = parseFloat(discountValueEl && discountValueEl.value) || 0;
-            var discountType = (discountTypeEl && discountTypeEl.value) || 'amount';
-            var invoiceDiscount = discountType === 'percent' ?
-                taxable * discountValue / 100 :
-                discountValue;
-            var freight = parseFloat(freightEl && freightEl.value) || 0;
-            var packing = parseFloat(packingEl && packingEl.value) || 0;
-            var other = parseFloat(otherEl && otherEl.value) || 0;
-            var roundOff = parseFloat(roundOffEl && roundOffEl.value) || 0;
-            var paid = parseFloat(paidEl && paidEl.value) || 0;
+            var taxableAfter = Math.max(round2(taxable - invoiceDiscount), 0);
+            var ratio = taxable > 0 ? (taxableAfter / taxable) : 1;
 
-            var total = taxable - invoiceDiscount + tax + freight + packing + other + roundOff;
-            var balance = total - paid;
+            cgst = round2(cgst * ratio);
+            sgst = round2(sgst * ratio);
+            igst = round2(igst * ratio);
 
-            var previewSubtotal = document.getElementById('previewSubtotal');
-            var previewTax = document.getElementById('previewTax');
-            var previewTotal = document.getElementById('previewTotal');
-            var previewBalance = document.getElementById('previewBalance');
-            if (previewSubtotal) previewSubtotal.textContent = money(taxable);
-            if (previewTax) previewTax.textContent = money(tax);
-            if (previewTotal) previewTotal.textContent = money(total);
-            if (previewBalance) previewBalance.textContent = money(balance);
+            var freight = fieldValue('freightAmount');
+            var packing = fieldValue('packingAmount');
+            var other = fieldValue('otherCharges');
+            var roundOff = fieldValue('roundOff');
+            var charges = round2(freight + packing + other);
+            var tax = round2(cgst + sgst + igst);
+
+            var total = round2(taxableAfter + tax + charges + roundOff);
+            var received = round2(fieldValue('amountPaid') + ledgerReceived);
+            var balance = Math.max(round2(total - received), 0);
+
+            setRow('rowSubtotal', 'previewSubtotal', money(gross), true);
+            setRow('rowLineDiscount', 'previewLineDiscount', minus(taxable - gross), round2(taxable - gross) !== 0);
+            setRow('rowInvoiceDiscount', 'previewInvoiceDiscount', minus(invoiceDiscount), invoiceDiscount > 0);
+            setRow('rowTaxable', 'previewTaxable', money(taxableAfter), true);
+            setRow('rowCgst', 'previewCgst', money(cgst), cgst !== 0);
+            setRow('rowSgst', 'previewSgst', money(sgst), sgst !== 0);
+            setRow('rowIgst', 'previewIgst', money(igst), igst !== 0);
+            setRow('rowFreight', 'previewFreight', money(freight), freight !== 0);
+            setRow('rowPacking', 'previewPacking', money(packing), packing !== 0);
+            setRow('rowOther', 'previewOther', money(other), other !== 0);
+            setRow('rowRoundOff', 'previewRoundOff', money(roundOff), roundOff !== 0);
+            setRow('rowTotal', 'previewTotal', money(total), true);
+            setRow('rowReceived', 'previewReceived', minus(received), received !== 0);
+            setRow('rowBalance', 'previewBalance', money(balance), true);
+
+            /* Red while money is owed, green when nothing is: the same two tones
+               the listing's balance column reads. */
+            var balanceText = document.getElementById('previewBalance');
+            if (balanceText) balanceText.className = balance > 0 ? 'si-due' : 'si-clear';
         }
 
+        /* One line of the invoice. Every name here is one
+           `SalesInvoiceController::syncItemsAndTotals()` reads — including
+           `discount_percent`, which the row did not post at all: the office
+           could type a line discount into the database and the next save of the
+           invoice wrote it back as zero. */
         function addRow(item) {
             item = item || {};
             var i = rowIndex++;
-            body.insertAdjacentHTML('beforeend', '<tr>\n' +
-                '            <td>\n' +
-                '                <div>\n' +
-                '                ' + productSelect('items[' + i + '][product_id]', item.product_id || '') + '\n' +
-                '                <input name="items[' + i + '][project_product_id]" type="hidden" value="' + (item.project_product_id || '') + '"></div><br>\n' +
-                '                <div><input class="master-input" name="items[' + i + '][product_name]" value="' + (item.product_name || '') + '" placeholder="Product name"></div><br>\n' +
-                '                <textarea class="master-textarea" rows="3" name="items[' + i + '][description]" placeholder="Description">' + (item.description || '') + '</textarea>\n' +
-                '            </td>\n' +
-                '            <td><input class="master-input" name="items[' + i + '][hsn_sac]" value="' + (item.hsn_sac || '') + '" placeholder="HSN"></td>\n' +
-                '            <td><input class="master-input calc" type="number" step="1" min="0" name="items[' + i + '][quantity]" value="' + (item.quantity || 1) + '"></td>\n' +
-                '            <td><input class="master-input" name="items[' + i + '][unit]" value="' + (item.unit || 'pcs') + '"></td>\n' +
-                '            <td><input class="master-input calc" type="number" step="0.05" min="0" name="items[' + i + '][unit_price]" value="' + (item.unit_price || 0) + '"></td>\n' +
-                '            <td><input class="master-input calc" type="number" step="1" min="0" name="items[' + i + '][gst_percent]" value="' + (item.gst_percent || 18) + '"></td>\n' +
-                '            <td><strong class="line-total">₹ 0.00</strong><input name="items[' + i + '][remarks]" placeholder="Remarks" style="margin-top:5px;" hidden></td>\n' +
-                '            <td><button type="button" class="master-remove">×</button></td>\n' +
-                '        </tr>');
+
+            var html = [
+                '<tr>',
+                '    <td>',
+                '        ' + productSelect('items[' + i + '][product_id]', val(item.product_id, '')),
+                '        <input type="hidden" name="items[' + i + '][project_product_id]" value="' + esc(val(item.project_product_id, '')) + '">',
+                '        <input class="master-input" name="items[' + i + '][product_name]" value="' + esc(val(item.product_name, '')) + '" placeholder="Product name">',
+                '        <textarea class="master-textarea" rows="3" name="items[' + i + '][description]" placeholder="Description">' + esc(val(item.description, '')) + '</textarea>',
+                '    </td>',
+                '    <td><input class="master-input" name="items[' + i + '][hsn_sac]" value="' + esc(val(item.hsn_sac, '')) + '" placeholder="HSN"></td>',
+                '    <td class="is-num"><input class="master-input calc" type="number" step="0.001" min="0" name="items[' + i + '][quantity]" value="' + esc(val(item.quantity, 1)) + '"></td>',
+                '    <td><input class="master-input" name="items[' + i + '][unit]" value="' + esc(val(item.unit, 'pcs')) + '"></td>',
+                '    <td class="is-num"><input class="master-input calc" type="number" step="0.01" min="0" name="items[' + i + '][unit_price]" value="' + esc(val(item.unit_price, 0)) + '"></td>',
+                '    <td class="is-num"><input class="master-input calc" type="number" step="0.01" min="0" name="items[' + i + '][discount_percent]" value="' + esc(val(item.discount_percent, 0)) + '"></td>',
+                '    <td class="is-num"><input class="master-input calc" type="number" step="0.05" min="0" name="items[' + i + '][gst_percent]" value="' + esc(val(item.gst_percent, 18)) + '"></td>',
+                '    <td class="is-num"><strong class="line-total">₹ 0.00</strong>',
+                '        <input type="hidden" name="items[' + i + '][remarks]" value="' + esc(val(item.remarks, '')) + '"></td>',
+                '    <td class="is-num"><button type="button" class="master-btn master-btn-ghost master-remove" aria-label="Remove this line"><i class="fas fa-xmark" aria-hidden="true"></i></button></td>',
+                '</tr>'
+            ].join('\n');
+
+            body.insertAdjacentHTML('beforeend', html);
             calculateTotals();
         }
 
@@ -171,8 +271,12 @@
         });
 
         body.addEventListener('click', function (e) {
-            if (e.target.classList.contains('master-remove')) {
-                e.target.closest('tr').remove();
+            /* the button carries an icon: the click may land on the <i> inside
+               it, so the handler walks up to the control itself */
+            var remove = e.target.closest ? e.target.closest('.master-remove') : null;
+
+            if (remove) {
+                remove.closest('tr').remove();
                 calculateTotals();
             }
         });

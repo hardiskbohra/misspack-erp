@@ -108,8 +108,12 @@ cashflow listing does. The module contributes no list styling of its own — see
 
 Capability, all from the listing:
 
-- **chips with counts** — All invoices · Proforma · Tax · Drafts · Nothing received ·
-  Partly paid · Paid · Overdue, plus one chip per `DateRanges::presets()` period;
+- **chips with counts** — All invoices · Proforma · Tax · Drafts, plus one chip per
+  `DateRanges::presets()` period. A chip's count is what that chip would show, asked
+  with the rest of the view kept. The money questions (nothing received · partly paid ·
+  paid), how late it is (the five ageing buckets) and who to chase (due within 7 days ·
+  not nudged in a week · nudged this week) are one select each in the filter row, not
+  chips: the strip was seven chips of noise over filters the row already offers;
 - **saved views** (`SavedViews`, module `sales-invoices`) — the query is the view, and
   `?saved_view=ID` redirects into it;
 - **filters** — search, type, status, client, project, payment, ageing, invoice date

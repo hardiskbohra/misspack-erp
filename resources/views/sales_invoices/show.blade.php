@@ -68,6 +68,14 @@
                         </span>
                     @endif
 
+                    @if ($invoice->isSuperseded())
+                        <a class="master-chip si-chip-converted"
+                            href="{{ route('sales-invoices.show', $invoice->convertedInvoice) }}">
+                            <i class="fas fa-arrow-right-arrow-left" aria-hidden="true"></i>
+                            Became {{ $invoice->convertedInvoice?->invoice_number }}
+                        </a>
+                    @endif
+
                     <span class="si-portal {{ $invoice->show_client_portal ? 'is-public' : 'is-private' }}">
                         <i class="fas fa-{{ $invoice->show_client_portal ? 'toggle-on' : 'toggle-off' }}" aria-hidden="true"></i>
                         {{ $invoice->show_client_portal ? 'In client portal' : 'Not in portal' }}
@@ -153,9 +161,9 @@
                                 {{ $invoice->show_client_portal ? 'Hide from portal' : 'Show in portal' }}
                             </button>
                         </form>
-                        @if ($invoice->invoice_type === 'proforma')
+                        @if ($invoice->invoice_type === 'proforma' && ! $invoice->isSuperseded())
                             <form method="POST" action="{{ route('sales-invoices.convert', $invoice) }}"
-                                data-confirm="Create a tax invoice from {{ $invoice->invoice_number }}?">
+                                data-confirm="Create a tax invoice from {{ $invoice->invoice_number }}? The advance and every receipt on it will move to the new tax invoice.">
                                 @csrf
                                 <button type="submit">
                                     <i class="fas fa-file-invoice" aria-hidden="true"></i> Convert to tax invoice
@@ -206,7 +214,9 @@
                     <p class="master-stat-title">Received</p>
                     <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($receivedAmount) }}</p>
                     <p class="master-sub">
-                        @if ($receipts->isEmpty())
+                        @if ($invoice->isSuperseded())
+                            Moved to {{ $invoice->convertedInvoice?->invoice_number }}
+                        @elseif ($receipts->isEmpty())
                             Nothing received yet
                         @else
                             {{ $receipts->count() }} {{ \Illuminate\Support\Str::plural('receipt', $receipts->count()) }} in the ledger
@@ -230,7 +240,9 @@
                     <p class="master-stat-title">Balance due</p>
                     <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}</p>
                     <p class="master-sub">
-                        @if ($balanceAmount <= 0)
+                        @if ($invoice->isSuperseded())
+                            Moved to the tax invoice
+                        @elseif ($balanceAmount <= 0)
                             Received in full
                         @else
                             {{ $ageingLabel }}
@@ -536,7 +548,14 @@
                         @endif
                     </div>
 
-                    @if ($receipts->isEmpty())
+                    @if ($invoice->isSuperseded())
+                        <div class="master-empty-state">
+                            <i class="fas fa-arrow-right-arrow-left"></i>
+                            <p>This proforma became {{ $invoice->convertedInvoice?->invoice_number }}. The advance and every receipt filed against it moved to that tax invoice — one document, one claim on the money.</p>
+                            <a href="{{ route('sales-invoices.show', $invoice->convertedInvoice) }}"
+                                class="master-btn master-btn-light">Open the tax invoice</a>
+                        </div>
+                    @elseif ($receipts->isEmpty())
                         <div class="master-empty-state">
                             <i class="fas fa-receipt"></i>
                             <p>Nothing received against this invoice yet. Book the receipt here and the ledger, the client statement and this balance all read the same number.</p>

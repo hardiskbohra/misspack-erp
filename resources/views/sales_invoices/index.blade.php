@@ -31,10 +31,6 @@
         'proforma' => $type === 'proforma',
         'tax' => $type === 'tax',
         'draft' => $status === 'draft',
-        'unpaid' => $payment === 'unpaid',
-        'partial' => $payment === 'partial',
-        'paid' => $payment === 'paid',
-        'overdue' => $ageing === 'overdue',
     ];
 
     /* The applied strip is built from the same list of dimensions that filtered
@@ -62,9 +58,17 @@
         <div class="master-stat master-stat--flat blue tooltip-container">
             <span class="icon">₹</span>
             <div>
-                <p class="master-stat-title">Invoiced (filtered)</p>
-                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['invoiced']) }}</p>
-                <span class="tooltip-text">The total of every invoice matching the filters above, drafts included.</span>
+                <p class="master-stat-title">Sales (filtered)</p>
+                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['sales']) }}</p>
+                <span class="tooltip-text">The tax invoices matching the filters, drafts included, cancellations aside. A proforma is never sales — it becomes this the moment a tax invoice is raised from it.</span>
+            </div>
+        </div>
+        <div class="master-stat master-stat--flat purple tooltip-container">
+            <span class="icon">↗</span>
+            <div>
+                <p class="master-stat-title">Potential revenue (filtered)</p>
+                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['potential']) }}</p>
+                <span class="tooltip-text">Proformas matching the filters that no tax invoice has been raised from yet — the money asked for, not the money sold. A converted proforma leaves this figure for Sales; it is never in both.</span>
             </div>
         </div>
         <div class="master-stat master-stat--flat teal tooltip-container">
@@ -72,7 +76,7 @@
             <div>
                 <p class="master-stat-title">Received (filtered)</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['received']) }}</p>
-                <span class="tooltip-text">Money in: the invoice's own opening figure plus every receipt filed against it in the cashflow ledger.</span>
+                <span class="tooltip-text">Money in: each standing invoice's own opening figure plus every receipt filed against it in the cashflow ledger.</span>
             </div>
         </div>
         <div class="master-stat master-stat--flat orange tooltip-container">
@@ -80,7 +84,7 @@
             <div>
                 <p class="master-stat-title">Outstanding (filtered)</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['outstanding']) }}</p>
-                <span class="tooltip-text">Invoiced minus received, over the same rows — drafts and cancellations excluded, because nobody owes those.</span>
+                <span class="tooltip-text">Sales and potential added up, minus what has been received — one claim per document, drafts and cancellations left out because nobody owes those.</span>
             </div>
         </div>
         <div class="master-stat master-stat--flat {{ $stats['overdue'] > 0 ? 'red' : 'purple' }} tooltip-container">
@@ -88,7 +92,7 @@
             <div>
                 <p class="master-stat-title">Overdue (filtered)</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['overdue']) }}</p>
-                <span class="tooltip-text">The part of that balance whose due date has passed. This is the money to chase.</span>
+                <span class="tooltip-text">The part of that balance whose due date has passed, on documents that stand — a proforma that became a tax invoice is not late, and is not in this figure. This is the money to chase.</span>
             </div>
         </div>
         <div class="master-stat master-stat--flat purple tooltip-container">
@@ -119,34 +123,11 @@
                     href="{{ route('sales-invoices.index', $chipBase->all() + ['status' => 'draft']) }}">
                     Drafts <span class="master-list-chip-count">{{ $chipCounts['draft'] }}</span>
                 </a>
-                {{-- The money questions are asked of the money, not of a stored
-                     word: an invoice marked "paid" a year ago whose receipt was
-                     since deleted is not paid. --}}
-                <a class="master-list-chip {{ $chipActive['unpaid'] ? 'is-active' : '' }}"
-                    href="{{ route('sales-invoices.index', $chipBase->all() + ['payment' => 'unpaid']) }}">
-                    Nothing received <span class="master-list-chip-count">{{ $chipCounts['unpaid'] }}</span>
-                </a>
-                <a class="master-list-chip {{ $chipActive['partial'] ? 'is-active' : '' }}"
-                    href="{{ route('sales-invoices.index', $chipBase->all() + ['payment' => 'partial']) }}">
-                    Partly paid <span class="master-list-chip-count">{{ $chipCounts['partial'] }}</span>
-                </a>
-                <a class="master-list-chip {{ $chipActive['paid'] ? 'is-active' : '' }}"
-                    href="{{ route('sales-invoices.index', $chipBase->all() + ['payment' => 'paid']) }}">
-                    Paid <span class="master-list-chip-count">{{ $chipCounts['paid'] }}</span>
-                </a>
-                <a class="master-list-chip {{ $chipActive['overdue'] ? 'is-active' : '' }}"
-                    href="{{ route('sales-invoices.index', $chipBase->all() + ['ageing' => 'overdue']) }}">
-                    Overdue <span class="master-list-chip-count">{{ $chipCounts['overdue'] }}</span>
-                </a>
-                {{-- Who to chase today: still owed, and either due this week or
-                     a week without a word. Each chip carries the count it would
-                     show, asked the same way the rows are. --}}
-                @foreach ($chaseLabels as $chaseKey => $chaseLabel)
-                    <a class="master-list-chip {{ $chase === $chaseKey ? 'is-active' : '' }}"
-                        href="{{ route('sales-invoices.index', $chipBase->all() + ['chase' => $chaseKey]) }}">
-                        {{ $chaseLabel }} <span class="master-list-chip-count">{{ $chipCounts['chase_'.$chaseKey] ?? 0 }}</span>
-                    </a>
-                @endforeach
+                {{-- Four chips, and nothing that repeats a filter the strip
+                     below already offers: the money questions (nothing
+                     received / partly paid / paid), how late it is, and who to
+                     chase are all in the filter row, where the ageing buckets
+                     read as the list they are. --}}
 
                 {{-- The periods read left to right, nearest first — the same four
                      ranges every list gets from App\Helpers\DateRanges. --}}
@@ -372,7 +353,13 @@
                             </td>
                             <td data-label="Total" class="is-num">
                                 <strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->total_amount) }}</strong>
-                                <span class="master-sub">{{ $invoice->items->count() }} {{ \Illuminate\Support\Str::plural('item', $invoice->items->count()) }}</span>
+                                <span class="master-sub">
+                                    @if ($invoice->isSuperseded())
+                                        Not counted in sales — the tax invoice stands for it
+                                    @else
+                                        {{ $invoice->items->count() }} {{ \Illuminate\Support\Str::plural('item', $invoice->items->count()) }}
+                                    @endif
+                                </span>
                             </td>
                             <td data-label="Received" class="is-num">
                                 <strong>{{ \App\Helpers\CommonHelper::indianCurrency($received) }}</strong>
@@ -385,9 +372,13 @@
                                 </span>
                             </td>
                             <td data-label="Balance" class="is-num">
-                                <strong class="si-balance {{ $balance > 0 ? ($invoice->isOverdue() ? 'is-due' : '') : 'is-clear' }}">
-                                    {{ \App\Helpers\CommonHelper::indianCurrency($balance) }}
-                                </strong>
+                                @if ($invoice->isSuperseded())
+                                    <span class="master-sub">Moved to {{ $invoice->convertedInvoice?->invoice_number }}</span>
+                                @else
+                                    <strong class="si-balance {{ $balance > 0 ? ($invoice->isOverdue() ? 'is-due' : '') : 'is-clear' }}">
+                                        {{ \App\Helpers\CommonHelper::indianCurrency($balance) }}
+                                    </strong>
+                                @endif
                             </td>
                             <td data-label="Due">
                                 {{ optional($invoice->due_date)->format('d M Y') ?: '-' }}
@@ -399,6 +390,11 @@
                             </td>
                             <td data-label="State">
                                 <span class="si-status status-{{ $stateKey }}">{{ $invoice->stateLabel() }}</span>
+                                @if ($invoice->isSuperseded())
+                                    <a class="master-sub si-converted-link"
+                                        href="{{ route('sales-invoices.show', $invoice->convertedInvoice) }}">Became
+                                        {{ $invoice->convertedInvoice?->invoice_number }}</a>
+                                @endif
                                 <span class="master-sub">
                                     <span class="si-portal {{ $invoice->show_client_portal ? 'is-public' : 'is-private' }}">
                                         {{ $invoice->show_client_portal ? 'In portal' : 'Not in portal' }}
@@ -465,9 +461,9 @@
                                                     {{ $invoice->show_client_portal ? 'Hide from portal' : 'Show in portal' }}
                                                 </button>
                                             </form>
-                                            @if ($invoice->invoice_type === 'proforma')
+                                            @if ($invoice->invoice_type === 'proforma' && ! $invoice->isSuperseded())
                                                 <form method="POST" action="{{ route('sales-invoices.convert', $invoice) }}"
-                                                    data-confirm="Create a tax invoice from {{ $invoice->invoice_number }}?">
+                                                    data-confirm="Create a tax invoice from {{ $invoice->invoice_number }}? The advance and every receipt on it will move to the new tax invoice.">
                                                     @csrf
                                                     <button type="submit">
                                                         <i class="fas fa-file-invoice" aria-hidden="true"></i> Convert to tax invoice
@@ -525,16 +521,16 @@
                                 <span class="master-sub">Filtered totals cover every page</span>
                             </td>
                             <td class="is-num">
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['invoiced']) }}</strong>
-                                <span class="master-sub">All pages</span>
+                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['counted']) }}</strong>
+                                <span class="master-sub">Sales + potential · a converted proforma counts once</span>
                             </td>
                             <td class="is-num">
                                 <strong>{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['received']) }}</strong>
-                                <span class="master-sub">All pages</span>
+                                <span class="master-sub">Received · all pages</span>
                             </td>
                             <td class="is-num">
                                 <strong>{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['outstanding']) }}</strong>
-                                <span class="master-sub">All pages</span>
+                                <span class="master-sub">Outstanding · all pages</span>
                             </td>
                             <td colspan="3"></td>
                         </tr>
