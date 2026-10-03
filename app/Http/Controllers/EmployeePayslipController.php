@@ -124,11 +124,18 @@ class EmployeePayslipController extends Controller
         $gross = round((float) ($data['gross_amount'] ?? 0), 2);
         $deductions = round((float) ($data['deductions'] ?? 0), 2);
 
-        $net = array_key_exists('net_amount', $data) && $data['net_amount'] !== null
-            ? round((float) $data['net_amount'], 2)
+        /* Blank and zero are different answers. The field is empty in the
+           ordinary case — the office typed a gross and deductions and expects
+           the net — so an empty string counts as "not given" and falls back to
+           the subtraction, rather than becoming a net of zero. */
+        $given = $data['net_amount'] ?? null;
+        $given = ($given === null || $given === '') ? null : $given;
+
+        $net = $given !== null
+            ? round((float) $given, 2)
             : round($gross - $deductions, 2);
 
-        if ($gross > 0 && ($data['net_amount'] ?? null) === null && $deductions > $gross) {
+        if ($gross > 0 && $given === null && $deductions > $gross) {
             throw ValidationException::withMessages([
                 'deductions' => 'Deductions cannot be more than the gross amount.',
             ]);
