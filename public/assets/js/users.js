@@ -56,16 +56,46 @@
 
     /* ------------------------------------------------------------ avatars */
 
+    /* The same four the server takes (`mimes:jpg,jpeg,png,gif,webp`, `max:2048`
+       in UserController::rules). Checked here as well so a 4 MB photograph is
+       refused where it was chosen instead of after an upload that has already
+       happened — two copies of the rule, and `employees-check` holds them
+       equal. */
+    var AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    var AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+
+    function avatarProblem(file) {
+        if (AVATAR_TYPES.indexOf(file.type) === -1) return 'JPG, PNG, GIF or WEBP only';
+
+        return file.size > AVATAR_MAX_BYTES ? 'That photo is over 2 MB' : '';
+    }
+
+    /* The band's empty state, button included: `resetAvatar` draws the circle
+       and the placeholder, and hides the Clear/Remove button that only makes
+       sense once there is something to clear. */
+    function resetAvatarBand(circleId, nameId) {
+        resetAvatar(circleId, nameId);
+
+        var button = document.querySelector(
+            '[data-avatar-drop][data-avatar-circle="' + circleId + '"] .master-remove-avatar-btn');
+
+        if (button) button.hidden = true;
+    }
+
     function resetAvatar(circleId, nameId) {
         var circle = byId(circleId);
         var name = byId(nameId);
 
         if (circle) circle.innerHTML = '<i class="fas fa-user" aria-hidden="true"></i>';
-        if (name) name.textContent = 'No file chosen';
+
+        if (name) {
+            name.textContent = 'No file chosen';
+            name.classList.remove('is-chosen', 'is-bad');
+        }
     }
 
-    function previewAvatar(input, circleId, nameId) {
-        if (!input.files || !input.files[0]) return;
+    function drawAvatar(file, circleId, nameId) {
+        if (!file) return;
 
         var reader = new FileReader();
 
@@ -76,24 +106,129 @@
                 circle.innerHTML = '<img src="' + event.target.result + '" alt="">';
             }
         };
-        reader.readAsDataURL(input.files[0]);
+        reader.readAsDataURL(file);
 
-        var fileName = byId(nameId);
-        if (fileName) fileName.textContent = input.files[0].name;
+        var name = byId(nameId);
 
-        var removeButton = byId('editRemoveBtn');
-        if (removeButton) removeButton.hidden = false;
-
-        var removeInput = byId('editRemoveAvatar');
-        if (removeInput) removeInput.value = '0';
+        if (name) {
+            name.textContent = file.name;
+            name.classList.add('is-chosen');
+            name.classList.remove('is-bad');
+        }
     }
 
-    function removeEditAvatar() {
-        resetAvatar('editAvatarCircle', 'editAvName');
+    /* A refusal says why, in the slot the file name would have used: silence
+       after choosing a file reads as a broken button. */
+    function sayAvatarProblem(nameId, message) {
+        var name = byId(nameId);
 
-        if (byId('editAvName')) byId('editAvName').textContent = 'Photo will be removed';
-        if (byId('editRemoveAvatar')) byId('editRemoveAvatar').value = '1';
-        if (byId('editRemoveBtn')) byId('editRemoveBtn').hidden = true;
+        if (!name) return;
+
+        name.textContent = message;
+        name.classList.add('is-bad');
+        name.classList.remove('is-chosen');
+    }
+
+    function previewAvatar(input, circleId, nameId) {
+        if (!input.files || !input.files[0]) return;
+
+        drawAvatar(input.files[0], circleId, nameId);
+
+        if (input.id === 'editAvatarFile') {
+            if (byId('editRemoveBtn')) byId('editRemoveBtn').hidden = false;
+            if (byId('editRemoveAvatar')) byId('editRemoveAvatar').value = '0';
+        }
+    }
+
+    /* One band, one input, one row of controls. The circle is a second label for
+       the same input — so clicking the photo opens the picker — and
+       `data-avatar-remove` says what its button means: `clear` forgets a file
+       that was just chosen (the add dialog), `delete` files the photo on record
+       for removal (the edit dialog, which posts `remove_avatar`). */
+    function wireAvatarBand(row) {
+        var input = row.querySelector('input[type="file"]');
+        var circleId = row.getAttribute('data-avatar-circle');
+        var nameId = row.getAttribute('data-avatar-name');
+        var removeButton = row.querySelector('.master-remove-avatar-btn');
+        var deletes = row.getAttribute('data-avatar-remove') === 'delete';
+
+        if (input) {
+            input.addEventListener('change', function () {
+                var file = this.files && this.files[0];
+
+                if (!file) return;
+
+                var problem = avatarProblem(file);
+
+                if (problem) {
+                    this.value = '';
+                    sayAvatarProblem(nameId, problem);
+                    if (removeButton) removeButton.hidden = true;
+                    return;
+                }
+
+                previewAvatar(this, circleId, nameId);
+                if (removeButton) removeButton.hidden = false;
+            });
+        }
+
+        if (removeButton) {
+            removeButton.addEventListener('click', function () {
+                if (input) input.value = '';
+
+                resetAvatar(circleId, nameId);
+                removeButton.hidden = true;
+
+                if (!deletes) return;
+
+                if (byId('editRemoveAvatar')) byId('editRemoveAvatar').value = '1';
+                if (byId(nameId)) byId(nameId).textContent = 'Photo will be removed on save';
+            });
+        }
+
+        ['dragenter', 'dragover'].forEach(function (name) {
+            row.addEventListener(name, function (event) {
+                event.preventDefault();
+                row.classList.add('is-dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(function (name) {
+            row.addEventListener(name, function () {
+                row.classList.remove('is-dragover');
+            });
+        });
+
+        row.addEventListener('drop', function (event) {
+            event.preventDefault();
+
+            var file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+
+            if (!file || !input) return;
+
+            var problem = avatarProblem(file);
+
+            if (problem) {
+                sayAvatarProblem(nameId, problem);
+                return;
+            }
+
+            /* Put the dropped file into the input itself, so what is shown and
+               what is submitted are the same file. If the browser will not take
+               it, say so rather than drawing a preview of something that would
+               never be uploaded. */
+            try {
+                var carrier = new DataTransfer();
+                carrier.items.add(file);
+                input.files = carrier.files;
+            } catch (error) {
+                sayAvatarProblem(nameId, 'Drop is not available here — use Choose file');
+                return;
+            }
+
+            previewAvatar(input, circleId, nameId);
+            if (removeButton) removeButton.hidden = false;
+        });
     }
 
     /* ---------------------------------------------------------- passwords */
@@ -116,7 +251,7 @@
 
         if (form) form.reset();
 
-        resetAvatar('addAvatarCircle', 'addAvName');
+        resetAvatarBand('addAvatarCircle', 'addAvName');
 
         if (window.EmployeeFields) window.EmployeeFields.sync(document);
 
@@ -128,9 +263,8 @@
             if (byId(id)) byId(id).value = '';
         });
 
-        if (byId('editAvName')) byId('editAvName').textContent = 'No file chosen';
+        resetAvatarBand('editAvatarCircle', 'editAvName');
         if (byId('editRemoveAvatar')) byId('editRemoveAvatar').value = '0';
-        if (byId('editRemoveBtn')) byId('editRemoveBtn').hidden = true;
 
         fetch('/users/' + userId + '/data', { headers: { Accept: 'application/json' } })
             .then(function (response) { return response.json(); })
@@ -158,8 +292,14 @@
 
                 var circle = byId('editAvatarCircle');
                 var removeButton = byId('editRemoveBtn');
+                /* A failed save reopens this dialog with a file already chosen
+                   (the browser will not re-fill a file input, but the name slot
+                   still says what was picked), so do not repaint the circle over
+                   it. Only the avatar block is skipped — the rest of the record
+                   still has to fill. */
+                var chosen = byId('editAvName') && byId('editAvName').classList.contains('is-chosen');
 
-                if (circle) {
+                if (circle && !chosen) {
                     if (user.avatar) {
                         circle.innerHTML = '<img src="' + user.avatar + '" alt="">';
                         if (removeButton) removeButton.hidden = false;
@@ -350,8 +490,20 @@
 
         /* A validation failure re-opens the dialog, so the reader does not have
            to find their way back to the form they just submitted. */
-        var failed = document.querySelector('[data-open-if-errors="1"]');
-        if (failed) openAddModal();
+        /* The dialog a failed save came from reopens with what was typed. The
+           edit form is server-rendered with `old()` and its own action (see
+           `UserController::update`), so it is opened as it stands — fetching the
+           record here would replace the office's corrections with the stored
+           values, which is the opposite of what they asked for. */
+        var reopen = document.querySelector('[data-open-dialog]');
+        var reopenKind = reopen ? reopen.getAttribute('data-open-dialog') : '';
+
+        if (reopenKind === 'edit') {
+            if (window.EmployeeFields) window.EmployeeFields.sync(document);
+            openModal(byId('editModal'));
+        } else if (reopenKind === 'add') {
+            openAddModal();
+        }
 
         document.querySelectorAll('[data-toggle-password]').forEach(function (button) {
             button.addEventListener('click', function () {
@@ -372,21 +524,7 @@
             });
         });
 
-        if (byId('addAvatarFile')) {
-            byId('addAvatarFile').addEventListener('change', function () {
-                previewAvatar(this, 'addAvatarCircle', 'addAvName');
-            });
-        }
-
-        if (byId('editAvatarFile')) {
-            byId('editAvatarFile').addEventListener('change', function () {
-                previewAvatar(this, 'editAvatarCircle', 'editAvName');
-            });
-        }
-
-        if (byId('editRemoveBtn')) {
-            byId('editRemoveBtn').addEventListener('click', removeEditAvatar);
-        }
+        document.querySelectorAll('[data-avatar-drop]').forEach(wireAvatarBand);
 
         list();
         /* The record's own tables open their rows, the way the three lists do:

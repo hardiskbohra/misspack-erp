@@ -17,6 +17,11 @@
 @endpush
 
 @php
+    /* A failed save on the edit form comes back here with the person's id in the
+       query (`UserController::update`), because its dialog opens over the list
+       and the redirect has to land somewhere the dialog can reopen on. */
+    $reopenUserId = $errors->any() ? max(0, (int) request()->query('edit')) : 0;
+
     /* One URL per removable filter: everything else stays, the page restarts,
        and a filter that has no visible control above (it arrived from a URL or
        a bookmark) can still be taken off. */
@@ -473,15 +478,26 @@
                     </div>
 
                     <div class="master-section-label">Photo</div>
-                    <div class="master-avatar-row">
-                        <div class="master-avatar-preview" id="addAvatarCircle" aria-hidden="true"><i class="fas fa-user"></i></div>
+                    <div class="master-avatar-row" data-avatar-drop data-avatar-circle="addAvatarCircle"
+                        data-avatar-name="addAvName" data-avatar-remove="clear">
+                        <span class="master-avatar-picker">
+                            <label class="master-avatar-preview" id="addAvatarCircle" for="addAvatarFile"
+                                aria-label="Choose a photo" title="Choose a photo">
+                                <i class="fas fa-user" aria-hidden="true"></i>
+                            </label>
+                            <span class="master-avatar-camera" aria-hidden="true"><i class="fas fa-camera"></i></span>
+                        </span>
                         <div class="master-avatar-info">
-                            <p>JPG, PNG, GIF or WEBP, up to 2 MB. Shown on the users list and on their record.</p>
+                            <p>JPG, PNG, GIF or WEBP, up to 2 MB. Click the circle or drag a photo onto it.</p>
                             <div class="master-avatar-actions">
                                 <label class="master-upload-btn" for="addAvatarFile">
                                     <i class="fas fa-upload" aria-hidden="true"></i> Choose file
-                                    <input class="master-input" type="file" id="addAvatarFile" name="avatar" accept="image/*" hidden>
+                                    <input class="master-input" type="file" id="addAvatarFile" name="avatar"
+                                        accept="image/jpeg,image/png,image/gif,image/webp">
                                 </label>
+                                <button type="button" class="master-remove-avatar-btn" hidden>
+                                    <i class="fas fa-times" aria-hidden="true"></i> Clear
+                                </button>
                                 <span class="master-file-name" id="addAvName">No file chosen</span>
                             </div>
                         </div>
@@ -520,7 +536,8 @@
     {{-- ================= Edit user ================= --}}
     <div class="master-modal" id="editModal" aria-hidden="true">
         <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="editUserTitle">
-            <form method="POST" id="editForm" enctype="multipart/form-data">
+            <form method="POST" id="editForm" enctype="multipart/form-data"
+                action="{{ $reopenUserId ? route('users.update', $reopenUserId) : '' }}">
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="remove_avatar" id="editRemoveAvatar" value="0">
@@ -530,7 +547,7 @@
                         <span class="master-modal-icon" aria-hidden="true">✎</span>
                         <div>
                             <h3 class="master-modal-title" id="editUserTitle">Edit user</h3>
-                            <p class="master-modal-subtitle" id="editModalSub">Update the record</p>
+                            <p class="master-modal-subtitle" id="editModalSub">{{ $reopenUserId && old('name') ? 'Update the record for '.old('name') : 'Update the record' }}</p>
                         </div>
                     </div>
                     <button type="button" class="master-modal-close" data-close-modal="editModal" aria-label="Close">&times;</button>
@@ -543,7 +560,7 @@
                             <label class="master-label" for="editRole">Role <span class="master-required">*</span></label>
                             <select name="role" id="editRole" class="master-select" data-role-select required @disabled($isSelf ?? false)>
                                 @foreach ($roles as $key => $label)
-                                    <option value="{{ $key }}">{{ $label }}</option>
+                                    <option value="{{ $key }}" @selected(old('role') === $key)>{{ $label }}</option>
                                 @endforeach
                             </select>
                             <p class="master-sub" id="editRoleNote"></p>
@@ -554,38 +571,38 @@
                     <div class="master-form-grid">
                         <div class="master-field">
                             <label class="master-label" for="editName">Full name <span class="master-required">*</span></label>
-                            <input type="text" name="name" id="editName" class="master-input" required>
+                            <input type="text" name="name" id="editName" class="master-input" value="{{ old('name') }}" required>
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="editEmail">Email address <span class="master-required">*</span></label>
-                            <input type="email" name="email" id="editEmail" class="master-input" required>
+                            <input type="email" name="email" id="editEmail" class="master-input" value="{{ old('email') }}" required>
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="editMobile">Mobile <span class="master-required" data-role-required>*</span></label>
-                            <input type="text" name="mobile" id="editMobile" class="master-input">
+                            <input type="text" name="mobile" id="editMobile" class="master-input" value="{{ old('mobile') }}">
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="editCode">Employee code</label>
-                            <input type="text" name="employee_code" id="editCode" class="master-input">
+                            <input type="text" name="employee_code" id="editCode" class="master-input" value="{{ old('employee_code') }}">
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="editDepartment">Department</label>
-                            <input type="text" name="department" id="editDepartment" class="master-input">
+                            <input type="text" name="department" id="editDepartment" class="master-input" value="{{ old('department') }}">
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="editDesignation">Designation <span class="master-required" data-role-required>*</span></label>
-                            <input type="text" name="designation" id="editDesignation" class="master-input">
+                            <input type="text" name="designation" id="editDesignation" class="master-input" value="{{ old('designation') }}">
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="editJoining">Date of joining <span class="master-required" data-role-required>*</span></label>
-                            <input type="date" name="date_of_joining" id="editJoining" class="master-input">
+                            <input type="date" name="date_of_joining" id="editJoining" class="master-input" value="{{ old('date_of_joining') }}">
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="editType">Employment type</label>
                             <select name="employment_type" id="editType" class="master-select">
                                 <option value="">—</option>
                                 @foreach ($employmentTypes as $key => $label)
-                                    <option value="{{ $key }}">{{ $label }}</option>
+                                    <option value="{{ $key }}" @selected(old('employment_type') === $key)>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -593,41 +610,49 @@
                             <label class="master-label" for="editStatus">Status</label>
                             <select name="employment_status" id="editStatus" class="master-select">
                                 @foreach ($employmentStatuses as $key => $label)
-                                    <option value="{{ $key }}">{{ $label }}</option>
+                                    <option value="{{ $key }}" @selected(old('employment_status') === $key)>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="editPan">PAN</label>
-                            <input type="text" name="pan_number" id="editPan" class="master-input">
+                            <input type="text" name="pan_number" id="editPan" class="master-input" value="{{ old('pan_number') }}">
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="editBank">Bank</label>
-                            <input type="text" name="bank_name" id="editBank" class="master-input">
+                            <input type="text" name="bank_name" id="editBank" class="master-input" value="{{ old('bank_name') }}">
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="editAccount">Account number</label>
-                            <input type="text" name="bank_account_number" id="editAccount" class="master-input">
+                            <input type="text" name="bank_account_number" id="editAccount" class="master-input" value="{{ old('bank_account_number') }}">
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="editIfsc">IFSC</label>
-                            <input type="text" name="bank_ifsc" id="editIfsc" class="master-input">
+                            <input type="text" name="bank_ifsc" id="editIfsc" class="master-input" value="{{ old('bank_ifsc') }}">
                         </div>
                         <div class="master-field full">
                             <label class="master-label" for="editAddress">Address</label>
-                            <textarea name="address" id="editAddress" class="master-input" rows="2"></textarea>
+                            <textarea name="address" id="editAddress" class="master-input" rows="2">{{ old('address') }}</textarea>
                         </div>
                     </div>
 
                     <div class="master-section-label">Photo</div>
-                    <div class="master-avatar-row">
-                        <div class="master-avatar-preview" id="editAvatarCircle" aria-hidden="true"><i class="fas fa-user"></i></div>
+                    <div class="master-avatar-row" data-avatar-drop data-avatar-circle="editAvatarCircle"
+                        data-avatar-name="editAvName" data-avatar-remove="delete">
+                        <span class="master-avatar-picker">
+                            <label class="master-avatar-preview" id="editAvatarCircle" for="editAvatarFile"
+                                aria-label="Change the photo" title="Change the photo">
+                                <i class="fas fa-user" aria-hidden="true"></i>
+                            </label>
+                            <span class="master-avatar-camera" aria-hidden="true"><i class="fas fa-camera"></i></span>
+                        </span>
                         <div class="master-avatar-info">
-                            <p>Upload a new photo, or remove the one on file. JPG, PNG, GIF or WEBP, up to 2 MB.</p>
+                            <p>JPG, PNG, GIF or WEBP, up to 2 MB. Click the circle or drag a photo onto it.</p>
                             <div class="master-avatar-actions">
                                 <label class="master-upload-btn" for="editAvatarFile">
                                     <i class="fas fa-upload" aria-hidden="true"></i> Change photo
-                                    <input class="master-input" type="file" id="editAvatarFile" name="avatar" accept="image/*" hidden>
+                                    <input class="master-input" type="file" id="editAvatarFile" name="avatar"
+                                        accept="image/jpeg,image/png,image/gif,image/webp">
                                 </label>
                                 <button type="button" class="master-remove-avatar-btn" id="editRemoveBtn" hidden>
                                     <i class="fas fa-trash-alt" aria-hidden="true"></i> Remove
@@ -705,7 +730,7 @@
 
     {{-- Validation failure on create/update re-opens the modal, so the reader
          does not have to find their way back to the form. --}}
-    <span hidden data-open-if-errors="{{ $errors->any() ? '1' : '0' }}"></span>
+    <span hidden data-open-dialog="{{ $errors->any() ? ($reopenUserId ? 'edit' : 'add') : '' }}"></span>
 </div>
 @endsection
 

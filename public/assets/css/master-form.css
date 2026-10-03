@@ -704,6 +704,33 @@
     background: var(--mc-card-soft)
 }
 
+/* The circle is a second label for the same file input, so clicking the photo
+   opens the picker — the affordance every avatar editor has. The camera badge
+   sits outside it (as a sibling) because the scripts replace the circle's own
+   contents when a preview is drawn. */
+.master-avatar-picker {
+    position: relative;
+    flex: 0 0 auto;
+    display: inline-flex
+}
+
+.master-avatar-camera {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--mc-card, #ffffff);
+    border-radius: 50%;
+    background: var(--master-primary, #4f83f1);
+    color: #fff;
+    font-size: 9px;
+    pointer-events: none
+}
+
 .master-avatar-preview {
     flex: 0 0 auto;
     display: inline-flex;
@@ -713,6 +740,7 @@
     height: 56px;
     overflow: hidden;
     border-radius: 50%;
+    cursor: pointer;
     background: var(--emp-avatar-bg, linear-gradient(135deg, #4f83f1, #6366f1));
     color: var(--emp-avatar-fg, #ffffff);
     font-size: 17px;
@@ -739,6 +767,22 @@
     font-size: 20px
 }
 
+/* The file input is hidden, so the ring has to be drawn by the things that are
+   clicked: the circle, and the button whose label wraps the input. */
+.master-avatar-picker:focus-within .master-avatar-preview,
+.master-avatar-preview:focus-visible {
+    outline: 2px solid var(--master-primary, #4f83f1);
+    outline-offset: 3px
+}
+
+/* Dragging a photo over the band: the same accent, dashed, so it reads as "it
+   can go here" without looking like a field error. */
+.master-avatar-row.is-dragover {
+    border-color: var(--master-primary, #4f83f1);
+    border-style: dashed;
+    background: var(--mc-soft)
+}
+
 .master-avatar-info {
     flex: 1 1 auto;
     min-width: 0;
@@ -763,8 +807,22 @@
 }
 
 /* The picker is the button: a file input cannot be themed, so the label is a
-   `master-btn` in everything but the class name and the input inside it is
-   hidden. Geometry matches `.master-btn` so the two share a baseline. */
+   `master-btn` in everything but the class name. The input itself is clipped
+   rather than `hidden` — `hidden` would take it out of the tab order and leave
+   the dialog with no keyboard route to the picker at all. Geometry matches
+   `.master-btn` so the two share a baseline. */
+.master-upload-btn input[type="file"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    border: 0;
+    clip: rect(0 0 0 0);
+    white-space: nowrap
+}
+
 .master-upload-btn,
 .master-remove-avatar-btn {
     display: inline-flex;
@@ -811,7 +869,9 @@
 }
 
 /* The name of the chosen file, beside the button. A long name truncates with an
-   ellipsis instead of wrapping the row onto a third line. */
+   ellipsis instead of wrapping the row onto a third line. "No file chosen" is a
+   placeholder and reads like one; once a file is picked (or refused) the same
+   slot states a fact, so it changes tone rather than growing a second line. */
 .master-file-name {
     min-width: 0;
     max-width: 260px;
@@ -821,6 +881,24 @@
     font-weight: 500;
     white-space: nowrap;
     text-overflow: ellipsis
+}
+
+.master-file-name.is-chosen {
+    color: var(--mc-text);
+    font-weight: 600
+}
+
+.master-file-name.is-bad {
+    color: #b4123c;
+    font-weight: 600
+}
+
+:root[data-theme="dark"] .master-file-name.is-bad {
+    color: #ffa9bf
+}
+
+:root[data-theme="dark"] .master-avatar-camera {
+    border-color: var(--mc-card)
 }
 
 :root[data-theme="dark"] .master-avatar-preview {

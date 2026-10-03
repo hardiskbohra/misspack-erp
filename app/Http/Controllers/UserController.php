@@ -628,7 +628,19 @@ class UserController extends Controller
     /** Update existing user */
     public function update(Request $request, User $user)
     {
-        $data = $this->validated($request, $user);
+        try {
+            $data = $this->validated($request, $user);
+        } catch (ValidationException $invalid) {
+            /* Back to the *person's* dialog, not to the list: the office was
+               correcting one record, and a redirect that drops them at the top
+               of the page with an Add-user form open loses both the record and
+               the work. The id travels in the query so the index can reopen the
+               right dialog, and the input is kept so the fields come back. */
+            return redirect()
+                ->route('users.index', ['edit' => $user->getKey()])
+                ->withInput()
+                ->withErrors($invalid->validator);
+        }
 
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);

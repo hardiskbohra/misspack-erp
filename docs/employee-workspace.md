@@ -315,7 +315,43 @@ same 2 MB sentence, an error under the field in both — and the edit dialog's
 link to the person's page moved from the end of the form to the footer line,
 left of Cancel and Save, where a way out of a dialog belongs.
 
-## 8. What is verified where
+## 8. The band is the control, and a failure comes back to its dialog
+
+**The photo band is a control, not a caption.** A file input cannot be themed and
+cannot be dropped on, so the band around it does the work:
+
+- the **circle is a second label** for the same input, with a camera badge on its
+  corner, so clicking the photo opens the picker — and the input is *clipped*
+  rather than `hidden`, because `hidden` takes it out of the tab order and would
+  leave the dialog with no keyboard route to the picker at all;
+- the row takes a **dropped photo**: the file is put into the input through a
+  `DataTransfer`, so what is shown and what is submitted are the same file. If
+  the browser refuses, the band says so instead of drawing a preview of something
+  that would never upload;
+- a photo that will not be taken **says why** in the slot the file name would
+  have used — the four types and the 2 MB limit are the server's own rule
+  (`mimes:jpg,jpeg,png,gif,webp`, `max:2048`), and `employees-check` holds the
+  two copies equal, so changing one without the other fails the gate;
+- the button's meaning comes from the row: `data-avatar-remove="clear"` forgets a
+  file that was just chosen (the add dialog), `"delete"` files the photo on
+  record for removal (the edit dialog, which posts `remove_avatar`).
+
+**A failed save reopens the dialog it came from.** It did not. `update()` threw
+the validation failure into `back()` — the list — and the script ran
+`openAddModal()`: the office corrected a person, submitted, and got a *New user*
+form wearing their errors, with the edit fields empty (they were only ever filled
+by the fetch). Now:
+
+- `UserController::update()` catches the failure and redirects to
+  `users.index?edit={id}` with the input kept;
+- the page reads that id (`$reopenUserId`) and says which dialog to open
+  (`data-open-dialog="edit|add"`), and the script opens **that** one — for the
+  edit dialog without refetching, because the fields already hold `old()`;
+- every edit field carries `old()`, and the form's action is server-rendered when
+  the page came back with errors, so the reopened dialog posts to the person it
+  was editing.
+
+## 9. What is verified where
 
 `node tools/checks/employees-check.cjs` — the module's own guards, run with the
 other ten gates: the middleware is on the office group, no personal route takes

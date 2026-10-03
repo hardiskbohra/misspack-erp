@@ -844,6 +844,14 @@ check('every variable a view array reads is assigned above it',
 
 const profileView = read('resources/views/employees/profile.blade.php');
 
+/* The rule is defined once (design-check guards the CSS); this is the other
+   half — the tab that is four cards of one weight has to ask for it, or the
+   definition is decoration. */
+check('the record\'s four cards are read in two equal columns',
+    /<div class="master-grid is-even">/.test(userShow)
+    && (userShow.match(/<div class="master-grid is-even">/g) || []).length === 1,
+    'the details tab is four cards of the same weight, not a main column and an aside');
+
 check('the two read-only records are the shared facts grid, not a box per field',
     /<div class="master-facts">/.test(userShow)
     && /<div class="master-facts">/.test(profileView)
@@ -952,6 +960,123 @@ check('the way out of a dialog sits on the footer line',
     && /\.master-modal-lead \{[\s\S]*?margin: 0 auto 0 0/.test(indexSheet)
     && !/user-modal-foot[\s\S]{0,80}editRecordLink/.test(usersIndex),
     'a link at the end of a form reads as one more field');
+
+/* ------------------------------ 12. the photo band, as a control (65)
+   A file input cannot be themed and cannot be dropped on, so the band around it
+   is the control: the circle is a second label for the same input, the row takes
+   a dropped photo, and a refusal says why in the slot the file name would have
+   used. The three parts have to agree — the circle points at the input, the row
+   names the circle and the name slot, and the script reads both from the row. */
+
+const usersScript = read('public/assets/js/users.js');
+const controller = read('app/Http/Controllers/UserController.php');
+
+const bands = [...usersIndex.matchAll(/<div class="master-avatar-row"[\s\S]*?data-avatar-remove="(\w+)"/g)];
+const circles = [...usersIndex.matchAll(/<label class="master-avatar-preview" id="(\w+)" for="(\w+)"/g)];
+
+check('the circle is a second label for the file input, so clicking it picks',
+    circles.length === 2
+    && circles.every(([, , input]) => usersIndex.includes('type="file" id="' + input + '"'))
+    && (usersIndex.match(/class="master-avatar-camera"/g) || []).length === 2,
+    'found ' + circles.length + ' labels for a file input');
+
+check('the band says which input, which circle and which name slot it owns',
+    bands.length === 2
+    && bands.map(b => b[1]).sort().join() === 'clear,delete'
+    && (usersIndex.match(/data-avatar-circle="\w+"\s*\n?\s*data-avatar-name="\w+"/g) || []).length === 2,
+    'the add dialog clears a choice, the edit dialog files a removal — the row says which');
+
+check('the script reads the band from the row rather than from two hard-coded ids',
+    /data-avatar-drop/.test(usersScript)
+    && /getAttribute\('data-avatar-circle'\)/.test(usersScript)
+    && /getAttribute\('data-avatar-name'\)/.test(usersScript)
+    && /wireAvatarBand/.test(usersScript),
+    'one wiring function, driven by the markup');
+
+check('a photo is refused before it is uploaded, for the reasons the server refuses it',
+    (() => {
+        const types = (usersScript.match(/var AVATAR_TYPES = \[([^\]]*)\]/) || [, ''])[1];
+        const bytes = (usersScript.match(/var AVATAR_MAX_BYTES = ([^;]+);/) || [, ''])[1];
+        const rule = controller.slice(controller.indexOf("'avatar' => ["), controller.indexOf("'avatar' => [") + 120);
+        const ruleKb = (rule.match(/max:(\d+)/) || [, ''])[1];
+
+        return ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].every(t => types.includes(t))
+            && /2 \* 1024 \* 1024/.test(bytes)
+            && ruleKb === '2048';
+    })(),
+    'the list and the limit are one rule in two languages — change one and this fails');
+
+check('a refused photo says so, in the slot the file name would have used',
+    /function sayAvatarProblem/.test(usersScript)
+    && /JPG, PNG, GIF or WEBP only/.test(usersScript)
+    && /is-bad/.test(usersScript)
+    && /\.master-file-name\.is-bad/.test(formSheet)
+    /* and the refusal is *reached*: the handler clears the input and says why,
+       rather than returning quietly with a broken file still attached */
+    && /this\.value = '';[\s\S]{0,120}sayAvatarProblem\(nameId, problem\)/.test(usersScript),
+    'silence after choosing a file reads as a broken button');
+
+check('a photo can be dropped on the band, or the band says it cannot take it',
+    /addEventListener\('drop'/.test(usersScript)
+    && /new DataTransfer\(\)/.test(usersScript)
+    && /input\.files = carrier\.files/.test(usersScript)
+    && /Drop is not available here/.test(usersScript),
+    'the dropped file goes into the input, so what is shown is what is submitted');
+
+check('the picker is reachable with the keyboard',
+    !/id="addAvatarFile"[^>]*\shidden/.test(usersIndex)
+    && !/id="editAvatarFile"[^>]*\shidden/.test(usersIndex)
+    && /\.master-upload-btn input\[type="file"\] \{[\s\S]*?clip: rect\(0 0 0 0\)/.test(formSheet)
+    && /\.master-avatar-picker:focus-within \.master-avatar-preview/.test(formSheet),
+    '`hidden` takes the input out of the tab order — the dialog would have no keyboard route to the picker');
+
+/* ------------------------- 13. a failed save comes back to its own dialog (65)
+   After a failed *edit* the page ran `openAddModal()`: the office corrected a
+   person, submitted, and got a New-user form wearing their errors — and the edit
+   fields were never rendered with values, so there was nothing to come back to.
+   The failure now travels with the person's id and reopens that dialog filled. */
+
+check('a failed edit is sent back to the person it was editing',
+    /catch \(ValidationException \$invalid\)/.test(controller)
+    && /route\('users\.index', \['edit' => \$user->getKey\(\)\]\)/.test(controller)
+    && /withErrors\(\$invalid->validator\)/.test(controller)
+    && /use Illuminate\\Validation\\ValidationException;/.test(controller),
+    'back() drops them at the top of the list with no way to tell which dialog failed');
+
+check('the page reopens the dialog the errors belong to, and not the other one',
+    (() => {
+        const from = usersScript.indexOf("[data-open-dialog]");
+        const to = usersScript.indexOf("[data-toggle-password]", from);
+        const block = from === -1 || to === -1 ? '' : usersScript.slice(from, to);
+        const addAt = block.indexOf("reopenKind === 'add'");
+
+        return /\$reopenUserId = \$errors->any\(\) \? max\(0, \(int\) request\(\)->query\('edit'\)\) : 0;/.test(usersIndex)
+            && /data-open-dialog="\{\{ \$errors->any\(\) \? \(\$reopenUserId \? 'edit' : 'add'\) : '' \}\}"/.test(usersIndex)
+            && /reopenKind === 'edit'[\s\S]*?openModal\(byId\('editModal'\)\)/.test(block)
+            && addAt > -1
+            && !block.slice(0, addAt).includes('openAddModal()')
+            && !/data-open-if-errors/.test(usersIndex);
+    })(),
+    'the guess is the bug: the add dialog opened for an edit failure');
+
+check('and its fields still hold what was typed',
+    (() => {
+        const at = usersIndex.indexOf('id="editForm"');
+        const form = usersIndex.slice(at, usersIndex.indexOf('master-modal-footer', at));
+
+        return ['name', 'email', 'mobile', 'employee_code', 'department', 'designation',
+            'date_of_joining', 'pan_number', 'bank_name', 'bank_account_number', 'bank_ifsc']
+            .every(field => form.includes("old('" + field + "')"))
+            && /\{\{ old\('address'\) \}\}/.test(form)
+            && (form.match(/@selected\(old\(/g) || []).length === 3;
+    })(),
+    'the edit fields are filled by the fetch on the normal path and by old() on the failed one');
+
+/* And the edit dialog must not refetch over the corrections: its action is
+   server-rendered when the page came back with errors. */
+check('the reopened edit form posts to the person, not to nowhere',
+    /action="\{\{ \$reopenUserId \? route\('users\.update', \$reopenUserId\) : '' \}\}"/.test(usersIndex),
+    'the form action is set by the fetch on the normal path and by the server on the failed one');
 
 /* ---------------------------------------------------------------- report */
 

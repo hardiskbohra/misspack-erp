@@ -548,6 +548,14 @@ check('and the flat card cannot re-surface it as a panel row',
     /\.master-card--flat \.master-facts > \.master-info/.test(facts),
     'the compound selector is missing — a later file wins ties');
 
+/* `2fr 1fr` is a main column and an aside. A tab that is four cards of the same
+   weight is not that, and read as 3:1 — an equal variant exists for it, and the
+   record's details tab wears it. */
+check('the grid has an equal-columns variant for cards of the same weight',
+    /\.master-grid\.is-even \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/.test(
+        strip(read(path.join(CSS, 'master-detail.css')))),
+    'expected `.master-grid.is-even` with two equal columns in master-detail.css');
+
 /* Three up, on a high breakpoint only: a third column at 900px is narrower than
    its own label. */
 const form = strip(read(path.join(CSS, 'master-form.css')));

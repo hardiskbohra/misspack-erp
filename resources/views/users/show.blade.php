@@ -215,7 +215,9 @@
 
             @if ($tab === 'details')
                 <section class="master-tab-panel" aria-label="Details">
-                    <div class="master-grid">
+                    {{-- Four cards of the same weight, so two equal columns: with
+                         the main/aside grid they were 3:1. --}}
+                    <div class="master-grid is-even">
                         @foreach ($record['groups'] as $group)
                             <div class="master-card master-card--flat master-section">
                                 <h3 class="master-section-title">{{ $group['title'] }}</h3>

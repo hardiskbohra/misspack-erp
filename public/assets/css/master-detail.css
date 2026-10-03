@@ -32,6 +32,15 @@
     gap: 20px
 }
 
+/* `2fr 1fr` is a main column and an aside — right for a record whose cards are a
+   table and a summary, wrong for a tab that is four cards of the same weight.
+   Four equal cards in that grid came out 3:1: the first column 66%, the second
+   33%, so Identity and Employment were wide and Contact and Bank were squeezed.
+   `.is-even` is the same grid with the two columns equal. */
+.master-grid.is-even {
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+}
+
 /* The record header is a card too, so it follows the same padding and gutter
    as the cards under it. */
 .master-header {
