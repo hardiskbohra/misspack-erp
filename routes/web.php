@@ -10,6 +10,8 @@ use App\Http\Controllers\VendorController;
 use App\Http\Controllers\CashflowAttachmentController;
 use App\Http\Controllers\CashflowController;
 use App\Http\Controllers\CashflowSettingController;
+use App\Http\Controllers\PartyStatementController;
+use App\Http\Controllers\ClientPortalStatementController;
 use App\Http\Controllers\PriceCalculatorController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\LeadController;
@@ -68,6 +70,14 @@ Route::get('/lead-public/{token}', [PublicLeadController::class, 'show'])->name(
 Route::post('/lead-enquiry', [PublicLeadController::class, 'store'])->name('leads.public.store');
 
 Route::get('/project-portal/{token}', [PublicProjectController::class, 'show'])->name('projects.public.show');
+
+/* A statement of account, sent as a link. Outside auth on purpose: the
+   accountant, the vendor's office and the client's finance person are not users
+   of this ERP. The token is the whole of the authentication — long, revocable,
+   expiring, and every open is counted. */
+Route::get('/statement/{token}', [PartyStatementController::class, 'publicShow'])
+    ->where('token', '[A-Za-z0-9]{20,80}')
+    ->name('statements.public');
 Route::post('/project-portal/{token}/comments', [PublicProjectController::class, 'storeComment'])->name('projects.public.comments.store');
 Route::post('/project-portal/{token}/attachments', [PublicProjectController::class, 'storeAttachment'])->name('projects.public.attachments.store');
 
@@ -239,6 +249,20 @@ Route::middleware('auth')->group(function () {
     Route::post('/cashflow-attachments', [CashflowAttachmentController::class, 'storeStandalone'])->name('cashflows.attachments.storeStandalone');
     Route::delete('/cashflow-attachments/{attachment}', [CashflowAttachmentController::class, 'destroy'])->name('cashflows.attachments.destroy');
 
+    /* Statements of account: the party-facing half of the ledger. Registered
+       before the resource route for the same reason the archive is, or
+       /cashflows/statements would be read as an entry id. A link is issued
+       here, revoked here, and the statement itself is rebuilt from the ledger
+       on every open — never stored, so it cannot go stale. */
+    Route::get('/cashflows/statements', [PartyStatementController::class, 'index'])->name('cashflows.statements');
+    Route::get('/cashflows/statements/pdf', [PartyStatementController::class, 'pdf'])->name('cashflows.statements.pdf');
+    Route::post('/cashflows/statements/shares', [PartyStatementController::class, 'store'])->name('cashflows.statements.shares.store');
+    Route::patch('/cashflow-statement-shares/{share}/revoke', [PartyStatementController::class, 'revoke'])->name('cashflows.statements.shares.revoke');
+    Route::delete('/cashflow-statement-shares/{share}', [PartyStatementController::class, 'destroy'])->name('cashflows.statements.shares.destroy');
+    Route::get('/cashflows/statements/{partyType}/{party}', [PartyStatementController::class, 'show'])
+        ->whereIn('partyType', ['client', 'vendor'])
+        ->name('cashflows.statements.show');
+
     Route::post('/cashflows/saved-views', [CashflowController::class, 'storeSavedView'])->name('cashflows.saved-views.store');
     Route::delete('/cashflows/saved-views/{savedView}', [CashflowController::class, 'destroySavedView'])->name('cashflows.saved-views.destroy');
     Route::post('/cashflows/quick', [CashflowController::class, 'quickStore'])->name('cashflows.quickStore');
@@ -291,6 +315,10 @@ Route::prefix('client-portal')->name('client-portal.')->group(function () {
         Route::delete('/attachments/{document}', [ClientPortalDocumentController::class, 'destroy'])->name('attachments.destroy');
 
         Route::get('/payments', [ClientPortalPaymentController::class, 'index'])->name('payments.index');
+
+        /* Their own statement of account, without needing a link: the same
+           document the Share button produces, from the same service. */
+        Route::get('/statement', [ClientPortalStatementController::class, 'index'])->name('statement.index');
         Route::get('/kyc', [ClientPortalKycController::class, 'show'])->name('kyc.show');
 
         Route::get('/notifications', [ClientPortalNotificationController::class, 'index'])->name('notifications.index');

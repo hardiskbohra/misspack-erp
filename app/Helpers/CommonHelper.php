@@ -65,6 +65,22 @@ class CommonHelper
     }
 
     /**
+     * A currency as a *label* — in a chip, a column, a picker — rather than as
+     * an amount.
+     *
+     * Rupees are the sign and nothing else: "INR" is a code the office never
+     * writes on a statement. Everything else keeps its code, because that is
+     * how a vendor abroad writes it. Money itself always goes through
+     * amount()/indianCurrency(); this is only for the word beside it.
+     */
+    public static function currencyLabel(?string $code): string
+    {
+        $code = strtoupper((string) ($code ?: 'INR'));
+
+        return $code === 'INR' ? self::SYMBOL : $code;
+    }
+
+    /**
      * Lakh/crore grouping: the last three digits, then twos all the way up.
      * 150000 => 1,50,000 — 6163140 => 61,63,140
      */

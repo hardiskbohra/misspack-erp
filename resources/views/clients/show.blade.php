@@ -27,6 +27,12 @@
         <div class="master-actions">
             <a href="{{ route('clients.index') }}" class="master-btn master-btn-light">Back</a>
             <a href="{{ route('clients.edit', $client) }}" class="master-btn master-btn-soft">Edit Client</a>
+            {{-- The client's ledger as a document: built from their invoices and
+                 receipts, in their own currency, and shareable as a link. --}}
+            <a href="{{ route('cashflows.statements.show', ['partyType' => 'client', 'party' => $client->id]) }}"
+                class="master-btn master-btn-soft">
+                <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Statement
+            </a>
             <a href="{{ route('clients.publicKyc', $client->public_token) }}" target="_blank"
                 class="master-btn master-btn-primary">Open KYC Link</a>
                 

@@ -795,16 +795,22 @@
                             <p class="vendor-eyebrow">Vendor Currency Statement</p>
                             <h2>Statement of Accounts</h2>
                         </div>
-                        <div>
+                        <div class="vendor-statement-actions">
                             <span class="vendor-pill">{{ $summary['statement_count'] }} manual entries</span>
+                            {{-- The manual tab is the currency ledger; this is the
+                                 same account as a statement the vendor can be sent. --}}
+                            <a class="master-btn master-btn-soft"
+                                href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id]) }}">
+                                <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Full statement of account
+                            </a>
                         </div>
                     </div>
                     <div class="vendor-currency-summary">
                         @forelse($currencySummary as $currency => $row)
-                            <div><span>{{ $currency }} Bills</span><strong>{{ \App\Helpers\CommonHelper::amount($row['credit'], $currency) }}</strong></div>
-                            <div><span>{{ $currency }} Paid</span><strong class="green">{{ \App\Helpers\CommonHelper::amount($row['debit'], $currency) }}</strong></div>
-                            <div><span>{{ $currency }} Balance</span><strong class="red">{{ \App\Helpers\CommonHelper::amount($row['balance'], $currency) }}</strong></div>
-                            <div><span>{{ $currency }} Expenses</span><strong
+                            <div><span>{{ \App\Helpers\CommonHelper::currencyLabel($currency) }} Bills</span><strong>{{ \App\Helpers\CommonHelper::amount($row['credit'], $currency) }}</strong></div>
+                            <div><span>{{ \App\Helpers\CommonHelper::currencyLabel($currency) }} Paid</span><strong class="green">{{ \App\Helpers\CommonHelper::amount($row['debit'], $currency) }}</strong></div>
+                            <div><span>{{ \App\Helpers\CommonHelper::currencyLabel($currency) }} Balance</span><strong class="red">{{ \App\Helpers\CommonHelper::amount($row['balance'], $currency) }}</strong></div>
+                            <div><span>{{ \App\Helpers\CommonHelper::currencyLabel($currency) }} Expenses</span><strong
                                     class="orange">{{ \App\Helpers\CommonHelper::amount($row['expense'], $currency) }}</strong></div>
                         @empty
                             <div><span>No Ledger</span><strong>-</strong></div>

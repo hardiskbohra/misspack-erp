@@ -67,6 +67,10 @@
             <a href="{{ route('client-portal.payments.index') }}" class="sidebar-item {{ request()->routeIs('client-portal.payments.*') ? 'active' : '' }}">
                 <i class="fa-solid fa-scale-balanced"></i><span class="sidebar-text">Payments</span>
             </a>
+
+            <a href="{{ route('client-portal.statement.index') }}" class="sidebar-item {{ request()->routeIs('client-portal.statement.*') ? 'active' : '' }}">
+                <i class="fa-solid fa-file-invoice"></i><span class="sidebar-text">Statement</span>
+            </a>
             <div class="cp-nav-section">Account</div>
             <a href="{{ route('client-portal.kyc.show') }}" class="sidebar-item {{ request()->routeIs('client-portal.kyc.*') ? 'active' : '' }}">
                 <i class="fas fa-user-gear"></i><span class="sidebar-text">KYC Form</span>

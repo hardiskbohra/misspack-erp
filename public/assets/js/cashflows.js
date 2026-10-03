@@ -28,7 +28,9 @@
        document archive are the same surface, so the density choice is shared
        between them. */
     function initList() {
-        ['.cashflow-index', '.cashflow-documents'].forEach(function (root) {
+        /* The ledger, the archive and the statements run share one density
+           choice: they are the same surface seen from three angles. */
+        ['.cashflow-index', '.cashflow-documents', '.cashflow-statements'].forEach(function (root) {
             window.MasterList.gridShadow({ root: root });
             window.MasterList.density({ root: root, key: 'misspack.cashflows.density' });
         });
@@ -75,5 +77,57 @@
                 window.MasterModal.open(accountModal);
             });
         }
+
+        /* the statement's share dialog: one modal, two triggers on the page */
+        ['openShareStatement', 'emptyShareStatement'].forEach(function (id) {
+            var trigger = document.getElementById(id);
+            var shareModal = document.getElementById('shareStatementModal');
+            if (trigger && shareModal) {
+                trigger.addEventListener('click', function () {
+                    window.MasterModal.open(shareModal);
+                });
+            }
+        });
+    });
+
+    /* Printing the statement and not the toolbar: what is on screen behind the
+       document (filters, links, actions) carries .no-print, so the browser's
+       print dialog needs no help beyond being opened. */
+    onReady(function () {
+        var printButton = document.getElementById('printStatement');
+        if (printButton) {
+            printButton.addEventListener('click', function () {
+                window.print();
+            });
+        }
+
+        /* Copy a link without selecting the text by hand. Falls back to
+           selecting the field when the clipboard API is unavailable (a page
+           served over plain HTTP has no navigator.clipboard). */
+        document.querySelectorAll('[data-copy-target]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var field = document.getElementById(button.getAttribute('data-copy-target'));
+                if (!field) return;
+
+                var label = button.getAttribute('data-copy-label') || 'Copy';
+                var done = function () {
+                    button.textContent = 'Copied';
+                    window.setTimeout(function () {
+                        button.textContent = label;
+                    }, 1800);
+                };
+
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(field.value).then(done, function () {
+                        field.select();
+                    });
+                    return;
+                }
+
+                field.select();
+                document.execCommand('copy');
+                done();
+            });
+        });
     });
 })();

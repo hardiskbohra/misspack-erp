@@ -74,6 +74,8 @@ category, then: group-by any dimension × period (month/quarter/year), compare
 save the result as a saved view, export it. Replaces the "sometimes needed" ad-hoc
 requests, because you can build them yourself in ten seconds.
 
+*Not started.*
+
 **2B. Shareable party statements.** A statement per client/vendor: opening balance,
 running balance, ageing (0–30 / 31–60 / 61–90 / 90+), and for vendors a
 **foreign-currency column set** (foreign amount, rate, INR). Deliver as PDF, as an
@@ -81,8 +83,38 @@ running balance, ageing (0–30 / 31–60 / 61–90 / 90+), and for vendors a
 leads and invoices), and as a page in the client portal so clients self-serve. Sent
 statements get logged, so "I sent that on the 5th" is answerable.
 
+*Shipped (`70c3e1c` + the statement commit), with the trade's own reading of the
+last sentence:* a statement is built per **party and currency** — a vendor billed
+in RMB and paid in rupees holds two balances, and a line that added them would be
+wrong by the exchange rate. Delivered as:
+
+- **Cashflow → Statements** — one line per party and currency with opening / debit
+  / credit / closing, filterable by type, period, currency and name. A party with
+  a balance carried in but no movement still appears: that is the statement somebody
+  forgot to send.
+- **The statement itself** — letterhead, party block, summary, ruled rows with a
+  running balance, ageing (clients aged from the due date against the invoice
+  balance after part payments; vendors from the bill date, which the block says),
+  and a foot that reports any other currency on the account rather than adding it in.
+- **PDF** (dompdf when installed, print-ready page when not), **an expiring public
+  link** (long token, 7/30/90 days or never, revocable in one click, every open
+  counted), and **a page in the client portal** so a client with a login never needs
+  a link at all.
+- **A log**: what was sent, to whom, by which channel, when it expires, and how many
+  times it was opened — with the party name copied onto the row so the record
+  survives a rename.
+
+*Still to come in 2B:* issuing a month's statements in one run (every party with a
+balance, one action), and attaching the month-close pack from 1B to the same link.
+
 **2C. Receivables / payables ageing + reminders.** Buckets per party, what is
 overdue, and a one-click reminder email/WhatsApp template.
+
+*Part-started by 2B:* the buckets and the per-document ageing exist on every
+statement, and the WhatsApp/email links are generated from the party's own number
+and address. What is missing is the age-ordered **worklist across parties** — one
+screen of "who is late and by how much" — and a reminder recorded against the party
+rather than against one statement.
 
 ## Wave 3 — control and foresight
 
