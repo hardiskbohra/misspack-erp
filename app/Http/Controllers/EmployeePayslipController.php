@@ -6,12 +6,15 @@ use App\Models\EmployeePayslip;
 use App\Models\User;
 use App\Services\DocumentUpload;
 use App\Services\EmployeeProfile;
+use App\Services\PayslipDocument;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * The office's side of a payslip: record a month, attach the paper, issue it.
@@ -25,11 +28,19 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  * Drafts are visible to the office and invisible to the employee until they are
  * issued, because the numbers move while a month is being closed and teaching
  * somebody a figure that then changes is worse than showing them nothing.
+ *
+ * A slip is written from a breakdown where the office has one — the earnings and
+ * deductions lines — and from its three totals where it does not, and the totals
+ * are *derived* from the lines whenever lines exist. The paper (a detailed
+ * payslip, rendered from the row on demand) therefore can never disagree with
+ * the record it was printed from.
  */
 class EmployeePayslipController extends Controller
 {
-    public function __construct(private readonly EmployeeProfile $profile)
-    {
+    public function __construct(
+        private readonly EmployeeProfile $profile,
+        private readonly PayslipDocument $document,
+    ) {
     }
 
     public function store(Request $request, User $user): RedirectResponse
@@ -102,6 +113,20 @@ class EmployeePayslipController extends Controller
         return back()->with('success', 'The payslip for '.$label.' was removed.');
     }
 
+    /**
+     * The payslip as paper — the office prints, downloads or sends this.
+     *
+     * Any status: the office is allowed to look at its own working copy. The
+     * employee's copy of the same document is served by their own controller and
+     * only once the slip is issued.
+     */
+    public function pdf(User $user, EmployeePayslip $payslip): Response
+    {
+        $this->assertOwned($user, $payslip);
+
+        return $this->document->download($payslip);
+    }
+
     /** The office can open any payslip, including a draft. */
     public function file(User $user, EmployeePayslip $payslip): BinaryFileResponse|RedirectResponse
     {
@@ -121,8 +146,20 @@ class EmployeePayslipController extends Controller
      */
     private function figures(array $data): array
     {
-        $gross = round((float) ($data['gross_amount'] ?? 0), 2);
-        $deductions = round((float) ($data['deductions'] ?? 0), 2);
+        $components = $this->components($data);
+        $lines = $components !== null;
+
+        /* When the slip carries a breakdown, its lines *are* the gross and the
+           deductions: a total that does not add up to its own lines is the one
+           thing a payslip must never be. Without lines the totals are typed,
+           which is how the first version of this form worked. */
+        $gross = $lines
+            ? round(array_sum(array_column($components['earnings'], 'amount')), 2)
+            : round((float) ($data['gross_amount'] ?? 0), 2);
+
+        $deductions = $lines
+            ? round(array_sum(array_column($components['deductions'], 'amount')), 2)
+            : round((float) ($data['deductions'] ?? 0), 2);
 
         /* Blank and zero are different answers. The field is empty in the
            ordinary case — the office typed a gross and deductions and expects
@@ -141,11 +178,62 @@ class EmployeePayslipController extends Controller
             ]);
         }
 
-        return [
+        $figures = [
             'gross_amount' => $gross,
             'deductions' => $deductions,
             'net_amount' => $net,
             'currency' => 'INR',
+        ];
+
+        /* Presence, not emptiness: a form that did not offer the breakdown (the
+           one-button issue, an older page) must not silently wipe it, while a
+           form that offered it and was left empty clears it. */
+        if (array_key_exists('earning_lines', $data) || array_key_exists('deduction_lines', $data)) {
+            $figures['components'] = $components;
+        }
+
+        foreach (['working_days', 'paid_days'] as $days) {
+            if (array_key_exists($days, $data)) {
+                $figures[$days] = $data[$days] === null || $data[$days] === '' ? null : (int) $data[$days];
+            }
+        }
+
+        return $figures;
+    }
+
+    /**
+     * The earnings and deductions lines, cleaned: a line needs a label and an
+     * amount, an all-empty form is no breakdown at all (null, not an empty
+     * array), and the order the office typed them in is kept.
+     *
+     * @return array{earnings: array<int, array{label: string, amount: float}>, deductions: array<int, array{label: string, amount: float}>}|null
+     */
+    private function components(array $data): ?array
+    {
+        if (! array_key_exists('earning_lines', $data) && ! array_key_exists('deduction_lines', $data)) {
+            return null;
+        }
+
+        $read = function ($rows) {
+            $lines = [];
+
+            foreach ((array) $rows as $row) {
+                $label = trim((string) ($row['label'] ?? ''));
+                $amount = round((float) ($row['amount'] ?? 0), 2);
+
+                if ($label === '' || $amount == 0.0) {
+                    continue;
+                }
+
+                $lines[] = ['label' => $label, 'amount' => $amount];
+            }
+
+            return $lines;
+        };
+
+        return [
+            'earnings' => $read($data['earning_lines'] ?? []),
+            'deductions' => $read($data['deduction_lines'] ?? []),
         ];
     }
 
@@ -163,6 +251,19 @@ class EmployeePayslipController extends Controller
             'gross_amount' => ['nullable', 'numeric', 'min:0'],
             'deductions' => ['nullable', 'numeric', 'min:0'],
             'net_amount' => ['nullable', 'numeric', 'min:0'],
+            /* The lines and the totals are different fields, and deliberately
+               so: the correction form sends the lines, while the one-button
+               issue / back-to-draft form sends the totals it read off the row.
+               One key cannot be both a number and a list — when it was, PHP kept
+               the last rule it saw and the button failed validation. */
+            'earning_lines' => ['nullable', 'array', 'max:10'],
+            'earning_lines.*.label' => ['nullable', 'string', 'max:60'],
+            'earning_lines.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'deduction_lines' => ['nullable', 'array', 'max:10'],
+            'deduction_lines.*.label' => ['nullable', 'string', 'max:60'],
+            'deduction_lines.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'working_days' => ['nullable', 'integer', 'min:0', 'max:31'],
+            'paid_days' => ['nullable', 'integer', 'min:0', 'max:31', 'lte:working_days'],
             'paid_on' => ['nullable', 'date'],
             'status' => ['required', Rule::in(array_keys(EmployeePayslip::STATUSES))],
             'notes' => ['nullable', 'string', 'max:1000'],

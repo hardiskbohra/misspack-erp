@@ -67,7 +67,6 @@
             ['section' => 'My Workspace'],
             ['label' => 'Dashboard', 'route' => 'my.dashboard', 'active' => 'my.dashboard', 'icon' => 'fas fa-th-large'],
             ['label' => 'My Salary', 'route' => 'my.salary', 'active' => 'my.salary', 'icon' => 'fa-solid fa-indian-rupee-sign'],
-            ['label' => 'My Payslips', 'route' => 'my.payslips', 'active' => 'my.payslips*', 'icon' => 'fa-solid fa-file-invoice-dollar'],
             ['label' => 'My Documents', 'route' => 'my.documents', 'active' => 'my.documents*', 'icon' => 'fa-regular fa-folder-open'],
             ['label' => 'My Profile', 'route' => 'my.profile', 'active' => 'my.profile*', 'icon' => 'fa-regular fa-id-card'],
         ];

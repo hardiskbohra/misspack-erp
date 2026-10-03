@@ -1,0 +1,403 @@
+/* ==========================================================================
+   PAYSLIP.CSS — the salary slip, on screen and on paper
+   --------------------------------------------------------------------------
+   A payslip is a document: it is read on a screen for a second and on paper for
+   years. So the sheet is drawn once, in one partial, and this sheet dresses it
+   for both — a card with tokens on screen (light and dark), a plain black-on-
+   white A4 page when printed or rendered by dompdf.
+
+   Every colour is a token with a dark value, because the record page is read in
+   the dark theme as well; every *paper* rule is under @media print, where the
+   app's chrome is stripped away.
+   ========================================================================== */
+
+:root {
+    --ps-card: var(--mc-card, #ffffff);
+    --ps-line: var(--mc-border, #e3e9f4);
+    --ps-text: var(--mc-text, #1b2a41);
+    --ps-text-2: var(--mc-text-2, #4a5b74);
+    --ps-text-3: var(--mc-text-3, #7c8aa0);
+    --ps-tint: #f5f8fd;
+    --ps-ok-bg: rgba(16, 185, 129, .14);
+    --ps-ok-fg: #047857;
+    --ps-warn-bg: rgba(245, 158, 11, .16);
+    --ps-warn-fg: #b45309;
+    --ps-net-bg: linear-gradient(135deg, rgba(79, 131, 241, .10), rgba(99, 102, 241, .05));
+    --ps-net-fg: #2f5fd0;
+}
+
+:root[data-theme="dark"] {
+    --ps-tint: #1b2740;
+    --ps-ok-bg: rgba(56, 217, 169, .16);
+    --ps-ok-fg: #4ade9f;
+    --ps-warn-bg: rgba(246, 173, 85, .18);
+    --ps-warn-fg: #f6c177;
+    --ps-net-bg: linear-gradient(135deg, rgba(96, 145, 255, .16), rgba(129, 140, 248, .07));
+    --ps-net-fg: #9db9ff;
+}
+
+/* ------------------------------------------------------------------ sheet */
+
+.payslip {
+    background: var(--ps-card);
+    border: 1px solid var(--ps-line);
+    border-radius: 18px;
+    padding: 22px 24px;
+    color: var(--ps-text);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------- head */
+
+.ps-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--ps-line);
+}
+
+.ps-brand {
+    min-width: 0;
+}
+
+.ps-brand-name {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: .01em;
+}
+
+.ps-brand-line {
+    margin: 3px 0 0;
+    color: var(--ps-text-3);
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.ps-heading {
+    text-align: right;
+    flex: 0 0 auto;
+}
+
+.ps-eyebrow {
+    margin: 0;
+    color: var(--ps-text-3);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+}
+
+.ps-period {
+    margin: 2px 0 0;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -.01em;
+}
+
+.ps-slip-no {
+    margin: 3px 0 0;
+    color: var(--ps-text-3);
+    font-size: 11.5px;
+}
+
+.ps-stamp {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    margin: 8px 0 0;
+}
+
+.ps-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 9px;
+    border: 1px solid var(--ps-line);
+    border-radius: 999px;
+    background: var(--ps-tint);
+    color: var(--ps-text-2);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    white-space: nowrap;
+}
+
+.ps-chip.is-ok {
+    background: var(--ps-ok-bg);
+    border-color: transparent;
+    color: var(--ps-ok-fg);
+}
+
+.ps-chip.is-warn {
+    background: var(--ps-warn-bg);
+    border-color: transparent;
+    color: var(--ps-warn-fg);
+}
+
+/* ------------------------------------------------------------------ facts */
+
+.ps-facts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px 22px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--ps-line);
+}
+
+.ps-payment {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px 22px;
+    padding-top: 14px;
+}
+
+.ps-fact {
+    min-width: 0;
+}
+
+.ps-fact-label {
+    display: block;
+    color: var(--ps-text-3);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+
+.ps-fact-value {
+    display: block;
+    margin-top: 3px;
+    font-size: 13px;
+    font-weight: 600;
+    word-break: break-word;
+}
+
+/* ------------------------------------------------------------------ lines */
+
+.ps-lines {
+    padding-top: 16px;
+}
+
+.ps-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ps-table th,
+.ps-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--ps-line);
+    font-size: 12.5px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.ps-table thead th {
+    color: var(--ps-text-3);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+
+.ps-table .ps-num {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.ps-table tfoot th,
+.ps-table tfoot td {
+    border-bottom: 0;
+    border-top: 2px solid var(--ps-line);
+    font-weight: 800;
+}
+
+.ps-table tfoot th {
+    text-align: left;
+}
+
+/* -------------------------------------------------------------------- net */
+
+.ps-net {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: var(--ps-net-bg);
+}
+
+.ps-net-label {
+    color: var(--ps-text-2);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+
+.ps-net-value {
+    display: block;
+    margin-top: 2px;
+    color: var(--ps-net-fg);
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+}
+
+.ps-net-words {
+    margin: 0;
+    color: var(--ps-text-2);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: right;
+}
+
+/* ------------------------------------------------------------------- foot */
+
+.ps-note {
+    margin: 14px 0 0;
+    padding: 10px 12px;
+    border-left: 3px solid var(--ps-line);
+    background: var(--ps-tint);
+    border-radius: 0 10px 10px 0;
+    color: var(--ps-text-2);
+    font-size: 12px;
+}
+
+.ps-foot {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--ps-line);
+}
+
+.ps-foot-line {
+    margin: 0;
+    color: var(--ps-text-3);
+    font-size: 11px;
+}
+
+/* ------------------------------------------------------------- standalone */
+
+body.ps-standalone {
+    margin: 0;
+    padding: 18px;
+    background: #eef2f9;
+}
+
+body.ps-standalone .payslip {
+    max-width: 860px;
+    margin: 0 auto;
+    box-shadow: 0 18px 45px rgba(25, 42, 70, .10);
+}
+
+.ps-print-foot {
+    max-width: 860px;
+    margin: 12px auto 0;
+    color: #6b7a90;
+    font-size: 11px;
+    text-align: center;
+}
+
+.ps-notice {
+    max-width: 860px;
+    margin: 0 auto 12px;
+    padding: 10px 14px;
+    border: 1px solid #cdd9ee;
+    border-radius: 10px;
+    background: #fff;
+    color: #33456b;
+    font-size: 12px;
+}
+
+/* --------------------------------------------------------------- narrow */
+
+@media (max-width: 900px) {
+    .ps-facts,
+    .ps-payment {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ps-head {
+        flex-direction: column;
+    }
+
+    .ps-heading {
+        text-align: left;
+    }
+
+    .ps-stamp {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 620px) {
+    .payslip {
+        padding: 16px;
+    }
+
+    .ps-facts,
+    .ps-payment {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ps-net-words {
+        text-align: left;
+    }
+}
+
+/* ---------------------------------------------------------------- paper */
+
+@media print {
+    @page {
+        size: A4;
+        margin: 12mm;
+    }
+
+    body.ps-standalone,
+    body {
+        padding: 0 !important;
+        background: #fff !important;
+    }
+
+    body.ps-standalone .payslip,
+    .payslip {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: #fff;
+        color: #000;
+    }
+
+    .ps-print-foot,
+    .ps-notice,
+    .no-print {
+        display: none !important;
+    }
+
+    .ps-chip {
+        border-color: #999;
+        background: #fff;
+        color: #000;
+    }
+
+    .ps-table thead {
+        display: table-header-group;
+    }
+
+    .ps-net {
+        background: #f2f2f2;
+    }
+
+    .ps-net-value {
+        color: #000;
+    }
+}

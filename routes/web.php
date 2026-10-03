@@ -118,6 +118,9 @@ Route::middleware('auth')->group(function () {
         Route::put('/users/{user}/payslips/{payslip}', [EmployeePayslipController::class, 'update'])->name('users.payslips.update');
         Route::delete('/users/{user}/payslips/{payslip}', [EmployeePayslipController::class, 'destroy'])->name('users.payslips.destroy');
         Route::get('/users/{user}/payslips/{payslip}/file', [EmployeePayslipController::class, 'file'])->name('users.payslips.file');
+        /* The slip as paper: rendered from the row, never stored, so the printed
+           document cannot be older than the figures it came from. */
+        Route::get('/users/{user}/payslips/{payslip}/pdf', [EmployeePayslipController::class, 'pdf'])->name('users.payslips.pdf');
         Route::post('/users/{user}/documents', [EmployeeDocumentController::class, 'store'])->name('users.documents.store');
         Route::patch('/users/{user}/documents/{document}/verify', [EmployeeDocumentController::class, 'verify'])->name('users.documents.verify');
         Route::delete('/users/{user}/documents/{document}', [EmployeeDocumentController::class, 'destroy'])->name('users.documents.destroy');
@@ -298,7 +301,8 @@ Route::middleware('auth')->group(function () {
 
     /* What an employee may reach: their own record, from four angles. Every one
        of these reads the signed-in user and never a user id from the URL, which
-       is why there is nothing here to guess at. */
+       is why there is nothing here to guess at. The slips are one page — the
+       salary page — and /my/payslips stays as a redirect for old links. */
     Route::prefix('my')->name('my.')->group(function () {
         Route::get('/', [EmployeeWorkspaceController::class, 'dashboard'])->name('dashboard');
         Route::get('/profile', [EmployeeWorkspaceController::class, 'profile'])->name('profile');
@@ -307,6 +311,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/salary', [EmployeeWorkspaceController::class, 'salary'])->name('salary');
         Route::get('/payslips', [EmployeeWorkspaceController::class, 'payslips'])->name('payslips');
         Route::get('/payslips/{payslip}/file', [EmployeeWorkspaceController::class, 'payslipFile'])->name('payslips.file');
+        Route::get('/payslips/{payslip}/pdf', [EmployeeWorkspaceController::class, 'payslipPdf'])->name('payslips.pdf');
         Route::get('/documents', [EmployeeWorkspaceController::class, 'documents'])->name('documents');
         Route::post('/documents', [EmployeeWorkspaceController::class, 'storeDocument'])->name('documents.store');
         Route::get('/documents/{document}/file', [EmployeeWorkspaceController::class, 'documentFile'])->name('documents.file');

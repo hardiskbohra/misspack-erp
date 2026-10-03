@@ -697,16 +697,36 @@ check('no sheet but the surface styles the list chrome',
    row insets. A view that carries the chrome without the root inherits none of
    it — which is exactly how the archive's controls ended up sitting on the
    divider. */
-const listChromeViews = bladeFiles.filter(f =>
+const carriesChrome = f =>
     /class="[^"]*\bmaster-list-|master-list-(bar|chips|chip|applied|toolbar|table)\b/
-        .test(fs.readFileSync(f, 'utf8')));
+        .test(fs.readFileSync(f, 'utf8'));
 /* the root is the class on its own — not a chrome element that merely starts
    with the same name (master-list-bar is not the opt-in) */
-const offSurface = listChromeViews.filter(f =>
-    !/\bclass="[^"]*\bmaster-list(?![-\w])/.test(fs.readFileSync(f, 'utf8')));
+const optsIn = f => /\bclass="[^"]*\bmaster-list(?![-\w])/.test(fs.readFileSync(f, 'utf8'));
+
+/* A partial is not a page: it is drawn inside somebody else's root, so it has
+   no root of its own to opt in with — the page that includes it must opt in,
+   and it must be included by at least one page. */
+const isFragment = f => /[\\/]partials[\\/]/.test(f);
+const chromePages = bladeFiles.filter(f => !isFragment(f) && carriesChrome(f));
+const offSurface = chromePages.filter(f => !optsIn(f));
 check('every view that carries the list chrome opts into the surface',
-    listChromeViews.length >= 3 && offSurface.length === 0,
-    offSurface.map(f => path.relative(ROOT, f)).join(', ') || listChromeViews.length + ' views');
+    chromePages.length >= 3 && offSurface.length === 0,
+    offSurface.map(f => path.relative(ROOT, f)).join(', ') || chromePages.length + ' views');
+
+const chromeFragments = bladeFiles.filter(f => isFragment(f) && carriesChrome(f)).map(f => ({
+    file: f,
+    name: path.relative(path.join(ROOT, 'resources/views'), f).replace(/\.blade\.php$/, '').split(path.sep).join('.'),
+}));
+const borrowedFrom = chromeFragments.map(fragment => ({
+    ...fragment,
+    hosts: bladeFiles.filter(f => !isFragment(f) && fs.readFileSync(f, 'utf8').includes("@include('" + fragment.name + "'")),
+}));
+check('a fragment borrows the surface from the page that draws it',
+    borrowedFrom.every(entry => entry.hosts.length > 0 && entry.hosts.every(optsIn)),
+    borrowedFrom.filter(e => e.hosts.length === 0 || !e.hosts.every(optsIn))
+        .map(e => e.name + ' -> ' + (e.hosts.map(h => path.relative(ROOT, h)).join(' ') || 'no page includes it'))
+        .join(', '));
 
 /* And nobody patches the shared chrome with an inline style: that is how a
    missing inset gets hidden — products/index carried an inline

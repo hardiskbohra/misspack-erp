@@ -108,6 +108,7 @@ const SHEETS = [
     'master-media.css',       /* pushed by record pages */
     'shipments.css',
     'shipping-mark.css',      /* print document, standalone */
+    'payslip.css',            /* the payslip sheet: pushed in the app, linked by the print view */
     'tasks.css',
 ].filter((f, i, arr) => arr.indexOf(f) === i && fs.existsSync(path.join(CSS, f)));
 

@@ -4,7 +4,7 @@
 @section('page-title', 'My Salary')
 
 @section('page-actions')
-    <a class="master-btn master-btn-ghost" href="{{ route('my.payslips') }}">My payslips</a>
+    <a class="master-btn master-btn-soft" href="#payslips">My payslips</a>
     <a class="master-btn master-btn-ghost" href="{{ route('my.dashboard') }}">My workspace</a>
 @endsection
 
@@ -138,5 +138,29 @@
             </table>
         </div>
     </div>
+
+    {{-- My payslips. They are here, on the salary page, and not on one of their
+         own: a payslip is a month of this salary, printed from these figures —
+         two pages listing the same months is two places to disagree. --}}
+    <div class="master-card master-table-card master-card--flat" id="payslips">
+        <div class="master-list-toolbar">
+            <p class="master-list-hint">
+                {{ $payslips->count() }} {{ \Illuminate\Support\Str::plural('payslip', $payslips->count()) }} issued to me
+            </p>
+        </div>
+
+        @include('employees.partials.payslip-table', ['payslips' => $payslips, 'context' => 'employee', 'user' => $me])
+    </div>
+
+    @if ($previewSlipDoc)
+        <div class="master-card master-card--flat master-section" id="payslip-sheet">
+            <h3 class="master-section-title">Payslip for {{ $previewSlip->periodLabel() }} · {{ $previewSlip->slipNumber() }}</h3>
+            <p class="master-sub user-modal-foot">
+                Printed from the office's record for that month. Use <strong>Print</strong> on the slip, or the
+                <strong>Payslip</strong> button in the list, for a copy to keep.
+            </p>
+            @include('employees.partials.payslip', ['doc' => $previewSlipDoc, 'context' => 'app', 'payslip' => $previewSlip])
+        </div>
+    @endif
 </div>
 @endsection

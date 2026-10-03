@@ -65,6 +65,17 @@ const entryModel = read('app/Models/CashflowEntry.php');
 const employeeSalary = read('resources/views/employees/salary.blade.php');
 const payMonths = read('resources/views/employees/partials/pay-months.blade.php');
 const cashflowController = read('app/Http/Controllers/CashflowController.php');
+const payslipDoc = read('app/Services/PayslipDocument.php');
+const payslipSheet = read('resources/views/employees/partials/payslip.blade.php');
+const payslipList = read('resources/views/employees/partials/payslip-table.blade.php');
+const payslipModel = read('app/Models/EmployeePayslip.php');
+const payslipPrint = read('resources/views/employees/payslip-pdf.blade.php');
+const payslipCss = read('public/assets/css/payslip.css');
+/* the sheet without its prose: a comment that says "@media print" is not a
+   print rule, and a guard that cannot tell the two apart passes on a sheet
+   that no longer prints */
+const payslipRules = payslipCss.replace(/\/\*[\s\S]*?\*\//g, '');
+const helper = read('app/Helpers/CommonHelper.php');
 
 /* ------------------------------------------------------------- 1. the door */
 
@@ -180,9 +191,19 @@ check('the sidebar is role-aware: an employee gets their own menu only',
 check('that menu is built from the personal routes, not from admin ones',
     /'route' => 'my\.dashboard'/.test(nav)
     && /'route' => 'my\.salary'/.test(nav)
-    && /'route' => 'my\.payslips'/.test(nav)
     && /'route' => 'my\.documents'/.test(nav)
     && /'route' => 'my\.profile'/.test(nav));
+
+/* Task 61: one salary door. A payslip is a month of the salary, so a second
+   menu entry listing the same months was two places to read one month — and
+   whichever the employee opened first decided what they believed. The route is
+   kept as a redirect, because a menu entry is a URL somebody has already
+   bookmarked, mailed or typed. */
+check('there is one salary door, and the old payslips URL still opens',
+    !/'route' => 'my\.payslips'/.test(nav)
+    && nav.includes("'route' => 'my.salary'")
+    && /return redirect\(\)->to\(route\('my\.salary', \['focus' => 'payslips'\]\)\.'#payslips'\);/.test(workspace)
+    && /\$slips = \$this->profile->issuedPayslips\(\$this->user\(\)\);/.test(workspace));
 
 check('the menu the employee sees names no office screen, and the office keeps its own',
     !/'route' => 'cashflows\.index'/.test(nav.slice(0, nav.indexOf('$sidebarItems = Auth::user()')))
@@ -190,7 +211,10 @@ check('the menu the employee sees names no office screen, and the office keeps i
     && /'route' => 'users\.index'/.test(nav));
 
 check('the employee sees their salary, their payslips and their documents',
-    ['my.salary', 'my.payslips', 'my.documents'].every(r => nav.includes(r)));
+    ['my.salary', 'my.documents'].every(r => nav.includes(r))
+    && /employees\.partials\.payslip-table/.test(employeeSalary)
+    && /employees\.partials\.payslip', \['doc' => \$previewSlipDoc/.test(employeeSalary)
+    && /\$slips->firstWhere\('id', \(int\) \$request->query\('preview'\)\)/.test(workspace));
 
 /* ------------------------------------------------- 3b. the way the money went
    A salary the office filed as a **debit** — money out of the company, the
@@ -273,7 +297,8 @@ check('a draft payslip is invisible to the employee',
 check('the office sees drafts on the record page',
     /\$payslips = \$profile->payslips\(\$user\);/.test(userController)
     && !/issuedPayslips/.test(userController)
-    && /Back to draft/.test(userShow));
+    && /drafts stay private/.test(userShow)
+    && /Back to draft/.test(payslipList));
 
 check('an employee cannot remove a paper the office marked seen',
     /if \(\$document->isVerified\(\)\) \{/.test(workspace)
@@ -319,12 +344,16 @@ check('a stored file is served by its real name, or not at all',
 
 /* -------------------------------------------------- 6. every page has a sheet */
 
-const employeeViews = ['dashboard', 'profile', 'salary', 'payslips', 'documents']
+const employeeViews = ['dashboard', 'profile', 'salary', 'documents']
     .map(name => 'resources/views/employees/' + name + '.blade.php');
 
 check('every employee page exists and wears the module stylesheet',
     employeeViews.every(f => exists(f) && read(f).includes("assets/css/employees.css")),
     employeeViews.filter(f => !exists(f) || !read(f).includes('employees.css')).join(', '));
+
+check('the standalone payslips page is retired, not orphaned',
+    !exists('resources/views/employees/payslips.blade.php')
+    && routes.includes("Route::get('/payslips', [EmployeeWorkspaceController::class, 'payslips'])->name('payslips')"));
 
 check('the stylesheet exists and carries a dark value for every light token',
     (() => {
@@ -364,10 +393,27 @@ check('the record uses the shared tab vocabulary, not a private one',
     && /\.master-tab\.is-active \{/.test(read('public/assets/css/master-detail.css')));
 
 check('a panel is drawn only for the tab that is open',
-    /\(\$tab === 'overview'\)/.test(userShow)
-    && /\(\$tab === 'payslips'\)/.test(userShow)
-    && /\(\$tab === 'documents'\)/.test(userShow)
-    && /\$tab = array_key_exists\(\$tab, self::TABS\) \? \$tab : 'overview';/.test(userController));
+    /\$tab === 'overview'/.test(userShow)
+    && /\$tab === 'salary'/.test(userShow)
+    && /\$tab === 'documents'/.test(userShow)
+    && /\$tab === 'work'/.test(userShow)
+    && !/\$tab === 'payslips'/.test(userShow)
+    && /self::TABS\) \? \$tab : 'overview';/.test(userController));
+
+/* The salary panel carries the ledger entries *and* the slips, which is the
+   whole point of merging the tabs: the month and the paper for the month are
+   read together, not one tab apart. */
+check('the salary tab carries both the month and its slip',
+    /users\.payslips\.store/.test(userShow)
+    && /employees\.partials\.payslip-table', \['payslips' => \$payslips, 'context' => 'office'/.test(userShow)
+    && /id="payslip-sheet"/.test(userShow)
+    && /@include\('employees\.partials\.payslip', \['doc' => \$editingPayslipDoc/.test(userShow));
+
+check('the retired payslips tab is a name that resolves, not a panel',
+    /private const TAB_ALIASES = \[/.test(userController)
+    && /'payslips' => 'salary'/.test(userController)
+    && /self::TAB_ALIASES\[\$tab\] \?\? \$tab/.test(userController)
+    && /'tab' => 'salary'/.test(userIndex));
 
 /* ---- the list, on the same surface as shipments and the ledger ---- */
 check('the list wears the same five-tile strip as the other two lists',
@@ -533,6 +579,93 @@ check('the employee-code tile counts what the filter counts',
     /\$stats\['with_code'\]/.test(userIndex)
     && /'with_code' => \$withCode/.test(userController)
     && /whereNotNull\('employee_code'\)->where\('employee_code', '!=', ''\)->count\(\)/.test(userController));
+
+/* ------------------------------------ 8. one payslip, three surfaces (61)
+   Task 61 asked for a detailed payslip that generates itself and can be
+   printed and shared. The failure this section exists to catch is the slip
+   assembled twice — once for the screen and once for the paper — so that the
+   figure the employee is holding stops matching the figure on the record.
+   There is one document (App\Services\PayslipDocument), one sheet (the
+   partial), and the totals on it are sums of its own lines. */
+
+check('one payslip, one document, three surfaces',
+    /public function build\(EmployeePayslip \$payslip, \?string \$context = 'app'\): array/.test(payslipDoc)
+    && /employees\.partials\.payslip', \['doc' => \$doc/.test(payslipPrint)
+    && /employees\.partials\.payslip', \['doc' => \$editingPayslipDoc/.test(userShow)
+    && /employees\.partials\.payslip', \['doc' => \$previewSlipDoc/.test(employeeSalary));
+
+check('the slip is built from the row, not read back from a stored file',
+    /class_exists\(\\Barryvdh\\DomPDF\\Facade\\Pdf::class\)/.test(payslipDoc)
+    && !/Storage::/.test(payslipDoc)
+    && /route\('users\.payslips\.pdf'/.test(payslipList)
+    && /route\('my\.payslips\.pdf'/.test(payslipList)
+    && /employees\.partials\.payslip-table/.test(userShow));
+
+check('the printed slip prints: standalone page, A4 paper, print dialog without dompdf',
+    /window\.print\(\);/.test(payslipPrint)
+    && /pdfFallbackMessage/.test(payslipPrint)
+    && /@media print/.test(payslipRules)
+    && /@page \{/.test(payslipRules)
+    && /body\.ps-standalone/.test(payslipCss));
+
+/* A form key is either a number or a list. When it was both, PHP kept the
+   last rule it saw and the one-button issue / back-to-draft form — which sends
+   the totals it read off the row — failed validation. */
+check('the slip\'s lines and its totals are different fields, not one key twice',
+    /'earning_lines' => \['nullable', 'array', 'max:10'\]/.test(payslipController)
+    && /'deduction_lines' => \['nullable', 'array', 'max:10'\]/.test(payslipController)
+    && (payslipController.match(/'deductions' => \[/g) || []).length === 1
+    && /'deductions' => \['nullable', 'numeric', 'min:0'\]/.test(payslipController)
+    && /array_key_exists\('earning_lines', \$data\)/.test(payslipController)
+    && /name="earning_lines\[/.test(userShow)
+    && /name="deduction_lines\[/.test(userShow));
+
+check('a slip total is the sum of the slip\'s own lines, on the page and on the paper',
+    /array_sum\(array_column\(\$earnings, 'amount'\)\)/.test(payslipDoc)
+    && /array_sum\(array_column\(\$components\['earnings'\], 'amount'\)\)/.test(payslipController)
+    && /array_sum\(array_column\(\$components\['deductions'\], 'amount'\)\)/.test(payslipController)
+    && /'net' => \(float\) \$payslip->net_amount/.test(payslipDoc));
+
+check('the net is spelled out, by the one helper that spells money',
+    /function inWords\(\$amount, \?string \$currency = 'INR'\): string/.test(helper)
+    && /CommonHelper::inWords\(\(float\) \$payslip->net_amount, \$currency\)/.test(payslipDoc)
+    && /net_in_words/.test(payslipSheet));
+
+check('a draft slip cannot be printed either, not only unlisted',
+    /private function guardPayslip\(EmployeePayslip \$payslip\): \?RedirectResponse/.test(workspace)
+    && times(workspace, '$denied = $this->guardPayslip($payslip);') === 2
+    && /has not been issued yet/.test(workspace));
+
+check('the office hands the slip over without the figures in the message',
+    /public function shareMessage\(\): string/.test(payslipModel)
+    && /public function whatsappUrl\(\?string \$phone\): \?string/.test(payslipModel)
+    && /public function mailUrl\(\?string \$email\): \?string/.test(payslipModel)
+    && /'https:\/\/wa\.me\/'\.\$digits\.'\?text='\.rawurlencode\(\$this->shareMessage\(\)\)/.test(payslipModel)
+    && /'mailto:'\.\$email/.test(payslipModel)
+    && /WhatsApp/.test(payslipList)
+    && /Email/.test(payslipList));
+
+check('one list of slips, read by the office and by the employee',
+    /employees\.partials\.payslip-table/.test(userShow)
+    && /employees\.partials\.payslip-table/.test(employeeSalary)
+    && /'context' => 'office'/.test(userShow)
+    && /'context' => 'employee'/.test(employeeSalary));
+
+check('the office on the slip is the office on the invoice, and the account is masked',
+    /SalesInvoice::defaultSellerDetails\(\)/.test(payslipDoc)
+    && times(payslipDoc, '->mask(') >= 2
+    && /bank_account_number/.test(payslipDoc));
+
+check('the arithmetic of a payslip has a test that runs',
+    exists('tests/Unit/EmployeePayslipTest.php')
+    && read('tests/Unit/EmployeePayslipTest.php').includes('test_the_totals_are_the_sum_of_the_slips_own_lines')
+    && read('tests/Unit/EmployeePayslipTest.php').includes('php artisan test --filter=EmployeePayslipTest'));
+
+check('the slip sheet loads its own stylesheet wherever it is drawn',
+    /@push\('styles'\)/.test(payslipSheet)
+    && /assets\/css\/payslip\.css/.test(payslipSheet)
+    && /assets\/css\/payslip\.css/.test(payslipPrint)
+    && /'payslip\.css',/.test(read('tools/checks/design-check.cjs')));
 
 /* ---------------------------------------------------------------- report */
 

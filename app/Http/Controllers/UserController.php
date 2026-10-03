@@ -8,6 +8,7 @@ use App\Models\EmployeePayslip;
 use App\Models\User;
 use App\Services\DocumentUpload;
 use App\Services\EmployeeProfile;
+use App\Services\PayslipDocument;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -40,15 +41,43 @@ class UserController extends Controller
      * The record's tabs: the questions an office asks about a person, in the
      * order it asks them. Declared here so the strip, the panel and the
      * `?tab=` guard can never disagree about what exists.
+     *
+     * There is one salary tab, not two. A payslip *is* a month of this salary —
+     * the same month the ledger row paid — and listing those months on a tab of
+     * their own made the reader decide which of the two to believe.
      */
     private const TABS = [
         'overview' => 'Overview',
         'details' => 'Details',
         'salary' => 'Salary',
-        'payslips' => 'Payslips',
         'documents' => 'Documents',
         'work' => 'Work',
     ];
+
+    /**
+     * Tabs that used to exist, and where they are now.
+     *
+     * A tab is a URL: it is in somebody's bookmark, in the row menu that was
+     * rendered before the change, in the browser history, and in the key this
+     * application keeps in localStorage for the last tab somebody opened. So the
+     * old name resolves to the new one instead of falling back to Overview,
+     * which would look like the page had lost the record.
+     */
+    private const TAB_ALIASES = [
+        'payslips' => 'salary',
+    ];
+
+    /**
+     * The one definition of a payslip, resolved rather than injected.
+     *
+     * This controller answers a dozen questions about a person; the slip is
+     * needed only while somebody is looking at one, which is why it is fetched
+     * where it is used instead of being threaded through every method.
+     */
+    private function slip(): PayslipDocument
+    {
+        return app(PayslipDocument::class);
+    }
 
     /**
      * The columns the search box reads. The list, the query and the chips all
@@ -171,12 +200,19 @@ class UserController extends Controller
     {
         $year = (int) request()->query('year', date('Y'));
         $tab = (string) request()->query('tab', 'overview');
+        $tab = self::TAB_ALIASES[$tab] ?? $tab;
         $tab = array_key_exists($tab, self::TABS) ? $tab : 'overview';
 
         $record = $profile->profile($user);
         $checklist = $profile->documentChecklist($user);
         $payslips = $profile->payslips($user);
         $tasks = $profile->tasks($user);
+
+        /* The payslip being corrected, if the page was opened from a row rather
+           than from the record form. Read as an id and matched against this
+           person's own slips, so a hand-typed number cannot pull another
+           person's slip into the form. */
+        $editingPayslip = $payslips->firstWhere('id', (int) request()->query('payslip'));
 
         return view('users.show', [
             'user' => $user,
@@ -185,13 +221,18 @@ class UserController extends Controller
             'tabs' => self::TABS,
             'tabCounts' => [
                 'salary' => $profile->salaryEntries($user)->count(),
-                'payslips' => $payslips->count(),
                 'documents' => Schema::hasTable('employee_documents') ? $user->employeeDocuments()->count() : 0,
                 'notes' => 0,
             ],
             'record' => $record,
             'checklist' => $checklist,
             'payslips' => $payslips,
+            'editingPayslip' => $editingPayslip,
+            'editingPayslipDoc' => $editingPayslip ? $this->slip()->build($editingPayslip, 'app') : null,
+            'payslipLines' => [
+                'earnings' => EmployeePayslip::EARNING_LINES,
+                'deductions' => EmployeePayslip::DEDUCTION_LINES,
+            ],
             'total' => $profile->yearTotal($user, $year),
             'months' => $profile->monthlyPay($user, $year),
             'years' => $profile->salaryYears($user),

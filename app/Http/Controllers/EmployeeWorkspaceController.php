@@ -7,6 +7,7 @@ use App\Models\EmployeePayslip;
 use App\Services\DocumentUpload;
 use App\Services\EmployeeAccess;
 use App\Services\EmployeeProfile;
+use App\Services\PayslipDocument;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,9 +16,10 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
- * An employee's own workspace: what I earned, my payslips, my papers, my details.
+ * An employee's own workspace: what I earned, my papers, my details.
  *
  * One rule shapes this whole controller: **the person is the session, never the
  * URL**. There is no `{user}` anywhere in these routes, so there is no id to
@@ -36,6 +38,7 @@ class EmployeeWorkspaceController extends Controller
     public function __construct(
         private readonly EmployeeProfile $profile,
         private readonly EmployeeAccess $access,
+        private readonly PayslipDocument $document,
     ) {
     }
 
@@ -108,6 +111,8 @@ class EmployeeWorkspaceController extends Controller
     {
         $year = (int) $request->query('year', date('Y'));
         $entries = $this->profile->salaryEntries($this->user(), $year.'-01-01', $year.'-12-31');
+        $slips = $this->profile->issuedPayslips($this->user());
+        $preview = $slips->firstWhere('id', (int) $request->query('preview')) ?? $slips->first();
 
         return view('employees.salary', array_merge($this->shared(), [
             'year' => $year,
@@ -115,14 +120,37 @@ class EmployeeWorkspaceController extends Controller
             'total' => $this->profile->yearTotal($this->user(), $year),
             'months' => $this->profile->monthlyPay($this->user(), $year),
             'entries' => $entries,
+            /* The slips belong on this page, not on one of their own: a payslip
+               is a month of this salary, and a second page listing the same
+               months made the reader decide which one to believe. */
+            'payslips' => $slips,
+            /* The slip opens on the page as well as in its own tab: the newest
+               one by default, and whichever row was clicked (?preview=<id>) when
+               that is one of their own. */
+            'previewSlip' => $preview,
+            'previewSlipDoc' => $preview ? $this->document->build($preview, 'app') : null,
         ]));
     }
 
-    public function payslips(): View
+    /**
+     * The old payslips page, kept as a door rather than a room.
+     *
+     * The slips are on the salary page now; a bookmark, a link in an old email
+     * or an employee's muscle memory still lands somewhere that makes sense.
+     */
+    public function payslips(): RedirectResponse
     {
-        return view('employees.payslips', array_merge($this->shared(), [
-            'payslips' => $this->profile->issuedPayslips($this->user()),
-        ]));
+        /* The query says why the reader is here; the fragment is what actually
+           takes them to the slips, which sit below the ledger months. */
+        return redirect()->to(route('my.salary', ['focus' => 'payslips']).'#payslips');
+    }
+
+    /** The employee's own payslip, as paper — the same document the office prints. */
+    public function payslipPdf(EmployeePayslip $payslip): Response|RedirectResponse
+    {
+        $denied = $this->guardPayslip($payslip);
+
+        return $denied ?? $this->document->download($payslip);
     }
 
     /**
@@ -134,6 +162,20 @@ class EmployeeWorkspaceController extends Controller
      */
     public function payslipFile(EmployeePayslip $payslip): BinaryFileResponse|RedirectResponse
     {
+        $denied = $this->guardPayslip($payslip);
+
+        return $denied ?? $this->serve($payslip->file_path, $payslip->fileName());
+    }
+
+    /**
+     * Who may read a payslip: its own person, and only once it is issued.
+     *
+     * Both doors into a slip — the file the office attached and the slip this
+     * application renders — ask this one question, so a draft that is invisible
+     * as a file cannot be read as a document instead.
+     */
+    private function guardPayslip(EmployeePayslip $payslip): ?RedirectResponse
+    {
         if (! $this->access->canView($this->user(), $payslip->user)) {
             return $this->access->deny($this->user(), $payslip->user);
         }
@@ -142,7 +184,7 @@ class EmployeeWorkspaceController extends Controller
             return back()->with('error', 'That payslip has not been issued yet.');
         }
 
-        return $this->serve($payslip->file_path, $payslip->fileName());
+        return null;
     }
 
     public function documents(): View

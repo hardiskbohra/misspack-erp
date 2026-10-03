@@ -362,7 +362,7 @@
                 <section class="master-tab-panel" aria-label="Salary">
                     @if (! $employee)
                         <div class="master-card master-card--flat master-section">
-                            <p class="master-sub">An office account is not paid through this module, so it has no salary entries.</p>
+                            <p class="master-sub">An office account is not paid through this module, so it has no salary entries or payslips.</p>
                         </div>
                     @else
                         <div class="master-card master-card--flat">
@@ -445,7 +445,7 @@
                                                 <td colspan="6">
                                                     <div class="master-list-empty">
                                                         <span class="master-list-empty-icon" aria-hidden="true">₹</span>
-                                                        <p class="master-list-empty-title">No salary paid in {{ $year }}</p>
+                                                        <p class="master-list-empty-title">No salary entry in {{ $year }}</p>
                                                         <p class="master-list-empty-text">
                                                             Pay is a cashflow entry filed against this person — record it in the ledger
                                                             with the Employee set to their name and it appears here. A salary is
@@ -470,66 +470,151 @@
                                 </table>
                             </div>
                         </div>
-                    @endif
-                </section>
-            @endif
 
-            @if ($tab === 'payslips')
-                <section class="master-tab-panel" aria-label="Payslips">
-                    @if (! $employee)
-                        <div class="master-card master-card--flat master-section">
-                            <p class="master-sub">Payslips belong to an employee account. Switch the role to Employee first.</p>
-                        </div>
-                    @else
-                        <div class="master-card master-card--flat master-section">
-                            <h3 class="master-section-title">Record a month</h3>
-                            <form method="POST" action="{{ route('users.payslips.store', $user) }}" enctype="multipart/form-data">
+                        {{-- The payslips. One tab, because a payslip is a month of
+                             the salary above it — and the slip the employee is
+                             holding was printed from this record. --}}
+                        @php
+                            $editing = $editingPayslip ?? null;
+                            $money = fn ($value) => rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
+                            /* Four rows each side, seeded with the office's own vocabulary and
+                               overwritten, row by row, by the slip being corrected. */
+                            /* $field is the request key, $side the side of the
+                               stored slip: the form posts lines under their own
+                               names, so a total and a list never share a key. */
+                            $formRows = function (string $field, string $side) use ($editing, $payslipLines, $money) {
+                                $stored = $editing
+                                    ? ($side === 'earnings' ? $editing->earnings() : $editing->deductionLines())
+                                    : [];
+                                $defaults = array_slice($payslipLines[$side], 0, 4);
+                                $rows = [];
+
+                                for ($i = 0; $i < 4; $i++) {
+                                    $rows[] = [
+                                        'label' => old($field.'.'.$i.'.label', $stored[$i]['label'] ?? ($defaults[$i] ?? '')),
+                                        'amount' => old($field.'.'.$i.'.amount', isset($stored[$i]) ? $money($stored[$i]['amount']) : ''),
+                                    ];
+                                }
+
+                                return $rows;
+                            };
+                        @endphp
+
+                        @if ($editingPayslipDoc)
+                            <div class="master-card master-card--flat master-section" id="payslip-sheet">
+                                <h3 class="master-section-title">The slip for {{ $editingPayslip->periodLabel() }}, as it stands</h3>
+                                <p class="master-sub user-modal-foot">
+                                    This is the document the employee is given — every figure below comes from the
+                                    row, so correcting the form corrects the slip.
+                                </p>
+                                @include('employees.partials.payslip', ['doc' => $editingPayslipDoc, 'context' => 'app', 'payslip' => $editingPayslip])
+                            </div>
+                        @endif
+
+                        <div class="master-card master-card--flat master-section" id="payslip-form">
+                            <h3 class="master-section-title">
+                                {{ $editing ? 'Correct the payslip for '.$editing->periodLabel() : 'Record a month' }}
+                            </h3>
+                            <p class="master-sub user-modal-foot">
+                                The breakdown is what the printed slip shows — earnings on the left, deductions on
+                                the right. Leave the lines empty and the slip prints its totals alone; leave
+                                <strong>Net paid</strong> empty and it is worked out for you.
+                            </p>
+
+                            <form method="POST"
+                                action="{{ $editing ? route('users.payslips.update', ['user' => $user, 'payslip' => $editing]) : route('users.payslips.store', $user) }}"
+                                enctype="multipart/form-data">
                                 @csrf
+                                @if ($editing) @method('PUT') @endif
+
                                 <div class="master-form-grid">
                                     <div class="master-field">
                                         <label class="master-label" for="payslipPeriod">Month</label>
-                                        <input class="master-input" id="payslipPeriod" type="month" name="period" value="{{ old('period', date('Y-m')) }}" required>
+                                        <input class="master-input" id="payslipPeriod" type="month" name="period"
+                                            value="{{ old('period', $editing?->period ?? date('Y-m')) }}" required>
                                         @error('period')<p class="master-error">{{ $message }}</p>@enderror
                                     </div>
                                     <div class="master-field">
-                                        <label class="master-label" for="payslipGross">Gross</label>
-                                        <input class="master-input" id="payslipGross" name="gross_amount" value="{{ old('gross_amount') }}" placeholder="0">
-                                        @error('gross_amount')<p class="master-error">{{ $message }}</p>@enderror
+                                        <label class="master-label" for="payslipWorkingDays">Working days</label>
+                                        <input class="master-input" id="payslipWorkingDays" name="working_days" inputmode="numeric"
+                                            value="{{ old('working_days', $editing?->working_days) }}" placeholder="Optional">
+                                        @error('working_days')<p class="master-error">{{ $message }}</p>@enderror
                                     </div>
                                     <div class="master-field">
-                                        <label class="master-label" for="payslipDeductions">Deductions</label>
-                                        <input class="master-input" id="payslipDeductions" name="deductions" value="{{ old('deductions') }}" placeholder="0">
-                                        @error('deductions')<p class="master-error">{{ $message }}</p>@enderror
-                                    </div>
-                                    <div class="master-field">
-                                        <label class="master-label" for="payslipNet">Net paid</label>
-                                        <input class="master-input" id="payslipNet" name="net_amount" value="{{ old('net_amount') }}"
-                                            placeholder="Left blank: gross − deductions">
-                                        @error('net_amount')<p class="master-error">{{ $message }}</p>@enderror
+                                        <label class="master-label" for="payslipPaidDays">Paid days</label>
+                                        <input class="master-input" id="payslipPaidDays" name="paid_days" inputmode="numeric"
+                                            value="{{ old('paid_days', $editing?->paid_days) }}" placeholder="Optional">
+                                        @error('paid_days')<p class="master-error">{{ $message }}</p>@enderror
                                     </div>
                                     <div class="master-field">
                                         <label class="master-label" for="payslipPaidOn">Paid on</label>
-                                        <input class="master-input" id="payslipPaidOn" type="date" name="paid_on" value="{{ old('paid_on') }}">
+                                        <input class="master-input" id="payslipPaidOn" type="date" name="paid_on"
+                                            value="{{ old('paid_on', $editing?->paid_on?->format('Y-m-d')) }}">
+                                    </div>
+                                </div>
+
+                                <div class="master-form-grid user-payslip-lines">
+                                    <div class="master-field">
+                                        <span class="master-label">Earnings</span>
+                                        @foreach ($formRows('earning_lines', 'earnings') as $i => $row)
+                                            <div class="user-line-row">
+                                                <input class="master-input" name="earning_lines[{{ $i }}][label]" value="{{ $row['label'] }}"
+                                                    aria-label="Earning {{ $i + 1 }}">
+                                                <input class="master-input" name="earning_lines[{{ $i }}][amount]" value="{{ $row['amount'] }}"
+                                                    inputmode="decimal" placeholder="0" aria-label="Earning {{ $i + 1 }} amount">
+                                            </div>
+                                        @endforeach
+                                        @error('earning_lines.*.amount')<p class="master-error">{{ $message }}</p>@enderror
+                                    </div>
+                                    <div class="master-field">
+                                        <span class="master-label">Deductions</span>
+                                        @foreach ($formRows('deduction_lines', 'deductions') as $i => $row)
+                                            <div class="user-line-row">
+                                                <input class="master-input" name="deduction_lines[{{ $i }}][label]" value="{{ $row['label'] }}"
+                                                    aria-label="Deduction {{ $i + 1 }}">
+                                                <input class="master-input" name="deduction_lines[{{ $i }}][amount]" value="{{ $row['amount'] }}"
+                                                    inputmode="decimal" placeholder="0" aria-label="Deduction {{ $i + 1 }} amount">
+                                            </div>
+                                        @endforeach
+                                        @error('deduction_lines.*.amount')<p class="master-error">{{ $message }}</p>@enderror
+                                    </div>
+                                </div>
+
+                                <div class="master-form-grid">
+                                    <div class="master-field">
+                                        <label class="master-label" for="payslipNet">Net paid</label>
+                                        <input class="master-input" id="payslipNet" name="net_amount"
+                                            value="{{ old('net_amount', $editing?->net_amount) }}"
+                                            placeholder="Left blank: earnings − deductions">
+                                        @error('net_amount')<p class="master-error">{{ $message }}</p>@enderror
                                     </div>
                                     <div class="master-field">
                                         <label class="master-label" for="payslipStatus">Status</label>
                                         <select class="master-select" id="payslipStatus" name="status">
                                             @foreach ($payslipStatuses as $key => $label)
-                                                <option value="{{ $key }}" @selected(old('status', 'issued') === $key)>{{ $label }}</option>
+                                                <option value="{{ $key }}" @selected(old('status', $editing?->status ?? 'issued') === $key)>{{ $label }}</option>
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="master-field full">
-                                        <label class="master-label" for="payslipFile">Slip file (optional)</label>
+                                    <div class="master-field">
+                                        <label class="master-label" for="payslipFile">Signed copy (optional)</label>
                                         <input class="master-input emp-file-input" id="payslipFile" type="file" name="attachment">
+                                        <span class="master-sub">The slip itself is printed from these figures — attach a scan only if you have one.</span>
                                     </div>
-                                    <div class="master-field full">
-                                        <label class="master-label" for="payslipNotes">Notes</label>
-                                        <input class="master-input" id="payslipNotes" name="notes" value="{{ old('notes') }}">
+                                    <div class="master-field">
+                                        <label class="master-label" for="payslipNotes">Note on the slip</label>
+                                        <input class="master-input" id="payslipNotes" name="notes" value="{{ old('notes', $editing?->notes) }}"
+                                            placeholder="Printed on the payslip">
                                     </div>
                                 </div>
+
                                 <div class="master-actions">
-                                    <button class="master-btn master-btn-primary" type="submit">Record the payslip</button>
+                                    <button class="master-btn master-btn-primary" type="submit">
+                                        {{ $editing ? 'Save the correction' : 'Record the payslip' }}
+                                    </button>
+                                    @if ($editing)
+                                        <a class="master-btn master-btn-soft" href="{{ route('users.show', ['user' => $user, 'tab' => 'salary', 'year' => $year]) }}">Cancel</a>
+                                    @endif
                                 </div>
                             </form>
                         </div>
@@ -541,80 +626,7 @@
                                 </p>
                             </div>
 
-                            <div class="master-table-wrap">
-                                <table class="master-table">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col">Month</th>
-                                            <th scope="col" class="is-num">Net</th>
-                                            <th scope="col">Paid on</th>
-                                            <th scope="col">Status</th>
-                                            <th scope="col">File</th>
-                                            <th scope="col">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse ($payslips as $payslip)
-                                            <tr>
-                                                <td data-label="Month">
-                                                    <strong>{{ $payslip->periodLabel() }}</strong>
-                                                    @if ($payslip->entry)
-                                                        <span class="master-sub">matched to the ledger entry of {{ $payslip->entry->entry_date?->format('d M Y') }}</span>
-                                                    @endif
-                                                </td>
-                                                <td class="is-num" data-label="Net">{{ \App\Helpers\CommonHelper::amount($payslip->net_amount, $payslip->currency) }}</td>
-                                                <td data-label="Paid on">{{ $payslip->paidOnLabel() }}</td>
-                                                <td data-label="Status">
-                                                    <span class="emp-pill {{ $payslip->isIssued() ? 'is-ok' : 'is-warn' }}">{{ $payslip->statusLabel() }}</span>
-                                                </td>
-                                                <td data-label="File">
-                                                    @if ($payslip->hasFile())
-                                                        <a href="{{ route('users.payslips.file', ['user' => $user, 'payslip' => $payslip]) }}">Download</a>
-                                                    @else
-                                                        <span class="master-sub">—</span>
-                                                    @endif
-                                                </td>
-                                                <td data-label="Action">
-                                                    <div class="emp-row-actions">
-                                                        <form method="POST" action="{{ route('users.payslips.update', ['user' => $user, 'payslip' => $payslip]) }}">
-                                                            @csrf
-                                                            @method('PUT')
-                                                            <input type="hidden" name="period" value="{{ $payslip->period }}">
-                                                            <input type="hidden" name="gross_amount" value="{{ $payslip->gross_amount }}">
-                                                            <input type="hidden" name="deductions" value="{{ $payslip->deductions }}">
-                                                            <input type="hidden" name="net_amount" value="{{ $payslip->net_amount }}">
-                                                            <input type="hidden" name="paid_on" value="{{ $payslip->paid_on?->format('Y-m-d') }}">
-                                                            <input type="hidden" name="status" value="{{ $payslip->isIssued() ? 'draft' : 'issued' }}">
-                                                            <button class="master-btn master-btn-ghost master-btn-sm" type="submit">
-                                                                {{ $payslip->isIssued() ? 'Back to draft' : 'Issue' }}
-                                                            </button>
-                                                        </form>
-                                                        <form method="POST" action="{{ route('users.payslips.destroy', ['user' => $user, 'payslip' => $payslip]) }}"
-                                                            onsubmit="return confirm('Remove the payslip for {{ $payslip->periodLabel() }}?');">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button class="master-btn master-btn-ghost master-btn-sm" type="submit">Remove</button>
-                                                        </form>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="6">
-                                                    <div class="master-list-empty">
-                                                        <span class="master-list-empty-icon" aria-hidden="true">🧾</span>
-                                                        <p class="master-list-empty-title">No payslip yet</p>
-                                                        <p class="master-list-empty-text">
-                                                            Record a month above. The figures are the record; attaching the signed
-                                                            slip is optional, and the employee sees it the moment it is issued.
-                                                        </p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
+                            @include('employees.partials.payslip-table', ['payslips' => $payslips, 'context' => 'office', 'user' => $user])
                         </div>
                     @endif
                 </section>

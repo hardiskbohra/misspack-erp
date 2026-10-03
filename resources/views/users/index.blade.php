@@ -289,7 +289,7 @@
                                                 Edit user
                                             </button>
 
-                                            <a href="{{ route('users.show', [$user, 'tab' => 'payslips']) }}">
+                                            <a href="{{ route('users.show', [$user, 'tab' => 'salary']) }}">
                                                 <i class="fas fa-file-invoice-dollar"></i>
                                                 Payslips &amp; pay
                                             </a>
