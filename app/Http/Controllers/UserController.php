@@ -9,6 +9,7 @@ use App\Models\EmployeePayslip;
 use App\Models\User;
 use App\Services\DocumentUpload;
 use App\Services\EmployeeProfile;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -50,6 +51,74 @@ class UserController extends Controller
         'work' => 'Work',
     ];
 
+    /**
+     * The columns the search box reads. The list, the query and the chips all
+     * read this one list, so a column can never be searched but not filtered,
+     * or filtered but not searched.
+     */
+    private const SEARCH_COLUMNS = ['name', 'email', 'mobile', 'department', 'designation', 'employee_code'];
+
+    /** The column behind each filter, by the name the query string uses. */
+    private const FILTER_COLUMNS = [
+        'role' => 'role',
+        'department' => 'department',
+        'designation' => 'designation',
+        'status' => 'employment_status',
+        'code' => 'employee_code',
+        'joined' => 'date_of_joining',
+    ];
+
+    /** @var array<string, bool> */
+    private static array $columns = [];
+
+    /**
+     * Does the table have this column *yet*?
+     *
+     * Half of this module's columns arrive with its own migration, and an
+     * application deployed by hand is read on databases that have not caught
+     * up. A page that offers fewer filters is a better answer than a 500 in
+     * front of somebody's payroll — but the rule that matters more is the
+     * second half: a filter is only *offered* when it can actually be applied.
+     * A control that silently does nothing is worse than no control.
+     */
+    private function hasColumn(string $column): bool
+    {
+        return self::$columns[$column] ??= Schema::hasColumn('users', $column);
+    }
+
+    /**
+     * Which filters this database can apply right now.
+     *
+     * @return array<string, bool>
+     */
+    private function availableFilters(): array
+    {
+        $available = ['search' => true];
+
+        foreach (self::FILTER_COLUMNS as $key => $column) {
+            $available[$key] = $this->hasColumn($column);
+        }
+
+        return $available;
+    }
+
+    /**
+     * The payslip and document counts the list prints — asked for only when
+     * their tables exist, so an unmigrated database still lists its people.
+     */
+    private function counting(Builder $query): Builder
+    {
+        $relations = [];
+
+        foreach (['payslips' => 'employee_payslips', 'employeeDocuments' => 'employee_documents'] as $relation => $table) {
+            if (Schema::hasTable($table)) {
+                $relations[] = $relation;
+            }
+        }
+
+        return $relations === [] ? $query : $query->withCount($relations);
+    }
+
     /** List all users — the same list screen as shipments and the ledger. */
     public function index(Request $request)
     {
@@ -62,16 +131,19 @@ class UserController extends Controller
         }
 
         $perPage = (int) $request->get('per_page', 10);
+        $available = $this->availableFilters();
+        $chips = $this->filterChips($filters, $available);
 
-        $query = $this->filtered($filters)->withCount(['payslips', 'employeeDocuments']);
+        $query = $this->counting($this->filtered($filters, $available));
 
         $users = $query->orderBy('id')->paginate($perPage ?: 10)->withQueryString();
 
         return view('users.index', array_merge($filters, [
             'users' => $users,
             'filters' => $filters,
-            'filtersActive' => $this->anyFilter($filters),
-            'filterChips' => $this->filterChips($filters),
+            'filtersActive' => $chips !== [],
+            'availableFilters' => $available,
+            'filterChips' => $chips,
             'perPage' => $perPage,
             'roles' => User::ROLES,
             'roleCounts' => $this->roleCounts(),
@@ -109,7 +181,7 @@ class UserController extends Controller
             'tabCounts' => [
                 'salary' => $profile->salaryEntries($user)->count(),
                 'payslips' => $payslips->count(),
-                'documents' => $user->employeeDocuments()->count(),
+                'documents' => Schema::hasTable('employee_documents') ? $user->employeeDocuments()->count() : 0,
                 'notes' => 0,
             ],
             'record' => $record,
@@ -140,33 +212,34 @@ class UserController extends Controller
      * "all" is a value somebody might genuinely type into the search box — the
      * bug the ledger shipped twice, and this list is not going to repeat it.
      */
-    private function filtered(array $filters)
+    private function filtered(array $filters, array $available)
     {
         $query = User::query();
         $search = $filters['search'] ?? null;
 
         if (filled($search)) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('mobile', 'like', "%{$search}%")
-                  ->orWhere('department', 'like', "%{$search}%")
-                  ->orWhere('designation', 'like', "%{$search}%")
-                  ->orWhere('employee_code', 'like', "%{$search}%");
-            });
+            $columns = array_values(array_filter(self::SEARCH_COLUMNS, fn (string $column) => $this->hasColumn($column)));
+
+            if ($columns !== []) {
+                $query->where(function ($q) use ($columns, $search) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'like', "%{$search}%");
+                    }
+                });
+            }
         }
 
         foreach (['role', 'department', 'designation'] as $column) {
             $value = $filters[$column] ?? null;
 
-            if (filled($value) && $value !== 'all') {
+            if (($available[$column] ?? false) && filled($value) && $value !== 'all') {
                 $query->where($column, $value);
             }
         }
 
         $code = $filters['code'] ?? null;
 
-        if (filled($code) && $code !== 'all') {
+        if (($available['code'] ?? false) && filled($code) && $code !== 'all') {
             /* with / without, not free text: an office asking "who has no code
                yet" is asking a complete question and typing nothing to ask it. */
             $code === 'missing'
@@ -176,7 +249,7 @@ class UserController extends Controller
 
         $status = $filters['status'] ?? null;
 
-        if (filled($status) && $status !== 'all') {
+        if (($available['status'] ?? false) && filled($status) && $status !== 'all') {
             $status === 'exited'
                 ? $query->where('employment_status', 'exited')
                 : $query->where(fn ($q) => $q->where('employment_status', $status)->orWhereNull('employment_status'));
@@ -184,7 +257,7 @@ class UserController extends Controller
 
         $joined = $filters['joined'] ?? null;
 
-        if (filled($joined) && $joined !== 'all') {
+        if (($available['joined'] ?? false) && filled($joined) && $joined !== 'all') {
             $preset = DateRanges::presets()[$joined] ?? null;
 
             if ($preset) {
@@ -197,17 +270,6 @@ class UserController extends Controller
     }
 
     /** Is anything actually filtering? */
-    private function anyFilter(array $filters): bool
-    {
-        foreach ($filters as $value) {
-            if (filled($value) && $value !== 'all') {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     /**
      * One removable chip per active filter — the applied strip every list wears.
      *
@@ -217,7 +279,7 @@ class UserController extends Controller
      *
      * @return array<int, array{key: string, label: string, value: string}>
      */
-    private function filterChips(array $filters): array
+    private function filterChips(array $filters, array $available): array
     {
         $labels = [
             'search' => 'Search', 'role' => 'Role', 'department' => 'Department',
@@ -229,7 +291,9 @@ class UserController extends Controller
         foreach ($labels as $key => $label) {
             $value = $filters[$key] ?? null;
 
-            if (! filled($value) || $value === 'all') {
+            /* A filter this database cannot apply is not a filter that is on:
+               the chip would be a claim the query never made. */
+            if (! ($available[$key] ?? false) || ! filled($value) || $value === 'all') {
                 continue;
             }
 
@@ -257,7 +321,7 @@ class UserController extends Controller
     private function stats(): array
     {
         $counts = $this->roleCounts();
-        $month = now()->format('Y-m');
+        $hasRole = $this->hasColumn('role');
 
         $paidThisMonth = Schema::hasTable('cashflow_entries') && Schema::hasColumn('cashflow_entries', 'employee_id')
             ? (float) CashflowEntry::query()
@@ -268,19 +332,19 @@ class UserController extends Controller
                 ->sum('credit_amount')
             : 0.0;
 
-        $issues = 0;
-
-        if (Schema::hasColumn('users', 'employment_status')) {
-            $issues += User::query()->where('role', User::ROLE_EMPLOYEE)
-                ->where(fn ($q) => $q->whereNull('joining_date')->orWhereNull('date_of_joining'))
-                ->count();
-        }
+        /* Who is on the payroll and has a code to be paid against — the same
+           predicate as the `code=present` filter, so the tile and the filter
+           can never mean two different things. */
+        $withCode = $hasRole && $this->hasColumn('employee_code')
+            ? User::query()->where('role', User::ROLE_EMPLOYEE)
+                ->whereNotNull('employee_code')->where('employee_code', '!=', '')->count()
+            : 0;
 
         $documents = Schema::hasTable('employee_documents') ? EmployeeDocument::query()->count() : 0;
 
         $missingFiles = 0;
 
-        if (Schema::hasTable('employee_documents')) {
+        if ($hasRole && Schema::hasTable('employee_documents')) {
             /* Who is on the payroll with no identity paper at all — the one gap
                an audit asks about first. */
             $missingFiles = User::query()->where('role', User::ROLE_EMPLOYEE)
@@ -292,6 +356,7 @@ class UserController extends Controller
             'total' => $counts['all'] ?? 0,
             'employees' => $counts[User::ROLE_EMPLOYEE] ?? 0,
             'admins' => $counts[User::ROLE_ADMIN] ?? 0,
+            'with_code' => $withCode,
             'paid_this_month' => $paidThisMonth,
             'documents' => $documents,
             'missing_id_proof' => $missingFiles,
@@ -302,6 +367,10 @@ class UserController extends Controller
     /** The departments actually in use, for the filter — never a stale list. */
     private function departments(): array
     {
+        if (! $this->hasColumn('department')) {
+            return [];
+        }
+
         return User::query()
             ->whereNotNull('department')
             ->where('department', '!=', '')
@@ -325,8 +394,7 @@ class UserController extends Controller
             $filters[$key] = is_string($value) ? trim($value) : null;
         }
 
-        $rows = $this->filtered($filters)
-            ->withCount(['payslips', 'employeeDocuments'])
+        $rows = $this->counting($this->filtered($filters, $this->availableFilters()))
             ->orderBy('id')
             ->get();
 
@@ -377,7 +445,7 @@ class UserController extends Controller
     {
         $counts = ['all' => User::query()->count()];
 
-        if (Schema::hasColumn('users', 'role')) {
+        if ($this->hasColumn('role')) {
             foreach (array_keys(User::ROLES) as $role) {
                 $counts[$role] = User::query()->where('role', $role)->count();
             }

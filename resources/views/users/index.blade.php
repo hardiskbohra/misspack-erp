@@ -52,8 +52,8 @@
             <span class="icon" aria-hidden="true">🏷</span>
             <div>
                 <p class="master-stat-title">Employee codes</p>
-                <p class="master-stat-value">{{ $stats['employees'] - $stats['missing_id_proof'] >= 0 ? ($stats['total'] - $stats['missing_id_proof']) : $stats['total'] }}</p>
-                <p class="master-sub">on file</p>
+                <p class="master-stat-value">{{ $stats['with_code'] }}</p>
+                <p class="master-sub">of {{ $stats['employees'] }} employee{{ $stats['employees'] === 1 ? '' : 's' }} on the payroll</p>
             </div>
         </div>
         <div class="master-stat master-stat--flat green">
@@ -99,7 +99,9 @@
             {{-- The role is a chip, and the chips are links: without this the
                  chip would be silently dropped every time the filters below
                  are applied. --}}
-            <input type="hidden" name="role" value="{{ $role }}">
+            @if ($availableFilters['role'] ?? true)
+                <input type="hidden" name="role" value="{{ $role }}">
+            @endif
 
             <div class="master-filter-row">
                 <div class="master-search">
@@ -108,32 +110,40 @@
                         placeholder="Name, email, mobile, code…" aria-label="Search the team">
                 </div>
 
-                <select class="master-select" name="department" aria-label="Filter by department">
-                    <option value="all">All departments</option>
-                    @foreach ($departments as $department)
-                        <option value="{{ $department }}" @selected($department === ($filters['department'] ?? null))>{{ $department }}</option>
-                    @endforeach
-                </select>
+                @if ($availableFilters['department'] ?? true)
+                    <select class="master-select" name="department" aria-label="Filter by department">
+                        <option value="all">All departments</option>
+                        @foreach ($departments as $department)
+                            <option value="{{ $department }}" @selected($department === ($filters['department'] ?? null))>{{ $department }}</option>
+                        @endforeach
+                    </select>
+                @endif
 
-                <select class="master-select desktop-only" name="status" aria-label="Filter by employment status">
-                    <option value="all">Any status</option>
-                    @foreach ($employmentStatuses as $key => $label)
-                        <option value="{{ $key }}" @selected(($filters['status'] ?? null) === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
+                @if ($availableFilters['status'] ?? true)
+                    <select class="master-select desktop-only" name="status" aria-label="Filter by employment status">
+                        <option value="all">Any status</option>
+                        @foreach ($employmentStatuses as $key => $label)
+                            <option value="{{ $key }}" @selected(($filters['status'] ?? null) === $key)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                @endif
 
-                <select class="master-select desktop-only" name="code" aria-label="Filter by employee code">
-                    <option value="all">Code: any</option>
-                    <option value="present" @selected(($filters['code'] ?? null) === 'present')>Has a code</option>
-                    <option value="missing" @selected(($filters['code'] ?? null) === 'missing')>No code yet</option>
-                </select>
+                @if ($availableFilters['code'] ?? true)
+                    <select class="master-select desktop-only" name="code" aria-label="Filter by employee code">
+                        <option value="all">Code: any</option>
+                        <option value="present" @selected(($filters['code'] ?? null) === 'present')>Has a code</option>
+                        <option value="missing" @selected(($filters['code'] ?? null) === 'missing')>No code yet</option>
+                    </select>
+                @endif
 
-                <select class="master-select desktop-only" name="joined" aria-label="Filter by joining period">
-                    <option value="all">Joined: any time</option>
-                    @foreach (\App\Helpers\DateRanges::LABELS as $key => $label)
-                        <option value="{{ $key }}" @selected(($filters['joined'] ?? null) === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
+                @if ($availableFilters['joined'] ?? true)
+                    <select class="master-select desktop-only" name="joined" aria-label="Filter by joining period">
+                        <option value="all">Joined: any time</option>
+                        @foreach (\App\Helpers\DateRanges::LABELS as $key => $label)
+                            <option value="{{ $key }}" @selected(($filters['joined'] ?? null) === $key)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                @endif
 
                 <div class="master-list-filter-group">
                     @if ($filtersActive)
@@ -255,8 +265,8 @@
                                         {{ $user->employmentStatusLabel() }}
                                     </span>
                                     <span class="master-sub">
-                                        {{ $user->payslips_count }} {{ \Illuminate\Support\Str::plural('payslip', $user->payslips_count) }}
-                                        · {{ $user->employee_documents_count }} {{ \Illuminate\Support\Str::plural('document', $user->employee_documents_count) }}
+                                        {{ (int) $user->payslips_count }} {{ \Illuminate\Support\Str::plural('payslip', (int) $user->payslips_count) }}
+                                        · {{ (int) $user->employee_documents_count }} {{ \Illuminate\Support\Str::plural('document', (int) $user->employee_documents_count) }}
                                     </span>
                                 @else
                                     <span class="emp-pill is-off">Office access</span>

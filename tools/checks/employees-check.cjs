@@ -19,7 +19,15 @@
      - a document the office marked seen must not be removable by the person
        who uploaded it;
      - the two roles must exist everywhere the role is read — the model, the
-       migration default, the validation, and the forms.
+       migration default, the validation, and the forms;
+     - no query may name a column no migration declares. The list screen died on
+       `whereNull('joining_date')` — a column that was never created — while the
+       tile it fed was never even printed. A missing column is a 500 in front of
+       somebody's payroll, so the whole application is swept for it, not just
+       this module;
+     - the page must offer a filter only when the query can apply it. A control
+       that silently does nothing is worse than no control, and a chip claiming
+       a filter the query never applied is a lie about the rows on screen.
 
    Source-level, like every other gate in this folder: the behaviour itself is
    exercised by the application. What this catches is the change that *looks*
@@ -373,6 +381,87 @@ check('a fresh install has both sides of the line',
 check('the seed never overwrites an employment record somebody edited',
     /wasRecentlyCreated === false && blank\(\$user->role\)/.test(seeder)
     || /firstOrCreate/.test(seeder));
+
+/* --------------------------------------------------- 8. the schema is asked */
+
+/** Every column any migration declares — `up()` only: a `down()` drops them. */
+const declaredColumns = (() => {
+    const columns = new Set();
+    const types = 'string|text|longText|mediumText|integer|bigInteger|unsignedBigInteger|unsignedInteger|tinyInteger|smallInteger|'
+        + 'boolean|date|dateTime|timestamp|decimal|double|float|json|enum|foreignId|foreignUuid|uuid|binary|ipAddress|rememberToken';
+
+    fs.readdirSync(path.join(ROOT, 'database/migrations')).forEach(file => {
+        const sql = read('database/migrations/' + file);
+        const down = sql.indexOf('function down(');
+        const up = sql.slice(sql.indexOf('function up('), down > -1 ? down : sql.length);
+
+        [...up.matchAll(new RegExp('->(?:' + types + ')\\(\\s*\'([a-z_]+)\'', 'g'))]
+            .forEach(match => columns.add(match[1]));
+
+        if (/->timestamps\(\)/.test(up)) {
+            columns.add('created_at');
+            columns.add('updated_at');
+        }
+    });
+
+    return columns;
+})();
+
+/** A result column is not a table column (`select(... as total)`). */
+const SELECT_ALIASES = new Set(['bucket', 'total', 'total_value', 'entry', 'done', 'required']);
+
+const walk = dir => fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap(entry =>
+    entry.isDirectory()
+        ? walk(dir + '/' + entry.name)
+        : (entry.name.endsWith('.php') ? [dir + '/' + entry.name] : []));
+
+const undeclared = [...new Set(walk('app').flatMap(file =>
+    [...read(file).matchAll(/->(?:where|whereNull|whereNotNull|orderBy|orderByDesc|whereDate|whereYear|whereMonth|whereDay|pluck|groupBy|increment|decrement)\(\s*'([a-z_][a-z_0-9]*)'/g)]
+        .map(match => match[1])
+        .filter(column => !declaredColumns.has(column) && !SELECT_ALIASES.has(column))
+        .map(column => file + ' → ' + column)))];
+
+check('no query names a column no migration declares',
+    undeclared.length === 0, undeclared.slice(0, 6).join(', '));
+
+check('the list offers a filter only when the query can apply it',
+    /private function availableFilters\(\): array/.test(userController)
+    && /'availableFilters' => \$available/.test(userController)
+    && /@if \(\$availableFilters\['role'\]/.test(userIndex)
+    && /@if \(\$availableFilters\['department'\]/.test(userIndex)
+    && /@if \(\$availableFilters\['status'\]/.test(userIndex)
+    && /@if \(\$availableFilters\['code'\]/.test(userIndex)
+    && /@if \(\$availableFilters\['joined'\]/.test(userIndex));
+
+check('the query claims a filter only when its column is there',
+    /private function filtered\(array \$filters, array \$available\)/.test(userController)
+    && /\$available\['code'\]/.test(userController)
+    && /\$available\['status'\]/.test(userController)
+    && /\$available\['joined'\]/.test(userController)
+    && /array_filter\(self::SEARCH_COLUMNS/.test(userController));
+
+check('a filter this database cannot apply is never shown as applied',
+    /private function filterChips\(array \$filters, array \$available\)/.test(userController)
+    && /! \(\$available\[\$key\] \?\? false\)/.test(userController)
+    && /'filtersActive' => \$chips !== \[\]/.test(userController));
+
+check('the row counts are asked for only when their tables exist',
+    /private function counting\(Builder \$query\): Builder/.test(userController)
+    && /'payslips' => 'employee_payslips', 'employeeDocuments' => 'employee_documents'/.test(userController)
+    && /\$this->counting\(\$this->filtered\(/.test(userController));
+
+check('a tile shows a figure, not arithmetic on other figures',
+    (() => {
+        const values = [...userIndex.matchAll(/<p class="master-stat-value">([\s\S]*?)<\/p>/g)].map(match => match[1].trim());
+
+        return values.length >= 5 && values.every(value =>
+            /^\{\{\s*(?:\\App\\Helpers\\CommonHelper::indianCurrency\()?\$stats\['[a-z_]+'\](?:\))?\s*\}\}$/.test(value));
+    })());
+
+check('the employee-code tile counts what the filter counts',
+    /\$stats\['with_code'\]/.test(userIndex)
+    && /'with_code' => \$withCode/.test(userController)
+    && /whereNotNull\('employee_code'\)->where\('employee_code', '!=', ''\)->count\(\)/.test(userController));
 
 /* ---------------------------------------------------------------- report */
 
