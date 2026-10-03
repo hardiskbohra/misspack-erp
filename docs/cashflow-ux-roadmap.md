@@ -177,12 +177,23 @@ seconds — and it asked about the party twice: **Related To** (which kind) and
 to now have a list to pick from, so an entry is filed *against* the client or the
 vendor rather than beside their name.
 
-- **One picker at a time.** "Related To" chooses which list you are picking from:
-  a **client**, a **vendor**, the **employee** being paid, or the **head** a cash
-  expense was spent under. The field that does not belong to the chosen kind is
-  hidden — and **cleared**, because a hidden `<select>` still submits, and a
+- **One picker at a time for the parties that collide.** "Related To" chooses
+  which list you are picking from: a **client**, a **vendor**, or the **head** a
+  cash expense was spent under. The field that does not belong to the chosen kind
+  is hidden — and **cleared**, because a hidden `<select>` still submits, and a
   client left over from a moment ago is how an entry lands on the wrong party's
-  statement.
+  statement. They stay one at a time because a row linked to a client *and* to a
+  vendor at once sits on two parties' statements while its single label can agree
+  with only one of them.
+- **The person being paid is a field, not a mode.** `#quickEmployee` — "Paid to
+  employee" — is on screen in every mode, as the detailed form has always asked
+  for it. Who the money went to is a fact about an entry whether it was filed
+  against a client, a vendor or a cash head, and the office should not have to
+  switch the party selector to somebody to record it. It is a *link*, so the same
+  `alignPartyType()` files it: a payment to an employee left on the selector's
+  first option is still an employee entry, and a client receipt can name the
+  employee it went through (the chosen type names a link that is set, so both
+  survive).
 - **The link decides the label.** `CashflowEntry::alignPartyType()`: the chosen
   type stands when it names one of the links that is set; otherwise the link
   wins, in `partyLinkColumns()` order (client, vendor, employee). A party

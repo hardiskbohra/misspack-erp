@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Payments → Cashflow — MissPack ERP (preview)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/core.css?v=6abf109f">
+    <link rel="stylesheet" href="/assets/css/app-layout.css?v=6abf6a51">
+    <link rel="stylesheet" href="/assets/css/master-index.css?v=6abf04ad">
+    <link rel="stylesheet" href="/assets/css/master-show.css?v=6abf13a6">
+    <link rel="stylesheet" href="/assets/css/master-form.css?v=6abf0f9a">
+    <link rel="stylesheet" href="/assets/css/master-flat.css?v=6abf2c03">
+    <link rel="stylesheet" href="/assets/vendor/select2/css/select2.min.css?v=6abf7b0c">
+    <link rel="stylesheet" href="/assets/css/select2-theme.css?v=6abf2522">
+    <link rel="stylesheet" href="/assets/css/master-alert.css?v=6abf21b9">
+    <link rel="stylesheet" href="/assets/css/vendors.css?v=6abf6bd3">
+    <link rel="stylesheet" href="/assets/css/cashflows.css?v=6abf0cf0">
+    <link rel="stylesheet" href="/assets/css/responsive.css?v=6abf2e74">
+    <style>
+        a[href^="/theme"], form.theme-form { pointer-events: none; }
+        #previewThemeBtn { display: inline-flex; align-items: center; gap: 8px; }
+    </style>
+<body>
+    <aside class="sidebar" id="sidebar" aria-label="Main sidebar">
+        <div class="sidebar-logo">
+            <div>
+                <div class="sidebar-logo-text sidebar-text">MissPack</div>
+                <div class="sidebar-logo-sub sidebar-text">Packed Perfect</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">Dashboards</div>
+            <a href="#" class="sidebar-item"><i class="fas fa-th-large"></i><span class="sidebar-text">Dashboard</span></a>
+            <div class="sidebar-section">Management</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-layer-group"></i><span class="sidebar-text">Tasks</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-box-open"></i><span class="sidebar-text">Products</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-truck"></i><span class="sidebar-text">Shipments</span></a>
+            <div class="sidebar-section">Sales</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-users"></i><span class="sidebar-text">Clients</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-briefcase"></i><span class="sidebar-text">Projects</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-file-invoice-dollar"></i><span class="sidebar-text">Invoices</span></a>
+            <div class="sidebar-section">Purchase</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-user-gear"></i><span class="sidebar-text">Vendors</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-money-bill"></i><span class="sidebar-text">Vendor Quotes</span></a>
+            <div class="sidebar-section">Accounts</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-scale-balanced"></i><span class="sidebar-text">Cashflow</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-users-cog"></i><span class="sidebar-text">Users</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="user-avatar-sm">H</div>
+                <div class="sidebar-user-info sidebar-text">
+                    <div class="user-name">Hardik Bohra</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+                <button type="button" class="sidebar-logout-btn" title="Logout" aria-label="Logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="main-wrap" id="mainWrap">
+        <header class="topbar">
+            <button type="button" class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="topbar-title">Vendor Payments → Cashflow</span>
+            <div class="topbar-spacer"></div>
+            <div class="topbar-actions">
+                <button type="button" class="topbar-btn desktop-only" aria-label="Search"><i class="fas fa-search"></i></button>
+                <button type="button" id="previewThemeBtn" class="theme-toggle desktop-only">
+                    <i class="fas fa-moon"></i> <span>Dark</span>
+                </button>
+                <button type="button" class="topbar-btn desktop-only" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="topbar-badge">3</span>
+                </button>
+                <div class="topbar-user-btn">
+                    <div class="user-avatar-sm topbar-avatar">H</div>
+                    <span class="topbar-user-name desktop-only">Hardik Bohra</span>
+                </div>
+            </div>
+        </header>
+
+                <main class="page-content">
+            <div class="vendor-show" data-vendor-id="7">
+                <div class="vendor-hero" style="margin-bottom:14px;">
+                    <div>
+                        <p class="vendor-eyebrow">Bamboo Packaging Co. · RMB</p>
+                        <h1>One entry, two ledgers</h1>
+                        <p style="max-width:820px;line-height:1.65;">
+                            A payment to a vendor used to be typed twice — once in this vendor ledger (RMB/USD) and again in the
+                            Cashflow module (INR). Now the vendor entry is the source of truth: pressing <strong>Add Payment</strong> as a
+                            <strong>payment (debit)</strong> also writes the INR cashflow entry and keeps them in step on every edit or delete.
+                        </p>
+                    </div>
+                    <div>
+                        <button type="button" class="master-btn master-btn-primary" id="openAddPaymentModal">＋ Add Payment</button>
+                    </div>
+                </div>
+
+                <div class="vendor-tabs-card">
+                    <div class="vendor-tabs" role="tablist">
+                        <button type="button" class="vendor-tab" data-tab="overview">Overview</button>
+                        <button type="button" class="vendor-tab active" data-tab="payments">Payments</button>
+                    </div>
+                </div>
+
+                <div class="vendor-panel active" data-panel="payments">
+                    <div class="vendor-section-head">
+                        <div>
+                            <p class="vendor-eyebrow">Vendor Currency</p>
+                            <h2>Payment Ledger (RMB)</h2>
+                        </div>
+                        <div><span class="vendor-pill">Balance RMB 1,08,500.00</span></div>
+                    </div>
+                    <div class="vendor-table-wrap vendor-card">
+                        <table class="vendor-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th><th>Invoice</th><th>Particular</th><th>Credit / Bill</th>
+                                    <th>Debit / Paid</th><th>INR Value</th><th>Account / Mode</th><th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>28 Sep 26</td>
+                                    <td>BP-2291<small>Payment To Vendor</small></td>
+                                    <td><strong>Advance payment - cartons</strong><small>PRJ-1042 - Cotton Tote Program</small></td>
+                                    <td class="red">-</td>
+                                    <td class="green">RMB 50,000.00</td>
+                                    <td>₹ 5,85,000.00<small>Rate: 11.70</small></td>
+                                    <td>HDFC Current<small>wire · TT-88214</small></td>
+                                    <td>Booked
+                                        <a class="vendor-sync-link" href="#cf-list" title="Open the linked INR cashflow entry">↔ Cashflow #142</a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>25 Sep 26</td>
+                                    <td>BP-2288<small>Vendor Bill / Invoice</small></td>
+                                    <td><strong>Corrugated carton supply</strong><small>No project</small></td>
+                                    <td class="red">RMB 1,08,500.00</td>
+                                    <td class="green">-</td>
+                                    <td>₹ 12,69,450.00<small>Rate: 11.70</small></td>
+                                    <td>-<small>-</small></td>
+                                    <td>Pending</td>
+                                </tr>
+                                <tr>
+                                    <td>12 Sep 26</td>
+                                    <td>BP-2270<small>Payment To Vendor</small></td>
+                                    <td><strong>Payment against bill BP-2288</strong><small>PRJ-1042 - Cotton Tote Program</small></td>
+                                    <td class="red">-</td>
+                                    <td class="green">RMB 40,000.00</td>
+                                    <td>₹ 4,68,000.00<small>Rate: 11.70</small></td>
+                                    <td>ICICI CC<small>bank_transfer · NEFT-77120</small></td>
+                                    <td>Reconciled
+                                        <a class="vendor-sync-link" href="#cf-list">↔ Cashflow #131</a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p style="margin:10px 0 0;color:var(--mc-text-3);font-weight:600;font-size:12.5px;line-height:1.6;">
+                        Bills (credit rows) create a payable, not a cash movement, so they do not add a cashflow entry — the box is
+                        unticked automatically when you pick “Credit / Bill Generated”.
+                    </p>
+
+                    <div class="vendor-section-head" id="cf-list">
+                        <div>
+                            <p class="vendor-eyebrow">INR Cashflow</p>
+                            <h2>Mirrored Entries — Cashflow Module</h2>
+                        </div>
+                        <div><span class="vendor-pill">2 cashflow</span></div>
+                    </div>
+                    <div class="master-card" style="padding:0;">
+                        <table class="master-table">
+                            <thead>
+                                <tr><th>Date</th><th>Particular</th><th>Account</th><th>Debit</th><th>Status</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>28 Sep 26</td>
+                                    <td class="master-particular">
+                                        <strong>Advance payment - cartons</strong>
+                                        <a class="cf-sync-chip" href="#cf-list" title="Auto-synced from a vendor payment">↔ Vendor payment</a>
+                                        <span class="master-sub">Vendor: Bamboo Packaging Co.</span>
+                                    </td>
+                                    <td>HDFC Current</td>
+                                    <td style="color:#e11d48;font-weight:700;">₹ 5,85,000.00</td>
+                                    <td>Booked</td>
+                                </tr>
+                                <tr>
+                                    <td>12 Sep 26</td>
+                                    <td class="master-particular">
+                                        <strong>Payment against bill BP-2288</strong>
+                                        <a class="cf-sync-chip" href="#cf-list">↔ Vendor payment</a>
+                                        <span class="master-sub">Vendor: Bamboo Packaging Co.</span>
+                                    </td>
+                                    <td>ICICI CC</td>
+                                    <td style="color:#e11d48;font-weight:700;">₹ 4,68,000.00</td>
+                                    <td>Reconciled</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="master-card master-section cf-sync-note" style="margin-top:15px;">
+                        <h3 class="master-section-title">On the cashflow entry page</h3>
+                        <p style="margin:0;font-weight:700;">
+                            This INR entry is generated from a vendor payment — <a href="#cf-list">open the vendor ledger</a>
+                        </p>
+                        <p style="margin:6px 0 0;font-weight:600;color:#687386;">
+                            Bamboo Packaging Co. · RMB 50,000.00 @ 11.70 · edit or delete it from the vendor page and this entry follows automatically.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Add Payment modal: real markup + real vendors.js behaviour -->
+                <div class="master-modal" id="addPaymentModal" aria-hidden="true">
+                    <form method="POST" action="#" class="vendor-payment-form" onsubmit="return false;">
+                        <div class="master-modal-header">
+                            <div class="master-modal-heading">
+                                <div>
+                                    <h3 class="master-modal-title">Add Vendor Payment</h3>
+                                    <p class="master-modal-subtitle">Bamboo Packaging Co. · RMB</p>
+                                </div>
+                            </div>
+                            <button type="button" class="master-modal-close" data-close-modal>×</button>
+                        </div>
+                        <div class="master-modal-body">
+                            <div class="master-modal-grid">
+                                <div class="master-field">
+                                    <label class="master-label">Date <span>*</span></label>
+                                    <input class="master-input" type="date" name="transaction_date" value="2026-10-01" required>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label">Invoice / Bill No.</label>
+                                    <input class="master-input" type="text" name="invoice_number" value="BP-2291">
+                                </div>
+                                <div class="master-field full">
+                                    <label class="master-label">Particular <span>*</span></label>
+                                    <input class="master-input" type="text" name="particular" value="Advance payment - cartons" required>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label">RMB/USD Value <span>*</span></label>
+                                    <input class="master-input" type="number" step="0.0001" name="foreign_amount" id="foreignAmount" value="50000" required>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label">Currency <span>*</span></label>
+                                    <select class="master-select" name="foreign_currency" id="foreignCurrency">
+                                        <option selected>RMB</option><option>USD</option><option>INR</option>
+                                    </select>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label">Exchange Rate</label>
+                                    <input class="master-input" type="number" step="0.000001" name="exchange_rate" id="exchangeRate" value="11.70" placeholder="INR per currency">
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label">Amount in INR</label>
+                                    <input class="master-input" type="number" step="0.01" name="amount_in_inr" id="amountInInr" value="585000.00" placeholder="Auto if rate entered">
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label">Credit / Debit <span>*</span></label>
+                                    <select class="master-select" name="transaction_type" required>
+                                        <option value="credit">Credit / Bill Generated</option>
+                                        <option value="debit" selected>Debit / Paid To Vendor</option>
+                                    </select>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label">Entry Category <span>*</span></label>
+                                    <select class="master-select" name="entry_category" required>
+                                        <option>Vendor Bill / Invoice</option>
+                                        <option selected>Payment To Vendor</option>
+                                        <option>Expense Done By Vendor</option>
+                                        <option>Adjustment</option>
+                                        <option>Refund / Credit Note</option>
+                                    </select>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label">Status <span>*</span></label>
+                                    <select class="master-select" name="status" required>
+                                        <option>Pending</option><option selected>Booked</option><option>Paid</option>
+                                        <option>Reconciled</option><option>Cancelled</option>
+                                    </select>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label">Project</label>
+                                    <select class="master-select" name="project_id">
+                                        <option selected>PRJ-1042 - Cotton Tote Program</option>
+                                        <option>PRJ-1039 - Denim Jacket Line</option>
+                                    </select>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label">Paid Account</label>
+                                    <select class="master-select" name="paid_account_id">
+                                        <option value="">Select paid account</option>
+                                        <option selected>HDFC Current</option>
+                                        <option>ICICI CC</option>
+                                    </select>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label">Payment Mode</label>
+                                    <select class="master-select" name="payment_mode">
+                                        <option>Bank Transfer</option><option>Wire / TT</option><option>Cash</option>
+                                        <option>UPI</option><option>Cheque</option><option>Card</option>
+                                        <option>Adjustment</option><option>Other</option>
+                                    </select>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label">Bank Reference</label>
+                                    <input class="master-input" type="text" name="bank_reference_number" value="TT-88214">
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label">Remarks</label>
+                                    <input class="master-input" name="remarks" placeholder="Additional details">
+                                </div>
+                                <div class="master-field full">
+                                    <label class="master-label">Bill / Proof Attachments</label>
+                                    <input class="master-input" type="file" name="attachments[]" multiple>
+                                </div>
+                                <div class="master-field full vendor-sync-field">
+                                    <label class="master-check">
+                                        <input type="hidden" name="also_create_cashflow" value="0">
+                                        <input type="checkbox" name="also_create_cashflow" value="1" class="vendor-cashflow-sync" checked>
+                                        Record this payment in the INR cashflow
+                                    </label>
+                                    <small class="vendor-sync-hint">One entry here also creates the INR entry in the Cashflow module — it stays in sync when you edit or delete this payment.</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="master-modal-footer">
+                            <button type="button" class="master-btn master-btn-light" data-close-modal>Cancel</button>
+                            <button type="submit" class="master-btn master-btn-primary">Add Entry</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+</main>
+    </div>
+
+    <script src="/assets/vendor/jquery/jquery.min.js?v=6abe6ebd"></script>
+    <script src="/assets/vendor/select2/js/select2.min.js?v=6abe1966"></script>
+    <script src="/assets/js/master-alert.js?v=6abf15d1"></script>
+    <script src="/assets/js/master-selects.js?v=6abf2a90"></script>
+    <script src="/assets/js/app-layout.js?v=6abf23b1"></script>
+    <script src="/assets/js/vendors.js?v=6abf0270"></script>
+    <script>
+        // Static preview: client-side theme toggle (Laravel's /theme/toggle is not available here)
+        (function () {
+            var html = document.documentElement;
+            try {
+                var t = new URLSearchParams(location.search).get('theme');
+                if (t === 'dark' || t === 'light') { html.setAttribute('data-theme', t); }
+            } catch (e) {}
+            function syncBtn() {
+                var dark = html.getAttribute('data-theme') === 'dark';
+                var btn = document.getElementById('previewThemeBtn');
+                btn.innerHTML = dark ? '<i class="fas fa-sun"></i> <span>Light</span>' : '<i class="fas fa-moon"></i> <span>Dark</span>';
+            }
+            syncBtn();
+            document.getElementById('previewThemeBtn').addEventListener('click', function () {
+                var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', next);
+                try { localStorage.setItem('preview-theme', next); } catch (e) {}
+                syncBtn();
+            });
+        })();
+    </script>
+</body>
+</html>

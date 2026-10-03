@@ -593,8 +593,13 @@
                         {{-- One party question at a time. "Related To" says which
                              list you are picking from, and the field below it is
                              that list: a client, a vendor, or the head a cash
-                             expense was spent under. The free-text name stays for
-                             the cases that have no record to link to. --}}
+                             expense was spent under. A row linked to two parties
+                             at once sits on two statements with one label, so the
+                             two that can collide are never both on screen — the
+                             employee link below them is not a party in that sense
+                             (it is who the money went to), which is why it is
+                             always there. The free-text name stays for the cases
+                             that have no record to link to. --}}
                         <div class="master-field party-picker" data-party-for="client"
                             @if ($quickPartyType !== 'client') hidden @endif>
                             <label class="master-label" for="quickClient">Client</label>
@@ -619,14 +624,28 @@
                             @error('vendor_id')<p class="master-error">{{ $message }}</p>@enderror
                         </div>
 
-                        {{-- A person paid from the account is a party like any
-                             other, and the link is what files the payment against
-                             them: linked here, it shows up in the employee report
-                             and on their own record instead of only in the notes.
-                             The words are task 60's, so the office recognises the
-                             field it has been using. --}}
-                        <div class="master-field party-picker" data-party-for="employee"
-                            @if ($quickPartyType !== 'employee') hidden @endif>
+                        <div class="master-field party-picker" data-party-for="expense"
+                            @if ($quickPartyType !== 'expense') hidden @endif>
+                            <label class="master-label" for="quickExpenseHead">Expense head</label>
+                            <input class="master-input" id="quickExpenseHead" name="expense_head"
+                                value="{{ old('expense_head') }}" placeholder="Petrol, tea, courier …">
+                            @error('expense_head')<p class="master-error">{{ $message }}</p>@enderror
+                        </div>
+
+                        {{-- The person the entry is against is its own field, on
+                             screen in every mode: the money going *to* somebody is
+                             a fact about an entry whether the office filed it
+                             against a client, a vendor or a cash head, and the
+                             detailed form has always asked for it that way. The
+                             link is what files the payment against them — it shows
+                             up in the employee report and on their own record
+                             instead of only in the notes — and `alignPartyType()`
+                             decides the label on save, so a payment to an employee
+                             left on the selector's first option is still filed
+                             against them, not against the client. The words are
+                             task 60's, so the office recognises the field it has
+                             been using. --}}
+                        <div class="master-field">
                             <label class="master-label" for="quickEmployee">Paid to employee</label>
                             <select class="master-select" id="quickEmployee" name="employee_id">
                                 <option value="">No employee</option>
@@ -635,14 +654,6 @@
                                 @endforeach
                             </select>
                             @error('employee_id')<p class="master-error">{{ $message }}</p>@enderror
-                        </div>
-
-                        <div class="master-field party-picker" data-party-for="expense"
-                            @if ($quickPartyType !== 'expense') hidden @endif>
-                            <label class="master-label" for="quickExpenseHead">Expense head</label>
-                            <input class="master-input" id="quickExpenseHead" name="expense_head"
-                                value="{{ old('expense_head') }}" placeholder="Petrol, tea, courier …">
-                            @error('expense_head')<p class="master-error">{{ $message }}</p>@enderror
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="quickProject">Project / Deal</label>

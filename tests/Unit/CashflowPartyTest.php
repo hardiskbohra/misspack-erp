@@ -86,6 +86,31 @@ class CashflowPartyTest extends TestCase
         $this->assertSame('client', $data['related_party_type'], 'client, vendor, employee — in that order');
     }
 
+    public function test_a_payment_to_an_employee_files_against_them_with_the_selector_untouched(): void
+    {
+        /* The employee list is on screen in every mode, so this is the ordinary
+           case: the selector still reads "Client" — its first option — and the
+           office picks the person the money went to. */
+        $data = CashflowEntry::alignPartyType([
+            'related_party_type' => 'client',
+            'employee_id' => 9,
+        ]);
+
+        $this->assertSame('employee', $data['related_party_type'], 'the only link set is the employee');
+    }
+
+    public function test_a_client_and_the_employee_it_went_through_can_both_be_named(): void
+    {
+        $data = CashflowEntry::alignPartyType([
+            'related_party_type' => 'client',
+            'client_id' => 4,
+            'employee_id' => 9,
+        ]);
+
+        $this->assertSame('client', $data['related_party_type'], 'the chosen type names a link that is set');
+        $this->assertSame(9, $data['employee_id'], 'the other link is kept, not dropped');
+    }
+
     public function test_the_dialog_opens_on_the_option_the_selector_will_show(): void
     {
         /* The list is the office's, and a `<select>` with nothing marked

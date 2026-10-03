@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Invoice — MissPack ERP (preview)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/core.css?v=6abf109f">
+    <link rel="stylesheet" href="/assets/css/app-layout.css?v=6abf6a51">
+    <link rel="stylesheet" href="/assets/css/master-index.css?v=6abf04ad">
+    <link rel="stylesheet" href="/assets/css/master-show.css?v=6abf13a6">
+    <link rel="stylesheet" href="/assets/css/master-form.css?v=6abf0f9a">
+    <link rel="stylesheet" href="/assets/css/master-flat.css?v=6abf2c03">
+    <link rel="stylesheet" href="/assets/vendor/select2/css/select2.min.css?v=6abf7b0c">
+    <link rel="stylesheet" href="/assets/css/select2-theme.css?v=6abf2522">
+    <link rel="stylesheet" href="/assets/css/master-alert.css?v=6abf21b9">
+    <link rel="stylesheet" href="/assets/css/sales-invoices.css?v=6abf07cc">
+    <link rel="stylesheet" href="/assets/css/responsive.css?v=6abf2e74">
+    <style>
+        a[href^="/theme"], form.theme-form { pointer-events: none; }
+        #previewThemeBtn { display: inline-flex; align-items: center; gap: 8px; }
+    </style>
+<body>
+    <aside class="sidebar" id="sidebar" aria-label="Main sidebar">
+        <div class="sidebar-logo">
+            <div>
+                <div class="sidebar-logo-text sidebar-text">MissPack</div>
+                <div class="sidebar-logo-sub sidebar-text">Packed Perfect</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">Dashboards</div>
+            <a href="#" class="sidebar-item"><i class="fas fa-th-large"></i><span class="sidebar-text">Dashboard</span></a>
+            <div class="sidebar-section">Management</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-layer-group"></i><span class="sidebar-text">Tasks</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-box-open"></i><span class="sidebar-text">Products</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-truck"></i><span class="sidebar-text">Shipments</span></a>
+            <div class="sidebar-section">Sales</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-users"></i><span class="sidebar-text">Clients</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-briefcase"></i><span class="sidebar-text">Projects</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-file-invoice-dollar"></i><span class="sidebar-text">Invoices</span></a>
+            <div class="sidebar-section">Purchase</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-user-gear"></i><span class="sidebar-text">Vendors</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-money-bill"></i><span class="sidebar-text">Vendor Quotes</span></a>
+            <div class="sidebar-section">Accounts</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-scale-balanced"></i><span class="sidebar-text">Cashflow</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-users-cog"></i><span class="sidebar-text">Users</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="user-avatar-sm">H</div>
+                <div class="sidebar-user-info sidebar-text">
+                    <div class="user-name">Hardik Bohra</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+                <button type="button" class="sidebar-logout-btn" title="Logout" aria-label="Logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="main-wrap" id="mainWrap">
+        <header class="topbar">
+            <button type="button" class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="topbar-title">Create Invoice</span>
+            <div class="topbar-spacer"></div>
+            <div class="topbar-actions">
+                <button type="button" class="topbar-btn desktop-only" aria-label="Search"><i class="fas fa-search"></i></button>
+                <button type="button" id="previewThemeBtn" class="theme-toggle desktop-only">
+                    <i class="fas fa-moon"></i> <span>Dark</span>
+                </button>
+                <button type="button" class="topbar-btn desktop-only" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="topbar-badge">3</span>
+                </button>
+                <div class="topbar-user-btn">
+                    <div class="user-avatar-sm topbar-avatar">H</div>
+                    <span class="topbar-user-name desktop-only">Hardik Bohra</span>
+                </div>
+            </div>
+        </header>
+
+                <main class="page-content">
+            <div class="sif">
+                <div class="master-hero" style="margin-bottom:15px;">
+                    <div>
+                        <p class="master-eyebrow">Generate sales invoice</p>
+                        <h1>Create Tax Invoice</h1>
+                        <p>Client details are derived from the Client object. Add multiple products and print/share to client portal.</p>
+                    </div><a href="invoices-index.html" class="master-btn master-btn-light">Back</a>
+                </div>
+
+                <form method="POST" action="#" class="master-form" onsubmit="return false;">
+                    <div class="master-card">
+                        <div class="master-section-head">
+                            <div>
+                                <p class="master-eyebrow">Basic</p>
+                                <h2>Invoice Details</h2>
+                            </div>
+                        </div>
+                        <div class="master-grid four">
+                            <div class="master-field"><label class="master-label">Invoice Type</label><select class="master-select" name="invoice_type" id="invoiceType"><option value="proforma">Proforma</option><option value="tax" selected>Tax</option></select></div>
+                            <div class="master-field"><label class="master-label">Invoice No.</label><input class="master-input" name="invoice_number" value="SI-2026-0149" placeholder="Auto if blank"></div>
+                            <div class="master-field"><label class="master-label">Status</label><select class="master-select" name="status"><option value="draft" selected>Draft</option><option value="sent">Sent</option><option value="partial">Partially Paid</option><option value="paid">Paid</option><option value="overdue">Overdue</option></select></div>
+                            <div class="master-field"><label class="master-label">Invoice Date</label><input class="master-input" type="date" name="invoice_date" value="2026-10-02"></div>
+                            <div class="master-field"><label class="master-label">Due Date</label><input class="master-input" type="date" name="due_date" value="2026-10-16"></div>
+                            <div class="master-field"><label class="master-label">Valid Until</label><input class="master-input" type="date" name="valid_until"></div>
+                            <div class="master-field"><label class="master-label">Currency</label><select class="master-select" name="currency"><option value="INR" selected>INR</option><option value="USD">USD</option></select></div>
+                            <div class="master-field"><label class="master-label">GST Type</label><select class="master-select" name="gst_type" id="gstType"><option value="domestic" selected>Domestic</option><option value="export">Export</option></select></div>
+                        </div>
+                    </div>
+
+                    <div class="master-card">
+                        <div class="master-section-head">
+                            <div>
+                                <p class="master-eyebrow">Client</p>
+                                <h2>Client Details</h2>
+                            </div>
+                        </div>
+                        <div class="master-grid four">
+                            <div class="master-field"><label class="master-label">Client</label><select class="master-select" name="client_id" id="clientId"><option value="">Select client</option><option value="3" selected data-billing-address="14 Ring Road, Ahmedabad, Gujarat 380015" data-billing-gstin="24AA PCA 1234F1Z5C">Ahmedabad Apparel Co.</option><option value="7" data-billing-address="Andheri East, Mumbai, Maharashtra 400069" data-billing-gstin="27AABC M7890K1Z2A">Mumbai Textiles Pvt.</option><option value="11" data-billing-address="Nehru Place, New Delhi 110019" data-billing-gstin="07AA PCD3456L1Z8P">Delhi Footwear Ltd.</option></select></div>
+                            <div class="master-field"><label class="master-label">Project</label><select class="master-select" name="project_id"><option value="">No Project</option><option value="42" selected>PRJ-1042 - Cotton Tote Program</option><option value="39">PRJ-1039 - Denim Jacket Line</option></select></div>
+                            <div class="master-field"><label class="master-label">Client Company</label><input class="master-input" name="client_company_name" id="client_company_name" value="Ahmedabad Apparel Co."></div>
+                            <div class="master-field"><label class="master-label">Contact</label><input class="master-input" name="client_contact_name" id="client_contact_name" value="Rohit Desai"></div>
+                            <div class="master-field"><label class="master-label">Email</label><input class="master-input" name="client_email" id="client_email" value="accounts@ahmedabadapparel.in"></div>
+                            <div class="master-field"><label class="master-label">Mobile</label><input class="master-input" name="client_mobile" id="client_mobile" value="98250 44771"></div>
+                            <div class="master-field"><label class="master-label">GSTIN</label><input class="master-input" name="client_gstin" id="client_gstin" value="24AA PCA 1234F1Z5C"></div>
+                            <div class="master-field"><label class="master-label">PAN</label><input class="master-input" name="client_pan" id="client_pan" value="AA PCA1234F"></div>
+                            <div class="master-field two"><label class="master-label">Billing Address</label><textarea class="master-textarea" name="billing_address" id="billing_address">14 Ring Road, Ahmedabad, Gujarat 380015</textarea></div>
+                            <div class="master-field two"><label class="master-label">Shipping Address</label><textarea class="master-textarea" name="shipping_address" id="shipping_address">Warehouse 7, GIDC Vatva, Ahmedabad, Gujarat 382445</textarea></div>
+                        </div>
+                    </div>
+
+                    <div class="master-card">
+                        <div class="master-section-head">
+                            <div>
+                                <p class="master-eyebrow">Items</p>
+                                <h2>Invoice Products</h2>
+                            </div><button type="button" class="master-btn master-btn-soft" id="addItemRow">+ Add Product</button>
+                        </div>
+                        <div class="master-items-wrap">
+                            <table class="master-items-table">
+                                <thead>
+                                    <tr>
+                                        <th width="30%">Product</th>
+                                        <th width="10%">HSN</th>
+                                        <th width="10%">Qty</th>
+                                        <th width="10%">Unit</th>
+                                        <th width="15%">Rate</th>
+                                        <th width="10%">GST %</th>
+                                        <th width="15%">Total</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="invoiceItemsBody"
+                                        data-product-options='[{"id": 12, "no": "P-0012", "name": "Premium Cotton Tote 300gsm", "description": "300gsm cotton, screen print, 38x42 cm", "price": 0}, {"id": 15, "no": "P-0015", "name": "Logo Embroidery Patch", "description": "Woven patch 8x5 cm with backing", "price": 0}, {"id": 21, "no": "P-0021", "name": "Recycled Poly Bottle 1L", "description": "rPET bottle, 1000 ml, custom label", "price": 0}, {"id": 34, "no": "P-0034", "name": "Organic Zip Hoodie", "description": "Organic cotton, taped seams, 4 colours", "price": 0}]'
+                                        data-initial-items='[{"product_id": 12, "product_name": "Premium Cotton Tote 300gsm", "description": "300gsm cotton, screen print, 38x42 cm", "hsn_sac": "6109", "quantity": 500, "unit": "pcs", "unit_price": 145, "gst_percent": 18}, {"product_id": 15, "product_name": "Logo Embroidery Patch", "description": "Woven patch 8x5 cm with backing", "hsn_sac": "5808", "quantity": 500, "unit": "pcs", "unit_price": 22, "gst_percent": 18}]'></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="master-grid two">
+                        <div class="master-card">
+                            <div class="master-section-head">
+                                <div>
+                                    <p class="master-eyebrow">Terms</p>
+                                    <h2>Terms &amp; Notes</h2>
+                                </div>
+                            </div>
+                            <div class="master-grid two">
+                                <div class="master-field"><label class="master-label">Payment Terms</label><input class="master-input" name="payment_terms" value="50% advance, balance on dispatch"></div>
+                                <div class="master-field"><label class="master-label">Delivery Terms</label><input class="master-input" name="delivery_terms" value="FOB Ahmedabad"></div>
+                                <div class="master-field full"><label class="master-label">Fixed Terms &amp; Conditions</label><textarea class="master-textarea" name="terms_conditions" rows="6">Goods once sold will not be taken back. Claims must be raised within 7 days of delivery. GST as per applicable slab.</textarea></div>
+                                <div class="master-field full"><label class="master-label">Notes</label><textarea class="master-textarea" name="notes" rows="3">Please quote invoice number in payment remarks.</textarea></div>
+                                <div class="master-field full"><label class="master-label">Internal Notes</label><textarea class="master-textarea" name="internal_notes" rows="3">Client PO: AAI-PO-2231. Credit note issued last month.</textarea></div>
+                            </div>
+                        </div>
+
+                        <div class="master-card">
+                            <div class="master-section-head">
+                                <div>
+                                    <p class="master-eyebrow">Totals</p>
+                                    <h2>Charges &amp; Summary</h2>
+                                </div>
+                            </div>
+                            <div class="master-grid two">
+                                <div class="master-field"><label class="master-label">Invoice Discount Type</label><select class="master-select" name="discount_type" id="discountType"><option value="amount" selected>Amount</option><option value="percent">Percent</option></select></div>
+                                <div class="master-field"><label class="master-label">Discount Value</label><input class="master-input" type="number" step="0.01" name="discount_value" id="discountValue" value="1000"></div>
+                                <div class="master-field"><label class="master-label">Freight</label><input class="master-input" type="number" step="0.01" name="freight_amount" id="freightAmount" value="2500"></div>
+                                <div class="master-field"><label class="master-label">Packing</label><input class="master-input" type="number" step="0.01" name="packing_amount" id="packingAmount" value="800"></div>
+                                <div class="master-field"><label class="master-label">Other Charges</label><input class="master-input" type="number" step="0.01" name="other_charges" id="otherCharges" value="0"></div>
+                                <div class="master-field"><label class="master-label">Round Off</label><input class="master-input" type="number" step="0.01" name="round_off" id="roundOff" value="0"></div>
+                                <div class="master-field"><label class="master-label">Amount Paid</label><input class="master-input" type="number" step="0.01" name="amount_paid" id="amountPaid" value="100000"></div>
+                                <div class="master-field"><label class="master-label">Attachments</label><input class="master-input" type="file" name="attachments[]" multiple></div>
+                            </div>
+                            <div class="master-total-box">
+                                <div><span>Subtotal</span><strong id="previewSubtotal">₹ 0.00</strong></div>
+                                <div><span>Tax</span><strong id="previewTax">₹ 0.00</strong></div>
+                                <div><span>Total</span><strong id="previewTotal">₹ 0.00</strong></div>
+                                <div><span>Balance</span><strong id="previewBalance">₹ 0.00</strong></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="master-submit"><a href="invoices-index.html" class="master-btn master-btn-light-dark">Cancel</a><button class="master-btn master-btn-primary" type="submit">Create Invoice</button></div>
+                </form>
+            </div>
+</main>
+    </div>
+
+    <script src="/assets/vendor/jquery/jquery.min.js?v=6abe6ebd"></script>
+    <script src="/assets/vendor/select2/js/select2.min.js?v=6abe1966"></script>
+    <script src="/assets/js/master-alert.js?v=6abf15d1"></script>
+    <script src="/assets/js/master-selects.js?v=6abf2a90"></script>
+    <script src="/assets/js/app-layout.js?v=6abf23b1"></script>
+    <script src="/assets/js/sales-invoices.js?v=6abf122a"></script>
+    <script>
+        // Static preview: client-side theme toggle (Laravel's /theme/toggle is not available here)
+        (function () {
+            var html = document.documentElement;
+            try {
+                var t = new URLSearchParams(location.search).get('theme');
+                if (t === 'dark' || t === 'light') { html.setAttribute('data-theme', t); }
+            } catch (e) {}
+            function syncBtn() {
+                var dark = html.getAttribute('data-theme') === 'dark';
+                var btn = document.getElementById('previewThemeBtn');
+                btn.innerHTML = dark ? '<i class="fas fa-sun"></i> <span>Light</span>' : '<i class="fas fa-moon"></i> <span>Dark</span>';
+            }
+            syncBtn();
+            document.getElementById('previewThemeBtn').addEventListener('click', function () {
+                var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', next);
+                try { localStorage.setItem('preview-theme', next); } catch (e) {}
+                syncBtn();
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Shipment — MissPack ERP (preview)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/core.css?v=6abf109f">
+    <link rel="stylesheet" href="/assets/css/app-layout.css?v=6abf6a51">
+    <link rel="stylesheet" href="/assets/css/master-index.css?v=6abf04ad">
+    <link rel="stylesheet" href="/assets/css/master-show.css?v=6abf13a6">
+    <link rel="stylesheet" href="/assets/css/master-form.css?v=6abf0f9a">
+    <link rel="stylesheet" href="/assets/css/master-flat.css?v=6abf2c03">
+    <link rel="stylesheet" href="/assets/vendor/select2/css/select2.min.css?v=6abf7b0c">
+    <link rel="stylesheet" href="/assets/css/select2-theme.css?v=6abf2522">
+    <link rel="stylesheet" href="/assets/css/master-alert.css?v=6abf21b9">
+    <link rel="stylesheet" href="/assets/css/shipments.css?v=6abf53ed">
+    <link rel="stylesheet" href="/assets/css/responsive.css?v=6abf2e74">
+    <style>
+        a[href^="/theme"], form.theme-form { pointer-events: none; }
+        #previewThemeBtn { display: inline-flex; align-items: center; gap: 8px; }
+    </style>
+<body>
+    <aside class="sidebar" id="sidebar" aria-label="Main sidebar">
+        <div class="sidebar-logo">
+            <div>
+                <div class="sidebar-logo-text sidebar-text">MissPack</div>
+                <div class="sidebar-logo-sub sidebar-text">Packed Perfect</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">Dashboards</div>
+            <a href="#" class="sidebar-item"><i class="fas fa-th-large"></i><span class="sidebar-text">Dashboard</span></a>
+            <div class="sidebar-section">Management</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-layer-group"></i><span class="sidebar-text">Tasks</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-box-open"></i><span class="sidebar-text">Products</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-truck"></i><span class="sidebar-text">Shipments</span></a>
+            <div class="sidebar-section">Sales</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-users"></i><span class="sidebar-text">Clients</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-briefcase"></i><span class="sidebar-text">Projects</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-file-invoice-dollar"></i><span class="sidebar-text">Invoices</span></a>
+            <div class="sidebar-section">Purchase</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-user-gear"></i><span class="sidebar-text">Vendors</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-money-bill"></i><span class="sidebar-text">Vendor Quotes</span></a>
+            <div class="sidebar-section">Accounts</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-scale-balanced"></i><span class="sidebar-text">Cashflow</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-users-cog"></i><span class="sidebar-text">Users</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="user-avatar-sm">H</div>
+                <div class="sidebar-user-info sidebar-text">
+                    <div class="user-name">Hardik Bohra</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+                <button type="button" class="sidebar-logout-btn" title="Logout" aria-label="Logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="main-wrap" id="mainWrap">
+        <header class="topbar">
+            <button type="button" class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="topbar-title">Add Shipment</span>
+            <div class="topbar-spacer"></div>
+            <div class="topbar-actions">
+                <button type="button" class="topbar-btn desktop-only" aria-label="Search"><i class="fas fa-search"></i></button>
+                <button type="button" id="previewThemeBtn" class="theme-toggle desktop-only">
+                    <i class="fas fa-moon"></i> <span>Dark</span>
+                </button>
+                <button type="button" class="topbar-btn desktop-only" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="topbar-badge">3</span>
+                </button>
+                <div class="topbar-user-btn">
+                    <div class="user-avatar-sm topbar-avatar">H</div>
+                    <span class="topbar-user-name desktop-only">Hardik Bohra</span>
+                </div>
+            </div>
+        </header>
+
+                <main class="page-content">
+            <div class="ship">
+                <div class="master-card" style="margin-bottom:14px;">
+                    <div class="master-section-head">
+                        <div>
+                            <p class="master-eyebrow">Shipments &middot; Create</p>
+                            <h1 style="font-size:18px;margin:0;">New shipment &mdash; From / To memory (live demo)</h1>
+                            <p class="master-sub" style="max-width:820px;line-height:1.7;">
+                                Type <strong>MissPack</strong> in <em>From</em> name (or <strong>ACME Corp</strong> in <em>To</em>) and leave the field,
+                                or pick a suggestion from the list. Details remembered from earlier shipments fill in, the fields glow green,
+                                and a note says which shipment they came from &mdash; with an <em>undo</em> link. Anything you already typed is never overwritten.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <form class="master-card master-card--flat master-form-card" data-party-lookup-url="/shipments/party-lookup">
+                    <div class="master-form-section">
+                        <h3 class="master-section-title">Basic Information</h3>
+                        <div class="master-detail-grid">
+                            <div class="master-field"><label class="master-label">Identity Name</label><input class="master-input" name="identity_name" value="Green pigment samples from China"></div>
+                            <div class="master-field"><label class="master-label">Shipment Type</label><select class="master-select" name="shipment_type"><option>Export</option><option>Import</option></select></div>
+                            <div class="master-field"><label class="master-label">Shipment Mode</label><select class="master-select" name="shipment_mode"><option>Air Freight</option><option>Sea Freight</option></select></div>
+                            <div class="master-field"><label class="master-label">Pickup Date</label><input class="master-input" type="date" name="pickup_date" value="2026-09-28"></div>
+                            <div class="master-field"><label class="master-label">Drop / Delivery Date</label><input class="master-input" type="date" name="drop_date" value="2026-10-02"></div>
+                            <div class="master-field"><label class="master-label">Expected Delivery (ETA)</label><input class="master-input" type="date" name="eta_date" value="2026-10-02"></div>
+                            <div class="master-field"><label class="master-label">Delay Reason</label><input class="master-input" name="delay_reason" maxlength="60" placeholder="Shown as a chip on the list"></div>
+                            <div class="master-field"><label class="master-label">Linked Sales Invoice</label><select class="master-select" name="sales_invoice_id"><option>INV-2026-0148 &middot; ACME Corp</option><option>INV-2026-0142 &middot; Dafina Chemicals</option></select></div>
+                            <div class="master-field"><label class="master-label">E-way Bill Number</label><input class="master-input" name="eway_bill_number" maxlength="40" value="EWB-4417-2298-0031"></div>
+                            <div class="master-field"><label class="master-label">E-way Bill Valid Till</label><input class="master-input" type="date" name="eway_bill_valid_until" value="2026-10-04"><span class="master-sub">The list flags this shipment 3 days before the bill lapses.</span></div>
+                            <div class="master-field"><label class="master-label">Notify Client on Status Change</label><label class="master-check"><input type="checkbox" name="notify_client" value="1" checked> Send a portal notification</label></div>
+                        </div>
+                    </div>
+
+                    <div class="master-section" data-party-block="from">
+                        <h3 class="master-section-title">From / Shipper Details</h3>
+                        <div class="master-detail-grid">
+                            <div class="master-field">
+                                <label class="master-label">Name</label>
+                                <input class="master-input" name="from_name" list="fromPartyNames" value="" placeholder="Shipper Name" data-party-name="from" autocomplete="off">
+                                <datalist id="fromPartyNames"></datalist>
+                                <small class="party-prefill-note" data-party-note="from" hidden></small>
+                            </div>
+                            <div class="master-field"><label class="master-label">Email</label><input class="master-input" name="from_email"></div>
+                            <div class="master-field"><label class="master-label">Mobile</label><input class="master-input" name="from_mobile"></div>
+                            <div class="master-field"><label class="master-label">Address</label><input class="master-input" name="from_address"></div>
+                            <div class="master-field"><label class="master-label">City</label><input class="master-input" name="from_city" value="Mumbai"></div>
+                            <div class="master-field"><label class="master-label">State</label><input class="master-input" name="from_state"></div>
+                            <div class="master-field"><label class="master-label">Country</label><input class="master-input" name="from_country"></div>
+                            <div class="master-field"><label class="master-label">Pincode</label><input class="master-input" name="from_pincode"></div>
+                        </div>
+                    </div>
+
+                    <div class="master-section" data-party-block="to">
+                        <h3 class="master-section-title">To / Receiver Details</h3>
+                        <div class="master-detail-grid">
+                            <div class="master-field">
+                                <label class="master-label">Name</label>
+                                <input class="master-input" name="to_name" list="toPartyNames" value="" placeholder="Receiver Name" data-party-name="to" autocomplete="off">
+                                <datalist id="toPartyNames"></datalist>
+                                <small class="party-prefill-note" data-party-note="to" hidden></small>
+                            </div>
+                            <div class="master-field"><label class="master-label">Email</label><input class="master-input" name="to_email"></div>
+                            <div class="master-field"><label class="master-label">Mobile</label><input class="master-input" name="to_mobile"></div>
+                            <div class="master-field"><label class="master-label">Address</label><input class="master-input" name="to_address"></div>
+                            <div class="master-field"><label class="master-label">City</label><input class="master-input" name="to_city"></div>
+                            <div class="master-field"><label class="master-label">State</label><input class="master-input" name="to_state"></div>
+                            <div class="master-field"><label class="master-label">Country</label><input class="master-input" name="to_country"></div>
+                            <div class="master-field"><label class="master-label">Pincode</label><input class="master-input" name="to_pincode"></div>
+                        </div>
+                    </div>
+
+                    <div class="master-form-footer">
+                        <button type="button" class="master-btn master-btn-light">Cancel</button>
+                        <button type="submit" class="master-btn master-btn-primary">Save Shipment</button>
+                    </div>
+                </form>
+            </div>
+</main>
+
+<script>
+    /* Static preview: the Laravel endpoint /shipments/party-lookup does not exist
+       here, so answer the three lookups with the same JSON shape the controller
+       returns. */
+    (function () {
+        var NAMES = {
+            from: ['MissPack Industries', 'Rajkamal Plastics', 'Guangzhou Solvents', 'Kunshan Packaging'],
+            to: ['ACME Corp', 'Dafina Chemicals', 'Kunshan Packaging', 'MissPack Industries']
+        };
+        var PARTIES = {
+            from: {
+                'MissPack Industries': {
+                    email: 'ops@misspack.in', mobile: '+91 98250 44771', address: '14 Ring Road, Nikol',
+                    city: 'Ahmedabad', state: 'Gujarat', country: 'India', pincode: '380049',
+                    source: { id: 12, shipment_number: 'SHP-000012' }
+                },
+                'Rajkamal Plastics': {
+                    email: 'dispatch@rajkamal.co.in', mobile: '+91 90045 88210', address: 'Plot 44, MIDC Andheri East',
+                    city: 'Mumbai', state: 'Maharashtra', country: 'India', pincode: '400093',
+                    source: { id: 9, shipment_number: 'SHP-000009' }
+                }
+            },
+            to: {
+                'ACME Corp': {
+                    email: 'imports@acmecorp.com', mobile: '+1 212 555 0147', address: '280 Park Avenue South, Suite 1201',
+                    city: 'New York', state: 'NY', country: 'USA', pincode: '10010',
+                    source: { id: 4, shipment_number: 'SHP-000004' }
+                },
+                'Dafina Chemicals': {
+                    email: 'logistics@dafina.co.ke', mobile: '+254 720 114 552', address: 'Enterprise Road, Industrial Area',
+                    city: 'Nairobi', state: '', country: 'Kenya', pincode: '00100',
+                    source: { id: 7, shipment_number: 'SHP-000007' }
+                }
+            }
+        };
+
+        window.fetch = function (url) {
+            var query = String(url).split('?')[1] || '';
+            var params = {};
+            query.split('&').forEach(function (pair) {
+                var bits = pair.split('=');
+                if (bits[0]) { params[decodeURIComponent(bits[0])] = decodeURIComponent(bits[1] || ''); }
+            });
+            var field = params.field;
+            var payload = { field: field, names: NAMES[field] || [], details: {}, source: null, name: params.name || null };
+            if (params.name) {
+                var hit = (PARTIES[field] || {})[params.name];
+                if (hit) {
+                    var details = {};
+                    Object.keys(hit).forEach(function (k) { if (k !== 'source') { details[k] = hit[k]; } });
+                    payload.details = details;
+                    payload.source = hit.source;
+                }
+            }
+            return Promise.resolve({ ok: true, json: function () { return Promise.resolve(payload); } });
+        };
+    })();
+</script>
+</main>
+    </div>
+
+    <script src="/assets/vendor/jquery/jquery.min.js?v=6abe6ebd"></script>
+    <script src="/assets/vendor/select2/js/select2.min.js?v=6abe1966"></script>
+    <script src="/assets/js/master-alert.js?v=6abf15d1"></script>
+    <script src="/assets/js/master-selects.js?v=6abf2a90"></script>
+    <script src="/assets/js/app-layout.js?v=6abf23b1"></script>
+    <script src="/assets/js/shipments.js?v=6abf0688"></script>
+    <script>
+        // Static preview: client-side theme toggle (Laravel's /theme/toggle is not available here)
+        (function () {
+            var html = document.documentElement;
+            try {
+                var t = new URLSearchParams(location.search).get('theme');
+                if (t === 'dark' || t === 'light') { html.setAttribute('data-theme', t); }
+            } catch (e) {}
+            function syncBtn() {
+                var dark = html.getAttribute('data-theme') === 'dark';
+                var btn = document.getElementById('previewThemeBtn');
+                btn.innerHTML = dark ? '<i class="fas fa-sun"></i> <span>Light</span>' : '<i class="fas fa-moon"></i> <span>Dark</span>';
+            }
+            syncBtn();
+            document.getElementById('previewThemeBtn').addEventListener('click', function () {
+                var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', next);
+                try { localStorage.setItem('preview-theme', next); } catch (e) {}
+                syncBtn();
+            });
+        })();
+    </script>
+</body>
+</html>

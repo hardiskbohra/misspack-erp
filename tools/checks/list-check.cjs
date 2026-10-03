@@ -986,17 +986,24 @@ check("the blocks of a page keep the page's own rhythm",
    Quick Entry is the ledger's front door — one bank line, recorded in a few
    seconds — and it asked two questions about the same party: which kind it is,
    and its name as free text. The kinds that have a record to link to now have a
-   list to pick from, one at a time, and the link decides the label:
+   list to pick from, and the link decides the label:
 
-     `CashflowEntry::partyLinkColumns()` says which column holds each link, the
-     dialog renders one picker per link (`data-party-for`), and every writer
-     aligns the label to the link. A label that disagrees with the link puts an
-     entry on a client's statement while the ledger filter for "Client" cannot
-     find it — one row answering two questions differently.
+     `CashflowEntry::partyLinkColumns()` says which column holds each link, and
+     every writer aligns the label to the link. A label that disagrees with the
+     link puts an entry on a client's statement while the ledger filter for
+     "Client" cannot find it — one row answering two questions differently.
 
-   The failure this section is really about: a hidden picker still submits. A
-   client left over from the moment before is how an entry lands on the wrong
-   party's statement, so the script clears what it hides. */
+   Two of those links are **modes**: "Related To" picks which of client, vendor
+   or the head a cash expense was spent under is on screen (`data-party-for`), and
+   the ones that are not are hidden *and cleared*, because a hidden select still
+   submits and a client left over from the moment before is how an entry lands on
+   the wrong party's statement. They stay one at a time because a row linked to a
+   client and to a vendor at once sits on two parties' statements and its single
+   label can agree with only one of them.
+
+   The **employee** is not a mode: who the money went to is a fact about an entry
+   in every mode, and the detailed form has always asked for it that way. Its list
+   is on screen always (`#quickEmployee`), which is also what task 60 shipped. */
 
 const partySource = cashflowsModel.slice(cashflowsModel.indexOf('partyLinkColumns'));
 
@@ -1006,15 +1013,29 @@ const linkedParties = [...partySource.matchAll(/'(client|vendor|employee)' => '(
 const pickers = [...cashView.matchAll(/class="master-field party-picker" data-party-for="(\w+)"/g)]
     .map(m => m[1]);
 
-/* Every link the ledger keeps has a picker. The dialog has one more — the head
+/* Every link the ledger keeps has a list to pick from: client and vendor are
+   modes, the employee is its own field. The dialog has one mode more — the head
    a cash expense was spent under — which is not a link (there is no column to
    file it against, so `alignPartyType()` has nothing to say about it). */
 check('the dialog offers a list for every link the ledger keeps',
     linkedParties.length === 3
-    && linkedParties.every(([party]) => pickers.includes(party))
-    && pickers.length === 4
+    && linkedParties.every(([party]) => party === 'employee'
+        ? /id="quickEmployee" name="employee_id"/.test(cashView)
+        : pickers.includes(party))
+    && pickers.length === 3
     && pickers.includes('expense'),
     'parties ' + linkedParties.map(p => p[0]).join('/') + ' vs pickers ' + pickers.join('/'));
+
+/* The employee list is a field, not a mode: the person the money went to is a
+   fact about the entry whether it was filed against a client, a vendor or a cash
+   head, so the office never has to switch the party selector to them to record
+   it. The wrapper is asserted exactly — a `hidden`, a `data-party-for` or a
+   `@if ($quickPartyType !== 'employee')` on it is the regression. */
+check('the employee being paid is a field, not a mode',
+    /<div class="master-field">\s*\n\s*<label class="master-label" for="quickEmployee">/.test(cashView)
+    && ! /data-party-for="employee"/.test(cashView)
+    && ! /\$quickPartyType !== 'employee'/.test(cashView),
+    'the office pays people without switching the party selector to them');
 
 check('a cash expense asks what it was for, without pretending to be a link',
     /data-party-for="expense"[\s\S]{0,300}?name="expense_head"/.test(cashView)
@@ -1022,7 +1043,8 @@ check('a cash expense asks what it was for, without pretending to be a link',
     'the head is typed, the party is linked — the model says so by omitting it');
 
 check('each picker posts the column its party is decided by',
-    linkedParties.every(([party, column]) =>
+    /* The employee has no picker — it has a field, asserted above. */
+    linkedParties.filter(([party]) => pickers.includes(party)).every(([party, column]) =>
         new RegExp('data-party-for="' + party + '"[\\s\\S]{0,600}?name="' + column + '"').test(cashView)),
     'the picker and the column have to be the same pair the model names');
 

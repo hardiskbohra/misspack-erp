@@ -45,10 +45,14 @@
     /* ------------------------------------------------------- the party picker
        "Related To" says which list the entry is being filed against, so the field
        under it is that list — a client, a vendor, or the head a cash expense was
-       spent under. The others are hidden *and cleared*: a hidden select still
+       spent under. The modes are hidden *and cleared*: a hidden select still
        submits, and a client left over from a moment ago is exactly how an entry
        ends up on the wrong party's statement. The wiring is driven by the
-       `data-party-for` attribute, so a fourth list is markup and one word. */
+       `data-party-for` attribute, so another mode is markup and one word.
+
+       The employee field is deliberately not one of them: who the money went to
+       is a fact about the entry in every mode, so its list stays on screen and
+       keeps whatever was picked when the mode changes. */
     function partyPicker() {
         var source = document.querySelector('[data-party-source]');
         if (!source) return;
