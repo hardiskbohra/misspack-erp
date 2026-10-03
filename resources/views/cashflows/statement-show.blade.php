@@ -130,7 +130,12 @@
                             <td data-label="Sent">{{ $share->created_at?->format('d M Y, h:i A') }}</td>
                             <td data-label="Period">
                                 {{ $share->title() }}
-                                <span class="master-sub">{{ \App\Helpers\CommonHelper::currencyLabel($share->party_currency) }}</span>
+                                @if (count($currencyOptions) > 1)
+                                    {{-- the currency earns its line only when it tells
+                                         one link from another; on a single-currency
+                                         party it printed a lone ₹ under every row --}}
+                                    <span class="master-sub">{{ \App\Helpers\CommonHelper::currencyLabel($share->party_currency) }}</span>
+                                @endif
                             </td>
                             <td data-label="Via">{{ $share->channelLabel() }}</td>
                             <td data-label="Expires">{{ $share->expiresLabel() }}</td>

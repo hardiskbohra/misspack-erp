@@ -11,7 +11,6 @@
 @section('content')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/employees.css') }}">
-    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-list.css') }}">
 @endpush
 
 <div class="emp employee-salary master-list">

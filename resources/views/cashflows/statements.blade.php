@@ -10,8 +10,6 @@
 @section('content')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/cashflows.css') }}">
-    {{-- the shared list chrome, after the module sheet like every other list --}}
-    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-list.css') }}">
 @endpush
 @php
     /* Every filter is one URL away from the others, so a chip keeps what it does

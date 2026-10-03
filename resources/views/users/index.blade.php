@@ -14,9 +14,6 @@
 @section('content')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/users.css') }}">
-    {{-- the shared list chrome: chips, applied strip, density, pinned grid,
-         mobile cards, totals row, empty state, and the modal sheet --}}
-    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-list.css') }}">
 @endpush
 
 @php

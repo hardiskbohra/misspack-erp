@@ -897,15 +897,19 @@ check('every list table stops its columns from reflowing',
     'ship ' + shipColumns.length + ' ledger ' + ledgerColumns.length + ' archive ' + archiveColumns.length
     + ' headings ' + headingCount(cashView) + '/' + headingCount(documentsView));
 
-/* each list loads the shared sheet after its own, so the chrome wins its own
-   properties without out-specifying the module cells */
-const sheetOrder = (text, moduleSheet) => {
-    const moduleAt = text.indexOf(moduleSheet);
-    const sharedAt = text.indexOf('master-list.css');
-    return moduleAt !== -1 && sharedAt > moduleAt;
-};
-check('the shared sheet loads after the module sheet on both lists',
-    sheetOrder(cashView, 'cashflows.css') && sheetOrder(view, 'shipments.css'));
+/* The chrome is loaded once, by the shell, after the module sheet a page pushes
+   — so the chrome wins its own properties without out-specifying the module
+   cells, and no page can forget it. The statement page wore .master-list and
+   never loaded the sheet at all, which is how two of its cards ended up flush. */
+const layoutView = fs.readFileSync(path.join(ROOT, 'resources/views/layouts/app.blade.php'), 'utf8');
+check('the shared sheet loads after the module sheet, for every page',
+    /assets\/css\/cashflows\.css/.test(cashView) && /assets\/css\/shipments\.css/.test(view)
+    && layoutView.indexOf("@stack('styles')") !== -1
+    && layoutView.indexOf("@stack('styles')") < layoutView.indexOf('assets/css/master-list.css')
+    && (layoutView.match(/assets\/css\/master-list\.css/g) || []).length === 1
+    && bladeFiles
+        .filter(f => ! f.endsWith('layouts/app.blade.php'))
+        .every(f => ! /assets\/css\/master-list\.css/.test(fs.readFileSync(f, 'utf8'))));
 
 /* The list prints the date it was filtered by; it never parses it. A filter
    value that is not a day (a range name from a link or a saved view) used to
@@ -930,8 +934,12 @@ check('a date filter is printed by the list, never parsed by it',
    them (any count of cards, in any module), so no module has to space its own
    page — and a stats row fills its width whether the page shows three figures,
    four or five, instead of leaving an empty column at the end. */
-check("the blocks of a list page keep the page's own rhythm",
-    /@media screen \{\s*\.master-list > \.master-card \+ \.master-card,\s*\.master-list > \.master-card \+ \.master-stats \{\s*margin-top: 24px;/.test(listCss)
+check("the blocks of a page keep the page's own rhythm",
+    /@media screen \{\s*\.master-list > \.master-card \+ \.master-card,/.test(listCss)
+    && ['.cf', '.ship', '.vendor-show', '.client-show', '.emp'].every(wrapper =>
+        new RegExp(wrapper.replace('.', '\\.') + ' > \\.master-card \\+ \\.master-card').test(listCss))
+    && (listCss.match(/\.master-card \+ \.master-card \{\s*margin-top: 24px;/g) || []).length === 1
+    && /\.master-grid > \.master-card \+ \.master-card \{\s*margin-top: 0;/.test(listCss)
     && ! /\.master-card \+ \.master-(card|stats)/.test(cashCss)
     && ! /\.master-card \+ \.master-(card|stats)/.test(css));
 

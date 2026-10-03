@@ -16,9 +16,6 @@
 @section('content')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/cashflows.css') }}">
-    {{-- the shared list chrome — the chip bar, the saved views, the applied
-         strip and the totals row are the same on every surface in the module --}}
-    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-list.css') }}">
 @endpush
 
 @php

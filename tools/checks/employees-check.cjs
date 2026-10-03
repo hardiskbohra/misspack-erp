@@ -363,9 +363,10 @@ check('the users list says which side of the line each account is on',
     && /users\.show/.test(userIndex));
 
 check('the list paints the shared chrome without restating it',
-    /master-list\.css/.test(userIndex)
-    && /class="users user-index master-list"/.test(userIndex)
-    && !/\.master-list/.test(read('public/assets/css/users.css')));
+    /class="users user-index master-list"/.test(userIndex)
+    && ! /\.master-list/.test(read('public/assets/css/users.css'))
+    /* the sheet itself is the shell's, loaded once for every page */
+    && /assets\/css\/master-list\.css/.test(read('resources/views/layouts/app.blade.php')));
 
 check('the ledger\'s employee field is one list, employees first',
     /public static function employeePicker\(\)/.test(userModel)

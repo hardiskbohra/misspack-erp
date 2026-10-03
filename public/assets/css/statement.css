@@ -399,8 +399,8 @@
 }
 
 .stmt-toolbar {
+    /* no margin of its own: the shell owns the rhythm between two cards */
     padding: 0 0 14px;
-    margin-bottom: 16px;
 }
 
 .stmt-toolbar .master-filter-row {

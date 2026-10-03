@@ -45,6 +45,14 @@
 
     @stack('styles')
 
+    {{-- The shared list chrome — chips, applied strip, density, pinned grid,
+         mobile cards, totals row, empty state, the modal sheet, and the rhythm
+         between two stacked cards. Loaded by the shell, after the module's own
+         sheet so the chrome keeps its own properties: a page cannot forget it,
+         and the statement page did — it wore .master-list without ever loading
+         the sheet that spaces and insets it. --}}
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-list.css') }}">
+
     {{-- Central responsive layer (must load last so it can fill module gaps) --}}
     <link rel="stylesheet" href="{{ $assetVer('assets/css/responsive.css') }}">
 </head>

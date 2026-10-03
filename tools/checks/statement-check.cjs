@@ -240,14 +240,29 @@ check('the statement never prints the letters INR where a rupee sign belongs',
     && ! />INR</.test(surface + preview + partial + publicPage + portalPage + expired)
     && ! /\{\{ \$currency \}\}/.test(partial + surface),
     'rupees are the sign; other currencies keep their code, from one helper');
+/* The send log printed a lone ₹ under every period on a single-currency party:
+   a symbol that tells nothing apart is a line of noise in a table. The currency
+   earns its line only when the party's links can differ by one. */
+check('the send log names the currency only when it tells a link apart',
+    /@if \(count\(\$currencyOptions\) > 1\)[\s\S]{0,400}?currencyLabel\(\$share->party_currency\)/.test(preview));
+
+/* The toolbar used to carry its own margin-bottom as well as the shell's rule —
+   a page spacing itself, which is how a 16px gap and a 24px gap end up in the
+   same column. The rhythm between two cards belongs to the shell. */
+check('the statement page does not space its own blocks',
+    ! /\.stmt-toolbar \{[^}]*margin-bottom/.test(read('public/assets/css/statement.css')));
+
 check('every figure goes through the money formatter',
     /CommonHelper::amount\(/.test(partial)
     && /CommonHelper::indianCurrency\(\$row\['inr'\]\)/.test(partial),
     'no raw float reaches the page');
 check('the surface is the module\'s own sheet plus the shared chrome',
     /assets\/css\/statement\.css/.test(preview + pdfView + publicPage + expired + portalPage)
-    && /assets\/css\/master-list\.css/.test(surface)
-    && /assets\/css\/cashflows\.css/.test(surface));
+    && /assets\/css\/cashflows\.css/.test(surface)
+    /* the chrome belongs to the shell: loaded once in the layout, after the
+       module sheets a page pushes, and never pushed by a page itself */
+    && /@stack\('styles'\)[\s\S]{0,800}?assets\/css\/master-list\.css/.test(read('resources/views/layouts/app.blade.php'))
+    && ! /assets\/css\/master-list\.css/.test(surface));
 /* A statement range arrives as a query string and can name a range rather than
    a day ("all", "custom"); it is read through DateRanges::normalise — never
    handed to Carbon raw — on the office screen, in the portal and in the service

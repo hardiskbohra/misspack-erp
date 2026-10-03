@@ -20,10 +20,6 @@
 @section('content')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/cashflows.css') }}">
-    {{-- the shared list chrome (chips, applied strip, density, pinned grid,
-         mobile card, totals row, empty state) — after the module sheet, so the
-         chrome keeps its own properties --}}
-    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-list.css') }}">
 @endpush
 
 @php
