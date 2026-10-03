@@ -2,7 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\DateRanges;
+use App\Models\CashflowEntry;
+use App\Models\EmployeeDocument;
+use App\Models\EmployeePayslip;
 use App\Models\User;
+use App\Services\DocumentUpload;
 use App\Services\EmployeeProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -28,70 +33,343 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  */
 class UserController extends Controller
 {
-    /** List all users with optional search */
+    /** The filters this list understands, as they read on screen. */
+    private const FILTER_KEYS = ['search', 'role', 'department', 'designation', 'status', 'code', 'joined'];
+
+    /**
+     * The record's tabs: the questions an office asks about a person, in the
+     * order it asks them. Declared here so the strip, the panel and the
+     * `?tab=` guard can never disagree about what exists.
+     */
+    private const TABS = [
+        'overview' => 'Overview',
+        'details' => 'Details',
+        'salary' => 'Salary',
+        'payslips' => 'Payslips',
+        'documents' => 'Documents',
+        'work' => 'Work',
+    ];
+
+    /** List all users — the same list screen as shipments and the ledger. */
     public function index(Request $request)
     {
-        $search  = $request->get('search', '');
-        $perPage = $request->get('per_page', 10);
-        $role    = $request->get('role', 'all');
+        /* Read by presence, never with `??`: an unset filter is empty, and the
+           word "all" is a value the office might genuinely type into a box. */
+        $filters = [];
+        foreach (self::FILTER_KEYS as $key) {
+            $value = $request->query($key);
+            $filters[$key] = is_string($value) ? trim($value) : null;
+        }
 
-        $query = User::query()->withCount(['payslips', 'employeeDocuments']);
+        $perPage = (int) $request->get('per_page', 10);
 
-        if ($search) {
+        $query = $this->filtered($filters)->withCount(['payslips', 'employeeDocuments']);
+
+        $users = $query->orderBy('id')->paginate($perPage ?: 10)->withQueryString();
+
+        return view('users.index', array_merge($filters, [
+            'users' => $users,
+            'filters' => $filters,
+            'filtersActive' => $this->anyFilter($filters),
+            'filterChips' => $this->filterChips($filters),
+            'perPage' => $perPage,
+            'roles' => User::ROLES,
+            'roleCounts' => $this->roleCounts(),
+            'stats' => $this->stats(),
+            'departments' => $this->departments(),
+            'employmentTypes' => User::EMPLOYMENT_TYPES,
+            'employmentStatuses' => User::EMPLOYMENT_STATUSES,
+        ]));
+    }
+
+    /**
+     * One person's record, in tabs — the same shape as a vendor's page.
+     *
+     * Tabs, not one long page, because the questions are asked one at a time:
+     * who is this, what are they paid, where are their papers. And the same
+     * panels serve an administrator's record, which is why `employee` is a
+     * boolean the view reads rather than four separate pages.
+     */
+    public function show(User $user, EmployeeProfile $profile): View
+    {
+        $year = (int) request()->query('year', date('Y'));
+        $tab = (string) request()->query('tab', 'overview');
+        $tab = array_key_exists($tab, self::TABS) ? $tab : 'overview';
+
+        $record = $profile->profile($user);
+        $checklist = $profile->documentChecklist($user);
+        $payslips = $profile->payslips($user);
+        $tasks = $profile->tasks($user);
+
+        return view('users.show', [
+            'user' => $user,
+            'employee' => $user->isEmployee(),
+            'tab' => $tab,
+            'tabs' => self::TABS,
+            'tabCounts' => [
+                'salary' => $profile->salaryEntries($user)->count(),
+                'payslips' => $payslips->count(),
+                'documents' => $user->employeeDocuments()->count(),
+                'notes' => 0,
+            ],
+            'record' => $record,
+            'checklist' => $checklist,
+            'payslips' => $payslips,
+            'total' => $profile->yearTotal($user, $year),
+            'months' => $profile->monthlyPay($user, $year),
+            'years' => $profile->salaryYears($user),
+            'salaryEntries' => $profile->salaryEntries($user, $year.'-01-01', $year.'-12-31'),
+            'attachments' => $profile->attachments($user),
+            'tasks' => $tasks,
+            'openTasks' => $tasks->whereNotIn('status', ['completed'])->count(),
+            'year' => $year,
+            'documentTypes' => EmployeeDocument::documentTypeOptions(),
+            'payslipStatuses' => EmployeePayslip::STATUSES,
+            'employmentTypes' => User::EMPLOYMENT_TYPES,
+            'employmentStatuses' => User::EMPLOYMENT_STATUSES,
+            'roles' => User::ROLES,
+            'isSelf' => (int) auth()->id() === (int) $user->id,
+            'isLastAdmin' => $this->isLastAdmin($user),
+        ]);
+    }
+
+    /**
+     * The list's filter vocabulary, in one place.
+     *
+     * Written by presence, not with `??`: an unset filter is empty and the word
+     * "all" is a value somebody might genuinely type into the search box — the
+     * bug the ledger shipped twice, and this list is not going to repeat it.
+     */
+    private function filtered(array $filters)
+    {
+        $query = User::query();
+        $search = $filters['search'] ?? null;
+
+        if (filled($search)) {
             $query->where(function ($q) use ($search) {
-                $q->where('name',        'like', "%{$search}%")
-                  ->orWhere('email',       'like', "%{$search}%")
-                  ->orWhere('mobile',      'like', "%{$search}%")
-                  ->orWhere('department',  'like', "%{$search}%")
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('mobile', 'like', "%{$search}%")
+                  ->orWhere('department', 'like', "%{$search}%")
                   ->orWhere('designation', 'like', "%{$search}%")
                   ->orWhere('employee_code', 'like', "%{$search}%");
             });
         }
 
-        if ($role !== 'all' && array_key_exists($role, User::ROLES)) {
-            $query->where('role', $role);
+        foreach (['role', 'department', 'designation'] as $column) {
+            $value = $filters[$column] ?? null;
+
+            if (filled($value) && $value !== 'all') {
+                $query->where($column, $value);
+            }
         }
 
-        $users = $query->orderBy('id')->paginate($perPage)->withQueryString();
+        $code = $filters['code'] ?? null;
 
-        return view('users.index', [
-            'users' => $users,
-            'search' => $search,
-            'perPage' => $perPage,
-            'role' => $role,
-            'roles' => User::ROLES,
-            'roleCounts' => $this->roleCounts(),
-            'employmentTypes' => User::EMPLOYMENT_TYPES,
-            'employmentStatuses' => User::EMPLOYMENT_STATUSES,
-        ]);
+        if (filled($code) && $code !== 'all') {
+            /* with / without, not free text: an office asking "who has no code
+               yet" is asking a complete question and typing nothing to ask it. */
+            $code === 'missing'
+                ? $query->where(fn ($q) => $q->whereNull('employee_code')->orWhere('employee_code', ''))
+                : $query->whereNotNull('employee_code')->where('employee_code', '!=', '');
+        }
+
+        $status = $filters['status'] ?? null;
+
+        if (filled($status) && $status !== 'all') {
+            $status === 'exited'
+                ? $query->where('employment_status', 'exited')
+                : $query->where(fn ($q) => $q->where('employment_status', $status)->orWhereNull('employment_status'));
+        }
+
+        $joined = $filters['joined'] ?? null;
+
+        if (filled($joined) && $joined !== 'all') {
+            $preset = DateRanges::presets()[$joined] ?? null;
+
+            if ($preset) {
+                $query->whereDate('date_of_joining', '>=', $preset['from'])
+                      ->whereDate('date_of_joining', '<=', $preset['to']);
+            }
+        }
+
+        return $query;
+    }
+
+    /** Is anything actually filtering? */
+    private function anyFilter(array $filters): bool
+    {
+        foreach ($filters as $value) {
+            if (filled($value) && $value !== 'all') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
-     * One person's record: who they are, what they were paid, their payslips and
-     * their papers — everything the office holds about them on one page, which
-     * is what "manage the profile" means in practice.
+     * One removable chip per active filter — the applied strip every list wears.
+     *
+     * Built here rather than in the blade so the chip, its label and the value
+     * it shows are one definition: a filter that can be applied and not removed
+     * is a filter nobody dares use.
+     *
+     * @return array<int, array{key: string, label: string, value: string}>
      */
-    public function show(User $user, EmployeeProfile $profile): View
+    private function filterChips(array $filters): array
     {
-        $record = $profile->profile($user);
-        $year = (int) request()->query('year', date('Y'));
+        $labels = [
+            'search' => 'Search', 'role' => 'Role', 'department' => 'Department',
+            'designation' => 'Designation', 'status' => 'Status', 'code' => 'Employee code',
+            'joined' => 'Joined',
+        ];
+        $chips = [];
 
-        return view('users.show', [
-            'user' => $user,
-            'record' => $record,
-            'checklist' => $profile->documentChecklist($user),
-            'payslips' => $profile->payslips($user),
-            'total' => $profile->yearTotal($user, $year),
-            'months' => $profile->monthlyPay($user, $year),
-            'salaryEntries' => $profile->salaryEntries($user, $year.'-01-01', $year.'-12-31'),
-            'year' => $year,
-            'documentTypes' => \App\Models\EmployeeDocument::documentTypeOptions(),
-            'payslipStatuses' => \App\Models\EmployeePayslip::STATUSES,
-            'employmentTypes' => User::EMPLOYMENT_TYPES,
-            'employmentStatuses' => User::EMPLOYMENT_STATUSES,
-            'roles' => User::ROLES,
-            'isSelf' => (int) auth()->id() === (int) $user->id,
+        foreach ($labels as $key => $label) {
+            $value = $filters[$key] ?? null;
+
+            if (! filled($value) || $value === 'all') {
+                continue;
+            }
+
+            $shown = match (true) {
+                $key === 'role' => User::ROLES[$value] ?? $value,
+                $key === 'status' => User::EMPLOYMENT_STATUSES[$value] ?? $value,
+                $key === 'code' => $value === 'missing' ? 'Not set yet' : 'On file',
+                $key === 'joined' => DateRanges::LABELS[$value] ?? $value,
+                default => $value,
+            };
+
+            $chips[] = ['key' => $key, 'label' => $label, 'value' => $shown];
+        }
+
+        return $chips;
+    }
+
+    /**
+     * The five figures the list opens with — the same tile strip as shipments
+     * and the ledger. They count the whole module, not the current page, and
+     * they are the questions an office actually has about its people.
+     *
+     * @return array<string, int|float>
+     */
+    private function stats(): array
+    {
+        $counts = $this->roleCounts();
+        $month = now()->format('Y-m');
+
+        $paidThisMonth = Schema::hasTable('cashflow_entries') && Schema::hasColumn('cashflow_entries', 'employee_id')
+            ? (float) CashflowEntry::query()
+                ->where('transaction_type', 'credit')
+                ->whereNotNull('employee_id')
+                ->whereYear('entry_date', now()->year)
+                ->whereMonth('entry_date', now()->month)
+                ->sum('credit_amount')
+            : 0.0;
+
+        $issues = 0;
+
+        if (Schema::hasColumn('users', 'employment_status')) {
+            $issues += User::query()->where('role', User::ROLE_EMPLOYEE)
+                ->where(fn ($q) => $q->whereNull('joining_date')->orWhereNull('date_of_joining'))
+                ->count();
+        }
+
+        $documents = Schema::hasTable('employee_documents') ? EmployeeDocument::query()->count() : 0;
+
+        $missingFiles = 0;
+
+        if (Schema::hasTable('employee_documents')) {
+            /* Who is on the payroll with no identity paper at all — the one gap
+               an audit asks about first. */
+            $missingFiles = User::query()->where('role', User::ROLE_EMPLOYEE)
+                ->whereDoesntHave('employeeDocuments', fn ($q) => $q->where('document_type', EmployeeDocument::TYPE_ID_PROOF))
+                ->count();
+        }
+
+        return [
+            'total' => $counts['all'] ?? 0,
+            'employees' => $counts[User::ROLE_EMPLOYEE] ?? 0,
+            'admins' => $counts[User::ROLE_ADMIN] ?? 0,
+            'paid_this_month' => $paidThisMonth,
+            'documents' => $documents,
+            'missing_id_proof' => $missingFiles,
+            'month_label' => now()->format('M Y'),
+        ];
+    }
+
+    /** The departments actually in use, for the filter — never a stale list. */
+    private function departments(): array
+    {
+        return User::query()
+            ->whereNotNull('department')
+            ->where('department', '!=', '')
+            ->orderBy('department')
+            ->distinct()
+            ->pluck('department')
+            ->all();
+    }
+
+    /**
+     * The list as a spreadsheet — the same rows, the same filters, one click.
+     *
+     * CSV rather than a package: it opens in Excel, Google Sheets and Tally's
+     * import, which is what an office actually does with a list of its people.
+     */
+    public function export(Request $request): \Symfony\Component\HttpFoundation\Response
+    {
+        $filters = [];
+        foreach (self::FILTER_KEYS as $key) {
+            $value = $request->query($key);
+            $filters[$key] = is_string($value) ? trim($value) : null;
+        }
+
+        $rows = $this->filtered($filters)
+            ->withCount(['payslips', 'employeeDocuments'])
+            ->orderBy('id')
+            ->get();
+
+        $handle = fopen('php://temp', 'r+');
+
+        fputcsv($handle, [
+            'Employee code', 'Name', 'Role', 'Email', 'Mobile', 'Department', 'Designation',
+            'Employment type', 'Status', 'Date of joining', 'PAN', 'Bank', 'Account number',
+            'IFSC', 'Payslips', 'Documents',
         ]);
+
+        foreach ($rows as $person) {
+            fputcsv($handle, [
+                $person->employee_code,
+                $person->name,
+                $person->roleLabel(),
+                $person->email,
+                $person->mobile,
+                $person->department,
+                $person->designation,
+                $person->employmentTypeLabel(),
+                $person->employmentStatusLabel(),
+                $person->date_of_joining?->format('Y-m-d'),
+                /* the masked number, not the real one: an export is a file on
+                   somebody's desktop, and a spreadsheet of account numbers is
+                   the worst place for them. */
+                $person->pan_number,
+                $person->bank_name,
+                (new EmployeeProfile())->mask($person->bank_account_number),
+                $person->bank_ifsc,
+                (int) $person->payslips_count,
+                (int) $person->employee_documents_count,
+            ]);
+        }
+
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return DocumentUpload::temporaryDownload(
+            $csv,
+            'employees-'.date('Y-m-d').'.csv'
+        );
     }
 
     /** How many of each role — the counts the role chips carry. */

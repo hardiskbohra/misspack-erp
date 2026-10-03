@@ -190,8 +190,11 @@ check('a draft payslip is invisible to the employee',
     && /isIssued\(\)/.test(profile)
     && /! \$payslip->isIssued\(\)/.test(workspace));
 
+/* The office's record page lists every slip, drafts included — it is the page
+   an office closes a month on. Only the employee's own list filters to issued. */
 check('the office sees drafts on the record page',
-    /'payslips' => \$profile->payslips\(\$user\)/.test(userController)
+    /\$payslips = \$profile->payslips\(\$user\);/.test(userController)
+    && !/issuedPayslips/.test(userController)
     && /Back to draft/.test(userShow));
 
 check('an employee cannot remove a paper the office marked seen',
@@ -261,9 +264,90 @@ check('the stylesheet exists and carries a dark value for every light token',
     })());
 
 check('the record page shows the four things it is for',
-    /Payslips/.test(userShow) && /Pay, this year/.test(userShow)
-    && /document-checklist/.test(userShow) && /Edit the record/.test(userShow)
+    /document-checklist/.test(userShow) && /Edit the record/.test(userShow)
     && /users\.payslips\.store/.test(userShow) && /users\.documents\.store/.test(userShow));
+
+/* ---- the record, read in tabs (the vendor page's pattern) ---- */
+check('the record is a tabbed page, and the tabs come from one list',
+    /private const TABS = \[/.test(userController)
+    && /'tabs' => self::TABS,/.test(userController)
+    && /@foreach \(\$tabs as \$key => \$label\)/.test(userShow)
+    && /\$tabs\['?\w+'?\]|array_key_exists\(\$tab, self::TABS\)/.test(userController));
+
+check('the tabs are links, so every panel has a URL',
+    /class="master-tab \{\{ \$tab === \$key \? 'is-active' : '' \}\}"/.test(userShow)
+    && /data-user-tab-link/.test(userShow)
+    && /route\('users\.show', \['user' => \$user, 'tab' => \$key/.test(userShow)
+    && /\$tabUrl = fn \(string \$key\)/.test(userShow));
+
+check('the record uses the shared tab vocabulary, not a private one',
+    /master-tabs-card/.test(userShow) && /master-tabs-panels/.test(userShow)
+    && /\.master-tabs-card \{/.test(read('public/assets/css/master-detail.css'))
+    && /\.master-tab\.is-active \{/.test(read('public/assets/css/master-detail.css')));
+
+check('a panel is drawn only for the tab that is open',
+    /\(\$tab === 'overview'\)/.test(userShow)
+    && /\(\$tab === 'payslips'\)/.test(userShow)
+    && /\(\$tab === 'documents'\)/.test(userShow)
+    && /\$tab = array_key_exists\(\$tab, self::TABS\) \? \$tab : 'overview';/.test(userController));
+
+/* ---- the list, on the same surface as shipments and the ledger ---- */
+check('the list wears the same five-tile strip as the other two lists',
+    /master-stats desktop-only/.test(userIndex)
+    && (userIndex.match(/master-stat--flat/g) || []).length === 5);
+
+check('the list opens with role chips that carry their counts',
+    /master-list-chips/.test(userIndex)
+    && /master-list-chip-count/.test(userIndex)
+    && /\{\{ \$roleCounts\[\$key\] \?\? 0 \}\}/.test(userIndex)
+    && (userIndex.match(/master-list-chip /g) || []).length >= 1);
+
+check('the chip-owned role survives the filter form below it',
+    /type="hidden" name="role"/.test(userIndex));
+
+check('every filter the list can hold is offered as a removable chip',
+    /\$filterChips/.test(userIndex)
+    && /master-list-applied-chip/.test(userIndex)
+    && /\$chipUrl\(\$chip\['key'\]\)/.test(userIndex)
+    && /private function filterChips/.test(userController)
+    && /'joined' => DateRanges::LABELS/.test(userController));
+
+check('the list can be exported, under the filters on screen',
+    /route\('users\.export', \$baseFilters\)/.test(userIndex)
+    && /\$baseFilters = request\(\)->except\(\['page'\]\)/.test(userIndex)
+    && /public function export\(Request \$request\)/.test(userController)
+    && routes.includes("/users/export")
+    && routes.includes("'users.export'"));
+
+check('the export is registered before the record wildcard',
+    (() => {
+        const at = routes.indexOf("Route::get('/users/export'");
+        const wildcard = routes.indexOf("Route::get('/users/{user}'");
+
+        return at !== -1 && wildcard !== -1 && at < wildcard;
+    })());
+
+check('the export does not put a full account number in a spreadsheet',
+    /->mask\(\$person->bank_account_number\)/.test(userController));
+
+check('the list is dense enough and clickable, through the shared toolkit',
+    /data-density="comfortable"/.test(userIndex)
+    && /data-density="compact"/.test(userIndex)
+    && /data-href="\{\{ route\('users\.show', \$user\) \}\}"/.test(userIndex)
+    && /MasterList\.rowNavigation\(\{ root: '\.user-index' \}\)/.test(read('public/assets/js/users.js'))
+    && /MasterList\.density\(\{ root: '\.user-index', key: 'misspack\.users\.density' \}\)/.test(read('public/assets/js/users.js')));
+
+check('the row menu carries an icon on every item',
+    (() => {
+        /* the menu only — the empty state's buttons come later in the file and
+           are not menu items */
+        const from = userIndex.indexOf('master-dropdown-menu');
+        const to = userIndex.indexOf('master-list-empty', from);
+        const menu = userIndex.slice(from, to === -1 ? undefined : to);
+        const items = [...menu.matchAll(/<(a|button)\b[\s\S]*?<\/\1>/g)].map(m => m[0]);
+
+        return items.length >= 4 && items.every(item => /<i class="fa/.test(item));
+    })());
 
 check('the users list says which side of the line each account is on',
     /roleLabel\(\)/.test(userIndex)
@@ -272,7 +356,8 @@ check('the users list says which side of the line each account is on',
 
 check('the list paints the shared chrome without restating it',
     /master-list\.css/.test(userIndex)
-    && /class="users master-list"/.test(userIndex));
+    && /class="users user-index master-list"/.test(userIndex)
+    && !/\.master-list/.test(read('public/assets/css/users.css')));
 
 check('the ledger\'s employee field is one list, employees first',
     /public static function employeePicker\(\)/.test(userModel)

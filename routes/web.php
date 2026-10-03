@@ -105,6 +105,9 @@ Route::middleware('auth')->group(function () {
 
         // User Management (CRUD — all handled via modal on index page)
         Route::get('/users',             [UserController::class, 'index'])->name('users.index');
+        /* The same rows under the same filters, as a spreadsheet. Registered
+           before /users/{user} so 'export' is never read as a user id. */
+        Route::get('/users/export',      [UserController::class, 'export'])->name('users.export');
         Route::post('/users',            [UserController::class, 'store'])->name('users.store');
         Route::get('/users/{user}',       [UserController::class, 'show'])->name('users.show');
 

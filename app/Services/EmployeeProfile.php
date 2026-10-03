@@ -322,6 +322,64 @@ class EmployeeProfile
         ];
     }
 
+    /** The years this person has any pay in, newest first (this year always). */
+    public function salaryYears(User $user): array
+    {
+        $years = $this->salaryEntries($user)
+            ->map(fn ($entry) => $entry->entry_date ? (int) date('Y', strtotime((string) $entry->entry_date)) : null)
+            ->filter()
+            ->unique()
+            ->sortDesc()
+            ->values()
+            ->all();
+
+        $current = (int) date('Y');
+
+        if (! in_array($current, $years, true)) {
+            array_unshift($years, $current);
+        }
+
+        return $years;
+    }
+
+    /**
+     * The bills filed against this person's pay — a bank slip, a signed
+     * voucher, whatever the office attached to the entry that paid them.
+     *
+     * Read through the ledger on purpose: the attachment belongs to the entry,
+     * and an employee who can see the entry but not its paper would be looking
+     * at half the record.
+     */
+    public function attachments(User $user, int $limit = 24): Collection
+    {
+        if (! $this->salaryColumnExists() || ! Schema::hasTable('cashflow_attachments')) {
+            return collect();
+        }
+
+        return \App\Models\CashflowAttachment::query()
+            ->whereIn('cashflow_entry_id', $this->salaryQuery($user)->select('id'))
+            ->with('cashflowEntry')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get();
+    }
+
+    /** The work assigned to this person, open first then newest. */
+    public function tasks(User $user, int $limit = 25): Collection
+    {
+        if (! Schema::hasTable('tasks')) {
+            return collect();
+        }
+
+        return \App\Models\Task::query()
+            ->where('assignee_id', $user->id)
+            ->orderByRaw("case when status = 'completed' then 1 else 0 end")
+            ->orderByRaw('due_date is null')
+            ->orderBy('due_date')
+            ->limit($limit)
+            ->get();
+    }
+
     /** The next code in the series, for a new employee. */
     public function nextEmployeeCode(): string
     {

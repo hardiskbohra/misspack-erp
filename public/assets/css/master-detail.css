@@ -465,3 +465,96 @@
         justify-content: center
     }
 }
+
+/* ==========================================================================
+   TABS — a record read in sections
+   --------------------------------------------------------------------------
+   A record page answers several questions (who is this, what are the figures,
+   where are the papers). A vendor page already raised them as tabs, with its
+   own classes; this is the same strip in the shared vocabulary, so the next
+   module does not write a third one. The vendor page keeps `.vendor-tab*` for
+   now — it is a shipped screen — and the two are drawn from the same tokens,
+   so they cannot drift apart in colour or geometry.
+
+   The tabs are **links**, not buttons: each panel has its own URL, so a tab
+   can be shared, opened in a new window and reached with the back button. Only
+   the active class moves.
+   ========================================================================== */
+
+.master-tabs-card {
+    background: var(--mc-card);
+    border: 1px solid var(--mc-border);
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.master-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 12px;
+    background: var(--mc-card-soft);
+    border-bottom: 1px solid var(--mc-border);
+}
+
+.master-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card);
+    color: var(--mc-text-2);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.master-tab:hover {
+    border-color: var(--master-primary, #4f83f1);
+    color: var(--mc-text);
+}
+
+.master-tab.is-active {
+    border-color: var(--master-primary, #4f83f1);
+    background: var(--master-primary, #4f83f1);
+    color: #fff;
+}
+
+.master-tab:focus-visible {
+    outline: 2px solid var(--master-primary, #4f83f1);
+    outline-offset: 2px;
+}
+
+.master-tab-count {
+    min-width: 20px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--mc-soft);
+    color: var(--mc-text-2);
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.master-tab.is-active .master-tab-count {
+    background: rgba(255, 255, 255, .22);
+    color: #fff;
+}
+
+.master-tabs-panels {
+    padding: 18px;
+}
+
+@media screen and (max-width: 768px) {
+    .master-tabs {
+        padding: 10px;
+    }
+
+    .master-tabs-panels {
+        padding: 12px;
+    }
+}
