@@ -499,6 +499,34 @@
     color: #6ee7b7
 }
 
+/* The invoice cell reads down three lines — the number, the chips that say what
+   the document is, and the date. Sharing a line with the type chip wrapped the
+   date mid-year on every row ("03 Oct" / "2026"). */
+.si-invoice-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 6px
+}
+
+/* The receipt names the ledger entry behind it. A receipt is a cashflow entry,
+   and the office reconciles against the ledger, so the row links to it. */
+.si-payment-ref {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+    color: var(--master-primary, #4f83f1);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none
+}
+
+.si-payment-ref:hover {
+    text-decoration: underline
+}
+
 /* The row's own money columns keep the tabular alignment the shared grid gives
    them; nothing here re-times the table's geometry. */
 .si-index td.is-num,

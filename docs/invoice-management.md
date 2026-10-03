@@ -273,3 +273,28 @@ All of them are declared **before** `Route::resource('sales-invoices', …)`, or
 `/sales-invoices/export` is read as an invoice called "export". The client portal is
 public and read-only: `GET /public-sales-invoices/{token}`, the token minted when the
 invoice is created.
+
+### What a conversion does to the document's life
+
+The tax invoice a conversion creates inherits the proforma's `status`, `sent_at`
+and `accepted_at`: the conversion re-papers the same money rather than starting a
+document nobody has sent. A draft proforma becomes a draft tax invoice; a
+cancelled proforma cannot be converted at all.
+
+### What is owed
+
+*Outstanding* is the Balance column, summed: each standing document's total minus
+the money received — drafts included, cancellations aside. The tile and the
+footer's own total ask that one question of the same rows, because a tile that
+excludes drafts while the column above it prints their balance is a figure the
+office stops believing. *Overdue* stays the part of that balance that is late
+(`isOverdue()`), and nothing is late before it is sent.
+
+### The cells on the listing
+
+The invoice cell reads down three lines — the number, the type chip (with the PO
+when there is one), then the date on its own line, because a date sharing a line
+with the chip wrapped mid-year on every row. The money cell's second line is the
+item count. A fact nobody filled in says so in words — `No GSTIN on file`,
+`No project mapped`, `No due date` — never a dash. And a receipt on the record
+page names the cashflow entry it came from and links to it.

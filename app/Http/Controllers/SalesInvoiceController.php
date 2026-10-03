@@ -78,8 +78,14 @@ class SalesInvoiceController extends Controller
                 ." and sales_invoices.converted_invoice_id is null and sales_invoices.status <> 'cancelled'"
                 .' then sales_invoices.total_amount else 0 end), 0) as potential'
             .', coalesce(sum(case when '.$live.' then '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as received'
+
+            /* What is owed is the Balance column, summed — the same rule as the
+               row beside it. A draft is money the office has recorded, not money
+               that vanishes: the tax invoice a conversion creates starts as one
+               with the advance already on it. Only a cancellation takes a document
+               out of what is owed. */
             .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < sales_invoices.total_amount - 0.01'
-                ." and sales_invoices.status not in ('draft', 'cancelled') then sales_invoices.total_amount - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
+                ." and sales_invoices.status <> 'cancelled' then sales_invoices.total_amount - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
             .', coalesce(sum(case when sales_invoices.due_date is not null and sales_invoices.due_date < ?'
                 ." and sales_invoices.status not in ('draft', 'cancelled')"
                 .' and '.$live
@@ -110,7 +116,7 @@ class SalesInvoiceController extends Controller
             'coalesce(sum(case when '.$live.' then sales_invoices.total_amount else 0 end), 0) as counted'
             .', coalesce(sum(case when '.$live.' then '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as received'
             .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < sales_invoices.total_amount - 0.01'
-                ." and sales_invoices.status not in ('draft', 'cancelled') then sales_invoices.total_amount - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
+                ." and sales_invoices.status <> 'cancelled' then sales_invoices.total_amount - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
         )->first();
 
         $pageTotals = [
@@ -331,6 +337,13 @@ class SalesInvoiceController extends Controller
             return back()->with('error', $salesInvoice->invoice_number.' is already a tax invoice.');
         }
 
+        /* A cancelled document is not a document: it owes nothing and stands for
+           nothing, so there is nothing to re-issue. */
+        if ($salesInvoice->status === 'cancelled') {
+            return back()->with('error', $salesInvoice->invoice_number
+                .' is cancelled — bring it back to life before raising a tax invoice from it.');
+        }
+
         if ($already = $salesInvoice->convertedInvoice) {
             return back()->with('error', $salesInvoice->invoice_number.' has already become '
                 .$already->invoice_number.'. A proforma becomes one tax invoice — edit that one, '
@@ -350,11 +363,15 @@ class SalesInvoiceController extends Controller
             $tax = $this->copyInvoice($proforma, [
                 'invoice_type' => 'tax',
                 'invoice_number' => $this->makeInvoiceNumber('tax'),
-                'status' => 'draft',
+                /* The conversion continues the document rather than restarting
+                   it: whatever the proforma had reached — sent, accepted — the
+                   tax invoice has reached too, and it is chased on the same due
+                   date. A draft proforma still becomes a draft tax invoice. */
+                'status' => $proforma->status,
                 'amount_paid' => 0,
                 'public_token' => null,
-                'sent_at' => null,
-                'accepted_at' => null,
+                'sent_at' => $proforma->sent_at,
+                'accepted_at' => $proforma->accepted_at,
                 'cancelled_at' => null,
                 'notes' => trim('Converted from '.$proforma->invoice_number.'. '.($proforma->notes ?? '')),
             ]);

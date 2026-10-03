@@ -592,6 +592,13 @@
                                                 @if (filled($payment->bank_reference_number))<b>Ref</b> {{ $payment->bank_reference_number }}@endif
                                             </span>
                                         @endif
+                                        {{-- The receipt is a ledger entry, and the office
+                                             reconciles against the ledger: the row names
+                                             the entry it came from and opens it. --}}
+                                        <a class="si-payment-ref" href="{{ route('cashflows.show', $payment) }}">
+                                            <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                                            Cashflow entry #{{ $payment->id }}
+                                        </a>
                                     </div>
                                     <strong class="si-payment-amount {{ $netReceipt < 0 ? 'si-due' : 'si-clear' }}">
                                         {{ \App\Helpers\CommonHelper::indianCurrency($netReceipt) }}

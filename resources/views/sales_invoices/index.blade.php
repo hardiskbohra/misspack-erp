@@ -84,7 +84,7 @@
             <div>
                 <p class="master-stat-title">Outstanding (filtered)</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['outstanding']) }}</p>
-                <span class="tooltip-text">Sales and potential added up, minus what has been received — one claim per document, drafts and cancellations left out because nobody owes those.</span>
+                <span class="tooltip-text">The Balance column, added up: what each standing document still owes, drafts included — the tax invoice a conversion creates starts as a draft with the advance already on it. Only a cancelled document is left out.</span>
             </div>
         </div>
         <div class="master-stat master-stat--flat {{ $stats['overdue'] > 0 ? 'red' : 'purple' }} tooltip-container">
@@ -337,28 +337,32 @@
                             </td>
                             <td data-label="Invoice">
                                 <a class="si-number" href="{{ route('sales-invoices.show', $invoice) }}">{{ $invoice->invoice_number }}</a>
-                                <span class="master-sub">
+                                <span class="si-invoice-chips">
                                     <span class="si-type type-{{ $invoice->invoice_type }}">{{ $invoice->typeLabel() }}</span>
-                                    · {{ optional($invoice->invoice_date)->format('d M Y') ?: '-' }}
-                                    @if ($invoice->po_number) · PO {{ $invoice->po_number }} @endif
+                                    @if ($invoice->po_number)
+                                        <span class="master-chip">PO {{ $invoice->po_number }}</span>
+                                    @endif
                                 </span>
+                                @if ($invoice->invoice_date)
+                                    <span class="master-sub">{{ $invoice->invoice_date->format('d M Y') }}</span>
+                                @endif
                             </td>
                             <td data-label="Client">
-                                <span class="si-client">{{ $invoice->client_company_name ?: '-' }}</span>
-                                <span class="master-sub">{{ $invoice->client_gstin ?: 'GSTIN -' }}</span>
+                                <span class="si-client">{{ $invoice->client_company_name ?: 'No client' }}</span>
+                                <span class="master-sub">{{ $invoice->client_gstin ?: 'No GSTIN on file' }}</span>
                             </td>
                             <td data-label="Project">
-                                {{ $invoice->project?->project_number ?: '-' }}
-                                <span class="master-sub">{{ $invoice->project?->name ?: 'No project mapped' }}</span>
+                                @if ($invoice->project?->project_number)
+                                    {{ $invoice->project->project_number }}
+                                    <span class="master-sub">{{ $invoice->project->name ?: 'Unnamed project' }}</span>
+                                @else
+                                    <span class="master-empty-value">No project mapped</span>
+                                @endif
                             </td>
                             <td data-label="Total" class="is-num">
                                 <strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->total_amount) }}</strong>
                                 <span class="master-sub">
-                                    @if ($invoice->isSuperseded())
-                                        Not counted in sales — the tax invoice stands for it
-                                    @else
-                                        {{ $invoice->items->count() }} {{ \Illuminate\Support\Str::plural('item', $invoice->items->count()) }}
-                                    @endif
+                                    {{ $invoice->items->count() }} {{ \Illuminate\Support\Str::plural('item', $invoice->items->count()) }}
                                 </span>
                             </td>
                             <td data-label="Received" class="is-num">
@@ -381,7 +385,11 @@
                                 @endif
                             </td>
                             <td data-label="Due">
-                                {{ optional($invoice->due_date)->format('d M Y') ?: '-' }}
+                                @if ($invoice->due_date)
+                                    {{ $invoice->due_date->format('d M Y') }}
+                                @else
+                                    <span class="master-empty-value">No due date</span>
+                                @endif
                                 @if ($daysLate > 0)
                                     <span class="master-sub">{{ $daysLate }} {{ \Illuminate\Support\Str::plural('day', $daysLate) }} late</span>
                                 @elseif ($invoice->due_date && $balance > 0)

@@ -413,6 +413,61 @@ check('the sheet and the script are loaded with a version',
     && ! /asset\('assets\/(css|js)\/sales-invoices/.test(view + form + record),
     'without a version the browser keeps serving the fork after it is gone');
 
+/* ---- 4b. what the office saw on the screen ----------------------------- */
+
+/* Still owed is the Balance column, summed. The tile and the footer's own total
+   are the only two places the module asks it of a whole set, and both have to
+   ask it the same way as the row: drafts included (a converted tax invoice
+   starts as one, with the advance already on it), cancellations aside. A draft
+   exclusion here is the ₹19,400 balance that sat under a ₹0 tile. The overdue
+   clause keeps its own exclusion — nothing is late before it is sent. */
+const owedClauses = [...controller.matchAll(/coalesce\(sum\(case when ([\s\S]{0,420}?) as outstanding/g)]
+    .map(m => m[1]);
+
+check('still owed is the Balance column, summed — a draft is money too',
+    owedClauses.length === 2
+    && owedClauses.every(clause => /RECEIVED_SQL/.test(clause)
+        && /total_amount - 0\.01/.test(clause)
+        && /status <> 'cancelled'/.test(clause)
+        && ! /'draft'/.test(clause))
+    && /The Balance column, added up/.test(view),
+    'a tile that excludes what the column above it prints is a figure the office '
+    + 'stops believing');
+
+/* The conversion re-papers the same money: the tax invoice inherits where the
+   proforma had got to, so it lands in the chase worklists and in what is owed
+   exactly where the proforma was — and a cancelled proforma, which stands for
+   nothing, cannot be converted at all. */
+check('the conversion continues the document instead of restarting it',
+    /'status' => \$proforma->status,/.test(controller)
+    && /'sent_at' => \$proforma->sent_at,/.test(controller)
+    && /'accepted_at' => \$proforma->accepted_at,/.test(controller)
+    && /if \(\$salesInvoice->status === 'cancelled'\)/.test(controller),
+    'a tax invoice that lands as a draft nobody sent is out of the chase and out '
+    + 'of what is owed, while the proforma it came from had already gone out');
+
+/* A receipt is a cashflow entry, and the office reconciles against the ledger:
+   the row names the entry it came from and opens it. */
+check('a receipt names the ledger entry behind it',
+    /route\('cashflows\.show', \$payment\)/.test(record)
+    && /Cashflow entry #\{\{ \$payment->id \}\}/.test(record)
+    && /\.si-payment-ref \{/.test(sheet),
+    'a receipt the office cannot trace back to the ledger is a receipt they '
+    + 're-type into the ledger by hand');
+
+/* The listing's cells, as read: a dash is not a value, and the money cell's
+   second line is the item count the office counts against the goods. */
+check('the listing says what is missing in words, and counts the items',
+    ! /\?: '-'/.test(view)
+    && ! /'GSTIN -'/.test(view)
+    && /No project mapped/.test(view)
+    && /No due date/.test(view)
+    && (view.match(/plural\('item'/g) || []).length === 1
+    && /class="si-invoice-chips"/.test(view),
+    'a dash leaves the office guessing whether the field was empty or the screen '
+    + 'broke; and the invoice cell reads number, chips, then the date, because a '
+    + 'date sharing a line with the chip wrapped mid-year on every row');
+
 /* ---- 4c. one document, one claim on the money -------------------------- */
 
 /* The office's rule: a proforma becomes a tax invoice once, and after that the
