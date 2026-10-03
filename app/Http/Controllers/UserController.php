@@ -268,6 +268,10 @@ class UserController extends Controller
         $checklist = $profile->documentChecklist($user);
         $payslips = $profile->payslips($user);
         $tasks = $profile->tasks($user);
+        /* The year's ledger entries, read once and read *here*: a view array is
+           evaluated top to bottom, so a variable first assigned inside it is an
+           undefined variable at the line that reads it. */
+        $salaryEntries = $profile->salaryEntries($user, $year.'-01-01', $year.'-12-31');
 
         /* The payslip being corrected, if the page was opened from a row rather
            than from the record form. Read as an id and matched against this
@@ -303,7 +307,7 @@ class UserController extends Controller
             'total' => $profile->yearTotal($user, $year),
             'months' => $profile->monthlyPay($user, $year),
             'years' => $profile->salaryYears($user),
-            'salaryEntries' => $profile->salaryEntries($user, $year.'-01-01', $year.'-12-31'),
+            'salaryEntries' => $salaryEntries,
             'attachments' => $profile->attachments($user),
             'tasks' => $tasks,
             'openTasks' => $tasks->whereNotIn('status', ['completed'])->count(),

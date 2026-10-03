@@ -195,6 +195,14 @@ with `context="office"|"employee"`: the office sees the issue state, the
 corrections and the share buttons; the employee sees the month, the figures, the
 slip number and Print. Everything else is the same table.
 
+> A view array is evaluated **top to bottom**: `return view('x', [...])` reads
+> each value as the array is built, so a variable first assigned *inside* that
+> array is an undefined variable at the line that reads it. The salary tab died
+> exactly there — `'payRows' => $profile->payRows($year, $salaryEntries,
+> $payslips)` sat above the `'salaryEntries' => …` that created it — which is why
+> `UserController::show()` reads the year's entries **before** the array, and why
+> `employees-check` sweeps every controller's view arrays for the same shape.
+
 **The two forms are dialogs** (`employees/partials/payslip-form.blade.php`,
 included once per mode). Recording a month and correcting one are the same
 fourteen fields, so they are written once; they open from the table — *Record a

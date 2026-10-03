@@ -749,6 +749,75 @@ check('the slip sheet loads its own stylesheet wherever it is drawn',
     && /assets\/css\/payslip\.css/.test(payslipPrint)
     && /'payslip\.css',/.test(read('tools/checks/design-check.cjs')));
 
+/* ----------------------------- 9. a view array is evaluated top to bottom
+   `return view('x', [...])` reads each value as the array is built, so a
+   variable first assigned *inside* that array — or anywhere below it — is an
+   undefined variable at the line that reads it, and the page is a 500. That is
+   how `/users/2?tab=salary` died: `'payRows' => $profile->payRows($year,
+   $salaryEntries, $payslips)` sat above the `'salaryEntries' => ...` that
+   created it. Simple to write, invisible in review, fatal in front of payroll —
+   so every controller's view arrays are swept for it, not just this one. */
+const viewArrayOffenders = (() => {
+    const files = [];
+    const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).forEach(entry => {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (entry.name.endsWith('.php')) files.push(full);
+    });
+    walk(path.join(ROOT, 'app/Http/Controllers'));
+
+    const out = [];
+
+    for (const file of files) {
+        const text = fs.readFileSync(file, 'utf8');
+
+        for (const match of text.matchAll(/return view\(\s*'[^']+'\s*,\s*\[/g)) {
+            const open = text.indexOf('[', match.index + match[0].length - 1);
+            let depth = 0;
+            let end = open;
+
+            for (let i = open; i < text.length; i++) {
+                if (text[i] === '[') depth++;
+                else if (text[i] === ']') {
+                    depth--;
+                    if (depth === 0) { end = i; break; }
+                }
+            }
+
+            const array = text.slice(open, end + 1);
+
+            /* the enclosing *method*: a `function ()` inside a query chain would
+               otherwise cut the window of declared variables short */
+            let methodAt = -1;
+            for (const m of text.slice(0, match.index).matchAll(/^[ \t]*(?:public|protected|private)\s+(?:static\s+)?function\s+\w+/gm)) {
+                methodAt = m.index;
+            }
+
+            const signature = text.slice(methodAt, text.indexOf('{', methodAt));
+            const declared = new Set([...signature.matchAll(/\$(\w+)/g)].map(m => m[1]));
+
+            for (const assignment of text.slice(methodAt, match.index).matchAll(/\$(\w+)\s*=[^=]/g)) {
+                declared.add(assignment[1]);
+            }
+
+            /* a closure's own parameters are locals of the closure, not of the
+               array it is written inside */
+            const closureParams = new Set([...array.matchAll(/(?:fn\s*\(|function\s*\()([^)]*)\)/g)]
+                .flatMap(m => [...m[1].matchAll(/\$(\w+)/g)].map(x => x[1])));
+
+            for (const used of new Set([...array.matchAll(/\$(\w+)/g)].map(m => m[1]))) {
+                if (used === 'this' || declared.has(used) || closureParams.has(used)) continue;
+                out.push(path.relative(ROOT, file) + ':' + text.slice(0, open).split('\n').length + ' $' + used);
+            }
+        }
+    }
+
+    return out;
+})();
+
+check('every variable a view array reads is assigned above it',
+    viewArrayOffenders.length === 0, viewArrayOffenders.join(', '));
+
 /* ---------------------------------------------------------------- report */
 
 const failed = out.filter(([, ok]) => !ok);
