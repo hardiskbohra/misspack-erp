@@ -671,16 +671,184 @@
 .master-remove { width: 30px; height: 30px; border: 0; border-radius: 9px; background: #fff0f4; color: #e11d48; font-weight: 900; cursor: pointer; transition: all .2s }
 .master-remove:hover { background: #ef4770; color: #fff }
 
-/* Password field toggle (eye icon) */
-.master-password-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: 0; cursor: pointer; color: var(--mc-text-3); font-size: 13px; padding: 2px }
-.master-password-toggle:hover { color: #4f83f1 }
+/* Password field toggle (eye icon).
+   The wrapper was named by both user dialogs and defined by no sheet, so the
+   absolutely positioned eye resolved against the *dialog card* instead: one
+   floated over the form in a corner. `position: relative` here is the whole
+   fix; the padding keeps a long password from running beneath the icon. */
+.master-password-wrap { position: relative; display: block }
+.master-password-wrap .master-input { padding-right: 42px }
+.master-password-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 0; border-radius: 8px; background: none; cursor: pointer; color: var(--mc-text-3); font-size: 13px; padding: 0 }
+.master-password-toggle:hover { background: var(--mc-soft); color: var(--master-primary, #4f83f1) }
+.master-password-toggle:focus-visible { outline: 2px solid var(--master-primary, #4f83f1); outline-offset: 1px }
 
-/* Avatar / file upload actions */
-.master-upload-btn, .master-remove-avatar-btn { border-radius: 10px; padding: 8px 15px; font-size: 12px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: all .2s }
-.master-upload-btn { background: #4f83f1; color: #fff; border: 1px solid #4f83f1 }
-.master-upload-btn:hover { background: #3f7cf4 }
-.master-remove-avatar-btn { background: #fff0f4; color: #ef4770; border: 1px solid rgba(239, 71, 112, .25) }
-.master-remove-avatar-btn:hover { background: #ef4770; color: #fff }
+/* --------------------------------------------------------------------------
+   The photo band: a circle, a sentence, two controls.
+
+   Both user dialogs named `.master-avatar-row`, `.master-avatar-preview`,
+   `.master-avatar-info`, `.master-avatar-actions` and `.master-file-name`, and
+   no sheet defined any of them. Without a circle, a preview or a layout, the
+   band rendered as three stacked lines — "PHOTO", then the avatar's own
+   contents, then the two controls — which is the screenshot this answers. The
+   circle is the one the list and the record already use (`--emp-avatar-bg` /
+   `--emp-avatar-fg`, with fallbacks so the band is correct on a page that
+   loads neither module sheet).
+   -------------------------------------------------------------------------- */
+.master-avatar-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--master-border);
+    border-radius: 14px;
+    background: var(--mc-card-soft)
+}
+
+.master-avatar-preview {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--emp-avatar-bg, linear-gradient(135deg, #4f83f1, #6366f1));
+    color: var(--emp-avatar-fg, #ffffff);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    box-shadow: 0 6px 16px rgba(37, 66, 128, .18)
+}
+
+/* The initials the edit dialog draws when there is no photo. */
+.master-avatar-initials {
+    font: inherit;
+    line-height: 1
+}
+
+.master-avatar-preview img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover
+}
+
+.master-avatar-preview i {
+    font-size: 20px
+}
+
+.master-avatar-info {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px
+}
+
+.master-avatar-info p {
+    margin: 0;
+    color: var(--mc-text-3);
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.5
+}
+
+.master-avatar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap
+}
+
+/* The picker is the button: a file input cannot be themed, so the label is a
+   `master-btn` in everything but the class name and the input inside it is
+   hidden. Geometry matches `.master-btn` so the two share a baseline. */
+.master-upload-btn,
+.master-remove-avatar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 15px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .2s, color .2s, border-color .2s
+}
+
+.master-upload-btn {
+    border: 1px solid var(--master-primary, #4f83f1);
+    background: var(--master-primary, #4f83f1);
+    color: #fff
+}
+
+.master-upload-btn:hover {
+    background: #3f7cf4;
+    border-color: #3f7cf4
+}
+
+.master-remove-avatar-btn {
+    border: 1px solid rgba(239, 71, 112, .28);
+    background: rgba(239, 71, 112, .08);
+    color: #d92b56
+}
+
+.master-remove-avatar-btn:hover {
+    background: #ef4770;
+    border-color: #ef4770;
+    color: #fff
+}
+
+.master-upload-btn:focus-within,
+.master-remove-avatar-btn:focus-visible {
+    outline: 2px solid var(--master-primary, #4f83f1);
+    outline-offset: 2px
+}
+
+/* The name of the chosen file, beside the button. A long name truncates with an
+   ellipsis instead of wrapping the row onto a third line. */
+.master-file-name {
+    min-width: 0;
+    max-width: 260px;
+    overflow: hidden;
+    color: var(--mc-text-3);
+    font-size: 12.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    text-overflow: ellipsis
+}
+
+:root[data-theme="dark"] .master-avatar-preview {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .35)
+}
+
+:root[data-theme="dark"] .master-remove-avatar-btn {
+    background: rgba(255, 143, 171, .14);
+    border-color: rgba(255, 143, 171, .34);
+    color: #ffa9bf
+}
+
+@media (max-width: 520px) {
+    .master-avatar-row {
+        align-items: flex-start;
+        gap: 13px;
+        padding: 13px
+    }
+
+    .master-avatar-preview {
+        width: 48px;
+        height: 48px
+    }
+
+    .master-file-name {
+        max-width: 100%
+    }
+}
 
 /* Compact menu button (kanban rows) */
 .master-menu-btn { border: 0; background: var(--mc-card-soft); color: var(--mc-text); width: 34px; height: 34px; border-radius: 12px; cursor: pointer }

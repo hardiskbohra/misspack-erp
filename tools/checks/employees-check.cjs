@@ -406,12 +406,26 @@ check('a panel is drawn only for the tab that is open',
 /* The salary panel carries the ledger entries *and* the slips, which is the
    whole point of merging the tabs: the month and the paper for the month are
    read together, not one tab apart. */
+/* The salary panel is sliced out of the page, so the count is of *that* panel:
+   the documents and work panels carry tables of their own. */
+const salaryPanel = (() => {
+    const at = userShow.indexOf("$tab === 'salary'");
+    const end = userShow.indexOf("$tab === 'documents'", at);
+    return at === -1 || end === -1 ? '' : userShow.slice(at, end);
+})();
+
 check('the salary tab is one table, and its forms are dialogs',
-    /employees\.partials\.pay-table/.test(userShow)
+    salaryPanel !== ''
+    && /employees\.partials\.pay-table/.test(salaryPanel)
     && !/partials\.payslip-table/.test(userShow)
-    && /data-payslip-open="payslipForm"/.test(userShow)
-    && (userShow.match(/master-modal-card is-wide/g) || []).length === 2
-    && /@include\('employees\.partials\.payslip-form'/.test(userShow));
+    && (salaryPanel.match(/<table/g) || []).length === 0
+    && (salaryPanel.match(/master-table-card/g) || []).length === 1
+    && /data-payslip-open="payslipForm"/.test(salaryPanel)
+    && (salaryPanel.match(/master-modal-card is-wide/g) || []).length === 2
+    && /@include\('employees\.partials\.payslip-form'/.test(salaryPanel),
+    'one table in the salary panel — found '
+    + (salaryPanel.match(/master-table-card/g) || []).length + ' table cards and '
+    + (salaryPanel.match(/<table/g) || []).length + ' inline tables');
 
 check('the pay table carries the month, the money and the payslip on one row',
     /<th scope="col">Payslip<\/th>/.test(payTable)
@@ -873,6 +887,71 @@ check('and its save button stays in reach while the form scrolls',
     /<div class="master-actions is-sticky">/.test(recordForm)
     && /Save the record/.test(recordForm),
     'a nine-row form hides its own action bar without one');
+
+/* --------------------------- 11. the photo band and the password fields (64)
+   Both user dialogs name six classes for the photo band and one for the
+   password field's wrapper. Every one of them was undefined, so the band was
+   three stacked lines — the label, the avatar's own contents, the two controls
+   — and the eye toggle for a password resolved against the dialog card and
+   floated into a corner. `design-check` now holds "named but undefined" for the
+   whole application; this holds the *shape*, because a guard that only asks for
+   a declaration would pass on `.master-avatar-row { display: block }`. */
+
+const usersIndex = read('resources/views/users/index.blade.php');
+const formSheet = read('public/assets/css/master-form.css');
+const indexSheet = read('public/assets/css/master-index.css');
+
+/* A rule is read by its own body, never by a lazy match across the file: the
+   first version of these guards matched `.master-avatar-row { … display: flex`
+   by running past the row's closing brace into the next rule that happened to
+   say the same thing, so the band could stack and the guard stayed green. */
+const cssRule = (sheet, selector) => {
+    const at = sheet.indexOf(selector + ' {');
+    if (at === -1) return '';
+    const from = sheet.indexOf('{', at);
+    const to = sheet.indexOf('}', from);
+    return from === -1 || to === -1 ? '' : sheet.slice(from + 1, to);
+};
+
+check('the photo band is a row: a circle, a sentence and the two controls',
+    /display:\s*flex/.test(cssRule(formSheet, '.master-avatar-row'))
+    && /align-items:\s*center/.test(cssRule(formSheet, '.master-avatar-row'))
+    && /width:\s*56px/.test(cssRule(formSheet, '.master-avatar-preview'))
+    && /height:\s*56px/.test(cssRule(formSheet, '.master-avatar-preview'))
+    && /border-radius:\s*50%/.test(cssRule(formSheet, '.master-avatar-preview'))
+    && /flex:\s*1 1 auto/.test(cssRule(formSheet, '.master-avatar-info'))
+    && /flex-wrap:\s*wrap/.test(cssRule(formSheet, '.master-avatar-actions')),
+    'the band, the circle, the column and the action row are one layout');
+
+check('the avatar circle shows a photo when there is one and initials when there is not',
+    /object-fit:\s*cover/.test(cssRule(formSheet, '.master-avatar-preview img'))
+    && cssRule(formSheet, '.master-avatar-initials') !== '',
+    'the preview swaps an `<img>` in; the initials span is what it swaps to');
+
+check('a long file name truncates instead of wrapping the band',
+    /text-overflow:\s*ellipsis/.test(cssRule(formSheet, '.master-file-name')),
+    'expected `text-overflow: ellipsis` on `.master-file-name`');
+
+check('the password eye is positioned against its own field, not the card',
+    /position:\s*relative/.test(cssRule(formSheet, '.master-password-wrap'))
+    && /padding-right:\s*42px/.test(cssRule(formSheet, '.master-password-wrap .master-input')),
+    'without the wrapper the absolutely positioned eye escapes to the dialog');
+
+check('both dialogs ask the same two questions',
+    (usersIndex.match(/<div class="master-section-label">Photo<\/div>/g) || []).length === 2
+    && (usersIndex.match(/<div class="master-section-label">Account security<\/div>/g) || []).length === 2
+    && (usersIndex.match(/up to 2 MB/g) || []).length === 2,
+    'the photo and the password blocks must not drift apart between add and edit');
+
+check('a password rule that fails in either dialog says so',
+    (usersIndex.match(/@error\('password'\)/g) || []).length === 2,
+    'the edit dialog reopened with no reason given — the add dialog showed one');
+
+check('the way out of a dialog sits on the footer line',
+    /<p class="master-sub master-modal-lead">/.test(usersIndex)
+    && /\.master-modal-lead \{[\s\S]*?margin: 0 auto 0 0/.test(indexSheet)
+    && !/user-modal-foot[\s\S]{0,80}editRecordLink/.test(usersIndex),
+    'a link at the end of a form reads as one more field');
 
 /* ---------------------------------------------------------------- report */
 

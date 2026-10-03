@@ -288,7 +288,34 @@ hunts for the action at row nine.
 The field list is held by a guard, not by review: `employees-check` asserts the
 form still posts all twenty-one names, so a regrouping cannot quietly drop one.
 
-## 7. What is verified where
+## 7. The two dialogs, in detail
+
+Add user and Edit user are one form twice, and their two bottom blocks are the
+same two questions: **a photo** and **a password**.
+
+**The photo band.** A circle, a sentence and the controls, on one line: the
+circle is the avatar the list and the record already use (photo when there is
+one, initials when there is not, an icon when neither), the sentence says what
+is accepted, and the picker is a label styled as a button because a file input
+cannot be themed (task 22). The band was three stacked lines until now: both
+dialogs named `master-avatar-row`, `-preview`, `-info`, `-actions` and
+`master-file-name`, and **no sheet defined any of them** — the same fault as
+`.master-form-grid` and `.master-detail-list`, found in the same sweep.
+
+**The password fields.** Each field's eye is absolutely positioned, so it needs
+`master-password-wrap` to be `position: relative`; that class was named and not
+defined either, and the eye resolved against the *dialog card* — one floated
+over the form in a corner while the other fields had no toggle at all. The
+wrapper is now defined, the field is padded so a long password never runs under
+the icon, and the edit dialog shows the rule's error the way the add dialog
+does (it reopened with no reason given before).
+
+Both blocks now read the same in both dialogs — the same heading words, the
+same 2 MB sentence, an error under the field in both — and the edit dialog's
+link to the person's page moved from the end of the form to the footer line,
+left of Cancel and Save, where a way out of a dialog belongs.
+
+## 8. What is verified where
 
 `node tools/checks/employees-check.cjs` — the module's own guards, run with the
 other ten gates: the middleware is on the office group, no personal route takes

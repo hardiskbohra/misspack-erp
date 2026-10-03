@@ -474,9 +474,9 @@
 
                     <div class="master-section-label">Photo</div>
                     <div class="master-avatar-row">
-                        <div class="master-avatar-preview" id="addAvatarCircle"><i class="fas fa-user" aria-hidden="true"></i></div>
+                        <div class="master-avatar-preview" id="addAvatarCircle" aria-hidden="true"><i class="fas fa-user"></i></div>
                         <div class="master-avatar-info">
-                            <p>JPG, PNG, GIF or WEBP, up to 2 MB.</p>
+                            <p>JPG, PNG, GIF or WEBP, up to 2 MB. Shown on the users list and on their record.</p>
                             <div class="master-avatar-actions">
                                 <label class="master-upload-btn" for="addAvatarFile">
                                     <i class="fas fa-upload" aria-hidden="true"></i> Choose file
@@ -488,6 +488,7 @@
                     </div>
 
                     <div class="master-section-label">Account security</div>
+                    <p class="master-sub">They sign in with this password, and can change it themselves later.</p>
                     <div class="master-form-grid">
                         <div class="master-field">
                             <label class="master-label" for="addPw1">Password <span class="master-required">*</span></label>
@@ -620,9 +621,9 @@
 
                     <div class="master-section-label">Photo</div>
                     <div class="master-avatar-row">
-                        <div class="master-avatar-preview" id="editAvatarCircle"><i class="fas fa-user" aria-hidden="true"></i></div>
+                        <div class="master-avatar-preview" id="editAvatarCircle" aria-hidden="true"><i class="fas fa-user"></i></div>
                         <div class="master-avatar-info">
-                            <p>Upload a new photo, or remove the one on file.</p>
+                            <p>Upload a new photo, or remove the one on file. JPG, PNG, GIF or WEBP, up to 2 MB.</p>
                             <div class="master-avatar-actions">
                                 <label class="master-upload-btn" for="editAvatarFile">
                                     <i class="fas fa-upload" aria-hidden="true"></i> Change photo
@@ -636,15 +637,16 @@
                         </div>
                     </div>
 
-                    <div class="master-section-label">Change password</div>
+                    <div class="master-section-label">Account security</div>
                     <p class="master-sub">Leave both fields blank to keep the current password.</p>
                     <div class="master-form-grid">
                         <div class="master-field">
                             <label class="master-label" for="editPw1">New password</label>
                             <div class="master-password-wrap">
-                                <input type="password" name="password" id="editPw1" class="master-input" placeholder="Min. 6 characters" autocomplete="new-password">
+                                <input type="password" name="password" id="editPw1" class="master-input {{ $errors->has('password') ? 'is-invalid' : '' }}" placeholder="Min. 6 characters" autocomplete="new-password">
                                 <button type="button" class="master-password-toggle" data-toggle-password="editPw1" aria-label="Toggle password visibility"><i class="fas fa-eye" aria-hidden="true"></i></button>
                             </div>
+                            @error('password')<span class="master-error">{{ $message }}</span>@enderror
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="editPw2">Repeat new password</label>
@@ -654,13 +656,12 @@
                             </div>
                         </div>
                     </div>
-
-                    <p class="master-sub user-modal-foot">
-                        <a id="editRecordLink" href="#">Open the full record — pay, payslips, documents</a>
-                    </p>
                 </div>
 
                 <div class="master-modal-footer">
+                    <p class="master-sub master-modal-lead">
+                        <a id="editRecordLink" href="#">Open the full record — pay, payslips, documents</a>
+                    </p>
                     <button type="button" class="master-btn master-btn-light" data-close-modal="editModal">Cancel</button>
                     <button type="submit" class="master-btn master-btn-primary"><i class="fas fa-save" aria-hidden="true"></i> Save changes</button>
                 </div>
