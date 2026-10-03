@@ -250,7 +250,7 @@
     </div>
 
     {{-- ── the window, in figures ── --}}
-    <div class="master-stats cf-report-headline">
+    <div class="master-stats">
         <div class="master-stat master-stat--flat green">
             <span class="icon">↓</span>
             <div>

@@ -39,9 +39,14 @@
     box-shadow: var(--master-shadow)
 }
 
+/* auto-fit, not a fixed five: a page with four figures (the documents archive,
+   the statements run) or three (a report's money in / money out / net) used to
+   leave an empty column or two at the right-hand end, which reads as a card
+   that failed to load. Whatever a surface has, they fill the row and share it
+   equally; the narrow-screen passes below still re-flow them. */
 .master-stats {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 18px;
     margin-bottom: 24px
 }

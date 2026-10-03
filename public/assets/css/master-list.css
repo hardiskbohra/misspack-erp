@@ -48,6 +48,25 @@
     }
 }
 
+/* ---------------- the rhythm between one page's blocks ----------------
+   A list page is a stack of blocks: the cards of figures, the filter card, the
+   table card, the section under it. Two cards stacked flush are two tables
+   sharing a border: the last row of one runs straight into the header of the
+   next, which is how the statements run and its send log shipped. One rule, on
+   the shell, keeps the page's own rhythm (the 24px the stats block already
+   carries under itself) between any two of them — a module does not space its
+   own page.
+
+   Screen only: on paper a statement's own sheet has its own rhythm, and a
+   toolbar that is hidden for print must not leave a band of white behind it. */
+
+@media screen {
+    .master-list > .master-card + .master-card,
+    .master-list > .master-card + .master-stats {
+        margin-top: 24px;
+    }
+}
+
 /* ---------------- Priority order groups (open first, closed below) ---------------- */
 
 .master-list .master-list-group td {

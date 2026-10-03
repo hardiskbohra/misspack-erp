@@ -1298,14 +1298,12 @@
 
 /* ---------------- the window, in figures ---------------- */
 
-.cashflow-reports .cf-report-headline {
-    margin: 18px 0 0;
-}
-
 .cashflow-reports .cf-report-note {
     display: flex;
     gap: 8px;
-    margin: 16px 0 0;
+    /* 24px under it: a note is a block too, and the block after it (the card
+       holding the matrix) must not start against its border */
+    margin: 16px 0 24px;
     padding: 12px 16px;
     border: 1px solid var(--mc-border);
     border-left: 3px solid var(--master-primary, #4f83f1);

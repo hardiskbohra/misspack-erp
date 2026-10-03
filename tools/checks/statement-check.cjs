@@ -248,6 +248,13 @@ check('the surface is the module\'s own sheet plus the shared chrome',
     /assets\/css\/statement\.css/.test(preview + pdfView + publicPage + expired + portalPage)
     && /assets\/css\/master-list\.css/.test(surface)
     && /assets\/css\/cashflows\.css/.test(surface));
+/* The run and its send log are two cards of one page: both sit directly on the
+   list root (so the shell's own rhythm separates them) and neither carries its
+   own spacing — a module that spaces its own page is a second owner. */
+check('the run and its send log are two blocks of the page, not one table',
+    (surface.match(/^    <div class="master-card/gm) || []).length === 2
+    && ! /\.master-card \+ \.master-card/.test(read('public/assets/css/statement.css')));
+
 check('the module sheet leaves the list chrome to the surface',
     ! /\.master-list\b/.test(read('public/assets/css/statement.css').replace(/\/\*[\s\S]*?\*\//g, '')));
 

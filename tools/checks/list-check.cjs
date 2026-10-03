@@ -907,6 +907,19 @@ const sheetOrder = (text, moduleSheet) => {
 check('the shared sheet loads after the module sheet on both lists',
     sheetOrder(cashView, 'cashflows.css') && sheetOrder(view, 'shipments.css'));
 
+/* Two blocks of one list page are two blocks: the shell owns the space between
+   them (any count of cards, in any module), so no module has to space its own
+   page — and a stats row fills its width whether the page shows three figures,
+   four or five, instead of leaving an empty column at the end. */
+check("the blocks of a list page keep the page's own rhythm",
+    /@media screen \{\s*\.master-list > \.master-card \+ \.master-card,\s*\.master-list > \.master-card \+ \.master-stats \{\s*margin-top: 24px;/.test(listCss)
+    && ! /\.master-card \+ \.master-(card|stats)/.test(cashCss)
+    && ! /\.master-card \+ \.master-(card|stats)/.test(css));
+
+check('a stats row fills its width, whatever number of figures it holds',
+    /\.master-stats \{\s*display: grid;\s*grid-template-columns: repeat\(auto-fit, minmax\(200px, 1fr\)\);/.test(layoutCss)
+    && ! /repeat\(5, minmax\(0, 1fr\)\)/.test(layoutCss));
+
 /* ---------------------------------------------------------------- report */
 
 const failed = out.filter(([, ok]) => !ok);
