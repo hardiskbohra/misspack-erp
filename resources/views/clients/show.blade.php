@@ -27,6 +27,12 @@
         <div class="master-actions">
             <a href="{{ route('clients.index') }}" class="master-btn master-btn-light">Back</a>
             <a href="{{ route('clients.edit', $client) }}" class="master-btn master-btn-soft">Edit Client</a>
+            {{-- The client's ledger as a document: built from their invoices and
+                 receipts, in their own currency, and shareable as a link. --}}
+            <a href="{{ route('cashflows.statements.show', ['partyType' => 'client', 'party' => $client->id]) }}"
+                class="master-btn master-btn-soft">
+                <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Statement
+            </a>
             <a href="{{ route('clients.publicKyc', $client->public_token) }}" target="_blank"
                 class="master-btn master-btn-primary">Open KYC Link</a>
                 
@@ -113,7 +119,7 @@
                             Branch</span><strong>{{ $client->ifsc_code ?: '-' }}</strong><span
                             class="master-sub">{{ $client->bank_branch ?: '-' }}</span></div>
                     <div class="master-info"><span>Credit
-                            Limit</span><strong>{{ $client->credit_limit ? $client->preferred_currency . ' ' . number_format((float) $client->credit_limit, 2) : '-' }}</strong>
+                            Limit</span><strong>{{ $client->credit_limit ? \App\Helpers\CommonHelper::amount($client->credit_limit, $client->preferred_currency) : '-' }}</strong>
                     </div>
                     <div class="master-info"><span>Credit Days</span><strong>{{ $client->credit_days ?: '-' }}</strong>
                     </div>
@@ -140,7 +146,7 @@
                     @endif
                     <div class="master-actions">
                         @if($portalRouteExists)
-                            <a href="{{ route('clients.portal.show', $client) }}" class="master-btn master-btn-pink">Manage Portal</a>
+                            <a href="{{ route('clients.portal.show', $client) }}" class="master-btn master-btn-primary">Manage Portal</a>
                         @endif
                         @if($portalLoginRouteExists)
                             <a href="{{ route('client-portal.login') }}" target="_blank" class="master-btn master-btn-soft">Open Login</a>
@@ -155,7 +161,7 @@
                 <div class="public-box"><input class="master-input" id="clientKycLink" readonly
                         value="{{ route('clients.publicKyc', $client->public_token) }}"><button type="button"
                         class="master-btn master-btn-soft"
-                        onclick="navigator.clipboard ? navigator.clipboard.writeText(document.getElementById('clientKycLink').value) : prompt('Copy link', document.getElementById('clientKycLink').value)">Copy</button>
+                        onclick="maCopy('clientKycLink', 'Copy KYC link')">Copy</button>
                 </div>
                 <form method="POST" action="{{ route('clients.sendKyc', $client) }}" style="margin-top:12px;">@csrf
                     @method('PATCH')<button class="master-btn master-btn-primary" type="submit">Mark KYC Link

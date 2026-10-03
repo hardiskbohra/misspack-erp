@@ -1,0 +1,1602 @@
+/* ==========================================================================
+   CASHFLOWS.CSS — Cashflow module (list cells, reports, settings, show)
+   --------------------------------------------------------------------------
+   Module stylesheet for the Cashflow section: the ledger list's own cells
+   (dates, particular, money columns, settlement tones), the reports dashboard
+   (cf-*), cashflow settings (cf-settings*) and the detail badges. The list
+   chrome it sits in — chips, applied strip, density, pinned grid, totals row,
+   empty state — is master-list.css, shared with every other list screen.
+   Loaded on cashflow screens via @push('styles').
+
+   The reports and settings views each carried an identical --cf-* :root
+   palette (settings added --cf-white); they are merged into one block
+   above. The PDF export is standalone and uses cashflows-pdf.css.
+   ========================================================================== */
+
+/* ==========================================================================
+   MODULE PALETTE
+   Merged from the identical :root blocks of the reports and
+   settings views.
+   ========================================================================== */
+
+:root {
+    --cf-primary: #4f83f1;
+    --cf-green: #10b981;
+    --cf-red: #ef4770;
+    --cf-dark: var(--mc-text);
+    --cf-muted: #687386;
+    --cf-border: var(--mc-border);
+    --cf-bg: var(--mc-soft);
+    --cf-shadow: 0 14px 35px rgba(25, 42, 70, .08);
+}
+
+/* ==========================================================================
+   CASHFLOW REPORTS — resources/views/cashflows/reports.blade.php
+   Reports dashboard (cf-*).
+   ========================================================================== */
+
+        .cf-page,
+        .cf-page * {
+            box-sizing: border-box
+        }
+
+        .cf-page {
+            background: var(--cf-bg);
+            min-height: calc(100vh - 70px);
+            padding: 28px;
+            color: var(--cf-dark);
+            font-size: 14px
+        }
+
+        .cf-card {
+            background: var(--mc-card);
+            border: 1px solid var(--cf-border);
+            border-radius: 18px;
+            box-shadow: var(--cf-shadow)
+        }
+
+        .cf-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 22px 28px;
+            margin-bottom: 24px
+        }
+
+        .cf-header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 900
+        }
+
+        .cf-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .cf-filter {
+            padding: 22px 24px;
+            margin-bottom: 24px
+        }
+
+        .cf-filter-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px
+        }
+
+        .cf-summary {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 18px;
+            margin-bottom: 24px
+        }
+
+        .cf-stat {
+            padding: 22px;
+            border-radius: 18px
+        }
+
+        .cf-stat.blue {
+            background: #dff1ff
+        }
+
+        .cf-stat.purple {
+            background: #ece7ff
+        }
+
+        .cf-stat.teal {
+            background: #dcf8f3
+        }
+
+        .cf-stat.orange {
+            background: #fff2dc
+        }
+
+        .cf-stat p {
+            margin: 0 0 6px;
+            color: var(--mc-text-2);
+            font-weight: 900
+        }
+
+        .cf-stat strong {
+            font-size: 24px
+        }
+
+        .cf-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+            margin-bottom: 24px
+        }
+
+        .cf-section {
+            padding: 22px
+        }
+
+        .cf-section h3 {
+            margin: 0 0 16px;
+            font-size: 16px;
+            font-weight: 900
+        }
+
+        .cf-table-wrap {
+            overflow-x: auto
+        }
+
+        .cf-table {
+            width: 100%;
+            min-width: 780px;
+            border-collapse: collapse
+        }
+
+        .cf-table th,
+        .cf-table td {
+            padding: 14px;
+            border-bottom: 1px solid var(--cf-border);
+            text-align: left
+        }
+
+        .cf-table th {
+            font-size: 11px;
+            color: var(--mc-text-3);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .06em
+        }
+
+        .credit {
+            color: #059669;
+            font-weight: 900
+        }
+
+        .debit {
+            color: #e11d48;
+            font-weight: 900
+        }
+
+        .cf-sub {
+            display: block;
+            color: var(--cf-muted);
+            font-size: 12px;
+            margin-top: 3px;
+            font-weight: 700
+        }
+
+        .cf-badge {
+            display: inline-flex;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase
+        }
+
+        .status-reconciled {
+            background: #e8fff7;
+            color: #0e9f6e
+        }
+
+        .status-booked {
+            background: #eaf1ff;
+            color: #3f7cf4
+        }
+
+        .status-pending {
+            background: #fff4e5;
+            color: #d97706
+        }
+
+        .status-disputed {
+            background: #ffeaf0;
+            color: #e11d48
+        }
+
+        .status-ignored {
+            background: var(--mc-card-soft);
+            color: var(--mc-text-2)
+        }
+
+        @media(max-width:1100px) {
+            .cf-filter-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr))
+            }
+
+            .cf-summary {
+                grid-template-columns: repeat(2, minmax(0, 1fr))
+            }
+
+            .cf-grid {
+                grid-template-columns: 1fr
+            }
+        }
+
+        @media(max-width:700px) {
+            .cf-page {
+                padding: 14px
+            }
+
+            .cf-header {
+                align-items: flex-start;
+                flex-direction: column;
+                padding: 18px
+            }
+
+            .cf-actions,
+            .cf-actions .master-btn {
+                width: 100%
+            }
+
+            .cf-filter-grid,
+            .cf-summary {
+                grid-template-columns: 1fr
+            }
+
+            .cf-section {
+                padding: 18px
+            }
+        }
+
+/* ==========================================================================
+   CASHFLOW SETTINGS — resources/views/cashflows/settings.blade.php
+   Settings page (cf-settings*).
+   ========================================================================== */
+
+    .cf-settings,
+    .cf-settings * {
+        box-sizing: border-box
+    }
+
+    .cf-settings {
+        background: var(--cf-bg);
+        min-height: calc(100vh - 70px);
+        padding: 28px;
+        color: var(--cf-dark);
+        font-size: 14px;
+        line-height: 1.45
+    }
+
+    .cf-card {
+        background: var(--mc-card);
+        border: 1px solid var(--cf-border);
+        border-radius: 18px;
+        box-shadow: var(--cf-shadow)
+    }
+
+    .cf-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        padding: 22px 28px;
+        margin-bottom: 24px
+    }
+
+    .cf-header h1 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 900
+    }
+
+    .cf-header p {
+        margin: 5px 0 0;
+        color: var(--cf-muted);
+        font-weight: 700
+    }
+
+    .cf-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap
+    }
+
+    .cf-alert {
+        padding: 14px 16px;
+        margin-bottom: 18px;
+        border-radius: 14px;
+        font-weight: 800
+    }
+
+    .cf-alert-success {
+        color: #047857;
+        background: #e8fff7;
+        border: 1px solid #a7f3d0
+    }
+
+    .cf-alert-error {
+        color: #be123c;
+        background: #fff0f4;
+        border: 1px solid #fecdd3
+    }
+
+    .cf-tabs {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid var(--cf-border);
+        overflow-x: auto
+    }
+
+    .cf-tab {
+        padding: 16px 24px;
+        color: var(--cf-dark);
+        text-decoration: none;
+        font-weight: 500;
+        border-bottom: 2px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap
+    }
+
+    .cf-tab.active {
+        color: var(--cf-primary);
+        border-bottom-color: var(--cf-primary);
+        background: var(--mc-card-soft)
+    }
+
+    .cf-panel {
+        padding: 22px
+    }
+
+    .cf-section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 0 0 16px
+    }
+
+    .cf-section-title h2 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 900
+    }
+
+    .cf-section-title p {
+        margin: 4px 0 0;
+        color: var(--cf-muted);
+        font-weight: 600
+    }
+
+    .cf-form-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 18px
+    }
+
+    .cf-form-grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+
+    .cf-help {
+        color: var(--cf-muted);
+        font-size: 12px;
+        font-weight: 700
+    }
+
+    .cf-sub-card {
+        border: 2px solid var(--cf-border);
+        border-radius: 16px;
+        padding: 18px;
+        background: var(--mc-card-soft);
+        margin-bottom: 22px
+    }
+
+    .cf-sub-card h3 {
+        margin: 0 0 14px;
+        font-size: 16px;
+        font-weight: 900
+    }
+
+    .cf-list {
+        display: grid;
+        gap: 12px
+    }
+
+    .cf-row {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr 1fr .8fr .9fr .8fr auto;
+        gap: 10px;
+        align-items: end;
+        padding: 14px;
+        border: 1px solid var(--cf-border);
+        border-radius: 14px;
+        background: var(--mc-card)
+    }
+
+    .cf-row.category {
+        grid-template-columns: 1.5fr 1fr .7fr .7fr .7fr auto
+    }
+
+    .cf-row.master {
+        grid-template-columns: 1fr 1fr 1fr .6fr .7fr .7fr auto
+    }
+
+    .cf-row .current-balance {
+        font-size: 15px;
+        font-weight: 900;
+        color: var(--cf-green);
+        padding: 10px 0
+    }
+
+    .cf-badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 10px 10px;
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase
+    }
+
+    .cf-badge.active {
+        background: #e8fff7;
+        color: #0e9f6e
+    }
+
+    .cf-badge.inactive {
+        background: var(--mc-card-soft);
+        color: var(--mc-text-2)
+    }
+
+    .cf-color-dot {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: inline-block;
+        border: 2px solid var(--mc-card);
+        box-shadow: 0 0 0 1px var(--cf-border)
+    }
+
+    .cf-master-filter {
+        display: flex;
+        gap: 12px;
+        align-items: end;
+        flex-wrap: wrap;
+        margin-bottom: 18px
+    }
+
+    .cf-master-filter>div {
+        min-width: 240px;
+        flex: 0 1 280px
+    }
+
+    @media(max-width:1280px) {
+        .cf-settings {
+            padding: 22px 18px
+        }
+
+        .cf-form-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr))
+        }
+
+        .cf-row,
+        .cf-row.category,
+        .cf-row.master {
+            grid-template-columns: repeat(2, minmax(0, 1fr))
+        }
+
+        .cf-row-actions {
+            grid-column: 1/-1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px
+        }
+    }
+
+    @media(max-width:700px) {
+        .cf-settings {
+            padding: 14px
+        }
+
+        .cf-header {
+            align-items: flex-start;
+            flex-direction: column;
+            padding: 18px
+        }
+
+        .cf-actions,
+        .cf-actions .master-btn {
+            width: 100%
+        }
+
+        .cf-panel {
+            padding: 16px
+        }
+
+        .cf-form-grid,
+        .cf-form-grid.two,
+        .cf-row,
+        .cf-row.category,
+        .cf-row.master {
+            grid-template-columns: 1fr
+        }
+
+        .cf-row-actions {
+            justify-content: stretch;
+            flex-direction: column
+        }
+
+        .cf-row-actions .master-btn {
+            width: 100%
+        }
+
+        .cf-tabs {
+            padding: 0 4px
+        }
+
+        .cf-tab {
+            padding: 14px 16px
+        }
+    }
+
+/* ==========================================================================
+   CASHFLOW DETAIL — resources/views/cashflows/show.blade.php
+   Detail page: status and type badges.
+   ========================================================================== */
+
+.status-pending {
+        background: #fff4e5;
+        color: #d97706
+    }
+
+    .status-booked {
+        background: #eaf1ff;
+        color: #3f7cf4
+    }
+
+    .status-reconciled {
+        background: #e8fff7;
+        color: #0e9f6e
+    }
+
+    .status-disputed {
+        background: #ffeaf0;
+        color: #e11d48
+    }
+
+    .status-ignored {
+        background: var(--mc-card-soft);
+        color: var(--mc-text-2)
+    }
+
+    .type-credit {
+        background: #e8fff7;
+        color: #0e9f6e
+    }
+
+    .type-debit {
+        background: #ffeaf0;
+        color: #e11d48
+    }
+
+    .amount-credit {
+        font-size: 30px;
+        color: #059669;
+        font-weight: 900
+    }
+
+    .amount-debit {
+        font-size: 30px;
+        color: #e11d48;
+        font-weight: 900
+    }
+
+    .master-muted-box {
+        background: var(--mc-card-soft);
+        border: 1px solid var(--master-border);
+        border-radius: 14px;
+        padding: 14px;
+        color: var(--mc-text-2);
+        font-weight: 700;
+        line-height: 1.55
+    }
+
+/* ---------------- Vendor payment sync markers ---------------- */
+
+.cf-sync-note {
+    margin-bottom: 15px;
+    border-left: 4px solid #4f83f1;
+    line-height: 1.6;
+}
+
+.cf-sync-note a {
+    color: #4f83f1;
+    font-weight: 800;
+}
+
+.cf-sync-chip {
+    display: inline-block;
+    margin: 3px 0 2px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--mc-soft);
+    color: #4f83f1;
+    font-size: 10.5px;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.cf-sync-chip:hover {
+    background: var(--mc-hover);
+    text-decoration: underline;
+}
+
+/* ==========================================================================
+   CASHFLOW LIST — resources/views/cashflows/index.blade.php
+   --------------------------------------------------------------------------
+   The chrome (chip bar and chips, saved views, applied strip, table bar,
+   density switch, grouped divider, pinned grid, totals row, empty state,
+   mobile card) is public/assets/css/master-list.css, shared with the shipment
+   list. What is left here is what only a ledger has — the date column, the
+   particular, the two money columns and the settlement state — measured to the
+   same geometry as the shipment list, so the two screens read as one product.
+   ========================================================================== */
+
+/* The account select and the button that adds one stay together when the
+   filter row wraps. */
+.cashflow-index .cf-account-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 190px;
+    min-width: 0;
+}
+
+.cashflow-index .cf-account-filter .master-select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cashflow-index .cf-account-filter .master-btn {
+    min-width: 0;
+}
+
+/* ---------------- table ---------------- */
+
+.cashflow-index .master-table-wrap {
+    margin-top: 12px;
+}
+
+.cashflow-index .master-table th,
+.cashflow-index .master-table td {
+    padding: 12px 14px;
+}
+
+.cashflow-index .master-table th {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    font-size: 11px;
+    color: var(--mc-text-3);
+}
+
+.cashflow-index .master-table td {
+    font-size: 13.5px;
+    vertical-align: top;
+}
+
+/* Column hints: the table keeps its natural layout, these only stop the
+   columns from reflowing between pages as the content changes. */
+.cashflow-index .master-table th:nth-child(1) { width: 104px; }
+.cashflow-index .master-table th:nth-child(2) { width: 260px; }
+.cashflow-index .master-table th:nth-child(3) { width: 168px; }
+.cashflow-index .master-table th:nth-child(4) { width: 132px; }
+.cashflow-index .master-table th:nth-child(5) { width: 132px; }
+.cashflow-index .master-table th:nth-child(6) { width: 150px; }
+.cashflow-index .master-table th:nth-child(7) { width: 132px; }
+.cashflow-index .master-table th:nth-child(8) { width: 72px; }
+
+.cashflow-index .master-table th:last-child,
+.cashflow-index .master-table td:last-child {
+    text-align: right;
+}
+
+/* Row rhythm. One line box for the first line and one for the second — the
+   same two values the shipment list uses, so the two tables' rows are the same
+   height and their baselines land in the same place. */
+.cashflow-index .master-table {
+    --cf-line: 20px;
+    --cf-sub: 16px;
+}
+
+.cashflow-index .cf-date,
+.cashflow-index .cf-particular strong,
+.cashflow-index .cf-account,
+.cashflow-index .cf-money,
+.cashflow-index .cf-status {
+    min-height: var(--cf-line);
+    line-height: var(--cf-line);
+}
+
+.cashflow-index td .master-sub {
+    margin-top: 4px;
+    line-height: var(--cf-sub);
+}
+
+/* ---------------- cells ---------------- */
+
+.cashflow-index .cf-date {
+    display: block;
+    font-weight: 700;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.cashflow-index .cf-particular strong {
+    display: block;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.cashflow-index .cf-account {
+    display: block;
+    font-size: 13px;
+}
+
+/* the row's own name behaves like the identifier it is: hovering the row
+   underlines it, the same way the shipment list marks its shipment number */
+.cashflow-index .master-table tbody tr.is-clickable:hover .cf-particular strong {
+    text-decoration: underline;
+}
+
+.cashflow-index .cf-money {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* Money in reads green, money out reads red — the direction is the point of
+   the row, so the figure itself carries it and not only the column. */
+.cashflow-index .cf-credit {
+    color: var(--cf-green);
+}
+
+.cashflow-index .cf-debit {
+    color: var(--cf-red);
+}
+
+/* How the money moved, on the row's second line — the payment mode was only
+   ever visible inside the record. */
+.cashflow-index .cf-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--mc-soft);
+    color: var(--mc-text-2);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+/* ---------------- the settlement state ----------------
+   A tint with a saturated foreground reads on both themes; a filled pill does
+   not. Every status in CashflowEntry::accountingStatusOptions() has a light
+   tone and a dark foreground — list-check.cjs fails if one is missing. */
+
+.cashflow-index .cf-status {
+    /* the pill sits on the row's first line instead of being taller than it */
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--cf-line);
+    padding: 0 10px;
+    border-radius: 999px;
+    background: var(--tone-bg);
+    color: var(--tone-fg);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    white-space: nowrap;
+}
+
+.cashflow-index .cf-status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: 0 0 auto;
+}
+
+.cashflow-index .cf-status.status-pending {
+    --tone-bg: rgba(245, 158, 11, .18);
+    --tone-fg: #b45309;
+}
+
+.cashflow-index .cf-status.status-booked {
+    --tone-bg: rgba(79, 131, 241, .18);
+    --tone-fg: #3f6fd8;
+}
+
+.cashflow-index .cf-status.status-reconciled {
+    --tone-bg: rgba(16, 185, 129, .18);
+    --tone-fg: #047857;
+}
+
+.cashflow-index .cf-status.status-disputed {
+    --tone-bg: rgba(225, 29, 72, .16);
+    --tone-fg: #be123c;
+}
+
+.cashflow-index .cf-status.status-ignored {
+    --tone-bg: var(--mc-soft);
+    --tone-fg: var(--mc-text-3);
+}
+
+:root[data-theme="dark"] .cashflow-index .cf-status.status-pending {
+    --tone-fg: #fcd34d;
+}
+
+:root[data-theme="dark"] .cashflow-index .cf-status.status-booked {
+    --tone-fg: #93b4ff;
+}
+
+:root[data-theme="dark"] .cashflow-index .cf-status.status-reconciled {
+    --tone-fg: #6ee7b7;
+}
+
+:root[data-theme="dark"] .cashflow-index .cf-status.status-disputed {
+    --tone-fg: #ff9b9b;
+}
+
+:root[data-theme="dark"] .cashflow-index .cf-status.status-ignored {
+    --tone-fg: #94a3b8;
+}
+
+:root[data-theme="dark"] .cashflow-index .cf-credit {
+    color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .cashflow-index .cf-debit {
+    color: #ff9b9b;
+}
+
+/* The record page's badges take the same tones as the ledger's pills. The
+   .status-* / .type-* rules above carry light-theme colours and nothing else,
+   so on a dark card they stayed cream-and-amber; these are the dark halves,
+   with the ledger's own values. Scoped to .cf so no other module is touched. */
+:root[data-theme="dark"] .cf .master-badge.status-pending {
+    background: rgba(245, 158, 11, .18);
+    color: #fcd34d;
+}
+
+:root[data-theme="dark"] .cf .master-badge.status-booked {
+    background: rgba(79, 131, 241, .18);
+    color: #93b4ff;
+}
+
+:root[data-theme="dark"] .cf .master-badge.status-reconciled {
+    background: rgba(16, 185, 129, .18);
+    color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .cf .master-badge.status-disputed {
+    background: rgba(225, 29, 72, .16);
+    color: #ff9b9b;
+}
+
+:root[data-theme="dark"] .cf .master-badge.status-ignored {
+    background: var(--mc-soft);
+    color: #94a3b8;
+}
+
+:root[data-theme="dark"] .cf .master-badge.type-credit {
+    background: rgba(16, 185, 129, .18);
+    color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .cf .master-badge.type-debit {
+    background: rgba(225, 29, 72, .16);
+    color: #ff9b9b;
+}
+
+/* ---------------- density ----------------
+   Comfortable is the default; compact fits roughly a third more rows on the
+   same screen. The padding and the header come from master-list.css; the
+   ledger's own type scale tightens here, exactly as the shipment cells do. */
+
+@media (min-width: 769px) {
+    .cashflow-index[data-density="compact"] .master-table {
+        --cf-line: 18px;
+        --cf-sub: 15px;
+    }
+
+    .cashflow-index[data-density="compact"] .cf-date,
+    .cashflow-index[data-density="compact"] .cf-particular strong,
+    .cashflow-index[data-density="compact"] .cf-account {
+        font-size: 12.5px;
+    }
+
+    .cashflow-index[data-density="compact"] td .master-sub {
+        font-size: 11px;
+    }
+}
+
+/* ---------------- documents ----------------
+   The paperwork behind a row: the count the ledger prints, the card on the
+   record page and the archive's own cells. The tones follow the status pills
+   above — one background and one foreground, both from tokens, with the dark
+   theme only having to raise the foreground. */
+
+/* The documents card on the record page is a full-width row of that page's
+   grid: it spans both columns and takes the grid's own gutter, so it keeps the
+   rhythm the cards above it keep. Left outside the grid it sits flush against
+   the column above — no gutter — with edges that match nothing on the page. */
+.cf-docs {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+}
+
+.cf-doc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 8px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--mc-soft);
+    color: var(--mc-text-2);
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.7;
+    text-decoration: none;
+    vertical-align: middle;
+}
+
+.cf-doc-chip:hover {
+    background: var(--mc-border);
+    color: var(--mc-text);
+}
+
+.cf-doc-chip i {
+    font-size: 10.5px;
+}
+
+.cf-doc-state {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--tone-bg, var(--mc-soft));
+    color: var(--tone-fg, var(--mc-text-2));
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.cf-doc-state.is-filed {
+    --tone-bg: rgba(16, 185, 129, .18);
+    --tone-fg: #047857;
+}
+
+.cf-doc-state.is-missing {
+    --tone-bg: rgba(245, 158, 11, .18);
+    --tone-fg: #b45309;
+}
+
+/* filed on its own: not a problem to chase, so it is neutral rather than a
+   warning tone — the document exists, it simply has no entry behind it */
+.cf-doc-state.is-unlinked {
+    --tone-bg: rgba(79, 131, 241, .16);
+    --tone-fg: #3f6fd8;
+}
+
+:root[data-theme="dark"] .cf-doc-state.is-filed {
+    --tone-fg: #6ee7b7;
+}
+
+:root[data-theme="dark"] .cf-doc-state.is-missing {
+    --tone-fg: #fcd34d;
+}
+
+:root[data-theme="dark"] .cf-doc-state.is-unlinked {
+    --tone-fg: #93b4ff;
+}
+
+.cf-doc-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.cf-doc {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+}
+
+.cf-doc-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--mc-soft);
+    color: var(--master-primary);
+    font-size: 14px;
+}
+
+.cf-doc-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.cf-doc-name {
+    color: var(--mc-text);
+    font-weight: 700;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.cf-doc-name:hover {
+    color: var(--master-primary);
+    text-decoration: underline;
+}
+
+.cf-doc-actions {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.cf-doc-upload {
+    /* the divider alone separates the upload from what is above it: the head
+       already carries a 14px bottom margin, so a top margin here read as a
+       hole in the card */
+    margin-top: 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--mc-border);
+}
+
+/* Three fields, one row. The card is as wide as the page, so the type, the
+   title and the file picker read as one line instead of a stack; the picker
+   takes the whole row as soon as the width cannot hold three columns. */
+.cf-doc-upload-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px 16px;
+}
+
+/* In a grid the row gap is the rhythm; the label's own top margin would add a
+   second one under the divider. */
+.cf-docs .master-label {
+    margin-top: 0;
+}
+
+/* The file control is the one field the browser sizes itself: without this it
+   stands taller than the two selects beside it. */
+.cf-doc-upload-fields .master-input[type="file"] {
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.cf-doc-upload-fields .master-input[type="file"]::file-selector-button,
+.cf-doc-upload-fields .master-input[type="file"]::-webkit-file-upload-button {
+    padding: 6px 12px;
+}
+
+@media (max-width: 1100px) {
+    .cf-doc-upload-fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cf-doc-upload-fields > .master-field:last-child {
+        grid-column: 1 / -1;
+    }
+}
+
+.cf-doc-upload-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 14px;
+}
+
+/* The second way in: claiming a document that was filed before its entry
+   existed. A hairline separates it from the upload, so the common action
+   stays the obvious one. */
+.cf-doc-match {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--mc-border);
+}
+
+.cf-doc-type {
+    display: inline-flex;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--mc-soft);
+    color: var(--mc-text-2);
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* the archive's eight columns: the file name takes the room the ledger gives
+   its particulars, the short columns on the right stay narrow, so the header
+   and the body keep one grid as the month grows */
+.cashflow-documents .master-table th:nth-child(1) { width: 300px; }
+.cashflow-documents .master-table th:nth-child(2) { width: 250px; }
+.cashflow-documents .master-table th:nth-child(3) { width: 190px; }
+.cashflow-documents .master-table th:nth-child(4) { width: 140px; }
+.cashflow-documents .master-table th:nth-child(5) { width: 130px; }
+.cashflow-documents .master-table th:nth-child(6) { width: 105px; }
+.cashflow-documents .master-table th:nth-child(7) { width: 125px; }
+.cashflow-documents .master-table th:nth-child(8) { width: 110px; }
+
+.cashflow-documents .master-table th:last-child,
+.cashflow-documents .master-table td:last-child {
+    text-align: right;
+}
+
+.cf-doc-cell .cf-doc-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cf-doc-cell .cf-doc-name i {
+    color: var(--mc-text-3);
+}
+
+.cf-doc-entry {
+    color: var(--mc-text);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.cf-doc-entry:hover {
+    color: var(--master-primary);
+    text-decoration: underline;
+}
+
+/* ---------------- mobile ----------------
+   The row becomes a card (master-list.css labels each cell); the money cells
+   read as values rather than as a right-aligned column. */
+
+@media (max-width: 768px) {
+    .cashflow-index .master-table td:last-child,
+    .cashflow-documents .master-table td:last-child {
+        text-align: left;
+    }
+
+    .cashflow-index .master-dropdown-toggle {
+        margin-left: 0;
+    }
+
+    .cashflow-index .cf-money {
+        white-space: normal;
+    }
+
+    /* the archive's cards: the actions drop under the file they belong to */
+    .cashflow-documents .cf-doc {
+        flex-wrap: wrap;
+    }
+
+    .cashflow-documents .cf-doc-actions {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .cf-doc-upload-fields {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================================================
+   REPORT BUILDER — resources/views/cashflows/reports.blade.php
+   --------------------------------------------------------------------------
+   The matrix is the module's own form: money down the side, time across the
+   top, every figure a link to the rows behind it. Only the report's cells live
+   here — the chip bar, the applied strip, the saved views, the totals row and
+   the empty state all come from master-list.css, so the report is the ledger's
+   sibling rather than a second dialect.
+   ========================================================================== */
+
+/* ---------------- the builder's own row ---------------- */
+
+.cashflow-reports .cf-report-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1 1 170px;
+    min-width: 150px;
+}
+
+.cashflow-reports .cf-report-field .master-select,
+.cashflow-reports .cf-report-field .master-input {
+    width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
+}
+
+.cashflow-reports .cf-report-actions {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex: 0 0 auto;
+}
+
+/* the dimensions that narrow the rows rather than shape the report: one
+   disclosure, counted, so six controls stay on one line and a hidden filter is
+   still visible as a chip below */
+.cashflow-reports .cf-report-more {
+    flex-basis: 100%;
+    margin: 0;
+}
+
+.cashflow-reports .cf-report-more > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.cashflow-reports .cf-report-more > summary::-webkit-details-marker {
+    display: none;
+}
+
+.cashflow-reports .cf-report-more-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--accent-light, rgba(79, 142, 247, .12));
+    color: var(--master-primary, #4f83f1);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.cashflow-reports .cf-report-more-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-card-soft);
+}
+
+/* ---------------- the window, in figures ---------------- */
+
+.cashflow-reports .cf-report-note {
+    display: flex;
+    gap: 8px;
+    /* 24px under it: a note is a block too, and the block after it (the card
+       holding the matrix) must not start against its border */
+    margin: 16px 0 24px;
+    padding: 12px 16px;
+    border: 1px solid var(--mc-border);
+    border-left: 3px solid var(--master-primary, #4f83f1);
+    border-radius: 12px;
+    background: var(--mc-card);
+    color: var(--mc-text-2);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+.cashflow-reports .cf-report-note strong {
+    color: var(--mc-text);
+}
+
+/* ---------------- the matrix ---------------- */
+
+.cashflow-reports .cf-report-wrap {
+    /* a matrix is wider than the page by nature: it scrolls inside its own
+       frame, and the name column stays with its row while it does */
+    overflow-x: auto;
+}
+
+.cashflow-reports .cf-report-table {
+    /* thirteen to forty columns: the table is as wide as its content, not as
+       wide as the shell's 1280px floor */
+    min-width: max-content;
+}
+
+.cashflow-reports .cf-report-table th,
+.cashflow-reports .cf-report-table td {
+    padding: 10px 12px;
+    white-space: nowrap;
+}
+
+/* the row's own name reads as text, not as a column heading */
+.cashflow-reports .cf-report-table td.cf-report-name-col {
+    font-size: 13px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* The name column stays with its row while the periods scroll past it, so a
+   figure is never read against the wrong party. It carries the card's own
+   background because a transparent sticky cell lets the columns slide under
+   it. */
+.cashflow-reports .cf-report-table .cf-report-name-col {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    min-width: 190px;
+    max-width: 320px;
+    text-align: left;
+    background: var(--mc-card);
+    box-shadow: inset -1px 0 0 var(--mc-border);
+}
+
+.cashflow-reports .cf-report-table thead .cf-report-name-col {
+    z-index: 4;
+    background: var(--mc-card-soft);
+}
+
+.cashflow-reports .cf-report-table tbody tr:hover,
+.cashflow-reports .cf-report-table tbody tr:hover .cf-report-name-col {
+    background: var(--mc-card-soft);
+}
+
+.cashflow-reports .cf-report-table .cf-report-period,
+.cashflow-reports .cf-report-table .cf-report-total-col {
+    min-width: 104px;
+    text-align: right;
+}
+
+.cashflow-reports .cf-report-table .cf-report-total-col {
+    font-weight: 800;
+}
+
+.cashflow-reports .cf-report-table thead a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.cashflow-reports .cf-report-table thead a:hover {
+    text-decoration: underline;
+}
+
+.cashflow-reports .cf-report-name {
+    display: block;
+    color: var(--mc-text);
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+a.cf-report-name:hover {
+    text-decoration: underline;
+}
+
+.cashflow-reports .cf-report-table .master-sub {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+}
+
+.cashflow-reports .cf-report-value {
+    display: inline-block;
+    color: var(--mc-text);
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+a.cf-report-value:hover {
+    text-decoration: underline;
+}
+
+/* Money in reads green and money out reads red — the same two tones the
+   ledger's own credit and debit columns use, so one figure is one colour
+   wherever the module shows it. */
+.cashflow-reports .cf-report-value.is-in {
+    color: var(--cf-green);
+}
+
+.cashflow-reports .cf-report-value.is-out {
+    color: var(--cf-red);
+}
+
+.cashflow-reports .cf-report-delta {
+    display: block;
+    margin-top: 1px;
+    font-size: 10.5px;
+    font-weight: 800;
+}
+
+.cashflow-reports .cf-report-delta.is-up {
+    color: var(--cf-green);
+}
+
+.cashflow-reports .cf-report-delta.is-down {
+    color: var(--cf-red);
+}
+
+.cashflow-reports .cf-report-dash {
+    color: var(--mc-text-3);
+    font-weight: 700;
+}
+
+.cashflow-reports .cf-report-blank {
+    padding: 30px 20px;
+    text-align: center;
+    color: var(--mc-text-3);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ---------------- the shape of the range ---------------- */
+
+.cashflow-reports .cf-report-trend {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 18px 18px 14px;
+    overflow-x: auto;
+}
+
+.cashflow-reports .cf-report-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1 0 42px;
+    min-width: 42px;
+    text-decoration: none;
+}
+
+.cashflow-reports .cf-report-bar-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    width: 100%;
+    height: 104px;
+}
+
+.cashflow-reports .cf-report-bar-in,
+.cashflow-reports .cf-report-bar-out {
+    display: block;
+    width: 13px;
+    min-height: 3px;
+    border-radius: 4px 4px 0 0;
+}
+
+.cashflow-reports .cf-report-bar-in {
+    background: var(--cf-green);
+}
+
+.cashflow-reports .cf-report-bar-out {
+    background: var(--cf-red);
+}
+
+.cashflow-reports .cf-report-bar-label {
+    color: var(--mc-text-3);
+    font-size: 10.5px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.cashflow-reports .cf-report-bar:hover .cf-report-bar-label {
+    color: var(--mc-text);
+}
+
+:root[data-theme="dark"] .cashflow-reports .cf-report-value.is-in,
+:root[data-theme="dark"] .cashflow-reports .cf-report-delta.is-up {
+    color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .cashflow-reports .cf-report-value.is-out,
+:root[data-theme="dark"] .cashflow-reports .cf-report-delta.is-down {
+    color: #ff9b9b;
+}
+
+:root[data-theme="dark"] .cashflow-reports .cf-report-bar-in {
+    background: #34d399;
+}
+
+:root[data-theme="dark"] .cashflow-reports .cf-report-bar-out {
+    background: #fb7185;
+}
+
+/* The brand blue is a light-panel blue: on the dark card it reads at about
+   3.4:1, which is not enough for a badge or a note's rule, so both take the
+   module's dark blue instead. */
+:root[data-theme="dark"] .cashflow-reports .cf-report-note {
+    border-left-color: #93b4ff;
+}
+
+:root[data-theme="dark"] .cashflow-reports .cf-report-more-count {
+    background: rgba(147, 180, 255, .16);
+    color: #93b4ff;
+}
+
+/* The list shell stacks a table's rows into cards below 768px. A matrix is not
+   a row list: stacking twelve months into one card per client produces a page
+   nobody can read across. It keeps its grid and scrolls sideways, with the
+   name column pinned — the period headers name the columns the card stack
+   would otherwise have labelled cell by cell.
+
+   Two classes plus the module root, so these win against the shell's own
+   stacking rules on specificity alone: the module never has to name a class
+   that belongs to the surface. */
+@media (max-width: 768px) {
+    .cf.cashflow-reports .cf-report-table,
+    .cf.cashflow-reports .cf-report-table thead,
+    .cf.cashflow-reports .cf-report-table tbody,
+    .cf.cashflow-reports .cf-report-table tfoot {
+        display: revert;
+    }
+
+    .cf.cashflow-reports .cf-report-table thead {
+        display: table-header-group;
+    }
+
+    .cf.cashflow-reports .cf-report-table tr {
+        display: table-row;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        padding: 0;
+        margin: 0;
+        box-shadow: none;
+    }
+
+    .cf.cashflow-reports .cf-report-table th,
+    .cf.cashflow-reports .cf-report-table td {
+        display: table-cell;
+        width: auto;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--mc-border);
+        margin: 0;
+        text-align: right;
+    }
+
+    .cf.cashflow-reports .cf-report-table .cf-report-name-col {
+        text-align: left;
+        min-width: 150px;
+    }
+
+    .cashflow-reports .cf-report-actions {
+        flex: 1 1 100%;
+    }
+
+    .cashflow-reports .cf-report-actions .master-btn {
+        flex: 1 1 0;
+    }
+}

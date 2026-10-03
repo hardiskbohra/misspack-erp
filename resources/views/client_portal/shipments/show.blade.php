@@ -24,12 +24,27 @@
                 <div class="master-info-grid">
                     <div class="master-info"><span>Status</span><strong class="master-badge status-{{ $statusClass }}">{{ $shipment->statusLabel() }}</strong></div>
                     <div class="master-info"><span>Pickup Date</span><strong>{{ $shipment->pickup_date ? $shipment->pickup_date->format('d M Y') : '-' }}</strong></div>
+                    <div class="master-info">
+                        <span>Expected Delivery</span>
+                        <strong class="ship-eta ship-eta-{{ $shipment->etaState() }}">{{ $shipment->eta_date ? $shipment->eta_date->format('d M Y') : 'Not set' }}</strong>
+                        @if ($shipment->eta_date)
+                            <span>{{ $shipment->etaLabel() }}</span>
+                        @endif
+                    </div>
                     <div class="master-info"><span>Logistic Partner</span><strong>{{ $shipment->logistic_partner ?: '-' }}</strong></div>
                     <div class="master-info"><span>Tracking Number</span><strong>{{ $shipment->tracking_number ?: '-' }}</strong></div>
                     <div class="master-info"><span>Project</span><strong>{{ $shipment->project->name ?? '-' }}</strong>
                         <span>{{ $shipment->project->project_number ?? '-' }}</span></div>
                     <div class="master-info"><span>Cost Borne By</span><strong>{{ $costBorneByOptions[$shipment->cost_borne_by] ?? '-' }}</strong></div>
                 </div>
+            </div>
+
+            <div class="master-card master-section">
+                <h3 class="master-section-title">Tracking Progress</h3>
+                @include('shipments.partials.tracker', ['shipment' => $shipment])
+                @if ($shipment->delay_reason)
+                    <p class="master-sub" style="margin-top:8px;">Delay reason: {{ $shipment->delay_reason }}</p>
+                @endif
             </div>
 
             <div class="master-card master-section">
@@ -200,7 +215,7 @@
         </div>
     </div>
     <div class="cp-grid-2" style="margin-top:18px;">
-        <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Comments</p><h2 style="margin-top:0;">Shipment Discussion</h2><form method="POST" action="{{ route('client-portal.shipments.comments.store', $shipment->id) }}" style="margin-bottom:15px;">@csrf<div class="cp-field"><label>Comment</label><textarea name="body" required></textarea></div><button class="cp-btn cp-btn-primary" style="margin-top:10px;">Submit Comment</button></form>@forelse($comments as $comment)<div class="cp-comment"><div class="cp-comment-head"><strong>{{ $comment->authorName() }}</strong><span>{{ $comment->created_at->format('d M Y, h:i A') }}</span></div><p>{{ $comment->body }}</p></div>@empty<div class="cp-empty">No comments yet.</div>@endforelse</div>
-        <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Upload</p><h2 style="margin-top:0;">Upload Shipment Document</h2><form method="POST" action="{{ route('client-portal.shipments.documents.store', $shipment->id) }}" enctype="multipart/form-data" class="cp-form-grid">@csrf<div class="cp-field"><label>Category</label><select name="category"><option value="shipment">Shipment Document</option><option value="payment_proof">Payment Proof</option><option value="other">Other</option></select></div><div class="cp-field"><label>Title</label><input name="title"></div><div class="cp-field" style="grid-column:1/-1;"><label>Files</label><input type="file" name="attachments[]" multiple required></div><div class="cp-field" style="grid-column:1/-1;"><label>Notes</label><textarea name="notes"></textarea></div><button class="cp-btn cp-btn-primary" style="grid-column:1/-1;">Upload</button></form></div>
+        <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Comments</p><h2 style="margin-top:0;">Shipment Discussion</h2><form method="POST" action="{{ route('client-portal.shipments.comments.store', $shipment->id) }}" style="margin-bottom:15px;">@csrf<div class="master-field"><label class="master-label">Comment</label><textarea class="master-textarea" name="body" required></textarea></div><button class="master-btn master-btn-primary" style="margin-top:10px;">Submit Comment</button></form>@forelse($comments as $comment)<div class="cp-comment"><div class="cp-comment-head"><strong>{{ $comment->authorName() }}</strong><span>{{ $comment->created_at->format('d M Y, h:i A') }}</span></div><p>{{ $comment->body }}</p></div>@empty<div class="cp-empty">No comments yet.</div>@endforelse</div>
+        <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Upload</p><h2 style="margin-top:0;">Upload Shipment Document</h2><form method="POST" action="{{ route('client-portal.shipments.documents.store', $shipment->id) }}" enctype="multipart/form-data" class="cp-form-grid">@csrf<div class="master-field"><label class="master-label">Category</label><select class="master-select" name="category"><option value="shipment">Shipment Document</option><option value="payment_proof">Payment Proof</option><option value="other">Other</option></select></div><div class="master-field"><label class="master-label">Title</label><input class="master-input" name="title"></div><div class="master-field" style="grid-column:1/-1;"><label class="master-label">Files</label><input class="master-input" type="file" name="attachments[]" multiple required></div><div class="master-field" style="grid-column:1/-1;"><label class="master-label">Notes</label><textarea class="master-textarea" name="notes"></textarea></div><button class="master-btn master-btn-primary" style="grid-column:1/-1;">Upload</button></form></div>
     </div>
 @endsection

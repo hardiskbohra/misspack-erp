@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Change Review — MissPack ERP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/core.css?v=6abf109f">
+    <link rel="stylesheet" href="/assets/css/app-layout.css?v=6abf6a51">
+    <link rel="stylesheet" href="/assets/css/master-index.css?v=6abf04ad">
+    <link rel="stylesheet" href="/assets/css/master-show.css?v=6abf13a6">
+    <link rel="stylesheet" href="/assets/css/master-form.css?v=6abf0f9a">
+    <link rel="stylesheet" href="/assets/css/master-flat.css?v=6abf2c03">
+    <link rel="stylesheet" href="/assets/vendor/select2/css/select2.min.css?v=6abf7b0c">
+    <link rel="stylesheet" href="/assets/css/select2-theme.css?v=6abf2522">
+    <link rel="stylesheet" href="/assets/css/master-alert.css?v=6abf21b9">
+
+    <link rel="stylesheet" href="/assets/css/responsive.css?v=6abf2e74">
+    <style>
+        a[href^="/theme"], form.theme-form { pointer-events: none; }
+        #previewThemeBtn { display: inline-flex; align-items: center; gap: 8px; }
+    </style>
+<body>
+    <aside class="sidebar" id="sidebar" aria-label="Main sidebar">
+        <div class="sidebar-logo">
+            <div>
+                <div class="sidebar-logo-text sidebar-text">MissPack</div>
+                <div class="sidebar-logo-sub sidebar-text">Packed Perfect</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">Dashboards</div>
+            <a href="#" class="sidebar-item"><i class="fas fa-th-large"></i><span class="sidebar-text">Dashboard</span></a>
+            <div class="sidebar-section">Management</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-layer-group"></i><span class="sidebar-text">Tasks</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-box-open"></i><span class="sidebar-text">Products</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-truck"></i><span class="sidebar-text">Shipments</span></a>
+            <div class="sidebar-section">Sales</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-users"></i><span class="sidebar-text">Clients</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-briefcase"></i><span class="sidebar-text">Projects</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-file-invoice-dollar"></i><span class="sidebar-text">Invoices</span></a>
+            <div class="sidebar-section">Purchase</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-user-gear"></i><span class="sidebar-text">Vendors</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-money-bill"></i><span class="sidebar-text">Vendor Quotes</span></a>
+            <div class="sidebar-section">Accounts</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-scale-balanced"></i><span class="sidebar-text">Cashflow</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-users-cog"></i><span class="sidebar-text">Users</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="user-avatar-sm">H</div>
+                <div class="sidebar-user-info sidebar-text">
+                    <div class="user-name">Hardik Bohra</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+                <button type="button" class="sidebar-logout-btn" title="Logout" aria-label="Logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="main-wrap" id="mainWrap">
+        <header class="topbar">
+            <button type="button" class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="topbar-title">Change Review</span>
+            <div class="topbar-spacer"></div>
+            <div class="topbar-actions">
+                <button type="button" class="topbar-btn desktop-only" aria-label="Search"><i class="fas fa-search"></i></button>
+                <button type="button" id="previewThemeBtn" class="theme-toggle desktop-only">
+                    <i class="fas fa-moon"></i> <span>Dark</span>
+                </button>
+                <button type="button" class="topbar-btn desktop-only" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="topbar-badge">3</span>
+                </button>
+                <div class="topbar-user-btn">
+                    <div class="user-avatar-sm topbar-avatar">H</div>
+                    <span class="topbar-user-name desktop-only">Hardik Bohra</span>
+                </div>
+            </div>
+        </header>
+
+                <main class="page-content">
+            <div class="si-page" style="padding:0;">
+                <div class="si-hero">
+                    <div>
+                        <p class="si-eyebrow">PR #2 · branch arena/01a0bfd3-misspack-erp</p>
+                        <h1>Change Review Deck</h1>
+                        <p>Every screen changed in this PR, rendered with the <strong>real production CSS and JS</strong> from <code>public/assets/</code> plus sample data. Toggle <strong>Dark mode</strong> in the top bar (top-right), resize the window to test the responsive rules.</p>
+                    </div>
+                </div>
+                <div class="master-grid two">
+                <div class="master-card">
+                    <div class="master-section-head">
+                        <div>
+                            <p class="master-eyebrow">Task Module</p>
+                            <h2 style="font-size:15px;">Kanban board + task form (Parts 5, 7)</h2>
+                        </div>
+                    </div>
+                    <ul style="margin:0 0 12px 18px; font-size:12.5px; line-height:1.9; color:var(--mc-text-muted, #6b7280);"><li>Kanban columns snap horizontally on mobile (40px+ swipe targets)</li><li>⋮ row menu instead of stacked action buttons</li><li>Form: hero stacks, fields 1-column, full-width buttons</li></ul>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;"><a href="index.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Open board (light)</a><a href="index.html?theme=dark" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Dark</a><a href="form.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Add task (light)</a><a href="form.html?theme=dark" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Dark</a></div>
+                </div>
+                <div class="master-card">
+                    <div class="master-section-head">
+                        <div>
+                            <p class="master-eyebrow">PI / Tax Invoices — List</p>
+                            <h2 style="font-size:15px;">Master table list screen (Parts 7, 8b)</h2>
+                        </div>
+                    </div>
+                    <ul style="margin:0 0 12px 18px; font-size:12.5px; line-height:1.9; color:var(--mc-text-muted, #6b7280);"><li>Fix: date no longer visually merges into the invoice number cell</li><li>Table scrolls horizontally on mobile instead of clipping</li><li>Select2 filters stack and go 44px tall on mobile</li></ul>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;"><a href="invoices-index.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Open list (light)</a><a href="invoices-index.html?theme=dark" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Dark</a></div>
+                </div>
+                <div class="master-card">
+                    <div class="master-section-head">
+                        <div>
+                            <p class="master-eyebrow">PI / Tax Invoices — Form</p>
+                            <h2 style="font-size:15px;">Invoice form with live items table (Part 8a)</h2>
+                        </div>
+                    </div>
+                    <ul style="margin:0 0 12px 18px; font-size:12.5px; line-height:1.9; color:var(--mc-text-muted, #6b7280);"><li>All item fields use core master-* classes (no module-only field styles)</li><li>+ Add Product works live — pick a product, qty/rate/GST recompute totals</li><li>Items table scrolls horizontally on mobile; totals box stacks</li></ul>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;"><a href="invoices-form.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Open form (light)</a><a href="invoices-form.html?theme=dark" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Dark</a></div>
+                </div>
+                <div class="master-card">
+                    <div class="master-section-head">
+                        <div>
+                            <p class="master-eyebrow">Vendor Payments &rarr; Cashflow</p>
+                            <h2 style="font-size:15px;">One payment entry, both ledgers (new)</h2>
+                        </div>
+                    </div>
+                    <ul style="margin:0 0 12px 18px; font-size:12.5px; line-height:1.9; color:var(--mc-text-muted, #6b7280);">
+                        <li>Adding a payment (debit) also writes the INR cashflow entry &mdash; one entry instead of two</li>
+                        <li>Editing or deleting the vendor payment updates / removes the cashflow entry automatically</li>
+                        <li>Ledger rows link to their mirrored cashflow entry; cashflow rows carry a &ldquo;&harr; Vendor payment&rdquo; chip back</li>
+                        <li>Bills (credit) create a payable, not a cash movement &mdash; no cashflow entry</li>
+                    </ul>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <a href="vendor-payments.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Open flow (light)</a>
+                        <a href="vendor-payments.html?theme=dark" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Dark</a>
+                    </div>
+                </div>
+                <div class="master-card">
+                    <div class="master-section-head">
+                        <div>
+                            <p class="master-eyebrow">Shipments &mdash; sorting, stickers, memory</p>
+                            <h2 style="font-size:15px;">Open first, printable shipping marks, From / To prefill (new)</h2>
+                        </div>
+                    </div>
+                    <ul style="margin:0 0 12px 18px; font-size:12.5px; line-height:1.9; color:var(--mc-text-muted, #6b7280);">
+                        <li>Shipment list: open / in-transit rows stay on top (newest pickup date first), delivered &amp; cancelled drop into a closed block below</li>
+                        <li>Spent total follows the active filters and stays per currency (INR &middot; USD &middot; RMB are never added together); footer totals the rows on screen</li>
+                        <li>Shipping mark: 8 stickers per A4 page, each with From + To address and contact &mdash; choose how many to print</li>
+                        <li>From / To memory: picking a party name used before fills the empty address &amp; contact fields, says which shipment it came from, and offers undo</li>
+                    </ul>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <a href="shipments-index.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Shipment list (light)</a>
+                        <a href="shipments-index.html?theme=dark" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Dark</a>
+                        <a href="shipping-mark.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Sticker sheet</a>
+                        <a href="shipments-form.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">From / To memory (light)</a>
+                        <a href="shipments-form.html?theme=dark" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Dark</a>
+                    </div>
+                </div>
+                <div class="master-card">
+                    <div class="master-section-head">
+                        <div>
+                            <p class="master-eyebrow">Shipments &mdash; Wave 1 &amp; 2 (new)</p>
+                            <h2 style="font-size:15px;">Control tower, paperwork, freight money &mdash; without a single external service</h2>
+                        </div>
+                    </div>
+                    <ul style="margin:0 0 12px 18px; font-size:12.5px; line-height:1.9; color:var(--mc-text-muted, #6b7280);">
+                        <li><strong>Card surfaces:</strong> every shipment card now uses the theme&rsquo;s own surface &mdash; solid white in the light theme, the deep panel colour in dark &mdash; with the colour kept for chips, icon badges and status pills (<code>.master-card--flat</code> is reusable by any module)</li>
+                        <li><strong>Control tower:</strong> ETA + delay reason on every shipment, &ldquo;due in X days / X days overdue&rdquo; chips, needs-attention counts (overdue, arriving &le; 7 days, hold, docs pending, e-way expiring) and one-click saved views</li>
+                        <li><strong>Document vault:</strong> real document types (BL/AWB, invoice, packing list, shipping bill, BOE, COO, insurance, e-way) with a per-shipment &#10003;/&#10007; checklist per shipment type &mdash; a delivered shipment with missing paper raises a warning</li>
+                        <li><strong>Paperwork you can hand over:</strong> packing list, delivery challan and shipment summary print from the real item lines (browser print &#8594; Save as PDF)</li>
+                        <li><strong>Stickers with a scannable QR:</strong> hand-rolled local QR encoder &mdash; the code on the mark opens the public tracking page; print one shipment&rsquo;s stickers or the whole open board</li>
+                        <li><strong>Money:</strong> freight cost breakdown (freight, insurance, duty, CHA, last-mile, demurrage, other) with INR conversion, paid heads mirrored into the cashflow ledger, invoice link with landed-cost margin and cost per kg</li>
+                        <li><strong>Clients:</strong> notify-on-status-change tick-box, six-step tracking stepper on the portal and a public page with day-by-day updates and WhatsApp share</li>
+                    </ul>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <a href="shipment-detail.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Shipment detail (costs, docs, tracker)</a>
+                        <a href="shipment-detail.html?theme=dark" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Detail (dark)</a>
+                        <a href="shipments-index.html?theme=dark" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">List (dark)</a>
+                        <a href="shipments-index.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Control tower list</a>
+                        <a href="shipment-print.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Packing list</a>
+                        <a href="shipment-challan.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Delivery challan</a>
+                        <a href="shipment-summary.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Shipment summary</a>
+                        <a href="shipping-mark.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Shipping mark + QR</a>
+                        <a href="shipment-stickers.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Whole open board</a>
+                        <a href="shipment-track.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Public tracking page</a>
+                    </div>
+                </div>
+                <div class="master-card">
+                    <div class="master-section-head">
+                        <div>
+                            <p class="master-eyebrow">Projects — Milestones</p>
+                            <h2 style="font-size:15px;">Project show, milestones tab (Parts 7, 8c–8e)</h2>
+                        </div>
+                    </div>
+                    <ul style="margin:0 0 12px 18px; font-size:12.5px; line-height:1.9; color:var(--mc-text-muted, #6b7280);"><li>New horizontal stepper cards per product (completed / in-progress overdue / blocked / waiting states)</li><li>Edit modal: open any ✎ button — scrollable body, sticky footer, delete row</li><li>“Generate Default Timeline” triggers the themed confirm dialog (custom text, non-danger)</li></ul>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;"><a href="project-milestones.html" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Open page (light)</a><a href="project-milestones.html?theme=dark" class="master-btn master-btn-soft master-btn-sm" style="text-decoration:none;">Dark</a></div>
+                </div>
+                </div>
+                <div class="master-card" style="margin-top:15px;">
+                    <div class="master-section-head">
+                        <div>
+                            <p class="master-eyebrow">Testing guide</p>
+                            <h2 style="font-size:15px;">How to review</h2>
+                        </div>
+                    </div>
+                    <div class="master-grid three" style="gap:15px; font-size:13px; line-height:1.8; color:var(--mc-text-muted, #6b7280);">
+                        <div>
+                            <strong style="color:inherit;">1 · Breakpoints</strong><br>
+                            Resize: <strong>≥1200</strong> desktop · <strong>768–1199</strong> tablet (toolbar wraps, tables scroll) · <strong>481–767</strong> mobile (kanban snap, 44px controls, safe-area) · <strong>≤480</strong> (full-bleed modal sheets).
+                        </div>
+                        <div>
+                            <strong style="color:inherit;">2 · Themes</strong><br>
+                            The <strong>Dark</strong> button (top bar, top-right) or a <code>?theme=dark</code> link sets both themes and persists across pages via localStorage.
+                        </div>
+                        <div>
+                            <strong style="color:inherit;">3 · Caveats</strong><br>
+                            Static deck: sample data only, forms submit to <code>#</code> (nothing persists, no backend). Selects use the real Select2 init where the production page does.
+                        </div>
+                    </div>
+                </div>
+            </div>
+</main>
+    </div>
+
+    <script src="/assets/vendor/jquery/jquery.min.js?v=6abe6ebd"></script>
+    <script src="/assets/vendor/select2/js/select2.min.js?v=6abe1966"></script>
+    <script src="/assets/js/master-alert.js?v=6abf15d1"></script>
+    <script src="/assets/js/master-selects.js?v=6abf2a90"></script>
+    <script src="/assets/js/app-layout.js?v=6abf23b1"></script>
+    <script>
+        // Static preview: client-side theme toggle (Laravel's /theme/toggle is not available here)
+        (function () {
+            var html = document.documentElement;
+            try {
+                var t = new URLSearchParams(location.search).get('theme');
+                if (t === 'dark' || t === 'light') { html.setAttribute('data-theme', t); }
+            } catch (e) {}
+            function syncBtn() {
+                var dark = html.getAttribute('data-theme') === 'dark';
+                var btn = document.getElementById('previewThemeBtn');
+                btn.innerHTML = dark ? '<i class="fas fa-sun"></i> <span>Light</span>' : '<i class="fas fa-moon"></i> <span>Dark</span>';
+            }
+            syncBtn();
+            document.getElementById('previewThemeBtn').addEventListener('click', function () {
+                var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', next);
+                try { localStorage.setItem('preview-theme', next); } catch (e) {}
+                syncBtn();
+            });
+        })();
+    </script>
+</body>
+</html>

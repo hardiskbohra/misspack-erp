@@ -68,9 +68,9 @@
                                         <td>{{ $row->capacity ? $row->capacity . 'ml' : '-' }}</td>
                                         <td>{{ $row->finish_type ?: '-' }}</td>
                                         <td>{{ $row->printing_type ?: '-' }}</td>
-                                        <td>{{ $row->landing_cost_inr ? '₹ ' . number_format((float) $row->landing_cost_inr, 2) : '-' }}
+                                        <td>{{ $row->landing_cost_inr ? \App\Helpers\CommonHelper::indianCurrency($row->landing_cost_inr) : '-' }}
                                         </td>
-                                        <td>{{ $row->selling_cost_inr ? '₹ ' . number_format((float) $row->selling_cost_inr, 2) : '-' }}
+                                        <td>{{ $row->selling_cost_inr ? \App\Helpers\CommonHelper::indianCurrency($row->selling_cost_inr) : '-' }}
                                         </td>
                                 </tr>@empty<tr>
                                         <td colspan="6">No ladder added.</td>
@@ -102,9 +102,9 @@
                                             : ($quote->quantity ? number_format($quote->quantity) . ' ' . $quote->unit : '-')
                                         !!}</td>
                                         <td>{!! $quote->items->isNotEmpty()
-                                            ? $quote->items->map(fn($item) => $quote->currency . ' ' . number_format($item->vendor_unit_price, 2) . ($quote->incoterm ? ' ' . $quote->incoterm : ''))->implode('<br>')
+                                            ? $quote->items->map(fn($item) => \App\Helpers\CommonHelper::amount($item->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : ''))->implode('<br>')
                                             : ($quote->vendor_unit_price
-                                                ? $quote->currency . ' ' . number_format((float) $quote->vendor_unit_price, 2) . ($quote->incoterm ? ' ' . $quote->incoterm : '')
+                                                ? \App\Helpers\CommonHelper::amount($quote->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : '')
                                                 : '-')
                                         !!}</td>
                                         <td><a href="{{ route('vendor-quotes.show',$quote) }}">View</a></td>

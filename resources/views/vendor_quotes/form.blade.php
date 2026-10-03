@@ -3,15 +3,15 @@
 @section('page-title', $quote->exists ? 'Edit Vendor Quote' : 'Add Vendor Quote')
 
 @section('content')
-<style>
-    
-</style>
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/vendors.css') }}">
+@endpush
 @php($isEdit = $quote->exists)
 @php($productMedia = $quote->product?->primaryMedia())
 @php($quoteImage = $quote->product_image_path ?: ($productMedia?->file_path ?: $quote->lead?->product_image_path))
 @php($prices = old('prices') ?? $quote->prices->map(function($price){ return $price->only(['quantity','unit','finish_type','printing_type','vendor_unit_price','landing_cost_inr','selling_price_inr','moq','remarks']); })->toArray())
 @if(empty($prices)) @php($prices=[['quantity'=>$quote->quantity,'unit'=>$quote->unit ?: 'pcs','finish_type'=>'','printing_type'=>'','vendor_unit_price'=>$quote->vendor_unit_price,'landing_cost_inr'=>$quote->landing_cost_inr,'selling_price_inr'=>$quote->selling_price_inr,'moq'=>$quote->moq,'remarks'=>'']]) @endif
-    <div class="master-form">
+    <div class="master-form vendor-quote-form">
         <div class="master-card master-header">
             <h1>{{ $isEdit ? 'Edit Vendor Quote' : 'Add Vendor Quote' }}</h1>
             <div class="master-breadcrumb"><a href="{{ url('/') }}">Home</a><span>•</span><a
@@ -135,6 +135,7 @@
             <div class="master-section">
                 <h3 class="master-section-title">Optional Quantity Price Breaks</h3>
                 <div class="master-items">
+                    <div class="master-table-wrap">
                     <table class="master-table" id="quotePricesTable">
                         <thead>
                             <tr>
@@ -169,12 +170,13 @@
                                             value="{{ $price['selling_price_inr'] ?? '' }}"></td>
                                     <td><input class="master-input" name="prices[{{ $i }}][remarks]"
                                             value="{{ $price['remarks'] ?? '' }}"></td>
-                                    <td><button type="button" class="master-remove"
+                                    <td><button type="button" class="master-remove-row"
                                             onclick="removeQuotePriceRow(this)">×</button></td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 </div><button type="button" class="master-btn master-btn-light" id="addQuotePriceRow"
                     style="margin-top:12px;">+ Add Price Break</button>
             </div>
@@ -183,11 +185,10 @@
                 <div class="master-detail-grid">
                     <div class="master-field"><label class="master-label">Sample Available</label>
                             
-                    <div class="master-chip-group">
+                    <div class="master-choice-group">
 
-                        <label class="master-chip green-chip">
-                            <input
-                                type="radio"
+                        <label class="master-choice-chip green-chip">
+                            <input type="radio"
                                 name="sample_available"
                                 value="1"
                                 {{ old('sample_available', $quote->sample_available) == 1 ? 'checked' : '' }}
@@ -199,9 +200,8 @@
                             </span>
                         </label>
                     
-                        <label class="master-chip red-chip">
-                            <input
-                                type="radio"
+                        <label class="master-choice-chip red-chip">
+                            <input type="radio"
                                 name="sample_available"
                                 value="0"
                                 {{ old('sample_available', $quote->sample_available) == 0 ? 'checked' : '' }}
@@ -217,11 +217,10 @@
                             
                     <div class="master-field"><label class="master-label">Ready Stock Available</label>
                             
-                    <div class="master-chip-group">
+                    <div class="master-choice-group">
 
-                        <label class="master-chip green-chip">
-                            <input
-                                type="radio"
+                        <label class="master-choice-chip green-chip">
+                            <input type="radio"
                                 name="ready_stock_available"
                                 value="1"
                                 {{ old('ready_stock_available', $quote->ready_stock_available) == 1 ? 'checked' : '' }}
@@ -233,9 +232,8 @@
                             </span>
                         </label>
                     
-                        <label class="master-chip red-chip">
-                            <input
-                                type="radio"
+                        <label class="master-choice-chip red-chip">
+                            <input type="radio"
                                 name="ready_stock_available"
                                 value="0"
                                 {{ old('ready_stock_available', $quote->ready_stock_available) == 0 ? 'checked' : '' }}
@@ -280,19 +278,10 @@
             <td><input class="master-input" type="number" step="0.01" name="prices[__INDEX__][landing_cost_inr]"></td>
             <td><input class="master-input" type="number" step="0.01" name="prices[__INDEX__][selling_price_inr]"></td>
             <td><input class="master-input" name="prices[__INDEX__][remarks]"></td>
-            <td><button type="button" class="master-remove" onclick="removeQuotePriceRow(this)">×</button></td>
+            <td><button type="button" class="master-remove-row" onclick="removeQuotePriceRow(this)">×</button></td>
         </tr>
     </template>
-    <script>
-        let quotePriceIndex = {{ count($prices) }};
-        document.getElementById('addQuotePriceRow')?.addEventListener('click', function() {
-            document.querySelector('#quotePricesTable tbody').insertAdjacentHTML('beforeend', document
-                .getElementById('quotePriceRowTemplate').innerHTML.replaceAll('__INDEX__', quotePriceIndex++));
-        });
-
-        function removeQuotePriceRow(btn) {
-            const tbody = document.querySelector('#quotePricesTable tbody');
-            if (tbody.children.length > 1) btn.closest('tr').remove();
-        }
-    </script>
+@push('scripts')
+    <script src="{{ asset('assets/js/vendors.js') }}"></script>
+@endpush
 @endsection

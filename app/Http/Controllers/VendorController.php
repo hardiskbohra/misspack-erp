@@ -7,6 +7,7 @@ use App\Models\VendorAttachment;
 use App\Models\VendorComment;
 use App\Models\VendorPaymentAttachment;
 use App\Models\VendorPaymentEntry;
+use App\Services\VendorPaymentCashflowSync;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class VendorController extends Controller
@@ -280,27 +282,26 @@ class VendorController extends Controller
             'attachments.*' => ['nullable', 'file', 'max:20480'],
         ]);
 
+        $syncCashflow = $request->boolean('also_create_cashflow');
+
         $data['vendor_id'] = $vendor->id;
         $data['created_by'] = Auth::id();
         $data['amount_in_inr'] = $this->normalizeInrAmount($data);
         unset($data['attachments'], $data['also_create_cashflow']);
 
-        $entry = DB::transaction(function () use ($request, $data, $vendor) {
+        $this->assertCashflowMirrorPossible($data, $syncCashflow);
+
+        $entry = DB::transaction(function () use ($request, $data, $vendor, $syncCashflow) {
             $entry = VendorPaymentEntry::create($data);
 
-            if ($request->boolean('also_create_cashflow')) {
-                $cashflowId = $this->createCashflowFromVendorPayment($entry, $vendor);
-                if ($cashflowId) {
-                    $entry->update(['cashflow_entry_id' => $cashflowId]);
-                }
-            }
+            $this->cashflowSync()->sync($entry, $syncCashflow);
 
             $this->storeVendorPaymentAttachments($request, $entry);
 
             return $entry;
         });
 
-        return back()->with('success', 'Vendor payment/statement entry added successfully.');
+        return back()->with('success', $this->paymentSavedMessage($entry, 'added'));
     }
     
     public function updatePayment(Request $request, Vendor $vendor, VendorPaymentEntry $entry): RedirectResponse {
@@ -329,33 +330,47 @@ class VendorController extends Controller
             'attachments.*' => ['nullable','file','max:20480'],
         ]);
     
+        $syncCashflow = $request->boolean('also_create_cashflow');
+
         $data['amount_in_inr'] = $this->normalizeInrAmount($data);
     
         // These are not columns in vendor_payment_entries
         unset($data['attachments'],$data['also_create_cashflow']);
-    
-        DB::transaction(function () use ($request,$data,$vendor,$entry) {
+
+        $this->assertCashflowMirrorPossible($data, $syncCashflow);
+
+        DB::transaction(function () use ($request,$data,$vendor,$entry,$syncCashflow) {
             $entry->update($data);
+            $this->cashflowSync()->sync($entry, $syncCashflow);
             $this->storeVendorPaymentAttachments($request,$entry);
         });
     
-        return back()->with(
-            'success',
-            'Vendor payment/statement entry updated successfully.'
-        );
+        return back()->with('success', $this->paymentSavedMessage($entry, 'updated'));
     }
 
     public function destroyPayment(VendorPaymentEntry $entry): RedirectResponse
     {
-        foreach ($entry->attachments as $attachment) {
-            if ($attachment->file_path) {
-                Storage::disk('public')->delete($attachment->file_path);
+        $hadCashflow = (bool) $entry->cashflow_entry_id;
+
+        DB::transaction(function () use ($entry) {
+            // Remove the INR mirror too — one entry, both ledgers.
+            $this->cashflowSync()->remove($entry);
+
+            foreach ($entry->attachments as $attachment) {
+                if ($attachment->file_path) {
+                    Storage::disk('public')->delete($attachment->file_path);
+                }
             }
-        }
 
-        $entry->delete();
+            $entry->delete();
+        });
 
-        return back()->with('success', 'Vendor payment entry deleted successfully.');
+        return back()->with(
+            'success',
+            $hadCashflow
+                ? 'Vendor payment entry and its linked INR cashflow entry were deleted.'
+                : 'Vendor payment entry deleted successfully.'
+        );
     }
 
     public function destroyPaymentAttachment(VendorPaymentAttachment $attachment): RedirectResponse
@@ -367,6 +382,56 @@ class VendorController extends Controller
         $attachment->delete();
 
         return back()->with('success', 'Attachment deleted successfully.');
+    }
+
+    private function cashflowSync(): VendorPaymentCashflowSync
+    {
+        return app(VendorPaymentCashflowSync::class);
+    }
+
+    /**
+     * A vendor payment entry that should be mirrored into INR cashflow needs
+     * an account to debit and an INR value — without them the mirror cannot
+     * exist, so the user is told here instead of silently losing the entry
+     * in the cashflow module.
+     */
+    private function assertCashflowMirrorPossible(array $data, bool $requested): void
+    {
+        if (! $requested || ($data['transaction_type'] ?? 'credit') !== 'debit') {
+            return;
+        }
+
+        $sync = $this->cashflowSync();
+        if (! $sync->available()) {
+            return; // cashflow module not installed/migrated — nothing to mirror
+        }
+
+        $errors = [];
+
+        if (empty($data['paid_account_id'])) {
+            $errors['paid_account_id'] = 'Select the paid account so the INR cashflow entry can be created.';
+        }
+
+        if ((float) ($data['amount_in_inr'] ?? 0) <= 0) {
+            $errors['amount_in_inr'] = 'Enter the exchange rate (or the INR amount) so the cashflow entry can be created.';
+        }
+
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
+    private function paymentSavedMessage(VendorPaymentEntry $entry, string $verb): string
+    {
+        if ($entry->cashflow_entry_id) {
+            return 'Vendor payment entry '.$verb.' and INR cashflow entry #'.$entry->cashflow_entry_id.' kept in sync.';
+        }
+
+        if ($entry->transaction_type === 'debit' && $entry->status !== 'cancelled') {
+            return 'Vendor payment entry '.$verb.' (not mirrored to cashflow).';
+        }
+
+        return 'Vendor payment/statement entry '.$verb.' successfully.';
     }
 
     private function normalizeInrAmount(array $data): float
@@ -408,44 +473,6 @@ class VendorController extends Controller
         }
     }
 
-    private function createCashflowFromVendorPayment(VendorPaymentEntry $entry, Vendor $vendor): ?int
-    {
-        if (! class_exists(\App\Models\CashflowEntry::class) || ! Schema::hasTable('cashflow_entries') || ! $entry->paid_account_id) {
-            return null;
-        }
-
-        $entryClass = \App\Models\CashflowEntry::class;
-        $cashflow = new $entryClass;
-        $cashflow->entry_date = $entry->transaction_date;
-        $cashflow->particular = $entry->particular;
-        $cashflow->invoice_bill_number = $entry->invoice_number;
-        $cashflow->bank_reference_number = $entry->bank_reference_number;
-        $cashflow->transaction_type = $entry->transaction_type === 'debit' ? 'debit' : 'credit';
-        $cashflow->credit_amount = $entry->transaction_type === 'credit' ? $entry->amount_in_inr : 0;
-        $cashflow->debit_amount = $entry->transaction_type === 'debit' ? $entry->amount_in_inr : 0;
-        $cashflow->balance = null;
-        $cashflow->currency = 'INR';
-        $cashflow->account_id = $entry->paid_account_id;
-        $cashflow->category_id = null;
-        $cashflow->accounting_status = in_array($entry->status, ['paid', 'reconciled'], true) ? 'booked' : 'pending';
-        $cashflow->payment_mode = $entry->payment_mode;
-        $cashflow->client_id = null;
-        $cashflow->vendor_id = $vendor->id;
-        $cashflow->expense_head = $entry->entry_category;
-        $cashflow->related_party_type = 'vendor';
-        $cashflow->related_party_name = $vendor->vendor_name;
-        $cashflow->notes = trim(($entry->remarks ?: '').' Vendor currency: '.$entry->foreign_currency.' '.number_format((float) $entry->foreign_amount, 4));
-        $cashflow->created_by = Auth::id();
-
-        if (Schema::hasColumn('cashflow_entries', 'project_id')) {
-            $cashflow->project_id = $entry->project_id;
-        }
-
-        $cashflow->save();
-
-        return $cashflow->id;
-    }
-
     private function dashboardData(Vendor $vendor): array
     {
         $projectProducts = $this->vendorProjectProducts($vendor);
@@ -457,6 +484,8 @@ class VendorController extends Controller
         $cashflowAccounts = $this->cashflowAccounts();
         $projectsForPayment = $this->projectsForVendorPayment($vendor);
         $attachmentOptions = class_exists(VendorAttachment::class) ? VendorAttachment::categoryOptions() : [];
+        $commentsAvailable = Schema::hasTable('vendor_comments');
+        $attachmentsAvailable = Schema::hasTable('vendor_attachments');
 
         $projectValue = (float) $projectProducts->sum('total_amount');
         $quoteValue = (float) $vendorQuotes->sum(function ($quote) {
@@ -543,7 +572,9 @@ class VendorController extends Controller
             'paymentOptions',
             'attachmentOptions',
             'summary',
-            'routes'
+            'routes',
+            'commentsAvailable',
+            'attachmentsAvailable'
         );
     }
 
@@ -613,7 +644,10 @@ class VendorController extends Controller
             return collect();
         }
 
-        $relations = ['attachments', 'creator'];
+        $relations = ['creator'];
+        if (Schema::hasTable('vendor_payment_attachments')) {
+            $relations[] = 'attachments';
+        }
         if (class_exists(\App\Models\Project::class) && Schema::hasTable('projects')) {
             $relations[] = 'project';
         }

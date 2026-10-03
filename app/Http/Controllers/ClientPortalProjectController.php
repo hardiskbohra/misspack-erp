@@ -47,14 +47,27 @@ class ClientPortalProjectController extends ClientPortalBaseController
     public function show(Request $request, int $project): View
     {
         $project = $this->findProjectForClient($request, $project);
-        $project->load([
+
+        $load = [
             'products',
             'publicTrackingUpdates.product',
             'publicAttachments.product',
             'publicComments.user',
             'publicComments.product',
             'publicPayments',
-        ]);
+        ];
+
+        if (class_exists(\App\Models\Shipment::class)
+            && Schema::hasTable('shipments')
+            && Schema::hasColumn('shipments', 'project_id')) {
+            $load[] = 'shipments';
+        }
+
+        $project->load($load);
+
+        if (! $project->relationLoaded('shipments')) {
+            $project->setRelation('shipments', collect());
+        }
 
         $portalComments = \App\Models\ClientPortalComment::where('client_id', $this->client($request)->id)
             ->where('related_type', 'project')

@@ -1,0 +1,175 @@
+/* =========================================================
+   MASTER-FLAT — plain card surfaces
+   =========================================================
+   Loaded after master-index / master-show / master-form, so it
+   can neutralise the tinted washes those sheets apply to panels
+   (.master-stat.blue and friends) without touching module CSS.
+
+   Why this exists
+   ---------------
+   A panel should read as the theme's own surface — solid white in
+   the light theme, the deep panel colour in the dark theme — and
+   the colour should live in the small pieces: icon badges, chips,
+   status pills, ETA chips. That way one card style is correct in
+   both themes and no module needs a per-theme override.
+
+   Usage
+   -----
+     <div class="master-card master-card--flat">      panel
+     <div class="master-stat master-stat--flat blue">  standalone stat
+   ========================================================= */
+
+.master-card--flat {
+    background: var(--mc-card);
+}
+
+/* Panels nested inside a flat card inherit the same surface. */
+.master-card--flat .master-section,
+.master-card--flat .master-info,
+.master-card--flat .master-history-row,
+.master-card--flat .master-attachment-card,
+.master-card--flat .master-product-card {
+    background: var(--mc-card);
+}
+
+/* A section that sits inside another card keeps a hairline so the
+   two surfaces are still readable as separate blocks. */
+.master-card--flat .master-section {
+    border: 1px solid var(--mc-border);
+}
+
+/* --- last-resort fallbacks -------------------------------------------
+   The theme tokens are declared on :root, but if a page ever renders without
+   the theme attribute (or with an unexpected value) an unresolved var() makes
+   the surface transparent — the card and the fields then show the page behind
+   them, which reads as "the card and the fields are the same colour". These
+   two rules cost nothing when the tokens resolve and keep the light look
+   otherwise; dark mode still wins because the token is defined there. */
+
+.master-card,
+.master-section {
+    background: var(--mc-card, #ffffff);
+}
+
+.master-input,
+.master-select,
+.master-textarea,
+.master-search .master-input {
+    background: var(--mc-card, #ffffff);
+}
+
+/* --- list tables -----------------------------------------------------
+   The header band used to be painted with the soft surface (a blue-grey
+   #f8fbff in the light theme), which made the table look tinted next to a
+   white card. The band now uses --mc-table-head: white in the light theme,
+   the soft panel in dark (so the header still separates from the rows).
+   Every list table in the app gets this, not just the shipment screen. */
+
+.master-table th {
+    background: var(--mc-table-head, var(--mc-card-soft));
+}
+
+/* Controls inside a flat card sit on the card, not on a soft fill. */
+.master-card--flat .master-input,
+.master-card--flat .master-select,
+.master-card--flat .master-textarea,
+.master-card--flat .master-search .master-input {
+    background: var(--mc-card);
+}
+
+/* The filter row and the table wrapper are part of the card. Rows are left
+   transparent on purpose, so a module can still colour an individual row
+   (§ closed shipments, selected rows) without fighting this sheet. */
+.master-card--flat .master-filter-row,
+.master-card--flat .master-table-wrap {
+    background: var(--mc-card);
+}
+
+/* --- stat cards ------------------------------------------------------ */
+
+.master-card--flat .master-stat,
+.master-stat--flat {
+    background: var(--mc-card);
+    border: 1px solid var(--mc-border);
+    box-shadow: var(--mc-shadow);
+}
+
+/* The colour that used to wash the whole panel moves onto the icon
+   badge — semantic colours stay, the panel stays theme-neutral. */
+.master-stat--flat .icon,
+.master-card--flat .master-stat .icon {
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-2);
+}
+
+.master-card--flat .master-stat.blue,
+.master-stat--flat.blue {
+    border-color: rgba(21, 159, 247, .45);
+}
+
+.master-card--flat .master-stat.purple,
+.master-stat--flat.purple {
+    border-color: rgba(139, 92, 246, .45);
+}
+
+.master-card--flat .master-stat.teal,
+.master-stat--flat.teal {
+    border-color: rgba(18, 203, 183, .45);
+}
+
+.master-card--flat .master-stat.orange,
+.master-stat--flat.orange {
+    border-color: rgba(245, 158, 11, .45);
+}
+
+.master-card--flat .master-stat.green,
+.master-stat--flat.green {
+    border-color: rgba(16, 185, 129, .45);
+}
+
+.master-card--flat .master-stat.blue .icon,
+.master-stat--flat.blue .icon {
+    background: rgba(21, 159, 247, .14);
+    border-color: rgba(21, 159, 247, .35);
+    color: var(--master-info);
+}
+
+.master-card--flat .master-stat.purple .icon,
+.master-stat--flat.purple .icon {
+    background: rgba(139, 92, 246, .14);
+    border-color: rgba(139, 92, 246, .35);
+    color: var(--master-purple);
+}
+
+.master-card--flat .master-stat.teal .icon,
+.master-stat--flat.teal .icon {
+    background: rgba(18, 203, 183, .14);
+    border-color: rgba(18, 203, 183, .35);
+    color: var(--master-teal);
+}
+
+.master-card--flat .master-stat.orange .icon,
+.master-stat--flat.orange .icon {
+    background: rgba(245, 158, 11, .16);
+    border-color: rgba(245, 158, 11, .38);
+    color: var(--master-orange);
+}
+
+.master-card--flat .master-stat.green .icon,
+.master-stat--flat.green .icon {
+    background: rgba(16, 185, 129, .14);
+    border-color: rgba(16, 185, 129, .35);
+    color: var(--master-green);
+}
+
+/* Buttons, status pills, label chips and tooltips keep their own fill: the
+   flat class only neutralises panel surfaces (.master-card / .master-section /
+   .master-info), never the colour of an interactive element. Do NOT reset
+   their backgrounds here — `background-color: initial` inside a flat card left
+   every button transparent, so a primary button (white text) rendered as an
+   empty white pill with only its pink glow left behind. */
+
+.master-card--flat .master-stat-value {
+    color: var(--mc-text);
+}

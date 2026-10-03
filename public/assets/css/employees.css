@@ -1,0 +1,628 @@
+/* ==========================================================================
+   EMPLOYEES.CSS — the employee side of the user module
+   --------------------------------------------------------------------------
+   Two screens share this sheet and they must look like the same product:
+   the office's record page for one person (resources/views/users/show.blade.php)
+   and that person's own workspace (resources/views/employees/*).
+
+   It carries only what master-* does not: the identity strip at the top of a
+   record, the pills that say a document is checked or still required, the
+   month-by-month pay list, and the small row-action cluster those tables use.
+   Cards, grids, tables, buttons, fields and the page rhythm all come from
+   master-index / master-list / master-detail / master-form — a module does not
+   restate them (tasks 40 and 43 of this project).
+
+   EVERY colour is a token, and every token has a dark value, because this
+   sheet is read by an employee at night on a phone as often as by the office
+   at a desk. Literal colours live in the two token blocks below and nowhere
+   else, which is what keeps light and dark from drifting apart.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   TOKENS — light
+   -------------------------------------------------------------------------- */
+:root {
+    /* pills: background + text, one pair per meaning */
+    --emp-ok-bg: rgba(16, 185, 129, .14);
+    --emp-ok-fg: #047857;
+    --emp-ok-line: rgba(16, 185, 129, .34);
+    --emp-info-bg: rgba(79, 131, 241, .13);
+    --emp-info-fg: #2f5fd0;
+    --emp-info-line: rgba(79, 131, 241, .32);
+    --emp-warn-bg: rgba(245, 158, 11, .16);
+    --emp-warn-fg: #b45309;
+    --emp-warn-line: rgba(245, 158, 11, .34);
+    --emp-off-bg: #f1f5fb;
+    --emp-off-fg: #687386;
+    --emp-off-line: #dfe7f3;
+    --emp-red: #ef4770;
+
+    /* the identity strip and the bars behind the month list */
+    --emp-strip: linear-gradient(135deg, rgba(79, 131, 241, .10), rgba(99, 102, 241, .04));
+    --emp-bar: #e7edf9;
+    --emp-bar-fill: linear-gradient(90deg, #4f83f1, #6366f1);
+    --emp-avatar-bg: linear-gradient(135deg, #4f83f1, #6366f1);
+    --emp-avatar-fg: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   TOKENS — dark
+   -------------------------------------------------------------------------- */
+:root[data-theme="dark"] {
+    --emp-ok-bg: rgba(56, 217, 169, .16);
+    --emp-ok-fg: #4ade9f;
+    --emp-ok-line: rgba(56, 217, 169, .34);
+    --emp-info-bg: rgba(96, 145, 255, .18);
+    --emp-info-fg: #8fb4ff;
+    --emp-info-line: rgba(96, 145, 255, .36);
+    --emp-warn-bg: rgba(246, 173, 85, .18);
+    --emp-warn-fg: #f6c177;
+    --emp-warn-line: rgba(246, 173, 85, .36);
+    --emp-off-bg: #1d2c4d;
+    --emp-off-fg: #aab6c9;
+    --emp-off-line: #2a3854;
+    --emp-red: #ff6f8e;
+
+    --emp-strip: linear-gradient(135deg, rgba(96, 145, 255, .16), rgba(129, 140, 248, .07));
+    --emp-bar: #22304e;
+    --emp-bar-fill: linear-gradient(90deg, #5c8ff8, #818cf8);
+    --emp-avatar-bg: linear-gradient(135deg, #3f6fd8, #6366f1);
+    --emp-avatar-fg: #f2f6ff;
+}
+
+/* --------------------------------------------------------------------------
+   THE MODULE SURFACE
+   -------------------------------------------------------------------------- */
+.emp,
+.emp * {
+    box-sizing: border-box;
+}
+
+.emp {
+    color: var(--mc-text);
+    font-size: 14px;
+    min-width: 0;
+}
+
+/* `.full` is the shared grid marker; a field that needs the whole row and has
+   no class of its own still gets one, because a truncated address field is a
+   visible bug and an invisible cause. */
+.emp .master-field.full {
+    grid-column: 1 / -1;
+}
+
+/* A value nobody has filled in yet: muted, and never a blank cell that reads
+   like a rendering fault. */
+.emp .is-blank {
+    color: var(--mc-text-3);
+    font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------
+   PILLS
+   One shape, four meanings. Rounded-full, low-saturation background, a hairline
+   of the same hue: legible on white and on the dark card without a second
+   stylesheet.
+   -------------------------------------------------------------------------- */
+.emp-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 10px;
+    border: 1px solid var(--emp-off-line);
+    border-radius: 999px;
+    background: var(--emp-off-bg);
+    color: var(--emp-off-fg);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .01em;
+    line-height: 1.7;
+    white-space: nowrap;
+}
+
+.emp-pill.is-ok {
+    background: var(--emp-ok-bg);
+    border-color: var(--emp-ok-line);
+    color: var(--emp-ok-fg);
+}
+
+.emp-pill.is-info {
+    background: var(--emp-info-bg);
+    border-color: var(--emp-info-line);
+    color: var(--emp-info-fg);
+}
+
+.emp-pill.is-warn {
+    background: var(--emp-warn-bg);
+    border-color: var(--emp-warn-line);
+    color: var(--emp-warn-fg);
+}
+
+.emp-pill.is-off {
+    background: var(--emp-off-bg);
+    border-color: var(--emp-off-line);
+    color: var(--emp-off-fg);
+}
+
+/* --------------------------------------------------------------------------
+   IDENTITY STRIP — the record page's header
+   -------------------------------------------------------------------------- */
+.emp-record-head {
+    padding: 18px 20px;
+    background-image: var(--emp-strip);
+}
+
+.emp-record-who {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+}
+
+.emp-record-who h1 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--mc-text);
+    line-height: 1.25;
+}
+
+.emp-avatar {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: var(--emp-avatar-bg);
+    color: var(--emp-avatar-fg);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    box-shadow: 0 6px 16px rgba(37, 66, 128, .18);
+}
+
+.emp-record-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 10px 0 0;
+}
+
+/* The one-line summary under the name on the record's identity strip. */
+.emp-record-line {
+    margin: 4px 0 0;
+}
+
+/* --------------------------------------------------------------------------
+   WORK ASSIGNED
+   A compact list rather than a table: the record's own tabs already have four
+   tables between them, and a fifth would read as the important one.
+   -------------------------------------------------------------------------- */
+.user-task-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.user-task {
+    display: grid;
+    grid-template-columns: 8px minmax(0, 1fr) minmax(0, auto);
+    align-items: baseline;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--mc-border);
+}
+
+.user-task:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.user-task-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--emp-info-fg);
+    transform: translateY(-2px);
+}
+
+.user-task.is-done .user-task-dot {
+    background: var(--emp-ok-fg);
+}
+
+.user-task-title {
+    font-weight: 600;
+    color: var(--mc-text);
+    line-height: 1.4;
+}
+
+.user-task.is-done .user-task-title {
+    color: var(--mc-text-3);
+    text-decoration: line-through;
+}
+
+.user-task .master-sub {
+    font-size: 11.5px;
+    white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   A NOTE THE PAGE WANTS READ — profile gaps, mostly
+   -------------------------------------------------------------------------- */
+.emp-note {
+    padding: 14px 18px;
+    border-left: 3px solid var(--emp-warn-line);
+    background: var(--emp-warn-bg);
+    color: var(--mc-text);
+    line-height: 1.65;
+}
+
+.emp-note strong {
+    color: var(--emp-warn-fg);
+}
+
+.emp-hello {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--mc-text);
+}
+
+/* --------------------------------------------------------------------------
+   WHAT NEEDS YOUR ATTENTION
+   -------------------------------------------------------------------------- */
+.emp-todo {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.emp-todo li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--mc-border);
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--mc-text);
+}
+
+.emp-todo li:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.emp-todo li > span:nth-child(2) {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.emp-todo-dot {
+    flex: 0 0 auto;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--emp-red);
+}
+
+.emp-todo-dot.is-ok {
+    background: var(--emp-ok-fg);
+}
+
+.emp-todo-dot.is-info {
+    background: var(--emp-info-fg);
+}
+
+/* --------------------------------------------------------------------------
+   A CARD'S FOOT — actions that belong to the card above them
+   -------------------------------------------------------------------------- */
+.emp-card-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--mc-border);
+}
+
+/* A card that opts out of .master-section (the salary page's month panel sits
+   under a .master-list-bar, which owns its own inset) still owes its content
+   the page's rhythm. */
+.emp-months-wrap {
+    padding: 6px 16px 18px;
+}
+
+/* --------------------------------------------------------------------------
+   PAID, MONTH BY MONTH
+   A row per month, newest first, with the month's share of the best month drawn
+   behind the amount. Twelve rows read faster than twelve boxes, and a gap is
+   visible as a gap.
+   -------------------------------------------------------------------------- */
+.emp-months {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.emp-month {
+    display: grid;
+    grid-template-columns: 74px minmax(60px, 1fr) minmax(96px, auto) minmax(0, auto);
+    align-items: center;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--mc-border);
+}
+
+.emp-month:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.emp-month-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--mc-text-2);
+    letter-spacing: .01em;
+    white-space: nowrap;
+}
+
+.emp-month-bar {
+    display: block;
+    position: relative;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--emp-bar);
+    overflow: hidden;
+}
+
+.emp-month-bar > i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--emp-bar-fill);
+    transition: width .2s ease;
+}
+
+.emp-month-amount {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--mc-text);
+    white-space: nowrap;
+}
+
+.emp-month:not(.has-pay) .emp-month-amount {
+    color: var(--mc-text-3);
+}
+
+/* Money that came back is a movement too, and it reads in the module's own red
+   — the same colour every other figure that leaves a person's pay wears. */
+.emp-month.is-back .emp-month-amount {
+    color: var(--emp-red);
+}
+
+.emp-month.is-back .emp-month-bar > i {
+    background: var(--emp-red);
+}
+
+.emp-month-meta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 72px;
+    font-size: 11.5px;
+    color: var(--mc-text-3);
+    white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   THE DOCUMENT FILE
+   -------------------------------------------------------------------------- */
+.emp-checklist {
+    min-width: 0;
+}
+
+.emp-checklist-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 14px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--mc-border);
+}
+
+.emp-checklist-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--mc-text);
+}
+
+/* This table is six short columns, not a ledger: the shared 1280px floor would
+   make every employee scroll sideways on a laptop for no reason. */
+.emp-doc-table {
+    min-width: 860px;
+}
+
+.emp-doc-table tr.is-missing td {
+    background: var(--emp-warn-bg);
+}
+
+.emp-doc-table td strong {
+    display: block;
+    font-weight: 600;
+    color: var(--mc-text);
+}
+
+.emp-doc-table td .master-sub {
+    display: block;
+    margin-top: 2px;
+}
+
+.emp-file {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.emp-file a {
+    color: var(--emp-info-fg);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.emp-file a:hover {
+    text-decoration: underline;
+}
+
+.emp-tick {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: var(--emp-ok-bg);
+    border: 1px solid var(--emp-ok-line);
+    color: var(--emp-ok-fg);
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* --------------------------------------------------------------------------
+   ROW ACTIONS
+   Small forms sitting inside a cell: the cluster keeps them on one line and
+   stops a stray form from stretching the column.
+   -------------------------------------------------------------------------- */
+.emp-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.emp-row-actions form {
+    margin: 0;
+    display: inline-flex;
+}
+
+.emp-row-actions .master-sub {
+    font-size: 11.5px;
+}
+
+/* --------------------------------------------------------------------------
+   UPLOADING
+   One row of fields, the file picker last and full width — the same shape on
+   the employee's page and on the office's. Task 48's lesson: three inputs in a
+   row, and the picker that matches the fields beside it.
+   -------------------------------------------------------------------------- */
+.emp-upload-form {
+    width: 100%;
+}
+
+.emp-upload-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px 16px;
+    align-items: start;
+}
+
+.emp-upload-fields .master-field.full {
+    grid-column: 1 / -1;
+}
+
+/* The picker is a field like any other: same height, same border, same radius,
+   same focus ring — a native file input left alone is the one control that
+   never matches the theme (task 22). */
+.emp-file-input {
+    padding: 7px 10px;
+    min-height: 42px;
+    cursor: pointer;
+    color: var(--mc-text-2);
+}
+
+.emp-file-input::file-selector-button {
+    margin-right: 10px;
+    padding: 6px 12px;
+    border: 1px solid var(--mc-border);
+    border-radius: 8px;
+    background: var(--mc-soft);
+    color: var(--mc-text);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+.emp-file-input:hover::file-selector-button {
+    background: var(--mc-hover);
+    border-color: var(--emp-info-line);
+}
+
+.emp-file-input:focus-visible,
+.emp-file-input::file-selector-button:focus-visible {
+    outline: 2px solid var(--emp-info-line);
+    outline-offset: 1px;
+}
+
+/* --------------------------------------------------------------------------
+   NARROW SCREENS
+   The month row cannot hold four columns on a phone: label and amount stay,
+   the bar gets its own line under them, the meta line disappears — it repeats
+   the pill the row above already shows.
+   -------------------------------------------------------------------------- */
+@media screen and (max-width: 767px) {
+    .emp-record-who {
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .emp-avatar {
+        width: 44px;
+        height: 44px;
+        font-size: 15px;
+    }
+
+    .emp-month {
+        grid-template-columns: 64px minmax(0, 1fr) auto;
+        gap: 10px;
+    }
+
+    .emp-month-bar {
+        grid-row: 2;
+        grid-column: 1 / -1;
+    }
+
+    .emp-month-meta {
+        display: none;
+    }
+
+    .emp-checklist-head {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .emp-upload-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .emp-doc-table {
+        min-width: 720px;
+    }
+}

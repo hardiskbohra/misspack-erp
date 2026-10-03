@@ -184,9 +184,16 @@ class ProjectController extends Controller
             $with[] = 'cashflowEntries';
         }
 
+        if ($this->shipmentModelAvailable()) {
+            $with[] = 'shipments';
+        }
+
         $project->load($with);
         if (! $project->relationLoaded('milestones')) {
             $project->setRelation('milestones', collect());
+        }
+        if (! $project->relationLoaded('shipments')) {
+            $project->setRelation('shipments', collect());
         }
 
         return view('projects.show', array_merge($this->sharedData(), ['project' => $project]));
@@ -498,5 +505,12 @@ class ProjectController extends Controller
     private function cashflowEntryModelAvailable(): bool
     {
         return class_exists(\App\Models\CashflowEntry::class) && Schema::hasTable('cashflow_entries');
+    }
+
+    private function shipmentModelAvailable(): bool
+    {
+        return class_exists(\App\Models\Shipment::class)
+            && Schema::hasTable('shipments')
+            && Schema::hasColumn('shipments', 'project_id');
     }
 }

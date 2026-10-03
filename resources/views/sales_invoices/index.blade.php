@@ -1,76 +1,578 @@
 @extends('layouts.app')
 
-@section('page-title', 'PI / Tax Invoices')
+@section('title', 'Invoices')
+@section('page-title', 'Invoices')
+
+{{-- The module's primary action lives in the header, so it stays reachable
+     however far the list scrolls — the same place the cashflow ledger keeps
+     its own. --}}
+@section('page-actions')
+    <a class="master-btn master-btn-primary" href="{{ route('sales-invoices.create', ['type' => 'tax']) }}">+ New Tax Invoice</a>
+    <a class="master-btn master-btn-soft" href="{{ route('sales-invoices.create', ['type' => 'proforma']) }}">New Proforma</a>
+    <a class="master-btn master-btn-ghost desktop-only" href="{{ route('sales-invoices.export', request()->query()) }}">Export CSV</a>
+@endsection
 
 @section('content')
-<div class="si-page" style="padding:0;">
-    <div class="si-hero">
-        <div>
-            <p class="si-eyebrow">Sales Billing</p>
-            <h1>Invoice Management</h1>
-            <p>Create invoices with multiple linked products, clients, projects and client portal visibility.</p>
+@push('styles')
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/sales-invoices.css') }}">
+@endpush
+
+@php
+    /* Which chips are lit, and what each one would show. The counts come from
+       the controller, asked of the same query the rows come from — a chip that
+       claims a number has to be showing it. */
+    $chipBase = collect(request()->except([
+        'invoice_type', 'status', 'payment', 'ageing', 'date_from', 'date_to', 'page', 'saved_view',
+    ]))->reject(fn ($value) => $value === null || $value === '' || $value === 'all');
+
+    $chipActive = [
+        'all' => $type === 'all' && $status === 'all' && $payment === 'all' && $ageing === 'all'
+            && blank($dateFrom) && blank($dateTo),
+        'proforma' => $type === 'proforma',
+        'tax' => $type === 'tax',
+        'draft' => $status === 'draft',
+    ];
+
+    /* The applied strip is built from the same list of dimensions that filtered
+       the query, so a filter that arrived by link — a saved view, a client
+       record — is always visible and always removable. */
+    $filtersActive = $appliedChips !== [];
+
+    /* Removing a chip drops the query keys it owns — one for a filter, both ends
+       for a period. The service says which, so the strip and the CSV's own
+       "Filtered by" line list the same filters in the same words. */
+    $chipUrl = function (array $keys) {
+        $keep = collect(request()->except(array_merge($keys, ['page', 'saved_view'])))
+            ->reject(fn ($value) => $value === null || $value === '' || $value === 'all');
+
+        return route('sales-invoices.index', $keep->all());
+    };
+@endphp
+
+<div class="si-index master-list">
+    {{-- The figures: what the filtered rows add up to, and the one number that
+         is deliberately not filtered (the drafts waiting to be sent). Every
+         figure is the model's money rule asked of the whole filtered set in one
+         aggregate — never a sum of what happens to be on this page. --}}
+    <div class="master-stats">
+        <div class="master-stat master-stat--flat blue tooltip-container">
+            <span class="icon">₹</span>
+            <div>
+                <p class="master-stat-title">Sales (filtered)</p>
+                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['sales']) }}</p>
+                <span class="tooltip-text">The tax invoices matching the filters, drafts included, cancellations aside. A proforma is never sales — it becomes this the moment a tax invoice is raised from it.</span>
+            </div>
         </div>
-        <div class="si-actions">
-            <a href="{{ route('sales-invoices.create', ['type' => 'proforma']) }}" class="si-btn si-btn-primary">New PI</a>
-            <a href="{{ route('sales-invoices.create', ['type' => 'tax']) }}" class="si-btn si-btn-light">New Tax Invoice</a>
+        <div class="master-stat master-stat--flat purple tooltip-container">
+            <span class="icon">↗</span>
+            <div>
+                <p class="master-stat-title">Potential revenue (filtered)</p>
+                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['potential']) }}</p>
+                <span class="tooltip-text">Proformas matching the filters that no tax invoice has been raised from yet — the money asked for, not the money sold. A converted proforma leaves this figure for Sales; it is never in both.</span>
+            </div>
+        </div>
+        <div class="master-stat master-stat--flat teal tooltip-container">
+            <span class="icon">↙</span>
+            <div>
+                <p class="master-stat-title">Received (filtered)</p>
+                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['received']) }}</p>
+                <span class="tooltip-text">Money in: each standing invoice's own opening figure plus every receipt filed against it in the cashflow ledger.</span>
+            </div>
+        </div>
+        <div class="master-stat master-stat--flat orange tooltip-container">
+            <span class="icon">=</span>
+            <div>
+                <p class="master-stat-title">Outstanding (filtered)</p>
+                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['outstanding']) }}</p>
+                <span class="tooltip-text">The Balance column, added up: what each standing document still owes, drafts included — the tax invoice a conversion creates starts as a draft with the advance already on it. Only a cancelled document is left out.</span>
+            </div>
+        </div>
+        <div class="master-stat master-stat--flat {{ $stats['overdue'] > 0 ? 'red' : 'purple' }} tooltip-container">
+            <span class="icon">!</span>
+            <div>
+                <p class="master-stat-title">Overdue (filtered)</p>
+                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['overdue']) }}</p>
+                <span class="tooltip-text">The part of that balance whose due date has passed, on documents that stand — a proforma that became a tax invoice is not late, and is not in this figure. This is the money to chase.</span>
+            </div>
+        </div>
+        <div class="master-stat master-stat--flat purple tooltip-container">
+            <span class="icon">✎</span>
+            <div>
+                <p class="master-stat-title">Drafts</p>
+                <p class="master-stat-value">{{ $stats['drafts'] }}</p>
+                <p class="master-sub">{{ \Illuminate\Support\Str::plural('invoice', $stats['drafts']) }} not sent yet</p>
+                <span class="tooltip-text">Across the module, not the filtered set — the chip that asks for drafts is the one that makes them the filtered set.</span>
+            </div>
         </div>
     </div>
 
-    <div class="si-stats">
-        <div class="si-stat"><span>Proforma</span><strong>{{ $stats['proforma'] }}</strong></div>
-        <div class="si-stat blue"><span>Tax</span><strong>{{ $stats['tax'] }}</strong></div>
-        <div class="si-stat purple"><span>Total</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($stats['sent']) }}</strong></div>
-        <div class="si-stat green"><span>Paid</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($stats['paid']) }}</strong></div>
-        <div class="si-stat orange"><span>Outstanding</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($stats['outstanding']) }}</strong></div>
-    </div>
+    <div class="master-card master-card--flat">
+        <div class="master-list-bar">
+            <div class="master-list-chips">
+                <a class="master-list-chip {{ $chipActive['all'] ? 'is-active' : '' }}"
+                    href="{{ route('sales-invoices.index', $chipBase->all()) }}">All invoices</a>
+                <a class="master-list-chip {{ $chipActive['proforma'] ? 'is-active' : '' }}"
+                    href="{{ route('sales-invoices.index', $chipBase->all() + ['invoice_type' => 'proforma']) }}">
+                    Proforma <span class="master-list-chip-count">{{ $chipCounts['proforma'] }}</span>
+                </a>
+                <a class="master-list-chip {{ $chipActive['tax'] ? 'is-active' : '' }}"
+                    href="{{ route('sales-invoices.index', $chipBase->all() + ['invoice_type' => 'tax']) }}">
+                    Tax <span class="master-list-chip-count">{{ $chipCounts['tax'] }}</span>
+                </a>
+                <a class="master-list-chip {{ $chipActive['draft'] ? 'is-active' : '' }}"
+                    href="{{ route('sales-invoices.index', $chipBase->all() + ['status' => 'draft']) }}">
+                    Drafts <span class="master-list-chip-count">{{ $chipCounts['draft'] }}</span>
+                </a>
+                {{-- Four chips, and nothing that repeats a filter the strip
+                     below already offers: the money questions (nothing
+                     received / partly paid / paid), how late it is, and who to
+                     chase are all in the filter row, where the ageing buckets
+                     read as the list they are. --}}
 
-    <div class="si-card si-filter-card">
-        <form method="GET" action="{{ route('sales-invoices.index') }}" class="si-filter-form">
-            <div class="si-field search"><label>Search</label><input name="search" value="{{ $search }}" placeholder="Search invoice, client, GSTIN, PO..."></div>
-            <div class="si-field"><label>Type</label><select name="type"><option value="all">All Types</option>@foreach($typeOptions as $key => $label)<option value="{{ $key }}" {{ $type === $key ? 'selected' : '' }}>{{ $label }}</option>@endforeach</select></div>
-            <div class="si-field"><label>Status</label><select name="status"><option value="all">All Status</option>@foreach($statusOptions as $key => $label)<option value="{{ $key }}" {{ $status === $key ? 'selected' : '' }}>{{ $label }}</option>@endforeach</select></div>
-            <div class="si-field"><label>Client</label><select name="client_id"><option value="all">All Clients</option>@foreach($clients as $client)<option value="{{ $client->id }}" {{ (string)$clientId === (string)$client->id ? 'selected' : '' }}>{{ $client->company_name }}</option>@endforeach</select></div>
-            <div class="si-field"><label>Project</label><select name="project_id"><option value="all">All Projects</option>@foreach($projects as $project)<option value="{{ $project->id }}" {{ (string)$projectId === (string)$project->id ? 'selected' : '' }}>{{ $project->project_number }} - {{ $project->name }}</option>@endforeach</select></div>
-            <div class="si-filter-actions"><button class="si-btn si-btn-primary" type="submit">Filter</button><a class="si-btn si-btn-soft" href="{{ route('sales-invoices.index') }}">Reset</a></div>
+                {{-- The periods read left to right, nearest first — the same four
+                     ranges every list gets from App\Helpers\DateRanges. --}}
+                @foreach ($dateRanges as $rangeKey => $range)
+                    <a class="master-list-chip {{ $activeRange === $rangeKey ? 'is-active' : '' }}"
+                        href="{{ route('sales-invoices.index', $chipBase->all() + ['date_from' => $range['from'], 'date_to' => $range['to']]) }}">
+                        {{ $dateRangeLabels[$rangeKey] }}
+                        <span class="master-list-chip-count">{{ $chipCounts[$rangeKey] ?? 0 }}</span>
+                    </a>
+                @endforeach
+            </div>
+
+            <div class="master-list-saved">
+                @foreach ($savedViews as $view)
+                    <span class="master-list-saved-chip">
+                        <a href="{{ route('sales-invoices.index', ['saved_view' => $view->id]) }}"
+                            title="{{ $view->is_shared ? 'Shared view' : 'Your view' }}">{{ $view->name }}</a>
+                        @if ((int) $view->user_id === (int) auth()->id())
+                            <form method="POST" action="{{ route('sales-invoices.saved-views.destroy', $view) }}">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" title="Remove saved view">&times;</button>
+                            </form>
+                        @endif
+                    </span>
+                @endforeach
+                <button type="button" class="master-btn master-btn-soft master-btn-sm" id="toggleSaveView">☆ Save this view</button>
+                <form method="POST" action="{{ route('sales-invoices.saved-views.store', request()->except(['page', 'saved_view'])) }}"
+                    class="master-list-save-view" id="saveViewForm" hidden>
+                    @csrf
+                    <input class="master-input" name="name" placeholder="View name" maxlength="60"
+                        aria-label="Saved view name" required>
+                    <label class="master-check"><input type="checkbox" name="is_shared" value="1"> Share</label>
+                    <button class="master-btn master-btn-primary master-btn-sm">Save</button>
+                </form>
+            </div>
+        </div>
+
+        <form method="GET" action="{{ route('sales-invoices.index') }}">
+            <div class="master-filter-row">
+                <div class="master-search">
+                    <span aria-hidden="true">⌕</span>
+                    <input class="master-input" type="text" name="search" value="{{ $search }}"
+                        placeholder="Search invoice, client, GSTIN, PO..." aria-label="Search invoices">
+                </div>
+                <select class="master-select" name="invoice_type" aria-label="Filter by type">
+                    <option value="all">All types</option>
+                    @foreach($typeOptions as $key => $label)
+                        <option value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <select class="master-select" name="status" aria-label="Filter by status">
+                    <option value="all">All statuses</option>
+                    @foreach($statusOptions as $key => $label)
+                        <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <select class="master-select" name="client_id" aria-label="Filter by client">
+                    <option value="all">All clients</option>
+                    @foreach($clients as $client)
+                        <option value="{{ $client->id }}" @selected((string) $clientId === (string) $client->id)>{{ $client->company_name }}</option>
+                    @endforeach
+                </select>
+                <select class="master-select" name="project_id" aria-label="Filter by project">
+                    <option value="all">All projects</option>
+                    @foreach($projects as $project)
+                        <option value="{{ $project->id }}" @selected((string) $projectId === (string) $project->id)>{{ $project->project_number }} - {{ $project->name }}</option>
+                    @endforeach
+                </select>
+                {{-- Two questions the office actually asks of a bill book: has the
+                     money come in, and how late is what has not. --}}
+                <select class="master-select" name="payment" aria-label="Filter by what has been received">
+                    <option value="all">Any payment state</option>
+                    @foreach($paymentLabels as $key => $label)
+                        <option value="{{ $key }}" @selected($payment === $key)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <select class="master-select" name="chase" aria-label="Filter by what to chase">
+                    <option value="all">Nothing to chase</option>
+                    @foreach($chaseLabels as $chaseKey => $chaseLabel)
+                        <option value="{{ $chaseKey }}" @selected($chase === $chaseKey)>{{ $chaseLabel }}</option>
+                    @endforeach
+                </select>
+                <select class="master-select" name="ageing" aria-label="Filter by how late">
+                    <option value="all">Any age</option>
+                    <option value="overdue" @selected($ageing === 'overdue')>Late (all of it)</option>
+                    @foreach($ageingBuckets as $key => $label)
+                        <option value="{{ $key }}" @selected($ageing === $key)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <input class="master-input desktop-only" type="date" name="date_from" value="{{ $dateFrom }}"
+                    aria-label="Invoiced from" title="Invoiced from">
+                <input class="master-input desktop-only" type="date" name="date_to" value="{{ $dateTo }}"
+                    aria-label="Invoiced to" title="Invoiced to">
+
+                <div class="master-list-filter-group">
+                    @if ($filtersActive)
+                        <a class="master-btn master-btn-soft" href="{{ route('sales-invoices.index') }}">Reset</a>
+                    @endif
+                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                </div>
+            </div>
+
+            @if ($filtersActive)
+                <div class="master-list-applied">
+                    <span class="master-list-applied-title">Filtered by</span>
+
+                    @foreach ($appliedChips as $chip)
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">{{ $chip['label'] }}</span>
+                            <span class="master-list-applied-value">{{ $chip['value'] }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl($chip['query']) }}"
+                                aria-label="Remove the {{ strtolower($chip['label']) }} filter"
+                                title="Remove the {{ strtolower($chip['label']) }} filter">&times;</a>
+                        </span>
+                    @endforeach
+
+                    <a class="master-list-applied-clear" href="{{ route('sales-invoices.index') }}">Clear all filters</a>
+                </div>
+            @endif
         </form>
     </div>
 
-    <div class="si-card">
+    <div class="master-card master-table-card master-card--flat">
+        <div class="master-list-toolbar">
+            <p class="master-list-hint"
+                title="Newest invoice date on top. The balance is the invoice's opening figure plus every receipt filed against it in the ledger.">
+                Newest first &middot; balance is what the ledger says
+            </p>
+
+            <div class="master-list-toolbar-actions">
+                {{-- One action, many rows. The checkboxes in the table point at
+                     this form by id (`form="bulkForm"`): a form wrapping the
+                     table would nest the row menus' own forms inside it, and a
+                     nested form never submits. --}}
+                <form id="bulkForm" method="POST" action="{{ route('sales-invoices.bulk') }}"
+                    class="master-list-bulk" data-bulk-bar hidden>
+                    @csrf
+                    <span class="master-list-bulk-count" data-bulk-count>0 selected</span>
+                    <select class="master-select" name="action" aria-label="Action for the selected invoices">
+                        @foreach ($bulkActions as $actionKey => $actionLabel)
+                            <option value="{{ $actionKey }}">{{ $actionLabel }}</option>
+                        @endforeach
+                    </select>
+                    <button class="master-btn master-btn-primary master-btn-sm" type="submit">Apply</button>
+                    <a class="master-btn master-btn-soft master-btn-sm" data-bulk-export
+                        href="{{ route('sales-invoices.export') }}">
+                        <i class="fas fa-file-csv" aria-hidden="true"></i> Export selected
+                    </a>
+                    <a class="master-btn master-btn-soft master-btn-sm" data-bulk-gst
+                        href="{{ route('sales-invoices.gstExport') }}">
+                        <i class="fas fa-percent" aria-hidden="true"></i> GST summary
+                    </a>
+                    <button class="master-btn master-btn-light master-btn-sm" type="button" data-bulk-clear>Clear</button>
+                </form>
+
+                <a class="master-btn master-btn-ghost master-btn-sm" href="{{ route('sales-invoices.export', request()->query()) }}">
+                    <i class="fas fa-file-csv" aria-hidden="true"></i> Export CSV
+                </a>
+                <a class="master-btn master-btn-ghost master-btn-sm desktop-only"
+                    href="{{ route('sales-invoices.gstExport', request()->query()) }}">
+                    <i class="fas fa-percent" aria-hidden="true"></i> GST summary
+                </a>
+
+                <div class="master-list-density desktop-only" role="group" aria-label="Row density">
+                    <button type="button" class="master-list-density-btn" data-density="comfortable"
+                        aria-pressed="true">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact"
+                        aria-pressed="false">Compact</button>
+                </div>
+            </div>
+        </div>
+
         <div class="master-table-wrap">
-            <table class="master-table">
-                <thead><tr><th>Invoice</th><th>Client</th><th>Project</th><th>Items</th><th>Total</th><th>Balance</th><th>Portal</th><th>Status</th><th>Action</th></tr></thead>
+            <table class="master-table si-table">
+                {{-- The ten columns, in the order the headings are written: the
+                     pick box, the invoice (number, chips, date), the client, the
+                     project, the three money columns, the due date, the state
+                     chips and the one action. The widths live in the sheet, next
+                     to the other rules about this table's geometry. --}}
+                <colgroup>
+                    <col class="si-col-pick">
+                    <col class="si-col-invoice">
+                    <col class="si-col-client">
+                    <col class="si-col-project">
+                    <col class="si-col-total">
+                    <col class="si-col-received">
+                    <col class="si-col-balance">
+                    <col class="si-col-due">
+                    <col class="si-col-state">
+                    <col class="si-col-action">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th scope="col" class="master-list-pick">
+                            <input type="checkbox" data-bulk-all aria-label="Select every invoice on this page">
+                        </th>
+                        <th scope="col">Invoice</th>
+                        <th scope="col">Client</th>
+                        <th scope="col">Project</th>
+                        <th scope="col" class="is-num">Total</th>
+                        <th scope="col" class="is-num">Received</th>
+                        <th scope="col" class="is-num">Balance</th>
+                        <th scope="col">Due</th>
+                        <th scope="col">State</th>
+                        <th scope="col">Action</th>
+                    </tr>
+                </thead>
                 <tbody>
                     @forelse($invoices as $invoice)
                         @php
-                            $paidAmount = $invoice->payments->sum('credit_amount') - $invoice->payments->sum('debit_amount');
-                            $balanceAmount = (float) $invoice->total_amount - $paidAmount;
+                            /* Every one of these is the model's rule, not the
+                               view's arithmetic: the list, the record page, the
+                               figures and the CSV cannot disagree. */
+                            $received = $invoice->receivedAmount();
+                            $balance = $invoice->balanceDue();
+                            $stateKey = $invoice->stateKey();
+                            $daysLate = $invoice->daysOverdue();
                         @endphp
-                        <tr>
-                            <td>
-                                <a href="{{ route('sales-invoices.show', $invoice) }}" title="Open" style="text-decoration:none;">
-                                    <strong class="master-id">{{ $invoice->invoice_number }}</strong><br><span style="color:grey;font-size:11px;">{{ $invoice->typeLabel() }}</span><br>{{ optional($invoice->invoice_date)->format('d M Y') ?: '-' }}
-                                </a>
+                        <tr data-href="{{ route('sales-invoices.show', $invoice) }}">
+                            <td data-label="Pick" class="master-list-pick">
+                                <input type="checkbox" name="ids[]" value="{{ $invoice->id }}" form="bulkForm"
+                                    data-bulk-pick aria-label="Select {{ $invoice->invoice_number }}">
                             </td>
-                            <td><strong>{{ Str::limit($invoice->client_company_name, 22, '...') ?: '-' }}</strong><br><span>{{ $invoice->client_gstin ?: 'GSTIN -' }}</span></td>
-                            <td>{{ $invoice->project ? $invoice->project->project_number : '-' }}<br><span>{{ Str::limit($invoice->project?->name ?? '', 22, '...') }}</span></td>
-                            <td>{{ $invoice->items->count() }}</td>
-                            <td>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->total_amount) }}</td>
-                            <td>{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}</td>
-                            <td><span class="si-badge {{ $invoice->show_client_portal ? 'public' : 'private' }}">{{ $invoice->show_client_portal ? 'Visible' : 'Hidden' }}</span></td>
-                            <td><span class="si-badge status-{{ $invoice->status }}">{{ $invoice->statusLabel() }}</span></td>
-                            <td><div class="si-row-actions"><a class="si-icon" href="{{ route('sales-invoices.show', $invoice) }}" title="Open">👁</a><a class="si-icon" href="{{ route('sales-invoices.print', $invoice) }}" target="_blank" title="Print">🖨</a><a class="si-icon" href="{{ route('sales-invoices.edit', $invoice) }}" title="Edit">✎</a><form method="POST" action="{{ route('sales-invoices.destroy', $invoice) }}" onsubmit="return confirm('Delete invoice?')">@csrf @method('DELETE')<button class="si-icon danger" type="submit">🗑</button></form></div></td>
+                            <td data-label="Invoice">
+                                <a class="si-number" href="{{ route('sales-invoices.show', $invoice) }}">{{ $invoice->invoice_number }}</a>
+                                <span class="si-invoice-chips">
+                                    <span class="si-type type-{{ $invoice->invoice_type }}">{{ $invoice->typeLabel() }}</span>
+                                    @if ($invoice->po_number)
+                                        <span class="master-chip">PO {{ $invoice->po_number }}</span>
+                                    @endif
+                                </span>
+                                @if ($invoice->invoice_date)
+                                    <span class="master-sub si-date">{{ $invoice->invoice_date->format('d M Y') }}</span>
+                                @endif
+                            </td>
+                            <td data-label="Client">
+                                <span class="si-client">{{ $invoice->client_company_name ?: 'No client' }}</span>
+                                <span class="master-sub">{{ $invoice->client_gstin ?: 'No GSTIN on file' }}</span>
+                            </td>
+                            <td data-label="Project">
+                                @if ($invoice->project?->project_number)
+                                    {{ $invoice->project->project_number }}
+                                    <span class="master-sub">{{ $invoice->project->name ?: 'Unnamed project' }}</span>
+                                @else
+                                    <span class="master-empty-value">No project mapped</span>
+                                @endif
+                            </td>
+                            <td data-label="Total" class="is-num">
+                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->total_amount) }}</strong>
+                                <span class="master-sub">
+                                    {{ $invoice->items->count() }} {{ \Illuminate\Support\Str::plural('item', $invoice->items->count()) }}
+                                </span>
+                            </td>
+                            <td data-label="Received" class="is-num">
+                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($received) }}</strong>
+                                <span class="master-sub">
+                                    @if ($invoice->payments_count > 0)
+                                        {{ $invoice->payments_count }} {{ \Illuminate\Support\Str::plural('receipt', $invoice->payments_count) }}
+                                    @else
+                                        {{ $invoice->amount_paid > 0 ? 'Opening figure' : 'Nothing recorded' }}
+                                    @endif
+                                </span>
+                            </td>
+                            <td data-label="Balance" class="is-num">
+                                @if ($invoice->isSuperseded())
+                                    <span class="master-sub">Moved to {{ $invoice->convertedInvoice?->invoice_number }}</span>
+                                @else
+                                    <strong class="si-balance {{ $balance > 0 ? ($invoice->isOverdue() ? 'is-due' : '') : 'is-clear' }}">
+                                        {{ \App\Helpers\CommonHelper::indianCurrency($balance) }}
+                                    </strong>
+                                @endif
+                            </td>
+                            <td data-label="Due">
+                                @if ($invoice->due_date)
+                                    <span class="si-date">{{ $invoice->due_date->format('d M Y') }}</span>
+                                @else
+                                    <span class="master-empty-value">No due date</span>
+                                @endif
+                                @if ($daysLate > 0)
+                                    <span class="master-sub">{{ $daysLate }} {{ \Illuminate\Support\Str::plural('day', $daysLate) }} late</span>
+                                @elseif ($invoice->due_date && $balance > 0)
+                                    <span class="master-sub">Not late yet</span>
+                                @endif
+                            </td>
+                            <td data-label="State">
+                                <span class="si-status status-{{ $stateKey }}">{{ $invoice->stateLabel() }}</span>
+                                @if ($invoice->isSuperseded())
+                                    <a class="master-sub si-converted-link"
+                                        href="{{ route('sales-invoices.show', $invoice->convertedInvoice) }}">Became
+                                        {{ $invoice->convertedInvoice?->invoice_number }}</a>
+                                @endif
+                                <span class="master-sub">
+                                    <span class="si-portal {{ $invoice->show_client_portal ? 'is-public' : 'is-private' }}">
+                                        {{ $invoice->show_client_portal ? 'In portal' : 'Not in portal' }}
+                                    </span>
+                                </span>
+                            </td>
+                            <td data-label="Action">
+                                <div class="master-row-actions">
+                                    <div class="master-dropdown">
+                                        <button type="button" class="master-dropdown-toggle"
+                                            aria-label="Actions for {{ $invoice->invoice_number }}"
+                                            aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                        </button>
+
+                                        <div class="master-dropdown-menu">
+                                            <a href="{{ route('sales-invoices.show', $invoice) }}">
+                                                <i class="fas fa-eye" aria-hidden="true"></i> View invoice
+                                            </a>
+                                            <a href="{{ route('sales-invoices.edit', $invoice) }}">
+                                                <i class="fas fa-pen" aria-hidden="true"></i> Edit
+                                            </a>
+                                            @if ($balance > 0)
+                                                {{-- The receipt goes into the ledger, where the
+                                                     bank line is reconciled — not into a
+                                                     second number on the invoice. --}}
+                                                <button type="button" data-open-payment
+                                                    data-invoice-id="{{ $invoice->id }}"
+                                                    data-invoice-number="{{ $invoice->invoice_number }}"
+                                                    data-invoice-amount="{{ number_format($balance, 2, '.', '') }}"
+                                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balance) }}">
+                                                    <i class="fas fa-indian-rupee-sign" aria-hidden="true"></i> Record payment
+                                                </button>
+                                            @endif
+                                            <button type="button" data-open-reminder
+                                                data-invoice-id="{{ $invoice->id }}"
+                                                data-invoice-number="{{ $invoice->invoice_number }}"
+                                                data-invoice-message="{{ $invoice->reminderMessage() }}">
+                                                <i class="fas fa-bell" aria-hidden="true"></i> Log reminder
+                                            </button>
+                                            <button type="button" data-copy-text="{{ $invoice->reminderMessage() }}">
+                                                <i class="fas fa-comment-dots" aria-hidden="true"></i> Copy reminder text
+                                            </button>
+                                            <a href="{{ route('sales-invoices.print', $invoice) }}" target="_blank">
+                                                <i class="fas fa-print" aria-hidden="true"></i> Print
+                                            </a>
+                                            <button type="button" data-copy-link="{{ route('sales-invoices.public', $invoice->public_token) }}">
+                                                <i class="fas fa-link" aria-hidden="true"></i> Copy client link
+                                            </button>
+                                            @if ($invoice->status === 'draft')
+                                                <form method="POST" action="{{ route('sales-invoices.markSent', $invoice) }}">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit">
+                                                        <i class="fas fa-paper-plane" aria-hidden="true"></i> Mark sent
+                                                    </button>
+                                                </form>
+                                            @endif
+                                            <form method="POST" action="{{ route('sales-invoices.portal', $invoice) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit">
+                                                    <i class="fas fa-toggle-{{ $invoice->show_client_portal ? 'on' : 'off' }}" aria-hidden="true"></i>
+                                                    {{ $invoice->show_client_portal ? 'Hide from portal' : 'Show in portal' }}
+                                                </button>
+                                            </form>
+                                            @if ($invoice->invoice_type === 'proforma' && ! $invoice->isSuperseded())
+                                                <form method="POST" action="{{ route('sales-invoices.convert', $invoice) }}"
+                                                    data-confirm="Create a tax invoice from {{ $invoice->invoice_number }}? The advance and every receipt on it will move to the new tax invoice.">
+                                                    @csrf
+                                                    <button type="submit">
+                                                        <i class="fas fa-file-invoice" aria-hidden="true"></i> Convert to tax invoice
+                                                    </button>
+                                                </form>
+                                            @endif
+                                            <form method="POST" action="{{ route('sales-invoices.duplicate', $invoice) }}">
+                                                @csrf
+                                                <button type="submit">
+                                                    <i class="fas fa-copy" aria-hidden="true"></i> Duplicate as draft
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="{{ route('sales-invoices.destroy', $invoice) }}"
+                                                data-confirm="Delete {{ $invoice->invoice_number }}?">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="danger">
+                                                    <i class="fas fa-trash" aria-hidden="true"></i> Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="10"><div class="si-empty">No invoices found.</div></td></tr>
+                        <tr>
+                            <td colspan="9">
+                                <div class="master-list-empty">
+                                    <span class="master-list-empty-icon" aria-hidden="true">₹</span>
+                                    <p class="master-list-empty-title">
+                                        {{ $filtersActive ? 'No invoices match these filters' : 'No invoices yet' }}
+                                    </p>
+                                    <p class="master-list-empty-text">
+                                        {{ $filtersActive
+                                            ? 'Adjust the search or the filters above — the counts on each chip show what is available.'
+                                            : 'Raise a proforma to ask for the money, or a tax invoice once it is agreed.' }}
+                                    </p>
+                                    <div class="master-list-empty-actions">
+                                        @if ($filtersActive)
+                                            <a class="master-btn master-btn-soft" href="{{ route('sales-invoices.index') }}">Clear filters</a>
+                                        @endif
+                                        <a class="master-btn master-btn-primary" href="{{ route('sales-invoices.create', ['type' => 'tax']) }}">+ New Tax Invoice</a>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
+                @if ($invoices->isNotEmpty())
+                    <tfoot>
+                        <tr class="master-list-total">
+                            <td colspan="4">
+                                <strong>Total — {{ $invoices->count() }} {{ \Illuminate\Support\Str::plural('invoice', $invoices->count()) }} shown</strong>
+                                <span class="master-sub">Filtered totals cover every page · a converted proforma counts
+                                    once</span>
+                            </td>
+                            <td class="is-num">
+                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['counted']) }}</strong>
+                                <span class="master-sub">Sales + potential</span>
+                            </td>
+                            <td class="is-num">
+                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['received']) }}</strong>
+                                <span class="master-sub">Received · all pages</span>
+                            </td>
+                            <td class="is-num">
+                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['outstanding']) }}</strong>
+                                <span class="master-sub">Outstanding · all pages</span>
+                            </td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tfoot>
+                @endif
             </table>
         </div>
-        <div class="si-pagination">{{ $invoices->links() }}</div>
-    </div>
-</div>
 
-<style>
-.si-page{display:flex;flex-direction:column;gap:18px;background:#eef3ff;min-height:calc(100vh - 70px);padding:28px;color:#17233b}.si-page *{box-sizing:border-box}.si-hero{background:linear-gradient(135deg,#4f83f1,#7b61ff);border-radius:26px;padding:24px;color:#fff;display:flex;justify-content:space-between;gap:18px;box-shadow:0 18px 45px rgba(79,131,241,.22)}.si-eyebrow{margin:0 0 6px;text-transform:uppercase;letter-spacing:.13em;font-size:11px;font-weight:600;opacity:.78}.si-hero h1{margin:0;font-size:30px;font-weight:600}.si-hero p{margin:8px 0 0;max-width:780px;opacity:.9}.si-actions,.si-row-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.si-btn{border:0;border-radius:14px;padding:10px 15px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;white-space:nowrap}.si-btn-primary{background:#ef4770;color:#fff;box-shadow:0 10px 24px rgba(239,71,112,.24)}.si-btn-light{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.3)}.si-btn-soft{background:#eef3ff;color:#4f83f1}.si-alert{border-radius:16px;padding:13px 15px;font-weight:600}.si-alert.success{background:#e8fff7;color:#047857;border:1px solid #a7f3d0}.si-alert.error{background:#fff0f4;color:#be123c;border:1px solid #fecdd3}.si-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}.si-stat,.si-card{background:#fff;border:1px solid #dfe7f3;border-radius:22px;box-shadow:0 14px 35px rgba(25,42,70,.08)}.si-stat{padding:16px}.si-stat span{display:block;color:#687386;font-size:12px;font-weight:600;text-transform:uppercase}.si-stat strong{display:block;margin-top:7px;font-size:24px}.si-stat.blue strong{color:#4f83f1}.si-stat.purple strong{color:#7c3aed}.si-stat.green strong{color:#0e9f6e}.si-stat.orange strong{color:#d97706}.si-filter-card{padding:16px}.si-filter-form{display:grid;grid-template-columns:minmax(220px,1.3fr) repeat(4,minmax(140px,.8fr)) auto;gap:12px;align-items:end}.si-field{display:flex;flex-direction:column;gap:7px}.si-field label{font-size:12px;color:#536079;font-weight:600}.si-field input,.si-field select{height:44px;border:1px solid #d8e2ef;border-radius:13px;padding:10px 12px;background:#fff;outline:none}.si-filter-actions{display:flex;gap:8px}.si-table-wrap{overflow:auto}.si-table{width:100%;min-width:1180px;border-collapse:collapse}.si-table th,.si-table td{padding:15px 17px;border-bottom:1px solid #dfe7f3;text-align:left;vertical-align:top}.si-table th{font-size:12px;color:#7d8aa0;text-transform:uppercase;letter-spacing:.07em;background:#fbfdff}.si-table span{display:block;color:#687386;font-size:12px;margin-top:3px;font-weight:700}.si-id{color:#4f83f1}.si-badge{display:inline-flex!important;border-radius:999px;padding:6px 10px;font-size:11px!important;font-weight:600!important;text-transform:uppercase;margin:0!important}.si-badge.public,.status-paid,.status-accepted{background:#e8fff7;color:#0e9f6e!important}.si-badge.private,.status-draft{background:#f3f6fb;color:#536079!important}.status-sent,.status-partial{background:#eaf1ff;color:#3f7cf4!important}.status-overdue,.status-cancelled{background:#ffeaf0;color:#e11d48!important}.si-icon{width:36px;height:36px;border:0;border-radius:10px;background:#eef5ff;color:#4f83f1;text-decoration:none;display:grid;place-items:center;cursor:pointer}.si-icon.danger{background:#fff0f4;color:#ef4770}.si-empty{padding:50px;text-align:center;color:#687386;font-weight:600}.si-pagination{padding:16px}@media(max-width:1400px){.si-filter-form{grid-template-columns:1fr 1fr}.si-field.search{grid-column:1/-1}.si-filter-actions{grid-column:1/-1}.si-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:767px){.si-page{padding:14px}.si-hero{flex-direction:column}.si-actions,.si-actions .si-btn{width:100%}.si-filter-form,.si-stats{grid-template-columns:1fr}.si-filter-actions .si-btn{flex:1}.si-card{border-radius:18px}}
-</style>
+        <x-pagination :items="$invoices" />
+    </div>
+
+    @include('sales_invoices.partials.payment-modal')
+    @include('sales_invoices.partials.reminder-modal')
+</div>
 @endsection
+
+@push('scripts')
+    <script src="{{ $assetVer('assets/js/sales-invoices.js') }}"></script>
+@endpush

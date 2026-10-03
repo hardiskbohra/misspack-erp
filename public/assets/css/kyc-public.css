@@ -1,10 +1,5 @@
-/* ==========================================================================
-   KYC-PUBLIC.CSS — public client KYC page (clients/kyc standalone view)
-   --------------------------------------------------------------------------
-   Extracted verbatim from the former inline <style> of kyc.blade.php.
-   Standalone page: does NOT load core.css / master-*.css — keep it
-   self-contained (its own :root tokens + reset).
-   ========================================================================== */
+
+.master-field.full { grid-column: 1 / -1; }
 
         :root {
             --primary: #4f83f1;
@@ -147,89 +142,8 @@
             gap: 16px
         }
 
-        .field.full {
-            grid-column: 1/-1
-        }
-
-        .label {
-            display: block;
-            margin-top: 10px;
-            margin-bottom: 10px;
-            color: #111111;
-            font-size: 14px;
-            font-weight: 700
-        }
-
         .required {
             color: var(--red)
-        }
-
-        .input,
-        .select,
-        .textarea {
-            width: 100%;
-            border: 1px solid #d8e2ef;
-            border-radius: 12px;
-            background: #fff;
-            color: var(--dark);
-            font-size: 14px;
-            font-weight: 400;
-            outline: none
-        }
-
-        .input,
-        .select {
-            height: 44px;
-            padding: 10px 14px
-        }
-
-        .textarea {
-            min-height: 76px;
-            padding: 12px 14px;
-            resize: vertical
-        }
-
-        .input:focus,
-        .select:focus,
-        .textarea:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(79, 131, 241, .12)
-        }
-
-        .input[readonly],
-        .textarea[readonly],
-        .select:disabled {
-            background: #f8fafc;
-            color: #64748b
-        }
-
-        .checkbox {
-            display: flex;
-            gap: 9px;
-            align-items: center;
-            color: #536079;
-            font-weight: 500;
-            margin-top: 28px
-        }
-
-        .btn {
-            min-height: 44px;
-            border: 0;
-            border-radius: 12px;
-            padding: 12px 20px;
-            font-size: 14px;
-            font-weight: 900;
-            text-decoration: none;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary2));
-            color: #fff
         }
 
         .actions {
@@ -393,10 +307,6 @@
                 gap: 14px;
             }
         
-            .field.full {
-                grid-column: 1 / -1;
-            }
-        
             .section {
                 margin-bottom: 22px;
             }
@@ -446,11 +356,6 @@
                 gap: 14px;
             }
         
-            .field,
-            .field.full {
-                grid-column: 1 / -1;
-            }
-        
             .section-title {
                 align-items: flex-start;
                 gap: 8px;
@@ -458,23 +363,6 @@
         
             .section-title:after {
                 margin-top: 8px;
-            }
-        
-            .input,
-            .select {
-                height: 44px;
-                font-size: 14px;
-            }
-        
-            .textarea {
-                min-height: 90px;
-                font-size: 14px;
-            }
-        
-            .checkbox {
-                margin-top: 4px;
-                align-items: flex-start;
-                line-height: 1.45;
             }
         
             .actions {
@@ -555,26 +443,6 @@
             .section-title {
                 font-size: 11px;
                 line-height: 1.35;
-            }
-        
-            .label {
-                font-size: 12px;
-            }
-        
-            .input,
-            .select {
-                height: 42px;
-                padding: 9px 12px;
-            }
-        
-            .textarea {
-                min-height: 84px;
-                padding: 10px 12px;
-            }
-        
-            .btn {
-                min-height: 42px;
-                width: 100%;
             }
         
             .kyc-footer-top {

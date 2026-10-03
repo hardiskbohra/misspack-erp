@@ -7,12 +7,12 @@
     --master-orange: #f59e0b;
     --master-red: #ef4770;
     --master-green: #10b981;
-    --master-dark: #17233b;
+    --master-dark: var(--mc-text);
     --master-muted: #687386;
-    --master-border: #dfe7f3;
-    --master-bg: #eef3ff;
-    --master-soft: #edf5ff;
-    --master-white: #fff;
+    --master-border: var(--mc-border);
+    --master-bg: var(--mc-soft);
+    --master-soft: var(--mc-soft);
+    --master-white: var(--mc-card);
     --master-shadow: 0 14px 35px rgba(25, 42, 70, .08);
 }
 
@@ -33,15 +33,20 @@
 }
 
 .master-card {
-    background: #fff;
+    background: var(--mc-card);
     border: 1px solid var(--master-border);
     border-radius: 18px;
     box-shadow: var(--master-shadow)
 }
 
+/* auto-fit, not a fixed five: a page with four figures (the documents archive,
+   the statements run) or three (a report's money in / money out / net) used to
+   leave an empty column or two at the right-hand end, which reads as a card
+   that failed to load. Whatever a surface has, they fill the row and share it
+   equally; the narrow-screen passes below still re-flow them. */
 .master-stats {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 18px;
     margin-bottom: 24px
 }
@@ -102,7 +107,7 @@
 
 .master-stat-title {
     font-size: 14px;
-    color: #536079;
+    color: var(--mc-text-2);
     font-weight: 500;
     margin: 0 0 3px
 }
@@ -188,7 +193,7 @@
     left: 15px;
     top: 50%;
     transform: translateY(-50%);
-    color: #8792a5;
+    color: var(--mc-text-3);
     font-size: 24px
 }
 
@@ -196,9 +201,9 @@
 .master-select,
 .master-textarea {
     width: 100%;
-    border: 1px solid #d8e2ef;
+    border: 1px solid var(--mc-border);
     border-radius: 12px;
-    background: #fff;
+    background: var(--mc-card);
     color: var(--master-dark);
     font-size: 14px;
     font-weight: 500;
@@ -264,13 +269,13 @@
 }
 
 .master-btn-light {
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: #4f83f1;
     border: 1px solid rgba(255, 255, 255, .35)
 }
 
 .master-btn-soft {
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: #4f83f1;
 }
 
@@ -295,6 +300,15 @@
     gap: 12px;
     flex-wrap: wrap;
     padding: 0 24px 22px;
+}
+
+/* A filter row that opens a card carries its own top inset, because nothing
+   above it does. One that follows a toolbar does not: the toolbar's own 22px
+   bottom padding is already the gap, and adding another would double it. The
+   products list was patching this with an inline style="padding-top:22px"
+   before the rule existed. */
+.master-filter-row:first-child {
+    padding-top: 22px;
 }
 
 .master-filter-row .master-select,
@@ -336,12 +350,12 @@
 }
 
 .master-table th {
-    color: #000;
+    color: var(--mc-text);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: .07em;
     text-transform: uppercase;
-    background: #fbfdff;
+    background: var(--mc-card-soft);
     padding-top:0px;
 }
 
@@ -397,8 +411,8 @@
 }
 
 .status-ignored, .status-converted {
-    background: #f3f6fb;
-    color: #536079
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2)
 }
 
 .type-credit {
@@ -457,13 +471,15 @@
     overflow: hidden
 }
 
+/* Overlay: the card is centred by its own auto margins, so when the viewport
+   is too short the overlay scrolls and the top of the card stays reachable
+   (flex centring would push it above the scroll origin and clip it). */
 .master-modal {
     position: fixed;
     inset: 0;
     z-index: 9999;
     display: none;
-    align-items: center;
-    justify-content: center;
+    overflow-y: auto;
     padding: 24px;
     background: rgba(9, 14, 26, .62);
     backdrop-filter: blur(7px)
@@ -473,29 +489,77 @@
     display: flex
 }
 
+/* Card: one column — fixed header, scrolling body, fixed footer. The body
+   carries the scroll instead of the card, so a long form can never push the
+   action row out of view or get clipped by the card's overflow.
+   Almost every modal wraps its header/body/footer in a <form>, and a form is
+   a block box: the flex properties on those three only work if the form is a
+   column flex container too, so the rule below covers both shapes. */
+.master-modal-card,
+.master-modal-card > form {
+    display: flex;
+    flex-direction: column;
+}
+
+/* The form is the card's child that carries the layout: a column that fills
+   the card, so the body — the only flexible child inside it — is what scrolls.
+   min-height: 0 is what lets it shrink and hands the overflow to the body.
+   This used to hang on :has(), which made the scroll depend on the browser:
+   where :has() is unsupported the tall form stayed content-sized, overflowed
+   the card's hidden overflow, and the last fields were simply unreachable —
+   no scrollbar, nothing to drag.
+   Growing is safe for a form that wraps nothing but the action row (the delete
+   dialogs): a column child only grows into free space, and the card is
+   content-sized unless it hits its own max-height. */
+.master-modal-card > form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* When the action row is the last thing in the card it stays at the bottom of
+   the sheet (the full-bleed phone layout makes the card a full screen tall)
+   instead of floating in the middle. */
+.master-modal-card > form > .master-modal-footer:last-child {
+    margin-top: auto;
+}
+
 .master-modal-card {
+    position: relative;
+    margin: auto;
     width: min(700px, calc(100vw - 32px));
-    max-height: calc(100vh - 40px);
+    max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
     overflow: hidden;
-    background: #fff;
+    background: var(--mc-card, #ffffff);
     border: 1px solid var(--master-border);
     border-radius: 16px;
     box-shadow: 0 26px 70px rgba(13, 24, 45, .28)
 }
 
 .master-modal-header {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 14px;
-    padding: 20px 24px;
+    padding: 18px 24px;
+    background: var(--mc-card, #ffffff);
     border-bottom: 1px solid var(--master-border)
 }
 
 .master-modal-heading {
     display: flex;
     align-items: center;
-    gap: 12px
+    gap: 12px;
+    min-width: 0
+}
+
+/* A long title or subtitle wraps inside the header instead of shoving the
+   close button out of the card. */
+.master-modal-heading > div {
+    min-width: 0
 }
 
 .master-modal-icon {
@@ -513,12 +577,14 @@
 .master-modal-title {
     margin: 0;
     font-size: 16px;
+    line-height: 1.3;
     font-weight: 600
 }
 
 .master-modal-subtitle {
-    margin: 4px 0 0;
+    margin: 2px 0 0;
     font-size: 12px;
+    line-height: 1.4;
     color: var(--master-muted);
     font-weight: 600
 }
@@ -535,18 +601,46 @@
     cursor: pointer
 }
 
+/* min-height: 0 is what lets a flex child actually shrink — without it the
+   body keeps its content height and pushes the footer out of the card. The
+   old rule guessed the header/footer size (100vh - 190px), so any modal whose
+   header wrapped lost its last field under the action row. */
 .master-modal-body {
-    max-height: calc(100vh - 190px);
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
     overflow-y: auto;
-    padding: 22px 24px
+    overscroll-behavior: contain;
+    padding: 20px 24px 24px
 }
 
 .master-modal-footer {
+    flex: 0 0 auto;
     display: flex;
     justify-content: flex-end;
     gap: 12px;
-    padding: 18px 24px;
+    padding: 16px 24px;
+    background: var(--mc-card, #ffffff);
     border-top: 1px solid var(--master-border)
+}
+
+/* A dialog whose subject also has a page of its own: the way out to it belongs
+   on the footer's line, left of the actions that dismiss the dialog — not
+   buried at the end of the form, where it reads as one more field. */
+.master-modal-lead {
+    margin: 0 auto 0 0;
+    align-self: center;
+    font-size: 12.5px
+}
+
+.master-modal-lead a {
+    color: var(--master-primary, #4f83f1);
+    font-weight: 600;
+    text-decoration: none
+}
+
+.master-modal-lead a:hover {
+    text-decoration: underline
 }
 
 .master-modal-grid {
@@ -562,6 +656,63 @@
     margin-top:18px;
 }
 
+/* Size variant for confirm dialogs. */
+.master-modal-card.small {
+    width: min(460px, calc(100vw - 32px))
+}
+
+/* The header class some older modules ship is the same box under a shorter
+   name — supported here so no module has to restate the chrome. */
+.master-modal-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px 24px;
+    background: var(--mc-card, #ffffff);
+    border-bottom: 1px solid var(--master-border)
+}
+
+.master-modal-head h3 {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.3;
+    font-weight: 600
+}
+
+/* A modal may ship its own dim layer (with data-close-modal) instead of
+   relying on the overlay fill. Keep it behind the card and out of the flex
+   flow, so the card stays clickable and the overlay stays scrollable. */
+.master-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0
+}
+
+/* --- modal field rhythm ------------------------------------------------
+   The unified field is already a 7px flex column, but .master-label carries
+   10px top/bottom margins of its own. Inside a modal that doubles the gap
+   above every label and under every input — twelve fields added up to well
+   over a screenful, which is what turned the add-cost sheet into a scroll
+   box. Modal fields use the flex gap alone; the label keeps its size and
+   weight. */
+.master-modal .master-field > .master-label {
+    margin-top: 0;
+    margin-bottom: 0
+}
+
+.master-modal .master-field > .master-sub {
+    margin-top: 0
+}
+
+/* A hint under a field must not sit on the next row: with the grid stretched
+   to the tallest field, give the hint its own line and let the field clip its
+   own rounding rather than the row. */
+.master-modal .master-field > .master-sub {
+    line-height: 1.45
+}
+
 .master-field.full {
     grid-column: 1/-1
 }
@@ -569,7 +720,7 @@
 .master-label {
     display: block;
     margin-bottom: 7px;
-    color: #536079;
+    color: var(--mc-text-2);
     font-size: 12px;
     font-weight: 600
 }
@@ -706,33 +857,39 @@
     background: #fff0f4;
     color: var(--vq-red)
 }
-
-.master-chip-group {
+/* A choice chip is a segmented control, not a button: it draws no box. The
+   unselected chip is a soft fill that deepens on hover, the selected one is
+   the module colour, and the only outline either of them ever shows is the
+   keyboard focus ring — so a row of choices reads as one control instead of a
+   row of framed buttons. `.master-chip` is the record page's small neutral
+   meta chip (master-detail.css) and stays deliberately unrelated: while the
+   two shared one name, the meta chip's border drew a box around every choice. */
+.master-choice-group {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
 }
 
-.master-chip {
+.master-choice-chip {
     position: relative;
     cursor: pointer;
     user-select: none;
 }
 
-.master-chip input {
+.master-choice-chip input {
     position: absolute;
     opacity: 0;
     pointer-events: none;
 }
 
-.master-chip span {
+.master-choice-chip span {
     min-height: 42px;
     min-width: 110px;
     padding: 10px 16px;
-    border: 1px solid #d8e2ef;
+    border: 0;
     border-radius: 999px;
-    background: #fff;
-    color: #536079;
+    background: var(--mc-soft);
+    color: var(--mc-text-2);
     font-size: 14px;
     font-weight: 600;
     display: inline-flex;
@@ -742,15 +899,21 @@
     transition: 0.2s ease;
 }
 
-.master-chip:hover span {
-    background: #f8fbff;
-    border-color: #bcd3f8;
+/* with no border to tint, the fill carries the hover: one step from --mc-soft
+   to --mc-border, which reads darker in light and lighter in dark */
+.master-choice-chip:hover span {
+    background: var(--mc-border);
 }
 
-.master-chip input:checked + span {
+.master-choice-chip input:checked + span {
     color: #fff;
-    border-color: transparent;
     box-shadow: 0 8px 18px rgba(79, 131, 241, 0.22);
+}
+
+/* the control draws no box, so keyboard focus brings a ring of its own */
+.master-choice-chip input:focus-visible + span {
+    outline: 2px solid var(--master-primary);
+    outline-offset: 2px;
 }
 
 .credit-chip input:checked + span {
@@ -760,6 +923,27 @@
 .debit-chip input:checked + span {
     background: linear-gradient(135deg, #ef4770, #e11d48);
 }
+
+.green-chip input:checked + span {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.yellow-chip input:checked + span {
+    background: linear-gradient(135deg, #facc15, #eab308);
+}
+
+.blue-chip input:checked + span {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.red-chip input:checked + span {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.master-choice-chip i {
+    font-size: 13px;
+}
+
 
 .master-status-chip{
     display:inline-flex;
@@ -795,10 +979,6 @@
     color:#dc2626;
 }
 
-.master-chip i {
-    font-size: 13px;
-}
-
 .master-dropdown{
     position:relative;
     display:inline-block;
@@ -809,31 +989,39 @@
     height:40px;
     border:none;
     border-radius:12px;
-    background:#f4f7ff;
+    background: var(--bg-input);
     cursor:pointer;
     display:flex;
     align-items:center;
     justify-content:center;
     font-size:16px;
-    color:#55627a;
+    color: var(--mc-text-2);
     transition:.2s;
 }
 
 .master-dropdown-toggle:hover{
-    background:#e9efff;
+    background: var(--mc-hover);
 }
 
+/* The panel is fixed, never absolute: a menu that lives inside a table row is
+   painted in that row's pass — so every row after it covers it — and it is
+   clipped by any scrolling box above it. Against the viewport it is part of
+   neither fight. The layout script measures the button and places the panel
+   (and re-places it while the page scrolls); the numbers here are the size and
+   the look, so a panel that is never placed still lands in the right spot. */
 .master-dropdown-menu{
-    position:absolute;
-    right:0;
-    top:calc(100% + 8px);
-    z-index:9999;
-    top:48px;
+    position:fixed;
+    z-index:1300;
     width:220px;
-    background:#fff;
-    border:1px solid #e8edf7;
+    max-height:calc(100vh - 16px);
+    /* Opaque on purpose, and stated as a background *colour* so nothing can
+       leave the panel see-through: it floats over the rows, and a translucent
+       panel reads as a broken menu. The fallback keeps it opaque even if the
+       token is ever missing. */
+    background-color: var(--mc-card, #ffffff);
+    border: 1px solid var(--mc-border, #dfe7f3);
     border-radius:14px;
-    box-shadow:0 15px 40px rgba(0,0,0,.12);
+    box-shadow:0 15px 40px rgba(0,0,0,.16);
     display:none;
     overflow:hidden;
 }
@@ -842,6 +1030,19 @@
     display:block;
 }
 
+/* The open panel is moved to <body> by the layout script, so its focus ring
+   cannot come from a rule scoped to the table or the card it was authored in
+   — the panel carries its own. */
+.master-dropdown-menu a:focus-visible,
+.master-dropdown-menu button:focus-visible{
+    outline: 2px solid var(--master-primary);
+    outline-offset: -2px;
+}
+
+/* One item shape for the whole menu: an icon slot and a label, always from
+   the same left edge, whether the item is a link or a button. A `.master-btn`
+   dropped in here used to centre itself and wear its own background, so the
+   items did not line up — the panel owns the shape, not the button. */
 .master-dropdown-menu a,
 .master-dropdown-menu button{
     width:100%;
@@ -850,22 +1051,37 @@
     padding:13px 18px;
     display:flex;
     align-items:center;
+    justify-content:flex-start;
     gap:12px;
     text-decoration:none;
-    color:#2b3445;
+    color: var(--mc-text);
     font-size:14px;
     font-weight: 400;
     cursor:pointer;
     text-align:left;
+    border-radius:0;
+    box-shadow:none;
+    line-height:1.35;
+}
+
+/* the icon slot is a fixed width, so every label starts at the same edge */
+.master-dropdown-menu i{
+    flex:0 0 18px;
+    width:18px;
+    text-align:center;
 }
 
 .master-dropdown-menu a:hover,
 .master-dropdown-menu button:hover{
-    background:#f7f9fc;
+    background: var(--mc-hover);
 }
 
 .master-dropdown-menu .danger{
     color:#dc2626;
+}
+
+:root[data-theme="dark"] .master-dropdown-menu .danger{
+    color:#fda4af;
 }
 
 .master-dropdown-menu form{
@@ -909,8 +1125,8 @@
 
 /* Secondary (Gray) */
 .status-secondary {
-    background: #f3f6fb;
-    color: #536079;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
 }
 
 /* Purple */
@@ -921,14 +1137,54 @@
 
 /* Dark */
 .status-dark {
-    background: #edf1f5;
-    color: #374151;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
 }
 
-.master-table tr:hover {
-    background: var(--bg-card);
+.master-table tbody tr:hover {
+    /* --mc-hover, not --bg-card: in dark theme the card *is* --bg-card, so the
+       old rule made the hover invisible exactly where the list is hardest to
+       scan. */
+    background: var(--mc-hover);
+}
+
+/* the last row meets the totals row (or the card edge): one hairline, not two */
+.master-table tbody tr:last-child td {
+    border-bottom: 0;
 }
 
 strong, td {
     font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------
+   Modal helpers
+   A confirmation dialog is repeated across modules, so its two recurring
+   pieces — a danger-tinted icon and a body paragraph — are shared rather than
+   re-styled per module with inline values (which is where the light-only
+   #536079 came from).
+   -------------------------------------------------------------------------- */
+
+.master-modal-icon.is-danger {
+    background: rgba(239, 71, 112, .12);
+    color: var(--master-red, #ef4770);
+}
+
+.master-modal-text {
+    margin: 0;
+    color: var(--mc-text-2);
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+.master-modal-card.is-narrow {
+    max-width: 440px;
+}
+
+/* A dialog that edits a document rather than a record: the payslip's two
+   columns of line items need the room, and at 700px each line item is two
+   inputs in a space that fits one. */
+.master-modal-card.is-wide {
+    width: min(880px, calc(100vw - 32px));
 }

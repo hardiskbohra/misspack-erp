@@ -1,0 +1,583 @@
+/* ==========================================================================
+   MASTER-DETAIL — how a read-only record view is presented
+   --------------------------------------------------------------------------
+   Loaded after master-form.css so it owns the pieces a *show* page is made of:
+   the card header, the label/value facts grid, empty states and the timeline.
+   Module sheets (shipments.css, projects.css, …) sit after this file and add
+   context on top; a module never restates what is here.
+
+   The design rules this file encodes
+   ----------------------------------
+   • One type scale. 11px uppercase field labels, 12.5px meta, 14px values,
+     15px card titles, 20px page titles. Nothing else on a detail page.
+   • Spacing on an 8-point grid. Card padding 22/24, card gap 16, block gap 14,
+     control height 40-44. No ad-hoc 13px/22px/17px drops.
+   • Structure over decoration. A record is separated by hairlines, not by a
+     bordered box around every field — boxes make a read-only page look like a
+     form. Boxes are reserved for things you interact with.
+   • Colour means something. Status, missing and overdue are the only coloured
+     things; they are always translucent tints so the same rule is correct in
+     both themes (a solid pastel is a light-theme-only decision).
+   • One primary action per surface. Danger is an outline, never a filled
+     button competing with the primary action.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Page rhythm
+   A 20px gutter between the two columns and a 16px gap between stacked cards.
+   Uniform spacing is most of what makes a dense page feel calm.
+   -------------------------------------------------------------------------- */
+
+.master-grid {
+    gap: 20px
+}
+
+/* `2fr 1fr` is a main column and an aside — right for a record whose cards are a
+   table and a summary, wrong for a tab that is four cards of the same weight.
+   Four equal cards in that grid came out 3:1: the first column 66%, the second
+   33%, so Identity and Employment were wide and Contact and Bank were squeezed.
+   `.is-even` is the same grid with the two columns equal. */
+.master-grid.is-even {
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+}
+
+/* The record header is a card too, so it follows the same padding and gutter
+   as the cards under it. */
+.master-header {
+    padding: 20px 24px;
+    margin-bottom: 16px
+}
+
+.master-section {
+    margin-bottom: 16px
+}
+
+.master-grid > div > .master-section:last-child,
+.ship-side > .master-section:last-child {
+    margin-bottom: 0
+}
+
+/* --------------------------------------------------------------------------
+   Card headers
+   A card title is a title: sentence case, readable size, no letter-spaced
+   uppercase and no decorative rule running to the edge of the card (that
+   pattern belongs to section dividers inside long forms, and here it just
+   added visual noise to every card).
+   -------------------------------------------------------------------------- */
+
+.master-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    line-height: 1.35;
+    text-transform: none;
+    color: var(--mc-text)
+}
+
+.master-section-title:after {
+    content: none
+}
+
+/* Long form cards keep a divider — inside a multi-section form the rule is
+   genuinely useful — but as a quiet hairline in the border colour rather than
+   the primary hue, and only there. */
+.master-form-card .master-section-title:after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    background: var(--mc-border)
+}
+
+.master-section-title .master-count {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--mc-text-3)
+}
+
+/* A header that carries a status chip, a hint or an action on the right. */
+.master-section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px
+}
+
+.master-section-head .master-section-title {
+    margin: 0
+}
+
+.master-section-head .master-sub {
+    margin-top: 3px
+}
+
+/* A hint that sits directly under a card title belongs to the title, not to
+   the block below it. NOTE: this must never be a negative margin — inside a
+   .master-section-head the title's own bottom margin is reset to 0, so a
+   negative top margin on the hint pulls it up *over* the title. */
+.master-section-title + .master-sub {
+    margin: 2px 0 12px
+}
+
+.master-section-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap
+}
+
+/* --------------------------------------------------------------------------
+   Facts — the label/value pairs a record is described with
+   Two columns, hairline separated. The first row carries no hairline so the
+   grid does not start with a stray line under the card title.
+   -------------------------------------------------------------------------- */
+
+.master-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 32px
+}
+
+/* `.master-card--flat .master-info` (master-flat.css) re-surfaces every fact
+   as a panel row. It is the same specificity as these rules but a later file,
+   so each selector is written once more with the card in front of it: a fact is
+   a hairline row, and no flat card may turn it back into a box. */
+.master-facts > .master-info,
+.master-card--flat .master-facts > .master-info {
+    padding: 12px 0;
+    border: 0;
+    border-top: 1px solid var(--mc-border);
+    border-radius: 0;
+    background: none
+}
+
+.master-facts > .master-info:first-child,
+.master-facts > .master-info:nth-child(2),
+.master-card--flat .master-facts > .master-info:first-child,
+.master-card--flat .master-facts > .master-info:nth-child(2) {
+    border-top: 0;
+    padding-top: 2px
+}
+
+/* A field that spans the grid (long notes, addresses). */
+.master-facts > .master-info.is-wide {
+    grid-column: 1 / -1
+}
+
+.master-facts .master-info > span {
+    display: block;
+    margin-top: 3px;
+    color: var(--mc-text-3);
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none
+}
+
+.master-facts .master-info > span:first-child {
+    margin: 0 0 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase
+}
+
+/* Plain values only. A badge, chip or ETA pill inside a fact keeps its own
+   display and colour: `:not([class])` is what stops this rule from turning a
+   status pill into a full-width block and stripping its semantic colour. */
+.master-facts .master-info > strong:not([class]) {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.45;
+    color: var(--mc-text)
+}
+
+/* The ETA pill sits inline; the label above it is the field name. */
+.master-facts .master-info > .ship-eta {
+    display: inline-flex
+}
+
+/* Values that are not known yet read as meta, never as a bare dash. */
+.master-empty-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--mc-text-3)
+}
+
+.master-facts .master-address-sub {
+    margin: 4px 0 0;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--mc-text-2)
+}
+
+.master-facts .master-address-sub b {
+    font-weight: 600;
+    color: var(--mc-text-3)
+}
+
+/* --------------------------------------------------------------------------
+   Empty states
+   One pattern for "nothing here yet": an icon, a sentence, an optional action.
+   Left-aligned and quiet — an empty card should not shout.
+   -------------------------------------------------------------------------- */
+
+.master-empty-state {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border: 1px dashed var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft)
+}
+
+.master-empty-state i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--mc-card);
+    color: var(--mc-text-3);
+    font-size: 14px;
+    flex: 0 0 auto
+}
+
+.master-empty-state p {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--mc-text-2)
+}
+
+.master-empty-state .master-btn {
+    margin-left: auto
+}
+
+/* --------------------------------------------------------------------------
+   Chips — small neutral meta that is not a status
+   -------------------------------------------------------------------------- */
+
+.master-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 9px;
+    border: 1px solid var(--mc-border);
+    border-radius: 8px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.5
+}
+
+.master-chip i {
+    font-size: 10px;
+    color: var(--mc-text-3)
+}
+
+/* --------------------------------------------------------------------------
+   Numbers in tables
+   Money and quantities are right-aligned and use tabular figures so digits
+   line up column to column.
+   -------------------------------------------------------------------------- */
+
+.master-table th.is-num,
+.master-table td.is-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums
+}
+
+/* --------------------------------------------------------------------------
+   Row actions
+   The action on a table row is a quiet outline. A filled danger button on a
+   row competes with the page's primary action and reads as an alert.
+   -------------------------------------------------------------------------- */
+
+.master-btn-ghost,
+.master-btn-danger-ghost {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid var(--mc-border);
+    background: var(--mc-card);
+    color: var(--mc-text-2);
+    font-size: 12.5px;
+    font-weight: 600;
+    box-shadow: none
+}
+
+.master-btn-ghost:hover {
+    border-color: var(--master-primary, #4f83f1);
+    color: var(--master-primary, #4f83f1);
+    background: var(--mc-card)
+}
+
+.master-btn-danger-ghost {
+    border-color: rgba(239, 71, 112, .35);
+    color: #e11d48
+}
+
+.master-btn-danger-ghost:hover {
+    border-color: #ef4770;
+    background: rgba(239, 71, 112, .08);
+    color: #e11d48;
+    box-shadow: none
+}
+
+/* --------------------------------------------------------------------------
+   Timeline
+   A newer entry sits higher; the rail is a hairline and the marker takes the
+   theme's primary so it is visible in both themes.
+   -------------------------------------------------------------------------- */
+
+.timeline {
+    padding-left: 24px
+}
+
+.timeline:before {
+    left: 7px;
+    top: 6px;
+    bottom: 6px;
+    width: 1px;
+    background: var(--mc-border)
+}
+
+.timeline-item {
+    padding-bottom: 18px
+}
+
+.timeline-item:last-child {
+    padding-bottom: 0
+}
+
+.timeline-item:before {
+    left: -22px;
+    top: 4px;
+    width: 10px;
+    height: 10px;
+    background: var(--master-primary, #4f83f1);
+    box-shadow: 0 0 0 3px var(--mc-card), 0 0 0 4px var(--mc-border)
+}
+
+.timeline-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap
+}
+
+.timeline-meta {
+    padding: 2px 0 0;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--mc-text-3)
+}
+
+.timeline-remarks {
+    margin-top: 4px;
+    font-size: 13.5px;
+    font-weight: 500;
+    line-height: 1.55;
+    color: var(--mc-text-2)
+}
+
+/* --------------------------------------------------------------------------
+   Record header
+   Title and identity on the left, actions on the right, key facts as chips
+   under the title so the state of the record is readable before any action.
+   -------------------------------------------------------------------------- */
+
+.master-header.ship-head,
+.master-header.record-head {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px
+}
+
+.record-head-main {
+    min-width: 0
+}
+
+.record-head-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px
+}
+
+.record-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-left: auto
+}
+
+/* Print/preview actions belong together and read as one group. */
+.record-action-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 10px;
+    border-left: 1px solid var(--mc-border)
+}
+
+/* --------------------------------------------------------------------------
+   Inline share/copy row (the public link on a record)
+   -------------------------------------------------------------------------- */
+
+.public-box {
+    margin-top: 10px;
+    gap: 8px
+}
+
+.public-box input {
+    font-size: 13px
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+    .master-facts {
+        column-gap: 24px
+    }
+}
+
+@media (max-width: 767px) {
+    .master-facts {
+        grid-template-columns: 1fr
+    }
+
+    .master-facts > .master-info:nth-child(2) {
+        border-top: 1px solid var(--mc-border);
+        padding-top: 12px
+    }
+
+    .record-head-actions,
+    .record-action-group {
+        width: 100%;
+        margin-left: 0;
+        padding-left: 0;
+        border-left: 0
+    }
+
+    .record-head-actions .master-btn,
+    .record-action-group .master-btn {
+        flex: 1 1 auto;
+        justify-content: center
+    }
+}
+
+/* ==========================================================================
+   TABS — a record read in sections
+   --------------------------------------------------------------------------
+   A record page answers several questions (who is this, what are the figures,
+   where are the papers). A vendor page already raised them as tabs, with its
+   own classes; this is the same strip in the shared vocabulary, so the next
+   module does not write a third one. The vendor page keeps `.vendor-tab*` for
+   now — it is a shipped screen — and the two are drawn from the same tokens,
+   so they cannot drift apart in colour or geometry.
+
+   The tabs are **links**, not buttons: each panel has its own URL, so a tab
+   can be shared, opened in a new window and reached with the back button. Only
+   the active class moves.
+   ========================================================================== */
+
+.master-tabs-card {
+    background: var(--mc-card);
+    border: 1px solid var(--mc-border);
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.master-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 12px;
+    background: var(--mc-card-soft);
+    border-bottom: 1px solid var(--mc-border);
+}
+
+.master-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card);
+    color: var(--mc-text-2);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.master-tab:hover {
+    border-color: var(--master-primary, #4f83f1);
+    color: var(--mc-text);
+}
+
+.master-tab.is-active {
+    border-color: var(--master-primary, #4f83f1);
+    background: var(--master-primary, #4f83f1);
+    color: #fff;
+}
+
+.master-tab:focus-visible {
+    outline: 2px solid var(--master-primary, #4f83f1);
+    outline-offset: 2px;
+}
+
+.master-tab-count {
+    min-width: 20px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--mc-soft);
+    color: var(--mc-text-2);
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.master-tab.is-active .master-tab-count {
+    background: rgba(255, 255, 255, .22);
+    color: #fff;
+}
+
+/* One tab's block. Named by every record page since the strip was written and
+   defined by no sheet: the padding belongs to the panels container above, and
+   all a panel itself owes is to not push its card wider than the column. */
+.master-tab-panel {
+    min-width: 0
+}
+
+.master-tabs-panels {
+    padding: 18px;
+}
+
+@media screen and (max-width: 768px) {
+    .master-tabs {
+        padding: 10px;
+    }
+
+    .master-tabs-panels {
+        padding: 12px;
+    }
+}

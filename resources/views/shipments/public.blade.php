@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Shipment Tracking - {{ $shipment->shipment_number }} to {{ $shipment->to_name }}</title>
-    <link rel="stylesheet" href="{{ asset('assets/css/shipment-public.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/shipment-public.css') }}">
 </head>
 <body>
 @php($statusClass = str_replace('_', '-', $shipment->status))
@@ -46,6 +46,16 @@
                     <span style="font-weight:500;line-height:1.8">{{ $shipment->tracking_number ?: 'Not available' }}</span></div>
                 <div class="info"><span>Shipment Type</span><strong>{{ $shipment->typeLabel() }}</strong></div>
                 <div class="info"><span>No. of Packages</span><strong>{{ $shipment->package_count ?? '-' }} {{ $shipment->package_count > 1 ? "Boxes" : "Box" }}</strong></div>
+                <div class="info">
+                    <span>Expected Delivery</span>
+                    <strong>{{ $shipment->eta_date ? $shipment->eta_date->format('d M Y') : 'To be confirmed' }}</strong>
+                    @if ($shipment->eta_date)
+                        <span style="margin-top:6px;">{{ $shipment->etaLabel() }}</span>
+                    @endif
+                </div>
+                @if ($shipment->delay_reason)
+                    <div class="info"><span>Current Hold-up</span><strong>{{ $shipment->delay_reason }}</strong></div>
+                @endif
             </div>
         </div>
         <div class="card section">
@@ -82,6 +92,27 @@
             </div>
         </div>
     @endif
+
+    @php($trackUrl = route('shipments.publicTrack', $shipment->public_token))
+    @php($shareText = 'MissPack shipment '.$shipment->shipment_number
+        .' ('.($shipment->from_city ?: 'origin').' → '.($shipment->to_city ?: 'destination').')'
+        .' is currently: '.($statusOptions[$shipment->status] ?? $shipment->status).'. Track it live: '.$trackUrl)
+
+    <div class="card section" style="margin-bottom:22px;">
+        <h2>Tracking Progress</h2>
+        @include('shipments.partials.tracker', ['shipment' => $shipment])
+
+        <div class="track-share">
+            <a class="track-share-btn track-share-wa"
+                href="https://wa.me/?text={{ urlencode($shareText) }}" target="_blank" rel="noopener">
+                Share on WhatsApp
+            </a>
+            <button class="track-share-btn track-share-copy" type="button" data-copy="{{ $trackUrl }}">
+                Copy tracking link
+            </button>
+            <span class="track-share-url">{{ $trackUrl }}</span>
+        </div>
+    </div>
 
     <div class="card section" style="margin-bottom:22px;">
         <h2>Tracking History</h2>
@@ -161,5 +192,33 @@
         </div>
     </footer>
 </div>
+
+<script>
+    (function () {
+        var button = document.querySelector('.track-share-copy');
+        if (!button) return;
+
+        button.addEventListener('click', function () {
+            var value = button.getAttribute('data-copy') || '';
+            var done = function () {
+                button.textContent = 'Link copied';
+                setTimeout(function () { button.textContent = 'Copy tracking link'; }, 2000);
+            };
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(value).then(done, done);
+                return;
+            }
+
+            var field = document.createElement('textarea');
+            field.value = value;
+            document.body.appendChild(field);
+            field.select();
+            try { document.execCommand('copy'); } catch (error) { /* text stays selectable */ }
+            document.body.removeChild(field);
+            done();
+        });
+    })();
+</script>
 </body>
 </html>

@@ -6,45 +6,27 @@
 <div class="pmile-product-block">
     <div class="pmile-product-head">
         <div>
-            <h3 style="color:blue;">{{ $title }}</h3>
-            <small>{{ $count }} milestones · {{ $completed }} completed</small>
+            <h3>{{ $title }}</h3>
+            <small>{{ $count }} {{ Str::plural('milestone', $count) }} · {{ $completed }} completed</small>
         </div>
         <div class="pmile-product-progress">
-            <div class="pd-progress-text"><span>Overall Progress</span><strong> - {{ $progress }}%</strong></div>
+            <div class="pd-progress-text"><span>Overall Progress</span><strong>{{ $progress }}%</strong></div>
             <div class="pd-progress"><span style="width: {{ $progress }}%"></span></div>
         </div>
     </div>
 
     @if ($count)
-        {{-- PRODUCT MILESTONE STEP INDICATOR --}}
         <div class="pmile-step-wrapper">
-
             <div class="pmile-step-scroll">
+                <div class="pmile-stepper">
 
-                <div class="pmile-step-line">
-
-                    @foreach ($productMilestones as $index => $milestone)
+                    @foreach ($productMilestones as $milestone)
                         @php
-                            $isCompleted =
-                                $milestone->progress_percent >= 100 || strtolower($milestone->status) === 'completed';
-
-                            $isCurrent =
-                                !$isCompleted &&
-                                (strtolower($milestone->status) === 'in_progress' ||
-                                    strtolower($milestone->status) === 'in progress' ||
-                                    $milestone->progress_percent > 0);
-
-                            $isOverdue = $milestone->isOverdue();
-
-                            $stepClass = $isCompleted ? 'completed' : ($isCurrent ? 'current' : 'upcoming');
-
-                            $nodeLabel = $milestone->status === 'completed' ? '✓' : $loop->iteration;
-                            $connectorClass =
-                                $milestone->status === 'completed'
-                                    ? 'done'
-                                    : ($milestone->status === 'in_progress'
-                                        ? 'active'
-                                        : '');
+                            $isOverdue = method_exists($milestone, 'isOverdue') && $milestone->isOverdue();
+                            $nodeState = $milestone->status;
+                            $connectorClass = $milestone->status === 'completed'
+                                ? 'done'
+                                : ($milestone->status === 'in_progress' ? 'active' : '');
                             $milestonePayload = [
                                 'id' => $milestone->id,
                                 'project_product_id' => $milestone->project_product_id,
@@ -66,71 +48,81 @@
                                 'client_note' => $milestone->client_note,
                                 'blocked_reason' => $milestone->blocked_reason,
                             ];
+                            $plannedRange = optional($milestone->planned_start_date)->format('d M Y')
+                                . ($milestone->planned_end_date ? ' → ' . optional($milestone->planned_end_date)->format('d M Y') : '');
+                            $actualRange = optional($milestone->actual_start_date)->format('d M Y')
+                                . ($milestone->actual_end_date ? ' → ' . optional($milestone->actual_end_date)->format('d M Y') : '');
                         @endphp
 
-                        <div class="pmile-step {{ $stepClass }} {{ $isOverdue ? 'overdue' : '' }}">
+                        <div class="pmile-step status-{{ $milestone->statusClass() }} {{ $isOverdue ? 'overdue' : '' }}">
 
-                            {{-- STEP CIRCLE --}}
-                            <div class="pmile-step-circle">
+                            <div class="pmile-step-connector {{ $connectorClass }}"></div>
 
-                                @if ($isCompleted)
+                            <div class="pmile-step-node">
+                                @if ($milestone->status === 'completed')
                                     <i class="fas fa-check"></i>
                                 @else
-                                    <span>{{ $index + 1 }}</span>
+                                    <span>{{ $loop->iteration }}</span>
                                 @endif
-
                             </div>
 
-                            {{-- STEP CONTENT --}}
-                            <div class="pmile-step-content">
-
-                                <div class="pmile-step-title-row">
-
-                                    <h4>
-                                        {{ $milestone->title }}
-                                    </h4>
-
-                                    {{-- EDIT --}}
-                                    <button type="button" class="master-icon-btn master-btn-sm editMilestoneBtn"
-                                        title="Edit milestone" data-milestone='@json($milestonePayload)'
-                                        data-update-url="{{ route('projects.milestones.update', $milestone) }}"
-                                        data-delete-url="{{ route('projects.milestones.destroy', $milestone) }}">
-                                        <i class="fas fa-pen"></i>
-                                    </button>
-
-                                </div>
-
-                                {{-- STATUS --}}
-                                <div class="pmile-step-status">
-
-                                    <span class="pmile-step-status-badge">
-                                        {{ $milestone->statusLabel() }}
-                                    </span>
-
-                                    @if ($isOverdue)
-                                        <span class="pmile-step-overdue">
-                                            Overdue
-                                        </span>
-                                    @endif
-
-                                </div>
-
-                                {{-- DATE --}}
-                                <div class="pmile-step-date">
-
-                                    @if ($milestone->planned_start_date)
-                                        {{ optional($milestone->planned_start_date)->format('d M') }}
-
-                                        @if ($milestone->planned_end_date)
-                                            → {{ optional($milestone->planned_end_date)->format('d M') }}
+                            <div class="pmile-step-card">
+                                <div class="pmile-step-card-head">
+                                    <div class="pmile-step-title-wrap">
+                                        <h4>{{ $milestone->title }}</h4>
+                                        @if ($milestone->description)
+                                            <span class="pmile-step-subtitle">{{ Str::limit($milestone->description, 52) }}</span>
                                         @endif
-                                    @else
-                                        -
+                                    </div>
+
+                                    @if (! empty($editable))
+                                        <button type="button" class="master-icon-btn master-btn-sm editMilestoneBtn"
+                                            title="Edit milestone" data-milestone='@json($milestonePayload)'
+                                            data-update-url="{{ route('projects.milestones.update', $milestone) }}"
+                                            data-delete-url="{{ route('projects.milestones.destroy', $milestone) }}">
+                                            <i class="fas fa-pen"></i>
+                                        </button>
                                     @endif
                                 </div>
+
+                                <div class="pmile-step-badges">
+                                    <span class="pmile-status">{{ $milestone->statusLabel() }}</span>
+                                    @if ($isOverdue)
+                                        <span class="pmile-overdue">Overdue</span>
+                                    @endif
+                                    @if ($milestone->is_public)
+                                        <span class="pmile-public">Public</span>
+                                    @else
+                                        <span class="pmile-private">Internal</span>
+                                    @endif
+                                    @if ($milestone->is_required)
+                                        <span class="pmile-required">Required</span>
+                                    @endif
+                                </div>
+
+                                <div class="pmile-step-progress-row">
+                                    <div class="pmile-progress"><span style="width: {{ (int) $milestone->progress_percent }}%"></span></div>
+                                    <strong>{{ (int) $milestone->progress_percent }}%</strong>
+                                </div>
+
+                                <div class="pmile-step-dates">
+                                    <div><span>Planned</span><strong>{{ $plannedRange ?: '—' }}</strong></div>
+                                    <div><span>Actual</span><strong>{{ $actualRange ?: '—' }}</strong></div>
+                                </div>
+
+                                @if ($milestone->relationLoaded('owner') && $milestone->owner)
+                                    <div class="pmile-step-owner"><i class="fas fa-user"></i> {{ $milestone->owner->name }}</div>
+                                @endif
+
+                                @if ($milestone->blocked_reason)
+                                    <p class="pmile-notes danger">{{ $milestone->blocked_reason }}</p>
+                                @elseif($milestone->client_note)
+                                    <p class="pmile-notes">{{ $milestone->client_note }}</p>
+                                @endif
                             </div>
                         </div>
                     @endforeach
+
                 </div>
             </div>
         </div>

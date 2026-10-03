@@ -4,37 +4,9 @@
 @section('page-title', 'Payments')
 
 @section('content')
-<style>
-    .pd-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        border-radius: 12px;
-        padding: 7px 15px;
-        background: #f1f4f9;
-        color: #5f6b7a;
-        font-size: 12px;
-        font-weight: 600
-    }
-
-    .pd-status-in_progress,
-    .pd-mode-cash,
-    .pd-status-pending {
-        background: #fff7e6;
-        color: #b54708
-    }
-
-    .pd-status-completed,
-    .pd-status-booked,
-    .pd-health-green,
-    .pd-mode-neft,
-    .pd-mode-upi,
-    .pd-mode-rtgs,
-    .pd-public {
-        background: #c1f2bb !important;
-        color: green !important
-    }
-</style>
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/client-portal-payments.css') }}">
+@endpush
 <div class="master-header" style="padding:5px;margin-bottom:15px;">
     <div>
         <h1>Payments</h1>
@@ -44,15 +16,15 @@
 <div class="cp-grid-4" style="margin-bottom:15px;">
     <div class="cp-card cp-stat">
         <span>Paid</span>
-        <strong>₹{{ number_format($totals['inward'], 2) }}</strong>
+        <strong>{{ \App\Helpers\CommonHelper::indianCurrency($totals['inward']) }}</strong>
     </div>
     <div class="cp-card cp-stat">
         <span>Invoiced</span>
-        <strong>₹{{ number_format($totals['invoiced'], 2) }}</strong>
+        <strong>{{ \App\Helpers\CommonHelper::indianCurrency($totals['invoiced']) }}</strong>
     </div>
     <div class="cp-card cp-stat">
         <span>Pending Invoiced Amount</span>
-        <strong>₹{{ number_format($totals['inward']-$totals['invoiced'], 2) }}</strong>
+        <strong>{{ \App\Helpers\CommonHelper::indianCurrency($totals['inward'] - $totals['invoiced']) }}</strong>
     </div>
 </div>
 <div class="cp-card">
@@ -82,7 +54,7 @@
                         </td>
                         <td>
                             <span class="pd-chip pd-mode-{{ $payment->payment_mode }}" style="font-size:11px;">{{ $payment->payment_mode ? strtoupper($payment->payment_mode) : '-' }}</span></td>
-                        <td>{{ $payment->currency }} {{ number_format((float)$payment->credit_amount, 2) }}</td>
+                        <td>{{ \App\Helpers\CommonHelper::amount($payment->credit_amount, $payment->currency) }}</td>
                         <td>
                             <span class="pd-chip pd-status-{{ $payment->accounting_status }}">{{ $payment->statusLabel() }}</span>
                         </td>

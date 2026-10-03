@@ -1,0 +1,273 @@
+/* ==========================================================================
+   SELECT2 THEME — restyles Select2 4.1.0 to match the master form theme
+   (same geometry, colours and focus ring as .master-input / .master-select)
+   ========================================================================== */
+
+.select2-container {
+    width: 100% !important;
+    font-family: inherit;
+}
+
+/* Select2 4.1 is initialised with selectionCssClass: ':all:' — it copies
+   the original select's classes (e.g. .master-select) onto the generated
+   container span. The module layout rules that target .master-select
+   (flex sizing in filter rows, .two-btn-row, …) must keep applying to the
+   container, but the native-control geometry must not: the inner
+   .select2-selection is the visible control. Strip the geometry so the
+   container is a transparent, zero-padding wrapper. */
+span.select2-container.master-select,
+span.select2-container.master-input,
+span.select2-container.master-textarea {
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+/* --- single selection --- */
+
+.select2-container--default .select2-selection--single {
+    min-height: 44px;
+    border: 1px solid #d8e2ef;
+    border-radius: 14px;
+    background: #fff;
+    background-image: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #17233b;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    padding: 11px 38px 11px 14px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered::placeholder,
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #8792a5;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 42px;
+    width: 38px;
+    border: 0;
+    background: transparent;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: #8792a5 transparent transparent transparent;
+    border-width: 5px 5px 0 0;
+    border-style: solid;
+    border-radius: 0;
+    height: 0;
+    margin-left: -11px;
+    width: 0;
+    transform: none;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__clear {
+    color: #8792a5;
+    font-weight: 700;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--open .select2-selection--single {
+    border-color: #4f83f1;
+    box-shadow: 0 0 0 3px rgba(79, 131, 241, .12);
+}
+
+.select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b {
+    border-color: transparent transparent #8792a5 transparent;
+    border-width: 0 5px 5px 5px;
+}
+
+/* --- multiple selection --- */
+
+.select2-container--default .select2-selection--multiple {
+    min-height: 44px;
+    border: 1px solid #d8e2ef;
+    border-radius: 14px;
+    background: #fff;
+    padding: 4px 8px;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--multiple,
+.select2-container--default.select2-container--open .select2-selection--multiple {
+    border-color: #4f83f1;
+    box-shadow: 0 0 0 3px rgba(79, 131, 241, .12);
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background: #eaf1ff;
+    border: 1px solid #c9dbff;
+    border-radius: 999px;
+    color: #2b5cd9;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 3px 8px 3px 12px;
+    margin: 3px 4px 3px 0;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: #2b5cd9;
+    font-weight: 800;
+    padding-right: 6px;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: #17233b;
+}
+
+.select2-container--default .select2-selection--multiple .select2-search--inline .select2-search__field {
+    color: #17233b;
+    font-size: 13.5px;
+    min-width: 80px;
+}
+
+/* --- dropdown ---
+   The ladder, low to high: row menus 1300 · toasts 4000 · alert dialogs 4500 ·
+   .master-modal 9999 · this list. A select's options must clear the dialog
+   they were opened from, because the panel is portaled to <body> (see
+   master-selects.js) so that no scrolling or overflow-hidden ancestor can
+   clip it — which also means no ancestor's stacking context raises it. */
+
+.select2-dropdown {
+    border: 1px solid #d8e2ef;
+    border-radius: 14px;
+    box-shadow: 0 18px 45px rgba(23, 35, 59, .18);
+    background: #fff;
+    margin-top: 6px;
+    z-index: 10050;
+    overflow: hidden;
+}
+
+.select2-dropdown.select2-dropdown--above {
+    margin-top: 0;
+    margin-bottom: 6px;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    border: 1px solid #d8e2ef;
+    border-radius: 10px;
+    font-size: 13.5px;
+    padding: 8px 12px;
+    color: #17233b;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field:focus {
+    outline: none;
+    border-color: #4f83f1;
+    box-shadow: 0 0 0 3px rgba(79, 131, 241, .12);
+}
+
+.select2-results {
+    font-size: 13.5px;
+    color: #17233b;
+    padding: 6px 0;
+}
+
+.select2-results__option {
+    padding: 9px 14px;
+}
+
+.select2-results__option--selectable {
+    cursor: pointer;
+}
+
+.select2-results__option--highlighted.select2-results__option--selectable {
+    background: #eaf1ff;
+    color: #17233b;
+}
+
+.select2-results__option--selected {
+    background: transparent;
+    color: #4f83f1;
+    font-weight: 700;
+}
+
+.select2-results__option[aria-disabled="true"] {
+    color: #9aa5b5;
+}
+
+.select2-results__option .select2-results__group {
+    font-weight: 700;
+    color: #536079;
+    text-transform: uppercase;
+    font-size: 11.5px;
+    letter-spacing: .05em;
+    padding: 8px 14px 4px;
+}
+
+.select2-results__message {
+    background: #f8fbff;
+    color: #8792a5;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 14px;
+}
+
+/* --- disabled state --- */
+
+.select2-container--default.select2-container--disabled .select2-selection--single,
+.select2-container--default.select2-container--disabled .select2-selection--multiple {
+    background: #f3f6fb;
+    border-color: #e4eaf4;
+    cursor: not-allowed;
+}
+
+.select2-container--default.select2-container--disabled .select2-selection__rendered {
+    color: #8792a5;
+}
+
+/* --- dark theme (admin data-theme="dark") --- */
+
+:root[data-theme="dark"] .select2-container--default .select2-selection--single,
+:root[data-theme="dark"] .select2-container--default .select2-selection--multiple,
+:root[data-theme="dark"] .select2-dropdown,
+:root[data-theme="dark"] .select2-results__message {
+    background: var(--bg-card, #1a2540);
+    border-color: var(--border, #253047);
+}
+
+:root[data-theme="dark"] .select2-container--default .select2-selection--single .select2-selection__rendered,
+:root[data-theme="dark"] .select2-container--default .select2-selection--multiple .select2-search--inline .select2-search__field {
+    color: var(--text-primary, #e2e8f0);
+}
+
+:root[data-theme="dark"] .select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: var(--text-secondary, #8892a4) transparent transparent transparent;
+}
+
+:root[data-theme="dark"] .select2-results {
+    color: var(--text-primary, #e2e8f0);
+}
+
+:root[data-theme="dark"] .select2-results__option--highlighted.select2-results__option--selectable {
+    background: rgba(79, 131, 241, .18);
+    color: var(--text-primary, #e2e8f0);
+}
+
+:root[data-theme="dark"] .select2-container--default .select2-search--dropdown .select2-search__field {
+    background: var(--bg-input, #1e2d47);
+    border-color: var(--border, #253047);
+    color: var(--text-primary, #e2e8f0);
+}
+
+:root[data-theme="dark"] .select2-results__option--selected {
+    color: #7ea6ff;
+}
+
+/* --- print: never render select2 chrome on paper --- */
+
+@media print {
+    .select2-container--open { display: block; }
+    .select2-dropdown, .select2-search--dropdown { display: none !important; }
+}

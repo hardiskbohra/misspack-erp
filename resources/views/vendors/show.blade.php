@@ -3,15 +3,19 @@
 @section('page-title', $vendor->vendor_name)
 
 @section('content')
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/vendors.css') }}">
+@endpush
+
     @php
         $statusClass = str_replace('_', '-', $vendor->status);
         $typeClass = str_replace('_', '-', $vendor->vendor_type);
-        $money = function ($amount, $currency = '₹') {
-            return $currency . ' ' . number_format((float) $amount, 2);
+        $money = function ($amount, $currency = 'INR') {
+            return \App\Helpers\CommonHelper::amount($amount, $currency);
         };
     @endphp
 
-    <div class="vendor-show">
+    <div class="vendor-show" data-vendor-id="{{ $vendor->id }}">
         <div class="vendor-hero">
             <div class="vendor-head-left">
                 @if ($vendor->image_path)
@@ -23,7 +27,7 @@
                 <div>
                     <h1>{{ $vendor->vendor_name }} ({{ $vendor->contact_person_name }})</h1>
                     <p>{{ $vendor->vendor_number }} · {{ $vendor->category ?: 'No category' }} · {{ $vendor->country ?: '-' }}</p>
-                    <div class="master-chip-row" style="padding-top:10px;">
+                    <div class="master-chip-row">
                         <span class="master-badge status-{{ $statusClass }}">{{ $vendor->statusLabel() }}</span>
                         <span class="master-badge type-{{ $typeClass }}">{{ $vendor->typeLabel() }}</span>
                         <span class="master-badge currency">{{ $vendor->preferred_currency }}</span>
@@ -31,8 +35,8 @@
                 </div>
             </div>
             <div class="vendor-actions">
-                <a href="{{ route('vendors.index') }}" class="vendor-btn vendor-btn-light">Back</a>
-                <a href="{{ route('vendors.edit', $vendor) }}" class="vendor-btn vendor-btn-primary">Edit Vendor</a>
+                <a href="{{ route('vendors.index') }}" class="master-btn master-btn-light">Back</a>
+                <a href="{{ route('vendors.edit', $vendor) }}" class="master-btn master-btn-primary">Edit Vendor</a>
             </div>
         </div>
 
@@ -40,17 +44,13 @@
             <div class="vendor-kpi"><span>Running
                     Projects</span><strong>{{ $summary['running_projects'] }}</strong><small>{{ $summary['project_products_count'] }}
                     project product rows</small></div>
-            <div class="vendor-kpi blue"><span>Bill Generated</span><strong>{{ $summary['vendor_currency'] }}
-                    {{ number_format((float) $summary['vendor_bill_foreign'], 2) }}</strong><small>Vendor currency
+            <div class="vendor-kpi blue"><span>Bill Generated</span><strong>{{ \App\Helpers\CommonHelper::amount($summary['vendor_bill_foreign'], $summary['vendor_currency']) }}</strong><small>Vendor currency
                     payable</small></div>
-            <div class="vendor-kpi orange"><span>Vendor Expenses</span><strong>{{ $summary['vendor_currency'] }}
-                    {{ number_format((float) $summary['vendor_expense_foreign'], 2) }}</strong><small>INR eq:
+            <div class="vendor-kpi orange"><span>Vendor Expenses</span><strong>{{ \App\Helpers\CommonHelper::amount($summary['vendor_expense_foreign'], $summary['vendor_currency']) }}</strong><small>INR eq:
                     {{ $money($summary['expenses_on_behalf']) }}</small></div>
-            <div class="vendor-kpi green"><span>Paid To Vendor</span><strong>{{ $summary['vendor_currency'] }}
-                    {{ number_format((float) $summary['vendor_paid_foreign'], 2) }}</strong><small>INR paid:
+            <div class="vendor-kpi green"><span>Paid To Vendor</span><strong>{{ \App\Helpers\CommonHelper::amount($summary['vendor_paid_foreign'], $summary['vendor_currency']) }}</strong><small>INR paid:
                     {{ $money($summary['paid_to_vendor']) }}</small></div>
-            <div class="vendor-kpi red"><span>Need To Pay</span><strong>{{ $summary['vendor_currency'] }}
-                    {{ number_format((float) $summary['vendor_balance_foreign'], 2) }}</strong><small>INR balance:
+            <div class="vendor-kpi red"><span>Need To Pay</span><strong>{{ \App\Helpers\CommonHelper::amount($summary['vendor_balance_foreign'], $summary['vendor_currency']) }}</strong><small>INR balance:
                     {{ $money($summary['need_to_pay']) }}</small></div>
         </div>
 
@@ -76,7 +76,7 @@
             <div class="vendor-tab-panels">
                 <section class="vendor-panel active" data-panel="overview">
 
-                    <div class="vendor-grid-3" style="margin-top:18px;">
+                    <div class="vendor-grid-3">
                         <div class="vendor-card vendor-section">
                             <div class="vendor-section-head">
                                 <div>
@@ -105,8 +105,7 @@
                                 <div class="vendor-mini-row">
                                     <div><strong>{{ $entry->particular }}</strong><small>{{ optional($entry->entry_date)->format('d M Y') }}
                                             · {{ $entry->payment_mode ?: '-' }}</small></div><b
-                                        class="green">{{ $entry->currency }}
-                                        {{ number_format((float) $entry->debit_amount, 2) }}</b>
+                                        class="green">{{ \App\Helpers\CommonHelper::amount($entry->debit_amount, $entry->currency) }}</b>
                                 </div>
                             @empty
                                 <div class="vendor-empty small">No payment entries found.</div>
@@ -136,7 +135,7 @@
                 </section>
 
                 <section class="vendor-panel" data-panel="basic">
-                    <div class="vendor-card vendor-section" style="margin-bottom:20px;">
+                    <div class="vendor-card vendor-section">
                         <div class="vendor-section-head">
                             <div>
                                 <p class="vendor-eyebrow">Basic</p>
@@ -201,43 +200,49 @@
                 
                 
                 <section class="vendor-panel" data-panel="attachments">
-                    <div class="vendor-section-head" style="padding:15px;">
+                    <div class="vendor-section-head">
                         <div>
                             <p class="vendor-eyebrow">Files</p>
                             <h2>Attachments</h2>
                         </div>
                         <div>
-                            <span class="vendor-count">{{ $vendor->attachments->count() }} Files</span> &nbsp;
-                            <button type="button" class="master-btn master-btn-primary" id="openAddAttachmentModal"><i class="fas fa-plus"></i> Add Attachment</button>
+                            <span class="vendor-count">{{ $attachmentsAvailable ? $vendor->attachments->count() : 0 }} Files</span> &nbsp;
+                            @if($attachmentsAvailable)
+                                <button type="button" class="master-btn master-btn-primary" id="openAddAttachmentModal"><i class="fas fa-plus"></i> Add Attachment</button>
+                            @endif
                         </div>
                     </div>
-                        
-                    <div class="vendor-attachment-grid vendor-card" style="padding: 15px;">
-                        @forelse($vendor->attachments as $attachment)
-                            <div class="vendor-attachment">
-                                @if ($attachment->isImage())
-                                    <img src="{{ $attachment->fileUrl() }}" alt="{{ $attachment->title }}">
-                                @else
-                                    <div class="vendor-file-icon"><i class="fa-solid fa-file-lines"></i></div>
-                                @endif
-                                <div>
-                                    <strong>{{ $attachment->title ?: $attachment->original_name }}</strong>
-                                    <span>{{ $attachment->categoryLabel() }} ·
-                                        {{ strtoupper($attachment->extension) }} ·
-                                        {{ $attachment->is_public ? 'Public' : 'Internal' }}</span>
-                                    <span>{{ $attachment->notes }}</span>
-                                    <div class="vendor-row-actions">
-                                        <a href="{{ $attachment->fileUrl() }}" target="_blank" class="master-btn master-btn-primary">Open</a>
-                                        @if(\Illuminate\Support\Facades\Route::has('vendors.attachments.destroy'))
-                                            <form method="POST" action="{{ route('vendors.attachments.destroy', $attachment) }}" onsubmit="return confirm('Delete this vendor document?')">@csrf @method('DELETE')<button class="master-btn master-btn-primary vendor-row-delete" type="submit">Delete</button></form>
-                                        @endif
+
+                    @if($attachmentsAvailable)
+                        <div class="vendor-attachment-grid vendor-card">
+                            @forelse($vendor->attachments as $attachment)
+                                <div class="vendor-attachment">
+                                    @if ($attachment->isImage())
+                                        <img src="{{ $attachment->fileUrl() }}" alt="{{ $attachment->title }}">
+                                    @else
+                                        <div class="vendor-file-icon"><i class="fa-solid fa-file-lines"></i></div>
+                                    @endif
+                                    <div>
+                                        <strong>{{ $attachment->title ?: $attachment->original_name }}</strong>
+                                        <span>{{ $attachment->categoryLabel() }} ·
+                                            {{ strtoupper($attachment->extension) }} ·
+                                            {{ $attachment->is_public ? 'Public' : 'Internal' }}</span>
+                                        <span>{{ $attachment->notes }}</span>
+                                        <div class="vendor-row-actions">
+                                            <a href="{{ $attachment->fileUrl() }}" target="_blank" class="master-btn master-btn-primary">Open</a>
+                                            @if(\Illuminate\Support\Facades\Route::has('vendors.attachments.destroy'))
+                                                <form method="POST" action="{{ route('vendors.attachments.destroy', $attachment) }}" data-confirm="Delete this vendor document?">@csrf @method('DELETE')<button class="master-btn master-btn-primary vendor-row-delete" type="submit">Delete</button></form>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        @empty
-                            <div class="pd-empty">No attachments uploaded yet.</div>
-                        @endforelse
-                    </div>
+                            @empty
+                                <div class="pd-empty">No attachments uploaded yet.</div>
+                            @endforelse
+                        </div>
+                    @else
+                        <div class="vendor-empty">Run migration to enable attachments.</div>
+                    @endif
                 </section>
                 
                 <!--Add Attachment-->
@@ -290,7 +295,7 @@
                 
 
                 <section class="vendor-panel" data-panel="projects">
-                    <div class="vendor-section-head" style="padding:15px;">
+                    <div class="vendor-section-head">
                         <div>
                             <p class="vendor-eyebrow">Projects</p>
                             <h2>Project Running With Vendor</h2>
@@ -318,7 +323,7 @@
                                         </td>
                                         <td>{{ $row->product_name }}<small style="font-weight:400">Vendor Invoice: {{ $row->vendor_invoice_number ?: '-' }}</small></td>
                                         <td>{{ number_format((int)$row->quantity) }} {{ $row->unit }}</td>
-                                        <td>{{ $row->currency === 'INR' ? '₹' : $row->currency }} {{ number_format((float) $row->total_amount, 2) }}
+                                        <td>{{ \App\Helpers\CommonHelper::amount($row->total_amount, $row->currency) }}
                                         </td>
                                         <td>{{ $row->statusLabel() }}<small>{{ $row->stageLabel() }}</small></td>
                                         <td>Expected:
@@ -340,7 +345,7 @@
                 </section>
 
                 <section class="vendor-panel" data-panel="products">
-                    <div class="vendor-section-head" style="padding:15px;">
+                    <div class="vendor-section-head">
                         <div>
                             <p class="vendor-eyebrow">Products</p>
                             <h2>Products Supplied</h2>
@@ -350,7 +355,7 @@
                         </div>
                     </div>
                         
-                    <div class="vendor-info-grid vendor-card" style="padding:15px;">
+                    <div class="vendor-info-grid vendor-card">
                         @forelse($products as $product)
                             @php($media = method_exists($product, 'primaryMedia') ? $product->primaryMedia() : null)
                             <a class="no-decorate" href="{{ route('products.show', $product) }}">
@@ -373,7 +378,7 @@
 
                 <!--Payments-->
                 <section class="vendor-panel" data-panel="payments">
-                    <div class="vendor-section-head" style="padding:15px;">
+                    <div class="vendor-section-head">
                         <div>
                             <p class="vendor-eyebrow">Vendor Currency Ledger</p>
                             <h2>Manual Vendor Payment Entries</h2>
@@ -409,18 +414,23 @@
                                         <td><strong>{{ $entry->particular }}</strong><small>{{ $entry->relationLoaded('project') && $entry->project ? $entry->project->project_number . ' - ' . $entry->project->name : 'No project' }}</small><small>{{ $entry->remarks }}</small>
                                         </td>
                                         <td class="red">
-                                            {{ $entry->transaction_type === 'credit' ? $entry->foreign_currency . ' ' . number_format((float) $entry->foreign_amount, 2) : '-' }}
+                                            {{ $entry->transaction_type === 'credit' ? \App\Helpers\CommonHelper::amount($entry->foreign_amount, $entry->foreign_currency) : '-' }}
                                         </td>
                                         <td class="green">
-                                            {{ $entry->transaction_type === 'debit' ? $entry->foreign_currency . ' ' . number_format((float) $entry->foreign_amount, 2) : '-' }}
+                                            {{ $entry->transaction_type === 'debit' ? \App\Helpers\CommonHelper::amount($entry->foreign_amount, $entry->foreign_currency) : '-' }}
                                         </td>
-                                        <td>₹ {{ number_format((float) $entry->amount_in_inr, 2) }}<small>Rate:
+                                        <td>{{ \App\Helpers\CommonHelper::indianCurrency($entry->amount_in_inr) }}<small>Rate:
                                                 {{ $entry->exchange_rate ? number_format($entry->exchange_rate, 2) : '-' }}</small></td>
                                         <td>{{ $entry->relationLoaded('paidAccount') && $entry->paidAccount ? $entry->paidAccount->name : '-' }}<small>{{ $entry->payment_mode ?: '-' }}
                                                 {{ $entry->bank_reference_number ? '· ' . $entry->bank_reference_number : '' }}</small>
                                         </td>
                                         <td>{{ $entry->statusLabel() }}@if ($entry->cashflow_entry_id)
-                                                <small>Cashflow #{{ $entry->cashflow_entry_id }}</small>
+                                                @if (\Illuminate\Support\Facades\Route::has('cashflows.show'))
+                                                    <a class="vendor-sync-link" href="{{ route('cashflows.show', $entry->cashflow_entry_id) }}"
+                                                        title="Open the linked INR cashflow entry">↔ Cashflow #{{ $entry->cashflow_entry_id }}</a>
+                                                @else
+                                                    <small>Cashflow #{{ $entry->cashflow_entry_id }}</small>
+                                                @endif
                                             @endif
                                         </td>
                                         <td>
@@ -436,7 +446,7 @@
                                                 @if (\Illuminate\Support\Facades\Route::has('vendors.payments.destroy'))
                                                     <form method="POST"
                                                         action="{{ route('vendors.payments.destroy', $entry) }}"
-                                                        onsubmit="return confirm('Delete this vendor payment entry?')">
+                                                        data-confirm="Delete this vendor payment entry?">
                                                         @csrf @method('DELETE')<button class="master-icon-btn danger"><i class="fas fa-trash"></i></button>
                                                     </form>
                                                 @endif
@@ -454,7 +464,7 @@
                         </table>
                     </div>
 
-                    <div class="vendor-section-head" style="margin-top:18px;padding:15px;">
+                    <div class="vendor-section-head">
                         <div>
                             <p class="vendor-eyebrow">INR Cashflow</p>
                             <h2>Linked / Matched Cashflow Entries</h2>
@@ -483,10 +493,8 @@
                                         <td>{{ optional($entry->entry_date)->format('d M y') ?: '-' }}</td>
                                         <td>{{ $entry->category?->name ?? ($entry->expense_head ?? '-') }}</td>
                                         <td><strong>{{ $entry->particular }}</strong><small>{{ $entry->notes }}</small></td>
-                                        <td class="red">{{ $entry->currency }}
-                                            {{ number_format((float) $entry->credit_amount, 2) }}</td>
-                                        <td class="green">{{ $entry->currency }}
-                                            {{ number_format((float) $entry->debit_amount, 2) }}</td>
+                                        <td class="red">{{ \App\Helpers\CommonHelper::amount($entry->credit_amount, $entry->currency) }}</td>
+                                        <td class="green">{{ \App\Helpers\CommonHelper::amount($entry->debit_amount, $entry->currency) }}</td>
                                         <td>{{ $entry->account?->name ?? '-' }}</td>
                                         <td>{{ $entry->payment_mode ?: '-' }}</td>
                                         <td>{{ $entry->bank_reference_number ?: $entry->invoice_bill_number ?: '-' }}</td>
@@ -552,7 +560,7 @@
                                 <div class="master-field">
                                     <label class="master-label">Exchange Rate</label>
                                     <input class="master-input" type="number" step="0.000001" min="0" name="exchange_rate" id="exchangeRate"
-                                        placeholder="INR per currency"></div>
+                                        placeholder="₹ per 1 unit"></div>
                                 <div class="master-field">
                                     <label class="master-label">Amount in INR</label>
                                     <input class="master-input" type="number" step="0.01" min="0" name="amount_in_inr" id="amountInInr"
@@ -624,8 +632,14 @@
                                     <input class="master-input" type="file" name="attachments[]" multiple
                                         accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip">
                                 </div>
-                                <label class="master-check full"><input class="master-check" type="checkbox" name="also_create_cashflow"
-                                        value="1"> Also create linked INR cashflow entry</label>
+                                <div class="master-field full vendor-sync-field">
+                                    <label class="master-check">
+                                        <input type="hidden" name="also_create_cashflow" value="0">
+                                        <input type="checkbox" name="also_create_cashflow" value="1" class="vendor-cashflow-sync" checked>
+                                        Record this payment in the INR cashflow
+                                    </label>
+                                    <small class="vendor-sync-hint">One entry here also creates the INR entry in the Cashflow module — it stays in sync when you edit or delete this payment.</small>
+                                </div>
                             </div>
                         </div>
                         <div class="master-modal-footer">
@@ -685,7 +699,7 @@
                                 <div class="master-field">
                                     <label class="master-label">Exchange Rate</label>
                                     <input class="master-input" type="number" step="0.1" min="0" name="exchange_rate" id="exchangeRate"
-                                        placeholder="INR per currency"></div>
+                                        placeholder="₹ per 1 unit"></div>
                                 <div class="master-field">
                                     <label class="master-label">Amount in INR</label>
                                     <input class="master-input" type="number" step="1" min="0" name="amount_in_inr" id="amountInInr"
@@ -757,8 +771,14 @@
                                     <input class="master-input" type="file" name="attachments[]" multiple
                                         accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip">
                                 </div>
-                                <label class="master-check full"><input class="master-check" type="checkbox" name="also_create_cashflow"
-                                        value="1"> Also create linked INR cashflow entry</label>
+                                <div class="master-field full vendor-sync-field">
+                                    <label class="master-check">
+                                        <input type="hidden" name="also_create_cashflow" value="0">
+                                        <input type="checkbox" name="also_create_cashflow" value="1" class="vendor-cashflow-sync" checked>
+                                        Record this payment in the INR cashflow
+                                    </label>
+                                    <small class="vendor-sync-hint">One entry here also creates the INR entry in the Cashflow module — it stays in sync when you edit or delete this payment.</small>
+                                </div>
                             </div>
                         </div>
                         <div class="master-modal-footer">
@@ -770,31 +790,33 @@
 
                 <!--Statement-->
                 <section class="vendor-panel" data-panel="statement">
-                    <div class="vendor-section-head" style="padding:15px;">
+                    <div class="vendor-section-head">
                         <div>
                             <p class="vendor-eyebrow">Vendor Currency Statement</p>
                             <h2>Statement of Accounts</h2>
                         </div>
-                        <div>
+                        <div class="vendor-statement-actions">
                             <span class="vendor-pill">{{ $summary['statement_count'] }} manual entries</span>
+                            {{-- The manual tab is the currency ledger; this is the
+                                 same account as a statement the vendor can be sent. --}}
+                            <a class="master-btn master-btn-soft"
+                                href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id]) }}">
+                                <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Full statement of account
+                            </a>
                         </div>
                     </div>
                     <div class="vendor-currency-summary">
                         @forelse($currencySummary as $currency => $row)
-                            <div><span>{{ $currency }} Bills</span><strong>{{ $currency }}
-                                    {{ number_format((float) $row['credit'], 2) }}</strong></div>
-                            <div><span>{{ $currency }} Paid</span><strong class="green">{{ $currency }}
-                                    {{ number_format((float) $row['debit'], 2) }}</strong></div>
-                            <div><span>{{ $currency }} Balance</span><strong class="red">{{ $currency }}
-                                    {{ number_format((float) $row['balance'], 2) }}</strong></div>
-                            <div><span>{{ $currency }} Expenses</span><strong
-                                    class="orange">{{ $currency }}
-                                    {{ number_format((float) $row['expense'], 2) }}</strong></div>
+                            <div><span>{{ \App\Helpers\CommonHelper::currencyLabel($currency) }} Bills</span><strong>{{ \App\Helpers\CommonHelper::amount($row['credit'], $currency) }}</strong></div>
+                            <div><span>{{ \App\Helpers\CommonHelper::currencyLabel($currency) }} Paid</span><strong class="green">{{ \App\Helpers\CommonHelper::amount($row['debit'], $currency) }}</strong></div>
+                            <div><span>{{ \App\Helpers\CommonHelper::currencyLabel($currency) }} Balance</span><strong class="red">{{ \App\Helpers\CommonHelper::amount($row['balance'], $currency) }}</strong></div>
+                            <div><span>{{ \App\Helpers\CommonHelper::currencyLabel($currency) }} Expenses</span><strong
+                                    class="orange">{{ \App\Helpers\CommonHelper::amount($row['expense'], $currency) }}</strong></div>
                         @empty
                             <div><span>No Ledger</span><strong>-</strong></div>
                         @endforelse
                     </div>
-                    <div class="vendor-card vendor-table-wrap" style="margin-top:16px;">
+                    <div class="vendor-card vendor-table-wrap">
                         <table class="vendor-table">
                             <thead>
                                 <tr>
@@ -821,15 +843,14 @@
                                         <td>{{ $paymentEntry->categoryLabel() }}<small>{{ $paymentEntry->statusLabel() }}</small>
                                         </td>
                                         <td class="red">
-                                            {{ $paymentEntry->transaction_type === 'credit' ? $currency . ' ' . number_format((float) $paymentEntry->foreign_amount, 2) : '-' }}
+                                            {{ $paymentEntry->transaction_type === 'credit' ? \App\Helpers\CommonHelper::amount($paymentEntry->foreign_amount, $paymentEntry->foreign_currency ?: 'RMB') : '-' }}
                                         </td>
                                         <td class="green">
-                                            {{ $paymentEntry->transaction_type === 'debit' ? $currency . ' ' . number_format((float) $paymentEntry->foreign_amount, 2) : '-' }}
+                                            {{ $paymentEntry->transaction_type === 'debit' ? \App\Helpers\CommonHelper::amount($paymentEntry->foreign_amount, $paymentEntry->foreign_currency ?: 'RMB') : '-' }}
                                         </td>
-                                        <td><strong>{{ $paymentEntry->foreign_currency ?: 'RMB' }}
-                                                {{ number_format($paymentEntry->running_balance, 2) }}</strong>
+                                        <td><strong>{{ \App\Helpers\CommonHelper::amount($paymentEntry->running_balance, $paymentEntry->foreign_currency ?: 'RMB') }}</strong>
                                         </td>
-                                        <td>₹ {{ number_format((float) $paymentEntry->amount_in_inr, 2) }}<small>Rate:
+                                        <td>{{ \App\Helpers\CommonHelper::indianCurrency($paymentEntry->amount_in_inr) }}<small>Rate:
                                                 {{ $paymentEntry->exchange_rate ? number_format($paymentEntry->exchange_rate, 2) : '-' }}</small></td>
                                         <td>{{ $paymentEntry->relationLoaded('paidAccount') && $paymentEntry->paidAccount ? $paymentEntry->paidAccount->name : '-' }}<small>
                                                 @foreach ($paymentEntry->attachments as $attachment)
@@ -854,7 +875,7 @@
 
                 <!--Shipments-->
                 <section class="vendor-panel" data-panel="shipments">
-                    <div class="vendor-section-head" style="padding:15px;">
+                    <div class="vendor-section-head">
                         <div>
                             <p class="vendor-eyebrow">Shipments</p>
                             <h2>Vendor Related Shipments</h2>
@@ -890,8 +911,7 @@
                                         </td>
                                         <td>{{ method_exists($shipment, 'statusLabel') ? $shipment->statusLabel() : $shipment->status }}
                                         </td>
-                                        <td>{{ $shipment->currency }}
-                                            {{ number_format((float) $shipment->shipment_cost, 2) }}</td>
+                                        <td>{{ \App\Helpers\CommonHelper::amount($shipment->shipment_cost, $shipment->currency) }}</td>
                                     </tr>
                                 @empty
                                     <tr>
@@ -908,37 +928,43 @@
 
                 <!--Comments-->
                 <section class="vendor-panel" data-panel="comments">
-                    <div class="vendor-section-head" style="padding:15px;">
+                    <div class="vendor-section-head">
                         <div>
                             <p class="vendor-eyebrow">Comments</p>
                             <h2>Add Vendor Comment</h2>
                         </div>
                         <div>
-                            <span class="vendor-pill">{{ $vendor->comments->count() }} Comments</span> &nbsp;
-                            <button type="button" class="master-btn master-btn-primary addCommentBtn" id="openAddCommentModal"><i class="fas fa-plus"></i> Add Comment</button>
+                            <span class="vendor-pill">{{ $commentsAvailable ? $vendor->comments->count() : 0 }} Comments</span> &nbsp;
+                            @if($commentsAvailable)
+                                <button type="button" class="master-btn master-btn-primary addCommentBtn" id="openAddCommentModal"><i class="fas fa-plus"></i> Add Comment</button>
+                            @endif
                         </div>
                     </div>
-                    <div class="vendor-grid-2">
-                        @forelse($vendor->comments as $comment)
-                            <div class="vendor-comment {{ $comment->is_pinned ? 'pinned' : '' }}">
-                                <div><strong>{{ $comment->creator?->name ?? 'Internal Team' }}</strong><span>{{ $comment->created_at->format('d M Y, h:i A') }}
-                                        @if ($comment->is_pinned)
-                                            · Pinned
-                                        @endif
-                                    </span>
-                                </div>
-                                <p>{{ $comment->body }}</p>
-                                @if (\Illuminate\Support\Facades\Route::has('vendors.comments.destroy'))
-                                    <form method="POST"
-                                        action="{{ route('vendors.comments.destroy', $comment) }}"
-                                        onsubmit="return confirm('Delete comment?')">@csrf @method('DELETE')<button
+                    @if($commentsAvailable)
+                        <div class="vendor-grid-2">
+                            @forelse($vendor->comments as $comment)
+                                <div class="vendor-comment {{ $comment->is_pinned ? 'pinned' : '' }}">
+                                    <div><strong>{{ $comment->creator?->name ?? 'Internal Team' }}</strong><span>{{ $comment->created_at->format('d M Y, h:i A') }}
+                                            @if ($comment->is_pinned)
+                                                · Pinned
+                                            @endif
+                                        </span>
+                                    </div>
+                                    <p>{{ $comment->body }}</p>
+                                    @if (\Illuminate\Support\Facades\Route::has('vendors.comments.destroy'))
+                                        <form method="POST"
+                                            action="{{ route('vendors.comments.destroy', $comment) }}"
+                                            data-confirm="Delete comment?">@csrf @method('DELETE')<button
                                             type="submit">Delete</button></form>
-                                @endif
-                            </div>
-                        @empty
-                            <div class="vendor-empty small">No comments yet.</div>
-                        @endforelse
-                    </div>
+                                    @endif
+                                </div>
+                            @empty
+                                <div class="vendor-empty small">No comments yet.</div>
+                            @endforelse
+                        </div>
+                    @else
+                        <div class="vendor-empty">Run migration to enable comments.</div>
+                    @endif
                 </section>
                 
                 <!--Add Comment-->
@@ -965,7 +991,7 @@
                                         placeholder="Add internal vendor comment, payment note, follow-up, issue, reminder..."></textarea>
                                 </div>
                                 <div class="master-field full">
-                                    <label class="master-label"><input class="master-check" type="checkbox" name="is_pinned" value="1"> Pin this
+                                    <label class="master-check"><input class="master-check" type="checkbox" name="is_pinned" value="1"> Pin this
                                     comment</label>
                                 </div>
                             </div>
@@ -980,1039 +1006,7 @@
         </div>
     </div>
 
-    <style>
-        :root {
-            --vendor-primary: #4f83f1;
-            --vendor-primary-2: #6366f1;
-            --vendor-dark: #17233b;
-            --vendor-muted: #687386;
-            --vendor-border: #dfe7f3;
-            --vendor-bg: #eef3ff;
-            --vendor-soft: #edf5ff;
-            --vendor-white: #fff;
-            --vendor-red: #ef4770;
-            --vendor-green: #10b981;
-            --vendor-orange: #f59e0b;
-            --vendor-shadow: 0 14px 35px rgba(25, 42, 70, .08)
-        }
-
-        .vendor-show,
-        .vendor-show * {
-            box-sizing: border-box
-        }
-
-        .vendor-show {
-            background: var(--vendor-bg);
-            color: var(--vendor-dark);
-            font-size: 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 18px
-        }
-
-        .vendor-hero {
-            background: linear-gradient(135deg, #4f83f1, #7b61ff);
-            border-radius: 26px;
-            padding: 24px;
-            color: #fff;
-            display: flex;
-            justify-content: space-between;
-            gap: 18px;
-            box-shadow: 0 18px 45px rgba(79, 131, 241, .22)
-        }
-
-        .vendor-head-left {
-            display: flex;
-            gap: 18px;
-            align-items: center;
-            min-width: 0
-        }
-
-        .vendor-image {
-            width: 82px;
-            height: 82px;
-            border-radius: 20px;
-            object-fit: cover;
-            background: rgba(255, 255, 255, .16);
-            color: #fff;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            font-weight: 600;
-            flex: 0 0 82px
-        }
-
-        .vendor-eyebrow {
-            margin: 0 0 6px;
-            text-transform: uppercase;
-            letter-spacing: .13em;
-            font-size: 11px;
-            font-weight: 600;
-            opacity: .78
-        }
-
-        .vendor-hero h1 {
-            margin: 0;
-            font-size: 30px;
-            font-weight: 600
-        }
-
-        .vendor-row-actions {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-            margin-top: 8px
-        }
-
-        .vendor-row-actions a {
-            font-weight: 600;
-            text-decoration: none
-        }
-
-        .vendor-hero p {
-            margin: 6px 0 0;
-            opacity: .9
-        }
-
-        .vendor-actions,
-        .vendor-chip-row {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center
-        }
-
-        .vendor-actions {
-            justify-content: flex-end
-        }
-
-        .vendor-btn {
-            min-height: 42px;
-            border: 0;
-            border-radius: 14px;
-            padding: 11px 16px;
-            font-size: 14px;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            white-space: nowrap
-        }
-
-        .vendor-btn-primary {
-            background: #ef4770;
-            color: #fff;
-            box-shadow: 0 10px 24px rgba(239, 71, 112, .24)
-        }
-
-        .vendor-btn-soft {
-            background: var(--vendor-soft);
-            color: var(--vendor-primary)
-        }
-
-        .vendor-btn-light {
-            background: rgba(255, 255, 255, .16);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, .3)
-        }
-
-        .status-active {
-            background: #e8fff7;
-            color: #0e9f6e
-        }
-
-        .status-inactive {
-            background: #f3f6fb;
-            color: #536079
-        }
-
-        .status-on-hold {
-            background: #fff4e5;
-            color: #d97706
-        }
-
-        .status-blacklisted {
-            background: #ffeaf0;
-            color: #e11d48
-        }
-        
-        .vendor-attachment-form {
-            grid-template-columns: 1fr 1fr 1fr 1fr auto 1fr auto
-        }
-
-        .vendor-attachment-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px
-        }
-
-        .type-manufacturer {
-            background: #eaf1ff;
-            color: #3f7cf4
-        }
-
-        .type-trader {
-            background: #fff4e5;
-            color: #d97706
-        }
-
-        .type-distributor {
-            background: #ecfdf5;
-            color: #059669
-        }
-
-        .type-service-provider {
-            background: #ece7ff;
-            color: #7c3aed
-        }
-
-        .currency {
-            background: rgba(255, 255, 255, .16);
-            color: #fff
-        }
-
-        .vendor-kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 14px
-        }
-
-        .vendor-kpi,
-        .vendor-card,
-        .vendor-tabs-card {
-            background: #fff;
-            border: 1px solid var(--vendor-border);
-            border-radius: 22px;
-            box-shadow: var(--vendor-shadow)
-        }
-
-        .vendor-kpi {
-            padding: 16px
-        }
-
-        .vendor-kpi span {
-            display: block;
-            color: #687386;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase
-        }
-
-        .vendor-kpi strong {
-            display: block;
-            margin-top: 7px;
-            font-size: 22px
-        }
-
-        .vendor-kpi small {
-            display: block;
-            margin-top: 5px;
-            color: #8792a5;
-            font-weight: 500
-        }
-
-        .vendor-kpi.green strong,
-        .green {
-            color: #0e9f6e !important
-        }
-
-        .vendor-kpi.red strong,
-        .red {
-            color: #e11d48 !important
-        }
-
-        .vendor-kpi.orange strong,
-        .orange {
-            color: #d97706 !important
-        }
-
-        .vendor-kpi.blue strong {
-            color: #4f83f1
-        }
-
-        .vendor-kpi.purple strong {
-            color: #7c3aed
-        }
-
-        .vendor-tabs-card {
-            overflow: hidden
-        }
-
-        .vendor-tabs {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding: 12px;
-            background: #f8fbff;
-            border-bottom: 1px solid var(--vendor-border)
-        }
-
-        .vendor-tab {
-            border: 1px solid var(--vendor-border);
-            background: #fff;
-            color: #687386;
-            border-radius: 14px;
-            padding: 10px 13px;
-            font-weight: 600;
-            white-space: nowrap;
-            cursor: pointer
-        }
-
-        .vendor-tab.active {
-            background: #4f83f1;
-            color: #fff;
-            border-color: #4f83f1
-        }
-
-        .vendor-tab span {
-            background: #eef3ff;
-            color: #4f83f1;
-            border-radius: 999px;
-            padding: 3px 7px;
-            font-size: 11px;
-            margin-left: 5px
-        }
-
-        .vendor-tab.active span {
-            background: rgba(255, 255, 255, .2);
-            color: #fff
-        }
-
-        .vendor-tab-panels {
-            padding: 18px
-        }
-
-        .vendor-panel {
-            display: none
-        }
-
-        .vendor-panel.active {
-            display: block
-        }
-
-        .vendor-card {
-            box-shadow: none
-        }
-
-        .vendor-section {
-            padding: 20px
-        }
-
-        .vendor-section-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 12px;
-            margin-bottom: 14px
-        }
-
-        .vendor-section-head h2 {
-            margin: 0;
-            color: #172033;
-            font-weight: 600;
-            font-size: 20px
-        }
-
-        .vendor-grid-2 {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 18px
-        }
-
-        .vendor-grid-3 {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 18px
-        }
-
-        .vendor-info-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 14px
-        }
-
-        .vendor-info {
-            padding: 14px;
-            border: 1px solid var(--vendor-border);
-            border-radius: 14px;
-            background: #fbfdff
-        }
-
-        .vendor-info.full {
-            grid-column: 1/-1
-        }
-
-        .vendor-info span {
-            display: block;
-            color: #7d8aa0;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: .06em;
-            margin-bottom: 5px
-        }
-
-        .vendor-info strong,
-        .vendor-info small {
-            display: block;
-            overflow-wrap: anywhere
-        }
-
-        .vendor-info small {
-            color: #687386;
-            margin-top: 4px;
-            font-weight: 500
-        }
-
-        .vendor-rating {
-            font-size: 20px;
-            color: #f59e0b;
-            letter-spacing: 2px
-        }
-
-        .vendor-finance-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px
-        }
-
-        .vendor-finance-grid div {
-            background: #f8fbff;
-            border: 1px solid var(--vendor-border);
-            border-radius: 16px;
-            padding: 14px
-        }
-
-        .vendor-finance-grid span {
-            display: block;
-            color: #687386;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase
-        }
-
-        .vendor-finance-grid strong {
-            display: block;
-            margin-top: 7px;
-            font-size: 20px
-        }
-
-        .vendor-quick-links {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px
-        }
-
-        .vendor-quick-links a {
-            background: #f8fbff;
-            border: 1px solid var(--vendor-border);
-            border-radius: 14px;
-            padding: 13px;
-            text-decoration: none;
-            color: #4f83f1;
-            font-weight: 600
-        }
-
-        .vendor-mini-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            border-bottom: 1px solid var(--vendor-border);
-            padding: 10px 0
-        }
-
-        .vendor-mini-row:last-child {
-            border-bottom: 0
-        }
-
-        .vendor-mini-row strong,
-        .vendor-mini-row small {
-            display: block
-        }
-
-        .vendor-mini-row small {
-            color: #687386;
-            margin-top: 3px
-        }
-
-        .vendor-table-wrap {
-            overflow: auto
-        }
-
-        .vendor-table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 980px
-        }
-
-        .vendor-table.compact {
-            min-width: 640px
-        }
-
-        .vendor-table th,
-        .vendor-table td {
-            padding: 13px 14px;
-            border-bottom: 1px solid var(--vendor-border);
-            text-align: left;
-            vertical-align: top
-        }
-
-        .vendor-table th {
-            background: #fbfdff;
-            color: #7d8aa0;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: .07em
-        }
-
-        .vendor-table small {
-            display: block;
-            color: #687386;
-            margin-top: 3px;
-            font-weight: 500
-        }
-
-        .vendor-pill {
-            background: #eef3ff;
-            color: #4f83f1;
-            border-radius: 999px;
-            padding: 7px 10px;
-            font-size: 12px;
-            font-weight: 600
-        }
-
-        .vendor-pill.green {
-            background: #e8fff7;
-            color: #0e9f6e
-        }
-
-        .vendor-product-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px
-        }
-
-        .vendor-product-card {
-            display: grid;
-            grid-template-columns: 62px 1fr;
-            gap: 10px;
-            align-items: center;
-            border: 1px solid var(--vendor-border);
-            border-radius: 16px;
-            padding: 10px
-        }
-
-        .vendor-product-card img,
-        .vendor-product-empty {
-            width: 62px;
-            height: 62px;
-            border-radius: 14px;
-            object-fit: cover;
-            background: #edf5ff;
-            color: #4f83f1;
-            display: grid;
-            place-items: center;
-            font-size: 24px
-        }
-
-        .vendor-product-card strong,
-        .vendor-product-card small {
-            display: block
-        }
-
-        .vendor-product-card small {
-            color: #687386;
-            margin-top: 3px
-        }
-
-        .vendor-empty {
-            padding: 28px;
-            text-align: center;
-            border: 1px dashed #d8deea;
-            border-radius: 16px;
-            color: #687386;
-            font-weight: 600;
-            background: #fbfcff
-        }
-
-        .vendor-empty.small {
-            padding: 16px
-        }
-
-        .vendor-comment-mini,
-        .vendor-comment {
-            border: 1px solid var(--vendor-border);
-            border-radius: 16px;
-            padding: 12px;
-            margin-bottom: 10px;
-            background: #fff
-        }
-
-        .vendor-comment-mini strong {
-            display: block
-        }
-
-        .vendor-comment-mini p,
-        .vendor-comment p {
-            margin: 6px 0 0;
-            color: #536079;
-            white-space: pre-wrap
-        }
-
-        .vendor-comment.pinned {
-            background: #fffdf7;
-            border-color: #fedf89
-        }
-
-        .vendor-comment span {
-            display: block;
-            color: #687386;
-            font-size: 12px;
-            margin-top: 3px
-        }
-
-        .vendor-comment form {
-            margin-top: 8px
-        }
-
-        .vendor-comment button {
-            border: 0;
-            background: #fff0f4;
-            color: #e11d48;
-            border-radius: 10px;
-            padding: 8px 10px;
-            font-weight: 600;
-            cursor: pointer
-        }
-
-        .vendor-comment-form {
-            background: #f8fbff;
-            border: 1px solid var(--vendor-border);
-            border-radius: 18px;
-            padding: 16px
-        }
-
-        .vendor-comment-form textarea {
-            width: 100%;
-            min-height: 140px;
-            border: 1px solid #d8e2ef;
-            border-radius: 14px;
-            padding: 12px;
-            resize: vertical
-        }
-
-        .vendor-comment-form label {
-            font-weight: 600;
-            color: #536079
-        }
-
-        @media(max-width:1500px) {
-            .vendor-kpi-grid {
-                grid-template-columns: repeat(3, minmax(0, 1fr))
-            }
-
-            .vendor-grid-3,
-            .vendor-grid-2 {
-                grid-template-columns: 1fr
-            }
-
-            .vendor-finance-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr))
-            }
-        }
-
-        @media(max-width:767px) {
-            .vendor-show {
-                padding: 14px
-            }
-
-            .vendor-hero {
-                flex-direction: column
-            }
-
-            .vendor-head-left {
-                align-items: flex-start
-            }
-
-            .vendor-actions,
-            .vendor-actions .vendor-btn {
-                width: 100%
-            }
-
-            .vendor-kpi-grid,
-            .vendor-info-grid,
-            .vendor-finance-grid,
-            .vendor-product-grid,
-            .vendor-quick-links {
-                grid-template-columns: 1fr
-            }
-
-            .vendor-tab-panels {
-                padding: 12px
-            }
-
-            .vendor-section {
-                padding: 15px
-            }
-
-            .vendor-image {
-                width: 68px;
-                height: 68px;
-                flex-basis: 68px
-            }
-
-            .vendor-hero h1 {
-                font-size: 24px
-            }
-        }
-        
-        .vendor-attachment {
-            display: grid;
-            grid-template-columns: 64px 1fr;
-            border: 1px solid #edf0f7;
-            background: #fff;
-            border-radius: 18px;
-            padding: 14px;
-            gap: 12px
-        }
-
-        .vendor-attachment img,
-        .vendor-file-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 14px;
-            object-fit: cover;
-            background: #eef3ff;
-            color: #4f83f1;
-            display: grid;
-            place-items: center;
-            font-size: 22px
-        }
-
-        .vendor-attachment strong,
-        .vendor-attachment span {
-            display: block
-        }
-
-        .vendor-attachment span {
-            color: #7b8495;
-            font-size: 12px;
-            margin-top: 3px
-        }
-
-        .vendor-payment-form {
-            background: #f8fbff;
-            border: 1px solid var(--vendor-border);
-            border-radius: 18px;
-            padding: 16px
-        }
-
-        .vendor-form-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 12px
-        }
-
-        .vendor-field {
-            display: flex;
-            flex-direction: column;
-            gap: 7px
-        }
-
-        .vendor-field.full,
-        .vendor-check.full {
-            grid-column: 1/-1
-        }
-
-        .vendor-field label {
-            font-size: 12px;
-            color: #536079;
-            font-weight: 600
-        }
-
-        .vendor-field label span {
-            color: #ef4770
-        }
-
-        .vendor-field input,
-        .vendor-field select,
-        .vendor-field textarea {
-            width: 100%;
-            border: 1px solid #d8e2ef;
-            border-radius: 13px;
-            padding: 10px 12px;
-            background: #fff;
-            color: #17233b;
-            outline: none
-        }
-
-        .vendor-field input,
-        .vendor-field select {
-            height: 42px
-        }
-
-        .vendor-field textarea {
-            min-height: 86px;
-            resize: vertical
-        }
-
-        .vendor-field input:focus,
-        .vendor-field select:focus,
-        .vendor-field textarea:focus {
-            border-color: #4f83f1;
-            box-shadow: 0 0 0 3px rgba(79, 131, 241, .12)
-        }
-
-        .vendor-check {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            font-weight: 600;
-            color: #536079
-        }
-
-        .vendor-check input {
-            accent-color: #4f83f1
-        }
-
-        .vendor-form-actions {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 14px
-        }
-
-        .vendor-file-link {
-            display: inline-flex;
-            border-radius: 999px;
-            padding: 5px 8px;
-            background: #eef3ff;
-            color: #4f83f1;
-            text-decoration: none;
-            font-size: 11px;
-            font-weight: 600;
-            margin: 2px
-        }
-
-        .vendor-row-delete {
-            border: 0;
-            border-radius: 10px;
-            background: #fff0f4;
-            color: #e11d48;
-            padding: 8px 10px;
-            font-weight: 600;
-            cursor: pointer
-        }
-
-        .vendor-currency-summary {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 12px
-        }
-
-        .vendor-currency-summary div {
-            background: #f8fbff;
-            border: 1px solid var(--vendor-border);
-            border-radius: 16px;
-            padding: 14px
-        }
-
-        .vendor-currency-summary span {
-            display: block;
-            color: #687386;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase
-        }
-
-        .vendor-currency-summary strong {
-            display: block;
-            margin-top: 7px;
-            font-size: 18px
-        }
-
-        @media(max-width:1200px) {
-            .vendor-form-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr))
-            }
-
-            .vendor-currency-summary {
-                grid-template-columns: repeat(2, minmax(0, 1fr))
-            }
-        }
-
-        @media(max-width:767px) {
-
-            .vendor-form-grid,
-            .vendor-currency-summary {
-                grid-template-columns: 1fr
-            }
-
-            .vendor-form-actions .vendor-btn {
-                width: 100%
-            }
-        }
-        
-        .no-decorate {
-            text-decoration: none;
-        }
-        
-        .master-modal {
-            display: none;
-        }
-        
-        .master-modal.show {
-            display: flex;
-        }
-    </style>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.vendor-tab').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('.vendor-tab').forEach(function(b) {
-                        b.classList.remove('active');
-                    });
-                    document.querySelectorAll('.vendor-panel').forEach(function(panel) {
-                        panel.classList.remove('active');
-                    });
-                    btn.classList.add('active');
-                    const panel = document.querySelector('[data-panel="' + btn.dataset.tab + '"]');
-                    if (panel) panel.classList.add('active');
-                    try {
-                        localStorage.setItem('vendor_show_tab_{{ $vendor->id }}', btn.dataset
-                            .tab);
-                    } catch (e) {}
-                });
-            });
-
-            try {
-                const saved = localStorage.getItem('vendor_show_tab_{{ $vendor->id }}');
-                if (saved) {
-                    const btn = document.querySelector('.vendor-tab[data-tab="' + saved + '"]');
-                    if (btn) btn.click();
-                }
-            } catch (e) {}
-
-            const foreignAmount = document.getElementById('foreignAmount');
-            const foreignCurrency = document.getElementById('foreignCurrency');
-            const exchangeRate = document.getElementById('exchangeRate');
-            const amountInInr = document.getElementById('amountInInr');
-
-            function calculateInrAmount() {
-                if (!foreignAmount || !foreignCurrency || !exchangeRate || !amountInInr) return;
-                const amount = parseFloat(foreignAmount.value || '0');
-                const rate = parseFloat(exchangeRate.value || '0');
-                if (foreignCurrency.value === 'INR' && amount > 0 && !amountInInr.value) {
-                    amountInInr.value = amount.toFixed(2);
-                    return;
-                }
-                if (amount > 0 && rate > 0) {
-                    amountInInr.value = (amount * rate).toFixed(2);
-                }
-            }
-
-            foreignAmount?.addEventListener('input', calculateInrAmount);
-            exchangeRate?.addEventListener('input', calculateInrAmount);
-            foreignCurrency?.addEventListener('change', calculateInrAmount);
-        });
-        
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            
-            function openModal(modal){
-                modal.classList.add('show');
-                document.body.classList.add('master-modal-open');
-            }
-            
-            function closeModal(modal){
-                modal.classList.remove('show');
-                document.body.classList.remove('master-modal-open');
-            }
-            
-            function setValue(form, name, value) {
-                const field = form.elements[name];
-                if (!field) return;
-            
-                if (field.type === 'checkbox') {
-                    field.checked = !!value;
-                } else {
-                    field.value = value ?? '';
-                }
-            }
-        
-            document.addEventListener('keydown',function(e){
-                if(e.key !== 'Escape') return;
-                document.querySelectorAll('.master-modal.show').forEach(modal=>{
-                    closeModal(modal);
-                });
-            });
-            
-            document.querySelectorAll('.master-modal').forEach(modal=>{
-                modal.addEventListener('click',function(e){
-                    if(e.target===modal){
-                        closeModal(modal);
-                    }
-                });
-            });
-                
-            document.querySelectorAll('[data-close-modal]').forEach(btn=>{
-                btn.addEventListener('click',()=>{
-                    closeModal(btn.closest('.master-modal'));
-                });
-            });
-            
-            const editPaymentModal = document.getElementById('editPaymentModal');
-            const editPaymentForm = document.getElementById('editPaymentForm');
-            
-            document.querySelectorAll('.editPaymentBtn').forEach(btn => {
-
-                btn.addEventListener('click', function () {
-        
-                    const payment = JSON.parse(this.dataset.payment);
-        
-                    editPaymentForm.action = `/vendors/${payment.vendor_id}/payments/${payment.id}`;
-        
-                    setValue(editPaymentForm, 'invoice_number', payment.invoice_number ?? '');
-                    
-                    let paymentDate = payment.transaction_date;
-
-                    if (paymentDate) {
-                        paymentDate = paymentDate.substring(0, 10);
-                    }
-                    setValue(editPaymentForm, 'transaction_date', paymentDate);
-                    setValue(editPaymentForm, 'particular', payment.particular ?? '');
-                    setValue(editPaymentForm, 'foreign_amount', payment.foreign_amount);
-                    setValue(editPaymentForm, 'foreign_currency', payment.foreign_currency);
-                    setValue(editPaymentForm, 'exchange_rate', payment.exchange_rate);
-                    setValue(editPaymentForm, 'amount_in_inr', payment.amount_in_inr);
-                    setValue(editPaymentForm, 'transaction_type', payment.transaction_type);
-                    setValue(editPaymentForm, 'entry_category', payment.entry_category);
-                    setValue(editPaymentForm, 'status', payment.status);
-                    setValue(editPaymentForm, 'project_id', payment.project_id);
-                    setValue(editPaymentForm, 'paid_account_id', payment.paid_account_id);
-                    setValue(editPaymentForm, 'payment_mode', payment.payment_mode);
-                    setValue(editPaymentForm, 'bank_reference_number', payment.bank_reference_number);
-                    setValue(editPaymentForm, 'remarks', payment.remarks ?? '');
-                    setValue(editPaymentForm, 'also_create_cashflow', payment.also_create_cashflow);
-                    
-        
-                    openModal(editPaymentModal);
-                });
-            });
-            
-            const addPaymentModal = document.getElementById('addPaymentModal');
-            document.getElementById('openAddPaymentModal')?.addEventListener('click', () => openModal(addPaymentModal));
-            
-            const addAttachmentModal = document.getElementById('addAttachmentModal');
-            document.getElementById('openAddAttachmentModal')?.addEventListener('click', () => openModal(addAttachmentModal));
-            
-            const addCommentModal = document.getElementById('addCommentModal');
-            document.getElementById('openAddCommentModal')?.addEventListener('click', () => openModal(addCommentModal));
-        });
-    </script>
+@push('scripts')
+    <script src="{{ asset('assets/js/vendors.js') }}"></script>
+@endpush
 @endsection

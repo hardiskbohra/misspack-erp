@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Packing List — SHP-000031 (preview)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/shipment-print.css?v=6abf2d3a">
+</head>
+<body>
+    <div class="print-toolbar no-print">
+        <a class="print-btn" href="shipment-detail.html">&larr; Back to shipment</a>
+        <span class="print-toolbar-links">
+            <a class="print-btn is-active" href="shipment-print.html">Packing list</a>
+            <a class="print-btn" href="shipment-challan.html">Challan</a>
+            <a class="print-btn" href="shipment-summary.html">Summary</a>
+        </span>
+        <button class="print-btn print-btn-primary" type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+    </div>
+
+    <p class="print-note no-print">
+        No PDF engine is installed in this sandbox, so the toolbar falls back to the browser print dialog &mdash;
+        "Save as PDF" produces the same document. Installing barryvdh/laravel-dompdf switches these buttons to a
+        direct download automatically.
+    </p>
+    <div class="print-sheet">
+        <header class="print-head">
+            <div>
+                <span class="print-brand">MissPack</span>
+                <h1>Packing List</h1>
+            </div>
+            <div class="print-head-meta">
+                <strong>SHP-000031</strong>
+                <span>01 Oct 2026</span>
+            </div>
+        </header>
+
+        <section class="print-meta">
+            <div><span>Shipment</span><strong>Green pigment samples from China</strong></div>
+            <div><span>Type / Mode</span><strong>Export &middot; Air freight</strong></div>
+            <div><span>Pickup</span><strong>28 Sep 2026</strong></div>
+            <div><span>ETA</span><strong>02 Oct 2026</strong></div>
+            <div><span>Logistic</span><strong>DHL Express</strong></div>
+            <div><span>Tracking</span><strong>DHL-8841220</strong></div>
+            <div><span>Route</span><strong>Ahmedabad &rarr; New York</strong></div>
+            <div><span>Packages</span><strong>4</strong></div>
+        </section>
+
+        <div class="print-parties">
+            <div class="print-party">
+                <span class="print-label">From (Shipper)</span>
+                <strong>MissPack Industries</strong>
+                <p>14 Ring Road, Nikol<br>Ahmedabad, Gujarat<br>India 380049</p>
+                <p class="print-contact">Ph: +91 98250 44771 &middot; Email: ops@misspack.in</p>
+            </div>
+            <div class="print-party">
+                <span class="print-label">To (Consignee)</span>
+                <strong>ACME Corp</strong>
+                <p>280 Park Avenue South, Suite 1201<br>New York, NY<br>USA 10010</p>
+                <p class="print-contact">Ph: +1 212 555 0147 &middot; Email: imports@acmecorp.com</p>
+            </div>
+        </div>
+
+        <table class="print-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Product</th>
+                    <th>SKU</th>
+                    <th>HS Code</th>
+                    <th class="num">Qty</th>
+                    <th class="num">Net Wt (kg)</th>
+                    <th class="num">Gross Wt (kg)</th>
+                    <th class="num">Declared Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><strong>Pigment dispersion &mdash; green 7</strong></td>
+                        <td>SKU-PG-007</td>
+                        <td>3204.17</td>
+                        <td class="num">48 Drum</td>
+                        <td class="num">624.000</td>
+                        <td class="num">688.500</td>
+                        <td class="num">USD 12,400.00</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><strong>Pigment dispersion &mdash; blue 15</strong></td>
+                        <td>SKU-PB-015</td>
+                        <td>3204.17</td>
+                        <td class="num">24 Drum</td>
+                        <td class="num">312.000</td>
+                        <td class="num">344.250</td>
+                        <td class="num">USD 6,180.00</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td><strong>Sample pouches &mdash; assorted</strong></td>
+                        <td>SKU-SP-101</td>
+                        <td>3923.90</td>
+                        <td class="num">12 Box</td>
+                        <td class="num">36.500</td>
+                        <td class="num">41.000</td>
+                        <td class="num">USD 820.00</td>
+                    </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="4"><strong>Totals</strong></td>
+                    <td class="num"><strong>84</strong></td>
+                    <td class="num"><strong>972.500</strong></td>
+                    <td class="num"><strong>1,073.750</strong></td>
+                    <td class="num"><strong>USD 19,400.00</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <section class="print-notes">
+            <p><strong>Marks &amp; numbers:</strong> MP/SHP-000031/2026 &mdash; 4 packages, 12 of 12 drums strapped.</p>
+            <p><strong>Declared value:</strong> Freight and insurance excluded &mdash; customs valuation to be read with the linked commercial invoice.</p>
+        </section>
+
+        <div class="print-signs">
+            <div><span>Prepared by</span></div>
+            <div><span>Checked by</span></div>
+            <div><span>Receiver's signature &amp; date</span></div>
+        </div>
+    </div>
+</body>
+</html>

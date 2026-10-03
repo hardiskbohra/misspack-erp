@@ -50,12 +50,12 @@
             <p class="cp-muted" style="margin-top:15px;">
                 Use this link to open the MissPack KYC form. If the form is under review or approved, editing may be locked.
             </p>
-            <div class="cp-field" style="margin-top:15px;">
-                <label>KYC URL</label>
-                <input readonly value="{{ $kycUrl }}" id="kycLink">
+            <div class="master-field" style="margin-top:15px;">
+                <label class="master-label">KYC URL</label>
+                <input class="master-input" readonly value="{{ $kycUrl }}" id="kycLink">
             </div>
             <button
-                class="cp-btn cp-btn-soft"
+                class="master-btn master-btn-soft"
                 type="button"
                 style="margin-top:10px;"
                 onclick="copyKycLink()">
@@ -69,22 +69,7 @@
         </div>
     </div>
     
-    <script>
-    function copyKycLink() {
-        const link = document.getElementById('kycLink').value;
-        const message = document.getElementById('copySuccess');
-    
-        navigator.clipboard.writeText(link).then(() => {
-    
-            message.style.display = 'inline';
-    
-            setTimeout(() => {
-                message.style.display = 'none';
-            }, 2000);
-    
-        }).catch(() => {
-            prompt('Copy link', link);
-        });
-    }
-    </script>
+@push('scripts')
+    <script src="{{ asset('assets/js/client-portal-kyc.js') }}"></script>
+@endpush
 @endsection

@@ -10,7 +10,7 @@ class AuthController extends Controller
     public function showLogin()
     {
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            return redirect()->to($this->homeFor(Auth::user()));
         }
         return view('auth.login');
     }
@@ -27,12 +27,23 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
-            return redirect()->intended(route('dashboard'));
+
+            /* Where somebody lands after signing in depends on who they are.
+               An employee's home is their own record, not the office dashboard —
+               sending them to a page they are about to be turned away from would
+               greet every employee with an error message. */
+            return redirect()->intended($this->homeFor(Auth::user()));
         }
 
         return back()->withErrors([
             'email' => 'The provided credentials do not match our records.',
         ])->withInput($request->except('password'));
+    }
+
+    /** The landing page for whoever has just signed in. */
+    private function homeFor(?\App\Models\User $user): string
+    {
+        return $user && $user->isEmployee() ? route('my.dashboard') : route('dashboard');
     }
 
     public function logout(Request $request)

@@ -10,7 +10,7 @@
     <div class="master product-index">
         <div class="master-card">
             <form method="GET" action="{{ route('products.index') }}">
-                <div class="master-filter-row" style="padding-top:22px">
+                <div class="master-filter-row">
                     <div class="master-search"><span>⌕</span><input class="master-input" name="search" value="{{ $search }}"
                             placeholder="Search product, SKU, material..."></div>
                     
@@ -142,7 +142,7 @@
                 
                                 <form method="POST"
                                     action="{{ route('products.destroy',$product) }}"
-                                    onsubmit="return confirm('Delete this product?')">
+                                    data-confirm="Delete this product?">
                 
                                     @csrf
                                     @method('DELETE')
@@ -191,8 +191,8 @@
                             <div class="master-form-group">
                                 <label class="master-label">Ready Stock?</label>
 
-                                <div class="master-chip-group">
-                                    <label class="master-chip green-chip">
+                                <div class="master-choice-group">
+                                    <label class="master-choice-chip green-chip">
                                         <input type="radio" name="ready_stock_available" value="1" required checked>
                                         <span>
                                             <i class="fa-solid fa-check"></i>
@@ -200,7 +200,7 @@
                                         </span>
                                     </label>
 
-                                    <label class="master-chip red-chip">
+                                    <label class="master-choice-chip red-chip">
                                         <input type="radio" name="ready_stock_available" value="0" required>
                                         <span>
                                             <i class="fa-solid fa-times"></i>
@@ -213,8 +213,8 @@
                             <div class="master-form-group">
                                 <label class="master-label">Show Pricing Publicly?</label>
 
-                                <div class="master-chip-group">
-                                    <label class="master-chip green-chip">
+                                <div class="master-choice-group">
+                                    <label class="master-choice-chip green-chip">
                                         <input type="radio" name="show_price_ladder_public" value="1" required>
                                         <span>
                                             <i class="fa-solid fa-check"></i>
@@ -222,7 +222,7 @@
                                         </span>
                                     </label>
 
-                                    <label class="master-chip red-chip">
+                                    <label class="master-choice-chip red-chip">
                                         <input type="radio" name="show_price_ladder_public" value="0" required checked>
                                         <span>
                                             <i class="fa-solid fa-times"></i>

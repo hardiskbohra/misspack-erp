@@ -40,10 +40,9 @@
                         
                 <div class="master-form-group">
                     <label class="master-label">Ready Stock?</label>
-                    <div class="master-chip-group">
-                        <label class="master-chip green-chip">
-                            <input
-                                type="radio"
+                    <div class="master-choice-group">
+                        <label class="master-choice-chip green-chip">
+                            <input type="radio"
                                 name="ready_stock_available"
                                 value="1"
                                 {{ old('ready_stock_available', $product->ready_stock_available) == 1 ? 'checked' : '' }}
@@ -55,9 +54,8 @@
                             </span>
                         </label>
                 
-                        <label class="master-chip red-chip">
-                            <input
-                                type="radio"
+                        <label class="master-choice-chip red-chip">
+                            <input type="radio"
                                 name="ready_stock_available"
                                 value="0"
                                 {{ old('ready_stock_available', $product->ready_stock_available) == 0 ? 'checked' : '' }}
@@ -73,10 +71,9 @@
                 
                 <div class="master-form-group">
                     <label class="master-label">Show Price Ladder Publicly</label>
-                    <div class="master-chip-group">
-                        <label class="master-chip green-chip">
-                            <input
-                                type="radio"
+                    <div class="master-choice-group">
+                        <label class="master-choice-chip green-chip">
+                            <input type="radio"
                                 name="show_price_ladder_public"
                                 value="1"
                                 {{ old('show_price_ladder_public', $product->show_price_ladder_public) == 1 ? 'checked' : '' }}
@@ -88,9 +85,8 @@
                             </span>
                         </label>
                 
-                        <label class="master-chip red-chip">
-                            <input
-                                type="radio"
+                        <label class="master-choice-chip red-chip">
+                            <input type="radio"
                                 name="show_price_ladder_public"
                                 value="0"
                                 {{ old('show_price_ladder_public', $product->show_price_ladder_public) == 0 ? 'checked' : '' }}
@@ -178,6 +174,7 @@
         <div class="master-section">
             <h3 class="master-section-title">Quantity Price Ladder</h3>
             <div class="master-items">
+                <div class="master-table-wrap">
                 <table class="master-table" id="priceLadderTable">
                     <thead>
                         <tr>
@@ -222,6 +219,7 @@
                         @endforeach
                     </tbody>
                 </table>
+                </div>
             </div><button type="button" class="master-btn master-btn-light" id="addLadderRow"
                 style="margin-top:12px;">+ Add Price Row</button>
         </div>

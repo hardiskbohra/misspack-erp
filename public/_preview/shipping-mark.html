@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipping Mark — SHP-000031 (preview)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/shipping-mark.css?v=6abf23db">
+</head>
+<body>
+<div class="mark-page">
+    <div class="mark-toolbar no-print">
+        <a class="mark-btn" href="shipments-index.html">&larr; Back to shipments</a>
+
+        <form class="mark-copies" onsubmit="return false;">
+            <label for="copies">Stickers</label>
+            <input id="copies" type="number" min="1" max="48" value="8">
+            <button class="mark-btn" type="button" id="applyCopies">Apply</button>
+        </form>
+
+        <span class="mark-hint">
+            <span id="copyHint">8 stickers</span> &middot; 4 package(s) recorded &middot; 8 per A4 page
+        </span>
+
+        <button class="mark-btn mark-btn-primary" type="button" onclick="window.print()">🖨 Print stickers</button>
+    </div>
+
+    <div class="mark-sheet" id="markSheet"></div>
+</div>
+
+<script>
+    (function () {
+        var SHIPMENT = {
+            number: 'SHP-000031',
+            mode: 'Air Freight',
+            type: 'Export',
+            from: {
+                name: 'MissPack Industries',
+                address: '14 Ring Road, Nikol',
+                city: 'Ahmedabad', state: 'Gujarat', country: 'India', pincode: '380049',
+                mobile: '+91 98250 44771', email: 'ops@misspack.in'
+            },
+            to: {
+                name: 'ACME Corp',
+                address: '280 Park Avenue South, Suite 1201',
+                city: 'New York', state: 'NY', country: 'USA', pincode: '10010',
+                mobile: '+1 212 555 0147', email: 'imports@acmecorp.com'
+            },
+            grossWeight: '142.500 kg',
+            tracking: 'DHL-8841220',
+            logistic: 'DHL Express',
+            destination: 'NEW YORK, USA',
+            label: 'Urgent',
+            ref: 'Green pigment samples from China',
+            trackUrl: 'http://localhost:8090/track-shipment/8f3Kq2Lm7Vt0ZpXsR4YbN6HdQw1Ce9AuJ5TgMvWcPbErDnS2'
+        };
+
+        function party(p) {
+            var address = [p.address, p.city, p.state, (p.country + ' ' + p.pincode)].filter(Boolean).join(', ');
+            return '<div class="mark-party">'
+                + '<span class="mark-label">' + p.role + '</span>'
+                + '<strong>' + p.name + '</strong>'
+                + '<p>' + address + '</p>'
+                + '<p class="mark-contact">Ph: ' + p.mobile + ' &middot; Email: ' + p.email + '</p>'
+                + '</div>';
+        }
+
+        function mark(copy, copies) {
+            return '<div class="mark">'
+                + '<div class="mark-head"><div>'
+                + '<span class="mark-title">Shipping Mark</span>'
+                + '<span class="mark-sub">' + SHIPMENT.mode + ' &middot; ' + SHIPMENT.type + '</span>'
+                + '</div><div class="mark-number">' + SHIPMENT.number + '</div></div>'
+                + '<div class="mark-parties">'
+                + party({ role: 'From (Shipper)', name: SHIPMENT.from.name, address: SHIPMENT.from.address, city: SHIPMENT.from.city, state: SHIPMENT.from.state, country: SHIPMENT.from.country, pincode: SHIPMENT.from.pincode, mobile: SHIPMENT.from.mobile, email: SHIPMENT.from.email })
+                + '<div class="mark-arrow">&rarr;</div>'
+                + party({ role: 'To (Receiver)', name: SHIPMENT.to.name, address: SHIPMENT.to.address, city: SHIPMENT.to.city, state: SHIPMENT.to.state, country: SHIPMENT.to.country, pincode: SHIPMENT.to.pincode, mobile: SHIPMENT.to.mobile, email: SHIPMENT.to.email })
+                + '</div>'
+                + '<div class="mark-meta">'
+                + '<div><span>Package</span><strong>' + copy + ' of ' + copies + '</strong></div>'
+                + '<div><span>Gross wt.</span><strong>' + SHIPMENT.grossWeight + '</strong></div>'
+                + '<div><span>Tracking</span><strong>' + SHIPMENT.tracking + '</strong></div>'
+                + '<div><span>Logistic</span><strong>' + SHIPMENT.logistic + '</strong></div>'
+                + '</div>'
+                + '<div class="mark-foot">'
+                + '<div class="mark-destination"><span class="mark-label">Destination</span><strong>' + SHIPMENT.destination + '</strong></div>'
+                + '<div class="mark-label-chip">' + SHIPMENT.label + '</div>'
+                + '<div class="mark-ref"><span class="mark-label">Ref</span><strong>' + SHIPMENT.ref + '</strong></div>'
+                + '<div class="mark-qr">'
+                + '<div class="mark-qr-code" data-ship-qr="' + SHIPMENT.trackUrl + '" data-ship-qr-caption="Track ' + SHIPMENT.number + '"></div>'
+                + '<span class="mark-qr-hint">Scan to track</span>'
+                + '</div>'
+                + '</div>'
+                + '<div class="mark-cut">✂ - - - - - - - - - - -</div>'
+                + '</div>';
+        }
+
+        function render() {
+            var copies = Math.min(48, Math.max(1, parseInt(document.getElementById('copies').value, 10) || 1));
+            var html = '';
+            for (var i = 1; i <= copies; i++) { html += mark(i, copies); }
+            document.getElementById('markSheet').innerHTML = html;
+
+            /* the QR is drawn locally by assets/js/qr.js (no external service) */
+            if (window.ShipQR) { window.ShipQR.render(document.getElementById('markSheet')); }
+            document.getElementById('copyHint').textContent = copies + (copies === 1 ? ' sticker' : ' stickers');
+        }
+
+        document.getElementById('applyCopies').addEventListener('click', render);
+        render();
+    })();
+</script>
+<script src="/assets/js/qr.js?v=6abf6987"></script>
+</body>
+</html>

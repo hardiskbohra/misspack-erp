@@ -12,6 +12,12 @@
    as the inline <style> blocks they replaced.
    ===================================================================== */
 
+:root {
+    --ship-primary: #4f83f1;
+    --ship-primary-2: #6366f1;
+    --ship-muted: #687386;
+}
+
 /* =====================================================================
    1. Shipment List (index)
    Badge colours + mobile table-card layout.
@@ -23,71 +29,17 @@
     .master-route { max-width: 260px; }
     .master-route strong { display: block; }
 
-    .ship-index .type-domestic { background: #46d488; color: #fff; }
-    .ship-index .type-import { background: #fff4e5; color: #d97706; }
-    .ship-index .type-export { background: #ecfdf5; color: #059669; }
-    .ship-index .status-planning { background: #aab1bd; color: #FFF; }
-    .ship-index .status-picked-up { background: #dbcb3b; color: #FFF; }
-    .ship-index .status-in-transit { background: #7b99db; color: #FFF; }
-    .ship-index .status-custom-hold { background: #fff4e5; color: #d97706; }
-    .ship-index .status-delayed { background: #ffeaf0; color: #e11d48; }
-    .ship-index .status-out-for-delivery { background: #46d488; color: #FFF; }
-    .ship-index .status-delivered { background: #e8fff7; color: #0e9f6e; }
-    .ship-index .status-cancelled { background: #f3f4f6; color: #4b5563; }
+    /* Status, type and label colours are tinted tones defined once in
+       section 4 of this file — a filled pill with white text (the old
+       "picked up" amber, for one) is the least readable thing on a list. */
     
-    /* Default */
-    .ship-index .label-0 { background:blue; color:#FFF; }
-    
-    /* Mobile Responsive Shipment Table */
+    /* Mobile shipment cells — the stacked card itself is the shared list
+       layout (master-list.css, narrow screens); these rules only tune the
+       shipment cells once the row has become a card. */
     @media (max-width:768px){
 
-        .master-table,
-        .master-table tbody,
-        .master-table tr,
-        .master-table td {
-            display:block;
-            min-width: 350px;
-            width:100%;
-        }
-    
-        .master-table thead{
-            display:none;
-        }
-    
-        .master-table tr{
-            background:#fff;
-            border:0px solid #e8edf7;
-            border-radius:16px;
-            padding:18px;
-            margin-bottom:18px;
-            box-shadow:0 4px 18px rgba(0,0,0,.06);
-        }
-    
-        .master-table td{
-            padding:0;
-            border:none;
-            margin-bottom:16px;
-        }
-    
-        .master-table td:last-child{
-            margin-bottom:0;
-        }
-    
-        .master-table td::before{
-            display:block;
-            font-size:13px;
-            font-weight:600;
-            color:#64748b;
-            margin-bottom:6px;
-        }
-    
-        .master-table td:nth-child(1)::before{content:"";}
-        .master-table td:nth-child(2)::before{content:"";}
-        .master-table td:nth-child(3)::before{content:"";}
-        .master-table td:nth-child(4)::before{content:"";}
-        .master-table td:nth-child(5)::before{content:"";}
-        .master-table td:nth-child(6)::before{content:"";}
-    
+        /* the label travels with the value: <td data-label="Charges"> */
+
         /* Shipment */
     
         .ship-index .master-id{
@@ -98,7 +50,7 @@
     
         .ship-index .master-sub{
             display:block;
-            color:#64748b;
+            color: var(--mc-text-3);
             margin-top:4px;
         }
     
@@ -162,9 +114,9 @@
    public-tracking toggle.
    ===================================================================== */
 
-    .master-items-wrap{width:100%;overflow-x:auto}.master-items-table{width:100%;min-width:1120px;border-collapse:collapse}.master-items-table th,.master-items-table td{padding:10px;border-bottom:1px solid var(--master-border);vertical-align:top}.master-items-table th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#000;text-align:left}.master-remove-row{width:34px;height:34px;border:0;border-radius:9px;background:#fff0f4;color:#e11d48;cursor:pointer;font-weight:900}.master-add-row{margin-top:12px}
+    .master-items-wrap{width:100%;overflow-x:auto}.master-items-table{width:100%;min-width:1120px;border-collapse:collapse}.master-items-table th,.master-items-table td{padding:10px;border-bottom:1px solid var(--master-border);vertical-align:top}.master-items-table th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mc-text);text-align:left}.master-remove-row{width:34px;height:34px;border:0;border-radius:9px;background:#fff0f4;color:#e11d48;cursor:pointer;font-weight:900}.master-add-row{margin-top:12px}
     
-    .master-history-card{padding:26px;margin-top:22px}.master-history-form{display:grid;gap:14px}.master-history-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:14px}.master-history-row{border:1px solid var(--master-border);border-radius:16px;background:#fbfdff;padding:16px;margin-bottom:14px}.master-history-row-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}.master-history-row-title{font-size:14px;font-weight:600;color:var(--master-dark)}.master-history-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.master-history-delete{margin:0}.master-history-note{font-size:12px;color:var(--master-muted);font-weight:500;line-height:1.5}.master-public-check{display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px;font-weight:600;color:#536079}
+    .master-history-card{padding:26px;margin-top:22px}.master-history-form{display:grid;gap:14px}.master-history-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:14px}.master-history-row{border:1px solid var(--master-border);border-radius:16px;background: var(--mc-card-soft);padding:16px;margin-bottom:14px}.master-history-row-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}.master-history-row-title{font-size:14px;font-weight:600;color:var(--master-dark)}.master-history-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.master-history-delete{margin:0}.master-history-note{font-size:12px;color:var(--master-muted);font-weight:500;line-height:1.5}.master-public-check{display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px;font-weight:600;color: var(--mc-text-2)}
     
     @media (max-width:1200px){
         .master-history-grid{
@@ -178,7 +130,7 @@
         }
     }
     
-    .master-attachments-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.master-attachment-card{border:1px solid var(--master-border);border-radius:16px;background:#fbfdff;overflow:hidden}.master-attachment-card img{width:150px;height:150px;object-fit:cover;background:#f8fafc;display:block}.master-attachment-body{padding:12px;display:grid;gap:10px}.master-attachment-actions{display:flex;gap:8px;flex-wrap:wrap}.master-photo-upload-box{padding:14px;border:1px dashed var(--master-border);border-radius:14px;background:#fbfdff}.master-photo-help{font-size:12px;color:var(--master-muted);font-weight:500;margin-top:6px;line-height:1.5}
+    .master-attachments-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.master-attachment-card{border:1px solid var(--master-border);border-radius:16px;background: var(--mc-card-soft);overflow:hidden}.master-attachment-card img{width:150px;height:150px;object-fit:cover;background: var(--mc-card-soft);display:block}.master-attachment-body{padding:12px;display:grid;gap:10px}.master-attachment-actions{display:flex;gap:8px;flex-wrap:wrap}.master-photo-upload-box{padding:14px;border:1px dashed var(--master-border);border-radius:14px;background: var(--mc-card-soft)}.master-photo-help{font-size:12px;color:var(--master-muted);font-weight:500;margin-top:6px;line-height:1.5}
     
     .master-history-footer{
         display:flex;
@@ -213,15 +165,15 @@
     }
     
     .master-attachment-card{
-        background:#fff;
-        border:1px solid #e7edf7;
+        background: var(--mc-card);
+        border: 1px solid var(--mc-border);
         border-radius:16px;
         overflow:hidden;
     }
     
     .master-attachment-preview{
         height:140px;
-        background:#f8faff;
+        background: var(--mc-card-soft);
         display:flex;
         justify-content:center;
     }
@@ -268,7 +220,7 @@
         gap: 10px;
         font-size: 13px;
         font-weight: 500;
-        color: #536079;
+        color: var(--mc-text-2);
         cursor: pointer;
         user-select: none;
     }
@@ -283,7 +235,7 @@
         width: 44px;
         height: 24px;
         border-radius: 999px;
-        background: #d8e2ef;
+        background: var(--mc-border);
         position: relative;
         flex: 0 0 44px;
         transition: .2s ease;
@@ -297,7 +249,7 @@
         width: 18px;
         height: 18px;
         border-radius: 50%;
-        background: #fff;
+        background: var(--mc-card);
         box-shadow: 0 2px 6px rgba(15,23,42,.18);
         transition: .2s ease;
     }
@@ -359,7 +311,7 @@
             border-radius:16px;
             padding:16px;
             margin-bottom:16px;
-            background:#fff;
+            background: var(--mc-card);
         }
         
         .master-items-table input,
@@ -459,14 +411,27 @@
 
     
     
-    /* Default shipment label palette (label-0 is overridden per page
-       for the list view, see section 1). */
-    .label-0 { background:#fff4e5; color:#000; }
-    .label-1 { background:red; color:#FFF; }
-    .label-2 { background:green; color:#FFF; }
-    .label-3 { background:orange; color:black; }
-    .label-4 { background:yellow; color:red; }
-    .label-5 { background:pink; color:blue; }
+    /* Shipment label palette (FRAGILE, EXPRESS, ...). Six tinted tones rather
+       than the six pure CSS colours this started as: red/green/yellow/pink at
+       full saturation cannot carry readable text in either theme. */
+    .label-0 { --tone-bg: rgba(107, 114, 128, .16); --tone-fg: #4b5563; }
+    .label-1 { --tone-bg: rgba(225, 29, 72, .16); --tone-fg: #be123c; }
+    .label-2 { --tone-bg: rgba(16, 185, 129, .16); --tone-fg: #047857; }
+    .label-3 { --tone-bg: rgba(245, 158, 11, .18); --tone-fg: #b45309; }
+    .label-4 { --tone-bg: rgba(79, 131, 241, .16); --tone-fg: #3f6fd8; }
+    .label-5 { --tone-bg: rgba(139, 92, 246, .16); --tone-fg: #6d28d9; }
+
+    .label-0, .label-1, .label-2, .label-3, .label-4, .label-5 {
+        background: var(--tone-bg);
+        color: var(--tone-fg);
+    }
+
+    :root[data-theme="dark"] .label-0 { --tone-fg: #cbd5e1; }
+    :root[data-theme="dark"] .label-1 { --tone-fg: #fda4af; }
+    :root[data-theme="dark"] .label-2 { --tone-fg: #6ee7b7; }
+    :root[data-theme="dark"] .label-3 { --tone-fg: #fcd34d; }
+    :root[data-theme="dark"] .label-4 { --tone-fg: #93b4ff; }
+    :root[data-theme="dark"] .label-5 { --tone-fg: #c4b5fd; }
     
     
     
@@ -482,7 +447,7 @@
     }
     
     .product-card{
-        background:#fff;
+        background: var(--mc-card);
         border:1px solid var(--master-border);
         border-radius:16px;
         padding:16px;
@@ -528,7 +493,7 @@
         align-items:center;
         justify-content:center;
         padding:20px;
-        background:#f8fafc;
+        background: var(--mc-card-soft);
     }
     
     .file-icon{
@@ -541,7 +506,7 @@
         text-align:center;
         font-size:14px;
         font-weight:600;
-        color:#374151;
+        color: var(--mc-text-2);
         word-break:break-word;
         line-height:1.4;
     }
@@ -557,3 +522,1204 @@
         }
     
     }
+
+.ship-index .ship-row-closed td {
+    /* finished shipments read as done without dropping out of the list.
+       Not opacity: that puts a stacking context on the cell and drags the
+       row's own action menu below the rows after it (and makes it see-through). */
+    color: var(--mc-text-2);
+}
+
+.ship-index .ship-row-closed .ship-cell-id {
+    color: var(--mc-text-2);
+}
+
+.ship-index .ship-row-closed .ship-date,
+.ship-index .ship-row-closed .ship-route strong {
+    color: var(--mc-text-2);
+}
+
+.ship-index .ship-row-closed .master-id,
+.ship-index .ship-row-closed strong {
+    font-weight: 600;
+}
+
+/* ---------------- Spend totals ---------------- */
+
+.ship-spend-total {
+    font-size: 18px !important;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+/* ---------------- From / To memory ---------------- */
+
+.party-prefill-note {
+    display: block;
+    margin-top: 6px;
+    color: #0e9f6e;
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.party-prefill-note .party-prefill-undo {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: #4f83f1;
+    font: inherit;
+    font-weight: 800;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.party-prefilled {
+    border-color: #46d488 !important;
+    background: rgba(70, 212, 136, .12);
+}
+
+/* ---------------- Attention chips & saved views (list) ---------------- */
+
+/* .ship-save-view[hidden] used to need its own display:none here; the global
+   [hidden] rule in core.css now covers every element. */
+
+/* ---------------- ETA states ---------------- */
+
+.ship-eta {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+/* ETA state is a tint over the panel, not a solid pastel, so the same rule
+   is legible on white and on the dark card. */
+.ship-eta-overdue {
+    background: rgba(217, 45, 32, .10);
+    color: #b42318;
+    border: 1px solid rgba(217, 45, 32, .28);
+}
+
+.ship-eta-due_soon {
+    background: rgba(245, 158, 11, .12);
+    color: #b54708;
+    border: 1px solid rgba(245, 158, 11, .3);
+}
+
+.ship-eta-on_track {
+    background: rgba(16, 185, 129, .12);
+    color: #067647;
+    border: 1px solid rgba(16, 185, 129, .3);
+}
+
+.ship-eta-none {
+    background: var(--mc-card-soft);
+    color: var(--mc-text-3);
+    border: 1px solid var(--mc-border);
+}
+
+/* ---------------- E-way bill warnings ---------------- */
+
+.ship-eway {
+    display: block;
+    margin-top: 3px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.ship-eway-expiring {
+    color: #b54708;
+}
+
+.ship-eway-expired {
+    color: #d92d20;
+}
+
+/* ---------------- Tracking stepper ---------------- */
+
+.ship-track {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: ship-stage;
+}
+
+.ship-track li {
+    position: relative;
+    flex: 1 1 110px;
+    min-width: 96px;
+    padding: 9px 10px 9px 30px;
+    border: 1px solid var(--mc-border);
+    border-radius: 10px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-3);
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+.ship-track li::before {
+    counter-increment: ship-stage;
+    content: counter(ship-stage);
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--mc-card);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-3);
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 14px;
+    text-align: center;
+}
+
+.ship-track li.is-done {
+    border-color: rgba(16, 185, 129, .45);
+    background: rgba(16, 185, 129, .10);
+    color: var(--mc-text-2);
+}
+
+.ship-track li.is-done::before {
+    content: '✓';
+    border-color: #abefc6;
+    background: #d1fadf;
+    color: #067647;
+}
+
+.ship-track li.is-current {
+    border-color: var(--master-primary, #4f83f1);
+    background: var(--accent-light, rgba(79, 142, 247, .12));
+    color: var(--master-primary, #4f83f1);
+    box-shadow: 0 2px 8px rgba(79, 142, 247, .18);
+}
+
+.ship-track li.is-current::before {
+    border-color: var(--master-primary, #4f83f1);
+    background: var(--master-primary, #4f83f1);
+    color: #fff;
+}
+
+.ship-track-note {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #d92d20;
+}
+
+.ship-track-cancelled {
+    padding: 10px 12px;
+    border: 1px solid #fecdca;
+    border-radius: 10px;
+    background: #fff0f1;
+    color: #b42318;
+    font-weight: 700;
+}
+
+/* ---------------- Paperwork checklist ---------------- */
+
+.ship-doc-list {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.ship-doc {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: 1px solid var(--mc-border);
+    border-radius: 10px;
+    background: var(--mc-card);
+}
+
+.ship-doc.is-done {
+    /* translucent tints so the text colour can stay theme-driven (light + dark) */
+    border-color: rgba(16, 185, 129, .45);
+    background: rgba(16, 185, 129, .10);
+}
+
+.ship-doc.is-missing {
+    border-color: rgba(245, 158, 11, .45);
+    background: rgba(245, 158, 11, .10);
+}
+
+.ship-doc-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-weight: 900;
+    flex: 0 0 auto;
+}
+
+.ship-doc.is-done .ship-doc-mark {
+    background: #d1fadf;
+    color: #067647;
+}
+
+.ship-doc.is-missing .ship-doc-mark {
+    background: #fef0c7;
+    color: #b54708;
+}
+
+.ship-doc-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.ship-doc-body strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--mc-text);
+}
+
+.ship-doc-upload {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 12px;
+    border: 1px dashed var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card);
+}
+
+/* NOTE: the upload row used to be a flex row and these controls carried
+   `flex: 1 1 200px` / `1 1 240px`. Once the fields moved into a column flex
+   (.ship-form-field), a *length* flex-basis becomes the MAIN size — the file
+   input was 240px tall and the box was mostly empty space. Controls are sized
+   by height/width now; only min-width matters here. */
+.ship-doc-upload .master-select,
+.ship-doc-upload input[type="file"] {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    height: 44px;
+}
+
+/* the native picker keeps the field's baseline: the button sits in the middle
+   of the 44px box instead of on the first line of a tall one */
+.ship-doc-upload input[type="file"] {
+    display: flex;
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* ---------------- Cost breakdown ---------------- */
+
+.ship-cost-totals {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.ship-cost-totals > div {
+    padding: 10px 12px;
+    border: 1px solid var(--mc-border);
+    border-radius: 10px;
+    background: var(--mc-card);
+}
+
+.ship-cost-totals span {
+    display: block;
+    color: var(--mc-text-3);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.ship-cost-totals strong {
+    display: block;
+    margin-top: 3px;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--mc-text);
+    overflow-wrap: anywhere;
+}
+
+/* The exchange-rate field is always on screen and always editable — a field
+   that appears and disappears is a field that is missing when it is needed,
+   and a field that cannot be typed into is one the operator has to work
+   around. The base currency needs no conversion, so it only drops the
+   required marker; the input itself stays a normal input. */
+#costRateField.is-base .master-required {
+    display: none;
+}
+
+.ship-cost-rate-preview {
+    display: block;
+    margin-top: 3px;
+    color: var(--mc-text-2);
+    font-weight: 700;
+}
+
+.ship-cost-table td {
+    vertical-align: top;
+}
+
+.ship-cost-table .master-row-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.ship-margin {
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+    padding-top: 12px;
+}
+
+.ship-margin span {
+    display: block;
+    color: var(--mc-text-3);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.ship-margin strong {
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.ship-margin .is-positive {
+    color: #067647;
+}
+
+.ship-margin .is-negative {
+    color: #d92d20;
+}
+
+/* the old "status-pending" badge used on cost rows */
+.ship .master-badge.status-pending {
+    background: var(--mc-card-soft);
+    color: var(--mc-text-3);
+    border: 1px solid var(--mc-border);
+}
+
+/* ==========================================================================
+   Shipment detail — the record view
+   --------------------------------------------------------------------------
+   Sits on top of master-detail.css (the shared detail-page presentation) and
+   only adds what is specific to a shipment: the header's state chips, the
+   journey stepper, the paperwork list, the cost tiles and the side rail.
+   Colour rules that need a semantic hue are written as a light/dark pair —
+   a single pastel is only correct in one of the two themes.
+   ========================================================================== */
+
+/* ---------------- Header ---------------- */
+
+.ship-head h1 {
+    font-size: 20px;
+    font-weight: 650;
+    letter-spacing: -.01em;
+    line-height: 1.25;
+}
+
+.ship-head p {
+    margin-top: 4px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--mc-text-3);
+}
+
+.ship-head-tracking {
+    color: var(--mc-text-2);
+    font-weight: 600;
+}
+
+.ship-head .record-head-actions .master-btn {
+    height: 38px;
+    padding: 0 13px;
+    border-radius: 11px;
+    font-size: 13px;
+}
+
+.ship-head .record-head-actions .master-btn i {
+    font-size: 12px;
+    opacity: .85;
+}
+
+.ship-chip-warn {
+    border-color: rgba(245, 158, 11, .4);
+    background: rgba(245, 158, 11, .12);
+    color: #b54708;
+}
+
+/* ---------------- Side rail ---------------- */
+
+.ship-side {
+    display: grid;
+    gap: 16px;
+    align-content: start;
+}
+
+.ship-side .master-section {
+    margin-bottom: 0;
+}
+
+/* ---------------- Forms inside the rail ---------------- */
+
+.ship-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.ship-form-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--mc-text-3);
+}
+
+.ship-form-checks {
+    display: grid;
+    gap: 8px;
+    padding-top: 2px;
+}
+
+.history-form .master-btn {
+    width: 100%;
+    height: 42px;
+}
+
+.ship-doc-upload-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* ---------------- Journey stepper ----------------
+   Steps sit on a connector line with the marker above the label, so the
+   journey reads left to right and the current step is the one thing that is
+   filled. The old version boxed every step, which made six cards of noise. */
+
+.ship-track {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0 6px;
+}
+
+.ship-track li {
+    position: relative;
+    flex: none;
+    min-width: 0;
+    padding: 30px 8px 0 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.ship-track li::before {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 20px;
+    text-align: center;
+}
+
+.ship-track li::after {
+    content: '';
+    position: absolute;
+    top: 11px;
+    left: 28px;
+    right: 4px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--mc-border);
+}
+
+.ship-track li:last-child::after {
+    content: none;
+}
+
+.ship-track li.is-done {
+    border: 0;
+    background: none;
+    color: var(--mc-text-2);
+}
+
+.ship-track li.is-done::before {
+    border-color: rgba(16, 185, 129, .45);
+    background: rgba(16, 185, 129, .16);
+    color: #067647;
+}
+
+.ship-track li.is-done::after {
+    background: rgba(16, 185, 129, .4);
+}
+
+.ship-track li.is-current {
+    border: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--mc-text);
+    font-weight: 700;
+}
+
+.ship-track li.is-current::before {
+    border-color: var(--master-primary, #4f83f1);
+    background: var(--master-primary, #4f83f1);
+    color: #fff;
+    box-shadow: 0 0 0 4px var(--accent-light, rgba(79, 142, 247, .12));
+}
+
+.ship-track-note {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #b54708;
+}
+
+.ship-track-hint {
+    margin-top: 14px;
+}
+
+.ship-track-cancelled {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid rgba(217, 45, 32, .28);
+    border-radius: 12px;
+    background: rgba(217, 45, 32, .08);
+    color: #b42318;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ---------------- Paperwork checklist ----------------
+   A list of requirements, not a stack of cards: hairline rows with one state
+   marker each. The row itself stays neutral so a missing document reads as a
+   to-do, not as an error banner. */
+
+.ship-doc-list {
+    display: grid;
+    gap: 0;
+    margin: 0 0 16px;
+}
+
+.ship-doc {
+    padding: 10px 0;
+    border: 0;
+    border-top: 1px solid var(--mc-border);
+    border-radius: 0;
+    background: none;
+}
+
+.ship-doc:first-child {
+    border-top: 0;
+}
+
+.ship-doc.is-done,
+.ship-doc.is-missing,
+.ship-doc.is-optional {
+    background: none;
+    border-left: 0;
+}
+
+.ship-doc-mark {
+    width: 20px;
+    height: 20px;
+    border-radius: 7px;
+    font-size: 11px;
+}
+
+.ship-doc.is-done .ship-doc-mark {
+    background: rgba(16, 185, 129, .16);
+    color: #067647;
+}
+
+.ship-doc.is-missing .ship-doc-mark {
+    background: rgba(245, 158, 11, .18);
+    color: #b54708;
+}
+
+.ship-doc-body strong {
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+.ship-doc-upload {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px dashed var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+}
+
+.ship-doc-upload-fields {
+    display: grid;
+    gap: 10px;
+}
+
+/* ---------------- Cost tiles ----------------
+   Four numbers in one band with hairline separators — quieter than four
+   bordered boxes, and the figures line up because they are tabular. */
+
+.ship-cost-totals {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    margin-bottom: 16px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.ship-cost-totals > div {
+    padding: 11px 14px 12px;
+    border: 0;
+    border-left: 1px solid var(--mc-border);
+    border-radius: 0;
+    background: var(--mc-card-soft);
+}
+
+.ship-cost-totals > div:first-child {
+    border-left: 0;
+}
+
+.ship-cost-totals strong {
+    font-size: 15px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+}
+
+.ship-cost-table td {
+    vertical-align: middle;
+}
+
+.ship-cost-table .master-row-actions {
+    justify-content: flex-end;
+}
+
+.ship-col-actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.ship-cell-muted {
+    color: var(--mc-text-2);
+}
+
+/* The ledger link on a paid cost row is a reference, not a call to action. */
+.ship-cost-table .cf-sync-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 3px 8px;
+    border: 1px solid var(--mc-border);
+    border-radius: 8px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+    font-size: 11.5px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.ship-cost-table .cf-sync-chip:hover {
+    border-color: var(--master-primary, #4f83f1);
+    color: var(--master-primary, #4f83f1);
+}
+
+.ship-margin {
+    gap: 28px;
+    padding-top: 14px;
+    margin-top: 14px;
+    border-top: 1px solid var(--mc-border);
+}
+
+.ship-margin span {
+    font-size: 11px;
+    letter-spacing: .06em;
+}
+
+.ship-margin strong {
+    font-size: 15px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+}
+
+.ship-margin-hint {
+    margin: 0;
+    padding: 2px 0 0;
+}
+
+/* ---------------- Products (mobile cards) ---------------- */
+
+.product-card {
+    border-color: var(--mc-border);
+    background: var(--mc-card);
+}
+
+.product-desc,
+.product-grid span {
+    color: var(--mc-text-3);
+}
+
+.product-grid strong {
+    color: var(--mc-text);
+}
+
+.file-icon {
+    color: var(--mc-text-3);
+}
+
+/* A file (non-image) attachment uses the same footprint as a photo. */
+.ship .photo-card .file-card {
+    height: 150px;
+    padding: 14px;
+}
+
+.ship .photo-card .file-icon {
+    font-size: 34px;
+    margin-bottom: 8px;
+}
+
+/* ---------------- Responsive ---------------- */
+
+@media (max-width: 1100px) {
+    .ship-cost-totals {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ship-cost-totals > div:nth-child(3) {
+        border-left: 0;
+        border-top: 1px solid var(--mc-border);
+    }
+
+    .ship-cost-totals > div:nth-child(4) {
+        border-top: 1px solid var(--mc-border);
+    }
+}
+
+@media (max-width: 767px) {
+    /* The journey becomes a vertical list: the marker leads, the label
+       follows, and the connector runs down the side. */
+    .ship-track {
+        grid-template-columns: 1fr;
+        gap: 14px 0;
+    }
+
+    .ship-track li {
+        padding: 0 0 0 34px;
+    }
+
+    .ship-track li::after {
+        top: 24px;
+        left: 10px;
+        right: auto;
+        bottom: -14px;
+        width: 2px;
+        height: auto;
+    }
+
+    .ship-cost-totals {
+        grid-template-columns: 1fr;
+    }
+
+    .ship-cost-totals > div {
+        border-left: 0;
+        border-top: 1px solid var(--mc-border);
+    }
+
+    .ship-cost-totals > div:first-child {
+        border-top: 0;
+    }
+}
+
+/* ---------------- Dark theme pairs ----------------
+   Semantic hues are tints of a light-theme palette; on the dark panel they
+   need their own, lighter, values or they lose contrast. */
+
+:root[data-theme="dark"] .ship-chip-warn,
+:root[data-theme="dark"] .ship-doc.is-missing .ship-doc-mark,
+:root[data-theme="dark"] .ship-track-note {
+    color: #f6ad55;
+}
+
+:root[data-theme="dark"] .ship-doc.is-done .ship-doc-mark,
+:root[data-theme="dark"] .ship-track li.is-done::before {
+    color: #38d9a9;
+}
+
+:root[data-theme="dark"] .ship-track-cancelled {
+    color: #ff9b9b;
+}
+
+:root[data-theme="dark"] .ship-eta-overdue {
+    color: #ff9b9b;
+}
+
+:root[data-theme="dark"] .ship-eta-due_soon,
+:root[data-theme="dark"] .ship-eway-expiring {
+    color: #f6ad55;
+}
+
+:root[data-theme="dark"] .ship-eta-on_track {
+    color: #38d9a9;
+}
+
+:root[data-theme="dark"] .ship-eway-expired {
+    color: #ff9b9b;
+}
+
+/* ==========================================================================
+   4. Shipment List — the scanning surface
+   --------------------------------------------------------------------------
+   The list is the page an operator keeps open all day, so it is built for
+   scanning rather than for decoration:
+
+     - one toolbar: the filter chips and the filter form share one card and
+       one 16px inset, so the columns of controls line up
+     - dense rows: 50 rows a page should read as a table, not a brochure
+     - the record number is the link and the product is the second line.
+       The number is what people search by; it used to be the muted line
+       while the product name was the link
+     - money is right-aligned with tabular figures, so the column is
+       comparable at a glance (th/td also carry .is-num from master-detail)
+     - status, type and label chips are tinted (a translucent background
+       with a saturated foreground) instead of filled. A solid amber pill
+       with white text fails contrast in both themes; a tint does not, and
+       the same tint works on either background.
+     - rows are click targets for the record. Anything interactive inside
+       the row keeps its own click (assets/js/shipments.js skips them).
+
+   Adding a status means adding one tone line here plus its dark override;
+   tools/checks/list-check.cjs fails if a status in Shipment::statusOptions()
+   has no tone or no dark counterpart.
+   ========================================================================== */
+
+/* ---------------- applied filters ----------------
+   The controls above hold the values; this strip names what they are actually
+   filtering, one removable chip each. A filter that comes from a saved view or
+   a URL is no longer invisible — and every chip removes only its own key, so
+   undoing one filter never silently drops the others. */
+
+/* ---------------- table bar: the ordering caption + row density ---------------- */
+
+/* Row density. A list an operator keeps open all day should let them decide
+   how much of it fits on screen; the state is one attribute on .ship-index
+   and assets/js/shipments.js remembers the choice. */
+
+/* ---------------- table ---------------- */
+
+.ship-index .master-table-wrap {
+    margin-top: 12px;
+}
+
+.ship-index .master-table th,
+.ship-index .master-table td {
+    padding: 12px 14px;
+}
+
+.ship-index .master-table th {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    font-size: 11px;
+    color: var(--mc-text-3);
+}
+
+.ship-index .master-table td {
+    font-size: 13.5px;
+    vertical-align: top;
+}
+
+/* Column hints: the table keeps its natural layout, these only stop the
+   columns from reflowing between pages as the content changes. */
+.ship-index .master-table th:nth-child(1) { width: 104px; }
+.ship-index .master-table th:nth-child(2) { width: 230px; }
+/* Route is the one column that was left to the browser: with nothing declared
+   it took whatever the fixed columns did not, so its two-line "from → to"
+   wrapped differently on every page and the row height moved with it. */
+.ship-index .master-table th:nth-child(3) { width: 168px; }
+.ship-index .master-table th:nth-child(4) { width: 168px; }
+.ship-index .master-table th:nth-child(5) { width: 132px; }
+.ship-index .master-table th:nth-child(6) { width: 150px; }
+.ship-index .master-table th:nth-child(7) { width: 132px; }
+.ship-index .master-table th:nth-child(8) { width: 72px; }
+
+.ship-index .master-table th:last-child,
+.ship-index .master-table td:last-child {
+    text-align: right;
+}
+
+/* Row rhythm. The old row had a 13px first line in one cell, 13.5px in the
+   next and a 22px pill in another, so the row's top line wandered. One line
+   box for the first line and one for the second makes a row read as a row. */
+.ship-index .master-table {
+    --ship-line: 20px;
+    --ship-sub: 16px;
+}
+
+.ship-index .ship-date,
+.ship-index .ship-cell-id,
+.ship-index .ship-route strong,
+.ship-index .ship-logistic,
+.ship-index .ship-money,
+.ship-index .ship-status,
+.ship-index .ship-type,
+.ship-index .ship-eta {
+    min-height: var(--ship-line);
+    line-height: var(--ship-line);
+}
+
+.ship-index td .master-sub {
+    margin-top: 4px;
+    line-height: var(--ship-sub);
+}
+
+.ship-index .ship-cell-name {
+    margin-top: 4px;
+    line-height: var(--ship-sub);
+}
+
+.ship-index .ship-tags {
+    margin-top: 4px;
+}
+
+/* the pills sit on the row's first line instead of being taller than it */
+.ship-index .ship-status,
+.ship-index .ship-type {
+    height: var(--ship-line);
+    padding: 0 10px;
+}
+
+.ship-index .ship-eta {
+    display: inline-flex;
+    align-items: center;
+    height: var(--ship-line);
+    padding: 0 9px;
+}
+
+.ship-index .master-table tbody tr.is-clickable {
+    cursor: pointer;
+}
+
+.ship-index .master-table tbody tr.is-clickable:hover {
+    background: var(--mc-hover);
+}
+
+.ship-index .master-table tbody tr.is-clickable:hover .ship-cell-id {
+    text-decoration: underline;
+}
+
+/* ---------------- cells ---------------- */
+
+.ship-index .ship-date {
+    display: block;
+    font-weight: 700;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.ship-index .ship-tags {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.ship-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    background: var(--mc-soft);
+    color: var(--mc-text-2);
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.ship-index .ship-cell {
+    display: block;
+    text-decoration: none;
+    max-width: 240px;
+}
+
+.ship-index .ship-cell-id {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--master-primary);
+}
+
+.ship-index .ship-cell-name {
+    display: block;
+    margin-top: 3px;
+    overflow: hidden;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ship-index .ship-label-chip {
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 9.5px;
+    font-weight: 800;
+}
+
+.ship-index .ship-route strong {
+    display: block;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.ship-index .ship-route .master-sub,
+.ship-index .ship-logistic .master-sub,
+.ship-index .ship-money .master-sub {
+    margin-top: 4px;
+}
+
+.ship-index .ship-money {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.ship-index .ship-row-closed .ship-money {
+    font-weight: 600;
+}
+
+/* ---------------- status, type and label chips ---------------- */
+
+.ship-index .ship-status,
+.ship-index .ship-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--tone-bg);
+    color: var(--tone-fg);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
+.ship-index .ship-status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: 0 0 auto;
+}
+
+.ship-index .ship-status.status-planning { --tone-bg: rgba(107, 114, 128, .16); --tone-fg: #4b5563; }
+.ship-index .ship-status.status-picked-up { --tone-bg: rgba(217, 119, 6, .18); --tone-fg: #b45309; }
+.ship-index .ship-status.status-in-transit { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
+.ship-index .ship-status.status-custom-hold { --tone-bg: rgba(245, 158, 11, .18); --tone-fg: #b45309; }
+.ship-index .ship-status.status-delayed { --tone-bg: rgba(225, 29, 72, .16); --tone-fg: #be123c; }
+.ship-index .ship-status.status-out-for-delivery { --tone-bg: rgba(18, 203, 183, .18); --tone-fg: #0f766e; }
+.ship-index .ship-status.status-delivered { --tone-bg: rgba(16, 185, 129, .18); --tone-fg: #047857; }
+.ship-index .ship-status.status-cancelled { --tone-bg: var(--mc-soft); --tone-fg: var(--mc-text-3); }
+
+.ship-index .ship-type.type-domestic { --tone-bg: rgba(16, 185, 129, .18); --tone-fg: #047857; }
+.ship-index .ship-type.type-import { --tone-bg: rgba(245, 158, 11, .18); --tone-fg: #b45309; }
+.ship-index .ship-type.type-export { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
+
+:root[data-theme="dark"] .ship-index .ship-status.status-planning { --tone-fg: #cbd5e1; }
+:root[data-theme="dark"] .ship-index .ship-status.status-picked-up { --tone-fg: #fcd34d; }
+:root[data-theme="dark"] .ship-index .ship-status.status-in-transit { --tone-fg: #93b4ff; }
+:root[data-theme="dark"] .ship-index .ship-status.status-custom-hold { --tone-fg: #fcd34d; }
+:root[data-theme="dark"] .ship-index .ship-status.status-delayed { --tone-fg: #fda4af; }
+:root[data-theme="dark"] .ship-index .ship-status.status-out-for-delivery { --tone-fg: #5eead4; }
+:root[data-theme="dark"] .ship-index .ship-status.status-delivered { --tone-fg: #6ee7b7; }
+:root[data-theme="dark"] .ship-index .ship-status.status-cancelled { --tone-fg: #aab6c9; }
+
+:root[data-theme="dark"] .ship-index .ship-type.type-domestic { --tone-fg: #6ee7b7; }
+:root[data-theme="dark"] .ship-index .ship-type.type-import { --tone-fg: #fcd34d; }
+:root[data-theme="dark"] .ship-index .ship-type.type-export { --tone-fg: #93b4ff; }
+
+/* ---------------- totals ---------------- */
+
+/* ---------------- empty state ---------------- */
+
+/* ---------------- delete confirmation ---------------- */
+
+.ship-index .master-modal-card.is-narrow {
+    max-width: 440px;
+}
+
+/* ---------------- row action ---------------- */
+
+.ship-index .master-dropdown-toggle {
+    width: 34px;
+    height: 34px;
+    margin-left: auto;
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+/* ---------------- row density variants ----------------
+   Comfortable is the default; compact fits roughly a third more rows on the
+   same screen. Scoped above the mobile breakpoint because the stacked cards
+   have their own spacing. */
+
+@media (min-width: 769px) {
+
+    .ship-index[data-density="compact"] .master-table {
+        --ship-line: 18px;
+        --ship-sub: 15px;
+    }
+
+    .ship-index[data-density="compact"] .ship-date,
+    .ship-index[data-density="compact"] .ship-cell-id {
+        font-size: 12.5px;
+    }
+
+    .ship-index[data-density="compact"] .ship-cell-name,
+    .ship-index[data-density="compact"] td .master-sub {
+        font-size: 11.5px;
+    }
+}

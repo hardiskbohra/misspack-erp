@@ -6,22 +6,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <title>Client KYC - {{ $client->company_name }}</title>
+    <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/kyc-public.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/select2/css/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/select2-theme.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/master-alert.css') }}">
 </head>
 
 <body>
     @php
+        /* Plain PHP inside a @php block: a Blade directive here is compiled a
+           second time into PHP syntax inside PHP and the view dies parsing. */
         $statusClass = str_replace('_', '-', $client->status);
         $kycToast = [];
-        @if(session('success'))
+
+        if (session('success')) {
             $kycToast[] = ['type' => 'success', 'message' => session('success'), 'color' => '#4f83f1'];
-        @endif
-        @if(session('error'))
+        }
+
+        if (session('error')) {
             $kycToast[] = ['type' => 'error', 'message' => session('error'), 'color' => '#ef4770'];
-        @endif
-        @if($errors->any())
+        }
+
+        if ($errors->any()) {
             $kycToast[] = ['type' => 'validation', 'message' => $errors->first(), 'color' => '#ef4770'];
-        @endif
+        }
     @endphp
     <div class="page">
         <div class="card header" style="background:#2f3a4c;">
@@ -71,17 +80,17 @@
             <div class="card form-card section">
                 <h3 class="section-title">Company Information</h3>
                 <div class="grid">
-                    <div class="field"><label class="label">Company Name <span class="required">*</span></label><input
-                            class="input" name="company_name" value="{{ old('company_name', $client->company_name) }}"
+                    <div class="master-field"><label class="master-label">Company Name <span class="required">*</span></label><input
+                            class="master-input" name="company_name" value="{{ old('company_name', $client->company_name) }}"
                             required @readonly($readonly)></div>
-                    <div class="field"><label class="label">Brand Name</label><input class="input" name="brand_name"
+                    <div class="master-field"><label class="master-label">Brand Name</label><input class="master-input" name="brand_name"
                             value="{{ old('brand_name', $client->brand_name) }}" @readonly($readonly)></div>
                     
-                    <div class="field"><label class="label">Industry</label><input class="input" name="industry"
+                    <div class="master-field"><label class="master-label">Industry</label><input class="master-input" name="industry"
                             value="{{ old('industry', $client->industry) }}" @readonly($readonly)></div>
-                    <div class="field"><label class="label">Website</label><input class="input" name="website"
+                    <div class="master-field"><label class="master-label">Website</label><input class="master-input" name="website"
                             value="{{ old('website', $client->website) }}" @readonly($readonly)></div>
-                    <div class="field"><label class="label">Preferred Currency</label><select class="select"
+                    <div class="master-field"><label class="master-label">Preferred Currency</label><select class="master-select"
                             name="preferred_currency" @disabled($readonly)>@foreach($currencyOptions as $key => $label)
                             <option value="{{ $key }}" @selected(old('preferred_currency', $client->preferred_currency) === $key)>{{ $label }}</option>@endforeach</select></div>
                 </div>
@@ -90,47 +99,47 @@
             <div class="card form-card section">
                 <h3 class="section-title">Contact Persons</h3>
                 <div class="grid">
-                    <div class="field"><label class="label">CEO / Director Name <span class="required">*</span></label><input class="input"
+                    <div class="master-field"><label class="master-label">CEO / Director Name <span class="required">*</span></label><input class="master-input"
                             name="ceo_name" value="{{ old('ceo_name', $client->ceo_name) }}" required @readonly($readonly)></div>
-                    <div class="field"><label class="label">CEO / Director Email <span class="required">*</span></label><input class="input"
+                    <div class="master-field"><label class="master-label">CEO / Director Email <span class="required">*</span></label><input class="master-input"
                             type="email" name="ceo_email" value="{{ old('ceo_email', $client->ceo_email) }}"
                             required @readonly($readonly)></div>
-                    <div class="field"><label class="label">CEO / Director Contact <span class="required">*</span></label><input class="input"
+                    <div class="master-field"><label class="master-label">CEO / Director Contact <span class="required">*</span></label><input class="master-input"
                             name="ceo_contact" value="{{ old('ceo_contact', $client->ceo_contact) }}"
                             required @readonly($readonly)></div>
-                    <div class="field"><label class="label">Account Person Name</label><input class="input"
+                    <div class="master-field"><label class="master-label">Account Person Name</label><input class="master-input"
                             name="account_person_name"
                             value="{{ old('account_person_name', $client->account_person_name) }}" @readonly($readonly)>
                     </div>
-                    <div class="field"><label class="label">Account Person Email</label><input class="input"
+                    <div class="master-field"><label class="master-label">Account Person Email</label><input class="master-input"
                             type="email" name="account_person_email"
                             value="{{ old('account_person_email', $client->account_person_email) }}"
                             @readonly($readonly)></div>
-                    <div class="field"><label class="label">Account Person Contact</label><input class="input"
+                    <div class="master-field"><label class="master-label">Account Person Contact</label><input class="master-input"
                             name="account_person_contact"
                             value="{{ old('account_person_contact', $client->account_person_contact) }}"
                             @readonly($readonly)></div>
-                    <div class="field"><label class="label">Marketing / Purchase Name</label><input class="input"
+                    <div class="master-field"><label class="master-label">Marketing / Purchase Name</label><input class="master-input"
                             name="marketing_person_name"
                             value="{{ old('marketing_person_name', $client->marketing_person_name) }}"
                             @readonly($readonly)></div>
-                    <div class="field"><label class="label">Marketing / Purchase Email</label><input class="input"
+                    <div class="master-field"><label class="master-label">Marketing / Purchase Email</label><input class="master-input"
                             type="email" name="marketing_person_email"
                             value="{{ old('marketing_person_email', $client->marketing_person_email) }}"
                             @readonly($readonly)></div>
-                    <div class="field"><label class="label">Marketing / Purchase Contact</label><input class="input"
+                    <div class="master-field"><label class="master-label">Marketing / Purchase Contact</label><input class="master-input"
                             name="marketing_person_contact"
                             value="{{ old('marketing_person_contact', $client->marketing_person_contact) }}"
                             @readonly($readonly)></div>
-                    <div class="field"><label class="label">Inward Dispatch Name</label><input class="input"
+                    <div class="master-field"><label class="master-label">Inward Dispatch Name</label><input class="master-input"
                             name="dispatch_person_name"
                             value="{{ old('dispatch_person_name', $client->dispatch_person_name) }}"
                             @readonly($readonly)></div>
-                    <div class="field"><label class="label">Inward Dispatch Email</label><input class="input"
+                    <div class="master-field"><label class="master-label">Inward Dispatch Email</label><input class="master-input"
                             type="email" name="dispatch_person_email"
                             value="{{ old('dispatch_person_email', $client->dispatch_person_email) }}"
                             @readonly($readonly)></div>
-                    <div class="field"><label class="label">Inward Dispatch Contact</label><input class="input"
+                    <div class="master-field"><label class="master-label">Inward Dispatch Contact</label><input class="master-input"
                             name="dispatch_person_contact"
                             value="{{ old('dispatch_person_contact', $client->dispatch_person_contact) }}"
                             @readonly($readonly)></div>
@@ -141,37 +150,37 @@
                 <h3 class="section-title">Billing & Shipping Address</h3>
                 
                 <div class="grid">
-                    <div class="field full"><label class="label">Billing Address <span class="required">*</span></label><input class="input"
+                    <div class="master-field full"><label class="master-label">Billing Address <span class="required">*</span></label><input class="master-input"
                             name="billing_address"
                             required @readonly($readonly) value="{{ old('billing_address', $client->billing_address) }}"></div>
-                    <div class="field"><label class="label">Billing City <span class="required">*</span></label><input class="input" name="billing_city"
+                    <div class="master-field"><label class="master-label">Billing City <span class="required">*</span></label><input class="master-input" name="billing_city"
                             value="{{ old('billing_city', $client->billing_city) }}" required @readonly($readonly)></div>
-                    <div class="field"><label class="label">Billing State <span class="required">*</span></label><input class="input"
+                    <div class="master-field"><label class="master-label">Billing State <span class="required">*</span></label><input class="master-input"
                             name="billing_state" value="{{ old('billing_state', $client->billing_state) }}"
                             required @readonly($readonly)></div>
-                    <div class="field"><label class="label">Billing Country <span class="required">*</span></label><input class="input"
+                    <div class="master-field"><label class="master-label">Billing Country <span class="required">*</span></label><input class="master-input"
                             name="billing_country" value="{{ old('billing_country', $client->billing_country) }}"
                             required @readonly($readonly)></div>
-                    <div class="field"><label class="label">Billing Pincode <span class="required">*</span></label><input class="input"
+                    <div class="master-field"><label class="master-label">Billing Pincode <span class="required">*</span></label><input class="master-input"
                             name="billing_pincode" value="{{ old('billing_pincode', $client->billing_pincode) }}"
                             required @readonly($readonly)></div>
-                    <label class="checkbox"><input type="checkbox" name="shipping_same_as_billing" value="1"
+                    <label class="master-check"><input type="checkbox" name="shipping_same_as_billing" value="1"
                             @checked(old('shipping_same_as_billing', $client->shipping_same_as_billing))
                             @disabled($readonly)> Shipping address same as billing</label>
-                    <div class="field full"><label class="label">Shipping Address</label><input class="input"
+                    <div class="master-field full"><label class="master-label">Shipping Address</label><input class="master-input"
                             name="shipping_address"
                             @readonly($readonly) value="{{ old('shipping_address', $client->shipping_address) }}">
                     </div>
-                    <div class="field"><label class="label">Shipping City</label><input class="input"
+                    <div class="master-field"><label class="master-label">Shipping City</label><input class="master-input"
                             name="shipping_city" value="{{ old('shipping_city', $client->shipping_city) }}"
                             @readonly($readonly)></div>
-                    <div class="field"><label class="label">Shipping State</label><input class="input"
+                    <div class="master-field"><label class="master-label">Shipping State</label><input class="master-input"
                             name="shipping_state" value="{{ old('shipping_state', $client->shipping_state) }}"
                             @readonly($readonly)></div>
-                    <div class="field"><label class="label">Shipping Country</label><input class="input"
+                    <div class="master-field"><label class="master-label">Shipping Country</label><input class="master-input"
                             name="shipping_country" value="{{ old('shipping_country', $client->shipping_country) }}"
                             @readonly($readonly)></div>
-                    <div class="field"><label class="label">Shipping Pincode</label><input class="input"
+                    <div class="master-field"><label class="master-label">Shipping Pincode</label><input class="master-input"
                             name="shipping_pincode" value="{{ old('shipping_pincode', $client->shipping_pincode) }}"
                             @readonly($readonly)></div>
                 </div>
@@ -180,30 +189,30 @@
             <div class="card form-card section">
                 <h3 class="section-title">Tax & Bank Details</h3>
                 <div class="grid">
-                    <div class="field"><label class="label">GSTIN</label><input class="input" name="gstin"
+                    <div class="master-field"><label class="master-label">GSTIN</label><input class="master-input" name="gstin"
                             value="{{ old('gstin', $client->gstin) }}" @readonly($readonly)></div>
-                    <div class="field"><label class="label">PAN</label><input class="input" name="pan"
+                    <div class="master-field"><label class="master-label">PAN</label><input class="master-input" name="pan"
                             value="{{ old('pan', $client->pan) }}" @readonly($readonly)></div>
-                    <div class="field"><label class="label">TAN</label><input class="input" name="tan"
+                    <div class="master-field"><label class="master-label">TAN</label><input class="master-input" name="tan"
                             value="{{ old('tan', $client->tan) }}" @readonly($readonly)></div>
-                    <div class="field"><label class="label">CIN</label><input class="input" name="cin"
+                    <div class="master-field"><label class="master-label">CIN</label><input class="master-input" name="cin"
                             value="{{ old('cin', $client->cin) }}" @readonly($readonly)></div>
-                    <div class="field"><label class="label">MSME Number</label><input class="input" name="msme_number"
+                    <div class="master-field"><label class="master-label">MSME Number</label><input class="master-input" name="msme_number"
                             value="{{ old('msme_number', $client->msme_number) }}" @readonly($readonly)></div>
-                    <div class="field"><label class="label">Bank Name</label><input class="input" name="bank_name"
+                    <div class="master-field"><label class="master-label">Bank Name</label><input class="master-input" name="bank_name"
                             value="{{ old('bank_name', $client->bank_name) }}" @readonly($readonly)></div>
-                    <div class="field"><label class="label">Account Holder Name</label><input class="input"
+                    <div class="master-field"><label class="master-label">Account Holder Name</label><input class="master-input"
                             name="account_holder_name"
                             value="{{ old('account_holder_name', $client->account_holder_name) }}" @readonly($readonly)>
                     </div>
-                    <div class="field"><label class="label">Account Number</label><input class="input"
+                    <div class="master-field"><label class="master-label">Account Number</label><input class="master-input"
                             name="account_number" value="{{ old('account_number', $client->account_number) }}"
                             @readonly($readonly)></div>
-                    <div class="field"><label class="label">IFSC Code</label><input class="input" name="ifsc_code"
+                    <div class="master-field"><label class="master-label">IFSC Code</label><input class="master-input" name="ifsc_code"
                             value="{{ old('ifsc_code', $client->ifsc_code) }}" @readonly($readonly)></div>
-                    <div class="field"><label class="label">Bank Branch</label><input class="input" name="bank_branch"
+                    <div class="master-field"><label class="master-label">Bank Branch</label><input class="master-input" name="bank_branch"
                             value="{{ old('bank_branch', $client->bank_branch) }}" @readonly($readonly)></div>
-                    <div class="field"><label class="label">SWIFT Code</label><input class="input" name="swift_code"
+                    <div class="master-field"><label class="master-label">SWIFT Code</label><input class="master-input" name="swift_code"
                             value="{{ old('swift_code', $client->swift_code) }}" @readonly($readonly)></div>
                 </div>
             </div>
@@ -211,23 +220,23 @@
             <!--<div class="card form-card section">-->
             <!--    <h3 class="section-title">Commercial Details</h3>-->
             <!--    <div class="grid">-->
-            <!--        <div class="field"><label class="label">Credit Limit</label><input class="input" type="number"-->
+            <!--        <div class="master-field"><label class="master-label">Credit Limit</label><input class="master-input" type="number"-->
             <!--                min="0" step="0.01" name="credit_limit"-->
             <!--                value="{{ old('credit_limit', $client->credit_limit) }}" @readonly($readonly)></div>-->
-            <!--        <div class="field"><label class="label">Credit Days</label><input class="input" type="number"-->
+            <!--        <div class="master-field"><label class="master-label">Credit Days</label><input class="master-input" type="number"-->
             <!--                min="0" name="credit_days" value="{{ old('credit_days', $client->credit_days) }}"-->
             <!--                @readonly($readonly)></div>-->
-            <!--        <div class="field full"><label class="label">Payment Terms</label><input class="input"-->
+            <!--        <div class="master-field full"><label class="master-label">Payment Terms</label><input class="master-input"-->
             <!--                name="payment_terms" value="{{ old('payment_terms', $client->payment_terms) }}"-->
             <!--                @readonly($readonly)></div>-->
-            <!--        <div class="field full"><label class="label">Notes</label><input class="input" name="notes"-->
+            <!--        <div class="master-field full"><label class="master-label">Notes</label><input class="master-input" name="notes"-->
             <!--                @readonly($readonly) value="{{ old('notes', $client->notes) }}"></div>-->
             <!--    </div>-->
             <!--</div>-->
 
             @unless($readonly)
                 <div class="actions" style="justify-content: center;">
-                    <button type="submit" class="btn btn-primary px-4">
+                    <button type="submit" class="master-btn master-btn-primary px-4">
                         Submit KYC for Review
                     </button>
                 </div>
@@ -280,13 +289,14 @@
         </div>
     </footer>
     </div>
+    <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
+    <script src="{{ asset('assets/js/master-alert.js') }}"></script>
+    <script src="{{ asset('assets/js/master-selects.js') }}"></script>
+    <script>
+        window.kycToast = @json($kycToast);
+    </script>
+    <script src="{{ asset('assets/js/kyc-public.js') }}"></script>
 </body>
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<script>
-    window.kycToast = @json($kycToast);
-</script>
-<script src="{{ asset('assets/js/kyc-public.js') }}"></script>
 
 </html>

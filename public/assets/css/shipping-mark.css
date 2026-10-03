@@ -1,0 +1,486 @@
+/* ==========================================================================
+   SHIPPING MARK — carton sticker
+   --------------------------------------------------------------------------
+   One sticker per label: the office prints on 85 × 130 mm label stock, so
+   every copy is its own page. Each sticker is self-contained, and the screen
+   preview uses the same geometry as the printed label, so what the operator
+   sees is what comes out of the printer.
+   ========================================================================== */
+
+/* The label is 85 × 130 mm, declared in absolute millimetres rather than as a
+   named size: a driver with no "85 × 130" preset still gets the right box. No
+   page margin — the label has no printable area to spare — and the sticker
+   carries its own 4 mm safe inset, which also absorbs a printer's unprintable
+   edge. */
+@page {
+    size: 85mm 130mm;
+    margin: 0;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 14px;
+    background: #eef2f9;
+    color: #101828;
+    font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* ---------------- toolbar (screen only) ---------------- */
+
+.mark-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    /* matches the label width, so the preview and the toolbar line up */
+    max-width: 85mm;
+    margin: 0 auto 14px;
+    padding: 12px 14px;
+    background: #fff;
+    border: 1px solid #dfe7f3;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, .08);
+}
+
+.mark-copies {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #475467;
+}
+
+.mark-copies input {
+    width: 76px;
+    padding: 8px 10px;
+    border: 1px solid #dfe7f3;
+    border-radius: 9px;
+    font: inherit;
+    font-weight: 700;
+    color: #101828;
+}
+
+.mark-hint {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #667085;
+}
+
+.mark-btn {
+    padding: 9px 14px;
+    border: 1px solid #dfe7f3;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #1d2939;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.mark-btn:hover {
+    background: #eef2f9;
+}
+
+.mark-btn-primary {
+    margin-left: auto;
+    border-color: #4f8ef7;
+    background: #4f8ef7;
+    color: #fff;
+}
+
+/* ---------------- the label ----------------
+   One sticker per 85 × 130 mm label, so the sticker is the label: the sheet is
+   the full 85 mm width and a mark is 129.5 mm of the 130 mm height. Sizes are
+   in millimetres so the screen preview and the printer agree.
+   -------------------------------------------------------------------------- */
+
+.mark-sheet {
+    width: 85mm; /* the label width */
+    margin: 0 auto;
+    /* flex rows instead of grid: page breaks keep whole stickers together
+       more reliably across browsers when each item is break-inside: avoid */
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.mark {
+    position: relative;
+    /* one sticker per label: 129.5mm of the 130mm height, not the full 130.
+       Content that matches the page box exactly can round a fraction over and
+       make the print engine emit a blank label after every copy; the half
+       millimetre is invisible on paper.
+       A label is too narrow for two address columns — 4mm of side padding
+       leaves 77mm, about 35mm per party — so the parties stack. */
+    flex: 0 0 100%;
+    width: 100%;
+    height: 129.5mm;
+    padding: 3.5mm;
+    border: 1px dashed #b6c2d4;
+    display: flex;
+    flex-direction: column;
+    gap: .8mm;
+    overflow: hidden;
+    background: #fff;
+    /* one base leading for the whole label. At line-height 2 a party's label,
+       name, address and contact lines cost about 2mm each more than they need,
+       which is what pushed the address past three lines. */
+    line-height: 1.35;
+}
+
+/* The header, meta strip and footer are fixed; the party block is the one
+   flexible row. If a record's address is unusually long it is clipped inside
+   that block instead of pushing the branding off the label or overlapping the
+   row below — the mark has a fixed height and content must never collide. */
+.mark-head,
+.mark-meta,
+.mark-foot {
+    flex: 0 0 auto;
+}
+
+.mark-parties {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    /* clear space above the meta rule: centring alone can leave the last
+       contact line touching the hairline on a two-party block with a long
+       address, which reads as a collision on paper. Bottom only — the top is
+       already separated by the flex gap under the head rule. */
+    padding-bottom: .8mm;
+}
+
+/* ---------------- brand header ---------------- */
+
+.mark-head {
+    /* the wordmark on the left, the tracking code on the right. The code is the
+       tallest thing in the row, so it sets the header's height. */
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 3mm;
+    padding-bottom: .8mm;
+    border-bottom: 1.6px solid #101828;
+}
+
+.mark-brand {
+    /* 26.5mm ≈ the 100px the template used to carry inline */
+    width: 26.5mm;
+    height: auto;
+}
+
+/* ---------------- parties ---------------- */
+
+.mark-parties {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    /* a half each: centring both blocks as one group over a 67mm area left a
+       hollow middle. Each half centres its own content, so the slack is split
+       into four small margins instead of two large ones. */
+    grid-template-rows: 1fr 1fr;
+    gap: 2.5mm;
+    align-items: stretch;
+}
+
+.mark-party {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+}
+
+/* The receiver is the block a courier reads, so it is set a size up from the
+   shipper (which is a return address). The classes come from the shared
+   partial, so the emphasis does not depend on document order. */
+.mark-party-from strong,
+.mark-party-to strong {
+    display: block;
+    font-weight: 700;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.mark-party-from strong {
+    margin-top: .4mm;
+    font-size: 9pt;
+}
+
+.mark-party-to strong {
+    margin-top: .4mm;
+    font-size: 10pt;
+    line-height: 1.15;
+}
+
+.mark-party p {
+    margin: .4mm 0 0;
+    font-size: 9pt;
+    line-height: 1.3;
+    color: #344054;
+    overflow-wrap: anywhere;
+}
+
+.mark-party-to p {
+    font-size: 10pt;
+    color: #101828;
+}
+
+.mark-party-from .mark-contact {
+    font-size: 8pt;
+}
+
+.mark-party-to .mark-contact {
+    font-size: 10pt;
+}
+
+/* The address is the one block that cannot be allowed to lose its tail: the
+   city, pin code and country sit on the last line, and a courier sorts by the
+   pin code. Four lines are available, and a long address steps down a size
+   instead of being cut off — see `.mark-party.is-compact` below. The clamp
+   stays as the last resort for an address no label could carry. */
+.mark-address {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Measured against the 77mm line: the label carries about 40 characters per
+   line at the receiver's 10pt and 44 at the shipper's 9pt, and three lines are
+   what a base-size block affords (120 and 132 characters). Past that the
+   address drops to 8.5pt, where four lines hold 192 characters, and past 192 it
+   drops to 7.5pt, where four lines hold 216. The partial picks the step from
+   the address length; tools/checks/mark-check.cjs re-derives both boundaries
+   and fails if a boundary address stops fitting the label. */
+.mark-party.is-compact p,
+.mark-party.is-compact .mark-contact {
+    font-size: 8.5pt;
+}
+
+.mark-party.is-longer p,
+.mark-party.is-longer .mark-contact {
+    font-size: 7.5pt;
+}
+
+.mark-contact {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-weight: 700;
+    color: #101828 !important;
+}
+
+.mark-label {
+    display: block;
+    line-height: 1.2;
+    font-size: 6pt;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #667085;
+}
+
+/* The parties stack, so a rule marks the step from shipper to receiver — no
+   arrow, and no height spent on it. */
+.mark-party ~ .mark-party {
+    padding-top: 1.5mm;
+    padding-bottom: 1.5mm;
+    border-top: 1px solid #d0d5dd;
+}
+
+/* ---------------- meta strip ---------------- */
+
+.mark-meta {
+    /* two columns: the package figures and the destination. The optional label
+       chip lives in the footer, where the codes already set the height — in
+       here it would either start a second row (~6mm) or squeeze the
+       destination onto two lines, and both cost the address a line. */
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 1mm 4mm;
+    align-items: end;
+    /* one rule above the strip and one below it: the strip's own bottom border
+       is left off because the footer's top rule already closes it, and two
+       rules 1mm apart read as a printing error. */
+    padding: 1mm 0;
+    border-top: 1px solid #d0d5dd;
+}
+
+.mark-meta div {
+    min-width: 0;
+}
+
+.mark-meta strong {
+    display: block;
+    margin-top: .3mm;
+    font-size: 8.5pt;
+    font-weight: 800;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+/* A size down from the other meta values: the destination carries city, state,
+   country and pin code, and at 8.5pt it is 0.6mm too wide for its column, which
+   wraps it onto a second line and costs the address a line */
+.mark-meta-destination strong {
+    text-transform: uppercase;
+    font-size: 8pt;
+}
+
+ .mark-foot .mark-label-chip {
+    display: inline-block;
+    margin-top: .7mm;
+    padding: .4mm 1.6mm;
+    border: 1.2px dashed #101828;
+    border-radius: 1.4mm;
+    font-size: 7.5pt;
+    font-weight: 900;
+}
+
+/* ---------------- footer: branding + codes ---------------- */
+
+.mark-foot {
+    display: flex;
+    align-items: center;
+    justify-content:center;
+    gap: 3mm;
+    margin-top: auto;
+    padding-top: 1.2mm;
+    border-top: 1.6px solid #101828;
+}
+
+/* the codes are fixed width, so the branding is what gives way: without this
+   a long website paints underneath the tracking plate */
+.mark-brandfoot {
+    min-width: 0;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+.mark-website {
+    display: block;
+    font-size: 8pt;
+    font-weight: 900;
+    letter-spacing: .01em;
+    color: #101828;
+}
+
+.mark-tagline {
+    display: block;
+    margin-top: .4mm;
+    font-size: 6.5pt;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #667085;
+}
+
+.mark-codes {
+    display: flex;
+    align-items: flex-end;
+    gap: 3mm;
+    flex: 0 0 auto;
+}
+
+/* ---------------- QR codes (scan to track / Instagram) ----------------
+   The code is an SVG generated in the browser. It needs a white plate and a
+   real quiet zone to stay scannable at label size, and it must not be scaled
+   by the surrounding text rules — hence the fixed mm box and the explicit
+   svg sizing below. */
+
+.mark-qr {
+    margin: 0;
+    text-align: center;
+    flex: 0 0 auto;
+}
+
+.mark-qr-code {
+    width: 17mm;
+    height: 17mm;
+    padding: .6mm;
+    background: #fff;
+    border: .3mm solid #d0d5dd;
+    border-radius: 1mm;
+    overflow: hidden;
+}
+
+.mark-qr-social .mark-qr-code {
+    width: 13mm;
+    height: 13mm;
+}
+
+.mark-qr-code svg {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none;
+    background: #fff;
+}
+
+/* The caption stays inside its code's width: a nowrap caption would print
+   over the neighbouring block. */
+.mark-qr-hint {
+    display: block;
+    margin-top: .3mm;
+    max-width: 19mm;
+    margin-inline: auto;
+    font-size: 5pt;
+    font-weight: 800;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    line-height: 1.05;
+    color: #475467;
+    overflow-wrap: anywhere;
+}
+
+/* If the payload cannot be encoded the place is shown as a hatch rather than
+   as an empty square, so a bad sticker is obvious before it is printed. */
+.mark-qr-code.ship-qr-failed {
+    background: repeating-linear-gradient(45deg, #f2f4f7, #f2f4f7 2mm, #e4e7ec 2mm, #e4e7ec 4mm);
+}
+
+.mark-empty {
+    width: 100%;
+    padding: 12mm;
+    text-align: center;
+    font-weight: 700;
+    color: #667085;
+}
+
+/* ---------------- print ---------------- */
+
+@media print {
+    body {
+        padding: 0;
+        background: #fff;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    .mark-sheet {
+        width: auto;
+        margin: 0;
+    }
+
+    .mark {
+        /* keep each sticker whole so a page break never splits a mark */
+        break-inside: avoid;
+        page-break-inside: avoid;
+        /* the dashed edge is a cutting guide; keep it 1px on paper */
+        border-color: #c3cddd;
+    }
+
+    /* Browsers drop background colours when printing unless asked not to;
+       the white plate behind each code must survive. */
+    .mark-qr-code,
+    .mark-qr-code svg {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

@@ -339,3 +339,26 @@
             }
         
         }
+
+/* ---------------- Tracking stepper (mirrors shipments.css) ---------------- */
+
+.ship-track{display:flex;gap:8px;flex-wrap:wrap;margin:0;padding:0;list-style:none;counter-reset:ship-stage}
+.ship-track li{position:relative;flex:1 1 150px;min-width:130px;padding:12px 14px 12px 40px;border:1px solid var(--border);border-radius:14px;background:#fbfdff;color:var(--muted);font-size:12px;font-weight:800}
+.ship-track li::before{counter-increment:ship-stage;content:counter(ship-stage);position:absolute;top:50%;left:14px;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid var(--border);color:var(--muted);font-size:10px;font-weight:900;line-height:18px;text-align:center}
+.ship-track li.is-done{border-color:#abefc6;background:#f6fef9;color:#067647}
+.ship-track li.is-done::before{content:'\2713';border-color:#abefc6;background:#d1fadf;color:#067647}
+.ship-track li.is-current{border-color:var(--primary);background:#eaf1ff;color:#1d4ed8;box-shadow:0 8px 20px rgba(79,131,241,.18)}
+.ship-track li.is-current::before{border-color:var(--primary);background:var(--primary);color:#fff}
+.ship-track-note{display:block;margin-top:4px;font-size:11px;font-weight:800;color:#e11d48}
+.ship-track-cancelled{padding:14px;border:1px solid #fecdca;border-radius:14px;background:#fff0f1;color:#b42318;font-weight:800}
+
+/* ---------------- Share row ---------------- */
+
+.track-share{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.track-share-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--dark);font:inherit;font-size:13px;font-weight:800;text-decoration:none;cursor:pointer}
+.track-share-btn:hover{background:var(--soft)}
+.track-share-wa{border-color:#25d366;background:#25d366;color:#053d21}
+.track-share-wa:hover{background:#1fb857}
+.track-share-url{color:var(--muted);font-size:12px;font-weight:600;overflow-wrap:anywhere}
+
+@media (max-width:800px){.ship-track li{flex:1 1 100%}}

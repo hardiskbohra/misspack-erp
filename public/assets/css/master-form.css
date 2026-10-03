@@ -1,12 +1,12 @@
 :root {
     --master-primary: #4f83f1;
     --master-primary-2: #6366f1;
-    --master-dark: #17233b;
+    --master-dark: var(--mc-text);
     --master-muted: #687386;
-    --master-border: #dfe7f3;
-    --master-bg: #eef3ff;
-    --master-soft: #edf5ff;
-    --master-white: #fff;
+    --master-border: var(--mc-border);
+    --master-bg: var(--mc-soft);
+    --master-soft: var(--mc-soft);
+    --master-white: var(--mc-card);
     --master-red: #ef4770;
     --master-shadow: 0 14px 35px rgba(25, 42, 70, .08);
 }
@@ -25,7 +25,7 @@
 }
 
 .master-card {
-    background: #fff;
+    background: var(--mc-card);
     border: 1px solid var(--master-border);
     border-radius: 18px;
     box-shadow: var(--master-shadow)
@@ -102,12 +102,12 @@
     padding: 14px;
     border: 1px solid var(--master-border);
     border-radius: 14px;
-    background: #fbfdff
+    background: var(--mc-card-soft)
 }
 
 .master-info span {
     display: block;
-    color: #7d8aa0;
+    color: var(--mc-text-3);
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
@@ -139,6 +139,73 @@
     flex: 1
 }
 
+/* The grid a form (and every dialog body) lays its fields out in. Four screens
+   already name it — the user dialogs, the record's details tab, the employee's
+   own profile, the calculator — and until now it was defined in exactly one of
+   them, page-scoped, so everywhere else `.master-field.full` and `.two` were
+   no-ops and every dialog was a single column of fourteen fields. Two up on a
+   card: a form is read in pairs, and the alternative the screenshots showed was
+   one long scroll. */
+.master-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 10px
+}
+
+/* Three up. Twenty fields in two columns is a thirteen-row scroll; in three
+   columns it is seven. The breakpoint is high because a three-column field is
+   ~330px wide and a two-column one at 900px is the same — below this the third
+   column would be narrower than its own label. */
+@media (min-width: 1200px) {
+    .master-form-grid.is-three {
+        grid-template-columns: repeat(3, minmax(0, 1fr))
+    }
+}
+
+/* A group heading inside a dialog or a form, and the note box under it. The
+   user dialogs have named both since they were written and no sheet defined
+   either: a heading printed as ordinary text and a failed save gave its reason
+   with no box around it. */
+.master-section-label {
+    margin: 20px 0 0;
+    color: var(--master-muted);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase
+}
+
+.master-section-label:first-child {
+    margin-top: 0
+}
+
+.master-info-box {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border: 1px solid var(--master-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.6
+}
+
+.master-info-box.is-danger {
+    border-color: rgba(225, 29, 72, .3);
+    background: rgba(225, 29, 72, .08);
+    color: #b4123c
+}
+
+:root[data-theme="dark"] .master-info-box.is-danger {
+    border-color: rgba(255, 143, 171, .34);
+    background: rgba(255, 143, 171, .12);
+    color: #ffa9bf
+}
+
 .master-field.full {
     grid-column: 1/-1
 }
@@ -151,7 +218,10 @@
     display: block;
     margin-top: 10px;
     margin-bottom: 10px;
-    color: #111111;
+    /* was a hard #111111: correct on a white card, but in the dark theme it
+       painted near-black labels on the dark panel. The token carries the same
+       near-black in light and the panel's own text colour in dark. */
+    color: var(--mc-text, #111111);
     font-size: 14px;
     font-weight: 700
 }
@@ -164,10 +234,13 @@
 .master-select,
 .master-textarea {
     width: 100%;
-    border: 1px solid #d8e2ef;
+    border: 1px solid var(--mc-border);
     border-radius: 12px;
-    background: #fff;
-    color: var(--dark);
+    background: var(--mc-card);
+    /* --dark is a legacy name that the admin layout never defines, which left
+       this as an unresolved var() and let the text colour inherit by accident;
+       the theme text token says the same thing on purpose. */
+    color: var(--mc-text, #17233b);
     font-size: 14px;
     font-weight: 400;
     outline: none
@@ -183,6 +256,46 @@
     min-height: 96px;
     padding: 12px 14px;
     resize: vertical
+}
+
+/* Native file inputs: the picker is the one control the browser draws itself,
+   so it gets the theme's soft button styling and the control keeps the normal
+   field surface — a file row then matches the fields beside it in every module. */
+.master-input[type="file"]::-webkit-file-upload-button {
+    margin-right: 12px;
+    padding: 8px 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-soft);
+    color: var(--master-primary);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.master-input[type="file"]::file-selector-button {
+    margin-right: 12px;
+    padding: 8px 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-soft);
+    color: var(--master-primary);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.master-input[type="file"]::file-selector-button:hover {
+    filter: brightness(.96);
+}
+
+.master-input[type="file"] {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    cursor: pointer;
 }
 
 .master-input:focus,
@@ -226,13 +339,13 @@
 }
 
 .master-btn-light {
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: #4f83f1;
     border: 1px solid rgba(255, 255, 255, .35)
 }
 
 .master-btn-soft {
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: #4f83f1
 }
 
@@ -258,6 +371,20 @@
     gap: 12px;
     flex-wrap: wrap;
     margin-top: 26px
+}
+
+/* A form taller than the window hides its own Save button: the office types
+   into row 2 and then hunts for the action at row 9. Stuck to the bottom of the
+   viewport while the card is in view, with the card's own surface behind it, so
+   the fields scroll under the bar instead of next to it. */
+.master-actions.is-sticky {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-top: 20px;
+    padding: 14px 0 12px;
+    border-top: 1px solid var(--mc-border);
+    background: var(--mc-card)
 }
 
 .master-image-row {
@@ -306,6 +433,10 @@
 }
 
 @media(max-width:767px) {
+    .master-form-grid {
+        grid-template-columns: 1fr
+    }
+
     .master-form-page {
         padding: 14px
     }
@@ -333,33 +464,39 @@
     }
 }
 
-
-.master-chip-group {
+/* A choice chip is a segmented control, not a button: it draws no box. The
+   unselected chip is a soft fill that deepens on hover, the selected one is
+   the module colour, and the only outline either of them ever shows is the
+   keyboard focus ring — so a row of choices reads as one control instead of a
+   row of framed buttons. `.master-chip` is the record page's small neutral
+   meta chip (master-detail.css) and stays deliberately unrelated: while the
+   two shared one name, the meta chip's border drew a box around every choice. */
+.master-choice-group {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
 }
 
-.master-chip {
+.master-choice-chip {
     position: relative;
     cursor: pointer;
     user-select: none;
 }
 
-.master-chip input {
+.master-choice-chip input {
     position: absolute;
     opacity: 0;
     pointer-events: none;
 }
 
-.master-chip span {
+.master-choice-chip span {
     min-height: 42px;
     min-width: 110px;
     padding: 10px 16px;
-    border: 1px solid #d8e2ef;
+    border: 0;
     border-radius: 999px;
-    background: #fff;
-    color: #536079;
+    background: var(--mc-soft);
+    color: var(--mc-text-2);
     font-size: 14px;
     font-weight: 600;
     display: inline-flex;
@@ -369,15 +506,21 @@
     transition: 0.2s ease;
 }
 
-.master-chip:hover span {
-    background: #f8fbff;
-    border-color: #bcd3f8;
+/* with no border to tint, the fill carries the hover: one step from --mc-soft
+   to --mc-border, which reads darker in light and lighter in dark */
+.master-choice-chip:hover span {
+    background: var(--mc-border);
 }
 
-.master-chip input:checked + span {
+.master-choice-chip input:checked + span {
     color: #fff;
-    border-color: transparent;
     box-shadow: 0 8px 18px rgba(79, 131, 241, 0.22);
+}
+
+/* the control draws no box, so keyboard focus brings a ring of its own */
+.master-choice-chip input:focus-visible + span {
+    outline: 2px solid var(--master-primary);
+    outline-offset: 2px;
 }
 
 .credit-chip input:checked + span {
@@ -404,7 +547,7 @@
     background: linear-gradient(135deg, #ef4444, #dc2626);
 }
 
-.master-chip i {
+.master-choice-chip i {
     font-size: 13px;
 }
 
@@ -454,7 +597,7 @@
     height:22px;
     left:4px;
     top:4px;
-    background:#fff;
+    background: var(--mc-card);
     border-radius:50%;
     transition:.25s;
     box-shadow:0 2px 8px rgba(0,0,0,.15);
@@ -481,3 +624,316 @@
 .master-table td {
     line-height: 1.5;
 }
+/* checkbox / radio label row (e.g. "Also create linked INR cashflow entry") */
+.master-check {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-weight: 600;
+    color: var(--mc-text-2);
+}
+
+.master-check input[type="checkbox"],
+.master-check input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--master-primary);
+    cursor: pointer;
+}
+
+.master-check.full {
+    grid-column: 1 / -1;
+}
+
+/* ==========================================================================
+   UNIFIED FORM CONTROLS — added during the all-modules class unification.
+   Every module now uses these core classes for form fields; module CSS
+   files no longer redefine inputs/selects/textareas/buttons/labels.
+   ========================================================================== */
+
+.master-field { display: flex; flex-direction: column; gap: 7px; min-width: 0 }
+
+/* Button color variants */
+.master-btn-light-dark { background: var(--mc-card-soft); color: var(--mc-text) }
+.master-btn-orange { background: #f59e0b; color: #fff; box-shadow: 0 10px 24px rgba(245, 158, 11, .24) }
+/* Ghost button — for use on colored/gradient surfaces (hero headers) */
+.master-btn-ghost { background: rgba(255, 255, 255, .16); color: #fff; border: 1px solid rgba(255, 255, 255, .3) }
+
+/* Icon button action variants */
+.master-icon-btn.edit { background: var(--mc-soft); color: #4f83f1 }
+.master-icon-btn.edit:hover { background: #4f83f1; color: #fff }
+.master-icon-btn.delete { background: #fff0f4; color: #ef4770 }
+.master-icon-btn.delete:hover { background: #ef4770; color: #fff }
+
+/* Table row add/remove controls */
+.master-add-row { margin-top: 12px }
+.master-remove-row { width: 34px; height: 34px; border: 0; border-radius: 9px; background: #fff0f4; color: #e11d48; cursor: pointer; font-weight: 900 }
+.master-remove { width: 30px; height: 30px; border: 0; border-radius: 9px; background: #fff0f4; color: #e11d48; font-weight: 900; cursor: pointer; transition: all .2s }
+.master-remove:hover { background: #ef4770; color: #fff }
+
+/* Password field toggle (eye icon).
+   The wrapper was named by both user dialogs and defined by no sheet, so the
+   absolutely positioned eye resolved against the *dialog card* instead: one
+   floated over the form in a corner. `position: relative` here is the whole
+   fix; the padding keeps a long password from running beneath the icon. */
+.master-password-wrap { position: relative; display: block }
+.master-password-wrap .master-input { padding-right: 42px }
+.master-password-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 0; border-radius: 8px; background: none; cursor: pointer; color: var(--mc-text-3); font-size: 13px; padding: 0 }
+.master-password-toggle:hover { background: var(--mc-soft); color: var(--master-primary, #4f83f1) }
+.master-password-toggle:focus-visible { outline: 2px solid var(--master-primary, #4f83f1); outline-offset: 1px }
+
+/* --------------------------------------------------------------------------
+   The photo band: a circle, a sentence, two controls.
+
+   Both user dialogs named `.master-avatar-row`, `.master-avatar-preview`,
+   `.master-avatar-info`, `.master-avatar-actions` and `.master-file-name`, and
+   no sheet defined any of them. Without a circle, a preview or a layout, the
+   band rendered as three stacked lines — "PHOTO", then the avatar's own
+   contents, then the two controls — which is the screenshot this answers. The
+   circle is the one the list and the record already use (`--emp-avatar-bg` /
+   `--emp-avatar-fg`, with fallbacks so the band is correct on a page that
+   loads neither module sheet).
+   -------------------------------------------------------------------------- */
+.master-avatar-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--master-border);
+    border-radius: 14px;
+    background: var(--mc-card-soft)
+}
+
+/* The circle is a second label for the same file input, so clicking the photo
+   opens the picker — the affordance every avatar editor has. The camera badge
+   sits outside it (as a sibling) because the scripts replace the circle's own
+   contents when a preview is drawn. */
+.master-avatar-picker {
+    position: relative;
+    flex: 0 0 auto;
+    display: inline-flex
+}
+
+.master-avatar-camera {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--mc-card, #ffffff);
+    border-radius: 50%;
+    background: var(--master-primary, #4f83f1);
+    color: #fff;
+    font-size: 9px;
+    pointer-events: none
+}
+
+.master-avatar-preview {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    overflow: hidden;
+    border-radius: 50%;
+    cursor: pointer;
+    background: var(--emp-avatar-bg, linear-gradient(135deg, #4f83f1, #6366f1));
+    color: var(--emp-avatar-fg, #ffffff);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    box-shadow: 0 6px 16px rgba(37, 66, 128, .18)
+}
+
+/* The initials the edit dialog draws when there is no photo. */
+.master-avatar-initials {
+    font: inherit;
+    line-height: 1
+}
+
+.master-avatar-preview img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover
+}
+
+.master-avatar-preview i {
+    font-size: 20px
+}
+
+/* The file input is hidden, so the ring has to be drawn by the things that are
+   clicked: the circle, and the button whose label wraps the input. */
+.master-avatar-picker:focus-within .master-avatar-preview,
+.master-avatar-preview:focus-visible {
+    outline: 2px solid var(--master-primary, #4f83f1);
+    outline-offset: 3px
+}
+
+/* Dragging a photo over the band: the same accent, dashed, so it reads as "it
+   can go here" without looking like a field error. */
+.master-avatar-row.is-dragover {
+    border-color: var(--master-primary, #4f83f1);
+    border-style: dashed;
+    background: var(--mc-soft)
+}
+
+.master-avatar-info {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px
+}
+
+.master-avatar-info p {
+    margin: 0;
+    color: var(--mc-text-3);
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.5
+}
+
+.master-avatar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap
+}
+
+/* The picker is the button: a file input cannot be themed, so the label is a
+   `master-btn` in everything but the class name. The input itself is clipped
+   rather than `hidden` — `hidden` would take it out of the tab order and leave
+   the dialog with no keyboard route to the picker at all. Geometry matches
+   `.master-btn` so the two share a baseline. */
+.master-upload-btn input[type="file"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    border: 0;
+    clip: rect(0 0 0 0);
+    white-space: nowrap
+}
+
+.master-upload-btn,
+.master-remove-avatar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 15px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .2s, color .2s, border-color .2s
+}
+
+.master-upload-btn {
+    border: 1px solid var(--master-primary, #4f83f1);
+    background: var(--master-primary, #4f83f1);
+    color: #fff
+}
+
+.master-upload-btn:hover {
+    background: #3f7cf4;
+    border-color: #3f7cf4
+}
+
+.master-remove-avatar-btn {
+    border: 1px solid rgba(239, 71, 112, .28);
+    background: rgba(239, 71, 112, .08);
+    color: #d92b56
+}
+
+.master-remove-avatar-btn:hover {
+    background: #ef4770;
+    border-color: #ef4770;
+    color: #fff
+}
+
+.master-upload-btn:focus-within,
+.master-remove-avatar-btn:focus-visible {
+    outline: 2px solid var(--master-primary, #4f83f1);
+    outline-offset: 2px
+}
+
+/* The name of the chosen file, beside the button. A long name truncates with an
+   ellipsis instead of wrapping the row onto a third line. "No file chosen" is a
+   placeholder and reads like one; once a file is picked (or refused) the same
+   slot states a fact, so it changes tone rather than growing a second line. */
+.master-file-name {
+    min-width: 0;
+    max-width: 260px;
+    overflow: hidden;
+    color: var(--mc-text-3);
+    font-size: 12.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    text-overflow: ellipsis
+}
+
+.master-file-name.is-chosen {
+    color: var(--mc-text);
+    font-weight: 600
+}
+
+.master-file-name.is-bad {
+    color: #b4123c;
+    font-weight: 600
+}
+
+:root[data-theme="dark"] .master-file-name.is-bad {
+    color: #ffa9bf
+}
+
+:root[data-theme="dark"] .master-avatar-camera {
+    border-color: var(--mc-card)
+}
+
+:root[data-theme="dark"] .master-avatar-preview {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .35)
+}
+
+:root[data-theme="dark"] .master-remove-avatar-btn {
+    background: rgba(255, 143, 171, .14);
+    border-color: rgba(255, 143, 171, .34);
+    color: #ffa9bf
+}
+
+@media (max-width: 520px) {
+    .master-avatar-row {
+        align-items: flex-start;
+        gap: 13px;
+        padding: 13px
+    }
+
+    .master-avatar-preview {
+        width: 48px;
+        height: 48px
+    }
+
+    .master-file-name {
+        max-width: 100%
+    }
+}
+
+/* Compact menu button (kanban rows) */
+.master-menu-btn { border: 0; background: var(--mc-card-soft); color: var(--mc-text); width: 34px; height: 34px; border-radius: 12px; cursor: pointer }
+
+/* Card toggle (label + pill switch) */
+.master-toggle { min-height: 42px; border-radius: 14px; padding: 9px 13px; background: var(--mc-card); border: 1px solid var(--mc-border); color: var(--mc-text); text-decoration: none; font-weight: 500; display: flex; align-items: center; gap: 9px; font-size: 13px; cursor: pointer }
+.master-toggle span { width: 38px; height: 22px; border-radius: 999px; padding: 3px; background: var(--mc-border); display: flex }
+.master-toggle span i { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--mc-card); transition: .2s }
+.master-toggle.is-on span { background: #4f83f1 }
+.master-toggle.is-on span i { transform: translateX(16px) }
