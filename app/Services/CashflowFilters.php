@@ -128,18 +128,38 @@ class CashflowFilters
         $filters = [];
 
         foreach (self::VIEW_KEYS as $viewKey => $queryKey) {
-            $value = $request->query($queryKey, self::DEFAULTS[$queryKey] ?? 'all');
+            $value = $request->query($queryKey, self::default($queryKey));
 
-            /* The two date filters are dates or nothing. Every other key has a
-               sentinel that widens the query ("all"); for a date the sentinel is
-               null, so a value that names a range — which a link or a saved view
-               can carry — must not reach Carbon as if it were a day. */
-            $filters[$viewKey] = in_array($queryKey, ['date_from', 'date_to'], true)
-                ? DateRanges::normalise($value)
-                : $value;
+            /* Three of these filters are "nothing" when they are empty: the
+               search box, and the two ends of the date range. The rest have a
+               sentinel that widens the query ("all"). So the empty ones are read
+               as empty — a blank search box is no search, and a value that names
+               a range rather than a day (which a link or a saved view can carry)
+               is no date — and neither can reach the query, or Carbon, as if it
+               were a value. */
+            $filters[$viewKey] = match ($queryKey) {
+                'date_from', 'date_to' => DateRanges::normalise($value),
+                'search' => trim((string) $value) ?: null,
+                default => $value,
+            };
         }
 
         return $filters;
+    }
+
+    /**
+     * The value a filter takes when the request says nothing about it.
+     *
+     * `self::DEFAULTS[$key] ?? 'all'` is *not* the same thing, and the
+     * difference is a bug that has shipped twice: `??` reads a declared null as
+     * a missing key, so the three filters whose "off" is nothing at all were
+     * handed the sentinel instead. An empty search box searched the ledger for
+     * the word "all" (a list with no rows in it), and an empty date range became
+     * the string "all", which Carbon refused to parse — a 500, over a filter.
+     */
+    public static function default(string $queryKey)
+    {
+        return array_key_exists($queryKey, self::DEFAULTS) ? self::DEFAULTS[$queryKey] : 'all';
     }
 
     /**
@@ -155,7 +175,7 @@ class CashflowFilters
 
         foreach (self::VIEW_KEYS as $viewKey => $queryKey) {
             $value = $filters[$viewKey] ?? null;
-            $default = self::DEFAULTS[$queryKey] ?? 'all';
+            $default = self::default($queryKey);
 
             if ($value === null || $value === '' || $value === $default) {
                 continue;
@@ -182,7 +202,7 @@ class CashflowFilters
             $value = $filters[$viewKey] ?? null;
             $queryKey = self::VIEW_KEYS[$viewKey] ?? $viewKey;
 
-            if ($value === null || $value === '' || $value === (self::DEFAULTS[$queryKey] ?? 'all')) {
+            if ($value === null || $value === '' || $value === self::default($queryKey)) {
                 continue;
             }
 
@@ -290,7 +310,7 @@ class CashflowFilters
             'paymentMode' => (string) (CashflowEntry::paymentModeOptions()[$filters['paymentMode'] ?? ''] ?? ''),
             'expenseHead' => $notSet((string) ($filters['expenseHead'] ?? '')),
             'currency' => $notSet($code($filters['currency'] ?? '')),
-            'documents' => ($filters['documents'] ?? 'all') === 'missing' ? 'Missing' : 'Filed',
+            'documents' => ($filters['documents'] ?? self::default('documents')) === 'missing' ? 'Missing' : 'Filed',
         ];
     }
 

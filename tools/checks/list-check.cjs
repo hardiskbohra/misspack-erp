@@ -910,6 +910,15 @@ check('the shared sheet loads after the module sheet on both lists',
 /* The list prints the date it was filtered by; it never parses it. A filter
    value that is not a day (a range name from a link or a saved view) used to
    reach Carbon inside the template and take the page down with a 500. */
+/* An empty search box is an empty search box: the ledger's own control must
+   print the filter it was given (nothing), not the filter vocabulary's sentinel.
+   The value the box shows is the same value that narrows the query, so a
+   sentinel leaking into one leaks into the other. */
+check('an empty search box shows nothing, and searches for nothing',
+    /name="search" value="\{\{ \$search \}\}"/.test(cashView)
+    && ! /name="search"[^>]*'all'/.test(cashView)
+    && ! /\$search \?: 'all'/.test(cashView));
+
 check('a date filter is printed by the list, never parsed by it',
     ! /Carbon::parse\(/.test(cashView)
     && ! /Carbon::parse\(/.test(documentsView)

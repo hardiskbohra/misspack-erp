@@ -226,6 +226,51 @@ check('a report row with nothing in the dimension can still be opened',
    throws and the whole ledger becomes a 500 — over a filter. Everything that
    reads a date out of the query string reads it through DateRanges::normalise,
    which answers "a day, or nothing". */
+/* ---- the filter vocabulary's own contract ---- */
+
+/* Read the two tables as data. A filter's "off" is a sentinel ("all") or
+   nothing at all (null), and the difference matters: `?? 'all'` reads a
+   *declared* null as a missing key, so the three filters whose "off" is nothing
+   were handed the sentinel — an empty search box searched the ledger for the
+   word "all", and an empty date range became a value Carbon refused to parse. */
+/* Both tables live in the filter vocabulary (CashflowFilters). */
+const constantBlock = name => {
+    const start = filters.indexOf("const " + name + " = [");
+
+    return start === -1 ? '' : filters.slice(start, filters.indexOf('];', start));
+};
+
+const defaultsBlock = constantBlock('DEFAULTS');
+const viewKeysBlock = constantBlock('VIEW_KEYS');
+
+const table = block => {
+    const entries = {};
+    for (const [, key, value] of block.matchAll(/'([A-Za-z_]+)' => (null|'[^']*')/g)) {
+        entries[key] = value === 'null' ? null : value.replace(/'/g, '');
+    }
+    return entries;
+};
+
+const defaults = table(defaultsBlock);
+const viewKeys = table(viewKeysBlock);
+const emptyDefaults = Object.entries(defaults).filter(([, value]) => value === null).map(([key]) => key);
+
+check('every filter the views use is declared, and its "off" is a sentinel or nothing',
+    Object.keys(viewKeys).length === Object.keys(defaults).length
+    && Object.keys(viewKeys).length === 17
+    && Object.values(viewKeys).every(key => key in defaults)
+    && Object.values(defaults).every(value => value === null || value === 'all'));
+
+check('only the search box and the two ends of a range are "nothing" when empty',
+    emptyDefaults.sort().join(',') === 'date_from,date_to,search');
+
+check('a declared null default is a default, not a missing key',
+    /public static function default\(string \$queryKey\)/.test(filters)
+    && /array_key_exists\(\$queryKey, self::DEFAULTS\) \? self::DEFAULTS\[\$queryKey\] : 'all'/.test(filters)
+    && /\$request->query\(\$queryKey, self::default\(\$queryKey\)\)/.test(filters)
+    && ! /\?\? 'all'/.test(strip(filters))
+    && /'search' => trim\(\(string\) \$value\) \?: null,/.test(filters));
+
 check('a date out of the query string is read as a day or as nothing',
     /DateRanges::normalise\(\$request->query\('date_from'\)\)/.test(controller)
     && /DateRanges::normalise\(\$request->query\('date_to'\)\)/.test(controller)
