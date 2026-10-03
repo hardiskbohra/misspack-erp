@@ -1000,6 +1000,10 @@
     margin: -7px 0 15px;
 }
 
+.client-show .client-detail-help--spaced {
+    margin: 14px 0 0;
+}
+
 .client-show .client-detail-actions {
     display: flex;
     flex-wrap: wrap;

@@ -304,7 +304,7 @@
                                 @if($portalLoginRouteExists)
                                     <div class="portal-credential-box"><span>Portal sign-in</span><strong>{{ route('client-portal.login') }}</strong></div>
                                 @endif
-                                <p class="client-detail-help">Manage client portal users, access, invoices, shared documents, and support from the portal workspace.</p>
+                                <p class="client-detail-help client-detail-help--spaced">Manage client portal users, access, invoices, shared documents, and support from the portal workspace.</p>
                                 <div class="client-detail-actions">
                                     @if(\Illuminate\Support\Facades\Route::has('clients.portal.show'))
                                         <a href="{{ route('clients.portal.show', $client) }}" class="master-btn master-btn-primary"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Manage portal</a>
