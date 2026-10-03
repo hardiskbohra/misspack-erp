@@ -6,6 +6,8 @@ use App\Models\ClientPortalUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ClientPortalAuthController extends Controller
@@ -22,25 +24,37 @@ class ClientPortalAuthController extends Controller
     public function login(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'login' => ['required', 'string'],
-            'password' => ['required', 'string'],
+            'login' => ['required', 'string', 'max:255'],
+            'password' => ['required', 'string', 'max:255'],
         ]);
 
+        $throttleKey = 'client-portal-login:'.Str::lower(trim($data['login'])).'|'.$request->ip();
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            return back()->withInput($request->only('login'))
+                ->with('error', 'Too many sign-in attempts. Please try again in '.$seconds.' seconds.');
+        }
+
         $portalUser = ClientPortalUser::with('client')
-            ->where(function ($query) use ($data) {
-                $query->where('username', $data['login'])
-                    ->orWhere('email', $data['login']);
-            })
+            ->where('username', $data['login'])
             ->first();
 
-        if (! $portalUser || ! Hash::check($data['password'], $portalUser->password)) {
-            return back()->withInput($request->only('login'))->with('error', 'Invalid username/email or password.');
+        if (! $portalUser) {
+            $emailMatches = ClientPortalUser::with('client')
+                ->where('email', $data['login'])
+                ->limit(2)
+                ->get();
+            $portalUser = $emailMatches->count() === 1 ? $emailMatches->first() : null;
         }
 
-        if (! $portalUser->canLogin()) {
-            return back()->withInput($request->only('login'))->with('error', 'Your client portal access is disabled. Please contact MissPack team.');
+        if (! $portalUser || ! Hash::check($data['password'], $portalUser->password) || ! $portalUser->canLogin()) {
+            RateLimiter::hit($throttleKey, 60);
+
+            return back()->withInput($request->only('login'))->with('error', 'Sign-in details are invalid or portal access is unavailable.');
         }
 
+        RateLimiter::clear($throttleKey);
         $request->session()->put('client_portal_user_id', $portalUser->id);
         $request->session()->regenerate();
 
@@ -55,7 +69,7 @@ class ClientPortalAuthController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
-        $request->session()->forget('client_portal_user_id');
+        $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect()->route('client-portal.login')->with('success', 'Logged out successfully.');
@@ -75,7 +89,7 @@ class ClientPortalAuthController extends Controller
         $portalUser = ClientPortalUser::findOrFail($request->session()->get('client_portal_user_id'));
 
         $rules = [
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', 'min:12', 'confirmed'],
         ];
 
         if (! $portalUser->must_change_password) {
@@ -93,6 +107,7 @@ class ClientPortalAuthController extends Controller
             'must_change_password' => false,
             'password_changed_at' => now(),
         ]);
+        $request->session()->regenerate();
 
         return redirect()->route('client-portal.dashboard')->with('success', 'Password changed successfully.');
     }

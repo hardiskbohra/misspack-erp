@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Project;
+use App\Models\ProjectPayment;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
@@ -10,37 +13,57 @@ class ClientPortalPaymentController extends ClientPortalBaseController
 {
     public function index(Request $request): View
     {
-        $payments = collect();
-        $totals = ['inward' => 0, 'outward' => 0, 'net' => 0];
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'currency' => ['nullable', 'string', 'max:10'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+        ]);
 
-        // if ($this->projectsAvailable() && class_exists(\App\Models\ProjectPayment::class) && Schema::hasTable('project_payments')) {
-        //     $projectIds = \App\Models\Project::where('client_id', $this->client($request)->id)->where('show_client_portal', true)->pluck('id');
-        //     $payments = \App\Models\ProjectPayment::with('project')
-        //         ->whereIn('project_id', $projectIds)
-        //         ->where('is_public', true)
-        //         ->latest('payment_date')
-        //         ->paginate(15)
-        //         ->withQueryString();
+        if (class_exists(ProjectPayment::class)
+            && Schema::hasTable('project_payments')
+            && Schema::hasTable('projects')
+            && Schema::hasColumn('projects', 'show_client_portal')) {
+            $projectIds = Project::query()
+                ->where('client_id', $this->client($request)->id)
+                ->where('show_client_portal', true)
+                ->pluck('id');
 
-            // $all = \App\Models\ProjectPayment::whereIn('project_id', $projectIds)->where('is_public', true)->get();
-            // $totals['inward'] = (float) $all->where('transaction_type', 'inward')->sum('amount');
-            // $totals['outward'] = (float) $all->where('transaction_type', 'outward')->sum('amount');
-            // $totals['net'] = $totals['inward'] - $totals['outward'];
-            
-        // }
-        
-        $payments = \App\Models\CashflowEntry::with('project')
-            ->where('client_id', $this->client($request)->id)
-            ->latest('entry_date')
-            ->paginate(15)
-            ->withQueryString();    
-        
-        $all = \App\Models\CashflowEntry::where('client_id', $this->client($request)->id)->get();
-        $totals['inward'] = (float) $all->where('transaction_type', 'credit')->sum('credit_amount');
-        $totals['invoiced'] = (float) $all->whereNotNull('invoice_bill_number')->sum('credit_amount');
-        $totals['outward'] = (float) $all->where('transaction_type', 'debit')->sum('debit_amount');
-        $totals['net'] = $totals['inward'] - $totals['outward'];
+            $query = ProjectPayment::query()
+                ->with('project')
+                ->whereIn('project_id', $projectIds)
+                ->visibleToClient()
+                ->when($filters['search'] ?? null, function ($payments, $search) {
+                    $payments->where(function ($nested) use ($search) {
+                        $nested->where('reference_number', 'like', '%'.$search.'%')
+                            ->orWhereHas('project', fn ($project) => $project->where('name', 'like', '%'.$search.'%'));
+                    });
+                })
+                ->when($filters['currency'] ?? null, fn ($payments, $currency) => $payments->where('currency', strtoupper($currency)))
+                ->when($filters['date_from'] ?? null, fn ($payments, $date) => $payments->whereDate('payment_date', '>=', $date))
+                ->when($filters['date_to'] ?? null, fn ($payments, $date) => $payments->whereDate('payment_date', '<=', $date));
 
-        return view('client_portal.payments.index', compact('payments', 'totals'));
+            $payments = (clone $query)
+                ->latest('payment_date')
+                ->latest('id')
+                ->paginate(15)
+                ->withQueryString();
+
+            $currencyTotals = (clone $query)
+                ->select('currency')
+                ->selectRaw('COUNT(*) as payment_count, SUM(amount) as total_amount')
+                ->groupBy('currency')
+                ->orderBy('currency')
+                ->get();
+        } else {
+            $payments = new LengthAwarePaginator([], 0, 15, LengthAwarePaginator::resolveCurrentPage());
+            $currencyTotals = collect();
+        }
+
+        return view('client_portal.payments.index', [
+            'payments' => $payments,
+            'currencyTotals' => $currencyTotals,
+            'filters' => $filters,
+        ]);
     }
 }

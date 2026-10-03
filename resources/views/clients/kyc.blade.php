@@ -72,7 +72,7 @@
         {{ $client->revision_note ?: 'Please update the required information and resubmit.' }}</div>@endif
 
         <form method="POST" action="{{ route('clients.publicKyc.submit', $client->public_token) }}"
-               id="kycSubmitForm">
+               id="kycSubmitForm" data-client-form>
             @csrf
             <input type="hidden" name="client_number" value="{{ $client->client_number }}">
             <input type="hidden" name="status" value="{{ $client->status }}">
@@ -293,6 +293,7 @@
     <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
     <script src="{{ asset('assets/js/master-alert.js') }}"></script>
     <script src="{{ asset('assets/js/master-selects.js') }}"></script>
+    <script src="{{ asset('assets/js/client-form.js') }}"></script>
     <script>
         window.kycToast = @json($kycToast);
     </script>

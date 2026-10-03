@@ -3,36 +3,63 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\SavedView;
+use App\Services\SavedViews;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ClientController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
-        $search = $request->query('search');
-        $status = $request->query('status', 'all');
-        $type = $request->query('type', 'all');
+        if ($savedQuery = $this->resolveSavedView($request)) {
+            return redirect()->route('clients.index', $savedQuery);
+        }
 
-        $clients = Client::query()
-            ->with(['creator', 'reviewer'])
+        $search = $request->query('search');
+        $search = is_string($search) ? trim($search) : '';
+        $search = $search !== '' ? mb_substr($search, 0, 150) : null;
+
+        $status = $request->query('status', 'all');
+        if (! is_string($status) || ! array_key_exists($status, ['all' => 'All'] + Client::statusOptions())) {
+            $status = 'all';
+        }
+
+        $type = $request->query('type', 'all');
+        if (! is_string($type) || ! array_key_exists($type, ['all' => 'All'] + Client::typeOptions())) {
+            $type = 'all';
+        }
+
+        $portalInstalled = Schema::hasTable('client_portal_users');
+        $query = Client::query()
+            ->when($portalInstalled, fn ($q) => $q->with('portalUser'))
             ->search($search)
             ->when($status !== 'all', fn ($q) => $q->where('status', $status))
             ->when($type !== 'all', fn ($q) => $q->where('client_type', $type))
-            ->latest('id')
-            ->paginate(50)
-            ->withQueryString();
+            ->latest('id');
+
+        $clients = $query->paginate(25)->withQueryString();
+
+        $statusCounts = Client::query()
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
 
         $stats = [
-            'total' => Client::count(),
-            'under_review' => Client::where('status', Client::STATUS_UNDER_REVIEW)->count(),
-            'approved' => Client::where('status', Client::STATUS_APPROVED)->count(),
-            'revision' => Client::where('status', Client::STATUS_REVISION)->count(),
-            'rejected' => Client::where('status', Client::STATUS_REJECTED)->count(),
+            'total' => (int) $statusCounts->sum(),
+            'draft' => (int) ($statusCounts[Client::STATUS_DRAFT] ?? 0),
+            'under_review' => (int) ($statusCounts[Client::STATUS_UNDER_REVIEW] ?? 0),
+            'approved' => (int) ($statusCounts[Client::STATUS_APPROVED] ?? 0),
+            'revision' => (int) ($statusCounts[Client::STATUS_REVISION] ?? 0),
+            'rejected' => (int) ($statusCounts[Client::STATUS_REJECTED] ?? 0),
+            'portal_enabled' => Schema::hasColumn('clients', 'portal_enabled')
+                ? Client::where('portal_enabled', true)->count()
+                : 0,
         ];
 
         return view('clients.index', [
@@ -44,7 +71,56 @@ class ClientController extends Controller
             'statusOptions' => Client::statusOptions(),
             'typeOptions' => Client::typeOptions(),
             'currencyOptions' => Client::currencyOptions(),
+            'portalInstalled' => $portalInstalled,
+            'savedViews' => app(SavedViews::class)->forUser(Auth::id(), 'clients'),
         ]);
+    }
+
+    /** Restore a named filter set as the normal list URL and controls. */
+    private function resolveSavedView(Request $request): array
+    {
+        $id = (int) $request->query('saved_view', 0);
+        $savedViews = app(SavedViews::class);
+
+        if (! $id || ! $savedViews->available()) {
+            return [];
+        }
+
+        $view = SavedView::query()
+            ->where('module', 'clients')
+            ->where(function ($query) {
+                $query->where('user_id', Auth::id())->orWhere('is_shared', true);
+            })
+            ->find($id);
+
+        return $view ? $savedViews->queryFor($view) : [];
+    }
+
+    public function storeSavedView(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:60'],
+            'is_shared' => ['nullable', 'boolean'],
+        ]);
+
+        app(SavedViews::class)->save(
+            (int) Auth::id(),
+            'clients',
+            $data['name'],
+            $request->query(),
+            $request->boolean('is_shared')
+        );
+
+        return back()->with('success', 'View "'.$data['name'].'" saved.');
+    }
+
+    public function destroySavedView(SavedView $savedView): RedirectResponse
+    {
+        abort_unless($savedView->module === 'clients' && (int) $savedView->user_id === (int) Auth::id(), 403);
+
+        app(SavedViews::class)->delete((int) Auth::id(), (int) $savedView->id);
+
+        return back()->with('success', 'Saved view removed.');
     }
 
     public function create(): View
@@ -94,7 +170,6 @@ class ClientController extends Controller
             'account_person_contact' => ['nullable', 'string', 'max:40'],
             'gstin' => ['nullable', 'string', 'max:30'],
             'pan' => ['nullable', 'string', 'max:20'],
-            'status' => ['nullable', 'in:draft,under_review,approved,rejected,revision'],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -115,9 +190,15 @@ class ClientController extends Controller
 
     public function show(Client $client): View
     {
-        $client->load(['creator', 'reviewer']);
+        $client->load('reviewer');
+        $portalInstalled = Schema::hasTable('client_portal_users');
+        $portalUser = $portalInstalled ? $client->portalUser()->first() : null;
 
-        return view('clients.show', $this->formData($client));
+        return view('clients.show', [
+            ...$this->formData($client),
+            'portalInstalled' => $portalInstalled,
+            'portalUser' => $portalUser,
+        ]);
     }
 
     public function edit(Client $client): View
@@ -158,8 +239,8 @@ class ClientController extends Controller
     {
         $data = $request->validate([
             'status' => ['required', 'in:draft,under_review,approved,rejected,revision'],
-            'revision_note' => ['nullable', 'string'],
-            'rejection_reason' => ['nullable', 'string'],
+            'revision_note' => ['required_if:status,revision', 'nullable', 'string', 'max:5000'],
+            'rejection_reason' => ['required_if:status,rejected', 'nullable', 'string', 'max:5000'],
         ]);
 
         $update = [
@@ -180,6 +261,7 @@ class ClientController extends Controller
 
         if ($data['status'] === Client::STATUS_REJECTED) {
             $update['rejection_reason'] = $data['rejection_reason'] ?? null;
+            $update['revision_note'] = null;
         }
 
         $client->update($update);
@@ -228,7 +310,7 @@ class ClientController extends Controller
         $clientId = $client?->id ?? 'NULL';
 
         return $request->validate([
-            'client_number' => [$public ? 'nullable' : 'nullable', 'string', 'max:255', 'unique:clients,client_number,'.$clientId],
+            'client_number' => ['nullable', 'string', 'max:255', 'unique:clients,client_number,'.$clientId],
             'company_name' => ['required', 'string', 'max:255'],
             'brand_name' => ['nullable', 'string', 'max:255'],
             'client_type' => ['nullable', 'in:customer,vendor,both'],
@@ -236,9 +318,9 @@ class ClientController extends Controller
             'website' => ['nullable', 'string', 'max:255'],
             'status' => [$public ? 'nullable' : 'required', 'in:draft,under_review,approved,rejected,revision'],
 
-            'ceo_name' => ['nullable', 'string', 'max:255'],
-            'ceo_email' => ['nullable', 'email', 'max:255'],
-            'ceo_contact' => ['nullable', 'string', 'max:40'],
+            'ceo_name' => [$public ? 'required' : 'nullable', 'string', 'max:255'],
+            'ceo_email' => [$public ? 'required' : 'nullable', 'email', 'max:255'],
+            'ceo_contact' => [$public ? 'required' : 'nullable', 'string', 'max:40'],
 
             'account_person_name' => ['nullable', 'string', 'max:255'],
             'account_person_email' => ['nullable', 'email', 'max:255'],
@@ -252,11 +334,11 @@ class ClientController extends Controller
             'dispatch_person_email' => ['nullable', 'email', 'max:255'],
             'dispatch_person_contact' => ['nullable', 'string', 'max:40'],
 
-            'billing_address' => ['nullable', 'string'],
-            'billing_city' => ['nullable', 'string', 'max:255'],
-            'billing_state' => ['nullable', 'string', 'max:255'],
-            'billing_country' => ['nullable', 'string', 'max:255'],
-            'billing_pincode' => ['nullable', 'string', 'max:30'],
+            'billing_address' => [$public ? 'required' : 'nullable', 'string'],
+            'billing_city' => [$public ? 'required' : 'nullable', 'string', 'max:255'],
+            'billing_state' => [$public ? 'required' : 'nullable', 'string', 'max:255'],
+            'billing_country' => [$public ? 'required' : 'nullable', 'string', 'max:255'],
+            'billing_pincode' => [$public ? 'required' : 'nullable', 'string', 'max:30'],
 
             'shipping_address' => ['nullable', 'string'],
             'shipping_city' => ['nullable', 'string', 'max:255'],
@@ -320,6 +402,12 @@ class ClientController extends Controller
             'statusOptions' => Client::statusOptions(),
             'typeOptions' => Client::typeOptions(),
             'currencyOptions' => Client::currencyOptions(),
+            'contactGroups' => [
+                ['title' => 'CEO / Director', 'name' => 'ceo_name', 'email' => 'ceo_email', 'phone' => 'ceo_contact'],
+                ['title' => 'Accounts', 'name' => 'account_person_name', 'email' => 'account_person_email', 'phone' => 'account_person_contact'],
+                ['title' => 'Marketing / Purchase', 'name' => 'marketing_person_name', 'email' => 'marketing_person_email', 'phone' => 'marketing_person_contact'],
+                ['title' => 'Inward Dispatch', 'name' => 'dispatch_person_name', 'email' => 'dispatch_person_email', 'phone' => 'dispatch_person_contact'],
+            ],
         ];
     }
 }

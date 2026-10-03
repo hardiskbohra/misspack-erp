@@ -35,22 +35,19 @@
                     <div class="master-info"><span>Tracking Number</span><strong>{{ $shipment->tracking_number ?: '-' }}</strong></div>
                     <div class="master-info"><span>Project</span><strong>{{ $shipment->project->name ?? '-' }}</strong>
                         <span>{{ $shipment->project->project_number ?? '-' }}</span></div>
-                    <div class="master-info"><span>Cost Borne By</span><strong>{{ $costBorneByOptions[$shipment->cost_borne_by] ?? '-' }}</strong></div>
+
                 </div>
             </div>
 
             <div class="master-card master-section">
                 <h3 class="master-section-title">Tracking Progress</h3>
-                @include('shipments.partials.tracker', ['shipment' => $shipment])
-                @if ($shipment->delay_reason)
-                    <p class="master-sub" style="margin-top:8px;">Delay reason: {{ $shipment->delay_reason }}</p>
-                @endif
+                @include('shipments.partials.tracker', ['shipment' => $shipment, 'showDelayReason' => false])
             </div>
 
             <div class="master-card master-section">
                 <h3 class="master-section-title">Route Details</h3>
                 <div class="master-info-grid">
-                    
+
                     <div class="master-info">
                         <span>From</span>
                         <strong>{{ $shipment->from_name ?: '-' }}</strong><br>
@@ -60,12 +57,8 @@
                             {{ $shipment->from_country ? $shipment->from_country . " - " : "" }}
                             {{ $shipment->from_pincode ?? "" }}
                         </p>
-                        <p class="master-address-sub">
-                            <b>Email:</b>{{ $shipment->from_email ?? " -" }}<br>
-                            <b>Mobile:</b>{{ $shipment->from_mobile ?? " -" }}
-                        </p>
                     </div>
-                    
+
                     <div class="master-info">
                         <span>To</span>
                         <strong>{{ $shipment->to_name ?: '-' }}</strong><br>
@@ -74,10 +67,6 @@
                             {{ $shipment->to_state ? $shipment->to_state . "," : "" }}
                             {{ $shipment->to_country ? $shipment->to_country . " - " : "" }}
                             {{ $shipment->to_pincode ?? "" }}
-                        </p>
-                        <p class="master-address-sub">
-                            <b>Email:</b>{{ $shipment->to_email ?? " -" }}<br>
-                            <b>Mobile:</b>{{ $shipment->to_mobile ?? " -" }}
                         </p>
                     </div>
                 </div>
@@ -159,26 +148,26 @@
             </div>
 
         @endforelse
-                
+
                     </div>
-                
+
                 </div>
             </div>
         </div>
 
         <div>
-            
+
             <div class="master-card master-section">
                 <h3 class="master-section-title">Shipment Photos</h3>
                 <div class="photo-grid">
-                    
-                    @forelse($shipment->attachments as $attachment)
+
+                    @forelse($shipment->publicAttachments as $attachment)
                         <a class="photo-card"
-                           href="{{ asset('storage/'.$attachment->file_path) }}"
-                           target="_blank">
-                            @if (str_starts_with($attachment->mime_type, 'image/'))
+                           href="{{ route('client-portal.shipments.attachments.file', [$shipment->id, $attachment->id]) }}"
+                           target="_blank" rel="noopener">
+                            @if (in_array(strtolower(pathinfo($attachment->file_path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp', 'gif'], true) && str_starts_with(strtolower((string) $attachment->mime_type), 'image/'))
                                 <img
-                                    src="{{ asset('storage/'.$attachment->file_path) }}"
+                                    src="{{ route('client-portal.shipments.attachments.file', [$shipment->id, $attachment->id]) }}"
                                     alt="{{ $attachment->title ?: $attachment->original_name }}">
                             @else
                                 <div class="file-card">
@@ -197,10 +186,29 @@
                 </div>
             </div>
 
+            @if($documents->isNotEmpty())
+                <div class="master-card master-section">
+                    <h3 class="master-section-title">Files shared in this portal</h3>
+                    <div class="cp-document-grid">
+                        @foreach($documents as $document)
+                            <article class="cp-document-card">
+                                @if($document->isImage())
+                                    <a class="cp-document-preview" href="{{ route('client-portal.attachments.file', $document) }}" target="_blank" rel="noopener"><img src="{{ route('client-portal.attachments.file', $document) }}" alt="{{ $document->title ?: $document->original_name }}"></a>
+                                @else
+                                    <span class="cp-file-icon"><i class="fa-solid fa-file-lines"></i></span>
+                                @endif
+                                <div class="cp-document-copy"><strong>{{ $document->title ?: $document->original_name }}</strong><small>{{ $document->created_at->format('d M Y') }}</small></div>
+                                <div class="cp-document-actions"><a class="master-btn master-btn-soft master-btn-sm" href="{{ route('client-portal.attachments.file', $document) }}?download=1">Download</a></div>
+                            </article>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             <div class="master-card master-section">
                 <h3 class="master-section-title">Tracking History</h3>
                 <div class="timeline">
-                    @forelse($shipment->histories as $history)
+                    @forelse($publicHistories as $history)
                         @php($historyStatusClass = str_replace('_', '-', $history->status))
                         <div class="timeline-item">
                             <div class="timeline-title"><span class="master-badge status-{{ $historyStatusClass }}">{{ $statusOptions[$history->status] ?? $history->status }}</span></div>
@@ -215,7 +223,7 @@
         </div>
     </div>
     <div class="cp-grid-2" style="margin-top:18px;">
-        <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Comments</p><h2 style="margin-top:0;">Shipment Discussion</h2><form method="POST" action="{{ route('client-portal.shipments.comments.store', $shipment->id) }}" style="margin-bottom:15px;">@csrf<div class="master-field"><label class="master-label">Comment</label><textarea class="master-textarea" name="body" required></textarea></div><button class="master-btn master-btn-primary" style="margin-top:10px;">Submit Comment</button></form>@forelse($comments as $comment)<div class="cp-comment"><div class="cp-comment-head"><strong>{{ $comment->authorName() }}</strong><span>{{ $comment->created_at->format('d M Y, h:i A') }}</span></div><p>{{ $comment->body }}</p></div>@empty<div class="cp-empty">No comments yet.</div>@endforelse</div>
+        <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Comments</p><h2 style="margin-top:0;">Shipment Discussion</h2><form method="POST" action="{{ route('client-portal.shipments.comments.store', $shipment->id) }}" style="margin-bottom:15px;">@csrf<div class="master-field"><label class="master-label">Comment</label><textarea class="master-textarea" name="body" maxlength="4000" required></textarea></div><button class="master-btn master-btn-primary" style="margin-top:10px;">Submit Comment</button></form>@forelse($comments as $comment)<div class="cp-comment"><div class="cp-comment-head"><strong>{{ $comment->authorName() }}</strong><span>{{ $comment->created_at->format('d M Y, h:i A') }}</span></div><p>{{ $comment->body }}</p></div>@empty<div class="cp-empty">No comments yet.</div>@endforelse</div>
         <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Upload</p><h2 style="margin-top:0;">Upload Shipment Document</h2><form method="POST" action="{{ route('client-portal.shipments.documents.store', $shipment->id) }}" enctype="multipart/form-data" class="cp-form-grid">@csrf<div class="master-field"><label class="master-label">Category</label><select class="master-select" name="category"><option value="shipment">Shipment Document</option><option value="payment_proof">Payment Proof</option><option value="other">Other</option></select></div><div class="master-field"><label class="master-label">Title</label><input class="master-input" name="title"></div><div class="master-field" style="grid-column:1/-1;"><label class="master-label">Files</label><input class="master-input" type="file" name="attachments[]" multiple required></div><div class="master-field" style="grid-column:1/-1;"><label class="master-label">Notes</label><textarea class="master-textarea" name="notes"></textarea></div><button class="master-btn master-btn-primary" style="grid-column:1/-1;">Upload</button></form></div>
     </div>
 @endsection
