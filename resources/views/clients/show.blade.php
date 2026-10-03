@@ -6,12 +6,13 @@
 @section('content')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/clients.css') }}">
+    @if($tab === 'statement')
+        <link rel="stylesheet" href="{{ $assetVer('assets/css/statement.css') }}">
+    @endif
 @endpush
 
 @php
     $statusClass = str_replace('_', '-', $client->status);
-    $portalEnabled = (bool) ($client->portal_enabled ?? false);
-    $portalLoginRouteExists = \Illuminate\Support\Facades\Route::has('client-portal.login');
     $initials = collect(explode(' ', trim($client->company_name)))
         ->filter()
         ->map(fn ($word) => mb_strtoupper(mb_substr($word, 0, 1)))
@@ -48,9 +49,9 @@
         <nav class="client-record-actions" aria-label="Client actions">
             <a href="{{ route('clients.index') }}" class="master-btn master-btn-light"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Clients</a>
             <a href="{{ route('clients.edit', $client) }}" class="master-btn master-btn-primary"><i class="fa-solid fa-pen" aria-hidden="true"></i> Edit client</a>
-            <a href="{{ route('cashflows.statements.show', ['partyType' => 'client', 'party' => $client->id]) }}" class="master-btn master-btn-soft"><i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Statement</a>
-            @if($portalInstalled && \Illuminate\Support\Facades\Route::has('clients.portal.show'))
-                <a href="{{ route('clients.portal.show', $client) }}" class="master-btn master-btn-soft"><i class="fa-solid fa-user-lock" aria-hidden="true"></i> Portal</a>
+            <a href="{{ $tabUrl('statement') }}" class="master-btn master-btn-soft"><i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Statement</a>
+            @if($portalInstalled)
+                <a href="{{ $tabUrl('portal') }}" class="master-btn master-btn-soft"><i class="fa-solid fa-user-lock" aria-hidden="true"></i> Manage portal</a>
             @endif
         </nav>
     </header>
@@ -287,39 +288,19 @@
                 </section>
             @elseif($tab === 'portal')
                 <section class="master-tab-panel" id="client-panel-portal" role="tabpanel" aria-labelledby="client-tab-portal">
-                    <div class="client-detail-grid">
-                        @if($portalInstalled)
-                            <section class="master-card master-card--flat client-detail-card" aria-labelledby="client-portal-access-heading">
-                                <h2 class="client-detail-title" id="client-portal-access-heading">Portal access</h2>
-                                <div class="master-facts">
-                                    <div class="master-info"><span>Access</span><strong><span class="master-badge {{ $portalEnabled ? 'portal-enabled' : 'portal-disabled' }}">{{ $portalEnabled ? 'Enabled' : 'Disabled' }}</span></strong></div>
-                                    <div class="master-info"><span>Username</span><strong @class(['master-empty-value' => blank($portalUser?->username)])>{{ $portalUser?->username ?: 'No credentials' }}</strong></div>
-                                    <div class="master-info"><span>Email</span><strong @class(['master-empty-value' => ! $portalUser?->email])>{{ $portalUser?->email ?: 'Not set' }}</strong></div>
-                                    <div class="master-info"><span>Last login</span><strong @class(['master-empty-value' => ! $portalUser?->last_login_at])>{{ $portalUser?->last_login_at?->format('d M Y, h:i A') ?: 'No login yet' }}</strong></div>
-                                </div>
-                            </section>
-
-                            <section class="master-card master-card--flat client-detail-card" aria-labelledby="client-portal-tools-heading">
-                                <h2 class="client-detail-title" id="client-portal-tools-heading">Portal controls</h2>
-                                @if($portalLoginRouteExists)
-                                    <div class="portal-credential-box"><span>Portal sign-in</span><strong>{{ route('client-portal.login') }}</strong></div>
-                                @endif
-                                <p class="client-detail-help client-detail-help--spaced">Manage client portal users, access, invoices, shared documents, and support from the portal workspace.</p>
-                                <div class="client-detail-actions">
-                                    @if(\Illuminate\Support\Facades\Route::has('clients.portal.show'))
-                                        <a href="{{ route('clients.portal.show', $client) }}" class="master-btn master-btn-primary"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Manage portal</a>
-                                    @endif
-                                    @if($portalLoginRouteExists)
-                                        <a href="{{ route('client-portal.login') }}" target="_blank" rel="noopener" class="master-btn master-btn-soft">Open portal</a>
-                                    @endif
-                                </div>
-                            </section>
-                        @else
-                            <div class="master-card master-card--flat client-detail-card client-detail-card--wide">
-                                <div class="master-empty-state"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><p>Client portal access is not available in this installation.</p></div>
-                            </div>
-                        @endif
-                    </div>
+                    @include('clients.partials.portal-management')
+                </section>
+            @elseif($tab === 'notifications')
+                <section class="master-tab-panel" id="client-panel-notifications" role="tabpanel" aria-labelledby="client-tab-notifications">
+                    @include('clients.partials.notifications')
+                </section>
+            @elseif($tab === 'documents')
+                <section class="master-tab-panel" id="client-panel-documents" role="tabpanel" aria-labelledby="client-tab-documents">
+                    @include('clients.partials.documents')
+                </section>
+            @elseif($tab === 'statement')
+                <section class="master-tab-panel" id="client-panel-statement" role="tabpanel" aria-labelledby="client-tab-statement">
+                    @include('clients.partials.statement')
                 </section>
             @endif
         </div>

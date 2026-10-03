@@ -2,11 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ClientPortalConversation;
+use App\Models\Client;
 use App\Models\ClientPortalDocument;
-use App\Models\ClientPortalInvoice;
-use App\Models\SalesInvoice;
-use App\Models\ClientPortalNotification;
 use App\Models\ClientPortalUser;
 use App\Services\ClientPortalNotifier;
 use Illuminate\Http\RedirectResponse;
@@ -16,28 +13,19 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\View\View;
 
 class ClientPortalManagementController extends Controller
 {
-    public function show(Request $request, \App\Models\Client $client): View
+    /** Keep old bookmarks working, but manage the portal in the client record. */
+    public function show(Request $request, Client $client): RedirectResponse
     {
-        $portalUsers = ClientPortalUser::where('client_id', $client->id)->orderBy('id')->get();
-        $portalUser = $portalUsers->first();
-        $invoices = ClientPortalInvoice::where('client_id', $client->id)->latest('id')->get();
-        $salesInvoices = SalesInvoice::where('client_id', $client->id)->latest('invoice_date')->limit(20)->get();
-        $documents = ClientPortalDocument::where('client_id', $client->id)->latest('id')->limit(20)->get();
-        $supportCount = ClientPortalConversation::where('client_id', $client->id)->count();
-        $notifications = ClientPortalNotification::where('client_id', $client->id)->latest('id')->limit(20)->get();
-        $loginUrl = route('client-portal.login');
-        $selectedUserId = $request->query('portal_user_id', session('portal_plain_password_user_id'));
-        $credentialUser = $portalUsers->firstWhere('id', $selectedUserId) ?: $portalUser;
-        $oneTimePassword = (int) session('portal_plain_password_user_id') === (int) ($credentialUser?->id)
-            ? session('portal_plain_password')
-            : null;
-        $shareMessage = $this->shareMessage($client, $credentialUser, $oneTimePassword);
+        $query = ['client' => $client, 'tab' => 'portal'];
+        $selectedUserId = $request->query('portal_user_id');
+        if (is_scalar($selectedUserId) && (string) $selectedUserId !== '') {
+            $query['portal_user_id'] = $selectedUserId;
+        }
 
-        return view('clients.portal', compact('client', 'portalUser', 'portalUsers', 'credentialUser', 'invoices', 'salesInvoices', 'documents', 'supportCount', 'notifications', 'loginUrl', 'shareMessage'));
+        return redirect()->route('clients.show', $query);
     }
 
     public function store(Request $request, \App\Models\Client $client): RedirectResponse
@@ -108,7 +96,7 @@ class ClientPortalManagementController extends Controller
         app(ClientPortalNotifier::class)->notifyPortalUser($portalUser, 'Client portal access updated', 'Your MissPack client portal access has been updated.', 'account', null, null, route('client-portal.dashboard'));
 
         return redirect()
-            ->route('clients.portal.show', $client)
+            ->route('clients.show', ['client' => $client, 'tab' => 'portal', 'portal_user_id' => $portalUser->id])
             ->with('success', 'Client portal credentials saved successfully.')
             ->with('portal_plain_password', $plainPassword)
             ->with('portal_plain_password_user_id', $portalUser->id);
@@ -127,7 +115,7 @@ class ClientPortalManagementController extends Controller
 
         app(ClientPortalNotifier::class)->notifyPortalUser($portalUser, 'Password reset', 'Your client portal password has been reset by MissPack team.', 'account', null, null, route('client-portal.login'));
 
-        return redirect()->route('clients.portal.show', $client)
+        return redirect()->route('clients.show', ['client' => $client, 'tab' => 'portal'])
             ->with('success', 'One-time password reset successfully.')
             ->with('portal_plain_password', $plainPassword)
             ->with('portal_plain_password_user_id', $portalUser->id);
@@ -145,7 +133,7 @@ class ClientPortalManagementController extends Controller
         ]);
         app(ClientPortalNotifier::class)->notifyPortalUser($portalUser, 'Password reset', 'Your client portal password has been reset by MissPack team.', 'account', null, null, route('client-portal.login'));
 
-        return redirect()->route('clients.portal.show', $client)
+        return redirect()->route('clients.show', ['client' => $client, 'tab' => 'portal'])
             ->with('success', 'One-time password reset successfully.')
             ->with('portal_plain_password', $plainPassword)
             ->with('portal_plain_password_user_id', $portalUser->id);
@@ -157,7 +145,11 @@ class ClientPortalManagementController extends Controller
         $portalUser->update(['invitation_sent_at' => now()]);
         $client->forceFill(['portal_last_shared_at' => now()])->save();
 
-        return back()->with('success', 'Portal credential sharing marked as done.');
+        return redirect()->route('clients.show', [
+            'client' => $client,
+            'tab' => 'portal',
+            'portal_user_id' => $portalUser->id,
+        ])->with('success', 'Portal credential sharing marked as done.');
     }
 
     public function markShared(\App\Models\Client $client): RedirectResponse
@@ -166,14 +158,15 @@ class ClientPortalManagementController extends Controller
         $portalUser->update(['invitation_sent_at' => now()]);
         $client->forceFill(['portal_last_shared_at' => now()])->save();
 
-        return back()->with('success', 'Portal credential sharing marked as done.');
+        return redirect()->route('clients.show', ['client' => $client, 'tab' => 'portal'])
+            ->with('success', 'Portal credential sharing marked as done.');
     }
 
     public function storeNotification(Request $request, \App\Models\Client $client): RedirectResponse
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'message' => ['nullable', 'string'],
+            'message' => ['nullable', 'string', 'max:4000'],
             'type' => ['nullable', 'string', 'max:60'],
             'action_url' => ['nullable', 'string', 'max:255', function ($attribute, $value, $fail) {
                 if ($value !== null && $value !== '' && ! preg_match('#^/client-portal/[a-zA-Z0-9_/?=&%.-]*$#', $value)) {
@@ -192,97 +185,68 @@ class ClientPortalManagementController extends Controller
             filled($data['action_url'] ?? null) ? $data['action_url'] : route('client-portal.dashboard')
         );
 
-        return back()->with('success', 'Notification sent to client portal.');
+        return redirect()->route('clients.show', ['client' => $client, 'tab' => 'notifications'])
+            ->with('success', 'Notification sent to client portal.');
     }
 
-    public function storeInvoice(Request $request, \App\Models\Client $client): RedirectResponse
+    public function storeDocument(Request $request, Client $client): RedirectResponse
     {
         $data = $request->validate([
-            'invoice_number' => ['nullable', 'string', 'max:255', 'unique:client_portal_invoices,invoice_number'],
-            'project_id' => ['nullable', 'integer', Rule::exists('projects', 'id')->where(fn ($query) => $query->where('client_id', $client->id))],
+            'category' => ['required', 'string', Rule::in(array_keys(ClientPortalDocument::categoryOptions()))],
             'title' => ['nullable', 'string', 'max:255'],
-            'invoice_date' => ['nullable', 'date'],
-            'due_date' => ['nullable', 'date'],
-            'currency' => ['required', 'in:INR,USD,RMB'],
-            'subtotal' => ['nullable', 'numeric', 'min:0'],
-            'tax_amount' => ['nullable', 'numeric', 'min:0'],
-            'total_amount' => ['required', 'numeric', 'min:0'],
-            'paid_amount' => ['nullable', 'numeric', 'min:0'],
-            'status' => ['required', Rule::in(array_keys(ClientPortalInvoice::statusOptions()))],
-            'is_public_to_client' => ['nullable', 'boolean'],
-            'file' => ['nullable', 'file', 'max:20480', 'mimes:pdf,jpg,jpeg,png,webp,gif,doc,docx,xls,xlsx,csv,ppt,pptx,txt,zip'],
             'notes' => ['nullable', 'string', 'max:4000'],
+            'is_public_to_client' => ['nullable', 'boolean'],
+            'file' => [
+                'required', 'file', 'max:20480',
+                'mimes:jpg,jpeg,png,webp,gif,heic,heif,pdf,doc,docx,xls,xlsx,csv,ppt,pptx,txt,zip',
+            ],
         ]);
 
-        $path = null;
-        $originalName = null;
-        if ($request->hasFile('file')) {
-            $file = $request->file('file');
-            $path = $file->store('client-portal/invoices/'.$client->id, 'local');
-            $originalName = $file->getClientOriginalName();
-        }
-
-        $invoice = ClientPortalInvoice::create([
+        $file = $request->file('file');
+        $path = $file->store('client-portal/documents/'.$client->id, 'local');
+        $document = ClientPortalDocument::create([
             'client_id' => $client->id,
-            'project_id' => $data['project_id'] ?? null,
-            'invoice_number' => ($data['invoice_number'] ?? null) ?: $this->makeInvoiceNumber(),
-            'title' => $data['title'] ?? null,
-            'invoice_date' => $data['invoice_date'] ?? now()->toDateString(),
-            'due_date' => $data['due_date'] ?? null,
-            'currency' => $data['currency'],
-            'subtotal' => $data['subtotal'] ?? 0,
-            'tax_amount' => $data['tax_amount'] ?? 0,
-            'total_amount' => $data['total_amount'],
-            'paid_amount' => $data['paid_amount'] ?? 0,
-            'status' => $data['status'],
-            'is_public_to_client' => $request->boolean('is_public_to_client', true),
+            'client_portal_user_id' => null,
+            'related_type' => 'general',
+            'related_id' => null,
+            'category' => $data['category'],
+            'title' => ($data['title'] ?? null) ?: $file->getClientOriginalName(),
             'file_path' => $path,
             'storage_disk' => 'local',
-            'original_name' => $originalName,
+            'original_name' => $file->getClientOriginalName(),
+            'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
+            'file_size' => $file->getSize(),
+            'extension' => strtolower((string) $file->getClientOriginalExtension()),
+            'is_public_to_client' => $request->boolean('is_public_to_client', true),
+            'is_reviewed' => true,
             'notes' => $data['notes'] ?? null,
-            'created_by' => Auth::id(),
         ]);
 
-        if ($invoice->is_public_to_client && $invoice->status !== 'draft') {
-            app(ClientPortalNotifier::class)->notifyClient($client->id, 'New invoice published', 'Invoice '.$invoice->invoice_number.' is now available in your client portal.', 'invoice', 'invoice', $invoice->id, route('client-portal.invoices.show', $invoice));
+        if ($document->is_public_to_client) {
+            app(ClientPortalNotifier::class)->notifyClient(
+                $client->id,
+                'New document shared',
+                'A document has been added to your client portal.',
+                'document',
+                'general',
+                $document->id,
+                route('client-portal.attachments.index')
+            );
         }
 
-        return back()->with('success', 'Invoice added to client portal.');
+        return redirect()->route('clients.show', ['client' => $client, 'tab' => 'documents'])
+            ->with('success', 'Document attached to the client record.');
     }
 
-    public function destroyInvoice(ClientPortalInvoice $invoice): RedirectResponse
+    public function downloadDocument(Client $client, ClientPortalDocument $document)
     {
-        if ($invoice->file_path) {
-            Storage::disk($this->safeStorageDisk($invoice->storage_disk))->delete($invoice->file_path);
-        }
-        $invoice->delete();
-
-        return back()->with('success', 'Invoice removed from client portal.');
-    }
-
-    public function downloadDocument(ClientPortalDocument $document)
-    {
-        abort_unless($document->file_path, 404);
+        abort_unless((int) $document->client_id === (int) $client->id && $document->file_path, 404);
         $disk = $this->safeStorageDisk($document->storage_disk);
         abort_unless(Storage::disk($disk)->exists($document->file_path), 404);
 
         return Storage::disk($disk)->response(
             $document->file_path,
             $document->original_name ?: basename($document->file_path),
-            ['X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store'],
-            'attachment'
-        );
-    }
-
-    public function downloadInvoice(ClientPortalInvoice $invoice)
-    {
-        abort_unless($invoice->file_path, 404);
-        $disk = $this->safeStorageDisk($invoice->storage_disk);
-        abort_unless(Storage::disk($disk)->exists($invoice->file_path), 404);
-
-        return Storage::disk($disk)->response(
-            $invoice->file_path,
-            $invoice->original_name ?: basename($invoice->file_path),
             ['X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store'],
             'attachment'
         );
@@ -296,36 +260,4 @@ class ClientPortalManagementController extends Controller
         return $disk;
     }
 
-    private function makeInvoiceNumber(): string
-    {
-        $prefix = 'INV-'.now()->format('ymd').'-';
-        $next = str_pad((string) (ClientPortalInvoice::whereDate('created_at', today())->count() + 1), 4, '0', STR_PAD_LEFT);
-        $number = $prefix.$next;
-
-        while (ClientPortalInvoice::where('invoice_number', $number)->exists()) {
-            $next = str_pad((string) ((int) $next + 1), 4, '0', STR_PAD_LEFT);
-            $number = $prefix.$next;
-        }
-
-        return $number;
-    }
-
-    private function shareMessage(\App\Models\Client $client, ?ClientPortalUser $portalUser, ?string $plainPassword = null): string
-    {
-        if (! $portalUser) {
-            return '';
-        }
-
-        $message = "Hello ".$client->company_name.",\n\nYour MissPack Client Portal is ready.\nLogin URL: ".route('client-portal.login')."\nUsername: ".$portalUser->username;
-
-        if ($plainPassword) {
-            $message .= "\nOne-time Password: ".$plainPassword;
-        } else {
-            $message .= "\nPassword: The latest one-time password shared by MissPack.";
-        }
-
-        $message .= "\n\nPlease login and change your password.\nMissPack - Packed Perfect";
-
-        return $message;
-    }
 }

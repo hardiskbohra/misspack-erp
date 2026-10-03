@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClientPortalComment;
-use App\Models\ClientPortalInvoice;
 use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceAttachment;
 use Illuminate\Http\RedirectResponse;
@@ -17,8 +16,7 @@ class ClientPortalInvoiceController extends ClientPortalBaseController
     {
         $clientId = $this->client($request)->id;
 
-        // SalesInvoice is the ERP billing source of truth. The custom portal table
-        // remains visible below so historical records are never silently hidden.
+        // ERP SalesInvoices are the only invoice source presented in the portal.
         $salesInvoices = SalesInvoice::query()
             ->where('client_id', $clientId)
             ->where('show_client_portal', true)
@@ -29,57 +27,7 @@ class ClientPortalInvoiceController extends ClientPortalBaseController
             ->paginate(10, ['*'], 'sales_page')
             ->withQueryString();
 
-        $legacyInvoices = ClientPortalInvoice::query()
-            ->where('client_id', $clientId)
-            ->where('is_public_to_client', true)
-            ->where('status', '!=', 'draft')
-            ->latest('invoice_date')
-            ->latest('id')
-            ->paginate(10, ['*'], 'legacy_page')
-            ->withQueryString();
-
-        return view('client_portal.invoices.index', compact('salesInvoices', 'legacyInvoices'));
-    }
-
-    public function show(Request $request, ClientPortalInvoice $invoice): View
-    {
-        abort_unless($invoice->client_id === $this->client($request)->id && $invoice->is_public_to_client && $invoice->status !== 'draft', 404);
-
-        $comments = ClientPortalComment::query()
-            ->where('client_id', $invoice->client_id)
-            ->where('related_type', 'invoice')
-            ->where('related_id', $invoice->id)
-            ->where('is_public_to_client', true)
-            ->with('portalUser', 'internalUser')
-            ->latest('id')
-            ->get();
-
-        return view('client_portal.invoices.show', compact('invoice', 'comments'));
-    }
-
-    public function file(Request $request, ClientPortalInvoice $invoice)
-    {
-        abort_unless(
-            $invoice->client_id === $this->client($request)->id
-                && $invoice->is_public_to_client
-                && $invoice->status !== 'draft'
-                && $invoice->file_path,
-            404
-        );
-
-        $disk = $this->safeDisk($invoice->storage_disk);
-        abort_unless(Storage::disk($disk)->exists($invoice->file_path), 404);
-
-        return Storage::disk($disk)->response(
-            $invoice->file_path,
-            $invoice->original_name ?: basename($invoice->file_path),
-            [
-                'Content-Type' => Storage::disk($disk)->mimeType($invoice->file_path) ?: 'application/octet-stream',
-                'X-Content-Type-Options' => 'nosniff',
-                'Cache-Control' => 'private, no-store',
-            ],
-            'attachment'
-        );
+        return view('client_portal.invoices.index', compact('salesInvoices'));
     }
 
     public function showSales(Request $request, SalesInvoice $invoice): View
@@ -136,15 +84,6 @@ class ClientPortalInvoiceController extends ClientPortalBaseController
         return view('sales_invoices.print', ['invoice' => $invoice, 'publicMode' => true]);
     }
 
-    public function storeComment(Request $request, ClientPortalInvoice $invoice): RedirectResponse
-    {
-        abort_unless($invoice->client_id === $this->client($request)->id && $invoice->is_public_to_client && $invoice->status !== 'draft', 404);
-
-        $this->saveComment($request, 'invoice', $invoice->id, $invoice->client_id);
-
-        return back()->with('success', 'Comment submitted successfully.');
-    }
-
     public function storeSalesComment(Request $request, SalesInvoice $invoice): RedirectResponse
     {
         $invoice = $this->publishedSalesInvoice($request, $invoice);
@@ -179,11 +118,4 @@ class ClientPortalInvoiceController extends ClientPortalBaseController
         ]);
     }
 
-    private function safeDisk(?string $disk): string
-    {
-        $disk = $disk ?: 'public';
-        abort_unless(in_array($disk, ['local', 'public', 's3'], true), 404);
-
-        return $disk;
-    }
 }

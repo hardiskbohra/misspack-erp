@@ -72,17 +72,8 @@
                     <strong class="cp-record-amount">{{ \App\Helpers\CommonHelper::amount($invoice->clientPortalBalanceDue(), $invoice->currency) }}</strong>
                 </a>
             @empty
-                @if($legacyInvoices->isEmpty())
-                    <div class="cp-empty cp-empty-spacious">No invoices have been published yet.</div>
-                @endif
+                <div class="cp-empty cp-empty-spacious">No sales invoices have been published yet.</div>
             @endforelse
-            @foreach($legacyInvoices as $invoice)
-                <a class="cp-dashboard-record" href="{{ route('client-portal.invoices.show', $invoice) }}">
-                    <span class="cp-record-symbol record-mint"><i class="fa-solid fa-file-invoice"></i></span>
-                    <span class="cp-dashboard-record-copy"><strong>{{ $invoice->invoice_number }} <small class="cp-legacy-tag">Previous</small></strong><small>{{ optional($invoice->invoice_date)->format('d M Y') ?: 'Date not set' }} · {{ $invoice->statusLabel() }}</small></span>
-                    <strong class="cp-record-amount">{{ \App\Helpers\CommonHelper::amount($invoice->outstandingAmount(), $invoice->currency) }}</strong>
-                </a>
-            @endforeach
         </div>
     </section>
 

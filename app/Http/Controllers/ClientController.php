@@ -2,8 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\DateRanges;
 use App\Models\Client;
+use App\Models\ClientPortalConversation;
+use App\Models\ClientPortalDocument;
+use App\Models\ClientPortalNotification;
+use App\Models\ClientPortalUser;
 use App\Models\SavedView;
+use App\Models\SalesInvoice;
+use App\Services\PartyStatement;
 use App\Services\SavedViews;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,7 +28,10 @@ class ClientController extends Controller
         'addresses' => 'Addresses',
         'commercial' => 'Commercial',
         'kyc' => 'KYC',
-        'portal' => 'Portal',
+        'portal' => 'Manage Portal',
+        'notifications' => 'Notifications',
+        'documents' => 'Documents',
+        'statement' => 'Statement',
     ];
 
     public function index(Request $request): View|RedirectResponse
@@ -197,21 +207,148 @@ class ClientController extends Controller
             ->with('success', 'Quick client created successfully.');
     }
 
-    public function show(Request $request, Client $client): View
+    public function show(Request $request, Client $client, PartyStatement $statements): View
     {
         $client->load('reviewer');
-        $portalInstalled = Schema::hasTable('client_portal_users');
-        $portalUser = $portalInstalled ? $client->portalUser()->first() : null;
         $tab = $request->query('tab', 'overview');
         $tab = is_string($tab) && array_key_exists($tab, self::SHOW_TABS) ? $tab : 'overview';
+        $portalInstalled = Schema::hasTable('client_portal_users');
+        $portalUsers = $portalInstalled && $tab === 'portal'
+            ? ClientPortalUser::query()->where('client_id', $client->id)->orderBy('id')->get()
+            : collect();
+        $portalUser = $portalUsers->first();
+
+        $selectedUserId = $request->query('portal_user_id', session('portal_plain_password_user_id'));
+        $credentialUser = $portalUsers->firstWhere('id', $selectedUserId) ?: $portalUser;
+        $oneTimePassword = (int) session('portal_plain_password_user_id') === (int) ($credentialUser?->id)
+            ? session('portal_plain_password')
+            : null;
+        $portalLoginUrl = \Illuminate\Support\Facades\Route::has('client-portal.login')
+            ? route('client-portal.login')
+            : null;
+        $shareMessage = $this->portalShareMessage($client, $credentialUser, $oneTimePassword, $portalLoginUrl);
+
+        $documentsAvailable = $portalInstalled && Schema::hasTable('client_portal_documents');
+        $documents = $documentsAvailable && $tab === 'documents'
+            ? ClientPortalDocument::query()
+                ->where('client_id', $client->id)
+                ->with('portalUser')
+                ->latest('id')
+                ->limit(100)
+                ->get()
+            : collect();
+
+        $notificationsAvailable = $portalInstalled && Schema::hasTable('client_portal_notifications');
+        $notifications = $notificationsAvailable && $tab === 'notifications'
+            ? ClientPortalNotification::query()
+                ->where('client_id', $client->id)
+                ->with('portalUser')
+                ->latest('id')
+                ->limit(50)
+                ->get()
+            : collect();
+
+        $supportCount = $portalInstalled && $tab === 'portal' && Schema::hasTable('client_portal_conversations')
+            ? ClientPortalConversation::where('client_id', $client->id)->count()
+            : 0;
+        $salesInvoices = $tab === 'portal' && Schema::hasTable('sales_invoices')
+            ? SalesInvoice::query()->where('client_id', $client->id)->latest('invoice_date')->latest('id')->limit(25)->get()
+            : collect();
+
+        $statementData = $tab === 'statement'
+            ? $this->clientStatementData($request, $client, $statements)
+            : [];
 
         return view('clients.show', [
             ...$this->formData($client),
             'portalInstalled' => $portalInstalled,
             'portalUser' => $portalUser,
+            'portalUsers' => $portalUsers,
+            'credentialUser' => $credentialUser,
+            'oneTimePassword' => $oneTimePassword,
+            'portalLoginUrl' => $portalLoginUrl,
+            'shareMessage' => $shareMessage,
+            'documentsAvailable' => $documentsAvailable,
+            'documents' => $documents,
+            'notificationsAvailable' => $notificationsAvailable,
+            'notifications' => $notifications,
+            'supportCount' => $supportCount,
+            'salesInvoices' => $salesInvoices,
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
+            ...$statementData,
         ]);
+    }
+
+    /** Build the same live, currency-aware ledger statement used elsewhere. */
+    private function clientStatementData(Request $request, Client $client, PartyStatement $statements): array
+    {
+        $presets = DateRanges::presets();
+        $period = $request->query('period');
+        $period = is_string($period) ? $period : null;
+        $dateFrom = DateRanges::normalise($request->query('date_from'));
+        $dateTo = DateRanges::normalise($request->query('date_to'));
+
+        if ($period === 'all') {
+            $dateFrom = $dateTo = null;
+        } elseif ($period !== null && isset($presets[$period])) {
+            $dateFrom = $presets[$period]['from'];
+            $dateTo = $presets[$period]['to'];
+        } elseif (! $dateFrom && ! $dateTo) {
+            $dateFrom = $presets['this_month']['from'];
+            $dateTo = $presets['this_month']['to'];
+        }
+
+        if ($dateFrom && $dateTo && $dateFrom > $dateTo) {
+            [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+        }
+
+        $currencyOptions = $statements->currencies('client', (int) $client->id);
+        $defaultCurrency = $statements->defaultCurrency('client', (int) $client->id);
+        $requestedCurrency = $request->query('currency');
+        $currency = strtoupper(is_string($requestedCurrency) ? trim($requestedCurrency) : $defaultCurrency);
+        if ($currency === '' || ! in_array($currency, $currencyOptions, true)) {
+            $currency = $defaultCurrency;
+        }
+
+        $ageing = $request->query('ageing', '1') !== '0';
+        $statement = $statements->build('client', (int) $client->id, $dateFrom, $dateTo, [
+            'currency' => $currency,
+            'ageing' => $ageing,
+        ]);
+        abort_if($statement === null, 404);
+
+        $activeRange = ($dateFrom || $dateTo) ? DateRanges::keyOf($dateFrom, $dateTo) : 'all';
+        $periodKey = in_array($period, array_merge(array_keys($presets), ['all', 'custom']), true)
+            ? $period
+            : ($activeRange ?: 'custom');
+
+        return [
+            'statement' => $statement,
+            'currencyOptions' => $currencyOptions,
+            'currency' => $currency,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'dateRangeLabels' => DateRanges::LABELS,
+            'periodOptions' => DateRanges::LABELS + ['all' => 'All time', 'custom' => 'Custom dates'],
+            'periodKey' => $periodKey,
+            'ageing' => $ageing,
+        ];
+    }
+
+    private function portalShareMessage(Client $client, ?ClientPortalUser $portalUser, ?string $plainPassword, ?string $loginUrl): string
+    {
+        if (! $portalUser || ! $loginUrl) {
+            return '';
+        }
+
+        $message = "Hello ".$client->company_name.",\n\nYour MissPack Client Portal is ready.\nLogin URL: ".$loginUrl."\nUsername: ".$portalUser->username;
+        $message .= $plainPassword
+            ? "\nOne-time Password: ".$plainPassword
+            : "\nPassword: The latest one-time password shared by MissPack.";
+        $message .= "\n\nPlease login and change your password.\nMissPack - Packed Perfect";
+
+        return $message;
     }
 
     public function edit(Client $client): View

@@ -167,7 +167,6 @@
 .cp-record-percent { color: #627d94; font-size: 9px; font-weight: 800; }
 .cp-record-status { max-width: 90px; overflow: hidden; padding: 4px 7px; border-radius: 99px; color: #3375c8; background: #edf4ff; font-size: 8px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
 .cp-record-amount { color: #263c52; font-size: 10px; white-space: nowrap; }
-.cp-legacy-tag { margin-left: 4px; padding: 2px 5px; border-radius: 4px; color: #927143; background: #fff4df; font-size: 8px; }
 .cp-support-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 17px; padding: 12px; border: 1px solid #e9eff5; border-radius: 12px; background: #f9fbfd; }
 .cp-support-summary > div { display: flex; flex-direction: column; }
 .cp-support-summary > div strong { color: #253c51; font: 800 17px/1.1 "Manrope", sans-serif; }
@@ -277,7 +276,6 @@
 .cp-payment-table-card .cp-table-wrap { border-top: 1px solid #edf1f5; }
 .cp-invoice-section { margin-bottom: 15px; }
 .cp-invoice-section > .cp-section-heading { padding: 18px 18px 13px; }
-.cp-legacy-invoices { border-style: dashed; background: #fcfdfe; }
 .cp-invoice-metrics { margin-bottom: 15px; }
 .cp-invoice-metrics .cp-stat { padding: 16px; }
 .cp-invoice-metrics .cp-stat span { font-size: 9px; }

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\ClientPortalConversation;
 use App\Models\ClientPortalDocument;
-use App\Models\ClientPortalInvoice;
 use App\Models\ClientPortalNotification;
 use App\Models\Project;
 use App\Models\ProjectPayment;
@@ -66,20 +65,6 @@ class ClientPortalDashboardController extends ClientPortalBaseController
             ->limit(4)
             ->get();
 
-        $legacyInvoices = ClientPortalInvoice::query()
-            ->where('client_id', $client->id)
-            ->where('is_public_to_client', true)
-            ->where('status', '!=', 'draft')
-            ->latest('invoice_date')
-            ->latest('id')
-            ->limit(4)
-            ->get();
-        $legacyInvoiceTotal = ClientPortalInvoice::query()
-            ->where('client_id', $client->id)
-            ->where('is_public_to_client', true)
-            ->where('status', '!=', 'draft')
-            ->count();
-
         $paymentTotal = 0;
         if (class_exists(ProjectPayment::class) && Schema::hasTable('project_payments')) {
             $publishedProjectIds = Project::query()
@@ -121,7 +106,7 @@ class ClientPortalDashboardController extends ClientPortalBaseController
             'projects' => $projectTotal,
             'shipments' => $shipmentTotal,
             'quotes' => $quoteTotal,
-            'invoices' => $salesInvoiceTotal + $legacyInvoiceTotal,
+            'invoices' => $salesInvoiceTotal,
             'payments' => $paymentTotal,
             'documents' => ClientPortalDocument::query()
                 ->where('client_id', $client->id)
@@ -143,7 +128,6 @@ class ClientPortalDashboardController extends ClientPortalBaseController
             'shipments',
             'quotes',
             'salesInvoices',
-            'legacyInvoices',
             'notifications',
             'supportConversations'
         ));
