@@ -71,13 +71,23 @@ class Client extends Model
                 $nested->where('client_number', 'like', "%{$search}%")
                     ->orWhere('company_name', 'like', "%{$search}%")
                     ->orWhere('brand_name', 'like', "%{$search}%")
+                    ->orWhere('client_type', 'like', "%{$search}%")
+                    ->orWhere('industry', 'like', "%{$search}%")
                     ->orWhere('gstin', 'like', "%{$search}%")
                     ->orWhere('pan', 'like', "%{$search}%")
+                    ->orWhere('tan', 'like', "%{$search}%")
                     ->orWhere('ceo_name', 'like', "%{$search}%")
                     ->orWhere('ceo_email', 'like', "%{$search}%")
+                    ->orWhere('ceo_contact', 'like', "%{$search}%")
                     ->orWhere('account_person_name', 'like', "%{$search}%")
+                    ->orWhere('account_person_email', 'like', "%{$search}%")
+                    ->orWhere('account_person_contact', 'like', "%{$search}%")
                     ->orWhere('marketing_person_name', 'like', "%{$search}%")
-                    ->orWhere('dispatch_person_name', 'like', "%{$search}%");
+                    ->orWhere('marketing_person_email', 'like', "%{$search}%")
+                    ->orWhere('marketing_person_contact', 'like', "%{$search}%")
+                    ->orWhere('dispatch_person_name', 'like', "%{$search}%")
+                    ->orWhere('dispatch_person_email', 'like', "%{$search}%")
+                    ->orWhere('dispatch_person_contact', 'like', "%{$search}%");
             });
         });
     }

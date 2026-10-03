@@ -110,6 +110,6 @@
 </div>
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('assets/css/clients.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/clients.css') }}">
 @endpush
 @endsection
