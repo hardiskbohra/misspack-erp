@@ -347,6 +347,12 @@ class ClientController extends Controller
             'statusOptions' => Client::statusOptions(),
             'typeOptions' => Client::typeOptions(),
             'currencyOptions' => Client::currencyOptions(),
+            'contactGroups' => [
+                ['title' => 'CEO / Director', 'name' => 'ceo_name', 'email' => 'ceo_email', 'phone' => 'ceo_contact'],
+                ['title' => 'Accounts', 'name' => 'account_person_name', 'email' => 'account_person_email', 'phone' => 'account_person_contact'],
+                ['title' => 'Marketing / Purchase', 'name' => 'marketing_person_name', 'email' => 'marketing_person_email', 'phone' => 'marketing_person_contact'],
+                ['title' => 'Inward Dispatch', 'name' => 'dispatch_person_name', 'email' => 'dispatch_person_email', 'phone' => 'dispatch_person_contact'],
+            ],
         ];
     }
 }

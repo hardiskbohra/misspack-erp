@@ -103,38 +103,24 @@
             <h2 class="master-section-title" id="client-contacts-title">Contact people</h2>
             <p class="client-form-section-note">Add the people your team should reach for leadership, accounts, purchasing and dispatch.</p>
 
-            @php
-                $contactGroups = [
-                    ['title' => 'CEO / Director', 'prefix' => 'ceo'],
-                    ['title' => 'Accounts', 'prefix' => 'account_person'],
-                    ['title' => 'Marketing / Purchase', 'prefix' => 'marketing_person'],
-                    ['title' => 'Inward Dispatch', 'prefix' => 'dispatch_person'],
-                ];
-            @endphp
-
             @foreach($contactGroups as $groupIndex => $group)
-                @php
-                    $nameField = $group['prefix'].'_name';
-                    $emailField = $group['prefix'].'_email';
-                    $phoneField = $group['prefix'].'_contact';
-                @endphp
                 <div class="client-subsection{{ $groupIndex === 0 ? '' : ' client-subsection--divider' }}">
                     <h3 class="client-subsection-title">{{ $group['title'] }}</h3>
                     <div class="master-detail-grid">
                         <div class="master-field">
-                            <label class="master-label" for="client_{{ $nameField }}">Name</label>
-                            <input class="master-input @error($nameField) is-invalid @enderror" id="client_{{ $nameField }}" name="{{ $nameField }}"
-                                value="{{ old($nameField, $client->{$nameField}) }}" maxlength="255" autocomplete="name">
+                            <label class="master-label" for="client_{{ $group['name'] }}">Name</label>
+                            <input class="master-input @error($group['name']) is-invalid @enderror" id="client_{{ $group['name'] }}" name="{{ $group['name'] }}"
+                                value="{{ old($group['name'], data_get($client, $group['name'])) }}" maxlength="255" autocomplete="name">
                         </div>
                         <div class="master-field">
-                            <label class="master-label" for="client_{{ $emailField }}">Email</label>
-                            <input class="master-input @error($emailField) is-invalid @enderror" id="client_{{ $emailField }}" name="{{ $emailField }}" type="email"
-                                value="{{ old($emailField, $client->{$emailField}) }}" maxlength="255" autocomplete="email">
+                            <label class="master-label" for="client_{{ $group['email'] }}">Email</label>
+                            <input class="master-input @error($group['email']) is-invalid @enderror" id="client_{{ $group['email'] }}" name="{{ $group['email'] }}" type="email"
+                                value="{{ old($group['email'], data_get($client, $group['email'])) }}" maxlength="255" autocomplete="email">
                         </div>
                         <div class="master-field">
-                            <label class="master-label" for="client_{{ $phoneField }}">Phone</label>
-                            <input class="master-input @error($phoneField) is-invalid @enderror" id="client_{{ $phoneField }}" name="{{ $phoneField }}" type="tel"
-                                value="{{ old($phoneField, $client->{$phoneField}) }}" maxlength="40" autocomplete="tel">
+                            <label class="master-label" for="client_{{ $group['phone'] }}">Phone</label>
+                            <input class="master-input @error($group['phone']) is-invalid @enderror" id="client_{{ $group['phone'] }}" name="{{ $group['phone'] }}" type="tel"
+                                value="{{ old($group['phone'], data_get($client, $group['phone'])) }}" maxlength="40" autocomplete="tel">
                         </div>
                     </div>
                 </div>
