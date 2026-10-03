@@ -38,8 +38,24 @@ return new class extends Migration
                 $table->timestamp('closed_at')->nullable();
                 $table->timestamps();
 
-                $table->index(['client_id', 'status', 'updated_at']);
-                $table->index(['client_portal_user_id', 'updated_at']);
+                $table->index(['client_id', 'status', 'updated_at'], 'cpc_client_status_updated_idx');
+                $table->index(['client_portal_user_id', 'updated_at'], 'cpc_portal_user_updated_idx');
+            });
+        }
+
+        /* A prior MySQL attempt can leave the table in place if adding an index
+           fails. Check by columns so rerunning the migration repairs that state. */
+        if (Schema::hasTable('client_portal_conversations')
+            && ! Schema::hasIndex('client_portal_conversations', ['client_id', 'status', 'updated_at'])) {
+            Schema::table('client_portal_conversations', function (Blueprint $table) {
+                $table->index(['client_id', 'status', 'updated_at'], 'cpc_client_status_updated_idx');
+            });
+        }
+
+        if (Schema::hasTable('client_portal_conversations')
+            && ! Schema::hasIndex('client_portal_conversations', ['client_portal_user_id', 'updated_at'])) {
+            Schema::table('client_portal_conversations', function (Blueprint $table) {
+                $table->index(['client_portal_user_id', 'updated_at'], 'cpc_portal_user_updated_idx');
             });
         }
 
@@ -54,8 +70,22 @@ return new class extends Migration
                 $table->timestamp('read_at')->nullable();
                 $table->timestamps();
 
-                $table->index(['conversation_id', 'sender_type', 'read_at']);
-                $table->index(['sender_type', 'sender_id']);
+                $table->index(['conversation_id', 'sender_type', 'read_at'], 'cpm_convo_sender_read_idx');
+                $table->index(['sender_type', 'sender_id'], 'cpm_sender_id_idx');
+            });
+        }
+
+        if (Schema::hasTable('client_portal_messages')
+            && ! Schema::hasIndex('client_portal_messages', ['conversation_id', 'sender_type', 'read_at'])) {
+            Schema::table('client_portal_messages', function (Blueprint $table) {
+                $table->index(['conversation_id', 'sender_type', 'read_at'], 'cpm_convo_sender_read_idx');
+            });
+        }
+
+        if (Schema::hasTable('client_portal_messages')
+            && ! Schema::hasIndex('client_portal_messages', ['sender_type', 'sender_id'])) {
+            Schema::table('client_portal_messages', function (Blueprint $table) {
+                $table->index(['sender_type', 'sender_id'], 'cpm_sender_id_idx');
             });
         }
     }
