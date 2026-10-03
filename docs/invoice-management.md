@@ -321,3 +321,17 @@ Two rules keep it honest:
   and the invoice prints, with nowhere to see it, is a value the office cannot
   check before it prints — and it would fill only on the deep-link path. Adding a
   field to `clientSnapshot()` without a field on the form fails the module's gate.
+
+### The listing's columns
+
+The listing's table (`.si-table`) states its own geometry: a fixed layout with a
+ten-column `<colgroup>` from the view, its own 1080px floor, and its own cell
+rhythm. A table whose columns are left to the browser is sized by the longest
+thing in each of them — and the longest thing in this one was a sentence in the
+footer, so `MP/INV/26-27/001` broke after its hyphen and the money columns took
+half the width.
+
+The invoice number, both dates and the figures are `nowrap`; a client's name, a
+project's and the notes under the figures still wrap. What *Sales + potential*
+means lives with the footer's own note — where there is room for it — not under
+the figure.

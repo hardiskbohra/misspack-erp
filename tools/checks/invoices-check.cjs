@@ -325,6 +325,36 @@ check('the page rhythm belongs to the shell, not to an inline style',
     'a negative margin on a record page is a page spacing itself — and two grids '
     + 'stacked on that page are two cards sharing an edge');
 
+/* The listing's own table: ten columns of known content, so the module states
+   their widths instead of leaving them to the browser — which sizes a column
+   from the longest thing in it, and the longest thing in this table is a
+   sentence in the footer. */
+const colgroup = view.slice(view.indexOf('<colgroup>'), view.indexOf('</colgroup>'));
+const colClasses = [...colgroup.matchAll(/class="(si-col-[a-z]+)"/g)].map(m => m[1]);
+const headCount = (view.slice(view.indexOf('<thead>'), view.indexOf('</thead>')).match(/<th\b/g) || []).length;
+
+check('the listing sizes its own columns',
+    /<table class="master-table si-table">/.test(view)
+    && colClasses.length === headCount
+    && colClasses.every(name => new RegExp('\\.si-index \\.' + name + ' \\{\\s*\\n\\s*width:').test(sheet))
+    && /\.si-index \.si-table \{\s*\n\s*table-layout: fixed;\s*\n\s*min-width: 1080px/.test(sheet)
+    && /\.si-index \.si-table th,\s*\n\.si-index \.si-table td \{\s*\n\s*padding: 14px 12px/.test(sheet),
+    'a column with no width of its own is the browser reading the longest cell in '
+    + 'it as content — and the widest cell in this table is a sentence');
+
+check('an invoice number, a date and a figure never break in the middle',
+    /\.si-index \.si-table \.si-number,\s*\n\.si-index \.si-table \.si-date,\s*\n\.si-index \.si-table td\.is-num strong \{\s*\n\s*white-space: nowrap/.test(sheet)
+    && /class="master-sub si-date"/.test(view)
+    && /<span class="si-date">/.test(view),
+    '`MP/INV/26-27/001` broke after its hyphen and `10 Oct 2026` after the month: '
+    + 'a wrapped number is a number the office reads twice');
+
+check('the footer explains itself where there is room for it',
+    /Filtered totals cover every page · a converted proforma counts\s+once/.test(view)
+    && /<span class="master-sub">Sales \+ potential<\/span>/.test(view),
+    'the sentence about converted proformas sat in the TOTAL column, and the '
+    + 'column was as wide as the sentence');
+
 /* ---- 4b. the record screen ------------------------------------------- */
 
 const attachment = read('app/Models/SalesInvoiceAttachment.php');

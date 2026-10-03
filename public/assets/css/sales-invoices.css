@@ -543,8 +543,88 @@
     text-decoration: underline
 }
 
+/* ==========================================================================
+   THE LISTING'S OWN TABLE — ten columns, each sized for what it holds
+   --------------------------------------------------------------------------
+   The listing inherited the shared table's 1280px floor and let the browser size
+   its columns from the content. The footer's one long sentence then took the
+   width the invoice number needed: `MP/INV/26-27/001` broke after its hyphen,
+   dates broke mid-year, and a hand's width of white sat between PROJECT and
+   TOTAL. This table has ten columns of known content and no two of them want the
+   same width, so the geometry is the module's now — a fixed layout, with the
+   `<colgroup>` the view writes.
+
+   The floor is this table's own (1080px), like the employee documents table's
+   860px: a module may state the floor its own table needs, and the office should
+   not have to scroll a laptop sideways to read a listing. What can wrap still
+   wraps — a client's name, a project's, the notes under the figures. What is one
+   word — a number, a date, a figure — never breaks in the middle.
+   ========================================================================== */
+
+.si-index .si-table {
+    table-layout: fixed;
+    min-width: 1080px
+}
+
+/* The ten columns, in the view's order. The money columns are the widest of the
+   narrow ones because their notes sit under their figures; the pick box and the
+   action are as small as the controls inside them. */
+.si-index .si-col-pick {
+    width: 4%
+}
+
+.si-index .si-col-invoice {
+    width: 14%
+}
+
+.si-index .si-col-client {
+    width: 13%
+}
+
+.si-index .si-col-project {
+    width: 11%
+}
+
+.si-index .si-col-total {
+    width: 9%
+}
+
+.si-index .si-col-received {
+    width: 14%
+}
+
+.si-index .si-col-balance {
+    width: 8.5%
+}
+
+.si-index .si-col-due {
+    width: 9.5%
+}
+
+.si-index .si-col-state {
+    width: 11%
+}
+
+.si-index .si-col-action {
+    width: 6%
+}
+
+/* A listing's cell rhythm is its own: the shared 18/20 is sized for reading a
+   page of text, and these are ten short columns. Scoped to this table, so the
+   tables next door keep the shared padding. */
+.si-index .si-table th,
+.si-index .si-table td {
+    padding: 14px 12px
+}
+
+.si-index .si-table .si-number,
+.si-index .si-table .si-date,
+.si-index .si-table td.is-num strong {
+    white-space: nowrap
+}
+
 /* The row's own money columns keep the tabular alignment the shared grid gives
-   them; nothing here re-times the table's geometry. */
+   them. */
 .si-index td.is-num,
 .si-index th.is-num {
     text-align: right

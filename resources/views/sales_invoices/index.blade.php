@@ -302,7 +302,24 @@
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table">
+            <table class="master-table si-table">
+                {{-- The ten columns, in the order the headings are written: the
+                     pick box, the invoice (number, chips, date), the client, the
+                     project, the three money columns, the due date, the state
+                     chips and the one action. The widths live in the sheet, next
+                     to the other rules about this table's geometry. --}}
+                <colgroup>
+                    <col class="si-col-pick">
+                    <col class="si-col-invoice">
+                    <col class="si-col-client">
+                    <col class="si-col-project">
+                    <col class="si-col-total">
+                    <col class="si-col-received">
+                    <col class="si-col-balance">
+                    <col class="si-col-due">
+                    <col class="si-col-state">
+                    <col class="si-col-action">
+                </colgroup>
                 <thead>
                     <tr>
                         <th scope="col" class="master-list-pick">
@@ -344,7 +361,7 @@
                                     @endif
                                 </span>
                                 @if ($invoice->invoice_date)
-                                    <span class="master-sub">{{ $invoice->invoice_date->format('d M Y') }}</span>
+                                    <span class="master-sub si-date">{{ $invoice->invoice_date->format('d M Y') }}</span>
                                 @endif
                             </td>
                             <td data-label="Client">
@@ -369,7 +386,7 @@
                                 <strong>{{ \App\Helpers\CommonHelper::indianCurrency($received) }}</strong>
                                 <span class="master-sub">
                                     @if ($invoice->payments_count > 0)
-                                        {{ $invoice->payments_count }} {{ \Illuminate\Support\Str::plural('receipt', $invoice->payments_count) }} in the ledger
+                                        {{ $invoice->payments_count }} {{ \Illuminate\Support\Str::plural('receipt', $invoice->payments_count) }}
                                     @else
                                         {{ $invoice->amount_paid > 0 ? 'Opening figure' : 'Nothing recorded' }}
                                     @endif
@@ -386,7 +403,7 @@
                             </td>
                             <td data-label="Due">
                                 @if ($invoice->due_date)
-                                    {{ $invoice->due_date->format('d M Y') }}
+                                    <span class="si-date">{{ $invoice->due_date->format('d M Y') }}</span>
                                 @else
                                     <span class="master-empty-value">No due date</span>
                                 @endif
@@ -526,11 +543,12 @@
                         <tr class="master-list-total">
                             <td colspan="4">
                                 <strong>Total — {{ $invoices->count() }} {{ \Illuminate\Support\Str::plural('invoice', $invoices->count()) }} shown</strong>
-                                <span class="master-sub">Filtered totals cover every page</span>
+                                <span class="master-sub">Filtered totals cover every page · a converted proforma counts
+                                    once</span>
                             </td>
                             <td class="is-num">
                                 <strong>{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['counted']) }}</strong>
-                                <span class="master-sub">Sales + potential · a converted proforma counts once</span>
+                                <span class="master-sub">Sales + potential</span>
                             </td>
                             <td class="is-num">
                                 <strong>{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['received']) }}</strong>
