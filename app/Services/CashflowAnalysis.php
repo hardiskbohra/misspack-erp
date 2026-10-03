@@ -809,15 +809,19 @@ class CashflowAnalysis
     }
 
     /**
-     * The label a bucket wears. Financial years are how the office thinks, so a
-     * quarter or a year that crosses March is named by the year it ends in —
-     * "Q2 2026-27", not "Q2 2026".
+     * The label a bucket wears. Calendar quarters and calendar years, because
+     * that is what the rest of the module means by a period: the ledger's "This
+     * year" chip is January–December, and a report that cut the same window into
+     * April–March quarters would be answering a different question from the one
+     * the operator clicked to get here. (A financial-year reading is a
+     * module-wide vocabulary change — the chips, the presets and the buckets
+     * together — not a relabelling of this one screen.)
      */
     public function bucketLabel(Carbon $date, string $unit): string
     {
         return match ($unit) {
-            'year' => $this->financialYearLabel($date),
-            'quarter' => 'Q'.$date->quarter.' '.$this->financialYearLabel($date),
+            'year' => $date->format('Y'),
+            'quarter' => 'Q'.$date->quarter.' '.$date->format('Y'),
             default => $date->format('M Y'),
         };
     }
@@ -831,14 +835,5 @@ class CashflowAnalysis
         };
     }
 
-    private function financialYearLabel(Carbon $date): string
-    {
-        $year = (int) $date->format('Y');
-
-        if ((int) $date->format('n') >= 4) {
-            return $year.'-'.substr((string) ($year + 1), -2);
-        }
-
-        return ($year - 1).'-'.substr((string) $year, -2);
-    }
 }
+

@@ -23,6 +23,10 @@
      - **"Not set" is a row you can open.** The entries nobody was named against
        are the ones people ask about, and a row that cannot be drilled is a row
        nobody trusts.
+     - **A bucket is named the way the module names periods.** The ledger's "This
+       year" chip is January–December, so the columns the report cuts cannot come
+       back labelled in financial years, and the reverse is a change to the
+       chips, the presets and the buckets together.
    ========================================================================== */
 'use strict';
 
@@ -213,6 +217,15 @@ check('a report row with nothing in the dimension can still be opened',
     && /CashflowFilters::NOT_SET_KEY/.test(service));
 
 /* ------------------------------------------------------------- comparisons */
+
+/* The module's period vocabulary is calendar (the ledger's "This year" chip is
+   January–December), so the buckets the report cuts must be calendar too: a
+   window opened from that chip cannot come back labelled in financial years. */
+check('the buckets are named the way the rest of the module names periods',
+    /'year' => \$date->format\('Y'\),\n\s*'quarter' => 'Q'\.\$date->quarter\.' '\.\$date->format\('Y'\),\n\s*default => \$date->format\('M Y'\),/.test(service)
+    && /'quarter' => 'Q'\.\$date->quarter,\n\s*default => \$date->format\('M'\),/.test(service)
+    && ! /financialYearLabel/.test(service)
+    && /'this_year' => \[\n\s*'from' => \$thisYear->toDateString\(\),/.test(read('app/Helpers/DateRanges.php')));
 
 check('a comparison shifts the whole axis, it does not read the row above',
     /private function compare\(array \$periods, string \$unit, string \$comparison\): array/.test(service)
