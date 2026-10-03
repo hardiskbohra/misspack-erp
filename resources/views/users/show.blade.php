@@ -374,7 +374,7 @@
                                     @endforeach
                                 </div>
                                 <p class="master-sub">
-                                    Every credit the ledger filed against this person, month by month.
+                                    Every entry the ledger filed against this person, month by month — paid out, or money back.
                                 </p>
                             </div>
 
@@ -386,12 +386,21 @@
                         <div class="master-card master-table-card master-card--flat">
                             <div class="master-list-toolbar">
                                 <p class="master-list-hint">
-                                    {{ $total['entries'] }} {{ \Illuminate\Support\Str::plural('entry', $total['entries']) }} in {{ $year }} · total
+                                    {{ $total['entries'] }} {{ \Illuminate\Support\Str::plural('entry', $total['entries']) }} in {{ $year }} · net
                                     <strong>{{ \App\Helpers\CommonHelper::indianCurrency($total['total']) }}</strong>
+                                    @if ($total['recovered'] > 0)
+                                        · {{ \App\Helpers\CommonHelper::indianCurrency($total['recovered']) }} received back
+                                    @endif
+                                    @if ($total['pending'] > 0)
+                                        · {{ $total['pending'] }} still pending
+                                    @endif
                                 </p>
                                 <div class="master-list-toolbar-actions">
+                                    {{-- the person's entries, either way: the ledger link used to pin
+                                         `transaction_type=credit`, which showed an empty list for the
+                                         debit the office actually pays salaries with --}}
                                     <a class="master-btn master-btn-soft master-btn-sm"
-                                        href="{{ route('cashflows.index', ['employee_id' => $user->id, 'transaction_type' => 'credit']) }}">
+                                        href="{{ route('cashflows.index', ['employee_id' => $user->id]) }}">
                                         <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i> Open in the ledger
                                     </a>
                                 </div>
@@ -404,8 +413,9 @@
                                             <th scope="col">Date</th>
                                             <th scope="col">Particular</th>
                                             <th scope="col">Reference</th>
+                                            <th scope="col">Way</th>
                                             <th scope="col">Mode</th>
-                                            <th scope="col" class="is-num">Credited</th>
+                                            <th scope="col" class="is-num">Amount</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -417,20 +427,29 @@
                                                     @if ($entry->notes)<span class="master-sub">{{ $entry->notes }}</span>@endif
                                                 </td>
                                                 <td data-label="Reference">{{ $entry->bank_reference_number ?: '—' }}</td>
+                                                <td data-label="Way">
+                                                    <span class="emp-pill {{ $entry->isMoneyOut() ? 'is-ok' : 'is-off' }}">
+                                                        {{ $entry->isMoneyOut() ? 'Paid out' : 'Back' }}
+                                                    </span>
+                                                    @if (in_array($entry->accounting_status, ['pending', 'disputed'], true))
+                                                        <span class="master-sub">{{ $entry->statusLabel() }}</span>
+                                                    @endif
+                                                </td>
                                                 <td data-label="Mode">{{ \App\Models\CashflowEntry::paymentModeOptions()[$entry->payment_mode] ?? '—' }}</td>
-                                                <td class="is-num" data-label="Credited">
-                                                    <strong>{{ \App\Helpers\CommonHelper::amount($entry->credit_amount, $entry->currency ?: 'INR') }}</strong>
+                                                <td class="is-num" data-label="Amount">
+                                                    <strong>{{ $entry->signedAmountLabel() }}</strong>
                                                 </td>
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="5">
+                                                <td colspan="6">
                                                     <div class="master-list-empty">
                                                         <span class="master-list-empty-icon" aria-hidden="true">₹</span>
-                                                        <p class="master-list-empty-title">No salary credited in {{ $year }}</p>
+                                                        <p class="master-list-empty-title">No salary paid in {{ $year }}</p>
                                                         <p class="master-list-empty-text">
                                                             Pay is a cashflow entry filed against this person — record it in the ledger
-                                                            with the Employee set to their name and it appears here.
+                                                            with the Employee set to their name and it appears here. A salary is
+                                                            paid out, so it is a <strong>debit</strong> on the company's book.
                                                         </p>
                                                         <div class="master-list-empty-actions">
                                                             <a class="master-btn master-btn-primary" href="{{ route('cashflows.create', ['employee_id' => $user->id]) }}">Record a payment</a>
@@ -443,7 +462,7 @@
                                     @if ($salaryEntries->isNotEmpty())
                                         <tfoot>
                                             <tr class="master-list-total">
-                                                <td colspan="4"><strong>Total credited in {{ $year }}</strong></td>
+                                                <td colspan="5"><strong>Net paid in {{ $year }}</strong></td>
                                                 <td class="is-num"><strong>{{ \App\Helpers\CommonHelper::indianCurrency($total['total']) }}</strong></td>
                                             </tr>
                                         </tfoot>

@@ -126,6 +126,62 @@ class CashflowEntry extends Model
         return self::accountingStatusOptions()[$this->accounting_status] ?? Str::headline($this->accounting_status);
     }
 
+    /**
+     * Which way the money went, decided once.
+     *
+     * The ledger is the company's own cash book: `transaction_type` picks the
+     * column that holds the money (the form writes `credit_amount` for a credit
+     * and `debit_amount` for a debit), so a credit is money *in* and a debit is
+     * money *out*. Everything that asks "what did this entry do" asks here.
+     */
+    public function isMoneyOut(): bool
+    {
+        return $this->transaction_type !== 'credit';
+    }
+
+    /** The entries where money left the company. */
+    public function scopeMoneyOut(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q) {
+            $q->whereNull('transaction_type')->orWhere('transaction_type', 'debit');
+        });
+    }
+
+    /** The entries where money came in. */
+    public function scopeMoneyIn(Builder $query): Builder
+    {
+        return $query->where('transaction_type', 'credit');
+    }
+
+    /** How much money this entry moved, whichever column holds it. */
+    public function amountMoved(): float
+    {
+        return round((float) ($this->isMoneyOut()
+            ? $this->debit_amount
+            : $this->credit_amount), 2);
+    }
+
+    /**
+     * What this entry did for the person named on it: positive when the company
+     * paid money out to them, negative when money came back from them.
+     */
+    public function signedAmount(): float
+    {
+        return $this->isMoneyOut() ? $this->amountMoved() : -$this->amountMoved();
+    }
+
+    /**
+     * The signed amount as it reads on a page, in the entry's own currency.
+     * One place decides how the minus is drawn, so the office's record and the
+     * employee's own pages cannot print the same movement two different ways.
+     */
+    public function signedAmountLabel(): string
+    {
+        $amount = \App\Helpers\CommonHelper::amount(abs($this->signedAmount()), $this->currency ?: 'INR');
+
+        return $this->signedAmount() < 0 ? '−'.$amount : $amount;
+    }
+
     public static function transactionTypeOptions(): array
     {
         return ['credit' => 'Credit', 'debit' => 'Debit'];

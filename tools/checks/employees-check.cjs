@@ -61,6 +61,9 @@ const nav = layout.slice(0, layout.indexOf('</nav>'));
 const userIndex = read('resources/views/users/index.blade.php');
 const userShow = read('resources/views/users/show.blade.php');
 const seeder = read('database/seeders/DatabaseSeeder.php');
+const entryModel = read('app/Models/CashflowEntry.php');
+const employeeSalary = read('resources/views/employees/salary.blade.php');
+const payMonths = read('resources/views/employees/partials/pay-months.blade.php');
 const cashflowController = read('app/Http/Controllers/CashflowController.php');
 
 /* ------------------------------------------------------------- 1. the door */
@@ -189,9 +192,76 @@ check('the menu the employee sees names no office screen, and the office keeps i
 check('the employee sees their salary, their payslips and their documents',
     ['my.salary', 'my.payslips', 'my.documents'].every(r => nav.includes(r)));
 
-check('their salary is the ledger credit filed against them, and nothing else',
-    /->where\('employee_id', \$user->id\)/.test(profile)
-    && /->where\('transaction_type', 'credit'\)/.test(profile));
+/* ------------------------------------------------- 3b. the way the money went
+   A salary the office filed as a **debit** — money out of the company, the
+   ledger's own default — read as ₹0 on the person's record, because the record
+   was written as "the credits filed against them". Every line was spelled
+   correctly, so no source check could see it: the direction was assumed rather
+   than read. These guards assert that the direction *is* read, that the amount
+   comes from the column the direction wrote, and that a test which runs
+   (`tests/Unit/EmployeePayTest.php`) proves the arithmetic. */
+
+/** How many times a literal appears in a string. */
+const times = (text, needle) => text.split(needle).length - 1;
+
+check('a salary is every ledger entry filed against the person, both ways',
+    profile.includes('public function salaryQuery(User $user)')
+    && profile.includes("->where('employee_id', $user->id)")
+    /* a direction pinned in the fetch is the bug, written again */
+    && ! profile.slice(profile.indexOf('public function salaryQuery'), profile.indexOf('public function salaryQuery') + 300)
+        .includes('transaction_type'));
+
+check('the direction is read off the entry, not assumed',
+    entryModel.includes('public function isMoneyOut(): bool')
+    && entryModel.includes("return $this->transaction_type !== 'credit';")
+    && entryModel.includes('public function scopeMoneyOut(Builder $query): Builder')
+    && entryModel.includes('public function scopeMoneyIn(Builder $query): Builder'));
+
+check('the amount is read from the column the direction wrote',
+    entryModel.includes('public function amountMoved(): float')
+    && entryModel.includes('public function signedAmount(): float')
+    && entryModel.includes('$this->isMoneyOut() ? $this->amountMoved() : -$this->amountMoved()')
+    /* the profile adds up the signed amount, never a raw column: one reading,
+       both ways. The single exception is the team total, which sums
+       `debit_amount` in SQL over `moneyOut()` rows — the same rows, added up by
+       the database instead of by PHP. */
+    && times(profile, 'credit_amount') + times(profile, 'debit_amount') === 1
+    && profile.indexOf("->sum('debit_amount')") > profile.indexOf('public function paidToTeam')
+    && profile.indexOf("->sum('debit_amount')") > profile.indexOf('->moneyOut()'));
+
+check('a credit filed against a person reduces their pay, and the month agrees with the total',
+    profile.includes('public function payFrom(Collection $entries): array')
+    && profile.includes('public function monthsFrom(Collection $entries): array')
+    && profile.includes('$this->payFrom($this->salaryEntries($user, $from, $to))')
+    && profile.includes('$this->monthsFrom($this->salaryEntries(')
+    && profile.includes("'total' => round($paid - $recovered, 2)")
+    && profile.includes("'months_paid' => $entries")
+    /* the month row does the same subtraction the year total does */
+    && profile.includes("$months[$key]['net'] = round($months[$key]['paid'] - $months[$key]['recovered'], 2);"));
+
+check('the paid-this-month tile counts what a person\'s record counts',
+    userController.includes('private function profile(): EmployeeProfile')
+    && userController.includes('$this->profile()->paidToTeam(')
+    && profile.indexOf("->whereNotNull('employee_id')") > profile.indexOf('public function paidToTeam')
+    /* and the credit-only figure it used to compute is gone, not shadowed */
+    && ! userController.includes("'transaction_type', 'credit'"));
+
+check('the record and the employee\'s own pages print the same figures',
+    userShow.includes('$entry->signedAmountLabel()')
+    && employeeSalary.includes('$entry->signedAmountLabel()')
+    && entryModel.includes('public function signedAmountLabel(): string')
+    && ! (userShow + employeeSalary).includes('credit_amount')
+    && payMonths.includes("$month['net']")
+    && ! payMonths.includes("$month['credit']"));
+
+check('the ledger link opens the person\'s entries, either way',
+    userShow.includes("route('cashflows.index', ['employee_id' => $user->id])")
+    && ! userShow.includes("'transaction_type' => 'credit'"));
+
+check('the arithmetic of pay has a test that runs',
+    exists('tests/Unit/EmployeePayTest.php')
+    && read('tests/Unit/EmployeePayTest.php').includes('test_a_salary_debit_is_money_paid_to_the_person')
+    && read('tests/Unit/EmployeePayTest.php').includes('php artisan test --filter=EmployeePayTest'));
 
 check('a draft payslip is invisible to the employee',
     /public function issuedPayslips/.test(profile)

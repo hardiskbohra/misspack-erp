@@ -405,6 +405,16 @@
     color: var(--mc-text-3);
 }
 
+/* Money that came back is a movement too, and it reads in the module's own red
+   — the same colour every other figure that leaves a person's pay wears. */
+.emp-month.is-back .emp-month-amount {
+    color: var(--emp-red);
+}
+
+.emp-month.is-back .emp-month-bar > i {
+    background: var(--emp-red);
+}
+
 .emp-month-meta {
     display: inline-flex;
     align-items: center;

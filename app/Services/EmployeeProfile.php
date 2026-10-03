@@ -28,15 +28,90 @@ use Illuminate\Support\Facades\Schema;
  */
 class EmployeeProfile
 {
-    /** Which cashflow entries count as this employee's pay. */
+    /**
+     * Every cashflow entry the ledger filed against this person — both ways.
+     *
+     * Not "the credits": the ledger is the company's cash book, so a **debit**
+     * is money that left it and that is what paying somebody looks like. The
+     * office's own ledger defaults to a debit, and a ₹1,00,000 salary debit sat
+     * in it while this record said ₹0 — the direction was assumed instead of
+     * read. A **credit** filed against a person is money that came back (an
+     * advance repaid, a recovery), so it is read too, with the opposite sign.
+     */
     public function salaryQuery(User $user)
     {
-        return CashflowEntry::query()
-            ->where('employee_id', $user->id)
-            /* Money *to* the employee. A debit filed against somebody is a
-               recovery or a reimbursement, not a salary credit, and adding the
-               two into one "paid" figure would overstate what they earned. */
-            ->where('transaction_type', 'credit');
+        return CashflowEntry::query()->where('employee_id', $user->id);
+    }
+
+    /**
+     * What was paid to this person, and what came back — one definition, read
+     * by every figure on both sides of the module (the office's record page and
+     * the employee's own pages), so the two can never disagree.
+     *
+     * @return array{paid: float, recovered: float, total: float, entries: int, payments: int, months_paid: int, pending: int}
+     */
+    public function payTotals(User $user, ?string $from = null, ?string $to = null): array
+    {
+        return $this->payFrom($this->salaryEntries($user, $from, $to));
+    }
+
+    /**
+     * The arithmetic of pay, over rows already in hand.
+     *
+     * Split from the query on purpose: this is the part that was wrong (a
+     * credit-only reading of a debit-only ledger) and it is the part a test can
+     * run without a database — see tests/Unit/EmployeePayTest.php, which builds
+     * the rows in memory and asserts what the figures come to.
+     *
+     * @param  Collection<int, CashflowEntry>  $entries
+     * @return array{paid: float, recovered: float, total: float, entries: int, payments: int, months_paid: int, pending: int}
+     */
+    public function payFrom(Collection $entries): array
+    {
+        $paid = 0.0;
+        $recovered = 0.0;
+
+        foreach ($entries as $entry) {
+            $signed = $entry->signedAmount();
+
+            $signed >= 0 ? $paid += $signed : $recovered += -$signed;
+        }
+
+        return [
+            'paid' => round($paid, 2),
+            'recovered' => round($recovered, 2),
+            /* net, because both are real movements of the office's money */
+            'total' => round($paid - $recovered, 2),
+            'entries' => $entries->count(),
+            'payments' => $entries->filter(fn ($entry) => $entry->signedAmount() > 0)->count(),
+            'months_paid' => $entries
+                ->filter(fn ($entry) => $entry->signedAmount() > 0 && $entry->entry_date)
+                ->map(fn ($entry) => Carbon::parse($entry->entry_date)->format('Y-m'))
+                ->unique()
+                ->count(),
+            'pending' => $entries
+                ->filter(fn ($entry) => in_array($entry->accounting_status, ['pending', 'disputed'], true))
+                ->count(),
+        ];
+    }
+
+    /**
+     * What left the company for the whole team between two days — the users
+     * list's "paid this month" tile. The same query a person's record reads,
+     * without the person: a tile and a page cannot mean two different things.
+     */
+    public function paidToTeam(?string $from = null, ?string $to = null): float
+    {
+        if (! $this->salaryColumnExists()) {
+            return 0.0;
+        }
+
+        return round((float) CashflowEntry::query()
+            ->moneyOut()
+            ->whereNotNull('employee_id')
+            ->when($from, fn ($q) => $q->whereDate('entry_date', '>=', $from))
+            ->when($to, fn ($q) => $q->whereDate('entry_date', '<=', $to))
+            ->sum('debit_amount'), 2);
     }
 
     public function salaryEntries(User $user, ?string $from = null, ?string $to = null): Collection
@@ -54,17 +129,28 @@ class EmployeeProfile
     }
 
     /**
-     * What was credited, month by month — the shape of a year's pay.
+     * What was paid, month by month — the shape of a year's pay.
      *
      * The months are walked in PHP rather than grouped in SQL: `DATE_FORMAT` is
      * MySQL-only and the same page has to work on sqlite (the test suite) and on
      * whatever the office runs.
      *
-     * @return array<int, array{period: string, label: string, credit: float, entries: int, days: array<int, string>}>
+     * @return array<int, array{period: string, label: string, paid: float, recovered: float, net: float, entries: int, payments: int, days: array<int, string>}>
      */
     public function salaryByMonth(User $user, int $year): array
     {
-        $entries = $this->salaryEntries($user, $year.'-01-01', $year.'-12-31');
+        return $this->monthsFrom($this->salaryEntries($user, $year.'-01-01', $year.'-12-31'));
+    }
+
+    /**
+     * The month strip's own arithmetic, over rows already in hand — the same
+     * split as payFrom(), for the same reason.
+     *
+     * @param  Collection<int, CashflowEntry>  $entries
+     * @return array<int, array{period: string, label: string, paid: float, recovered: float, net: float, entries: int, payments: int, days: array<int, string>}>
+     */
+    public function monthsFrom(Collection $entries): array
+    {
         $months = [];
 
         foreach ($entries as $entry) {
@@ -74,12 +160,24 @@ class EmployeeProfile
             $months[$key] ??= [
                 'period' => $key,
                 'label' => $date ? $date->format('F Y') : 'Undated',
-                'credit' => 0.0,
+                'paid' => 0.0,
+                'recovered' => 0.0,
+                'net' => 0.0,
                 'entries' => 0,
+                'payments' => 0,
                 'days' => [],
             ];
 
-            $months[$key]['credit'] = round($months[$key]['credit'] + (float) $entry->credit_amount, 2);
+            $signed = $entry->signedAmount();
+
+            if ($signed >= 0) {
+                $months[$key]['paid'] = round($months[$key]['paid'] + $signed, 2);
+                $months[$key]['payments']++;
+            } else {
+                $months[$key]['recovered'] = round($months[$key]['recovered'] - $signed, 2);
+            }
+
+            $months[$key]['net'] = round($months[$key]['paid'] - $months[$key]['recovered'], 2);
             $months[$key]['entries']++;
             $months[$key]['days'][] = $date ? $date->format('d M') : '';
         }
@@ -104,8 +202,11 @@ class EmployeeProfile
             $rows[] = [
                 'period' => $key,
                 'label' => Carbon::createFromFormat('Y-m', $key)->format('M Y'),
-                'credit' => (float) ($pay['credit'] ?? 0),
+                'paid' => (float) ($pay['paid'] ?? 0),
+                'recovered' => (float) ($pay['recovered'] ?? 0),
+                'net' => (float) ($pay['net'] ?? 0),
                 'entries' => (int) ($pay['entries'] ?? 0),
+                'payments' => (int) ($pay['payments'] ?? 0),
                 'payslip' => $slip,
                 'paid_on' => $slip?->paid_on,
             ];
@@ -114,20 +215,16 @@ class EmployeeProfile
         return $rows;
     }
 
-    /** The year's total pay for this employee. */
+    /**
+     * The year's total pay for this employee — the same rows the page lists,
+     * added up the same way, because a total that disagrees with the table
+     * under it is a total nobody trusts.
+     */
     public function yearTotal(User $user, ?int $year = null): array
     {
         $year = $year ?: (int) date('Y');
-        $entries = $this->salaryEntries($user, $year.'-01-01', $year.'-12-31');
 
-        return [
-            'year' => $year,
-            'total' => round((float) $entries->sum('credit_amount'), 2),
-            'entries' => $entries->count(),
-            'months_paid' => $entries
-                ->map(fn ($entry) => $entry->entry_date ? Carbon::parse($entry->entry_date)->format('Y-m') : null)
-                ->filter()->unique()->count(),
-        ];
+        return ['year' => $year] + $this->payTotals($user, $year.'-01-01', $year.'-12-31');
     }
 
     public function payslips(User $user): Collection

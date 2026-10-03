@@ -66,7 +66,7 @@
                                         so you can always come back for an older month.
                                     </p>
                                     <div class="master-list-empty-actions">
-                                        <a class="master-btn master-btn-soft" href="{{ route('my.salary') }}">See my salary credits</a>
+                                        <a class="master-btn master-btn-soft" href="{{ route('my.salary') }}">See what I was paid</a>
                                     </div>
                                 </div>
                             </td>

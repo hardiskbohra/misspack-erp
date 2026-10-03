@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\DateRanges;
-use App\Models\CashflowEntry;
 use App\Models\EmployeeDocument;
 use App\Models\EmployeePayslip;
 use App\Models\User;
@@ -70,6 +69,12 @@ class UserController extends Controller
 
     /** @var array<string, bool> */
     private static array $columns = [];
+
+    /** The employee side of the module — one service, one definition of pay. */
+    private function profile(): EmployeeProfile
+    {
+        return new EmployeeProfile();
+    }
 
     /**
      * Does the table have this column *yet*?
@@ -323,14 +328,13 @@ class UserController extends Controller
         $counts = $this->roleCounts();
         $hasRole = $this->hasColumn('role');
 
-        $paidThisMonth = Schema::hasTable('cashflow_entries') && Schema::hasColumn('cashflow_entries', 'employee_id')
-            ? (float) CashflowEntry::query()
-                ->where('transaction_type', 'credit')
-                ->whereNotNull('employee_id')
-                ->whereYear('entry_date', now()->year)
-                ->whereMonth('entry_date', now()->month)
-                ->sum('credit_amount')
-            : 0.0;
+        /* What left the company for the team this month, read through the same
+           query the person's own record uses — a tile and a page cannot mean two
+           different things. */
+        $paidToTeam = $this->profile()->paidToTeam(
+            now()->startOfMonth()->toDateString(),
+            now()->endOfMonth()->toDateString()
+        );
 
         /* Who is on the payroll and has a code to be paid against — the same
            predicate as the `code=present` filter, so the tile and the filter
@@ -357,7 +361,7 @@ class UserController extends Controller
             'employees' => $counts[User::ROLE_EMPLOYEE] ?? 0,
             'admins' => $counts[User::ROLE_ADMIN] ?? 0,
             'with_code' => $withCode,
-            'paid_this_month' => $paidThisMonth,
+            'paid_this_month' => $paidToTeam,
             'documents' => $documents,
             'missing_id_proof' => $missingFiles,
             'month_label' => now()->format('M Y'),

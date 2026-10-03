@@ -18,7 +18,7 @@
         <div class="master-stat master-stat--flat green">
             <span class="icon">₹</span>
             <div>
-                <p class="master-stat-title">Credited in {{ $year }}</p>
+                <p class="master-stat-title">Paid in {{ $year }}</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($total['total']) }}</p>
                 <p class="master-sub">{{ $total['entries'] }} {{ \Illuminate\Support\Str::plural('entry', $total['entries']) }}
                     over {{ $total['months_paid'] }} {{ \Illuminate\Support\Str::plural('month', $total['months_paid']) }}</p>

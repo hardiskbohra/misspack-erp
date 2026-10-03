@@ -18,17 +18,28 @@
         <div class="master-stat master-stat--flat green">
             <span class="icon">₹</span>
             <div>
-                <p class="master-stat-title">Credited in {{ $year }}</p>
+                <p class="master-stat-title">Paid in {{ $year }}</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($total['total']) }}</p>
-                <p class="master-sub">{{ $total['months_paid'] }} {{ \Illuminate\Support\Str::plural('month', $total['months_paid']) }} paid</p>
+                <p class="master-sub">
+                    {{ $total['payments'] }} {{ \Illuminate\Support\Str::plural('payment', $total['payments']) }}
+                    over {{ $total['months_paid'] }} {{ \Illuminate\Support\Str::plural('month', $total['months_paid']) }}
+                    @if ($total['recovered'] > 0)
+                        · {{ \App\Helpers\CommonHelper::indianCurrency($total['recovered']) }} back
+                    @endif
+                </p>
             </div>
         </div>
         <div class="master-stat master-stat--flat blue">
             <span class="icon">⇄</span>
             <div>
-                <p class="master-stat-title">Credits</p>
+                <p class="master-stat-title">Ledger entries</p>
                 <p class="master-stat-value">{{ $total['entries'] }}</p>
-                <p class="master-sub">entries filed against you in {{ $year }}</p>
+                <p class="master-sub">
+                    filed against you in {{ $year }}
+                    @if ($total['pending'] > 0)
+                        · {{ $total['pending'] }} still pending
+                    @endif
+                </p>
             </div>
         </div>
     </div>
@@ -42,7 +53,7 @@
                 @endforeach
             </div>
             <p class="master-sub" style="margin:0;">
-                Every credit the office filed against your name, month by month.
+                Every entry the office filed against your name, month by month — a payment out, or money back.
             </p>
         </div>
 
@@ -55,6 +66,7 @@
         <div class="master-list-toolbar">
             <p class="master-list-hint">
                 {{ $total['entries'] }} {{ \Illuminate\Support\Str::plural('entry', $total['entries']) }} in {{ $year }}
+                · net <strong>{{ \App\Helpers\CommonHelper::indianCurrency($total['total']) }}</strong>
             </p>
         </div>
 
@@ -65,8 +77,9 @@
                         <th scope="col">Date</th>
                         <th scope="col">Particular</th>
                         <th scope="col">Reference</th>
+                        <th scope="col">Way</th>
                         <th scope="col">Mode</th>
-                        <th scope="col" class="is-num">Credited</th>
+                        <th scope="col" class="is-num">Amount</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -78,19 +91,24 @@
                                 @if ($entry->notes)<span class="master-sub">{{ $entry->notes }}</span>@endif
                             </td>
                             <td data-label="Reference">{{ $entry->bank_reference_number ?: '—' }}</td>
+                            <td data-label="Way">
+                                <span class="emp-pill {{ $entry->isMoneyOut() ? 'is-ok' : 'is-off' }}">
+                                    {{ $entry->isMoneyOut() ? 'Paid to you' : 'Back to the office' }}
+                                </span>
+                            </td>
                             <td data-label="Mode">
                                 <span class="emp-pill is-off">{{ \App\Models\CashflowEntry::paymentModeOptions()[$entry->payment_mode] ?? '—' }}</span>
                             </td>
-                            <td class="is-num" data-label="Credited">
-                                <strong>{{ \App\Helpers\CommonHelper::amount($entry->credit_amount, $entry->currency ?: 'INR') }}</strong>
+                            <td class="is-num" data-label="Amount">
+                                <strong>{{ $entry->signedAmountLabel() }}</strong>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5">
+                            <td colspan="6">
                                 <div class="master-list-empty">
                                     <span class="master-list-empty-icon" aria-hidden="true">₹</span>
-                                    <p class="master-list-empty-title">No salary credited in {{ $year }}</p>
+                                    <p class="master-list-empty-title">No salary paid in {{ $year }}</p>
                                     <p class="master-list-empty-text">
                                         When the office pays you through the cashflow ledger and files the entry
                                         against your name, it appears here — with the reference it was paid on.
@@ -110,7 +128,7 @@
                 @if ($entries->isNotEmpty())
                     <tfoot>
                         <tr class="master-list-total">
-                            <td colspan="4"><strong>Total credited in {{ $year }}</strong></td>
+                            <td colspan="5"><strong>Net paid in {{ $year }}</strong></td>
                             <td class="is-num">
                                 <strong>{{ \App\Helpers\CommonHelper::indianCurrency($total['total']) }}</strong>
                             </td>

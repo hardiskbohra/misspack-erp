@@ -82,12 +82,26 @@ the controller, which validates only the fields in that list.
 
 ## 4. Pay, payslips and papers
 
-**Salary** is not a second ledger. An employee's salary is the cashflow entry
-**credited** to them (`employee_id = them`, `transaction_type = credit`), read
-throug `EmployeeProfile::salaryQuery()`. A debit filed against somebody is a
-recovery, not pay, and counting the two together would overstate what they
-earned. Both the office's record page and the employee's own pages are built
-from that one query — the figures cannot disagree.
+**Salary** is not a second ledger. An employee's salary is **every cashflow
+entry filed against them** (`employee_id = them`), read through
+`EmployeeProfile::salaryQuery()` — and the *direction is read off the entry*
+rather than assumed:
+
+- a **debit** is money that left the company, which is what paying somebody
+  looks like on a cash book — and it is the ledger's own default;
+- a **credit** filed against a person is money that came back (an advance
+  repaid, a recovery), so it is subtracted rather than added.
+
+`CashflowEntry::isMoneyOut()`, `amountMoved()` and `signedAmount()` decide that
+once; `EmployeeProfile::payFrom()` and `monthsFrom()` do the arithmetic over
+rows in hand, so `tests/Unit/EmployeePayTest.php` can prove it without a
+database. Both the office's record page and the employee's own pages are built
+from those two methods — the figures cannot disagree.
+
+> This was wrong the first time, in a way no source-reading check could see:
+> the record counted *credits* against a person while the office files a salary
+> as a **debit**, so a ₹1,00,000 salary read as ₹0 on the person's page. The
+> direction had been assumed, not read, and every line was spelled correctly.
 
 **Payslips** (`employee_payslips`) are one row per person per month:
 
@@ -95,7 +109,7 @@ from that one query — the figures cannot disagree.
   pays by bank transfer often has none;
 - `draft` is the office's working copy and is **invisible to the employee**
   (`issuedPayslips()`); `issued` is what they see;
-- when a salary credit exists for that month, the slip links to it
+- when a salary payment exists for that month, the slip links to it
   (`cashflow_entry_id`), so the slip and the ledger can be read against each
   other instead of argued about.
 
