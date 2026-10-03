@@ -4,11 +4,14 @@
 @section('page-title', 'User Management')
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('assets/css/users.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/users.css') }}">
+    {{-- the same list chrome every other list screen wears: the bar, the chips,
+         the applied strip and the row insets (task 40's rule, one owner) --}}
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-list.css') }}">
 @endpush
 
 @section('content')
-<div class="users">
+<div class="users master-list">
     {{-- Toolbar --}}
     <div class="master-toolbar" style="padding:0;padding-bottom:18px;">
         <form method="GET" action="{{ route('users.index') }}" class="master-search-form">
@@ -28,6 +31,23 @@
         </button>
     </div>
 
+    {{-- The one question this module asks first: the office, or the payroll.
+         The counts are the split, so an office can see at a glance how many
+         people are on each side of the line. --}}
+    <div class="master-list-chips users-role-chips">
+        <a class="master-list-chip {{ $role === 'all' ? 'is-active' : '' }}"
+            href="{{ route('users.index', array_filter(['search' => $search])) }}">
+            Everyone <span class="master-list-chip-count">{{ $roleCounts['all'] ?? 0 }}</span>
+        </a>
+        @foreach ($roles as $key => $label)
+            <a class="master-list-chip {{ $role === $key ? 'is-active' : '' }}"
+                href="{{ route('users.index', array_filter(['search' => $search, 'role' => $key])) }}">
+                {{ $key === 'admin' ? 'Office / admins' : 'Employees' }}
+                <span class="master-list-chip-count">{{ $roleCounts[$key] ?? 0 }}</span>
+            </a>
+        @endforeach
+    </div>
+
     {{-- Users Table --}}
     <div class="master-card">
         <div class="master-table-wrap">
@@ -36,10 +56,11 @@
                     <tr>
                         <th class="master-col-number">#</th>
                         <th>User</th>
+                        <th>Role</th>
                         <th>Mobile</th>
                         <th>Department</th>
                         <th>Designation</th>
-                        <th>Verified</th>
+                        <th>Status</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -67,6 +88,10 @@
                                     </div>
                                 </div>
                             </td>
+                            <td data-label="Role">
+                                <span class="emp-pill {{ $user->isAdmin() ? 'is-info' : 'is-ok' }}">{{ $user->roleLabel() }}</span>
+                                @if ($user->employee_code)<span class="master-sub">{{ $user->employee_code }}</span>@endif
+                            </td>
                             <td data-label="Mobile">{{ $user->mobile ?? '—' }}</td>
                             <td data-label="Department">
                                 @if($user->department)
@@ -78,15 +103,27 @@
                             <td data-label="Designation">
                                     {{ $user->designation ?? '-' }}
                             </td>
-                            <td data-label="Verified">
-                                @if($user->email_verified_at)
-                                    <span class="master-badge verified"><i class="fas fa-check-circle"></i> Verified</span>
+                            <td data-label="Status">
+                                @if ($user->isEmployee())
+                                    <span class="emp-pill is-{{ $user->employmentStatusTone() === 'ok' ? 'ok' : ($user->employmentStatusTone() === 'warn' ? 'warn' : 'off') }}">
+                                        {{ $user->employmentStatusLabel() }}</span>
+                                    @if ($user->payslips_count || $user->employee_documents_count)
+                                        <span class="master-sub">
+                                            {{ $user->payslips_count }} {{ \Illuminate\Support\Str::plural('payslip', $user->payslips_count) }}
+                                            · {{ $user->employee_documents_count }} {{ \Illuminate\Support\Str::plural('document', $user->employee_documents_count) }}
+                                        </span>
+                                    @endif
                                 @else
-                                    <span class="master-badge pending"><i class="fas fa-clock"></i> Pending</span>
+                                    <span class="emp-pill is-off">Office access</span>
                                 @endif
                             </td>
                             <td data-label="Action">
                                 <div class="master-actions">
+                                    <a class="master-icon-btn"
+                                        href="{{ route('users.show', $user) }}"
+                                        title="Open the record — profile, pay, payslips, documents">
+                                        <i class="fas fa-folder-open"></i>
+                                    </a>
                                     <button type="button"
                                             class="master-icon-btn edit"
                                             title="Edit"
@@ -108,7 +145,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7">
+                            <td colspan="8">
                                 <div class="master-empty">
                                     <i class="fas fa-master-cog"></i>
                                     <p>No users found.</p>
@@ -164,23 +201,26 @@
                         </div>
         
                         <div class="user-row">
-                            <span>Status</span>
-        
-                            @if($user->email_verified_at)
-                                <span class="master-badge verified">
-                                    <i class="fas fa-check-circle"></i> Verified
-                                </span>
-                            @else
-                                <span class="master-badge pending">
-                                    <i class="fas fa-clock"></i> Pending
-                                </span>
-                            @endif
+                            <span>Role</span>
+                            <span class="emp-pill {{ $user->isAdmin() ? 'is-info' : 'is-ok' }}">{{ $user->roleLabel() }}</span>
                         </div>
+
+                        @if ($user->isEmployee())
+                            <div class="user-row">
+                                <span>Status</span>
+                                <span class="emp-pill is-{{ $user->employmentStatusTone() === 'ok' ? 'ok' : ($user->employmentStatusTone() === 'warn' ? 'warn' : 'off') }}">
+                                    {{ $user->employmentStatusLabel() }}</span>
+                            </div>
+                        @endif
         
                     </div>
         
                     <div class="user-card-footer" style="margin-bottom:10px;">
-        
+
+                        <a class="master-icon-btn" href="{{ route('users.show', $user) }}" title="Open the record">
+                            <i class="fas fa-folder-open"></i>
+                        </a>
+
                         <button type="button"
                                 class="master-icon-btn edit"
                                 data-edit-user="{{ $user->id }}">
@@ -246,6 +286,27 @@
                     </div>
                 </div>
 
+                <div class="master-section-label">Who is this?</div>
+                <div class="master-form-grid">
+                    <div class="master-field full">
+                        <label class="master-label">Role <span class="master-required">*</span></label>
+                        <select name="role" id="addRole" class="master-select" data-role-select required>
+                            @foreach ($roles as $key => $label)
+                                <option value="{{ $key }}" @selected(old('role', 'employee') === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        {{-- Said in the form, not in a manual: the two roles see
+                             different applications. --}}
+                        <p class="master-info-box" data-role-hint>
+                            <i class="fas fa-info-circle"></i>
+                            <span data-role-hint-text>
+                                An employee sees only their own workspace: profile, salary, payslips and documents.
+                            </span>
+                        </p>
+                        @error('role')<span class="master-error">{{ $message }}</span>@enderror
+                    </div>
+                </div>
+
                 <div class="master-section-label">Basic Information</div>
                 <div class="master-form-grid">
                     <div class="master-field">
@@ -259,16 +320,42 @@
                         @error('email')<span class="master-error">{{ $message }}</span>@enderror
                     </div>
                     <div class="master-field">
-                        <label class="master-label">Mobile Number</label>
+                        <label class="master-label">Mobile Number <span class="master-required" data-role-required>•</span></label>
                         <input type="text" name="mobile" class="master-input" placeholder="+91 9876543210" value="{{ old('mobile') }}">
                     </div>
                     <div class="master-field">
                         <label class="master-label">Department</label>
                         <input type="text" name="department" class="master-input" placeholder="Technology" value="{{ old('department') }}">
                     </div>
-                    <div class="master-field full">
-                        <label class="master-label">Designation</label>
+                    <div class="master-field">
+                        <label class="master-label">Designation <span class="master-required" data-role-required>•</span></label>
                         <input type="text" name="designation" class="master-input" placeholder="Senior Developer" value="{{ old('designation') }}">
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label">Date of joining <span class="master-required" data-role-required>•</span></label>
+                        <input type="date" name="date_of_joining" class="master-input" value="{{ old('date_of_joining') }}">
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label">Employee code</label>
+                        <input type="text" name="employee_code" class="master-input" placeholder="Left blank: EMP-0001" value="{{ old('employee_code') }}">
+                        @error('employee_code')<span class="master-error">{{ $message }}</span>@enderror
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label">Employment type</label>
+                        <select name="employment_type" class="master-select">
+                            <option value="">—</option>
+                            @foreach ($employmentTypes ?? [] as $key => $label)
+                                <option value="{{ $key }}" @selected(old('employment_type') === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label">Status</label>
+                        <select name="employment_status" class="master-select">
+                            @foreach ($employmentStatuses ?? [] as $key => $label)
+                                <option value="{{ $key }}" @selected(old('employment_status', 'active') === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
 
@@ -337,6 +424,19 @@
                     </div>
                 </div>
 
+                <div class="master-section-label">Who is this?</div>
+                <div class="master-form-grid">
+                    <div class="master-field full">
+                        <label class="master-label">Role <span class="master-required">*</span></label>
+                        <select name="role" id="editRole" class="master-select" data-role-select required>
+                            @foreach ($roles as $key => $label)
+                                <option value="{{ $key }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <p class="master-sub" id="editRoleNote" style="margin:6px 0 0;"></p>
+                    </div>
+                </div>
+
                 <div class="master-section-label">Basic Information</div>
                 <div class="master-form-grid">
                     <div class="master-field">
@@ -348,16 +448,46 @@
                         <input type="email" name="email" id="editEmail" class="master-input" required>
                     </div>
                     <div class="master-field">
-                        <label class="master-label">Mobile Number</label>
+                        <label class="master-label">Mobile Number <span class="master-required" data-role-required>•</span></label>
                         <input type="text" name="mobile" id="editMobile" class="master-input">
                     </div>
                     <div class="master-field">
                         <label class="master-label">Department</label>
                         <input type="text" name="department" id="editDepartment" class="master-input">
                     </div>
-                    <div class="master-field full">
-                        <label class="master-label">Designation</label>
+                    <div class="master-field">
+                        <label class="master-label">Designation <span class="master-required" data-role-required>•</span></label>
                         <input type="text" name="designation" id="editDesignation" class="master-input">
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label">Date of joining <span class="master-required" data-role-required>•</span></label>
+                        <input type="date" name="date_of_joining" id="editJoining" class="master-input">
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label">Employee code</label>
+                        <input type="text" name="employee_code" id="editCode" class="master-input">
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label">Employment type</label>
+                        <select name="employment_type" id="editType" class="master-select">
+                            <option value="">—</option>
+                            @foreach ($employmentTypes ?? [] as $key => $label)
+                                <option value="{{ $key }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label">Status</label>
+                        <select name="employment_status" id="editStatus" class="master-select">
+                            @foreach ($employmentStatuses ?? [] as $key => $label)
+                                <option value="{{ $key }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="master-field full">
+                        <a class="master-btn master-btn-ghost master-btn-sm" id="editRecordLink" href="#">
+                            Open the full record — payslips, documents, pay history
+                        </a>
                     </div>
                 </div>
 
@@ -411,5 +541,7 @@
 
 @push('scripts')
     <script src="{{ asset('assets/js/users.js') }}"></script>
+    {{-- the role decides which fields are required, in both modals --}}
+    <script src="{{ asset('assets/js/employees.js') }}"></script>
 @endpush
 @endsection

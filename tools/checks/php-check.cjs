@@ -148,6 +148,44 @@ const closingTag = phpFiles.filter(file => /\?>\s*$/.test(fs.readFileSync(file, 
 check('no PHP file ends with a closing tag',
     closingTag.length === 0, closingTag.slice(0, 3).map(rel).join(' | '));
 
+/* A namespace separator is one backslash. Written as two — `namespace App\\Models;`
+   — the file parses under some tools and dies under PHP, which is a class of
+   mistake this project has now made: a heredoc that doubles escapes produces a
+   file that looks right and cannot run. Read outside strings and comments, the
+   only place a doubled backslash belongs is a regex character class. */
+const codeOutsideStrings = text => {
+    let code = '';
+    let state = null;
+
+    for (let i = 0; i < text.length; i++) {
+        const two = text.slice(i, i + 2);
+        const char = text[i];
+
+        if (state === 'block') { if (two === '*/') { state = null; i++; } continue; }
+        if (state === 'line') { if (char === '\n') { state = null; code += char; } continue; }
+        if (state === 'single' || state === 'double') {
+            if (char === '\\') { i++; continue; }
+            if ((state === 'single' && char === "'") || (state === 'double' && char === '"')) state = null;
+            continue;
+        }
+        if (two === '/*') { state = 'block'; i++; continue; }
+        if (two === '//') { state = 'line'; i++; continue; }
+        if (char === "'") { state = 'single'; continue; }
+        if (char === '"') { state = 'double'; continue; }
+
+        code += char;
+    }
+
+    return code;
+};
+
+const doubledSeparator = phpFiles.filter(file =>
+    /\\{2,}/.test(codeOutsideStrings(fs.readFileSync(file, 'utf8'))));
+
+check('every namespace separator is a single backslash',
+    doubledSeparator.length === 0,
+    doubledSeparator.slice(0, 3).map(rel).join(' | ') + ' — PHP fatals on these');
+
 /* An app class called statically has to be imported (or be in this file's own
    namespace). php-parser checks grammar, not names: a bare `DateRanges::normalise()`
    in a controller that forgot its `use App\Helpers\DateRanges;` parses perfectly

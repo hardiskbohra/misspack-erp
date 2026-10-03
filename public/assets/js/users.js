@@ -98,6 +98,26 @@
                 byId('editDepartment').value = user.department || '';
                 byId('editDesignation').value = user.designation || '';
 
+                /* The employment half of the record. Everything is filled from
+                   the same endpoint, so the modal shows exactly what the record
+                   page would — and the two can never disagree about a person. */
+                if (byId('editRole')) byId('editRole').value = user.role || 'admin';
+                if (byId('editCode')) byId('editCode').value = user.employee_code || '';
+                if (byId('editJoining')) byId('editJoining').value = user.date_of_joining || '';
+                if (byId('editType')) byId('editType').value = user.employment_type || '';
+                if (byId('editStatus')) byId('editStatus').value = user.employment_status || 'active';
+                if (byId('editRecordLink')) byId('editRecordLink').href = '/users/' + user.id;
+
+                if (byId('editRoleNote')) {
+                    byId('editRoleNote').textContent = user.is_last_admin
+                        ? 'This is the last administrator, so the role cannot be changed.'
+                        : (user.is_self ? 'You cannot change your own role.' : '');
+                }
+
+                if (window.EmployeeFields) {
+                    window.EmployeeFields.sync(document);
+                }
+
                 var circle = byId('editAvatarCircle');
                 var removeButton = byId('editRemoveBtn');
 

@@ -29,6 +29,10 @@ node tools/checks/statement-check.cjs # a party statement: opening + debit − c
 node tools/checks/report-check.cjs    # the report builder: a cell sums the same rows it opens,
                                       # a bucket is dates and not a dialect, a comparison is the
                                       # axis shifted, and "not set" is a row you can drill
+node tools/checks/employees-check.cjs # the employee side of the user module: the office door is
+                                      # on the whole admin group, no personal route takes a user id,
+                                      # a file is ownership-checked before it is served, a draft
+                                      # payslip is invisible and a verified paper is not removable
 ```
 
 Every check is dependency-free. `mark-check.cjs` additionally decodes the QR
@@ -43,7 +47,7 @@ All of them exit non-zero on failure, so they can be wired into CI or a
 pre-push hook:
 
 ```bash
-for c in design blade php mark list status cost docs statement report; do
+for c in design blade php mark list status cost docs statement report employees; do
   node "tools/checks/$c-check.cjs" || exit 1
 done
 ```
@@ -113,3 +117,10 @@ guards actually fail when the behaviour they describe is broken.
 | A mixed range says so | rupees, dollars and yuan are never dressed as one currency: the figures lose their sign and the page names the currencies it holds |
 | A statement adds up | opening + debit − credit = closing, the ageing buckets sum to the closing, and an expiring public link is a real route — not a paragraph promising one |
 | Money never hand-built | a template may not format money itself, and may never echo a currency and then a rupee figure (`USD ₹1,200`) — the currency belongs with the amount it is in, through the formatter. Only an exchange rate keeps its own decimals in a template |
+| The office door | an employee account is turned around at the door of every screen the office owns — by a middleware on the whole admin group, not by a check on one page — and lands on its own workspace with a sentence instead of a 403 |
+| No user id in a personal URL | `/my/...` reads the person from the session and never from the address bar, so there is no number to change and no record to reach for; the two routes that do take a row id are ownership-checked before a byte is served |
+| A draft is not a payslip yet | an office closing a month drafts a slip before the money moves, and the employee cannot see it until it is issued; the figures are the record and the PDF is optional, because the office that pays by transfer has none |
+| A verified paper stays put | once the office has marked a document as seen, the person who uploaded it can no longer remove or quietly replace it — that difference is the whole value of the file at an audit |
+| Two owners for one profile | the employee keeps their mobile, address, date of birth and emergency contact current; designation, joining date, pay and the salary bank account are the office's record, and the list of who may edit what is written once in `EmployeeAccess` |
+| Roles read as "not an employee" | any unknown or missing role keeps the account able to work, because an office locked out of its own ledger by a missing value is the worse failure — and the last administrator cannot be demoted or deleted |
+| One payroll list | the ledger's Employee field offers employees first and office accounts underneath, from one method on the model — entries filed before roles existed still point at people the picker contains |

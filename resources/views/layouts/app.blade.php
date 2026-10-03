@@ -50,7 +50,21 @@
 </head>
 <body>
     @php
-        $sidebarItems = [
+        /* An employee's menu is their own record, and this is the only menu the
+           application shows them: the office's screens are behind a middleware
+           they cannot pass, so listing them here would be offering doors that
+           do not open. The workspace pages are the same four questions in the
+           same order a payroll clerk would ask them. */
+        $employeeItems = [
+            ['section' => 'My Workspace'],
+            ['label' => 'Dashboard', 'route' => 'my.dashboard', 'active' => 'my.dashboard', 'icon' => 'fas fa-th-large'],
+            ['label' => 'My Salary', 'route' => 'my.salary', 'active' => 'my.salary', 'icon' => 'fa-solid fa-indian-rupee-sign'],
+            ['label' => 'My Payslips', 'route' => 'my.payslips', 'active' => 'my.payslips*', 'icon' => 'fa-solid fa-file-invoice-dollar'],
+            ['label' => 'My Documents', 'route' => 'my.documents', 'active' => 'my.documents*', 'icon' => 'fa-regular fa-folder-open'],
+            ['label' => 'My Profile', 'route' => 'my.profile', 'active' => 'my.profile*', 'icon' => 'fa-regular fa-id-card'],
+        ];
+
+        $sidebarItems = Auth::user() && Auth::user()->isEmployee() ? $employeeItems : [
             ['section' => 'Dashboards'],
             ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'fas fa-th-large'],
             ['section' => 'Management'],
@@ -117,7 +131,11 @@
 
                 <div class="sidebar-user-info sidebar-text">
                     <div class="user-name">{{ Auth::user()->name ?? 'Admin' }}</div>
-                    <div class="user-role">Administrator</div>
+                    <div class="user-role">
+                        {{ Auth::user() && Auth::user()->isEmployee()
+                            ? (Auth::user()->designation ?: 'Employee')
+                            : 'Administrator' }}
+                    </div>
                 </div>
 
                 <form method="POST" action="{{ route('logout') }}" class="sidebar-logout-form">
@@ -170,12 +188,25 @@
                     <span class="topbar-badge">3</span>
                 </button>
 
-                <div class="topbar-user-btn">
-                    <div class="user-avatar-sm topbar-avatar">
-                        {{ substr(Auth::user()->name ?? 'A', 0, 1) }}
+                {{-- The avatar is the door to your own profile. An employee has
+                     a real page behind it; the office account does not, so it
+                     keeps the same look without pretending to be a link. --}}
+                @if (Auth::user() && Auth::user()->isEmployee())
+                    <a class="topbar-user-btn" href="{{ route('my.profile') }}"
+                        title="My profile" aria-label="My profile">
+                        <div class="user-avatar-sm topbar-avatar">
+                            {{ substr(Auth::user()->name ?? 'A', 0, 1) }}
+                        </div>
+                        <span class="topbar-user-name desktop-only">{{ Auth::user()->name }}</span>
+                    </a>
+                @else
+                    <div class="topbar-user-btn">
+                        <div class="user-avatar-sm topbar-avatar">
+                            {{ substr(Auth::user()->name ?? 'A', 0, 1) }}
+                        </div>
+                        <span class="topbar-user-name desktop-only">{{ Auth::user()->name ?? 'Admin' }}</span>
                     </div>
-                    <span class="topbar-user-name desktop-only">{{ Auth::user()->name ?? 'Admin' }}</span>
-                </div>
+                @endif
             </div>
         </header>
 

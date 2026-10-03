@@ -831,7 +831,10 @@ class CashflowController extends Controller
             return collect();
         }
 
-        return User::query()->orderBy('name')->get();
+        /* Employees first, the office underneath — the ledger's Employee field
+           is about somebody being paid, and the order is the model's answer
+           (`User::employeePicker`), not this page's. */
+        return User::employeePicker();
     }
 
     private function clientModelAvailable(): bool
