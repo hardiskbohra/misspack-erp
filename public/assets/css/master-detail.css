@@ -133,7 +133,12 @@
     column-gap: 32px
 }
 
-.master-facts > .master-info {
+/* `.master-card--flat .master-info` (master-flat.css) re-surfaces every fact
+   as a panel row. It is the same specificity as these rules but a later file,
+   so each selector is written once more with the card in front of it: a fact is
+   a hairline row, and no flat card may turn it back into a box. */
+.master-facts > .master-info,
+.master-card--flat .master-facts > .master-info {
     padding: 12px 0;
     border: 0;
     border-top: 1px solid var(--mc-border);
@@ -142,7 +147,9 @@
 }
 
 .master-facts > .master-info:first-child,
-.master-facts > .master-info:nth-child(2) {
+.master-facts > .master-info:nth-child(2),
+.master-card--flat .master-facts > .master-info:first-child,
+.master-card--flat .master-facts > .master-info:nth-child(2) {
     border-top: 0;
     padding-top: 2px
 }
@@ -543,6 +550,13 @@
 .master-tab.is-active .master-tab-count {
     background: rgba(255, 255, 255, .22);
     color: #fff;
+}
+
+/* One tab's block. Named by every record page since the strip was written and
+   defined by no sheet: the padding belongs to the panels container above, and
+   all a panel itself owes is to not push its card wider than the column. */
+.master-tab-panel {
+    min-width: 0
 }
 
 .master-tabs-panels {

@@ -818,6 +818,62 @@ const viewArrayOffenders = (() => {
 check('every variable a view array reads is assigned above it',
     viewArrayOffenders.length === 0, viewArrayOffenders.join(', '));
 
+/* ------------------------------- 10. the record's two long sections (63)
+   The details tab held the same twenty-one fields twice: once as read-only
+   cards and once as a form, laid out three answers deep. The read-only half was
+   a box per field (`.master-detail-list`, a class no sheet defined, so each
+   field fell back to the bordered `.master-info`), and the form was two to a
+   row with no groups. Both are now the shared vocabulary: the facts grid, and
+   the three-up field grid under a section label. This holds the shape — and
+   holds the field list, because a regrouping that loses a field loses the
+   office's ability to record it. */
+
+const profileView = read('resources/views/employees/profile.blade.php');
+
+check('the two read-only records are the shared facts grid, not a box per field',
+    /<div class="master-facts">/.test(userShow)
+    && /<div class="master-facts">/.test(profileView)
+    && !/master-detail-list/.test(userShow + profileView),
+    'expected `.master-facts` in both, and no `.master-detail-list` anywhere');
+
+check('and a value nobody filled in is muted without wearing an empty class',
+    (userShow.match(/<strong @class\(\['is-blank' => blank\(\$field\['value'\]\)\]\)>/g) || []).length === 2
+    && /<strong @class\(\['is-blank' => blank\(\$field\['value'\]\)\]\)>/.test(profileView),
+    '`@class` omits the attribute; `class=""` keeps it and defeats `:not([class])`');
+
+/* The record form, from its opening tag to its action bar. `@endif` is not a
+   terminator — the form holds `@if ($isSelf)` blocks of its own, and the
+   cutoff silently truncated the slice to the first four fields. */
+const recordFormStart = userShow.indexOf('action="{{ route(\'users.update\', $user) }}"');
+const recordForm = userShow.slice(recordFormStart, userShow.indexOf('Save the record', recordFormStart) + 40);
+
+check('the record form was located, not guessed',
+    recordFormStart > 0 && /<form method="POST"/.test(userShow.slice(recordFormStart - 80, recordFormStart)),
+    'the form action moved; every guard below would be reading an empty string');
+
+const FIELDS = [
+    'name', 'email', 'role', 'employee_code', 'designation', 'department',
+    'date_of_joining', 'date_of_birth', 'employment_type', 'employment_status',
+    'pan_number', 'mobile', 'bank_name', 'bank_account_name', 'bank_account_number',
+    'bank_ifsc', 'address', 'emergency_contact_name', 'emergency_contact_mobile',
+    'password', 'password_confirmation',
+];
+
+const missingFields = FIELDS.filter(field => !recordForm.includes('name="' + field + '"'));
+
+check('the record form still posts every field the office can set',
+    missingFields.length === 0, missingFields.join(', '));
+
+check('the form is grouped, and three fields to a row',
+    (recordForm.match(/<p class="master-section-label">/g) || []).length === 5
+    && (recordForm.match(/<div class="master-form-grid is-three">/g) || []).length === 5,
+    'expected five labelled groups, each its own three-up grid');
+
+check('and its save button stays in reach while the form scrolls',
+    /<div class="master-actions is-sticky">/.test(recordForm)
+    && /Save the record/.test(recordForm),
+    'a nine-row form hides its own action bar without one');
+
 /* ---------------------------------------------------------------- report */
 
 const failed = out.filter(([, ok]) => !ok);

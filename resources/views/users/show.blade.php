@@ -176,12 +176,12 @@
                     <div class="master-grid">
                         <div class="master-card master-card--flat master-section">
                             <h3 class="master-section-title">The record, in short</h3>
-                            <div class="master-detail-list">
+                            <div class="master-facts">
                                 @foreach ($record['groups'] as $group)
                                     @foreach ($group['fields'] as $field)
                                         <div class="master-info">
                                             <span>{{ $field['label'] }}</span>
-                                            <strong class="{{ blank($field['value']) ? 'is-blank' : '' }}">
+                                            <strong @class(['is-blank' => blank($field['value'])])>
                                                 {{ blank($field['value']) ? 'Not on file' : $field['value'] }}
                                             </strong>
                                         </div>
@@ -219,11 +219,11 @@
                         @foreach ($record['groups'] as $group)
                             <div class="master-card master-card--flat master-section">
                                 <h3 class="master-section-title">{{ $group['title'] }}</h3>
-                                <div class="master-detail-list">
+                                <div class="master-facts">
                                     @foreach ($group['fields'] as $field)
                                         <div class="master-info">
                                             <span>{{ $field['label'] }}</span>
-                                            <strong class="{{ blank($field['value']) ? 'is-blank' : '' }}">
+                                            <strong @class(['is-blank' => blank($field['value'])])>
                                                 {{ blank($field['value']) ? 'Not on file' : $field['value'] }}
                                             </strong>
                                         </div>
@@ -238,7 +238,8 @@
                         <form method="POST" action="{{ route('users.update', $user) }}">
                             @csrf
                             @method('PUT')
-                            <div class="master-form-grid">
+                            <p class="master-section-label">Identity</p>
+                            <div class="master-form-grid is-three">
                                 <div class="master-field">
                                     <label class="master-label" for="recordName">Name</label>
                                     <input class="master-input" id="recordName" name="name" value="{{ old('name', $user->name) }}" required>
@@ -278,6 +279,10 @@
                                     <label class="master-label" for="recordDepartment">Department</label>
                                     <input class="master-input" id="recordDepartment" name="department" value="{{ old('department', $user->department) }}">
                                 </div>
+                            </div>
+
+                            <p class="master-section-label">Employment</p>
+                            <div class="master-form-grid is-three">
                                 <div class="master-field">
                                     <label class="master-label" for="recordJoining">Date of joining <span class="master-required" data-role-required>*</span></label>
                                     <input class="master-input" id="recordJoining" type="date" name="date_of_joining"
@@ -309,10 +314,10 @@
                                     <label class="master-label" for="recordPan">PAN</label>
                                     <input class="master-input" id="recordPan" name="pan_number" value="{{ old('pan_number', $user->pan_number) }}">
                                 </div>
-                                <div class="master-field">
-                                    <label class="master-label" for="recordMobile">Mobile <span class="master-required" data-role-required>*</span></label>
-                                    <input class="master-input" id="recordMobile" name="mobile" value="{{ old('mobile', $user->mobile) }}">
-                                </div>
+                            </div>
+
+                            <p class="master-section-label">Bank</p>
+                            <div class="master-form-grid is-three">
                                 <div class="master-field">
                                     <label class="master-label" for="recordBank">Bank</label>
                                     <input class="master-input" id="recordBank" name="bank_name" value="{{ old('bank_name', $user->bank_name) }}">
@@ -329,6 +334,14 @@
                                     <label class="master-label" for="recordIfsc">IFSC</label>
                                     <input class="master-input" id="recordIfsc" name="bank_ifsc" value="{{ old('bank_ifsc', $user->bank_ifsc) }}">
                                 </div>
+                            </div>
+
+                            <p class="master-section-label">Contact</p>
+                            <div class="master-form-grid is-three">
+                                <div class="master-field">
+                                    <label class="master-label" for="recordMobile">Mobile <span class="master-required" data-role-required>*</span></label>
+                                    <input class="master-input" id="recordMobile" name="mobile" value="{{ old('mobile', $user->mobile) }}">
+                                </div>
                                 <div class="master-field full">
                                     <label class="master-label" for="recordAddress">Address</label>
                                     <textarea class="master-input" id="recordAddress" name="address" rows="2">{{ old('address', $user->address) }}</textarea>
@@ -341,6 +354,10 @@
                                     <label class="master-label" for="recordEmergencyMobile">Emergency mobile</label>
                                     <input class="master-input" id="recordEmergencyMobile" name="emergency_contact_mobile" value="{{ old('emergency_contact_mobile', $user->emergency_contact_mobile) }}">
                                 </div>
+                            </div>
+
+                            <p class="master-section-label">Access</p>
+                            <div class="master-form-grid is-three">
                                 <div class="master-field">
                                     <label class="master-label" for="recordPassword">New password (leave blank to keep it)</label>
                                     <input class="master-input" id="recordPassword" type="password" name="password" autocomplete="new-password">
@@ -351,7 +368,7 @@
                                     <input class="master-input" id="recordPasswordConfirm" type="password" name="password_confirmation" autocomplete="new-password">
                                 </div>
                             </div>
-                            <div class="master-actions">
+                            <div class="master-actions is-sticky">
                                 <button class="master-btn master-btn-primary" type="submit">Save the record</button>
                             </div>
                         </form>

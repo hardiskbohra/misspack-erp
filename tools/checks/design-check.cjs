@@ -467,6 +467,99 @@ check('a select\u2019s list is painted in front of the dialog it was opened from
     && parseInt(dropdownZ.value, 10) > parseInt(modalZ.value, 10),
     'dropdown ' + dropdownZ.value + ' vs dialog ' + modalZ.value);
 
+/* --------------------------------------------------------------------------
+   5. the shared vocabulary — a class a page wears must be a class a sheet owns
+   The same fault has now cost three rounds: `.master-form-grid` (named by five
+   dialogs, defined only inside the price-calculator sheet), `.master-section-
+   label` / `.master-info-box` (named, never defined anywhere) and
+   `.master-detail-list` (named by three record pages, never defined). Each one
+   renders as an unstyled block and reads as "the layout is broken", and none of
+   them is visible in a diff.
+
+   The rule is therefore mechanical: every `master-*` class in a `class="…"`
+   attribute must be declared by a stylesheet — or toggled by a script, which is
+   how a state class like `.is-open` is a legitimate name. `KNOWN` is the debt
+   that predates this rule, one module per line. It is **not** an ignore list: a
+   known offender that has since been defined or removed fails the check as
+   stale, so the list can only get shorter.
+   -------------------------------------------------------------------------- */
+
+const declaredClasses = new Set();
+const jsClassNames = new Set();
+
+for (const file of walk(CSS).filter(f => f.endsWith('.css'))) {
+    for (const m of strip(read(file)).matchAll(/\.(master-[a-z0-9-]+)/g)) {
+        declaredClasses.add(m[1]);
+    }
+}
+
+for (const file of walk(path.join(ROOT, 'public/assets/js')).filter(f => f.endsWith('.js'))) {
+    for (const m of read(file).matchAll(/['"`](master-[a-z0-9-]+)/g)) {
+        jsClassNames.add(m[1]);
+    }
+}
+
+const wornClasses = new Map();
+for (const file of walk(VIEWS).filter(f => f.endsWith('.blade.php'))) {
+    for (const m of read(file).matchAll(/class="([^"]*)"/g)) {
+        for (const token of m[1].split(/\s+/)) {
+            if (!/^master-[a-z0-9-]+$/.test(token)) continue;
+            if (!wornClasses.has(token)) wornClasses.set(token, new Set());
+            wornClasses.get(token).add(path.relative(ROOT, file));
+        }
+    }
+}
+
+/* Where a `master-*` name is worn but no sheet owns it, today. Modules already
+   shipped keep their own naming until their turn; nothing new may join them. */
+const KNOWN = [
+    'master-alert-error', 'master-attention-card', 'master-avatar-actions',
+    'master-avatar-info', 'master-avatar-preview', 'master-avatar-row',
+    'master-calc-input', 'master-checkbox', 'master-delete-btn',
+    'master-file-name', 'master-form-group', 'master-password-wrap',
+    'master-save', 'master-search-form', 'master-text', 'master-wrap',
+];
+
+const undressed = [...wornClasses.keys()]
+    .filter(c => !declaredClasses.has(c) && !jsClassNames.has(c) && !KNOWN.includes(c))
+    .sort();
+
+check('every master-* class a view wears is declared by a sheet',
+    undressed.length === 0,
+    undressed.map(c => c + ' (' + [...wornClasses.get(c)].join(', ') + ')').join(' | '));
+
+const mended = KNOWN.filter(c => declaredClasses.has(c) || jsClassNames.has(c) || !wornClasses.has(c));
+
+check('no mended class is still carried as debt',
+    mended.length === 0,
+    mended.join(', ') + ' — remove from KNOWN, it is defined or gone now');
+
+/* A fact is a hairline row. `.master-info` on its own is a bordered box, and
+   `.master-card--flat .master-info` re-surfaces it — so the facts rule has to
+   repeat itself with the card in front, or a flat card turns a record back
+   into a wall of boxes. That is exactly what the employee record looked like. */
+const facts = strip(read(path.join(CSS, 'master-detail.css')));
+const factsBody = (facts.match(/\.master-facts > \.master-info,[\s\S]*?\{([^}]*)\}/) || [, ''])[1];
+
+check('a fact is a hairline row, not a box per field',
+    /border:\s*0/.test(factsBody) && /background:\s*none/.test(factsBody),
+    factsBody.trim().replace(/\s+/g, ' '));
+
+check('and the flat card cannot re-surface it as a panel row',
+    /\.master-card--flat \.master-facts > \.master-info/.test(facts),
+    'the compound selector is missing — a later file wins ties');
+
+/* Three up, on a high breakpoint only: a third column at 900px is narrower than
+   its own label. */
+const form = strip(read(path.join(CSS, 'master-form.css')));
+check('the field grid has a three-up variant behind a wide breakpoint',
+    /@media \(min-width: 1200px\) \{\s*\.master-form-grid\.is-three/.test(form),
+    'expected `.master-form-grid.is-three` inside `@media (min-width: 1200px)`');
+
+check('a long form can pin its action bar to the foot of the viewport',
+    /\.master-actions\.is-sticky\s*\{[^}]*position:\s*sticky/.test(form),
+    'expected `.master-actions.is-sticky { position: sticky }`');
+
 /* balanced braces everywhere */
 const unbalanced = fs.readdirSync(CSS).filter(f => f.endsWith('.css')).filter(f => {
     const t = read(path.join(CSS, f));

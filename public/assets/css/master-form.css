@@ -153,6 +153,16 @@
     margin-top: 10px
 }
 
+/* Three up. Twenty fields in two columns is a thirteen-row scroll; in three
+   columns it is seven. The breakpoint is high because a three-column field is
+   ~330px wide and a two-column one at 900px is the same — below this the third
+   column would be narrower than its own label. */
+@media (min-width: 1200px) {
+    .master-form-grid.is-three {
+        grid-template-columns: repeat(3, minmax(0, 1fr))
+    }
+}
+
 /* A group heading inside a dialog or a form, and the note box under it. The
    user dialogs have named both since they were written and no sheet defined
    either: a heading printed as ordinary text and a failed save gave its reason
@@ -361,6 +371,20 @@
     gap: 12px;
     flex-wrap: wrap;
     margin-top: 26px
+}
+
+/* A form taller than the window hides its own Save button: the office types
+   into row 2 and then hunts for the action at row 9. Stuck to the bottom of the
+   viewport while the card is in view, with the card's own surface behind it, so
+   the fields scroll under the bar instead of next to it. */
+.master-actions.is-sticky {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-top: 20px;
+    padding: 14px 0 12px;
+    border-top: 1px solid var(--mc-border);
+    background: var(--mc-card)
 }
 
 .master-image-row {

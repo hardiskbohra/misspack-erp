@@ -258,9 +258,39 @@ and change the role). `DatabaseSeeder` now seeds one administrator
 (`admin@misspack.com`) and four employees so a fresh install has both sides to
 look at.
 
-## 6. What is verified where
+## 6. The record's shape: facts to read, one form to write
 
-`node tools/checks/employees-check.cjs` — 80 source-level guards, run with the
+The details tab shows the same twenty-one fields twice — once as the record you
+read, once as the form you edit — so both halves are now dense on purpose.
+
+**Read: the facts grid.** `.master-detail-list` was named by three record pages
+and defined by no sheet, so every field fell back to `.master-info`, the bordered
+box, and each one took a full-width row: nine fields of "The record, in short"
+were nine boxes, and the details tab was a wall of them. The lists now use
+`.master-facts` — the shared label-over-value grid the shipment, project and
+client records already use: two columns, a hairline between rows, no box per
+field, because a record is not a form.
+
+One trap lives in that change. `.master-card--flat .master-info` re-surfaces
+every fact as a panel row, and it is the same specificity as `.master-facts >
+.master-info` in a later file, so the facts rule is written twice, with the card
+in front of it. Without that, a flat card wins the tie and the boxes come back.
+
+**Write: one form, five groups, three to a row.** Twenty-one fields in two
+columns is a thirteen-row scroll with no landmarks; they are now five labelled
+groups — Identity, Employment, Bank, Contact, Access — each a
+`master-form-grid.is-three`: three columns at 1200px and up (a third column
+below that is narrower than its own label), two above 768, one on a phone. The
+save button rides the foot of the viewport while the card is in view
+(`.master-actions.is-sticky`), because the office types in row two and then
+hunts for the action at row nine.
+
+The field list is held by a guard, not by review: `employees-check` asserts the
+form still posts all twenty-one names, so a regrouping cannot quietly drop one.
+
+## 7. What is verified where
+
+`node tools/checks/employees-check.cjs` — the module's own guards, run with the
 other ten gates: the middleware is on the office group, no personal route takes
 a user id, ownership is checked before serving a file, a draft is invisible, a
 verified paper cannot be removed by its uploader, the two role lists agree, the

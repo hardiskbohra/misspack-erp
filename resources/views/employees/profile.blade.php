@@ -27,11 +27,11 @@
         @foreach ($record['groups'] as $group)
             <div class="master-card master-card--flat master-section">
                 <h3 class="master-section-title">{{ $group['title'] }}</h3>
-                <div class="master-detail-list">
+                <div class="master-facts">
                     @foreach ($group['fields'] as $field)
                         <div class="master-info">
                             <span>{{ $field['label'] }}</span>
-                            <strong class="{{ blank($field['value']) ? 'is-blank' : '' }}">
+                            <strong @class(['is-blank' => blank($field['value'])])>
                                 {{ blank($field['value']) ? 'Not on file' : $field['value'] }}
                             </strong>
                         </div>
@@ -53,7 +53,7 @@
                 @csrf
                 @method('PUT')
 
-                <div class="master-form-grid">
+                <div class="master-form-grid is-three">
                     <div class="master-field">
                         <label class="master-label" for="profileMobile">Mobile</label>
                         <input class="master-input" id="profileMobile" name="mobile" value="{{ old('mobile', $me->mobile) }}"
@@ -93,7 +93,7 @@
             <h3 class="master-section-title">Your password</h3>
             <form method="POST" action="{{ route('my.password.update') }}">
                 @csrf
-                <div class="master-form-grid">
+                <div class="master-form-grid is-three">
                     <div class="master-field full">
                         <label class="master-label" for="currentPassword">Current password</label>
                         <input class="master-input" id="currentPassword" type="password" name="current_password" autocomplete="current-password">
