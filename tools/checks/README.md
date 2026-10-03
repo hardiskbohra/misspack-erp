@@ -48,6 +48,18 @@ for c in design blade php mark list status cost docs statement report; do
 done
 ```
 
+### What the checkers cannot see
+
+These files *read* the code. Two bugs shipped that a reader could not catch — an
+empty search box that searched the ledger for the word `all`, and the same
+sentinel re-applied on the way into the query — because both were about what the
+code *does* when it runs. That question is answered by the test suite, where a
+PHP runtime exists:
+
+```bash
+php artisan test --filter=CashflowFiltersTest   # what an unfiltered ledger does
+```
+
 There is no CI in this repository and no PHP runtime in the sandbox, so the
 checkers are the gate: they are run by hand before every commit, and each one is
 paired with a mutator (a plausible regression written into the tree) to prove the

@@ -157,8 +157,12 @@ class CashflowFilters
      * the word "all" (a list with no rows in it), and an empty date range became
      * the string "all", which Carbon refused to parse — a 500, over a filter.
      */
-    public static function default(string $queryKey)
+    public static function default(string $key)
     {
+        /* A view key or a query key: both spellings name the same filter, and
+           both are asked about here. */
+        $queryKey = self::VIEW_KEYS[$key] ?? $key;
+
         return array_key_exists($queryKey, self::DEFAULTS) ? self::DEFAULTS[$queryKey] : 'all';
     }
 
@@ -228,7 +232,16 @@ class CashflowFilters
      */
     public function apply(Builder $query, array $filters): Builder
     {
-        $value = fn (string $key, string $default = 'all') => $filters[$key] ?? $default;
+        /* A filter that is *present* is the filter, even when it is empty; only
+           a key the caller never supplied falls back. `?? $default` cannot tell
+           those apart, and that is not a style point — three filters have
+           nothing as their "off" (the search box and the two ends of a date
+           range), and `null ?? 'all'` turned every one of them into the
+           sentinel: the ledger searched for the word "all" and bounded itself
+           by the date 'all', so it showed nothing at all. */
+        $value = fn (string $key, ?string $default = null) => array_key_exists($key, $filters)
+            ? $filters[$key]
+            : ($default ?? self::default($key));
         $set = fn (string $key, string $default = 'all') => $value($key, $default) !== null
             && $value($key, $default) !== ''
             && (string) $value($key, $default) !== $default;

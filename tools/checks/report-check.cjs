@@ -264,9 +264,31 @@ check('every filter the views use is declared, and its "off" is a sentinel or no
 check('only the search box and the two ends of a range are "nothing" when empty',
     emptyDefaults.sort().join(',') === 'date_from,date_to,search');
 
+/* The producer and the consumer have to answer "is this filter set?" the same
+   way. `fromRequest()` learned to emit null for the three filters whose "off" is
+   nothing, but `apply()` still read `$filters[$key] ?? $default` — which turns a
+   declared null straight back into the sentinel, so the ledger searched for the
+   word "all" and bounded itself by the date 'all' and listed nothing. Reading a
+   filter is a *presence* question: `array_key_exists`, never `??`. */
+const methodBody = name => {
+    const start = filters.indexOf('function ' + name + '(');
+
+    return start === -1 ? '' : filters.slice(start, filters.indexOf('\n    }', start));
+};
+
+check('four readers of one vocabulary agree on what "unset" means',
+    ['fromRequest', 'toQuery', 'applied', 'apply']
+        .every(name => /self::default\(|array_key_exists\(/.test(methodBody(name))));
+
+check('a filter that is present is never re-defaulted on the way into the query',
+    /array_key_exists\(\$key, \$filters\)/.test(methodBody('apply'))
+    && ! /\$filters\[\$key\] \?\?/.test(strip(methodBody('apply')))
+    && /self::VIEW_KEYS\[\$key\] \?\? \$key/.test(filters));
+
 check('a declared null default is a default, not a missing key',
-    /public static function default\(string \$queryKey\)/.test(filters)
+    /public static function default\(string \$key\)/.test(filters)
     && /array_key_exists\(\$queryKey, self::DEFAULTS\) \? self::DEFAULTS\[\$queryKey\] : 'all'/.test(filters)
+    && /self::VIEW_KEYS\[\$key\] \?\? \$key/.test(filters)
     && /\$request->query\(\$queryKey, self::default\(\$queryKey\)\)/.test(filters)
     && ! /\?\? 'all'/.test(strip(filters))
     && /'search' => trim\(\(string\) \$value\) \?: null,/.test(filters));
@@ -281,6 +303,15 @@ check('a date out of the query string is read as a day or as nothing',
     && ! /Carbon::parse\(\s*request\(/.test(controller)
     && ! /Carbon::parse\(\s*\$request/.test(filters)
     && ! /Carbon::parse\(\$dateFrom\)|Carbon::parse\(\$dateTo\)/.test(ledgerView));
+
+/* A source-reading check cannot answer "what does a bare request do to the
+   query?" — two bugs proved that. The answer lives in a test that runs the
+   service, and this guard is the tripwire that keeps it there. */
+check('the filter vocabulary is run by a test, not only read by this file',
+    fs.existsSync(path.join(ROOT, 'tests/Unit/CashflowFiltersTest.php'))
+    && /test_a_request_with_no_filters_narrows_nothing/.test(read('tests/Unit/CashflowFiltersTest.php'))
+    && /->apply\(CashflowEntry::query\(\), \$this->filters\(\$query\)\)/.test(read('tests/Unit/CashflowFiltersTest.php'))
+    && /assertStringNotContainsString\('where', \$query\['sql'\], 'a bare ledger must not filter'\)/.test(read('tests/Unit/CashflowFiltersTest.php')));
 
 check('the buckets are named the way the rest of the module names periods',
     /'year' => \$date->format\('Y'\),\n\s*'quarter' => 'Q'\.\$date->quarter\.' '\.\$date->format\('Y'\),\n\s*default => \$date->format\('M Y'\),/.test(service)
