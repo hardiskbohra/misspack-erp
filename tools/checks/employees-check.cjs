@@ -323,6 +323,7 @@ check('the profile has two owners, written down once',
 const ownDetails = read('resources/views/users/partials/own-details.blade.php');
 const ownPassword = read('resources/views/users/partials/own-password.blade.php');
 const accountView = read('resources/views/account/index.blade.php');
+const usersSheet = read('public/assets/css/users.css');
 
 check('the fields that are yours are one form, rendered by both pages',
     /name="mobile"/.test(ownDetails)
@@ -1225,6 +1226,26 @@ check('the account page has a sheet for its own cells, and the shell owns the me
     && /\.user-menu\.is-topbar \.master-dropdown-toggle \{/.test(layoutSheet)
     && /\.user-menu\.is-sidebar \.master-dropdown-toggle \{/.test(layoutSheet),
     'the trigger geometry is the shell\'s, the page\'s cells are the module\'s');
+
+/* ---- the layout of that page, which is the part a screenshot judges ---------
+   The page is a form and an aside: the details card is the tallest thing on it
+   (five fields, one of them a textarea) and the other column holds two cards, so
+   a third card on that side left the tall column ending some three hundred
+   pixels above the bottom of the grid. The switch card sits in the tall column
+   now — and it is a *row*: a button under its own sentence is a card-shaped hole,
+   where beside it the card is as tall as the button it holds. */
+const accountTitles = ['Your details', 'Appearance', 'Password', 'Yours to reach']
+    .map(title => accountView.indexOf('>' + title + '<'));
+
+check('the account page ends both its columns together',
+    accountTitles.every((at, i) => at > 0 && (i === 0 || at > accountTitles[i - 1]))
+    && /class="account-switch"/.test(accountView),
+    'the tallest card decides where its column ends, so it takes a companion');
+
+check('the theme switch sits beside the sentence it belongs to',
+    /\.user-account \.account-switch \{[^}]*display: flex[^}]*justify-content: space-between/.test(usersSheet)
+    && /\.user-account \.account-switch \.master-section-title \{\s*margin: 0/.test(usersSheet),
+    'stacked, the switch was a card with a button somewhere under it');
 
 /* ---------------------------------------------------------------- report */
 

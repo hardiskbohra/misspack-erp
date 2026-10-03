@@ -959,14 +959,28 @@ check('a date filter is printed by the list, never parsed by it',
    them (any count of cards, in any module), so no module has to space its own
    page — and a stats row fills its width whether the page shows three figures,
    four or five, instead of leaving an empty column at the end. */
+/* The rule, not the selector that happens to end it: this used to assert that
+   `.master-card + .master-card {` sat straight in front of the body, which is
+   true only until another block joins the list — and then the guard fails on a
+   sheet that just got more correct. Ask the rule for its body and its members. */
+const rhythmRule = cssRules(listCss).find(rule =>
+    rule.sel.split(',').some(sel => sel.trim() === '.master-list > .master-card + .master-card'));
+
 check("the blocks of a page keep the page's own rhythm",
-    /@media screen \{\s*\.master-list > \.master-card \+ \.master-card,/.test(listCss)
+    !! rhythmRule
+    && rhythmRule.query === 'screen'
+    && /margin-top:\s*24px/.test(rhythmRule.body)
+    /* every wrapper that stacks cards as blocks is named in that one rule */
     && ['.cf', '.ship', '.vendor-show', '.client-show', '.emp'].every(wrapper =>
-        new RegExp(wrapper.replace('.', '\\.') + ' > \\.master-card \\+ \\.master-card').test(listCss))
-    && (listCss.match(/\.master-card \+ \.master-card \{\s*margin-top: 24px;/g) || []).length === 1
+        rhythmRule.sel.split(',').some(sel => sel.trim().startsWith(wrapper + ' > .master-card')))
+    /* …and when the block under the card is the two-column grid — a grid owns the
+       gutter between its columns and never the space above itself, so without
+       this the account page's identity strip shared an edge with the columns. */
+    && rhythmRule.sel.split(',').filter(sel => /^\.(master-list|emp) > \.master-card \+ \.master-grid$/.test(sel.trim())).length === 2
     && /\.master-grid > \.master-card \+ \.master-card \{\s*margin-top: 0;/.test(listCss)
     && ! /\.master-card \+ \.master-(card|stats)/.test(cashCss)
-    && ! /\.master-card \+ \.master-(card|stats)/.test(css));
+    && ! /\.master-card \+ \.master-(card|stats)/.test(css),
+    'two blocks sharing an edge is not a tighter layout, it is a missing line');
 
 /* ------------------------------- 8. the quick entry dialog (67)
    Quick Entry is the ledger's front door — one bank line, recorded in a few

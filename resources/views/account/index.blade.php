@@ -59,6 +59,34 @@
                     'prefix' => 'account',
                 ])
             </div>
+
+            {{-- Appearance is a switch with a sentence, not a section: beside its
+                 own sentence the card is as tall as the button it holds, and this
+                 column is where it belongs — it is a thing about *you*, and it
+                 keeps the two columns ending together instead of one of them
+                 leaving three hundred pixels of white underneath. --}}
+            <div class="master-card master-card--flat master-section">
+                <div class="account-switch">
+                    <div>
+                        <h3 class="master-section-title">Appearance</h3>
+                        <p class="master-sub account-note">
+                            The same switch as the button in the top bar — here for phones, where
+                            that button is hidden.
+                        </p>
+                    </div>
+
+                    <form method="POST" action="{{ route('theme.toggle') }}">
+                        @csrf
+                        <button class="master-btn master-btn-soft" type="submit">
+                            @if (session('theme', 'light') === 'light')
+                                <i class="fas fa-moon" aria-hidden="true"></i> Switch to dark
+                            @else
+                                <i class="fas fa-sun" aria-hidden="true"></i> Switch to light
+                            @endif
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
 
         <div>
@@ -73,27 +101,6 @@
                     'submit' => 'Change password',
                     'prefix' => 'account',
                 ])
-            </div>
-
-            <div class="master-card master-card--flat master-section">
-                <h3 class="master-section-title">Appearance</h3>
-                <p class="master-sub account-note">
-                    The same switch as the button in the top bar — here for phones, where that
-                    button is hidden.
-                </p>
-
-                <form method="POST" action="{{ route('theme.toggle') }}">
-                    @csrf
-                    <div class="master-actions">
-                        <button class="master-btn master-btn-soft" type="submit">
-                            @if (session('theme', 'light') === 'light')
-                                <i class="fas fa-moon" aria-hidden="true"></i> Switch to dark
-                            @else
-                                <i class="fas fa-sun" aria-hidden="true"></i> Switch to light
-                            @endif
-                        </button>
-                    </div>
-                </form>
             </div>
 
             <div class="master-card master-card--flat master-section">

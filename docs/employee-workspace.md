@@ -392,6 +392,27 @@ render **one form each** (`users/partials/own-details.blade.php`,
 `own-password.blade.php`) and both controllers filter through one service list.
 Two copies of a field list is how two pages start asking different questions.
 
+### The shape of `/account`
+
+The page is a form and an aside, and the aside is two cards. The details card is
+the tallest thing on it — five fields, one of them a textarea — so a third card
+beside it left that column ending some three hundred pixels above the bottom of
+the grid. The switch card moved into the tall column, where it is a **row**: a
+button under its own sentence is a card-shaped hole, and beside it the card is as
+tall as the button it holds.
+
+One thing was missing at the shell's level, and it belongs there: a `.master-grid`
+that directly follows a card had **no margin at all** — a grid owns the gutter
+*between* its columns and never the space above itself. The identity strip
+therefore shared an edge with the columns under it, and the employee's record
+page did the same behind its "still to be filled in" note. `master-list.css` now
+names `.master-card + .master-grid` in the same one rule that spaces every other
+pair of blocks (the margins collapse with a card's own `margin-bottom`, so a block
+that already carries one is not spaced twice) — and the rhythm guard asks that
+rule for its *body* instead of for the selector that used to end it: a guard built
+on "this selector is followed by a brace" fails the moment the list gains a
+member, which is the day the sheet got more correct.
+
 **And one bug this uncovered.** `theme.toggle` sat inside the `office` group
 while its own comment said "for anybody signed in — an employee has a theme too".
 An employee pressing the top bar's **Dark** button was turned around at the door
@@ -407,7 +428,9 @@ a user id, ownership is checked before serving a file, a draft is invisible, a
 verified paper cannot be removed by its uploader, the two role lists agree, the
 stylesheet has a dark value for every token, one salary door, one payslip
 document read by three surfaces, totals summed from their own lines, a slip
-sheet that loads its own stylesheet, and a draft that cannot be printed.
+sheet that loads its own stylesheet, a draft that cannot be printed, and the
+account page's own shape — two columns that end together, the theme switch beside
+its sentence, the page's blocks spaced by the shell and not by the page.
 
 Two arithmetic facts are asserted by tests that **run**, not by reading the
 source — `php artisan test --filter=EmployeePayTest` (which way the money went)
@@ -415,6 +438,6 @@ and `php artisan test --filter=EmployeePayslipTest` (a slip's totals are its own
 lines, the money in words, the page and the paper are one document). Neither
 needs a database.
 
-And `python3 /tmp/2a/mutate.py` proves the guards bite: each hand mutation under
-`/tmp/2a/hand.json` breaks exactly one rule and is caught by the guard that
+And `python3 .dev-rig/mutate.py` proves the guards bite: each hand mutation under
+`.dev-rig/hand.json` (62 hand mutations) breaks exactly one rule and is caught by the guard that
 names it.

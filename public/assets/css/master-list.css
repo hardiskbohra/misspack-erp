@@ -63,17 +63,26 @@
    blocks. The margins collapse with a module's own `margin-bottom`, so a block
    that already carries one is not spaced twice.
 
+   The same is true of the grid *itself* when it follows a card: a grid owns the
+   gutter between its columns and never the space above itself, so a page that
+   opened with a card had its columns begin exactly where that card ended — the
+   account page's identity strip ran straight into the two columns under it, and
+   the employee's record page did it behind the "still to be filled in" note.
+   Two blocks sharing an edge is not a tighter layout, it is a missing line.
+
    Screen only: on paper a statement's own sheet has its own rhythm, and a
    toolbar that is hidden for print must not leave a band of white behind it. */
 
 @media screen {
     .master-list > .master-card + .master-card,
     .master-list > .master-card + .master-stats,
+    .master-list > .master-card + .master-grid,
     .cf > .master-card + .master-card,
     .ship > .master-card + .master-card,
     .vendor-show > .master-card + .master-card,
     .client-show > .master-card + .master-card,
-    .emp > .master-card + .master-card {
+    .emp > .master-card + .master-card,
+    .emp > .master-card + .master-grid {
         margin-top: 24px;
     }
 

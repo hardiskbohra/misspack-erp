@@ -144,8 +144,8 @@
 .user-account .account-head {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 18px 20px
+    gap: 18px;
+    padding: 16px 20px
 }
 
 .user-account .account-head-avatar {
@@ -184,7 +184,7 @@
 }
 
 .user-account .account-head-meta {
-    margin: 2px 0 6px;
+    margin: 2px 0 4px;
     color: var(--mc-text-3);
     font-size: 12.5px;
     font-weight: 600
@@ -196,6 +196,28 @@
 
 .user-account .account-note {
     margin: -6px 0 10px
+}
+
+/* The theme switch is one button with one sentence. Stacked, the sentence sat
+   above the button and the button under a card's worth of white; side by side,
+   the card is as tall as its own control and the sentence stays next to what it
+   explains. It wraps rather than squeezing the sentence: on a phone the two
+   parts are two rows, which is the layout it had before. */
+.user-account .account-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap
+}
+
+.user-account .account-switch .master-section-title {
+    margin: 0
+}
+
+.user-account .account-switch .account-note {
+    margin: 3px 0 0;
+    max-width: 60ch
 }
 
 /* Doors out of this page, each with the one line that says why it is there. */
