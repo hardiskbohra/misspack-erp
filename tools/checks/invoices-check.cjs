@@ -951,9 +951,25 @@ check('the address block stays in its parts, and shipping is one click from bill
 
 check('opening an invoice shows its own copy without rewriting it',
     /applySnapshot\(clientSelect\.options\[clientSelect\.selectedIndex\], true\)/.test(clientBlock)
-    && /applySnapshot\(this\.options\[this\.selectedIndex\], false\)/.test(clientBlock),
+    && /applySnapshot\(clientSelect\.options\[clientSelect\.selectedIndex\], false\)/.test(clientBlock),
     'the stored copy is the invoice\'s, and a screen that overwrites it on load '
     + 'changes a sent invoice by being opened');
+
+/* Every `.master-select` in this app is a select2, and select2 announces a pick
+   with `$el.trigger('change')` — a jQuery trigger, which runs jQuery handlers and
+   the inline `onchange` and dispatches **no DOM event**. A handler bound with
+   `addEventListener('change', …)` therefore never hears a client chosen from the
+   list: the fields the client's record fills stayed empty until the invoice was
+   saved and the server copied the same snapshot. Same trap on the item rows'
+   product list. */
+check('a pick made in a select2 list reaches the handler that fills the form',
+    /function onChange\(el, handler\)/.test(js)
+    && /window\.jQuery\(el\)\.on\('change', handler\)/.test(js)
+    && /onChange\(clientSelect, clientChosen\)/.test(js)
+    && /onChange\(body, function \(e\) \{/.test(js)
+    && ! /clientSelect\.addEventListener\('change'/.test(js),
+    'a DOM `change` listener is the one binding select2 never fires — the office '
+    + 'picks a client and the form sits there empty until the invoice is saved');
 
 /* ---------------------------------------------------------------- report */
 

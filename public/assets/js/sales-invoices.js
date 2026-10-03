@@ -106,6 +106,24 @@
             setText(valueId, text);
         }
 
+        /* A pick made in a select2 is announced with `$el.trigger('change')` —
+           a **jQuery** trigger, which runs jQuery handlers and the inline
+           `onchange` and dispatches no DOM event at all. A plain
+           `addEventListener('change', …)` never hears it, so a handler bound
+           that way fills nothing when the office chooses from the list; every
+           `.master-select` in this app is a select2. Bind the way the pick is
+           announced: jQuery when it is here (the shell loads it, and select2
+           needs it anyway), the native listener as the fallback. */
+        function onChange(el, handler) {
+            if (!el) return;
+
+            if (window.jQuery && window.jQuery.fn) {
+                window.jQuery(el).on('change', handler);
+            } else {
+                el.addEventListener('change', handler);
+            }
+        }
+
         function productSelect(name, selected) {
             var html = '<select class="master-select master-product-select" name="' + name + '"><option value="">Manual</option>';
             productOptions.forEach(function (p) {
@@ -258,7 +276,10 @@
             if (e.target.classList.contains('calc')) calculateTotals();
         });
 
-        body.addEventListener('change', function (e) {
+        /* The same trap as the client select: the row's product list is a
+           select2 too (the shell decorates every `.master-select`, including the
+           rows this file injects). */
+        onChange(body, function (e) {
             if (e.target.classList.contains('master-product-select')) {
                 var product = productOptions.find(function (p) { return String(p.id) === String(e.target.value); });
                 var row = e.target.closest('tr');
@@ -298,7 +319,9 @@
            every part of that copy. Both sides read ONE list: the controller
            writes it onto the option as JSON, and this applies it by field name,
            so a column added there arrives here with no edit to this file — and
-           there is no second list to fall out of step with the first. */
+           there is no second list to fall out of step with the first — and the
+           handler is bound through `onChange` below, because a select2 announces
+           a pick with a jQuery trigger that a DOM listener never hears. */
         var clientSelect = document.getElementById('clientSelect');
         if (clientSelect) {
             var clientForm = clientSelect.closest('.master-form') || document;
@@ -331,12 +354,16 @@
                 });
             }
 
-            clientSelect.addEventListener('change', function () {
+            function clientChosen() {
                 /* The placeholder is not a client: picking it leaves what the
                    office has typed where it is. */
-                if (!this.value) return;
-                applySnapshot(this.options[this.selectedIndex], false);
-            });
+                if (!clientSelect.value) return;
+                applySnapshot(clientSelect.options[clientSelect.selectedIndex], false);
+            }
+
+            /* Through `onChange`, so a pick made in the select2 list is heard:
+               a DOM `change` listener is the one binding select2 never fires. */
+            onChange(clientSelect, clientChosen);
 
             applySnapshot(clientSelect.options[clientSelect.selectedIndex], true);
 

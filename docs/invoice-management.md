@@ -335,3 +335,12 @@ The invoice number, both dates and the figures are `nowrap`; a client's name, a
 project's and the notes under the figures still wrap. What *Sales + potential*
 means lives with the footer's own note — where there is room for it — not under
 the figure.
+
+* **the pick is heard.** Every `.master-select` in this app is a select2, and
+  select2 announces a pick with `$el.trigger('change')` — a jQuery trigger, which
+  runs jQuery handlers and the inline `onchange` and dispatches **no DOM event**.
+  The handler that carries the client's record onto the form is therefore bound
+  through the module's `onChange()` helper (jQuery when it is here, the native
+  listener otherwise): a DOM `change` listener is the one binding select2 never
+  fires, and the fields stayed empty until the invoice was saved and the server
+  copied the same snapshot. The item rows' product list is bound the same way.
