@@ -19,6 +19,7 @@ const vendorView = read('resources/views/vendors/index.blade.php');
 const projectView = read('resources/views/projects/index.blade.php');
 const adminLayout = read('resources/views/layouts/app.blade.php');
 const portalLayout = read('resources/views/client_portal/layouts/app.blade.php');
+const appLayoutJs = read('public/assets/js/app-layout.js');
 const listJs = read('public/assets/js/master-list.js');
 const tableCss = read('resources/css/components/tables.css');
 const formCss = read('resources/css/components/forms.css');
@@ -73,6 +74,18 @@ check('form labels use the field gap without stacked legacy margins',
 check('admin and portal layouts both load the shared drawer behavior',
     /assets\/js\/master-drawer\.js/.test(adminLayout)
     && /assets\/js\/master-drawer\.js/.test(portalLayout));
+const responsiveStateStart = appLayoutJs.indexOf('function applyResponsiveState()');
+const responsiveStateEnd = appLayoutJs.indexOf('\n        if (sidebarToggle)', responsiveStateStart);
+const responsiveState = responsiveStateStart >= 0 && responsiveStateEnd > responsiveStateStart
+    ? appLayoutJs.slice(responsiveStateStart, responsiveStateEnd)
+    : '';
+check('the active route is revealed inside the shared sidebar scroll area',
+    /function keepActiveSidebarItemVisible\(\)/.test(appLayoutJs)
+    && /document\.querySelector\('\.sidebar-nav'\)/.test(appLayoutJs)
+    && /nav\.querySelector\('\.sidebar-item\.active'\)/.test(appLayoutJs)
+    && /nav\.scrollTop -= clippedAtTop/.test(appLayoutJs)
+    && /nav\.scrollTop \+= clippedAtBottom/.test(appLayoutJs)
+    && /keepActiveSidebarItemVisible\(\)/.test(responsiveState));
 check('vendor and project indexes provide a quick-detail drawer example',
     /data-drawer-open="vendorQuickDetails"/.test(vendorView)
     && /<x-drawer id="vendorQuickDetails"/.test(vendorView)

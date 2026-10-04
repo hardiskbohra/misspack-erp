@@ -13,10 +13,33 @@
             return mobileBreakpoint.matches;
         }
 
+        /* Each request starts with a fresh sidebar at scrollTop 0. Keep the
+           current route visible inside the menu's own scroll area without
+           moving the page or disturbing the top and bottom sidebar chrome. */
+        function keepActiveSidebarItemVisible() {
+            window.requestAnimationFrame(function () {
+                var nav = document.querySelector('.sidebar-nav');
+                var activeItem = nav && nav.querySelector('.sidebar-item.active');
+                if (!nav || !activeItem) return;
+
+                var navBounds = nav.getBoundingClientRect();
+                var itemBounds = activeItem.getBoundingClientRect();
+                var clippedAtTop = navBounds.top - itemBounds.top;
+                var clippedAtBottom = itemBounds.bottom - navBounds.bottom;
+
+                if (clippedAtTop > 0) {
+                    nav.scrollTop -= clippedAtTop;
+                } else if (clippedAtBottom > 0) {
+                    nav.scrollTop += clippedAtBottom;
+                }
+            });
+        }
+
         function openMobileSidebar() {
             root.classList.remove('sidebar-collapsed');
             root.classList.add('sidebar-mobile-open');
             document.body.classList.add('sidebar-open-body');
+            keepActiveSidebarItemVisible();
         }
 
         function closeMobileSidebar() {
@@ -36,6 +59,7 @@
             }
 
             root.classList.toggle('sidebar-collapsed', collapsed);
+            keepActiveSidebarItemVisible();
 
             try {
                 localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
@@ -62,6 +86,7 @@
             if (mode === 'tablet') {
                 forceMobileClosed();
                 responsiveMode = mode;
+                keepActiveSidebarItemVisible();
                 return;
             }
 
@@ -74,6 +99,7 @@
                     root.classList.add('sidebar-collapsed');
                 }
                 responsiveMode = mode;
+                keepActiveSidebarItemVisible();
                 return;
             }
 
@@ -86,6 +112,7 @@
                 root.classList.toggle('sidebar-collapsed', saved);
             }
             responsiveMode = mode;
+            keepActiveSidebarItemVisible();
         }
 
         if (sidebarToggle) {
