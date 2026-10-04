@@ -392,6 +392,84 @@ for (const file of files) {
 check('every structural tag is opened and closed the same number of times',
     unbalancedTags.length === 0, unbalancedTags.slice(0, 3).join(' | '));
 
+/* --------------------------------------- 8. a directive stands on its own */
+
+/* Blade finds a directive with /\B@(name)([ \t]*)(\( … \))?/ — the \B means the
+   "@" must NOT follow a word character, and only spaces or tabs may separate
+   the name from its argument list. Both halves fail silently in a way that is
+   invisible until the page renders:
+     - "outstanding@if (…)" is left as literal text while its "@endif" compiles,
+       so the compiled view is `endif;` with no `if` -> ParseError 500.
+     - "@if" with its "(…)" on the next line compiles as a bare "@if", dropping
+       the condition -> `if: ?>` -> ParseError 500.
+   Neither shows up in a diff, and neither is caught by the balance rule above
+   (the directives are balanced; they just are not compiled). */
+const CORE_DIRECTIVES = ['if', 'elseif', 'else', 'endif', 'unless', 'endunless',
+    'hasSection', 'sectionMissing', 'section', 'show', 'endsection', 'extends',
+    'yield', 'parent', 'include', 'includeIf', 'includeWhen', 'includeUnless',
+    'includeFirst', 'each', 'foreach', 'endforeach', 'forelse', 'empty',
+    'endforelse', 'for', 'endfor', 'while', 'endwhile', 'break', 'continue',
+    'switch', 'case', 'default', 'endswitch', 'json', 'php', 'endphp', 'class',
+    'style', 'checked', 'selected', 'disabled', 'readonly', 'required', 'props',
+    'csrf', 'method', 'error', 'enderror', 'dd', 'dump', 'inject', 'use',
+    'stack', 'push', 'prepend', 'endpush', 'endprepend', 'once', 'endonce',
+    'vite', 'lang', 'choice', 'env', 'production', 'verbatim', 'endverbatim',
+    'auth', 'endauth', 'guest', 'endguest', 'can', 'cannot', 'canany',
+    'endcan', 'endcannot', 'endcanany', 'component', 'endcomponent', 'slot',
+    'endslot', 'fragment', 'endfragment', 'js', 'endjs', 'session',
+    'endsession', 'context', 'endcontext'];
+
+/* custom directives count too: anything the views call with an argument list */
+const DIRECTIVES = new Set(CORE_DIRECTIVES);
+const NEEDS_ARGS = new Set(['if', 'elseif', 'unless', 'foreach', 'forelse',
+    'for', 'while', 'switch', 'case', 'include', 'includeIf', 'includeWhen',
+    'includeUnless', 'includeFirst', 'each', 'json', 'class', 'style',
+    'checked', 'selected', 'disabled', 'readonly', 'required', 'inject', 'use',
+    'can', 'cannot', 'canany', 'error', 'lang', 'choice', 'env', 'component',
+    'slot', 'props', 'section', 'yield', 'extends']);
+
+const bladeText = new Map();
+for (const file of files) {
+    bladeText.set(file, fs.readFileSync(file, 'utf8'));
+}
+for (const text of bladeText.values()) {
+    for (const m of text.matchAll(/@([a-zA-Z_]\w*)\s*\(/g)) DIRECTIVES.add(m[1]);
+}
+
+/* Blank what Blade never reads as template text, keeping newlines so the line
+   number in the report is the line the author sees. */
+const mask = (text, re) => text.replace(re, m => m.replace(/[^\n]/g, ' '));
+
+const gluedDirectives = [];
+const detachedArgs = [];
+
+for (const [file, raw] of bladeText) {
+    let text = raw;
+    text = mask(text, /@verbatim[\s\S]*?@endverbatim/g);
+    text = mask(text, /@php(?!\()[\s\S]*?@endphp/g);
+    text = mask(text, /\{\{--[\s\S]*?--\}\}/g);
+    text = mask(text, /\{\{[\s\S]*?\}\}/g);
+    text = mask(text, /\{!![\s\S]*?!!\}/g);
+
+    const lineOf = index => text.slice(0, index).split('\n').length;
+
+    for (const m of text.matchAll(/[A-Za-z0-9_]@([a-zA-Z_]\w*)/g)) {
+        if (!DIRECTIVES.has(m[1])) continue;
+        gluedDirectives.push(`${rel(file)}:${lineOf(m.index)}: @${m[1]} follows "${text[m.index]}"`);
+    }
+
+    for (const m of text.matchAll(/@([a-zA-Z_]\w*)[ \t]*\r?\n[ \t]*(?=\()/g)) {
+        if (!NEEDS_ARGS.has(m[1])) continue;
+        detachedArgs.push(`${rel(file)}:${lineOf(m.index)}: @${m[1]} and its (…) are on different lines`);
+    }
+}
+
+check('no directive is glued to a word (Blade would not compile it)',
+    gluedDirectives.length === 0, [...new Set(gluedDirectives)].slice(0, 3).join(' | '));
+
+check('every directive keeps its (…) on the same line',
+    detachedArgs.length === 0, [...new Set(detachedArgs)].slice(0, 3).join(' | '));
+
 /* ---------------------------------------------------------------- report */
 
 const failed = out.filter(([, ok]) => !ok);

@@ -25,6 +25,7 @@
                 <div class="vendor-currency-line">
                     <span>Billed <strong>{{ $money($row['credit'], $currency) }}</strong></span>
                     <span>Paid <strong class="vendor-amount-credit">{{ $money($row['debit'], $currency) }}</strong></span>
+                    <span>Expenses <strong>{{ $money($row['expense'], $currency) }}</strong></span>
                     <span>Balance <strong @class(['vendor-amount-debit' => $row['balance'] > 0])>{{ $money($row['balance'], $currency) }}</strong></span>
                 </div>
                 <span class="master-sub">In rupees: billed {{ $money($row['inr_credit']) }} · paid {{ $money($row['inr_debit']) }}</span>
@@ -65,7 +66,7 @@
                             <td data-label="Amount" class="is-num {{ $paymentEntry->transaction_type === 'credit' ? 'vendor-amount-debit' : 'vendor-amount-credit' }}">
                                 {{ $money($paymentEntry->foreign_amount, $paymentEntry->foreign_currency ?: 'RMB') }}
                                 <span class="master-sub">
-                                    {{ $money($paymentEntry->amount_in_inr) }}@if ($paymentEntry->exchange_rate) @ {{ number_format((float) $paymentEntry->exchange_rate, 2) }}@endif
+                                    {{ $paymentEntry->transaction_type === 'credit' ? 'Billed' : 'Paid' }} · {{ $money($paymentEntry->amount_in_inr) }}@if ($paymentEntry->exchange_rate) @ {{ number_format((float) $paymentEntry->exchange_rate, 2) }}@endif
                                 </span>
                             </td>
                             <td data-label="Balance" class="is-num">

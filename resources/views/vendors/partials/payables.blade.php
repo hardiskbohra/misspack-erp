@@ -59,7 +59,10 @@
     <div class="vendor-subhead">
         <h3 class="vendor-subhead-title">Open bills</h3>
         <span class="vendor-subhead-note">
-            {{ \App\Helpers\CommonHelper::indianCurrency($payables['outstanding']) }} outstanding@if (count($openRows)) · {{ count($openRows) }} {{ \Illuminate\Support\Str::plural('bill', count($openRows)) }}@endif
+            {{ \App\Helpers\CommonHelper::indianCurrency($payables['outstanding']) }} outstanding
+            @if (count($openRows))
+                · {{ count($openRows) }} {{ \Illuminate\Support\Str::plural('bill', count($openRows)) }}
+            @endif
         </span>
     </div>
 

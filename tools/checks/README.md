@@ -92,6 +92,8 @@ guards actually fail when the behaviour they describe is broken.
 | Numeric columns aligned | money reads wrong when the digits do not line up |
 | Labelled controls | every text control on a record page or modal has a label or `aria-label` |
 | Balanced blade directives | an unclosed `@if` in one partial takes the page down at render |
+| Directives that actually compile | Blade finds a directive with `/\B@(…)`, so `outstanding@if (…)` stays literal text while its `@endif` compiles — an `endif` with no `if`, and a 500 at render. The balance rule cannot see it: the directives are balanced, they just are not compiled |
+| A directive keeps its `(…)` on the same line | only spaces and tabs may sit between the name and its argument list, so `@if` with the condition on the next line compiles as a bare `if:` |
 | Resolvable includes/components | a renamed partial or component breaks silently at render time |
 | Dark-theme pairs | every semantic hue needs a counterpart on the dark panel |
 | No length `flex-basis` on a control in a column flex | that is how the file input became 240px tall |

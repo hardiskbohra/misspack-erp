@@ -62,7 +62,7 @@
                             <td data-label="Amount" class="is-num {{ $entry->transaction_type === 'credit' ? 'vendor-amount-debit' : 'vendor-amount-credit' }}">
                                 {{ $money($entry->foreign_amount, $entry->foreign_currency ?: 'RMB') }}
                                 <span class="master-sub">
-                                    {{ $money($entry->amount_in_inr) }}@if ($entry->exchange_rate) @ {{ number_format((float) $entry->exchange_rate, 2) }}@endif
+                                    {{ $entry->transaction_type === 'credit' ? 'Billed' : 'Paid' }} · {{ $money($entry->amount_in_inr) }}@if ($entry->exchange_rate) @ {{ number_format((float) $entry->exchange_rate, 2) }}@endif
                                 </span>
                             </td>
                             <td data-label="Account" class="ui-mobile-secondary">

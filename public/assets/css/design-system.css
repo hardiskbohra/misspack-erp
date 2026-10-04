@@ -2154,11 +2154,13 @@ body[data-ui-module="users"] .emp-record-head {
     color: var(--master-green, #10b981);
 }
 
+/* the same red as .vendor-amount-debit, and the name the record's balance
+   figures are marked with */
 .vendor-amount-negative {
     color: var(--master-red, #ef4770);
 }
 
-/* ---- the statement's currency cards ---- */
+/* ---- the statement's currency strip ---- */
 
 
 
