@@ -479,10 +479,16 @@ check('a select\u2019s option list is parented to the page, not to the dialog',
 
 const modalZ = winner('.master-modal', 'z-index');
 const dropdownZ = winner('.select2-dropdown', 'z-index');
-check('a select\u2019s list is painted in front of the dialog it was opened from',
+const dropdownsSheet = strip(read(path.join(ROOT, 'resources/css/components/dropdowns.css')));
+const elevationSheet = strip(read(path.join(ROOT, 'resources/css/tokens/elevation.css')));
+const selectLayer = Number((/--ui-z-select:\s*(\d+)/.exec(elevationSheet) || [])[1] || 0);
+const drawerLayer = Number((/--ui-z-drawer:\s*(\d+)/.exec(elevationSheet) || [])[1] || 0);
+const select2Override = /body\[data-ui-shell\]\s+\.select2-dropdown\s*\{[^}]*z-index:\s*var\(--ui-z-select/.test(dropdownsSheet);
+check("a select's list stays above drawers and dialogs it was opened from",
     modalZ.value !== null && dropdownZ.value !== null
-    && parseInt(dropdownZ.value, 10) > parseInt(modalZ.value, 10),
-    'dropdown ' + dropdownZ.value + ' vs dialog ' + modalZ.value);
+    && parseInt(dropdownZ.value, 10) > parseInt(modalZ.value, 10)
+    && selectLayer > modalZ.value && selectLayer > drawerLayer && select2Override,
+    'Select2 layer ' + selectLayer + ' vs drawer ' + drawerLayer + ' / dialog ' + modalZ.value);
 
 /* --------------------------------------------------------------------------
    5. the shared vocabulary — a class a page wears must be a class a sheet owns
