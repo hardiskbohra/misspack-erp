@@ -87,7 +87,7 @@
     --ui-z-dropdown: 1300;
     --ui-z-sticky: 1060;
     --ui-z-overlay: 1180;
-    --ui-z-drawer: 1200;
+    --ui-z-drawer: 1400;
     --ui-z-modal: 9999;
     --ui-z-toast: 10000;
 }
@@ -688,7 +688,7 @@ body[data-ui-shell] :is(.master-modal-close, .core-modal-close):focus-visible {
 .core-drawer-layer {
     position: fixed;
     inset: 0;
-    z-index: var(--ui-z-drawer, 1200);
+    z-index: var(--ui-z-drawer, 1400);
     display: flex;
     justify-content: flex-end;
     pointer-events: none;
@@ -840,6 +840,7 @@ body.core-drawer-open {
 
 .core-drawer-fields {
     display: grid;
+    align-content: start;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px 18px;
 }

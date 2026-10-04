@@ -12,6 +12,7 @@ const check = (name, ok, detail = '') => checks.push([name, Boolean(ok), detail]
 const drawerView = read('resources/views/components/drawer.blade.php');
 const filterTrigger = read('resources/views/components/filter-trigger.blade.php');
 const drawerCss = read('resources/css/components/drawers.css');
+const elevationCss = read('resources/css/tokens/elevation.css');
 const drawerJs = read('public/assets/js/master-drawer.js');
 const vendorView = read('resources/views/vendors/index.blade.php');
 const projectView = read('resources/views/projects/index.blade.php');
@@ -51,6 +52,14 @@ check('drawer surfaces use shared theme tokens and respect reduced motion',
     /background: var\(--ui-card-surface\)/.test(drawerCss)
     && /border: 1px solid var\(--ui-border\)/.test(drawerCss)
     && /prefers-reduced-motion/.test(drawerCss));
+const zLayers = Object.fromEntries([...elevationCss.matchAll(/--ui-z-(dropdown|drawer|modal|toast):\s*(\d+)/g)]
+    .map(([, name, value]) => [name, Number(value)]));
+check('right drawers cover page popovers while remaining below modals and toasts',
+    zLayers.drawer > zLayers.dropdown && zLayers.drawer < zLayers.modal && zLayers.modal < zLayers.toast);
+check('drawer field rows stay top-aligned and collapse to one column on phones',
+    /align-content:\s*start/.test(drawerCss)
+    && /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/.test(drawerCss)
+    && /grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(drawerCss));
 check('admin and portal layouts both load the shared drawer behavior',
     /assets\/js\/master-drawer\.js/.test(adminLayout)
     && /assets\/js\/master-drawer\.js/.test(portalLayout));
