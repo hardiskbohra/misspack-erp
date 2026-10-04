@@ -220,50 +220,65 @@
         </div>
 
         <form method="GET" action="{{ route('cashflows.index') }}">
-            <div class="master-filter-row">
-                {{-- The chips own credit/debit and the missing-documents view, so
-                     the form carries them: no second control for a dimension the
-                     chips already answer with a count, and applying the filters
-                     below keeps the chip that is lit instead of dropping it. --}}
-                <input type="hidden" name="transaction_type" value="{{ $transactionType ?: 'all' }}">
-                <input type="hidden" name="documents" value="{{ $documents ?? 'all' }}">
+            {{-- The chips own credit/debit and the missing-documents view, so the
+                 form carries them through an Apply action without duplicating them. --}}
+            <input type="hidden" name="transaction_type" value="{{ $transactionType ?: 'all' }}">
+            <input type="hidden" name="documents" value="{{ $documents ?? 'all' }}">
 
+            <div class="master-filter-row core-filter-toolbar">
                 <div class="master-search">
                     <span aria-hidden="true">⌕</span>
                     <input class="master-input" type="text" name="search" value="{{ $search }}"
                         placeholder="Search particular, invoice, bank reference, party..." aria-label="Search cashflow entries">
                 </div>
-                <div class="cf-account-filter">
-                    <select class="master-select" name="account_id" aria-label="Filter by account">
-                        <option value="all">All Accounts</option>
-                        @foreach($accounts as $account)
-                            <option value="{{ $account->id }}" @selected((string) $accountId === (string) $account->id)>
-                                {{ $account->account_name }}</option>
-                        @endforeach
-                    </select>
-                    {{-- the account the entries are filtered by is the account you
-                         sometimes have to add first, so the two sit together --}}
-                    <button type="button" class="master-btn master-btn-ghost" id="openAccountModal"
-                        title="Add an account" aria-label="Add an account">+ New</button>
-                </div>
-                <select class="master-select" name="accounting_status" aria-label="Filter by accounting status">
-                    <option value="all">All Accounting Status</option>
-                    @foreach($accountingStatusOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($accountingStatus === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <input class="master-input desktop-only" type="date" name="date_from" value="{{ $dateFrom }}"
-                    aria-label="Entries from" title="Entries from">
-                <input class="master-input desktop-only" type="date" name="date_to" value="{{ $dateTo }}"
-                    aria-label="Entries to" title="Entries to">
-
-                <div class="master-list-filter-group">
+                <x-filter-trigger drawer="cashflowFiltersDrawer"
+                    :count="$appliedChips->count() + ((filled($dateFrom) || filled($dateTo)) ? 1 : 0)" />
+            </div>
+            <x-drawer id="cashflowFiltersDrawer" title="Filter cashflow entries" eyebrow="Cashflow filters"
+                subtitle="Narrow ledger entries by account, accounting status, or date." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Ledger details</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="cashflowFilterAccount">Account</label>
+                            <div class="cf-account-filter">
+                                <select class="master-select" id="cashflowFilterAccount" name="account_id" aria-label="Filter by account">
+                                    <option value="all">All accounts</option>
+                                    @foreach($accounts as $account)
+                                        <option value="{{ $account->id }}" @selected((string) $accountId === (string) $account->id)>
+                                            {{ $account->account_name }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="button" class="master-btn master-btn-ghost" id="openAccountModal"
+                                    title="Add an account" aria-label="Add an account">+ New</button>
+                            </div>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="cashflowFilterAccountingStatus">Accounting status</label>
+                            <select class="master-select" id="cashflowFilterAccountingStatus" name="accounting_status" aria-label="Filter by accounting status">
+                                <option value="all">All accounting statuses</option>
+                                @foreach($accountingStatusOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($accountingStatus === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="cashflowFilterDateFrom">Entries from</label>
+                            <input class="master-input" id="cashflowFilterDateFrom" type="date" name="date_from" value="{{ $dateFrom }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="cashflowFilterDateTo">Entries to</label>
+                            <input class="master-input" id="cashflowFilterDateTo" type="date" name="date_to" value="{{ $dateTo }}">
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
                     @if ($filtersActive)
                         <a class="master-btn master-btn-soft" href="{{ route('cashflows.index') }}">Reset</a>
                     @endif
                     <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
-                </div>
-            </div>
+                </x-slot:footer>
+            </x-drawer>
 
             {{-- What is actually filtering, one removable chip each — including
                  filters that arrived from a saved view or a URL and therefore

@@ -202,6 +202,95 @@ a.core-drawer-field-value:hover {
     background: var(--ui-card-surface);
 }
 
+.core-filter-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.core-filter-toolbar > .master-search,
+.core-filter-toolbar > .master-field {
+    flex: 1 1 280px;
+    min-width: 0;
+    max-width: none;
+}
+
+.core-filter-toolbar > .master-field {
+    margin: 0;
+}
+
+.core-filter-trigger {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 42px;
+    white-space: nowrap;
+}
+
+.core-filter-trigger:focus-visible {
+    outline: 2px solid var(--ui-accent);
+    outline-offset: 2px;
+}
+
+.core-filter-count {
+    display: inline-grid;
+    min-width: 22px;
+    height: 22px;
+    place-items: center;
+    padding: 0 6px;
+    border: 1px solid var(--ui-border);
+    border-radius: 999px;
+    background: var(--ui-nested-surface);
+    color: var(--ui-text-secondary);
+    font-size: 11px;
+    font-weight: var(--ui-weight-semibold, 600);
+    line-height: 1;
+}
+
+.core-drawer-fields {
+    min-width: 0;
+}
+
+.core-drawer-fields > .master-field,
+.core-drawer-fields > .core-filter-field {
+    min-width: 0;
+}
+
+.core-drawer-fields > .master-field > .master-select,
+.core-drawer-fields > .master-field > .master-input,
+.core-drawer-fields > .master-field > .master-textarea,
+.core-drawer-fields > .master-field > .select2-container {
+    width: 100% !important;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.core-drawer-fields .master-label {
+    display: block;
+    margin: 0 0 6px;
+}
+
+@media screen and (max-width: 767px) {
+    .core-filter-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .core-filter-toolbar > .master-search,
+    .core-filter-toolbar > .master-field,
+    .core-filter-trigger {
+        width: 100%;
+        max-width: none;
+    }
+
+    .core-drawer-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 @media screen and (max-width: 767px) {
     .core-drawer {
         --core-drawer-width: 100vw;
@@ -221,7 +310,13 @@ a.core-drawer-field-value:hover {
     }
 
     .core-drawer-footer {
+        flex-wrap: wrap;
         padding-inline: 16px;
+    }
+
+    .core-drawer-footer > * {
+        min-width: 0;
+        max-width: 100%;
     }
 }
 

@@ -86,70 +86,68 @@
         </div>
 
         <form method="GET" action="{{ route('cashflows.reports') }}">
-            <div class="master-filter-row cf-report-builder">
-                <div class="cf-report-field">
-                    <label class="master-label" for="reportDimension">Group by</label>
-                    <select class="master-select" id="reportDimension" name="dimension">
-                        @foreach ($dimensions as $key => $definition)
-                            <option value="{{ $key }}" @selected($dimension === $key)>{{ $definition['label'] }}</option>
-                        @endforeach
-                    </select>
+            <div class="master-filter-row core-filter-toolbar">
+                <div class="master-search">
+                    <span aria-hidden="true">⌕</span>
+                    <input class="master-input" type="search" name="search"
+                        value="{{ request()->query('search') }}" placeholder="Particular, invoice, reference"
+                        aria-label="Search report entries">
                 </div>
+                <x-filter-trigger drawer="cashflowReportFiltersDrawer" label="Report options"
+                    :count="$filterCount" />
+            </div>
 
-                <div class="cf-report-field">
-                    <label class="master-label" for="reportUnit">Period</label>
-                    <select class="master-select" id="reportUnit" name="period_unit">
-                        @foreach ($units as $key => $label)
-                            <option value="{{ $key }}" @selected($unit === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
+            <x-drawer id="cashflowReportFiltersDrawer" title="Configure cashflow report" eyebrow="Report filters"
+                subtitle="Choose how to group the ledger, set its period, and narrow the matching entries." size="wide">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Report shape and period</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="reportDimension">Group by</label>
+                            <select class="master-select" id="reportDimension" name="dimension">
+                                @foreach ($dimensions as $key => $definition)
+                                    <option value="{{ $key }}" @selected($dimension === $key)>{{ $definition['label'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="reportUnit">Period</label>
+                            <select class="master-select" id="reportUnit" name="period_unit">
+                                @foreach ($units as $key => $label)
+                                    <option value="{{ $key }}" @selected($unit === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="reportMeasure">Figure</label>
+                            <select class="master-select" id="reportMeasure" name="measure">
+                                @foreach ($measures as $key => $label)
+                                    <option value="{{ $key }}" @selected($measure === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="reportComparison">Compare with</label>
+                            <select class="master-select" id="reportComparison" name="comparison">
+                                @foreach ($comparisons as $key => $label)
+                                    <option value="{{ $key }}" @selected($comparison === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="reportFrom">From</label>
+                            <input class="master-input" id="reportFrom" type="date" name="date_from" value="{{ $report['from'] }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="reportTo">To</label>
+                            <input class="master-input" id="reportTo" type="date" name="date_to" value="{{ $report['to'] }}">
+                        </div>
+                    </div>
+                </section>
 
-                <div class="cf-report-field">
-                    <label class="master-label" for="reportMeasure">Figure</label>
-                    <select class="master-select" id="reportMeasure" name="measure">
-                        @foreach ($measures as $key => $label)
-                            <option value="{{ $key }}" @selected($measure === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="cf-report-field">
-                    <label class="master-label" for="reportComparison">Compare with</label>
-                    <select class="master-select" id="reportComparison" name="comparison">
-                        @foreach ($comparisons as $key => $label)
-                            <option value="{{ $key }}" @selected($comparison === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="cf-report-field">
-                    <label class="master-label" for="reportFrom">From</label>
-                    <input class="master-input" id="reportFrom" type="date" name="date_from" value="{{ $report['from'] }}">
-                </div>
-
-                <div class="cf-report-field">
-                    <label class="master-label" for="reportTo">To</label>
-                    <input class="master-input" id="reportTo" type="date" name="date_to" value="{{ $report['to'] }}">
-                </div>
-
-                <div class="cf-report-actions">
-                    <button class="master-btn master-btn-primary" type="submit">Run report</button>
-                    <a class="master-btn master-btn-soft" href="{{ route('cashflows.reports') }}">Reset</a>
-                </div>
-
-                {{-- The dimensions that narrow the rows, not the shape of the
-                     report. Behind a disclosure so the six controls above stay
-                     one line, and counted so a filter nobody can see never
-                     quietly changes a total. --}}
-                <details class="cf-report-more" @if ($filterCount > 0) open @endif>
-                    <summary>
-                        <span class="master-btn master-btn-ghost master-btn-sm">Filters</span>
-                        @if ($filterCount > 0)
-                            <span class="cf-report-more-count">{{ $filterCount }}</span>
-                        @endif
-                    </summary>
-                    <div class="cf-report-more-grid">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Narrow the entries</h3>
+                    <div class="core-drawer-fields">
                         @foreach ([
                             'account_id' => ['Account', $accounts->pluck('account_name', 'id')->all()],
                             'account_type' => ['Account type', $accountTypeOptions],
@@ -161,7 +159,7 @@
                             'documents' => ['Documents', ['missing' => 'Missing only', 'attached' => 'Filed only']],
                         ] as $name => [$label, $options])
                             @php($selected = (string) request()->query($name, 'all'))
-                            <div class="cf-report-field">
+                            <div class="master-field">
                                 <label class="master-label" for="reportFilter-{{ str_replace('_', '-', $name) }}">{{ $label }}</label>
                                 <select class="master-select" id="reportFilter-{{ str_replace('_', '-', $name) }}" name="{{ $name }}">
                                     <option value="all">All {{ strtolower($label) }}</option>
@@ -173,7 +171,7 @@
                         @endforeach
 
                         @if ($clients->isNotEmpty())
-                            <div class="cf-report-field">
+                            <div class="master-field">
                                 <label class="master-label" for="reportFilter-client">Client</label>
                                 <select class="master-select" id="reportFilter-client" name="client_id">
                                     <option value="all">All clients</option>
@@ -185,7 +183,7 @@
                         @endif
 
                         @if ($vendors->isNotEmpty())
-                            <div class="cf-report-field">
+                            <div class="master-field">
                                 <label class="master-label" for="reportFilter-vendor">Vendor</label>
                                 <select class="master-select" id="reportFilter-vendor" name="vendor_id">
                                     <option value="all">All vendors</option>
@@ -197,7 +195,7 @@
                         @endif
 
                         @if ($employees->isNotEmpty())
-                            <div class="cf-report-field">
+                            <div class="master-field">
                                 <label class="master-label" for="reportFilter-employee">Employee</label>
                                 <select class="master-select" id="reportFilter-employee" name="employee_id">
                                     <option value="all">All employees</option>
@@ -208,20 +206,18 @@
                             </div>
                         @endif
 
-                        <div class="cf-report-field">
+                        <div class="master-field">
                             <label class="master-label" for="reportFilter-expense">Expense head</label>
                             <input class="master-input" id="reportFilter-expense" name="expense_head"
                                 value="{{ request()->query('expense_head') }}" placeholder="Any expense head">
                         </div>
-
-                        <div class="cf-report-field">
-                            <label class="master-label" for="reportFilter-particular">Search</label>
-                            <input class="master-input" id="reportFilter-particular" name="search"
-                                value="{{ request()->query('search') }}" placeholder="Particular, invoice, reference">
-                        </div>
                     </div>
-                </details>
-            </div>
+                </section>
+                <x-slot:footer>
+                    <a class="master-btn master-btn-soft" href="{{ route('cashflows.reports') }}">Reset</a>
+                    <button class="master-btn master-btn-primary" type="submit">Run report</button>
+                </x-slot:footer>
+            </x-drawer>
 
             {{-- What is filtering the report, one removable chip each: a filter
                  that arrives by link (or by saved view) is visible here even

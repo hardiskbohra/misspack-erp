@@ -19,7 +19,9 @@
     /* "Reset" and "clear filters" only make sense when something is filtered. */
     $filtersActive = trim((string) $search) !== ''
         || ($status && $status !== 'all')
+        || ($type && $type !== 'all')
         || filled($fromDate)
+        || filled($toDate)
         || filled($attention)
         || ($currency && $currency !== 'all');
 
@@ -108,35 +110,69 @@
         </div>
 
         <form method="GET" action="{{ route('shipments.index') }}">
-
-            <div class="master-filter-row">
+            @if (filled($attention))
+                <input type="hidden" name="attention" value="{{ $attention }}">
+            @endif
+            <div class="master-filter-row core-filter-toolbar">
                 <div class="master-search">
                     <span aria-hidden="true">⌕</span>
                     <input class="master-input" type="text" name="search" value="{{ $search }}"
                         placeholder="Search shipment, tracking, BOE, partner..." aria-label="Search shipments">
                 </div>
-                <select class="master-select" name="status" aria-label="Filter by status">
-                    <option value="all">All Status</option>
-                    @foreach($statusOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <select class="master-select desktop-only" name="currency" hidden>
-                    <option value="all">All Currency</option>
-                    @foreach($currencyOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($currency === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <input class="master-input desktop-only" type="date" name="from_date"
-                    value="{{ $fromDate }}" aria-label="Pickup date from" title="Pickup date from">
-
-                <div class="master-list-filter-group">
+                <x-filter-trigger drawer="shipmentFiltersDrawer"
+                    :count="(filled($search) ? 1 : 0) + (($status && $status !== 'all') ? 1 : 0) + (($type && $type !== 'all') ? 1 : 0) + (($currency && $currency !== 'all') ? 1 : 0) + (filled($fromDate) ? 1 : 0) + (filled($toDate) ? 1 : 0) + (filled($attention) ? 1 : 0)" />
+            </div>
+            <x-drawer id="shipmentFiltersDrawer" title="Filter shipments" eyebrow="Shipment filters"
+                subtitle="Narrow shipments by status, type, currency, pickup date, or attention." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Shipment details</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="shipmentFilterStatus">Status</label>
+                            <select class="master-select" id="shipmentFilterStatus" name="status" aria-label="Filter by status">
+                                <option value="all">All statuses</option>
+                                @foreach($statusOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="shipmentFilterType">Shipment type</label>
+                            <select class="master-select" id="shipmentFilterType" name="type" aria-label="Filter by shipment type">
+                                <option value="all">All shipment types</option>
+                                @foreach($typeOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="shipmentFilterCurrency">Currency</label>
+                            <select class="master-select" id="shipmentFilterCurrency" name="currency" aria-label="Filter by currency">
+                                <option value="all">All currencies</option>
+                                @foreach($currencyOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($currency === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="shipmentFilterFromDate">Pickup date from</label>
+                            <input class="master-input" id="shipmentFilterFromDate" type="date" name="from_date"
+                                value="{{ $fromDate }}" aria-label="Pickup date from">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="shipmentFilterToDate">Pickup date to</label>
+                            <input class="master-input" id="shipmentFilterToDate" type="date" name="to_date"
+                                value="{{ $toDate }}" aria-label="Pickup date to">
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
                     @if ($filtersActive)
                         <a class="master-btn master-btn-soft" href="{{ route('shipments.index') }}">Reset</a>
                     @endif
                     <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
-                </div>
-            </div>
+                </x-slot:footer>
+            </x-drawer>
 
             {{-- What is actually filtering, one removable chip each — including
                  filters that arrived from a saved view or a URL and therefore
@@ -163,6 +199,15 @@
                         </span>
                     @endif
 
+                    @if ($type && $type !== 'all')
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Type</span>
+                            <span class="master-list-applied-value">{{ $typeOptions[$type] ?? $type }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('type') }}"
+                                aria-label="Remove the shipment type filter" title="Remove the shipment type filter">&times;</a>
+                        </span>
+                    @endif
+
                     @if ($currency && $currency !== 'all')
                         <span class="master-list-applied-chip">
                             <span class="master-list-applied-key">Currency</span>
@@ -178,6 +223,15 @@
                             <span class="master-list-applied-value">{{ \App\Helpers\DateRanges::display($fromDate) }}</span>
                             <a class="master-list-applied-x" href="{{ $chipUrl('from_date') }}"
                                 aria-label="Remove the pickup-date filter" title="Remove the pickup-date filter">&times;</a>
+                        </span>
+                    @endif
+
+                    @if (filled($toDate))
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Pickup to</span>
+                            <span class="master-list-applied-value">{{ \App\Helpers\DateRanges::display($toDate) }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('to_date') }}"
+                                aria-label="Remove the pickup end-date filter" title="Remove the pickup end-date filter">&times;</a>
                         </span>
                     @endif
 

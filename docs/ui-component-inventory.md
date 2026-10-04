@@ -37,7 +37,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Compact table | Shared | Compact preset is one of the three shared density modes; `master-list` keeps its mobile card treatment |
 | Grouped table | Partial | Sectioned lists/subtotals exist in Cashflows and reports; no general grouped-table API |
 | Sortable table | Partial | Some lists sort via query controls; no shared accessible sort-header component |
-| Filterable table | Shared | `master-list` filter bar/chips plus module-specific filters |
+| Filterable table | Shared | Visible search and quick chips stay in the list toolbar; secondary criteria open in the shared, theme-aware right drawer across administrative and client-portal modules |
 | Selectable table | Partial | `.master-list-pick` and bulk controls on some lists; not available on every data table |
 | Column chooser | Shared | `master-list.js` creates an accessible per-table chooser for `data-table-settings` tables; visibility preferences persist by `data-table-key` in localStorage and action columns remain visible |
 | Server-side pagination | Shared | Laravel paginator/query pagination in module controllers and shared view partial |
@@ -100,7 +100,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Component | Status | Current implementation |
 | --- | --- | --- |
 | Modal | Shared | `.master-modal`, `.master-modal-card`; Projects and client-document variants are compatibility adapters |
-| Drawer | Shared | `<x-drawer>` plus `master-drawer.js` provides theme-aware, responsive panels, focus trapping, Escape/backdrop/close handling, and focus restoration; vendor/project quick details and the invoice filter panel demonstrate the pattern |
+| Drawer | Shared | `<x-drawer>` plus `master-drawer.js` provides theme-aware, responsive panels, focus trapping, Escape/backdrop/close handling, and focus restoration; vendor/project quick details and module filter panels demonstrate the pattern |
 | Dropdown | Shared | `.master-dropdown`, user-menu and Select2 dropdowns |
 | Popover | Partial | Tooltips and anchored helper patterns exist; no shared popover primitive |
 | Tooltip | Partial | Tooltip containers in lists and finance summaries; not consistently accessible/initialized |
@@ -124,4 +124,4 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 
 ## Architecture follow-up
 
-The inventory records what exists today. The shared responsive contract lives in `resources/css/layout/responsive.css`: use `.ui-mobile-secondary` for genuinely optional tablet/phone details and `.ui-mobile-cards` plus `data-label` for labelled mobile rows. Keep core actions and required data visible. Tables opt into saved columns and three density modes with `data-table-settings` plus a unique `data-table-key`. Use `<x-drawer>` and the shared `data-drawer-*` API for keyboard-accessible quick details; see `docs/ui-design-guidelines.md` for usage rules. The detailed UX guideline should specify when to choose each pattern, interaction and keyboard behavior, empty/loading/error states, responsive transformations, and content rules. It should not create a second visual token or component API.
+The inventory records what exists today. The shared responsive contract lives in `resources/css/layout/responsive.css`: use `.ui-mobile-secondary` for genuinely optional tablet/phone details and `.ui-mobile-cards` plus `data-label` for labelled mobile rows. Keep core actions and required data visible. Tables opt into saved columns and three density modes with `data-table-settings` plus a unique `data-table-key`. Use `<x-drawer>`, `<x-filter-trigger>`, and the shared `data-drawer-*` API for keyboard-accessible quick details and module filter panels; leave primary search and quick chips visible. See `docs/ui-design-guidelines.md` for usage rules. The detailed UX guideline should specify when to choose each pattern, interaction and keyboard behavior, empty/loading/error states, responsive transformations, and content rules. It should not create a second visual token or component API.

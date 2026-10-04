@@ -54,30 +54,10 @@
 
 .cq-toolbar {
     display:flex;
-    justify-content:space-between;
     align-items:center;
-    gap:14px;
+    gap:12px;
     flex-wrap:wrap;
-    padding:22px 24px;
-    margin-bottom:24px;
-}
-
-master-search-form {
-    position:relative;
-    flex:1 1 320px;
-    max-width:520px;
-}
-
-master-search-form span {
-    position:absolute;
-    left:15px;
-    top:50%;
-    transform:translateY(-50%);
-    color: var(--mc-text-3);
-}
-
-master-search-form .master-input {
-    padding-left:44px;
+    padding:14px 18px;
 }
 
 .cq-actions {
@@ -208,7 +188,7 @@ master-search-form .master-input {
         flex-direction:column;
     }
 
-    master-search-form,
+    .cq-toolbar > .master-search,
     .cq-actions,
     .cq-actions .master-btn {
         width:100%;

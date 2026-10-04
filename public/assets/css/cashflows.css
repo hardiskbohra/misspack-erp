@@ -681,6 +681,12 @@
     min-width: 0;
 }
 
+.cashflow-index .core-drawer-fields .cf-account-filter .select2-container {
+    flex: 1 1 auto;
+    width: auto !important;
+    min-width: 0;
+}
+
 /* ---------------- table ---------------- */
 
 .cashflow-index .master-table-wrap {

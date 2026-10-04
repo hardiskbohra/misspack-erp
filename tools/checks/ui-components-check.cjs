@@ -10,6 +10,7 @@ const checks = [];
 const check = (name, ok, detail = '') => checks.push([name, Boolean(ok), detail]);
 
 const drawerView = read('resources/views/components/drawer.blade.php');
+const filterTrigger = read('resources/views/components/filter-trigger.blade.php');
 const drawerCss = read('resources/css/components/drawers.css');
 const drawerJs = read('public/assets/js/master-drawer.js');
 const vendorView = read('resources/views/vendors/index.blade.php');
@@ -25,6 +26,13 @@ check('the shared drawer is an accessible labelled dialog',
     /role="dialog" aria-modal="true"/.test(drawerView)
     && /aria-labelledby="\{\{ \$id \}\}-title"/.test(drawerView)
     && /data-drawer-layer hidden aria-hidden="true"/.test(drawerView));
+check('the shared filter trigger names its drawer and announces the active count',
+    /data-drawer-open="\{\{ \$drawer \}\}"/.test(filterTrigger)
+    && /aria-haspopup="dialog"/.test(filterTrigger)
+    && /aria-controls="\{\{ \$drawer \}\}"/.test(filterTrigger)
+    && /aria-expanded="false"/.test(filterTrigger)
+    && /active ' \./.test(filterTrigger)
+    && /core-filter-count/.test(filterTrigger));
 check('drawer behavior supports Escape, backdrop, close controls, and focus return',
     /event\.key === 'Escape'/.test(drawerJs)
     && /event\.key !== 'Tab'/.test(drawerJs)
@@ -51,6 +59,77 @@ check('vendor and project indexes provide a quick-detail drawer example',
     && /<x-drawer id="vendorQuickDetails"/.test(vendorView)
     && /data-drawer-open="projectQuickDetails"/.test(projectView)
     && /<x-drawer id="projectQuickDetails"/.test(projectView));
+
+const filterDrawerPages = [
+    'resources/views/clients/index.blade.php',
+    'resources/views/users/index.blade.php',
+    'resources/views/vendors/index.blade.php',
+    'resources/views/vendor_quotes/index.blade.php',
+    'resources/views/leads/index.blade.php',
+    'resources/views/lead_quotes/index.blade.php',
+    'resources/views/projects/index.blade.php',
+    'resources/views/tasks/index.blade.php',
+    'resources/views/products/index.blade.php',
+    'resources/views/shipments/index.blade.php',
+    'resources/views/sales_invoices/index.blade.php',
+    'resources/views/cashflows/index.blade.php',
+    'resources/views/cashflows/documents.blade.php',
+    'resources/views/cashflows/statements.blade.php',
+    'resources/views/cashflows/statement-show.blade.php',
+    'resources/views/cashflows/reports.blade.php',
+    'resources/views/clients/partials/statement.blade.php',
+    'resources/views/clients/portal-support/index.blade.php',
+    'resources/views/client_portal/attachments/index.blade.php',
+    'resources/views/client_portal/payments/index.blade.php',
+    'resources/views/client_portal/support/index.blade.php',
+    'resources/views/client_portal/statements/index.blade.php',
+    'resources/views/client_portal/products/index.blade.php',
+    'resources/views/client_portal/quotes/index.blade.php',
+    'resources/views/dashboard/index.blade.php',
+];
+const missingFilterDrawers = filterDrawerPages.filter((file) => {
+    const source = read(file);
+    return ! source.includes('<x-filter-trigger') || ! source.includes('<x-drawer');
+});
+check('module filters use the shared right drawer across office and portal screens',
+    missingFilterDrawers.length === 0,
+    missingFilterDrawers.join(', '));
+const taskView = read('resources/views/tasks/index.blade.php');
+const taskDrawerStart = taskView.indexOf('<x-drawer id="taskFiltersDrawer"');
+const taskDrawerEnd = taskView.indexOf('</x-drawer>', taskDrawerStart);
+const taskDrawer = taskDrawerStart >= 0 && taskDrawerEnd > taskDrawerStart
+    ? taskView.slice(taskDrawerStart, taskDrawerEnd)
+    : '';
+check('task scope and completion controls stay with the rest of the task filters',
+    ['scope', 'category', 'status', 'priority', 'show_completed', 'assignee_id']
+        .every(name => taskDrawer.includes('name="' + name + '"'))
+    && /name="search"/.test(taskView.slice(0, taskDrawerStart)));
+
+const statementFilterContracts = [
+    ['resources/views/clients/partials/statement.blade.php', 'clientStatementFiltersDrawer', ['period', 'date_from', 'date_to', 'currency']],
+    ['resources/views/client_portal/statements/index.blade.php', 'portalStatementFiltersDrawer', ['period', 'date_from', 'date_to', 'currency']],
+    ['resources/views/cashflows/statement-show.blade.php', 'statementDetailFiltersDrawer', ['period', 'date_from', 'date_to', 'currency']],
+    ['resources/views/cashflows/statements.blade.php', 'statementListFiltersDrawer', ['date_from', 'date_to', 'currency']],
+];
+const statementFiltersStayInDrawers = statementFilterContracts.every(([file, drawerId, fields]) => {
+    const source = read(file);
+    const start = source.indexOf('<x-drawer id="' + drawerId + '"');
+    const end = source.indexOf('</x-drawer>', start);
+    if (start < 0 || end <= start) return false;
+    const drawer = source.slice(start, end);
+    return fields.every(name => drawer.includes('name="' + name + '"'));
+});
+check('statement period and date/currency filters remain together in their drawers',
+    statementFiltersStayInDrawers);
+const clientStatementView = read('resources/views/clients/partials/statement.blade.php');
+const statementShowView = read('resources/views/cashflows/statement-show.blade.php');
+const documentsView = read('resources/views/cashflows/documents.blade.php');
+check('statement PDF and document-pack downloads remain available with their filters',
+    /cashflows\.statements\.pdf/.test(clientStatementView)
+    && /Download PDF/.test(clientStatementView)
+    && /cashflows\.statements\.pdf/.test(statementShowView)
+    && /cashflows\.documents\.pack/.test(documentsView)
+    && /Download pack/.test(documentsView));
 
 check('DataTable settings are opt-in and column state is persisted per key',
     /table\[data-table-settings/.test(listJs)

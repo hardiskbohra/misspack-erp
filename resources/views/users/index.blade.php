@@ -105,55 +105,75 @@
                 <input type="hidden" name="role" value="{{ $role }}">
             @endif
 
-            <div class="master-filter-row">
+            <div class="master-filter-row core-filter-toolbar">
                 <div class="master-search">
                     <span aria-hidden="true">⌕</span>
                     <input class="master-input" type="text" name="search" value="{{ $search }}"
                         placeholder="Name, email, mobile, code…" aria-label="Search the team">
                 </div>
+                <x-filter-trigger drawer="userFiltersDrawer" label="Filters" :count="count($filterChips)" />
+            </div>
 
-                @if ($availableFilters['department'] ?? true)
-                    <select class="master-select" name="department" aria-label="Filter by department">
-                        <option value="all">All departments</option>
-                        @foreach ($departments as $department)
-                            <option value="{{ $department }}" @selected($department === ($filters['department'] ?? null))>{{ $department }}</option>
-                        @endforeach
-                    </select>
-                @endif
+            <x-drawer id="userFiltersDrawer" title="Filter the team" eyebrow="Team filters"
+                subtitle="Narrow the list by department, employment status, code, or joining period." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Employment details</h3>
+                    <div class="core-drawer-fields">
+                        @if ($availableFilters['department'] ?? true)
+                            <div class="master-field">
+                                <label class="master-label" for="userFilterDepartment">Department</label>
+                                <select class="master-select" id="userFilterDepartment" name="department" aria-label="Filter by department">
+                                    <option value="all">All departments</option>
+                                    @foreach ($departments as $department)
+                                        <option value="{{ $department }}" @selected($department === ($filters['department'] ?? null))>{{ $department }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
 
-                @if ($availableFilters['status'] ?? true)
-                    <select class="master-select desktop-only" name="status" aria-label="Filter by employment status">
-                        <option value="all">Any status</option>
-                        @foreach ($employmentStatuses as $key => $label)
-                            <option value="{{ $key }}" @selected(($filters['status'] ?? null) === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                @endif
+                        @if ($availableFilters['status'] ?? true)
+                            <div class="master-field">
+                                <label class="master-label" for="userFilterStatus">Employment status</label>
+                                <select class="master-select" id="userFilterStatus" name="status" aria-label="Filter by employment status">
+                                    <option value="all">Any status</option>
+                                    @foreach ($employmentStatuses as $key => $label)
+                                        <option value="{{ $key }}" @selected(($filters['status'] ?? null) === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
 
-                @if ($availableFilters['code'] ?? true)
-                    <select class="master-select desktop-only" name="code" aria-label="Filter by employee code">
-                        <option value="all">Code: any</option>
-                        <option value="present" @selected(($filters['code'] ?? null) === 'present')>Has a code</option>
-                        <option value="missing" @selected(($filters['code'] ?? null) === 'missing')>No code yet</option>
-                    </select>
-                @endif
+                        @if ($availableFilters['code'] ?? true)
+                            <div class="master-field">
+                                <label class="master-label" for="userFilterCode">Employee code</label>
+                                <select class="master-select" id="userFilterCode" name="code" aria-label="Filter by employee code">
+                                    <option value="all">Code: any</option>
+                                    <option value="present" @selected(($filters['code'] ?? null) === 'present')>Has a code</option>
+                                    <option value="missing" @selected(($filters['code'] ?? null) === 'missing')>No code yet</option>
+                                </select>
+                            </div>
+                        @endif
 
-                @if ($availableFilters['joined'] ?? true)
-                    <select class="master-select desktop-only" name="joined" aria-label="Filter by joining period">
-                        <option value="all">Joined: any time</option>
-                        @foreach (\App\Helpers\DateRanges::LABELS as $key => $label)
-                            <option value="{{ $key }}" @selected(($filters['joined'] ?? null) === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                @endif
-
-                <div class="master-list-filter-group">
+                        @if ($availableFilters['joined'] ?? true)
+                            <div class="master-field">
+                                <label class="master-label" for="userFilterJoined">Joining period</label>
+                                <select class="master-select" id="userFilterJoined" name="joined" aria-label="Filter by joining period">
+                                    <option value="all">Joined: any time</option>
+                                    @foreach (\App\Helpers\DateRanges::LABELS as $key => $label)
+                                        <option value="{{ $key }}" @selected(($filters['joined'] ?? null) === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
+                    </div>
+                </section>
+                <x-slot:footer>
                     @if ($filtersActive)
                         <a class="master-btn master-btn-soft" href="{{ route('users.index') }}">Reset</a>
                     @endif
                     <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
-                </div>
-            </div>
+                </x-slot:footer>
+            </x-drawer>
 
             {{-- What is actually filtering, one removable chip each. Built from
                  the controller's own list, so a filter that can be applied can

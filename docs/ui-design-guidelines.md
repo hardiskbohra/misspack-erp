@@ -39,6 +39,7 @@ This is the shared visual contract for the ERP application shell and its modules
 - Use the shared `.master-tabs` / `.master-tab` treatment for record tabs. Module-specific tabs (such as Cashflow settings) should match its spacing, surface, active state, and focus treatment.
 - Opt tables into preferences with `data-table-settings` and a stable, unique `data-table-key`. The shared chooser persists visible columns in localStorage; keep the actions column and essential mobile fields available. Density presets are **standard**, **compact**, and **comfortable**, with a per-view preference.
 - Use `<x-drawer>` for quick details and lightweight side tasks that do not need a full-page transition. Open with `data-drawer-open`; provide a visible close control, Escape/backdrop behavior, focus trapping, and return focus to the opener. Keep drawer surfaces and borders theme-aware.
+- On module list pages, keep primary search and quick-filter chips visible; put secondary criteria in a right-side `<x-drawer>` opened by `<x-filter-trigger>`. Keep the drawer controls inside the same GET form, preserve their names and selected values, and place Apply/Reset actions in its footer. Do not hide essential criteria with `desktop-only`; the shared drawer is the mobile access path too.
 
 ## Responsive behavior
 

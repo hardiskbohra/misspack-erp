@@ -207,8 +207,7 @@
 .cp-support-head-stat strong { color: #263e55; font: 700 19px "Manrope",sans-serif; }
 .cp-support-head-stat span { color: #8695a3; font-size: 9px; }
 .cp-support-count { min-width: 28px; height: 28px; display: grid; place-items: center; padding: 0 7px; border-radius: 9px; color: #3975c5; background: #edf4ff; font-size: 10px; font-weight: 700; }
-.cp-support-filters { display: flex; align-items: center; gap: 8px; margin: 13px 0 9px; padding: 10px; border: 1px solid #edf1f5; border-radius: 11px; background: #fafbfd; }
-.cp-support-filters .master-select { min-width: 0; height: 34px; min-height: 34px; }
+.cp-list-filter-toolbar { margin: 13px 0 9px; }
 .cp-support-thread-list { display: flex; flex-direction: column; }
 .cp-support-thread { display: flex; align-items: center; gap: 10px; padding: 12px 3px; border-bottom: 1px solid #edf1f5; color: inherit; text-decoration: none; }
 .cp-support-thread:last-child { border-bottom: 0; }
@@ -270,7 +269,6 @@
 .cp-payment-totals .cp-stat { padding: 15px 17px; }
 .cp-payment-totals .cp-stat span { color: #8594a3; font-size: 9px; }
 .cp-payment-totals .cp-stat strong { color: #263d52; font: 700 17px "Manrope",sans-serif; }
-.cp-payment-filters { display: grid; grid-template-columns: 1.4fr .75fr .8fr .8fr auto; align-items: end; gap: 11px; }
 .cp-payment-table-card { padding: 0; }
 .cp-payment-table-card > .cp-section-heading { padding: 18px 19px 13px; }
 .cp-payment-table-card .cp-table-wrap { border-top: 1px solid #edf1f5; }
@@ -352,8 +350,6 @@
 @media (max-width: 1260px) {
     .cp-dashboard-stat-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
     .cp-dashboard-hero-art { right: 2%; opacity: .65; }
-    .cp-payment-filters { grid-template-columns: repeat(2,minmax(0,1fr)); }
-    .cp-payment-filters .cp-filter-actions { grid-column: 1 / -1; }
 }
 @media (max-width: 991px) {
     .cp-sidebar { width: 256px; transform: translateX(-102%); transition: transform .22s ease; }
@@ -382,7 +378,6 @@
     .cp-support-grid, .cp-support-conversation-layout, .cp-account-grid, .cp-grid-2, .cp-grid-4, .cp-office-support-detail { grid-template-columns: 1fr; }
     .cp-support-compose, .cp-support-list, .cp-support-thread-detail, .cp-support-about, .cp-account-card { padding: 16px; }
     .cp-support-detail-actions { width: 100%; flex-wrap: wrap; }
-    .cp-payment-filters { grid-template-columns: repeat(2,minmax(0,1fr)); }
     .cp-invoice-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
     .cp-form-row { grid-template-columns: 1fr; }
     .cp-office-support-filter { flex-wrap: wrap; }
@@ -410,11 +405,8 @@
     .cp-support-summary > a { width: 100%; margin: 0; justify-content: center; }
     .cp-support-form-foot { align-items: flex-start; flex-direction: column; }
     .cp-support-form-foot .master-btn { width: 100%; justify-content: center; }
-    .cp-support-filters { align-items: stretch; flex-direction: column; }
     .cp-support-thread { align-items: flex-start; }
     .cp-support-thread-right { min-width: 80px; }
     .cp-message-body { max-width: calc(100% - 38px); }
-    .cp-payment-filters { grid-template-columns: 1fr; }
-    .cp-payment-filters .cp-filter-actions { grid-column: auto; }
     .cp-invoice-total-row { justify-content: space-between; gap: 12px; }
 }

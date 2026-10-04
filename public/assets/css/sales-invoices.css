@@ -675,35 +675,13 @@
     color: var(--mc-text)
 }
 
-.si-index .si-search-submit:focus-visible,
-.si-index .si-filter-open:focus-visible {
+.si-index .si-search-submit:focus-visible {
     outline: 2px solid var(--master-primary);
     outline-offset: 2px
 }
 
-.si-index .si-filter-open {
-    display: inline-flex;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    min-height: 44px;
-    white-space: nowrap
-}
-
-.si-index .si-filter-count {
-    display: inline-grid;
-    min-width: 23px;
-    height: 23px;
-    place-items: center;
-    padding: 0 6px;
-    border: 1px solid var(--mc-border);
-    border-radius: 999px;
-    background: var(--mc-card);
-    color: var(--mc-text-2);
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1
+.si-index .core-filter-trigger {
+    min-height: 44px
 }
 
 .si-index .si-filter-grid {
@@ -737,7 +715,7 @@
     }
 
     .si-index .si-filter-search,
-    .si-index .si-filter-open {
+    .si-index .core-filter-trigger {
         width: 100%;
         max-width: none
     }

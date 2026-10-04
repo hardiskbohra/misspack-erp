@@ -27,68 +27,87 @@
                         <button class="master-btn master-btn-green" type="submit"><i class="fa-solid fa-check-double"></i> Mark
                             All Complete</button>
                     </form>
-                    <a class="master-toggle {{ $showCompleted ? 'is-on' : '' }} desktop-only"
-                        href="{{ route('tasks.index', array_merge(request()->except('page'), ['show_completed' => $showCompleted ? 0 : 1])) }}">
-                        <span><i></i></span> {{ $showCompleted ? 'Hide Completed' : 'Show Completed' }}
-                    </a>
-                    
+
                     <button type="button" class="master-btn master-btn-primary" data-open-task-modal="create"><i
                             class="fa-solid fa-plus"></i> Add Task</button>
                 </div>
             </div>
             <div class="master-filter-card">
-                <form method="GET" action="{{ route('tasks.index') }}" class="master-filter-form">
-                    <input type="hidden" name="show_completed" value="{{ $showCompleted ? 1 : 0 }}">
-                    <div class="master-field search">
-                        <label class="master-label">Search</label>
-                        <input class="master-input" type="text" name="search" value="{{ $search }}"
-                            placeholder="Search task, category, description...">
+                <form method="GET" action="{{ route('tasks.index') }}">
+                    <div class="core-filter-toolbar">
+                        <div class="master-field">
+                            <label class="master-label" for="taskSearch">Search</label>
+                            <input class="master-input" id="taskSearch" type="text" name="search" value="{{ $search }}"
+                                placeholder="Search task, category, description...">
+                        </div>
+                        <x-filter-trigger drawer="taskFiltersDrawer"
+                            :count="(filled($search) ? 1 : 0) + ($scope !== 'all' ? 1 : 0) + (filled($category) && $category !== 'all' ? 1 : 0) + ($status !== 'all' ? 1 : 0) + ($priority !== 'all' ? 1 : 0) + (filled($assigneeId) ? 1 : 0) + (! $showCompleted ? 1 : 0)" />
                     </div>
-                    <div class="master-field desktop-only">
-                        <label class="master-label">Scope</label>
-                        <select class="master-select" name="category">
-                            <option value="all" {{ $category === 'all' ? 'selected' : '' }}>All Category</option>
-                            @foreach ($categoryOptions as $key => $label)
-                                <option value="{{ $key }}" {{ $category === $key ? 'selected' : '' }}>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="master-field desktop-only">
-                        <label class="master-label">Status</label>
-                        <select class="master-select" name="status">
-                            <option value="all" {{ $status === 'all' ? 'selected' : '' }}>All Status</option>
-                            @foreach ($statusOptions as $key => $label)
-                                <option value="{{ $key }}" {{ $status === $key ? 'selected' : '' }}>
-                                    {{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="master-field desktop-only">
-                        <label class="master-label">Priority</label>
-                        <select class="master-select" name="priority">
-                            <option value="all" {{ $priority === 'all' ? 'selected' : '' }}>All Priority</option>
-                            @foreach ($priorityOptions as $key => $label)
-                                <option value="{{ $key }}" {{ $priority === $key ? 'selected' : '' }}>
-                                    {{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="master-field desktop-only">
-                        <label class="master-label">Assignee</label>
-                        <select class="master-select" name="assignee_id">
-                            <option value="">All Assignees</option>
-                            @foreach ($users as $user)
-                                <option value="{{ $user->id }}"
-                                    {{ (string) $assigneeId === (string) $user->id ? 'selected' : '' }}>
-                                    {{ $user->name ?? $user->email }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="master-filter-actions">
-                        <button type="submit" class="master-btn master-btn-primary"><i class="fa-solid fa-filter"></i>
-                            Filter</button>
-                        <a href="{{ route('tasks.index') }}" class="master-btn master-btn-light">Reset</a>
-                    </div>
+                    <x-drawer id="taskFiltersDrawer" title="Filter tasks" eyebrow="Task filters"
+                        subtitle="Narrow the board by assignment, category, status, priority, or completion." size="medium">
+                        <section class="core-drawer-section">
+                            <h3 class="core-drawer-section-title">Task details</h3>
+                            <div class="core-drawer-fields">
+                                <div class="master-field">
+                                    <label class="master-label" for="taskFilterScope">Task scope</label>
+                                    <select class="master-select" id="taskFilterScope" name="scope">
+                                        <option value="all" @selected($scope === 'all')>All tasks</option>
+                                        <option value="mine" @selected($scope === 'mine')>Assigned to me</option>
+                                    </select>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label" for="taskFilterCategory">Category</label>
+                                    <select class="master-select" id="taskFilterCategory" name="category">
+                                        <option value="all" @selected(! filled($category) || $category === 'all')>All categories</option>
+                                        @foreach ($categoryOptions as $key => $label)
+                                            <option value="{{ $key }}" @selected($category === $key)>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label" for="taskFilterStatus">Status</label>
+                                    <select class="master-select" id="taskFilterStatus" name="status">
+                                        <option value="all" @selected($status === 'all')>All statuses</option>
+                                        @foreach ($statusOptions as $key => $label)
+                                            <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label" for="taskFilterPriority">Priority</label>
+                                    <select class="master-select" id="taskFilterPriority" name="priority">
+                                        <option value="all" @selected($priority === 'all')>All priorities</option>
+                                        @foreach ($priorityOptions as $key => $label)
+                                            <option value="{{ $key }}" @selected($priority === $key)>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label" for="taskFilterCompleted">Completed tasks</label>
+                                    <select class="master-select" id="taskFilterCompleted" name="show_completed">
+                                        <option value="1" @selected($showCompleted)>Include completed</option>
+                                        <option value="0" @selected(! $showCompleted)>Hide completed</option>
+                                    </select>
+                                </div>
+                                <div class="master-field">
+                                    <label class="master-label" for="taskFilterAssignee">Assignee</label>
+                                    <select class="master-select" id="taskFilterAssignee" name="assignee_id">
+                                        <option value="">All assignees</option>
+                                        @foreach ($users as $user)
+                                            <option value="{{ $user->id }}" @selected((string) $assigneeId === (string) $user->id)>
+                                                {{ $user->name ?? $user->email }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </section>
+                        <x-slot:footer>
+                            <a href="{{ route('tasks.index') }}" class="master-btn master-btn-soft">Reset</a>
+                            <button type="submit" class="master-btn master-btn-primary">
+                                <i class="fa-solid fa-filter" aria-hidden="true"></i> Apply filters
+                            </button>
+                        </x-slot:footer>
+                    </x-drawer>
                 </form>
             </div>
         </div>

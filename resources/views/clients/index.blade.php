@@ -19,6 +19,7 @@
 
 @php
     $filtersActive = filled($search) || $status !== 'all' || $type !== 'all';
+    $activeFilterCount = (filled($search) ? 1 : 0) + ($status !== 'all' ? 1 : 0) + ($type !== 'all' ? 1 : 0);
     $baseFilters = collect(request()->except(['page', 'saved_view']))
         ->reject(fn ($value) => $value === null || $value === '' || $value === 'all');
     $chipBase = collect(request()->except(['status', 'page', 'saved_view']))
@@ -115,33 +116,49 @@
         </div>
 
         <form method="GET" action="{{ route('clients.index') }}">
-            <div class="master-filter-row">
+            <div class="master-filter-row core-filter-toolbar">
                 <label class="master-search">
                     <span aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></span>
                     <input class="master-input" type="search" name="search" value="{{ $search }}" maxlength="150"
                         placeholder="Search company, brand, client ID, tax ID or contact" aria-label="Search clients">
                 </label>
-                <select class="master-select" name="status" aria-label="Filter by KYC status">
-                    <option value="all">All statuses</option>
-                    @foreach($statusOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <select class="master-select" name="type" aria-label="Filter by client type">
-                    <option value="all">All client types</option>
-                    @foreach($typeOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <div class="master-list-filter-group">
+                <x-filter-trigger drawer="clientFiltersDrawer" :count="$activeFilterCount" />
+            </div>
+
+            <x-drawer id="clientFiltersDrawer" title="Filter clients" eyebrow="Client filters"
+                subtitle="Narrow the client list by KYC status or client type." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Client details</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="clientFilterStatus">KYC status</label>
+                            <select class="master-select" id="clientFilterStatus" name="status" aria-label="Filter by KYC status">
+                                <option value="all">All statuses</option>
+                                @foreach($statusOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="clientFilterType">Client type</label>
+                            <select class="master-select" id="clientFilterType" name="type" aria-label="Filter by client type">
+                                <option value="all">All client types</option>
+                                @foreach($typeOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
                     @if($filtersActive)
                         <a href="{{ route('clients.index') }}" class="master-btn master-btn-soft">Reset</a>
                     @endif
                     <button class="master-btn master-btn-primary" type="submit">
                         <i class="fa-solid fa-filter" aria-hidden="true"></i> Apply filters
                     </button>
-                </div>
-            </div>
+                </x-slot:footer>
+            </x-drawer>
 
             @if($filtersActive)
                 <div class="master-list-applied" aria-label="Active filters">

@@ -35,38 +35,59 @@
 
         <div class="master-card">
             <form method="GET" action="{{ route('vendor-quotes.index') }}">
-                <div class="master-toolbar">
-                    <div class="master-search"><span>⌕</span><input class="master-input" name="search"
-                            value="{{ $search }}" placeholder="Search vendor, quote, lead, product..."></div>
-                    <div style="display:flex;gap:12px;flex-wrap:wrap"><button type="button"
-                            class="master-btn master-btn-primary" id="openQuickQuoteModal">+ Quick Quote</button><a
-                            class="master-btn master-btn-soft" href="{{ route('vendor-quotes.create') }}">Detailed
-                            Form</a><a class="master-btn master-btn-light" href="{{ route('leads.index') }}">Leads</a><a
-                            class="master-btn master-btn-light" href="{{ route('leads.settings.index') }}">Settings</a>
+            <div class="master-toolbar core-filter-toolbar">
+                <div class="master-search"><span aria-hidden="true">⌕</span><input class="master-input" name="search"
+                        value="{{ $search }}" placeholder="Search vendor, quote, lead, product..."
+                        aria-label="Search vendor quotes"></div>
+                <x-filter-trigger drawer="vendorQuoteFiltersDrawer"
+                    :count="(filled($search) ? 1 : 0) + ($status !== 'all' ? 1 : 0) + ($leadId !== 'all' ? 1 : 0) + ($currency !== 'all' ? 1 : 0)" />
+                <div style="display:flex;gap:12px;flex-wrap:wrap"><button type="button"
+                        class="master-btn master-btn-primary" id="openQuickQuoteModal">+ Quick Quote</button><a
+                        class="master-btn master-btn-soft" href="{{ route('vendor-quotes.create') }}">Detailed
+                        Form</a><a class="master-btn master-btn-light" href="{{ route('leads.index') }}">Leads</a><a
+                        class="master-btn master-btn-light" href="{{ route('leads.settings.index') }}">Settings</a>
+                </div>
+            </div>
+            <x-drawer id="vendorQuoteFiltersDrawer" title="Filter vendor quotes" eyebrow="Quote filters"
+                subtitle="Narrow quotes by status, lead, or currency." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Quote details</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="vendorQuoteFilterStatus">Status</label>
+                            <select class="master-select" id="vendorQuoteFilterStatus" name="status">
+                                <option value="all">All statuses</option>
+                                @foreach ($statusOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="vendorQuoteFilterLead">Lead</label>
+                            <select class="master-select" id="vendorQuoteFilterLead" name="lead_id">
+                                <option value="all">All leads</option>
+                                @foreach ($leads as $lead)
+                                    <option value="{{ $lead->id }}" @selected((string) $leadId === (string) $lead->id)>
+                                        {{ $lead->lead_number }} - {{ $lead->title }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="vendorQuoteFilterCurrency">Currency</label>
+                            <select class="master-select" id="vendorQuoteFilterCurrency" name="currency">
+                                <option value="all">All currencies</option>
+                                @foreach ($currencyOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($currency === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
-                </div>
-                <div class="master-filter-row"><select class="master-select" name="status">
-                        <option value="all">All Status</option>
-                        @foreach ($statusOptions as $key => $label)
-                            <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    <select class="master-select" name="lead_id">
-                        <option value="all">All Leads</option>
-                        @foreach ($leads as $lead)
-                            <option value="{{ $lead->id }}" @selected((string) $leadId === (string) $lead->id)>{{ $lead->lead_number }} -
-                                {{ $lead->title }}</option>
-                        @endforeach
-                    </select>
-                    <select class="master-select" name="currency">
-                        <option value="all">All Currency</option>
-                        @foreach ($currencyOptions as $key => $label)
-                            <option value="{{ $key }}" @selected($currency === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    <button class="master-btn master-btn-primary" type="submit">Filter</button><a
-                        class="master-btn master-btn-light" href="{{ route('vendor-quotes.index') }}">Reset</a>
-                </div>
+                </section>
+                <x-slot:footer>
+                    <a class="master-btn master-btn-soft" href="{{ route('vendor-quotes.index') }}">Reset</a>
+                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                </x-slot:footer>
+            </x-drawer>
             </form>
         </div>
 

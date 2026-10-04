@@ -14,18 +14,31 @@
     </div>
 
     <div class="master-card cp-office-support-card">
-        <form method="GET" class="cp-office-support-filter">
-            <div class="master-field">
-                <label class="master-label" for="support-status">Status</label>
-                <select class="master-select" id="support-status" name="status">
-                    <option value="all">All requests</option>
-                    @foreach($statusOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
+        <form method="GET" action="{{ route('clients.portal.support.index', $client) }}" class="cp-office-support-filter">
+            <div class="core-filter-toolbar">
+                <x-filter-trigger drawer="clientSupportFiltersDrawer" :count="($status !== 'all' ? 1 : 0)" />
             </div>
-            <button class="master-btn master-btn-primary" type="submit">Filter</button>
-            <a class="master-btn master-btn-light" href="{{ route('clients.portal.support.index', $client) }}">Reset</a>
+            <x-drawer id="clientSupportFiltersDrawer" title="Filter support requests" eyebrow="Client support"
+                subtitle="Narrow this client's support inbox by request status." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Request status</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="support-status">Status</label>
+                            <select class="master-select" id="support-status" name="status">
+                                <option value="all">All requests</option>
+                                @foreach($statusOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
+                    <a class="master-btn master-btn-soft" href="{{ route('clients.portal.support.index', $client) }}">Reset</a>
+                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                </x-slot:footer>
+            </x-drawer>
         </form>
         <div class="master-table-wrap">
             <table class="master-table">

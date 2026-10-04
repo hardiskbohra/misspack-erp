@@ -59,20 +59,41 @@
             <div><p class="cp-eyebrow">Shared inbox</p><h2>Your requests</h2></div>
             <span class="cp-support-count">{{ $conversations->total() }}</span>
         </div>
-        <form method="GET" class="cp-support-filters">
-            <select class="master-select" name="status" aria-label="Filter support by status">
-                <option value="all">All statuses</option>
-                @foreach($statusOptions as $key => $label)
-                    <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
-                @endforeach
-            </select>
-            <select class="master-select" name="category" aria-label="Filter support by topic">
-                <option value="all">All topics</option>
-                @foreach($categoryOptions as $key => $label)
-                    <option value="{{ $key }}" @selected($category === $key)>{{ $label }}</option>
-                @endforeach
-            </select>
-            <button class="master-btn master-btn-soft master-btn-sm" type="submit">Filter</button>
+        <form method="GET" action="{{ route('client-portal.support.index') }}" class="core-filter-toolbar cp-list-filter-toolbar">
+            <x-filter-trigger drawer="portalSupportFiltersDrawer"
+                :count="($status !== 'all' ? 1 : 0) + ($category !== 'all' ? 1 : 0)" />
+            <x-drawer id="portalSupportFiltersDrawer" title="Filter support requests" eyebrow="Support filters"
+                subtitle="Narrow your inbox by request status or topic." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Request details</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="portalSupportFilterStatus">Status</label>
+                            <select class="master-select" id="portalSupportFilterStatus" name="status" aria-label="Filter support by status">
+                                <option value="all">All statuses</option>
+                                @foreach($statusOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="portalSupportFilterCategory">Topic</label>
+                            <select class="master-select" id="portalSupportFilterCategory" name="category" aria-label="Filter support by topic">
+                                <option value="all">All topics</option>
+                                @foreach($categoryOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($category === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
+                    @if ($status !== 'all' || $category !== 'all')
+                        <a class="master-btn master-btn-soft" href="{{ route('client-portal.support.index') }}">Reset</a>
+                    @endif
+                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                </x-slot:footer>
+            </x-drawer>
         </form>
 
         <div class="cp-support-thread-list">

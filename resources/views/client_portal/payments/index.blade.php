@@ -25,27 +25,39 @@
 @endif
 
 <div class="cp-card cp-filter-card">
-    <form method="GET" class="cp-payment-filters">
-        <div class="master-field">
-            <label class="master-label" for="payment-search">Search</label>
-            <input class="master-input" id="payment-search" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Project or reference">
+    <form method="GET" action="{{ route('client-portal.payments.index') }}">
+        <div class="core-filter-toolbar">
+            <div class="master-field">
+                <label class="master-label" for="payment-search">Search</label>
+                <input class="master-input" id="payment-search" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Project or reference">
+            </div>
+            <x-filter-trigger drawer="portalPaymentFiltersDrawer" label="Payment filters"
+                :count="(filled($filters['search'] ?? null) ? 1 : 0) + (filled($filters['currency'] ?? null) ? 1 : 0) + (filled($filters['date_from'] ?? null) || filled($filters['date_to'] ?? null) ? 1 : 0)" />
         </div>
-        <div class="master-field">
-            <label class="master-label" for="payment-currency">Currency</label>
-            <input class="master-input" id="payment-currency" name="currency" value="{{ $filters['currency'] ?? '' }}" maxlength="10" placeholder="All currencies">
-        </div>
-        <div class="master-field">
-            <label class="master-label" for="payment-from">From</label>
-            <input class="master-input" id="payment-from" type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}">
-        </div>
-        <div class="master-field">
-            <label class="master-label" for="payment-to">To</label>
-            <input class="master-input" id="payment-to" type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}">
-        </div>
-        <div class="cp-filter-actions">
-            <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
-            <a class="master-btn master-btn-light" href="{{ route('client-portal.payments.index') }}">Reset</a>
-        </div>
+        <x-drawer id="portalPaymentFiltersDrawer" title="Filter receipts" eyebrow="Payment filters"
+            subtitle="Narrow published receipts by currency or payment date." size="medium">
+            <section class="core-drawer-section">
+                <h3 class="core-drawer-section-title">Receipt details</h3>
+                <div class="core-drawer-fields">
+                    <div class="master-field">
+                        <label class="master-label" for="payment-currency">Currency</label>
+                        <input class="master-input" id="payment-currency" name="currency" value="{{ $filters['currency'] ?? '' }}" maxlength="10" placeholder="All currencies">
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label" for="payment-from">From</label>
+                        <input class="master-input" id="payment-from" type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}">
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label" for="payment-to">To</label>
+                        <input class="master-input" id="payment-to" type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}">
+                    </div>
+                </div>
+            </section>
+            <x-slot:footer>
+                <a class="master-btn master-btn-soft" href="{{ route('client-portal.payments.index') }}">Reset</a>
+                <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+            </x-slot:footer>
+        </x-drawer>
     </form>
 </div>
 

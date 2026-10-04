@@ -130,44 +130,55 @@
         </div>
 
         <form method="GET" action="{{ route('cashflows.documents') }}">
-            <div class="master-filter-row">
-                {{-- The chips own the claim state; the form carries it so that
-                     applying a filter or downloading a pack keeps the chip the
-                     user clicked instead of silently dropping it. --}}
-                <input type="hidden" name="state" value="{{ $state ?? 'all' }}">
+            {{-- Keep the quick-match chip selected when applying criteria or
+                 downloading the same filtered document pack. --}}
+            <input type="hidden" name="state" value="{{ $state ?? 'all' }}">
 
+            <div class="master-filter-row core-filter-toolbar">
                 <div class="master-search">
                     <span aria-hidden="true">⌕</span>
                     <input class="master-input" type="text" name="q" value="{{ $q }}"
                         placeholder="Search file name, entry, bill number, party..." aria-label="Search documents">
                 </div>
-                {{-- Whose paperwork: a month is usually sent to the accountant one
-                     party at a time, so the party is a control of its own. --}}
-                <select class="master-select" name="party" aria-label="Filter by party">
-                    <option value="">All parties</option>
-                    @foreach ($partyOptions as $partyName)
-                        <option value="{{ $partyName }}" @selected($party === $partyName)>{{ $partyName }}</option>
-                    @endforeach
-                </select>
-                <input class="master-input desktop-only" type="date" name="date_from" value="{{ $dateFrom }}"
-                    aria-label="Booked from" title="Booked from">
-                <input class="master-input desktop-only" type="date" name="date_to" value="{{ $dateTo }}"
-                    aria-label="Booked to" title="Booked to">
-
-                <div class="master-list-filter-group">
+                <x-filter-trigger drawer="cashflowDocumentFiltersDrawer"
+                    :count="(filled($q) ? 1 : 0) + (filled($party) ? 1 : 0) + ((filled($dateFrom) || filled($dateTo)) ? 1 : 0) + (($state ?? 'all') !== 'all' ? 1 : 0)" />
+            </div>
+            <x-drawer id="cashflowDocumentFiltersDrawer" title="Filter documents" eyebrow="Document filters"
+                subtitle="Narrow the archive by party or booking date." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Archive details</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="cashflowDocumentFilterParty">Party</label>
+                            <select class="master-select" id="cashflowDocumentFilterParty" name="party" aria-label="Filter by party">
+                                <option value="">All parties</option>
+                                @foreach ($partyOptions as $partyName)
+                                    <option value="{{ $partyName }}" @selected($party === $partyName)>{{ $partyName }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="cashflowDocumentDateFrom">Booked from</label>
+                            <input class="master-input" id="cashflowDocumentDateFrom" type="date" name="date_from" value="{{ $dateFrom }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="cashflowDocumentDateTo">Booked to</label>
+                            <input class="master-input" id="cashflowDocumentDateTo" type="date" name="date_to" value="{{ $dateTo }}">
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
                     @if ($filtered)
                         <a class="master-btn master-btn-soft" href="{{ route('cashflows.documents') }}">Reset</a>
                     @endif
-                    {{-- Same form, same values: what the filters above match is
-                         what lands in the pack. --}}
                     <button class="master-btn master-btn-soft" type="submit"
                         formaction="{{ route('cashflows.documents.pack') }}"
-                        title="Download everything the filters above match — the files themselves in a folder per type, plus an index — ready to send to the accountant">
+                        title="Download all matching files in a folder per type, plus an index.">
                         Download pack
                     </button>
                     <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
-                </div>
-            </div>
+                </x-slot:footer>
+            </x-drawer>
 
             @if ($filtered)
                 <div class="master-list-applied">

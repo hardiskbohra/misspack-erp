@@ -24,10 +24,29 @@
 
     <section class="cp-card cp-support-list">
         <div class="cp-section-heading"><div><p class="cp-eyebrow">Your shared files</p><h2>Document library</h2></div><span class="cp-support-count">{{ $documents->total() }}</span></div>
-        <form method="GET" class="cp-support-filters cp-document-filter">
-            <select class="master-select" name="category" aria-label="Filter documents by category"><option value="all">All categories</option>@foreach($categories as $key => $label)<option value="{{ $key }}" @selected($category === $key)>{{ $label }}</option>@endforeach</select>
-            <button class="master-btn master-btn-soft master-btn-sm" type="submit">Filter</button>
-            <a class="master-btn master-btn-light master-btn-sm" href="{{ route('client-portal.attachments.index') }}">Reset</a>
+        <form method="GET" action="{{ route('client-portal.attachments.index') }}" class="core-filter-toolbar cp-list-filter-toolbar">
+            <x-filter-trigger drawer="portalDocumentFiltersDrawer" :count="($category !== 'all' ? 1 : 0)" />
+            <x-drawer id="portalDocumentFiltersDrawer" title="Filter documents" eyebrow="Document filters"
+                subtitle="Narrow the shared file library by category." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Document category</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="portalDocumentFilterCategory">Category</label>
+                            <select class="master-select" id="portalDocumentFilterCategory" name="category" aria-label="Filter documents by category">
+                                <option value="all">All categories</option>
+                                @foreach($categories as $key => $label)
+                                    <option value="{{ $key }}" @selected($category === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
+                    <a class="master-btn master-btn-soft" href="{{ route('client-portal.attachments.index') }}">Reset</a>
+                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                </x-slot:footer>
+            </x-drawer>
         </form>
         <div class="cp-document-grid">
             @forelse($documents as $document)

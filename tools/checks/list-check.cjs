@@ -254,8 +254,16 @@ check('the list rules use theme tokens rather than fixed colours',
 /* applied filters — a filter nobody can see is a filter nobody can undo */
 const appliedChips = [...view.matchAll(/\$chipUrl\('(\w+)'\)/g)].map(m => m[1]);
 check('every filter the page can hold is shown as an applied chip',
-    ['search', 'status', 'currency', 'from_date', 'attention'].every(key => appliedChips.includes(key)),
+    ['search', 'status', 'type', 'currency', 'from_date', 'to_date', 'attention'].every(key => appliedChips.includes(key)),
     appliedChips.join(', '));
+const shipmentDrawerStart = view.indexOf('<x-drawer id="shipmentFiltersDrawer"');
+const shipmentDrawerEnd = view.indexOf('</x-drawer>', shipmentDrawerStart);
+const shipmentFilterDrawer = shipmentDrawerStart >= 0 && shipmentDrawerEnd > shipmentDrawerStart
+    ? view.slice(shipmentDrawerStart, shipmentDrawerEnd)
+    : '';
+check('shipment type and both pickup-date bounds stay in the drawer',
+    ['type', 'from_date', 'to_date'].every(name => shipmentFilterDrawer.includes('name="' + name + '"'))
+    && ['type', 'from_date', 'to_date'].every(name => appliedChips.includes(name)));
 check('an applied chip removes only its own filter and keeps the rest',
     /request\(\)->except\(\[\$key, 'page', 'saved_view'\]\)/.test(view)
     && /'saved_view'/.test(view));
@@ -836,15 +844,19 @@ check('both lists open with the same strip of tiles',
 /* ---- the ledger keeps every door open ----
    Both ways to record an entry, and the account an entry lands in, stay one
    click from the list: the quick dialog, the detailed form, and the add-account
-   button sitting with the account filter it belongs to. */
+   button sitting with its account selector inside the shared filter drawer. */
 const accountFilterAt = cashView.indexOf('class="cf-account-filter"');
 const accountButtonAt = cashView.indexOf('id="openAccountModal"');
-const applyGroupAt = cashView.indexOf('class="master-list-filter-group"');
+const cashDrawerStart = cashView.indexOf('<x-drawer id="cashflowFiltersDrawer"');
+const cashDrawerEnd = cashView.indexOf('</x-drawer>', cashDrawerStart);
+const cashFooterAt = cashView.indexOf('<x-slot:footer>', accountButtonAt);
 check('the ledger keeps every door open',
     cashView.includes("route('cashflows.create')")
     && cashView.includes("route('cashflows.quickStore')")
-    && accountFilterAt !== -1 && accountButtonAt > accountFilterAt && accountButtonAt < applyGroupAt,
-    'add-account button sits in the control row: ' + accountFilterAt + ' < ' + accountButtonAt + ' < ' + applyGroupAt);
+    && accountFilterAt !== -1 && accountButtonAt > accountFilterAt
+    && accountButtonAt > cashDrawerStart && accountButtonAt < cashFooterAt
+    && cashFooterAt < cashDrawerEnd,
+    'the add-account action remains beside its selector inside the filter drawer');
 
 /* ---- same composition, same order ----
    The two lists are the same screen with different data, so they render the

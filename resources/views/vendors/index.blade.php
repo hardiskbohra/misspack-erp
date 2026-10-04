@@ -38,30 +38,54 @@
 
     <div class="master-card">
         <form method="GET" action="{{ route('vendors.index') }}">
-            <div class="master-toolbar">
+            <div class="master-toolbar core-filter-toolbar">
                 <div class="master-search"><span>⌕</span><input class="master-input" type="text" name="search"
-                        value="{{ $search }}" placeholder="Search vendor, brand, category, country, contact..."></div>
+                        value="{{ $search }}" placeholder="Search vendor, brand, category, country, contact..."
+                        aria-label="Search vendors"></div>
+                <x-filter-trigger drawer="vendorFiltersDrawer" :count="(filled($search) ? 1 : 0) + ($status !== 'all' ? 1 : 0) + ($type !== 'all' ? 1 : 0) + ($country !== 'all' ? 1 : 0)" />
                 <div class="master-actions-top"><button type="button" class="master-btn master-btn-primary"
                         id="openQuickVendorModal">+ Quick Vendor</button><a href="{{ route('vendors.create') }}"
                         class="master-btn master-btn-soft">Detailed Form</a></div>
             </div>
-            <div class="master-filter-row">
-                <select class="master-select" name="status">
-                    <option value="all">All Status</option>@foreach($statusOptions as $key => $label)<option
-                        value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>@endforeach
-                </select>
-                <select class="master-select" name="type">
-                    <option value="all">All Types</option>@foreach($typeOptions as $key => $label)<option
-                        value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>@endforeach
-                </select>
-                <select class="master-select" name="country">
-                    <option value="all">All Countries</option>@foreach($countries as $countryName)<option
-                        value="{{ $countryName }}" @selected($country === $countryName)>{{ $countryName }}</option>
-                    @endforeach
-                </select>
-                <button class="master-btn master-btn-primary" type="submit">Filter</button><a
-                    class="master-btn master-btn-light" href="{{ route('vendors.index') }}">Reset</a>
-            </div>
+            <x-drawer id="vendorFiltersDrawer" title="Filter vendors" eyebrow="Vendor filters"
+                subtitle="Narrow vendors by status, type, or country." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Vendor profile</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="vendorFilterStatus">Status</label>
+                            <select class="master-select" id="vendorFilterStatus" name="status">
+                                <option value="all">All statuses</option>
+                                @foreach($statusOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="vendorFilterType">Type</label>
+                            <select class="master-select" id="vendorFilterType" name="type">
+                                <option value="all">All types</option>
+                                @foreach($typeOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="vendorFilterCountry">Country</label>
+                            <select class="master-select" id="vendorFilterCountry" name="country">
+                                <option value="all">All countries</option>
+                                @foreach($countries as $countryName)
+                                    <option value="{{ $countryName }}" @selected($country === $countryName)>{{ $countryName }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
+                    <a class="master-btn master-btn-soft" href="{{ route('vendors.index') }}">Reset</a>
+                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                </x-slot:footer>
+            </x-drawer>
         </form>
     </div>
 

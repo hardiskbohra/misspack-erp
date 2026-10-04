@@ -320,9 +320,8 @@ const filterDrawer = filterDrawerStart >= 0 && filterDrawerEnd > filterDrawerSta
     ? view.slice(filterDrawerStart, filterDrawerEnd)
     : '';
 check('invoice filters move into the shared right drawer while search stays visible',
-    /data-drawer-open="invoiceFiltersDrawer"/.test(view)
-    && /aria-haspopup="dialog"/.test(view)
-    && /aria-controls="invoiceFiltersDrawer"/.test(view)
+    /<x-filter-trigger drawer="invoiceFiltersDrawer"/.test(view)
+    && /:count="count\(\$appliedChips\)"/.test(view)
     && /name="search"/.test(view.slice(0, filterDrawerStart))
     && ['invoice_type', 'status', 'client_id', 'project_id', 'payment', 'chase', 'ageing', 'date_from', 'date_to']
         .every(name => filterDrawer.includes('name="' + name + '"'))

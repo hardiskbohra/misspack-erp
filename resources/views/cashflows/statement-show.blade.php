@@ -27,38 +27,57 @@
 
     <div class="master-card master-card--flat stmt-toolbar no-print">
         <form method="GET" action="{{ route('cashflows.statements.show', ['partyType' => $statement['party_type'], 'party' => $statement['party_id']]) }}">
-            <div class="master-filter-row">
+            <div class="master-filter-row core-filter-toolbar">
                 <div class="master-search">
                     <span aria-hidden="true">🧾</span>
                     <input class="master-input" type="text" value="{{ $party['name'] }}" readonly
                         aria-label="Party" tabindex="-1">
                 </div>
-                <select class="master-select" name="period" aria-label="Period">
-                    @foreach ($periodOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($periodKey === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <input class="master-input desktop-only" type="date" name="date_from" value="{{ $dateFrom }}"
-                    aria-label="From" title="From">
-                <input class="master-input desktop-only" type="date" name="date_to" value="{{ $dateTo }}"
-                    aria-label="To" title="To">
-                @if (count($currencyOptions) > 1)
-                    <select class="master-select" name="currency" aria-label="Statement currency">
-                        @foreach ($currencyOptions as $code)
-                            <option value="{{ $code }}" @selected($statement['currency'] === $code)>
-                                {{ \App\Helpers\CommonHelper::currencyLabel($code) }}</option>
-                        @endforeach
-                    </select>
-                @endif
-                <label class="stmt-toggle">
-                    <input type="checkbox" name="ageing" value="1" @checked($ageing)>
-                    <span>Ageing</span>
-                </label>
-
-                <div class="master-list-filter-group">
-                    <button class="master-btn master-btn-primary" type="submit">Show</button>
-                </div>
+                <x-filter-trigger drawer="statementDetailFiltersDrawer" label="Statement filters"
+                    :count="(($periodKey !== 'this_month' || filled($dateFrom) || filled($dateTo)) ? 1 : 0) + ($statement['currency'] !== 'INR' ? 1 : 0) + ($ageing ? 1 : 0)" />
             </div>
+            <x-drawer id="statementDetailFiltersDrawer" title="Statement options" eyebrow="Statement filters"
+                subtitle="Choose the reporting period, currency, and ageing detail." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Period and currency</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="statementDetailPeriod">Period</label>
+                            <select class="master-select" id="statementDetailPeriod" name="period" aria-label="Period">
+                                @foreach ($periodOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($periodKey === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="statementDetailDateFrom">From</label>
+                            <input class="master-input" id="statementDetailDateFrom" type="date" name="date_from" value="{{ $dateFrom }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="statementDetailDateTo">To</label>
+                            <input class="master-input" id="statementDetailDateTo" type="date" name="date_to" value="{{ $dateTo }}">
+                        </div>
+                        @if (count($currencyOptions) > 1)
+                            <div class="master-field">
+                                <label class="master-label" for="statementDetailCurrency">Statement currency</label>
+                                <select class="master-select" id="statementDetailCurrency" name="currency" aria-label="Statement currency">
+                                    @foreach ($currencyOptions as $code)
+                                        <option value="{{ $code }}" @selected($statement['currency'] === $code)>
+                                            {{ \App\Helpers\CommonHelper::currencyLabel($code) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
+                        <div class="master-field">
+                            <label class="master-label" for="statementDetailAgeing">Ageing</label>
+                            <label class="master-check"><input id="statementDetailAgeing" type="checkbox" name="ageing" value="1" @checked($ageing)> Include ageing</label>
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
+                    <button class="master-btn master-btn-primary" type="submit">Show statement</button>
+                </x-slot:footer>
+            </x-drawer>
             <p class="stmt-toolbar-note">
                 {{ $statement['source_note'] }}
                 @if ($statement['period']['from'] || $statement['period']['to'])

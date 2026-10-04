@@ -24,42 +24,54 @@
             </div>
             <span class="cpa-badge">{{ number_format($totals['count']) }} {{ \Illuminate\Support\Str::plural('entry', $totals['count']) }}</span>
         </div>
-        <form method="GET" action="{{ route('clients.show', $client) }}" class="client-statement-filter-form">
+        <form method="GET" action="{{ route('clients.show', $client) }}">
             <input type="hidden" name="tab" value="statement">
-            <div class="master-field">
-                <label class="master-label" for="clientStatementPeriod">Period</label>
-                <select class="master-select" id="clientStatementPeriod" name="period">
-                    @foreach($periodOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($periodKey === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
+            <div class="core-filter-toolbar">
+                <x-filter-trigger drawer="clientStatementFiltersDrawer" label="Statement filters"
+                    :count="(($periodKey !== 'this_month' || filled($dateFrom) || filled($dateTo)) ? 1 : 0) + ($statement['currency'] !== 'INR' ? 1 : 0)" />
             </div>
-            <div class="master-field">
-                <label class="master-label" for="clientStatementFrom">From</label>
-                <input class="master-input" id="clientStatementFrom" type="date" name="date_from" value="{{ $dateFrom }}" onchange="document.getElementById('clientStatementPeriod').value='custom'">
-            </div>
-            <div class="master-field">
-                <label class="master-label" for="clientStatementTo">To</label>
-                <input class="master-input" id="clientStatementTo" type="date" name="date_to" value="{{ $dateTo }}" onchange="document.getElementById('clientStatementPeriod').value='custom'">
-            </div>
-            @if(count($currencyOptions) > 1)
-                <div class="master-field">
-                    <label class="master-label" for="clientStatementCurrency">Currency</label>
-                    <select class="master-select" id="clientStatementCurrency" name="currency">
-                        @foreach($currencyOptions as $code)
-                            <option value="{{ $code }}" @selected($statement['currency'] === $code)>{{ \App\Helpers\CommonHelper::currencyLabel($code) }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            @else
-                <input type="hidden" name="currency" value="{{ $statement['currency'] }}">
-            @endif
-            <div class="client-statement-filter-submit">
-                <button class="master-btn master-btn-soft client-statement-pdf-link" type="submit" formmethod="GET" formaction="{{ route('cashflows.statements.pdf', ['partyType' => 'client', 'party' => $client->id]) }}" formtarget="_blank" name="ageing" value="0" aria-label="Download statement PDF for the selected period">
-                    <i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i> Download PDF
-                </button>
-                <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
-            </div>
+            <x-drawer id="clientStatementFiltersDrawer" title="Statement filters" eyebrow="Client ledger"
+                subtitle="Choose the statement period, date range, and currency." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Reporting period</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="clientStatementPeriod">Period</label>
+                            <select class="master-select" id="clientStatementPeriod" name="period">
+                                @foreach($periodOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($periodKey === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="clientStatementFrom">From</label>
+                            <input class="master-input" id="clientStatementFrom" type="date" name="date_from" value="{{ $dateFrom }}" onchange="document.getElementById('clientStatementPeriod').value='custom'">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="clientStatementTo">To</label>
+                            <input class="master-input" id="clientStatementTo" type="date" name="date_to" value="{{ $dateTo }}" onchange="document.getElementById('clientStatementPeriod').value='custom'">
+                        </div>
+                        @if(count($currencyOptions) > 1)
+                            <div class="master-field">
+                                <label class="master-label" for="clientStatementCurrency">Currency</label>
+                                <select class="master-select" id="clientStatementCurrency" name="currency">
+                                    @foreach($currencyOptions as $code)
+                                        <option value="{{ $code }}" @selected($statement['currency'] === $code)>{{ \App\Helpers\CommonHelper::currencyLabel($code) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @else
+                            <input type="hidden" name="currency" value="{{ $statement['currency'] }}">
+                        @endif
+                    </div>
+                </section>
+                <x-slot:footer>
+                    <button class="master-btn master-btn-soft client-statement-pdf-link" type="submit" formmethod="GET" formaction="{{ route('cashflows.statements.pdf', ['partyType' => 'client', 'party' => $client->id]) }}" formtarget="_blank" name="ageing" value="0" aria-label="Download statement PDF for the selected period">
+                        <i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i> Download PDF
+                    </button>
+                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                </x-slot:footer>
+            </x-drawer>
         </form>
         <p class="client-statement-source">{{ rtrim($statement['source_note'], '. ') }} · Balance as on {{ ($statement['period']['to'] ?? $statement['generated_at'])->format('d M Y') }}</p>
     </section>

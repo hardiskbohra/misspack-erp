@@ -44,48 +44,57 @@
         </div>
 
         <div class="projects-card projects-filter-card">
-            <form method="GET" action="{{ route('projects.index') }}" class="projects-filter-form">
-                <div class="master-field projects-search-field">
-                    <label class="master-label">Search</label>
-                    <input class="master-input" type="text" name="search" value="{{ $search }}"
-                        placeholder="Search project no, name, status, scope...">
+            <form method="GET" action="{{ route('projects.index') }}">
+                <div class="core-filter-toolbar">
+                    <div class="master-field projects-search-field">
+                        <label class="master-label" for="projectSearch">Search</label>
+                        <input class="master-input" id="projectSearch" type="text" name="search" value="{{ $search }}"
+                            placeholder="Search project no, name, status, scope...">
+                    </div>
+                    <x-filter-trigger drawer="projectFiltersDrawer" :count="(filled($search) ? 1 : 0) + ($status !== 'all' ? 1 : 0) + ($clientId !== 'all' ? 1 : 0) + ($health !== 'all' ? 1 : 0)" />
                 </div>
-                <div class="master-field">
-                    <label class="master-label">Status</label>
-                    <select class="master-select" name="status">
-                        <option value="all" {{ $status === 'all' ? 'selected' : '' }}>All Status</option>
-                        @foreach ($statusOptions as $key => $label)
-                            <option value="{{ $key }}" {{ $status === $key ? 'selected' : '' }}>
-                                {{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="master-field">
-                    <label class="master-label">Client</label>
-                    <select class="master-select" name="client_id">
-                        <option value="all" {{ $clientId === 'all' ? 'selected' : '' }}>All Clients</option>
-                        @foreach ($clients as $client)
-                            <option value="{{ $client->id }}"
-                                {{ (string) $clientId === (string) $client->id ? 'selected' : '' }}>
-                                {{ $client->company_name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="master-field">
-                    <label class="master-label">Health</label>
-                    <select class="master-select" name="health">
-                        <option value="all" {{ $health === 'all' ? 'selected' : '' }}>All Health</option>
-                        @foreach ($healthOptions as $key => $label)
-                            <option value="{{ $key }}" {{ $health === $key ? 'selected' : '' }}>
-                                {{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="projects-filter-actions">
-                    <button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-filter"></i>
-                        Filter</button>
-                    <a class="master-btn master-btn-soft" href="{{ route('projects.index') }}">Reset</a>
-                </div>
+                <x-drawer id="projectFiltersDrawer" title="Filter projects" eyebrow="Project filters"
+                    subtitle="Narrow projects by status, client, or project health." size="medium">
+                    <section class="core-drawer-section">
+                        <h3 class="core-drawer-section-title">Project details</h3>
+                        <div class="core-drawer-fields">
+                            <div class="master-field">
+                                <label class="master-label" for="projectFilterStatus">Status</label>
+                                <select class="master-select" id="projectFilterStatus" name="status">
+                                    <option value="all" @selected($status === 'all')>All statuses</option>
+                                    @foreach ($statusOptions as $key => $label)
+                                        <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label" for="projectFilterClient">Client</label>
+                                <select class="master-select" id="projectFilterClient" name="client_id">
+                                    <option value="all" @selected($clientId === 'all')>All clients</option>
+                                    @foreach ($clients as $client)
+                                        <option value="{{ $client->id }}" @selected((string) $clientId === (string) $client->id)>
+                                            {{ $client->company_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label" for="projectFilterHealth">Health</label>
+                                <select class="master-select" id="projectFilterHealth" name="health">
+                                    <option value="all" @selected($health === 'all')>All health</option>
+                                    @foreach ($healthOptions as $key => $label)
+                                        <option value="{{ $key }}" @selected($health === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+                    <x-slot:footer>
+                        <a class="master-btn master-btn-soft" href="{{ route('projects.index') }}">Reset</a>
+                        <button class="master-btn master-btn-primary" type="submit">
+                            <i class="fa-solid fa-filter" aria-hidden="true"></i> Apply filters
+                        </button>
+                    </x-slot:footer>
+                </x-drawer>
             </form>
         </div>
 

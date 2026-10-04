@@ -176,14 +176,7 @@
                         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                     </button>
                 </div>
-                <button type="button" class="master-btn master-btn-soft si-filter-open"
-                    data-drawer-open="invoiceFiltersDrawer" aria-haspopup="dialog"
-                    aria-controls="invoiceFiltersDrawer" aria-expanded="false"
-                    aria-label="Open invoice filters, {{ count($appliedChips) }} active">
-                    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
-                    <span>Filters</span>
-                    <span class="si-filter-count" aria-hidden="true">{{ count($appliedChips) }}</span>
-                </button>
+                <x-filter-trigger drawer="invoiceFiltersDrawer" label="Filters" :count="count($appliedChips)" />
             </div>
 
             <x-drawer id="invoiceFiltersDrawer" title="Filter invoices" eyebrow="Invoice filters"
