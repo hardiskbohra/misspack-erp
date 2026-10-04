@@ -377,6 +377,27 @@
             if (el) el.addEventListener('change', calculateTotals);
         });
 
+        /* The next PO / bill number is already in the field. Switching type
+           swaps it for the other series unless the office has typed their own. */
+        var typeSelect = document.getElementById('invoiceType');
+        var numberInput = document.getElementById('invoiceNumber');
+        if (typeSelect && numberInput && numberInput.getAttribute('data-next-order')) {
+            function suggestedNumber(type) {
+                return type === 'bill'
+                    ? (numberInput.getAttribute('data-next-bill') || '')
+                    : (numberInput.getAttribute('data-next-order') || '');
+            }
+
+            typeSelect.addEventListener('change', function () {
+                var current = (numberInput.value || '').trim();
+                var orderNext = numberInput.getAttribute('data-next-order') || '';
+                var billNext = numberInput.getAttribute('data-next-bill') || '';
+                if (!current || current === orderNext || current === billNext) {
+                    numberInput.value = suggestedNumber(typeSelect.value);
+                }
+            });
+        }
+
         /* ------------------------------------------ the client's own record
            The invoice keeps a copy of the client, and the form has a field for
            every part of that copy. Both sides read ONE list: the controller

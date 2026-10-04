@@ -82,7 +82,16 @@
                     </div>
                     <div class="master-field">
                         <label class="master-label">Number</label>
-                        <input class="master-input" name="invoice_number" value="{{ old('invoice_number', $invoice->invoice_number) }}" placeholder="Auto if blank">
+                        <input class="master-input" id="invoiceNumber" name="invoice_number"
+                            value="{{ old('invoice_number', $invoice->invoice_number) }}"
+                            @if (! $isEdit)
+                                data-next-order="{{ $nextNumbers['order'] ?? '' }}"
+                                data-next-bill="{{ $nextNumbers['bill'] ?? '' }}"
+                            @endif
+                            placeholder="{{ $isEdit ? '' : 'MP/PO/26-27/001' }}">
+                        @unless ($isEdit)
+                            <p class="master-help">Next number in this series — edit it only if you need to skip one.</p>
+                        @endunless
                     </div>
                     <div class="master-field">
                         <label class="master-label">Status</label>

@@ -242,11 +242,17 @@ class PurchaseInvoiceController extends Controller
     public function create(Request $request): View
     {
         $type = $this->requestType($request);
+        $nextNumbers = [
+            PurchaseInvoice::TYPE_ORDER => $this->makeInvoiceNumber(PurchaseInvoice::TYPE_ORDER),
+            PurchaseInvoice::TYPE_BILL => $this->makeInvoiceNumber(PurchaseInvoice::TYPE_BILL),
+        ];
 
         return view('purchase_invoices.form', array_merge($this->sharedData($type), [
             'docType' => $type,
+            'nextNumbers' => $nextNumbers,
             'invoice' => new PurchaseInvoice([
                 'invoice_type' => $type,
+                'invoice_number' => $nextNumbers[$type],
                 'currency' => 'INR',
                 'gst_type' => 'intra_state',
                 'discount_type' => 'amount',
