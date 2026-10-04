@@ -249,8 +249,4 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\Lead::class, 'created_by');
     }
 
-    public function createdVendorQuotes()
-    {
-        return $this->hasMany(\App\Models\VendorQuote::class, 'created_by');
-    }
 }

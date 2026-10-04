@@ -539,7 +539,7 @@ const KNOWN = [
     'master-attention-card',
     'master-calc-input', 'master-delete-btn',
     'master-form-group',
-    'master-save', 'master-text', 'master-wrap',
+    'master-save', 'master-text',
 ];
 
 const undressed = [...wornClasses.keys()]

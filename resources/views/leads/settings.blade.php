@@ -16,7 +16,6 @@
         </div>
         <div class="ls-actions">
             <a href="{{ route('leads.index') }}" class="master-btn master-btn-light">Back to Leads</a>
-            <a href="{{ route('vendor-quotes.index') }}" class="master-btn master-btn-light">Vendor Quotes</a>
         </div>
     </div>
 

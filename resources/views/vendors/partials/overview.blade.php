@@ -73,7 +73,6 @@
             <div class="master-facts">
                 <div class="master-info"><span>Projects</span><strong>{{ number_format($summary['project_products_count']) }} product {{ \Illuminate\Support\Str::plural('row', $summary['project_products_count']) }}</strong></div>
                 <div class="master-info"><span>Products supplied</span><strong>{{ number_format($summary['products_count']) }}</strong></div>
-                <div class="master-info"><span>Vendor quotes</span><strong>{{ number_format($summary['vendor_quotes_count']) }}</strong></div>
                 <div class="master-info"><span>Shipments</span><strong>{{ number_format($summary['shipments_count']) }}</strong></div>
                 <div class="master-info"><span>Documents</span><strong>{{ number_format($summary['attachments_count']) }}</strong></div>
                 <div class="master-info"><span>Comments</span><strong>{{ $vendor->relationLoaded('comments') ? number_format($vendor->comments->count()) : '—' }}</strong></div>

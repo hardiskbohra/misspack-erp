@@ -43,7 +43,6 @@ class VendorController extends Controller
         'commercial' => 'Commercial',
         'projects' => 'Projects',
         'products' => 'Products',
-        'quotes' => 'Quotes',
         'payments' => 'Payments',
         'statement' => 'Statement',
         'shipments' => 'Shipments',
@@ -273,7 +272,6 @@ class VendorController extends Controller
             'tabCounts' => [
                 'projects' => (int) ($data['summary']['project_products_count'] ?? 0),
                 'products' => (int) ($data['summary']['products_count'] ?? 0),
-                'quotes' => (int) ($data['summary']['vendor_quotes_count'] ?? 0),
                 'payments' => (int) ($data['summary']['statement_count'] ?? 0),
                 'shipments' => (int) ($data['summary']['shipments_count'] ?? 0),
                 'attachments' => $vendor->relationLoaded('attachments') ? $vendor->attachments->count() : (int) ($data['summary']['attachments_count'] ?? 0),
@@ -642,11 +640,10 @@ class VendorController extends Controller
     private function dashboardData(Vendor $vendor): array
     {
         $projectProducts = $this->vendorProjectProducts($vendor);
-        $vendorQuotes = $this->vendorQuotes($vendor);
         $statementEntries = $this->vendorStatementEntries($vendor); // cashflow entries
         $vendorPaymentEntries = $this->vendorPaymentEntries($vendor); // manual vendor-currency ledger
         $shipments = $this->vendorShipments($vendor);
-        $products = $this->vendorProducts($projectProducts, $vendorQuotes);
+        $products = $this->vendorProducts($projectProducts);
         $cashflowAccounts = $this->cashflowAccounts();
         $projectsForPayment = $this->projectsForVendorPayment($vendor);
         $attachmentOptions = class_exists(VendorAttachment::class) ? VendorAttachment::categoryOptions() : [];
@@ -654,9 +651,6 @@ class VendorController extends Controller
         $attachmentsAvailable = Schema::hasTable('vendor_attachments');
 
         $projectValue = (float) $projectProducts->sum('total_amount');
-        $quoteValue = (float) $vendorQuotes->sum(function ($quote) {
-            return $this->vendorQuoteValue($quote);
-        });
 
         $currencySummary = $this->vendorCurrencySummary($vendorPaymentEntries);
         $preferredCurrency = $vendor->preferred_currency ?: 'RMB';
@@ -673,7 +667,7 @@ class VendorController extends Controller
         // Backward-compatible cashflow totals for vendors that have not started manual vendor ledger yet.
         if ($vendorPaymentEntries->isEmpty()) {
             $paidToVendor = (float) $statementEntries->sum(function ($entry) { return (float) ($entry->debit_amount ?? 0); });
-            $billedInr = $projectValue > 0 ? $projectValue : $quoteValue;
+            $billedInr = $projectValue;
             $needToPayInr = max($billedInr - $paidToVendor, 0);
             $otherExpensesInr = (float) $statementEntries->filter(function ($entry) {
                 return (float) ($entry->debit_amount ?? 0) > 0 && (! empty($entry->expense_head) || ($entry->related_party_type ?? null) === 'vendor');
@@ -688,9 +682,7 @@ class VendorController extends Controller
             'project_products_count' => $projectProducts->count(),
             'running_projects' => $runningProjects,
             'products_count' => $products->count(),
-            'vendor_quotes_count' => $vendorQuotes->count(),
             'project_value' => $projectValue,
-            'quote_value' => $quoteValue,
             'expected_payable' => $billedInr,
             'paid_to_vendor' => $paidToVendor,
             'received_from_vendor' => (float) $vendorPaymentEntries->where('transaction_type', 'credit')->where('entry_category', 'refund')->sum('amount_in_inr'),
@@ -714,7 +706,6 @@ class VendorController extends Controller
             'products' => Route::has('products.index') ? route('products.index') : '#',
             'cashflows' => Route::has('cashflows.index') ? route('cashflows.index') : '#',
             'shipments' => Route::has('shipments.index') ? route('shipments.index') : '#',
-            'vendorQuotes' => Route::has('vendor-quotes.index') ? route('vendor-quotes.index') : '#',
         ];
 
         $paymentOptions = [
@@ -727,7 +718,6 @@ class VendorController extends Controller
 
         return compact(
             'projectProducts',
-            'vendorQuotes',
             'statementEntries',
             'vendorPaymentEntries',
             'currencySummary',
@@ -761,45 +751,6 @@ class VendorController extends Controller
         return \App\Models\ProjectProduct::query()
             ->with($relations)
             ->where('vendor_id', $vendor->id)
-            ->latest('id')
-            ->get();
-    }
-
-    private function vendorQuotes(Vendor $vendor)
-    {
-        if (! class_exists(\App\Models\VendorQuote::class) || ! Schema::hasTable('vendor_quotes')) {
-            return collect();
-        }
-
-        $relations = [];
-        if (class_exists(\App\Models\VendorQuotePrice::class) && Schema::hasTable('vendor_quote_prices')) {
-            $relations[] = 'prices';
-        }
-        if (class_exists(\App\Models\Product::class) && Schema::hasTable('products')) {
-            $relations[] = 'product';
-        }
-        if (class_exists(\App\Models\Lead::class) && Schema::hasTable('leads')) {
-            $relations[] = 'lead';
-        }
-
-        $hasVendorId = Schema::hasColumn('vendor_quotes', 'vendor_id');
-        $hasVendorName = Schema::hasColumn('vendor_quotes', 'vendor_name');
-
-        if (! $hasVendorId && ! $hasVendorName) {
-            return collect();
-        }
-
-        return \App\Models\VendorQuote::query()
-            ->with($relations)
-            ->where(function ($query) use ($vendor, $hasVendorId, $hasVendorName) {
-                if ($hasVendorId) {
-                    $query->where('vendor_id', $vendor->id);
-                }
-                if ($hasVendorName) {
-                    $method = $hasVendorId ? 'orWhere' : 'where';
-                    $query->{$method}('vendor_name', 'like', '%'.$vendor->vendor_name.'%');
-                }
-            })
             ->latest('id')
             ->get();
     }
@@ -999,14 +950,13 @@ class VendorController extends Controller
             ->get();
     }
 
-    private function vendorProducts($projectProducts, $vendorQuotes)
+    private function vendorProducts($projectProducts)
     {
         if (! class_exists(\App\Models\Product::class) || ! Schema::hasTable('products')) {
             return collect();
         }
 
         $ids = $projectProducts->pluck('product_id')
-            ->merge($vendorQuotes->pluck('product_id'))
             ->filter()
             ->unique()
             ->values();
@@ -1028,27 +978,6 @@ class VendorController extends Controller
             ->whereIn('id', $ids)
             ->orderBy('name')
             ->get();
-    }
-
-    private function vendorQuoteValue($quote): float
-    {
-        $value = (float) ($quote->landing_cost_inr ?: 0);
-
-        if ($value <= 0 && $quote->vendor_unit_price && $quote->quantity) {
-            $value = (float) $quote->vendor_unit_price * (float) $quote->quantity;
-        }
-
-        if ($value <= 0 && $quote->relationLoaded('prices')) {
-            $value = (float) $quote->prices->sum(function ($price) {
-                $priceValue = (float) ($price->landing_cost_inr ?: 0);
-                if ($priceValue <= 0 && $price->vendor_unit_price && $price->quantity) {
-                    $priceValue = (float) $price->vendor_unit_price * (float) $price->quantity;
-                }
-                return $priceValue;
-            });
-        }
-
-        return $value;
     }
 
     private function validatedData(Request $request, ?Vendor $vendor = null): array

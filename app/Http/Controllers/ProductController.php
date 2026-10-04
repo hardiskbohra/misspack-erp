@@ -20,7 +20,6 @@ class ProductController extends Controller
 
         $products = Product::query()
             ->with(['media', 'priceLadders'])
-            ->withCount('vendorQuotes')
             ->search($search)
             ->when($status !== 'all', function ($q) use ($status) {
                 $q->where('status', $status);
@@ -175,7 +174,6 @@ class ProductController extends Controller
             }
         }
 
-        $product->vendorQuotes()->delete();
         $product->delete();
 
         return redirect()->route('products.index')->with('success', 'Product deleted successfully.');

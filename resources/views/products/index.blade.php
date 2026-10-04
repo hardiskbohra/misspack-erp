@@ -111,15 +111,7 @@
                                                 : '-' }}
                                         </strong>
                                     </div>
-                                
-                                    <div class="meta-item">
-                                        <span>Vendor Quotes</span>
-                                        <strong>
-                                            {{ $product->vendor_quotes_count }}
-                                        </strong>
-                                    </div>
-                                
-                                    <div class="meta-item">
+                                                                    <div class="meta-item">
                                         <span>Client Quotes</span>
                                         <strong>
                                             {{ $product->client_quotes_count ?? 0 }}
@@ -141,11 +133,6 @@
                                     <i class="fa-solid fa-pen"></i>
                                 </a>
                 
-                                <button
-                                    class="master-btn-light openQuickQuoteModal"
-                                    data-product-id="{{ $product->id }}">
-                                    <i class="fa-solid fa-indian-rupee-sign"></i>
-                                </button>
                 
                                 <button
                                     class="master-btn-light product-quotes-btn"

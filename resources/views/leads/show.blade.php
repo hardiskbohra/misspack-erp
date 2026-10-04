@@ -25,8 +25,7 @@
                         class="master-btn master-btn-soft">Public Product Link</a>
                 @endif
                 <a href="{{ route('lead-quotes.create', ['lead_id' => $lead->id]) }}" class="master-btn master-btn-primary">
-                    Create Lead Quote</a><a href="{{ route('vendor-quotes.create', ['lead_id' => $lead->id]) }}"
-                    class="master-btn master-btn-light">Create Vendor Quote</a>
+                    Create Lead Quote</a>
             </div>
         </div>
         <div class="master-grid">
@@ -103,48 +102,6 @@
                                         <td><a href="{{ route('lead-quotes.show', $quote) }}">View</a></td>
                                 </tr>@empty<tr>
                                         <td colspan="5">No lead quotes given yet.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="master-card master-section">
-                    <h3>Vendor Quotes</h3>
-                    <div class="master-table-wrap">
-                        <table class="master-table">
-                            <thead>
-                                <tr>
-                                    <th>Quote</th>
-                                    <th>Vendor</th>
-                                    <th>Quantity</th>
-                                    <th>Price</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($lead->vendorQuotes as $quote)
-                                    <tr style="line-height:1.5">
-                                        <td>{{ $quote->quote_number }}</td>
-                                        <td>
-                                            {{ \Illuminate\Support\Str::limit($quote->vendor_contact_name ?: '-', 25, '...') }}<br>
-                                            <span style="color:grey">{{ \Illuminate\Support\Str::limit($quote->vendor_name ?: '-', 25, '...') }}</span>
-                                        </td>
-                                        <td>{!! $quote->items->isNotEmpty()
-                                            ? $quote->items->map(fn($item) => number_format($item->quantity) . ' ' . $item->unit)->implode('<br>')
-                                            : ($quote->quantity ? number_format($quote->quantity) . ' ' . $quote->unit : '-')
-                                        !!}</td>
-                                        <td>{!! $quote->items->isNotEmpty()
-                                            ? $quote->items->map(fn($item) => \App\Helpers\CommonHelper::amount($item->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : ''))->implode('<br>')
-                                            : ($quote->vendor_unit_price
-                                                ? \App\Helpers\CommonHelper::amount($quote->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : '')
-                                                : '-')
-                                        !!}</td>
-                                        <td>{{ $quote->statusLabel() }}</td>
-                                        <td><a href="{{ route('vendor-quotes.show', $quote) }}">View</a></td>
-                                </tr>@empty<tr>
-                                        <td colspan="6">No vendor quotes added yet.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

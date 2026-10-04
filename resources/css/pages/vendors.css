@@ -355,10 +355,16 @@
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
+/* The card is the shared one; what this sheet adds is the padding the card
+   itself does not carry. Without it every fact row, hairline and mini row ran
+   into the border — the record page read as one undivided block. Same 22/24
+   as the client record's fact cards, so the two records sit the same way. */
 .vendor-detail-card {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
+    min-width: 0;
+    padding: 22px 24px;
 }
 
 .vendor-detail-title {
@@ -578,7 +584,9 @@
 .vendor-currency-card {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
+    min-width: 0;
+    padding: 20px 22px;
 }
 
 .vendor-currency-card-label {
@@ -624,7 +632,8 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px;
+    min-width: 0;
+    padding: 14px;
     color: inherit;
     text-decoration: none;
 }
@@ -991,190 +1000,7 @@
 }
 
 /* ==========================================================================
-   5. VENDOR QUOTES — resources/views/vendor_quotes/*.blade.php
-   --------------------------------------------------------------------------
-   The quote list is a shared master-* list screen and brings its own sheet;
-   what is left here is the price-break table on the quote form and the
-   standalone quote-image viewer, which are not part of the vendor redesign
-   and are carried across unchanged so those two screens keep their look.
-   ========================================================================== */
-
-.vendor-quote-form .master-items {
-    overflow-x: auto;
-}
-
-/* ---------------- Quote image viewer ---------------- */
-
-.image-view-page {
-    --img-primary: #4f83f1;
-    --img-primary-2: #6366f1;
-    --img-dark: var(--mc-text);
-    --img-muted: #687386;
-    --img-border: var(--mc-border);
-    --img-bg: var(--mc-soft);
-    --img-soft: var(--mc-soft);
-    --img-white: var(--mc-card);
-    --img-shadow: 0 14px 35px rgba(25, 42, 70, 0.08);
-    background: var(--img-bg);
-    min-height: calc(100vh - 70px);
-    padding: 28px;
-    color: var(--img-dark);
-    font-size: 14px;
-}
-
-.image-view-page,
-.image-view-page * {
-    box-sizing: border-box;
-}
-
-.image-card {
-    background: var(--img-white);
-    border: 1px solid var(--img-border);
-    border-radius: 18px;
-    box-shadow: var(--img-shadow);
-}
-
-.image-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 22px 28px;
-    margin-bottom: 24px;
-}
-
-.image-header h1 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-}
-
-.image-header p {
-    margin: 5px 0 0;
-    color: var(--img-muted);
-    font-weight: 700;
-}
-
-.image-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.image-stage {
-    padding: 24px;
-    display: grid;
-    place-items: center;
-    min-height: 620px;
-}
-
-.image-frame {
-    width: 100%;
-    min-height: 540px;
-    border: 1px dashed var(--img-border);
-    border-radius: 18px;
-    background: var(--mc-card-soft);
-    display: grid;
-    place-items: center;
-    overflow: auto;
-    padding: 18px;
-}
-
-.image-frame img {
-    max-width: 100%;
-    max-height: 74vh;
-    object-fit: contain;
-    border-radius: 14px;
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
-    background: var(--mc-card);
-}
-
-.image-empty {
-    text-align: center;
-    color: var(--img-muted);
-    font-weight: 700;
-}
-
-.image-empty .icon {
-    width: 88px;
-    height: 88px;
-    margin: 0 auto 16px;
-    border-radius: 22px;
-    background: var(--img-soft);
-    color: var(--img-primary);
-    display: grid;
-    place-items: center;
-    font-size: 36px;
-}
-
-.image-meta {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
-    padding: 0 24px 24px;
-}
-
-.image-meta-item {
-    padding: 14px;
-    border: 1px solid var(--img-border);
-    border-radius: 14px;
-    background: var(--mc-card-soft);
-}
-
-.image-meta-item span {
-    display: block;
-    color: var(--mc-text-3);
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 5px;
-}
-
-.image-meta-item strong {
-    overflow-wrap: anywhere;
-}
-
-@media (max-width: 900px) {
-    .image-meta {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 700px) {
-    .image-view-page {
-        padding: 14px;
-    }
-
-    .image-header {
-        align-items: flex-start;
-        flex-direction: column;
-        padding: 18px;
-    }
-
-    .image-actions,
-    .image-actions .master-btn {
-        width: 100%;
-    }
-
-    .image-stage {
-        padding: 16px;
-        min-height: 420px;
-    }
-
-    .image-frame {
-        min-height: 360px;
-    }
-
-    .image-meta {
-        grid-template-columns: 1fr;
-        padding: 0 16px 16px;
-    }
-}
-
-/* ==========================================================================
-   6. RESPONSIVE — the shared breakpoint bands, module composition only
+   5. RESPONSIVE — the shared breakpoint bands, module composition only
    ========================================================================== */
 
 @media (max-width: 1199px) {

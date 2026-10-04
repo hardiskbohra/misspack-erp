@@ -299,34 +299,6 @@
             reader.readAsDataURL(file);
         });
 
-        /* ---------------------------------------- vendor_quotes ---- */
-
-        byId('openQuickQuoteModal')?.addEventListener('click', function () {
-            openModal(byId('quickQuoteModal'));
-        });
     });
 
-    /* ---------- vendor_quotes/form: quantity price-break rows ---------- */
-
-    /* Kept global: rows call removeQuotePriceRow(this) from inline onclick. */
-    window.removeQuotePriceRow = function (button) {
-        var tbody = document.querySelector('#quotePricesTable tbody');
-        if (tbody && tbody.children.length > 1) button.closest('tr').remove();
-    };
-
-    document.addEventListener('DOMContentLoaded', function () {
-        var addQuotePriceRow = byId('addQuotePriceRow');
-        if (!addQuotePriceRow) return;
-
-        var quoteTbody = document.querySelector('#quotePricesTable tbody');
-        var quotePriceIndex = quoteTbody ? quoteTbody.children.length : 0;
-
-        addQuotePriceRow.addEventListener('click', function () {
-            var template = byId('quotePriceRowTemplate');
-            if (quoteTbody && template) {
-                quoteTbody.insertAdjacentHTML('beforeend',
-                    template.innerHTML.replaceAll('__INDEX__', quotePriceIndex++));
-            }
-        });
-    });
 })();

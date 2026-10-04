@@ -112,7 +112,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Component | Status | Current implementation |
 | --- | --- | --- |
 | Price ladder | Shared, domain-specific | Product price ladders and price-calculator grid (`products.css`, `price-calculator.css`) |
-| Quote comparison | Partial | Vendor/lead quote comparison data is shown in module pages; no reusable compare matrix component |
+| Quote comparison | Gap | Lead quotes are listed per lead; the vendor-quote module was removed, so no comparison matrix exists |
 | Payment summary | Partial | Invoice, portal, and Cashflow payment summaries use separate markup |
 | Invoice summary | Partial | Sales invoice show/list and portal invoice detail cards |
 | Shipment tracker | Shared, domain-specific | Shipment detail tracker plus public tracking/stepper (`shipments.css`, `shipment-public.css`) |

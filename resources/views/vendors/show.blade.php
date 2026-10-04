@@ -143,8 +143,6 @@
                 @include('vendors.partials.projects')
             @elseif ($tab === 'products')
                 @include('vendors.partials.products')
-            @elseif ($tab === 'quotes')
-                @include('vendors.partials.quotes')
             @elseif ($tab === 'payments')
                 @include('vendors.partials.payments')
             @elseif ($tab === 'statement')

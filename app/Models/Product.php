@@ -44,11 +44,6 @@ class Product extends Model
         return $this->hasMany(ProductPriceLadder::class)->orderBy('quantity')->orderBy('id');
     }
 
-    public function vendorQuotes()
-    {
-        return $this->hasMany(\App\Models\VendorQuote::class, 'product_id', 'id');
-    }
-
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

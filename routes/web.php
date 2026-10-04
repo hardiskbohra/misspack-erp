@@ -23,7 +23,6 @@ use App\Http\Controllers\PublicLeadController;
 use App\Http\Controllers\LeadSettingController;
 use App\Http\Controllers\LeadCommentController;
 use App\Http\Controllers\LeadQuoteController;
-use App\Http\Controllers\VendorQuoteController;
 use App\Http\Controllers\ProjectAttachmentController;
 use App\Http\Controllers\ProjectCommentController;
 use App\Http\Controllers\ProjectController;
@@ -242,13 +241,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/leads/{lead}/image', [LeadController::class, 'image'])->name('leads.image');
         Route::resource('leads', LeadController::class);
 
-        // Vendor Quote Management
-        Route::post('/vendor-quotes/quick', [VendorQuoteController::class, 'quickStore'])->name('vendor-quotes.quickStore');
-        Route::get('/vendor-quotes/{vendorQuote}/image', [VendorQuoteController::class, 'image'])->name('vendor-quotes.image');
-        Route::resource('vendor-quotes', VendorQuoteController::class)->parameters([
-            'vendor-quotes' => 'vendorQuote',
-        ]);
-    
         // Project Management
         Route::post('/projects/quick', [ProjectController::class, 'quickStore'])->name('projects.quickStore');
         Route::patch('/projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.status.update');

@@ -99,7 +99,6 @@
             ['label' => 'Invoices', 'route' => 'sales-invoices.index', 'active' => 'sales-invoices.*', 'icon' => 'fa-solid fa-file-invoice-dollar'],
             ['section' => 'Purchase'],
             ['label' => 'Vendors', 'route' => 'vendors.index', 'active' => 'vendors.*', 'icon' => 'fa-solid fa-user-gear'],
-            ['label' => 'Vendor Quotes', 'route' => 'vendor-quotes.index', 'active' => 'vendor-quotes.*', 'icon' => 'fa-solid fa-money-bill'],
             ['section' => 'Accounts'],
             ['label' => 'Cashflow', 'route' => 'cashflows.index', 'active' => 'cashflows.*', 'except' => ['cashflows.documents', 'cashflows.statements', 'cashflows.statements.*'], 'icon' => 'fa-solid fa-scale-balanced'],
             /* The archive is a page of the module, not a second module: it sits

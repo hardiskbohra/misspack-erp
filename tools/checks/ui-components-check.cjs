@@ -96,7 +96,6 @@ const filterDrawerPages = [
     'resources/views/clients/index.blade.php',
     'resources/views/users/index.blade.php',
     'resources/views/vendors/index.blade.php',
-    'resources/views/vendor_quotes/index.blade.php',
     'resources/views/leads/index.blade.php',
     'resources/views/lead_quotes/index.blade.php',
     'resources/views/projects/index.blade.php',
