@@ -6,6 +6,7 @@
 @section('content')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/statement.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/document-print.css') }}">
 @endpush
 @php
     $party = $statement['party'];

@@ -26,10 +26,12 @@ This is the shared visual contract for the ERP application shell and its modules
 
 ## Print and PDF documents
 
+- `public/assets/css/document-print.css` is the canonical foundation for every A4 document shown in a browser or saved as a PDF. Load it on standalone print views; use `body.pdf-preview`, `.pdf-sheet` (or `.pdf-sheet--landscape` for wide reports), `.pdf-toolbar`, and `.pdf-action` with its primary/secondary variants. Domain styles own content layout only; paper dimensions, toolbar controls, print reset, font stack, and base tokens stay shared. Add every new printable view to `tools/checks/pdf-documents-check.cjs` so the shared contract stays enforced.
 - Use the shared Inter stack and tabular figures; keep document body text at roughly 10 pt (13 px), captions/field labels at 8–9 pt, and line-height around 1.4–1.5. Do not shrink dense financial tables below a legible size to force a one-page fit.
-- Use A4 portrait with 12 mm margins for invoices, payslips and account statements unless a document has a clear landscape data need. Use a white paper surface and dark text regardless of the app or device theme; never carry a dark-mode canvas into a PDF.
+- Use A4 portrait with 12 mm margins unless a document has a clear landscape data need. Use a white paper surface and dark text regardless of the app or device theme; never carry a dark-mode canvas into a PDF.
 - Print output removes browser/app chrome, shadows and rounded-card framing. Keep a simple hierarchy of issuer, document identity/date, counterparties, itemized figures, tax/totals, payment terms and sign-off.
 - Right-align currency values with tabular numerals and use the shared currency formatter. Label taxable values, discounts, GST heads and balances distinctly; repeat table headers and avoid splitting a table row across pages.
+- Specialized labels (for example, the shipping mark) may retain their exact custom paper geometry; share the font, color, and action tokens without applying the A4 sheet wrapper or changing the label size.
 
 ## Surfaces and spacing
 

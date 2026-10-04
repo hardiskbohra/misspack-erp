@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <title>{{ $invoice->invoice_number }} - {{ $invoice->typeLabel() }}</title>
     <link rel="stylesheet" href="{{ asset('assets/css/sales-invoices-print.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/document-print.css') }}">
 </head>
 
 @php
@@ -31,15 +32,18 @@
         ->filter()->implode(', ');
 @endphp
 
-<body class="invoice-standalone">
-    <div class="toolbar">
+<body class="pdf-preview invoice-standalone">
+    <div class="pdf-toolbar pdf-toolbar--spread">
         @if (!$publicMode)
-        <a class="master-btn" href="{{ route('sales-invoices.show', $invoice) }}">Back</a>@else<span></span>
+            <a class="pdf-action pdf-action--secondary" href="{{ route('sales-invoices.show', $invoice) }}">Back</a>
+        @else
+            <span></span>
         @endif
-        <button class="master-btn" onclick="window.print()">
-            Print Invoice</button>
+        <button class="pdf-action pdf-action--primary" type="button" onclick="window.print()">
+            Print Invoice
+        </button>
     </div>
-    <div class="page">
+    <div class="page pdf-sheet">
         <div class="top">
             <div class="brand">
                 <img class="brand-logo" src="{{ asset('images/logo-dark.png') }}"

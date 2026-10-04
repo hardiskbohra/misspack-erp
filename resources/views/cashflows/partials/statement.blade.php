@@ -37,7 +37,7 @@
     })->implode(' · ');
 @endphp
 
-<article class="stmt" aria-label="Statement of account for {{ $party['name'] }}">
+<article class="stmt {{ in_array($ctx, ['pdf', 'public'], true) ? 'pdf-sheet' : ($ctx === 'portal' ? 'pdf-print-sheet' : '') }}" aria-label="Statement of account for {{ $party['name'] }}">
     <header class="stmt-head">
         <div class="stmt-brand">
             <p class="stmt-brand-name">{{ $statement['issuer']['seller_company_name'] }}</p>

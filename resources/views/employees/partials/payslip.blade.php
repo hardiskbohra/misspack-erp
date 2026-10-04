@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="{{ $assetVer('assets/css/payslip.css') }}">
 @endpush
 
-<article class="payslip" aria-label="Payslip for {{ $employee['name'] }} — {{ $doc['slip']['period'] }}">
+<article class="payslip {{ $ctx === 'pdf' ? 'pdf-sheet' : '' }}" aria-label="Payslip for {{ $employee['name'] }} — {{ $doc['slip']['period'] }}">
     <header class="ps-head">
         <div class="ps-brand">
             <p class="ps-brand-name">{{ $issuer['name'] }}</p>

@@ -15,52 +15,107 @@ const check = (name, ok, detail = '') => {
 const plain = text => text.replace(/\/\*[\s\S]*?\*\//g, '');
 
 const payslipView = read('resources/views/employees/payslip-pdf.blade.php');
+const payslipPartial = read('resources/views/employees/partials/payslip.blade.php');
 const payslipCss = plain(read('public/assets/css/payslip.css'));
 const statementView = read('resources/views/cashflows/statement-pdf.blade.php');
+const statementPublicView = read('resources/views/statements/public.blade.php');
+const statementPartial = read('resources/views/cashflows/partials/statement.blade.php');
 const statementCss = plain(read('public/assets/css/statement.css'));
+const portalStatementView = read('resources/views/client_portal/statements/index.blade.php');
 const invoiceView = read('resources/views/sales_invoices/print.blade.php');
 const invoiceCss = plain(read('public/assets/css/sales-invoices-print.css'));
+const cashflowView = read('resources/views/cashflows/pdf.blade.php');
+const cashflowCss = plain(read('public/assets/css/cashflows-pdf.css'));
+const shipmentViews = [
+    read('resources/views/shipments/print/packing-list.blade.php'),
+    read('resources/views/shipments/print/delivery-challan.blade.php'),
+    read('resources/views/shipments/print/summary.blade.php'),
+];
+const shipmentToolbar = read('resources/views/shipments/print/partials/toolbar.blade.php');
+const shipmentCss = plain(read('public/assets/css/shipment-print.css'));
+const documentCss = plain(read('public/assets/css/document-print.css'));
 const payslipDocument = read('app/Services/PayslipDocument.php');
 const statementController = read('app/Http/Controllers/PartyStatementController.php');
+const cashflowController = read('app/Http/Controllers/CashflowController.php');
+const shipmentController = read('app/Http/Controllers/ShipmentController.php');
 const guideline = read('docs/ui-design-guidelines.md');
+const shippingMarkView = read('resources/views/shipments/shipping-mark.blade.php');
+const stickerSheetView = read('resources/views/shipments/stickers.blade.php');
+const shippingMarkCss = plain(read('public/assets/css/shipping-mark.css'));
 
+const standaloneA4Views = [
+    payslipView,
+    statementView,
+    statementPublicView,
+    portalStatementView,
+    invoiceView,
+    cashflowView,
+    ...shipmentViews,
+];
+const loadsSharedPrint = view => /assets\/css\/document-print\.css/.test(view);
 const hasInterLink = view => /fonts\.googleapis\.com\/css2\?family=Inter:wght@400;500;600;700/.test(view);
-check('all three standalone documents load the shared Inter family',
-    [payslipView, statementView, invoiceView].every(hasInterLink));
+check('all A4 PDF/print views load the shared document stylesheet and Inter',
+    standaloneA4Views.every(loadsSharedPrint)
+    && [payslipView, statementView, statementPublicView, invoiceView, cashflowView, ...shipmentViews].every(hasInterLink));
 
-check('PDF fallback instructions explain Save as PDF without leaking package internals',
+check('the shared stylesheet defines one paper, type, and action system',
+    /--pdf-font-family:\s*"Inter"/.test(documentCss)
+    && /--pdf-ink:/.test(documentCss)
+    && /--pdf-accent:/.test(documentCss)
+    && /--pdf-sheet-width:\s*210mm/.test(documentCss)
+    && /font-size:\s*8\.25pt/.test(documentCss)
+    && /font-size:\s*9\.5pt/.test(documentCss)
+    && /\.pdf-sheet/.test(documentCss)
+    && /\.pdf-action--primary/.test(documentCss)
+    && /min-height:\s*40px/.test(documentCss)
+    && /:focus-visible/.test(documentCss)
+    && /@page\s*\{\s*size:\s*A4 portrait;\s*margin:\s*12mm/.test(documentCss));
+
+check('invoice, payslip and statement use the same A4 paper shell',
+    /class="page pdf-sheet"/.test(invoiceView)
+    && /\$ctx === 'pdf' \? 'pdf-sheet'/.test(payslipPartial)
+    && /'pdf-sheet' : \(\$ctx === 'portal' \? 'pdf-print-sheet'/.test(statementPartial)
+    && /class="pdf-preview invoice-standalone"/.test(invoiceView)
+    && /class="pdf-preview ps-standalone"/.test(payslipView)
+    && /class="pdf-preview stmt-standalone stmt-print"/.test(statementView));
+
+check('the invoice viewer uses shared, accessible theme actions',
+    /class="pdf-toolbar pdf-toolbar--spread"/.test(invoiceView)
+    && /pdf-action pdf-action--secondary/.test(invoiceView)
+    && /pdf-action pdf-action--primary/.test(invoiceView)
+    && !/class="master-btn/.test(invoiceView));
+
+check('PDF fallback guidance is consistent and user-facing',
     /Use the print dialog and choose Save as PDF to download this payslip/.test(payslipDocument)
     && /Use the print dialog and choose Save as PDF to download this statement/.test(statementController)
-    && !/Install barryvdh\/laravel-dompdf/.test(payslipDocument + statementController));
+    && /Use the print dialog and choose Save as PDF to download this report/.test(cashflowController)
+    && /Use the print dialog and choose Save as PDF to download this shipment document/.test(shipmentController)
+    && !/Install barryvdh\/laravel-dompdf/.test(payslipDocument + statementController + cashflowController + shipmentController));
 
-check('the PDF guideline defines readable A4 typography and paper surfaces',
-    /## Print and PDF documents/.test(guideline)
-    && /A4 portrait with 12 mm margins/.test(guideline)
-    && /white paper surface/.test(guideline)
-    && /tabular numerals/.test(guideline));
+check('the guideline makes the shared PDF foundation mandatory for future documents',
+    /document-print\.css/.test(guideline)
+    && /body\.pdf-preview/.test(guideline)
+    && /\.pdf-sheet/.test(guideline)
+    && /Specialized labels/.test(guideline));
 
-const weightCeiling = (name, css) => {
+const cssFiles = [documentCss, payslipCss, statementCss, invoiceCss, cashflowCss, shipmentCss];
+const weightCeiling = css => {
     const weights = [...css.matchAll(/font-weight\s*:\s*(\d+)\b/g)].map(match => Number(match[1]));
     return weights.length > 0 && Math.max(...weights) <= 700;
 };
-check('payslip, statement and invoice styles stay within the 700 weight cap',
-    weightCeiling('payslip', payslipCss)
-    && weightCeiling('statement', statementCss)
-    && weightCeiling('invoice', invoiceCss));
+check('every shared and document-specific PDF stylesheet stays within weight 700',
+    cssFiles.every(weightCeiling));
 
-check('payslip uses Inter, a readable text scale and A4 print margins',
+check('payslip, statement and invoice retain readable aligned print typography',
     /\.payslip\s*\{[^}]*font-family:\s*var\(--ps-font\)[^}]*font-size:\s*13px[^}]*line-height:\s*1\.5/.test(payslipCss)
-    && /@page\s*\{\s*size:\s*A4 portrait;\s*margin:\s*12mm/.test(payslipCss)
-    && /\.ps-notice,[\s\S]*?display:\s*none !important/.test(payslipCss)
-    && /\.ps-table thead\s*\{\s*display:\s*table-header-group/.test(payslipCss));
+    && /body\.stmt-standalone \.stmt\s*\{[^}]*--stmt-text:\s*var\(--pdf-ink, #1b2a41\)[^}]*background:\s*#fff/.test(statementCss)
+    && /\.pdf-print-sheet\s*\{[^}]*--stmt-text: var\(--pdf-ink\) !important/.test(documentCss)
+    && /\.items td\.right,[\s\S]*?text-align:\s*right/.test(invoiceCss)
+    && /\.items td,\s*\.summary td\s*\{[^}]*font-size:\s*9pt/.test(invoiceCss)
+    && /\.ps-table thead\s*\{\s*display:\s*table-header-group/.test(payslipCss)
+    && /\.stmt-table thead\s*\{\s*display:\s*table-header-group/.test(statementCss));
 
-check('statement PDFs always print as light A4 paper, even under dark mode',
-    /class="stmt-standalone stmt-print"/.test(statementView)
-    && /body\.stmt-standalone:not\(\.stmt-print\)/.test(statementCss)
-    && /body\.stmt-standalone \.stmt\s*\{[^}]*--stmt-text:\s*#1a2540[^}]*background:\s*#fff/.test(statementCss)
-    && /@page\s*\{\s*size:\s*A4 portrait;\s*margin:\s*12mm/.test(statementCss));
-
-check('invoice prints currency-correct, itemized taxable values and GST heads',
+check('invoice totals remain currency-correct and tax labels do not double-count',
     /CommonHelper::amount\(\(float\) \$amount, \$currency\)/.test(invoiceView)
     && !/CommonHelper::indianCurrency/.test(invoiceView)
     && /Taxable value/.test(invoiceView)
@@ -72,11 +127,20 @@ check('invoice prints currency-correct, itemized taxable values and GST heads',
     && /Received to date/.test(invoiceView)
     && /Balance due/.test(invoiceView));
 
-check('invoice print is A4 with right-aligned amounts and no screen chrome',
-    /@page\s*\{\s*size:\s*A4 portrait;\s*margin:\s*12mm/.test(invoiceCss)
-    && /\.items td\.right,[\s\S]*?text-align:\s*right/.test(invoiceCss)
-    && /\.toolbar,[\s\S]*?\.no-print\s*\{\s*display:\s*none !important/.test(invoiceCss)
-    && /\.page\s*\{[^}]*width:\s*auto !important[^}]*min-height:\s*0 !important/.test(invoiceCss));
+check('cashflow reports use the shared paper shell but keep their landscape data need',
+    /class="pdf-preview"/.test(cashflowView)
+    && /class="pdf-sheet pdf-sheet--landscape"/.test(cashflowView)
+    && /@page\s*\{\s*size:\s*A4 landscape;\s*margin:\s*12mm/.test(cashflowCss));
+
+check('shipment paperwork shares the A4 shell and themed toolbar',
+    shipmentViews.every(view => /class="pdf-preview"/.test(view) && /class="print-sheet pdf-sheet"/.test(view))
+    && /pdf-action pdf-action--primary/.test(shipmentToolbar)
+    && /pdf-action pdf-action--secondary/.test(shipmentToolbar));
+
+check('special shipping labels keep their exact custom page geometry',
+    /size:\s*85mm 130mm/.test(shippingMarkCss)
+    && !loadsSharedPrint(shippingMarkView)
+    && !loadsSharedPrint(stickerSheetView));
 
 console.log('');
 console.log(`pdf documents: ${passed} passed, ${failed} failed`);

@@ -17,10 +17,10 @@
 body {
     margin: 0;
     padding: 14px;
-    background: #eef2f9;
-    color: #101828;
-    font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
-    font-size: 12px;
+    background: var(--pdf-page-bg, #eef2f8);
+    color: var(--pdf-body, #344054);
+    font-family: var(--pdf-font-family, "Inter", "Segoe UI", Roboto, Arial, sans-serif);
+    font-size: 13px;
     line-height: 1.5;
 }
 
@@ -46,39 +46,11 @@ body {
     margin-left: auto;
 }
 
-.print-btn {
-    padding: 8px 12px;
-    border: 1px solid #dfe7f3;
-    border-radius: 9px;
-    background: #f8fafc;
-    color: #1d2939;
-    font: inherit;
-    font-weight: 700;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.print-btn:hover {
-    background: #eef2f9;
-}
-
-.print-btn.is-active {
-    border-color: #4f8ef7;
-    background: #eaf1fe;
-    color: #1d4ed8;
-}
-
-.print-btn-primary {
-    border-color: #4f8ef7;
-    background: #4f8ef7;
-    color: #fff;
-}
-
 .print-note {
     max-width: 210mm;
     margin: 0 auto 10px;
-    color: #667085;
-    font-size: 11.5px;
+    color: var(--pdf-muted, #667085);
+    font-size: 12px;
     font-weight: 600;
 }
 
@@ -88,9 +60,10 @@ body {
     max-width: 210mm;
     margin: 0 auto;
     padding: 12mm;
-    background: #fff;
-    border: 1px solid #dfe7f3;
-    border-radius: 6px;
+    background: var(--pdf-paper, #fff);
+    border: 1px solid var(--pdf-border, #dfe5ef);
+    border-radius: var(--pdf-radius, 14px);
+    box-shadow: var(--pdf-shadow, 0 16px 40px rgba(25, 42, 70, .10));
 }
 
 .print-head {
@@ -99,16 +72,16 @@ body {
     justify-content: space-between;
     gap: 12px;
     padding-bottom: 8px;
-    border-bottom: 3px solid #101828;
+    border-bottom: 2px solid var(--pdf-border, #dfe5ef);
 }
 
 .print-brand {
     display: block;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: .16em;
     text-transform: uppercase;
-    color: #667085;
+    color: var(--pdf-muted, #667085);
 }
 
 .print-head h1 {
@@ -135,16 +108,16 @@ body {
     grid-template-columns: repeat(4, 1fr);
     gap: 6px 12px;
     padding: 10px 0;
-    border-bottom: 1px solid #e4e7ec;
+    border-bottom: 1px solid var(--pdf-border, #dfe5ef);
 }
 
 .print-meta span {
     display: block;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
-    color: #667085;
+    color: var(--pdf-muted, #667085);
 }
 
 .print-meta strong {
@@ -158,7 +131,7 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 14px;
     padding: 10px 0;
-    border-bottom: 1px solid #e4e7ec;
+    border-bottom: 1px solid var(--pdf-border, #dfe5ef);
 }
 
 .print-party strong {
@@ -172,11 +145,11 @@ body {
 }
 
 .print-label {
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
-    color: #667085;
+    color: var(--pdf-muted, #667085);
 }
 
 .print-contact {
@@ -194,18 +167,18 @@ body {
 .print-table th,
 .print-table td {
     padding: 6px 8px;
-    border: 1px solid #d0d5dd;
+    border: 1px solid var(--pdf-border, #dfe5ef);
     text-align: left;
     vertical-align: top;
 }
 
 .print-table thead th {
-    background: #f2f4f7;
-    font-size: 9.5px;
+    background: var(--pdf-surface-soft, #f7f9fc);
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: .06em;
     text-transform: uppercase;
-    color: #475467;
+    color: var(--pdf-muted, #667085);
 }
 
 .print-table .num {
@@ -214,7 +187,7 @@ body {
 }
 
 .print-table tfoot td {
-    background: #f8fafc;
+    background: var(--pdf-surface-soft, #f7f9fc);
 }
 
 .print-table-compact th,
@@ -224,13 +197,13 @@ body {
 
 .print-sub {
     display: block;
-    color: #667085;
-    font-size: 10.5px;
+    color: var(--pdf-muted, #667085);
+    font-size: 11px;
 }
 
 .print-empty {
     text-align: center;
-    color: #667085;
+    color: var(--pdf-muted, #667085);
     font-weight: 600;
 }
 
@@ -250,7 +223,7 @@ body {
     font-size: 12px;
     letter-spacing: .06em;
     text-transform: uppercase;
-    color: #475467;
+    color: var(--pdf-muted, #667085);
 }
 
 .print-columns {
@@ -279,14 +252,14 @@ body {
 }
 
 .print-checklist em {
-    color: #667085;
+    color: var(--pdf-muted, #667085);
     font-style: normal;
-    font-size: 10.5px;
+    font-size: 11px;
 }
 
 .print-fine {
-    color: #667085;
-    font-size: 10.5px;
+    color: var(--pdf-muted, #667085);
+    font-size: 11px;
 }
 
 .print-signs {
@@ -298,13 +271,13 @@ body {
 
 .print-signs div {
     padding-top: 26px;
-    border-top: 1px solid #101828;
+    border-top: 1px solid var(--pdf-ink, #1b2a41);
 }
 
 .print-signs span {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
-    color: #475467;
+    color: var(--pdf-muted, #667085);
 }
 
 /* ---------------- print ---------------- */

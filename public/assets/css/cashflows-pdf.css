@@ -1,78 +1,85 @@
-/* ==========================================================================
-   CASHFLOWS-PDF.CSS — Cashflow PDF export view
-   --------------------------------------------------------------------------
-   Standalone page: resources/views/cashflows/pdf.blade.php
-   (own <html> shell for PDF printing - self-contained, element selectors
-   safe here)
-   ========================================================================== */
+/* ========================================================================
+   CASHFLOW REPORT — content rules for the shared A4 landscape document shell
+   ======================================================================== */
 
-* {
-    box-sizing: border-box;
+@page {
+    size: A4 landscape;
+    margin: 12mm;
 }
 
 body {
-    font-family: DejaVu Sans, Arial, sans-serif;
-    color: #17233b;
-    font-size: 12px;
-    margin: 0;
-    padding: 24px;
+    color: var(--pdf-body, #344054);
+    font-family: var(--pdf-font-family, "Inter", "Segoe UI", Roboto, Arial, sans-serif);
+    font-size: 13px;
+    line-height: 1.5;
 }
 
 .header {
     display: flex;
     justify-content: space-between;
-    border-bottom: 2px solid #dfe7f3;
+    gap: 18px;
     padding-bottom: 14px;
     margin-bottom: 18px;
+    border-bottom: 2px solid var(--pdf-border, #dfe5ef);
 }
 
 .brand {
+    color: var(--pdf-ink, #1b2a41);
     font-size: 22px;
     font-weight: 700;
+    line-height: 1.25;
 }
 
 .subtitle {
-    color: #687386;
+    margin: 4px 0 10px;
+    color: var(--pdf-muted, #667085);
+    font-size: 12px;
     font-weight: 500;
-    margin-top: 4px;
-    margin-bottom: 10px;
 }
 
 .badge {
     display: inline-block;
-    background: #edf5ff;
-    color: #4f83f1;
-    padding: 7px 10px;
+    padding: 6px 10px;
+    border: 1px solid var(--pdf-border, #dfe5ef);
     border-radius: 999px;
-    font-weight: 700;
+    background: var(--pdf-surface-soft, #f7f9fc);
+    color: var(--pdf-ink, #1b2a41);
+    font-size: 11px;
+    font-weight: 600;
 }
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 18px;
 }
 
 .stat {
-    border: 1px solid #dfe7f3;
-    border-radius: 12px;
+    min-width: 0;
     padding: 12px;
-    background: #fbfdff;
+    border: 1px solid var(--pdf-border, #dfe5ef);
+    border-radius: 9px;
+    background: var(--pdf-surface-soft, #f7f9fc);
 }
 
 .stat span {
     display: block;
-    color: #687386;
-    font-size: 10px;
-    font-weight: 700;
+    color: var(--pdf-muted, #667085);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
     text-transform: uppercase;
 }
 
 .stat strong {
     display: block;
-    font-size: 18px;
     margin-top: 5px;
+    color: var(--pdf-ink, #1b2a41);
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
 }
 
 .section {
@@ -80,62 +87,97 @@ body {
 }
 
 .section h3 {
-    font-size: 15px;
     margin: 0 0 10px;
+    color: var(--pdf-ink, #1b2a41);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
 }
 
 th,
 td {
-    border-bottom: 1px solid #dfe7f3;
     padding: 8px;
+    border-bottom: 1px solid var(--pdf-border-soft, #e9edf4);
+    color: var(--pdf-body, #344054);
     text-align: left;
     vertical-align: top;
 }
 
 th {
-    font-size: 10px;
-    color: #7d8aa0;
+    background: var(--pdf-surface-soft, #f7f9fc);
+    color: var(--pdf-muted, #667085);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
     text-transform: uppercase;
-    letter-spacing: .05em;
-    background: #f8fafc;
+    letter-spacing: .04em;
+}
+
+td {
+    font-size: 12.5px;
+    line-height: 1.4;
 }
 
 .credit {
-    color: #059669;
-    font-weight: 700;
+    color: #047857;
+    font-weight: 600;
 }
 
 .debit {
-    color: #e11d48;
-    font-weight: 700;
+    color: #b42318;
+    font-weight: 600;
 }
 
 .small {
-    color: #687386;
-    font-size: 10px;
+    color: var(--pdf-muted, #667085);
+    font-size: 11px;
 }
 
 .notice {
-    padding: 10px;
-    margin-bottom: 14px;
-    background: #fff4e5;
-    color: #92400e;
-    border: 1px solid #fed7aa;
-    border-radius: 10px;
-    font-weight: 700;
+    padding: 10px 12px;
+    margin: 12px 0;
+    border: 1px solid #f3d29a;
+    border-radius: 9px;
+    background: #fff9eb;
+    color: #80510a;
+    font-size: 12px;
+    line-height: 1.45;
 }
 
 @media print {
-    body {
-        padding: 0;
+    .section,
+    .grid,
+    .stat {
+        break-inside: avoid;
+        page-break-inside: avoid;
     }
 
-    .no-print {
-        display: none;
+    table tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    td {
+        font-size: 9pt;
+    }
+}
+
+@media screen and (max-width: 900px) {
+    .pdf-sheet--landscape .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pdf-sheet--landscape {
+        overflow-x: auto;
     }
 }

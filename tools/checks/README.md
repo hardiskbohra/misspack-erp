@@ -27,8 +27,8 @@ node tools/checks/docs-check.cjs      # the paperwork behind an entry: one table
                                       # before the resource route, one definition of "missing"
 node tools/checks/statement-check.cjs # a party statement: opening + debit − credit = closing, the
                                       # ageing adds up to the closing, and an expiring link is real
-node tools/checks/pdf-documents-check.cjs # invoice, payslip and statement typography, A4 paper,
-                                          # currency/tax labels and light-theme print output
+node tools/checks/pdf-documents-check.cjs # shared PDF paper/actions, A4 typography, currency/tax
+                                          # labels, reports, shipment docs, and label geometry
 node tools/checks/report-check.cjs    # the report builder: a cell sums the same rows it opens,
                                       # a bucket is dates and not a dialect, a comparison is the
                                       # axis shifted, and "not set" is a row you can drill

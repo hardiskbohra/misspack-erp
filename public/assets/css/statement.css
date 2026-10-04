@@ -21,12 +21,12 @@
    ========================================================================== */
 
 .stmt {
-    --stmt-bg: var(--mc-card, #ffffff);
-    --stmt-text: var(--mc-text, #1a2540);
-    --stmt-text-2: var(--mc-text-2, #5a6478);
-    --stmt-text-3: var(--mc-text-3, #7d8aa0);
-    --stmt-border: var(--mc-border, #e2e8f0);
-    --stmt-soft: var(--mc-soft, #f4f7ff);
+    --stmt-bg: var(--pdf-paper, var(--mc-card, #ffffff));
+    --stmt-text: var(--pdf-ink, var(--mc-text, #1a2540));
+    --stmt-text-2: var(--pdf-body, var(--mc-text-2, #536079));
+    --stmt-text-3: var(--pdf-muted, var(--mc-text-3, #667085));
+    --stmt-border: var(--pdf-border, var(--mc-border, #dfe5ef));
+    --stmt-soft: var(--pdf-surface-soft, #f7f9fc);
     --stmt-accent: var(--accent, #4f8ef7);
     --stmt-rule: rgba(26, 37, 64, 0.08);
     --stmt-positive: #047857;
@@ -45,7 +45,7 @@
     gap: 18px 32px;
     justify-content: space-between;
     padding-bottom: 16px;
-    border-bottom: 2px solid var(--stmt-text);
+    border-bottom: 2px solid var(--stmt-border);
 }
 
 .stmt-brand-name {
@@ -563,7 +563,7 @@ body.stmt-standalone .stmt {
 }
 
 .stmt-public-foot {
-    max-width: 1000px;
+    max-width: var(--pdf-sheet-width, 210mm);
     margin: 14px auto 0;
     color: #5a6478;
     font-size: 12px;
@@ -571,7 +571,7 @@ body.stmt-standalone .stmt {
 }
 
 .stmt-notice {
-    max-width: 1000px;
+    max-width: var(--pdf-sheet-width, 210mm);
     padding: 12px 16px;
     margin: 0 auto 14px;
     border-radius: 10px;
@@ -581,7 +581,7 @@ body.stmt-standalone .stmt {
 }
 
 .stmt-print-foot {
-    max-width: 1000px;
+    max-width: var(--pdf-sheet-width, 210mm);
     margin: 14px auto 0;
     color: #7d8aa0;
     font-size: 11.5px;
@@ -732,13 +732,13 @@ body.stmt-standalone.stmt-print {
 }
 
 body.stmt-standalone.stmt-print .stmt {
-    --stmt-bg: #fff;
-    --stmt-text: #1a2540;
-    --stmt-text-2: #536079;
-    --stmt-text-3: #6f7b8f;
-    --stmt-border: #dfe5ef;
-    --stmt-soft: #f7f9fc;
-    --stmt-rule: rgba(26, 37, 64, .10);
+    --stmt-bg: var(--pdf-paper, #fff);
+    --stmt-text: var(--pdf-ink, #1b2a41);
+    --stmt-text-2: var(--pdf-body, #344054);
+    --stmt-text-3: var(--pdf-muted, #667085);
+    --stmt-border: var(--pdf-border, #dfe5ef);
+    --stmt-soft: var(--pdf-surface-soft, #f7f9fc);
+    --stmt-rule: var(--pdf-border-soft, #e9edf4);
     --stmt-positive: #047857;
     --stmt-warn: #a15c00;
     background: #fff;
@@ -800,13 +800,13 @@ body.stmt-standalone.stmt-print .stmt {
     }
 
     body.stmt-standalone .stmt {
-        --stmt-bg: #fff;
-        --stmt-text: #1a2540;
-        --stmt-text-2: #536079;
-        --stmt-text-3: #6f7b8f;
-        --stmt-border: #dfe5ef;
-        --stmt-soft: #f7f9fc;
-        --stmt-rule: rgba(26, 37, 64, .10);
+        --stmt-bg: var(--pdf-paper, #fff);
+        --stmt-text: var(--pdf-ink, #1b2a41);
+        --stmt-text-2: var(--pdf-body, #344054);
+        --stmt-text-3: var(--pdf-muted, #667085);
+        --stmt-border: var(--pdf-border, #dfe5ef);
+        --stmt-soft: var(--pdf-surface-soft, #f7f9fc);
+        --stmt-rule: var(--pdf-border-soft, #e9edf4);
         --stmt-positive: #047857;
         --stmt-warn: #a15c00;
         max-width: none;

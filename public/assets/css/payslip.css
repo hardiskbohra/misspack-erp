@@ -12,19 +12,19 @@
    ========================================================================== */
 
 :root {
-    --ps-card: var(--mc-card, #ffffff);
-    --ps-line: var(--mc-border, #e3e9f4);
-    --ps-text: var(--mc-text, #1b2a41);
-    --ps-text-2: var(--mc-text-2, #4a5b74);
-    --ps-text-3: var(--mc-text-3, #7c8aa0);
-    --ps-tint: #f5f8fd;
+    --ps-card: var(--pdf-paper, var(--mc-card, #ffffff));
+    --ps-line: var(--pdf-border, var(--mc-border, #dfe5ef));
+    --ps-text: var(--pdf-ink, var(--mc-text, #1b2a41));
+    --ps-text-2: var(--pdf-body, var(--mc-text-2, #4a5b74));
+    --ps-text-3: var(--pdf-muted, var(--mc-text-3, #667085));
+    --ps-tint: var(--pdf-surface-soft, #f7f9fc);
     --ps-ok-bg: rgba(16, 185, 129, .14);
     --ps-ok-fg: #047857;
     --ps-warn-bg: rgba(245, 158, 11, .16);
     --ps-warn-fg: #b45309;
     --ps-net-bg: linear-gradient(135deg, rgba(79, 131, 241, .10), rgba(99, 102, 241, .05));
-    --ps-net-fg: #2f5fd0;
-    --ps-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+    --ps-net-fg: var(--pdf-accent, #4f83f1);
+    --ps-font: var(--pdf-font-family, "Inter", "Segoe UI", Roboto, Arial, sans-serif);
 }
 
 :root[data-theme="dark"] {
@@ -305,7 +305,7 @@ body.ps-standalone .payslip {
 }
 
 .ps-print-foot {
-    max-width: 860px;
+    max-width: var(--pdf-sheet-width, 210mm);
     margin: 12px auto 0;
     color: #6b7a90;
     font-size: 11px;
@@ -313,7 +313,7 @@ body.ps-standalone .payslip {
 }
 
 .ps-notice {
-    max-width: 860px;
+    max-width: var(--pdf-sheet-width, 210mm);
     margin: 0 auto 12px;
     padding: 10px 14px;
     border: 1px solid #cdd9ee;

@@ -1,0 +1,308 @@
+/* ========================================================================
+   DOCUMENT PRINT — shared shell for every A4 print / Save as PDF view
+   ------------------------------------------------------------------------
+   Domain documents keep their own content layout. This file owns the paper,
+   typography, toolbar, actions, and print reset so new documents inherit the
+   same visual standard instead of creating a fourth one.
+   ======================================================================== */
+
+:root {
+    --pdf-font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+    --pdf-page-bg: #eef2f8;
+    --pdf-paper: #fff;
+    --pdf-ink: #1b2a41;
+    --pdf-body: #344054;
+    --pdf-muted: #667085;
+    --pdf-border: #dfe5ef;
+    --pdf-border-soft: #e9edf4;
+    --pdf-surface-soft: #f7f9fc;
+    --pdf-accent: var(--ui-accent, var(--master-primary, #4f83f1));
+    --pdf-accent-hover: #3b72d9;
+    --pdf-focus: rgba(79, 131, 241, .28);
+    --pdf-shadow: 0 16px 40px rgba(25, 42, 70, .10);
+    --pdf-radius: 14px;
+    --pdf-sheet-width: 210mm;
+    --pdf-sheet-height: 297mm;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body.pdf-preview {
+    margin: 0;
+    padding: 18px 16px 40px;
+    background: var(--pdf-page-bg);
+    color: var(--pdf-body);
+    font-family: var(--pdf-font-family);
+    font-size: 13px;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    -webkit-text-size-adjust: 100%;
+}
+
+/* The same A4 sheet on screen and on paper. Content styles belong to the
+   document; this frame and its spacing do not. */
+html body.pdf-preview .pdf-sheet,
+body.stmt-standalone .pdf-sheet {
+    width: var(--pdf-sheet-width);
+    min-height: var(--pdf-sheet-height);
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 12mm;
+    border: 1px solid var(--pdf-border);
+    border-radius: var(--pdf-radius);
+    background: var(--pdf-paper);
+    color: var(--pdf-body);
+    box-shadow: var(--pdf-shadow);
+    font-family: var(--pdf-font-family);
+    font-size: 13px;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+}
+
+html body.pdf-preview .pdf-sheet--landscape {
+    width: 297mm;
+    min-height: 210mm;
+}
+
+/* Document actions are the same size, weight, radius, focus and accent as the
+   ERP's shared action buttons. Use secondary for navigation and primary for
+   the main print action. */
+html body .pdf-toolbar {
+    display: flex;
+    width: var(--pdf-sheet-width);
+    max-width: 100%;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 auto 14px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    font-family: var(--pdf-font-family);
+}
+
+html body .pdf-toolbar--spread {
+    justify-content: space-between;
+}
+
+html body .pdf-toolbar--landscape {
+    width: 297mm;
+}
+
+html body .pdf-toolbar-group {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-left: auto;
+}
+
+html body .pdf-action {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 15px;
+    border: 1px solid var(--pdf-border);
+    border-radius: 9px;
+    background: var(--pdf-paper);
+    color: var(--pdf-ink);
+    font-family: var(--pdf-font-family);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
+}
+
+html body .pdf-action:hover {
+    border-color: var(--pdf-accent);
+    background: var(--pdf-surface-soft);
+    color: var(--pdf-ink);
+}
+
+html body .pdf-action--primary {
+    border-color: var(--pdf-accent);
+    background: var(--pdf-accent);
+    color: #fff;
+}
+
+html body .pdf-action--primary:hover {
+    border-color: var(--pdf-accent-hover);
+    background: var(--pdf-accent-hover);
+    color: #fff;
+}
+
+html body .pdf-action--selected {
+    border-color: var(--pdf-accent);
+    background: #eef3ff;
+    color: #315fbd;
+}
+
+html body .pdf-action:focus-visible {
+    outline: 3px solid var(--pdf-focus);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 1px var(--pdf-accent);
+}
+
+html body .pdf-action:disabled,
+html body .pdf-action[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: .58;
+}
+
+html body .pdf-notice {
+    width: var(--pdf-sheet-width);
+    max-width: 100%;
+    margin: 0 auto 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--pdf-border);
+    border-radius: 10px;
+    background: var(--pdf-paper);
+    color: var(--pdf-body);
+    font-family: var(--pdf-font-family);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+@media screen and (max-width: 900px) {
+    body.pdf-preview {
+        padding: 12px 10px 28px;
+    }
+
+    html body.pdf-preview .pdf-sheet,
+    body.stmt-standalone .pdf-sheet {
+        width: 100%;
+        min-height: 0;
+        padding: 24px;
+    }
+
+    html body.pdf-preview .pdf-sheet--landscape {
+        width: 100%;
+    }
+
+    html body .pdf-toolbar,
+    html body .pdf-toolbar--landscape,
+    html body .pdf-notice {
+        width: 100%;
+    }
+}
+
+@media screen and (max-width: 620px) {
+    html body.pdf-preview .pdf-sheet,
+    body.stmt-standalone .pdf-sheet {
+        padding: 16px;
+        border-radius: 10px;
+    }
+
+    html body .pdf-toolbar--spread {
+        justify-content: flex-start;
+    }
+}
+
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 12mm;
+    }
+
+    html body.pdf-preview {
+        width: auto;
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+        background: #fff !important;
+        color: var(--pdf-ink);
+        font-family: var(--pdf-font-family);
+        font-size: 10pt;
+        line-height: 1.4;
+    }
+
+    .no-print,
+    .pdf-toolbar {
+        display: none !important;
+    }
+
+    .pdf-print-sheet {
+        --stmt-bg: #fff !important;
+        --stmt-text: var(--pdf-ink) !important;
+        --stmt-text-2: var(--pdf-body) !important;
+        --stmt-text-3: var(--pdf-muted) !important;
+        --stmt-border: var(--pdf-border) !important;
+        --stmt-soft: var(--pdf-surface-soft) !important;
+        --stmt-rule: #e9edf4 !important;
+        --stmt-positive: #047857 !important;
+        --stmt-warn: #a15c00 !important;
+    }
+
+    html body.pdf-preview .pdf-sheet,
+    body.stmt-standalone .pdf-sheet,
+    .pdf-print-sheet {
+        width: auto !important;
+        max-width: none !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: #fff !important;
+        color: var(--pdf-ink) !important;
+        box-shadow: none !important;
+        font-family: var(--pdf-font-family) !important;
+        font-size: 10pt !important;
+        line-height: 1.4 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .pdf-sheet thead,
+    .pdf-print-sheet thead {
+        display: table-header-group;
+    }
+
+    html body.pdf-preview .pdf-sheet table thead th,
+    body.stmt-standalone .pdf-sheet table thead th,
+    .pdf-print-sheet table thead th {
+        background: var(--pdf-surface-soft);
+        border-color: var(--pdf-border-soft);
+        color: var(--pdf-muted);
+        font-size: 8.25pt;
+        font-weight: 600;
+        line-height: 1.35;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+
+    html body.pdf-preview .pdf-sheet table tbody td,
+    body.stmt-standalone .pdf-sheet table tbody td,
+    .pdf-print-sheet table tbody td {
+        border-color: var(--pdf-border-soft);
+        font-size: 9.5pt;
+        line-height: 1.4;
+    }
+
+    .pdf-sheet tr,
+    .pdf-print-sheet tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .pdf-sheet a,
+    .pdf-print-sheet a {
+        color: inherit !important;
+        text-decoration: none !important;
+    }
+}

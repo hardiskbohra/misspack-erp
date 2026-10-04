@@ -4,18 +4,18 @@
    ======================================================================== */
 
 :root {
-    --invoice-brand: #2f3a4c;
-    --invoice-accent: #315fbd;
+    --invoice-brand: var(--pdf-ink, #1b2a41);
+    --invoice-accent: var(--pdf-accent, #4f83f1);
     --invoice-accent-soft: #eef3ff;
-    --invoice-text: #273449;
-    --invoice-body: #344054;
-    --invoice-muted: #667085;
-    --invoice-border: #d8e0ec;
-    --invoice-border-soft: #e7ebf2;
-    --invoice-surface: #ffffff;
-    --invoice-surface-soft: #f7f9fc;
-    --invoice-page: #f1f4f9;
-    --invoice-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+    --invoice-text: var(--pdf-ink, #1b2a41);
+    --invoice-body: var(--pdf-body, #344054);
+    --invoice-muted: var(--pdf-muted, #667085);
+    --invoice-border: var(--pdf-border, #dfe5ef);
+    --invoice-border-soft: var(--pdf-border-soft, #e9edf4);
+    --invoice-surface: var(--pdf-paper, #ffffff);
+    --invoice-surface-soft: var(--pdf-surface-soft, #f7f9fc);
+    --invoice-page: var(--pdf-page-bg, #eef2f8);
+    --invoice-font: var(--pdf-font-family, "Inter", "Segoe UI", Roboto, Arial, sans-serif);
 }
 
 *,
@@ -41,55 +41,7 @@ body {
     print-color-adjust: exact;
 }
 
-.toolbar {
-    width: 210mm;
-    margin: 16px auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-}
-
-.master-btn {
-    appearance: none;
-    min-height: 38px;
-    padding: 9px 15px;
-    border: 1px solid var(--invoice-brand);
-    border-radius: 8px;
-    background: var(--invoice-brand);
-    color: #fff;
-    font-family: var(--invoice-font);
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 1.2;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.master-btn:hover {
-    background: #202a3a;
-}
-
-.page {
-    position: relative;
-    width: 210mm;
-    min-height: 297mm;
-    margin: 0 auto 20px;
-    padding: 9mm;
-    overflow: hidden;
-    border: 1px solid var(--invoice-border);
-    border-radius: 10px;
-    background: var(--invoice-surface);
-    box-shadow: 0 14px 38px rgba(30, 42, 64, .10);
-}
-
-.page::before {
-    position: absolute;
-    inset: 0 0 auto;
-    height: 4px;
-    background: var(--invoice-brand);
-    content: "";
-}
+/* The shared toolbar and A4 paper shell are defined in document-print.css. */
 
 /* --------------------------------------------------------------- letterhead */
 
@@ -98,7 +50,7 @@ body {
     grid-template-columns: minmax(0, 1fr) minmax(170px, 205px);
     gap: 18px;
     padding: 4px 0 12px;
-    border-bottom: 1px solid var(--invoice-border);
+    border-bottom: 2px solid var(--invoice-border);
 }
 
 .brand {
@@ -126,7 +78,7 @@ body {
 .brand-detail {
     margin: 3px 0 0;
     color: var(--invoice-muted);
-    font-size: 11.5px;
+    font-size: 12px;
     line-height: 1.45;
     overflow-wrap: anywhere;
 }
@@ -170,7 +122,7 @@ body {
     border-radius: 999px;
     background: var(--invoice-surface-soft);
     color: var(--invoice-body);
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 600;
     line-height: 1.25;
     text-transform: uppercase;
@@ -200,7 +152,7 @@ body {
     display: block;
     margin-bottom: 3px;
     color: var(--invoice-muted);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     line-height: 1.3;
     text-transform: uppercase;
@@ -220,7 +172,7 @@ body {
     display: block;
     margin-top: 3px;
     color: var(--invoice-muted);
-    font-size: 10.5px;
+    font-size: 11px;
     line-height: 1.3;
 }
 
@@ -268,7 +220,7 @@ body {
 .box-detail {
     margin: 5px 0 0;
     color: var(--invoice-muted);
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.45;
 }
 
@@ -291,16 +243,16 @@ body {
     border: 0;
     border-bottom: 1px solid var(--invoice-border-soft);
     color: var(--invoice-body);
-    font-size: 11.5px;
+    font-size: 13px;
     line-height: 1.4;
     vertical-align: top;
     overflow-wrap: anywhere;
 }
 
 .items th {
-    background: #f4f6f9;
-    color: #536079;
-    font-size: 10px;
+    background: var(--invoice-surface-soft);
+    color: var(--invoice-muted);
+    font-size: 11px;
     font-weight: 600;
     line-height: 1.3;
     text-align: left;
@@ -340,7 +292,7 @@ body {
 .item-name {
     display: block;
     color: var(--invoice-text);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     line-height: 1.35;
 }
@@ -349,7 +301,7 @@ body {
     display: block;
     margin-top: 2px;
     color: var(--invoice-body);
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.4;
 }
 
@@ -362,7 +314,7 @@ body {
     display: block;
     margin-top: 4px;
     color: var(--invoice-muted);
-    font-size: 10.5px;
+    font-size: 11px;
     line-height: 1.3;
 }
 
@@ -403,7 +355,7 @@ body {
     border-radius: 7px;
     background: var(--invoice-surface-soft);
     color: var(--invoice-body);
-    font-size: 11.5px;
+    font-size: 12.5px;
     line-height: 1.45;
     overflow-wrap: anywhere;
 }
@@ -448,7 +400,7 @@ body {
     padding: 6px 9px;
     border-bottom: 1px solid var(--invoice-border-soft);
     color: var(--invoice-body);
-    font-size: 11.5px;
+    font-size: 12.5px;
     line-height: 1.35;
 }
 
@@ -506,7 +458,7 @@ body {
 
 .bank-details dt {
     color: var(--invoice-muted);
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 600;
 }
 
@@ -514,7 +466,7 @@ body {
     min-width: 0;
     margin: 0;
     color: var(--invoice-body);
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 500;
     overflow-wrap: anywhere;
 }
@@ -563,7 +515,7 @@ body {
     padding-top: 8px;
     border-top: 1px solid var(--invoice-border-soft);
     color: var(--invoice-muted);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.4;
     text-align: center;
 }
@@ -591,24 +543,7 @@ body {
         print-color-adjust: exact;
     }
 
-    .toolbar,
     .no-print {
-        display: none !important;
-    }
-
-    .page {
-        width: auto !important;
-        min-height: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: visible !important;
-        border: 0 !important;
-        border-radius: 0 !important;
-        background: #fff !important;
-        box-shadow: none !important;
-    }
-
-    .page::before {
         display: none !important;
     }
 
@@ -673,20 +608,6 @@ body {
         background: #fff;
     }
 
-    .toolbar {
-        width: auto;
-        margin: 10px;
-    }
-
-    .page {
-        width: 100%;
-        min-height: 0;
-        margin: 0;
-        padding: 20px 15px;
-        border-radius: 0;
-        box-shadow: none;
-    }
-
     .top {
         grid-template-columns: minmax(0, 1fr);
     }
@@ -716,6 +637,6 @@ body {
     .items th,
     .items td {
         padding: 7px 5px;
-        font-size: 10.5px;
+        font-size: 11px;
     }
 }

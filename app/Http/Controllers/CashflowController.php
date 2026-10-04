@@ -296,7 +296,7 @@ class CashflowController extends Controller
         }
 
         return response()->view('cashflows.pdf', $viewData + [
-            'pdfFallbackMessage' => 'Install barryvdh/laravel-dompdf for direct PDF download. Use browser Print > Save as PDF for now.',
+            'pdfFallbackMessage' => 'Use the print dialog and choose Save as PDF to download this report.',
         ]);
     }
 
