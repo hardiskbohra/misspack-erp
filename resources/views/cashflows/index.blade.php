@@ -386,7 +386,9 @@
                                 <span class="master-sub ui-mobile-secondary">{{ $entry->entry_date?->format('Y') }}</span>
                             </td>
                             <td class="cf-particular" data-label="Particular">
-                                <strong>{{ $entry->particular }}</strong>
+                                <a class="cf-entry-link" href="{{ route('cashflows.show', $entry) }}">
+                                    <strong>{{ $entry->particular }}</strong>
+                                </a>
                                 @if (($entry->attachments_count ?? 0) > 0)
                                     <a class="cf-doc-chip" href="{{ route('cashflows.show', $entry) }}#documents"
                                         title="{{ $entry->attachments_count }} document(s) on file — open them">

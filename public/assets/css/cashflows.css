@@ -702,7 +702,7 @@
     padding-top: 10px;
     padding-bottom: 10px;
     font-size: 11px;
-    color: var(--mc-text-3);
+    color: var(--mc-text);
 }
 
 .cashflow-index .master-table td {
@@ -763,15 +763,24 @@
     font-size: 13px;
 }
 
+.cashflow-index .cf-entry-link {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    color: var(--ui-accent);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.cashflow-index .cf-entry-link:hover,
+.cashflow-index .cf-entry-link:focus-visible {
+    color: var(--ui-accent);
+    text-decoration: underline;
+}
+
 .cashflow-index .cf-account {
     display: block;
     font-size: 13px;
-}
-
-/* the row's own name behaves like the identifier it is: hovering the row
-   underlines it, the same way the shipment list marks its shipment number */
-.cashflow-index .master-table tbody tr.is-clickable:hover .cf-particular strong {
-    text-decoration: underline;
 }
 
 .cashflow-index .cf-money {

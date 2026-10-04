@@ -430,6 +430,7 @@
 
 .master-list .master-list-density {
     display: inline-flex;
+    align-items: center;
     padding: 2px;
     border: 1px solid var(--mc-border);
     border-radius: 10px;
@@ -437,7 +438,11 @@
 }
 
 .master-list .master-list-density-btn {
-    padding: 4px 10px;
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 12px;
     border: 0;
     border-radius: 8px;
     background: none;
@@ -445,6 +450,7 @@
     font: inherit;
     font-size: 11px;
     font-weight: 700;
+    line-height: 1.2;
     letter-spacing: .01em;
     cursor: pointer;
 }

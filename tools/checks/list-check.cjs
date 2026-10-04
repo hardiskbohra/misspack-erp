@@ -896,6 +896,26 @@ const ruleBody = (text, selector) => {
 
 const shipCell = ruleBody(css, '.ship-index .master-table th,');
 const cashCell = ruleBody(cashCss, '.cashflow-index .master-table th,');
+const cashHeader = ruleBody(cashCss, '.cashflow-index .master-table th {');
+const cashLink = ruleBody(cashCss, '.cashflow-index .cf-entry-link {');
+const listDensityButton = ruleBody(listCss, '.master-list .master-list-density-btn {');
+const sharedDensityButton = ruleBody(tableCss, 'body[data-ui-shell] .core-table-density-btn {');
+
+check('the cashflow row key is a blue hyperlink with a hand cursor',
+    /<a class="cf-entry-link" href="\{\{ route\('cashflows\.show', \$entry\) \}\}">[\s\S]*?\$entry->particular/.test(cashView)
+    && /color:\s*var\(--ui-accent\)/.test(cashLink)
+    && /cursor:\s*pointer/.test(cashLink)
+    && /\.cashflow-index \.cf-entry-link:hover,[\s\S]{0,100}focus-visible/.test(cashCss)
+    && /text-decoration:\s*underline/.test(ruleBody(cashCss, '.cashflow-index .cf-entry-link:hover,')));
+check('cashflow table headers use the strong theme text colour',
+    /color:\s*var\(--mc-text\)/.test(cashHeader));
+check('density buttons have consistent, touch-friendly vertical padding',
+    /min-height:\s*40px/.test(listDensityButton)
+    && /padding:\s*9px 12px/.test(listDensityButton)
+    && /align-items:\s*center/.test(listDensityButton)
+    && /min-height:\s*40px/.test(sharedDensityButton)
+    && /padding:\s*9px 12px/.test(sharedDensityButton)
+    && /align-items:\s*center/.test(sharedDensityButton));
 
 check('both lists measure their table the same way',
     /padding:\s*12px 14px/.test(shipCell) && /padding:\s*12px 14px/.test(cashCell)
