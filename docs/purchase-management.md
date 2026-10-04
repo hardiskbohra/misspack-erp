@@ -2,8 +2,8 @@
 
 The buying-side twin of the sales invoice module. One table (`purchase_invoices`),
 two documents: `invoice_type` is `order` (a Purchase Order) or `bill` (the
-Purchase Bill raised from it). Screens live under `purchase-orders.*` and
-`purchase-bills.*` and share `PurchaseInvoiceController`.
+Purchase Bill raised from it). Both live in one UI under `purchase-invoices.*`,
+the way a proforma and a tax invoice share `/sales-invoices`.
 
 The money rule is the same shape as sales: `amount_paid` is the opening figure;
 ledger debits on `vendor_payment_entries.purchase_invoice_id` are the payments;

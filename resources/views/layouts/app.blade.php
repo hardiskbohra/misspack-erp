@@ -99,11 +99,9 @@
             ['label' => 'Invoices', 'route' => 'sales-invoices.index', 'active' => 'sales-invoices.*', 'icon' => 'fa-solid fa-file-invoice-dollar'],
             ['section' => 'Purchase'],
             ['label' => 'Vendors', 'route' => 'vendors.index', 'active' => 'vendors.*', 'icon' => 'fa-solid fa-user-gear'],
-            /* What the office buys: the order sent, and the bill that arrived.
-               Two items because they are read as two lists, one controller
-               behind both. */
-            ['label' => 'Purchase Orders', 'route' => 'purchase-orders.index', 'active' => 'purchase-orders.*', 'icon' => 'fas fa-file-signature'],
-            ['label' => 'Purchase Bills', 'route' => 'purchase-bills.index', 'active' => 'purchase-bills.*', 'icon' => 'fas fa-file-invoice'],
+            /* One list, two documents — a purchase order and the bill it
+               becomes — the same way Invoices holds a proforma and a tax invoice. */
+            ['label' => 'Purchases', 'route' => 'purchase-invoices.index', 'active' => 'purchase-invoices.*', 'icon' => 'fas fa-file-invoice'],
             ['section' => 'Accounts'],
             ['label' => 'Cashflow', 'route' => 'cashflows.index', 'active' => 'cashflows.*', 'except' => ['cashflows.documents', 'cashflows.statements', 'cashflows.statements.*'], 'icon' => 'fa-solid fa-scale-balanced'],
             /* The archive is a page of the module, not a second module: it sits

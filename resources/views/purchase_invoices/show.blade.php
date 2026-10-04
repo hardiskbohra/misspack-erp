@@ -40,12 +40,12 @@
                     </span>
                 @endif
                 @if ($invoice->isSuperseded())
-                    <a class="master-chip" href="{{ route('purchase-bills.show', $invoice->convertedInvoice) }}">
+                    <a class="master-chip" href="{{ route('purchase-invoices.show', $invoice->convertedInvoice) }}">
                         Became {{ $invoice->convertedInvoice?->invoice_number }}
                     </a>
                 @endif
                 @if ($invoice->purchaseOrder)
-                    <a class="master-chip" href="{{ route('purchase-orders.show', $invoice->purchaseOrder) }}">
+                    <a class="master-chip" href="{{ route('purchase-invoices.show', $invoice->purchaseOrder) }}">
                         From {{ $invoice->purchaseOrder->invoice_number }}
                     </a>
                 @endif
@@ -73,7 +73,7 @@
                         Copy public link
                     </button>
                     @if ($invoice->canConvert())
-                        <form method="POST" action="{{ route('purchase-orders.convert', $invoice) }}"
+                        <form method="POST" action="{{ route('purchase-invoices.convert', $invoice) }}"
                             data-confirm="Raise a purchase bill from {{ $invoice->invoice_number }}?">
                             @csrf
                             <button type="submit">Convert to bill</button>

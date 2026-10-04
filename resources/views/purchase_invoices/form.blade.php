@@ -70,6 +70,17 @@
                 <div class="master-section-head"><div><p class="master-eyebrow">Basics</p><h2>Document details</h2></div></div>
                 <div class="master-form-grid is-three">
                     <div class="master-field">
+                        <label class="master-label">Document type <span class="master-required">*</span></label>
+                        <select class="master-select" name="invoice_type" id="invoiceType" required @disabled($isEdit)>
+                            @foreach ($typeOptions as $key => $label)
+                                <option value="{{ $key }}" @selected(old('invoice_type', $invoice->invoice_type) === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @if ($isEdit)
+                            <input type="hidden" name="invoice_type" value="{{ $invoice->invoice_type }}">
+                        @endif
+                    </div>
+                    <div class="master-field">
                         <label class="master-label">Number</label>
                         <input class="master-input" name="invoice_number" value="{{ old('invoice_number', $invoice->invoice_number) }}" placeholder="Auto if blank">
                     </div>
@@ -121,7 +132,7 @@
                         <label class="master-label">Place of supply</label>
                         <input class="master-input" name="place_of_supply" value="{{ old('place_of_supply', $invoice->place_of_supply) }}">
                     </div>
-                    @if ($docType === 'bill')
+                    @if (old('invoice_type', $invoice->invoice_type) === 'bill')
                         <div class="master-field">
                             <label class="master-label">Vendor bill no.</label>
                             <input class="master-input" name="vendor_bill_number" value="{{ old('vendor_bill_number', $invoice->vendor_bill_number) }}">

@@ -55,7 +55,7 @@ class PurchaseInvoice extends Model
     ];
 
     /** The paid figure is upstream of every balance: one SQL, read everywhere. */
-    public const PAID_SQL = '(coalesce(purchase_invoices.amount_paid, 0) + (select coalesce(sum(debit_amount), 0) from vendor_payment_entries where vendor_payment_entries.purchase_invoice_id = purchase_invoices.id))';
+    public const PAID_SQL = '(coalesce(purchase_invoices.amount_paid, 0) + (select coalesce(sum(amount_in_inr), 0) from vendor_payment_entries where vendor_payment_entries.purchase_invoice_id = purchase_invoices.id and vendor_payment_entries.transaction_type = \'debit\'))';
 
     /** The supplier's own bill number, falling back to our document number. */
     public function referenceNumber(): string
@@ -235,7 +235,7 @@ class PurchaseInvoice extends Model
     /** The route prefix this document's screens live under. */
     public function routePrefix(): string
     {
-        return $this->isOrder() ? 'purchase-orders' : 'purchase-bills';
+        return 'purchase-invoices';
     }
 
     /* ------------------------------------------------------------------

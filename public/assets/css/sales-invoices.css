@@ -484,6 +484,8 @@
 
 .si-type.type-proforma { --tone-bg: rgba(123, 97, 255, .16); --tone-fg: #6d4bd8; }
 .si-type.type-tax { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
+.si-type.type-order { --tone-bg: rgba(123, 97, 255, .16); --tone-fg: #6d4bd8; }
+.si-type.type-bill { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
 
 .si-portal.is-public { --tone-bg: rgba(16, 185, 129, .16); --tone-fg: #047857; }
 .si-portal.is-private { --tone-bg: var(--mc-soft); --tone-fg: var(--mc-text-3); }
@@ -499,6 +501,8 @@
 
 :root[data-theme="dark"] .si-type.type-proforma { --tone-fg: #c4b5fd; }
 :root[data-theme="dark"] .si-type.type-tax { --tone-fg: #93b4ff; }
+:root[data-theme="dark"] .si-type.type-order { --tone-fg: #c4b5fd; }
+:root[data-theme="dark"] .si-type.type-bill { --tone-fg: #93b4ff; }
 
 :root[data-theme="dark"] .si-portal.is-public { --tone-fg: #6ee7b7; }
 :root[data-theme="dark"] .si-portal.is-private { --tone-fg: #aab6c9; }

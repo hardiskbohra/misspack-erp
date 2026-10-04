@@ -1,9 +1,8 @@
 {{-- Payment against a purchase bill: a debit in the vendor ledger. --}}
-@if (($docType ?? '') === 'bill')
     <div class="master-modal" id="paymentModal" aria-hidden="true">
         <div class="master-modal-card is-narrow" role="dialog" aria-modal="true" aria-labelledby="purchasePaymentTitle">
             <form method="POST" data-payment-form
-                data-action-template="{{ route('purchase-bills.payments.store', ['purchaseInvoice' => '__INVOICE__']) }}">
+                data-action-template="{{ route('purchase-invoices.payments.store', ['purchaseInvoice' => '__INVOICE__']) }}">
                 @csrf
                 <input type="hidden" name="_dialog" value="paymentModal">
                 <div class="master-modal-header">
@@ -66,4 +65,3 @@
         </div>
     </div>
     <span hidden data-open-dialog="{{ $errors->any() ? old('_dialog') : '' }}"></span>
-@endif

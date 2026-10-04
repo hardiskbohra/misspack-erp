@@ -230,32 +230,18 @@ Route::middleware('auth')->group(function () {
         Route::delete('/sales-invoice-attachments/{attachment}', [SalesInvoiceController::class, 'destroyAttachment'])->name('sales-invoices.attachments.destroy');
         Route::resource('sales-invoices', SalesInvoiceController::class);
 
-        // Purchase Orders & Purchase Bills
-        /* One controller, two documents: the route set decides whether it is
-           looking at an order or a bill, the way `/sales-invoices` does for a
-           proforma and a tax invoice. The vocabulary routes come first so a
-           document action is not read as a document id. */
-        foreach ([
-            'purchase-orders' => 'order',
-            'purchase-bills' => 'bill',
-        ] as $purchasePath => $purchaseType) {
-            Route::post("/{$purchasePath}/{purchaseInvoice}/payments", [PurchaseInvoiceController::class, 'recordPayment'])->name("{$purchasePath}.payments.store");
-            Route::patch("/{$purchasePath}/{purchaseInvoice}/status", [PurchaseInvoiceController::class, 'updateStatus'])->name("{$purchasePath}.status");
-            Route::get("/{$purchasePath}/{purchaseInvoice}/print", [PurchaseInvoiceController::class, 'print'])->name("{$purchasePath}.print");
-            Route::post("/{$purchasePath}/{purchaseInvoice}/convert", [PurchaseInvoiceController::class, 'convert'])->name("{$purchasePath}.convert");
-            Route::get("/{$purchasePath}/create", [PurchaseInvoiceController::class, 'create'])->name("{$purchasePath}.create");
-            Route::post("/{$purchasePath}", [PurchaseInvoiceController::class, 'store'])->name("{$purchasePath}.store");
-            Route::get("/{$purchasePath}", [PurchaseInvoiceController::class, 'index'])->name("{$purchasePath}.index");
-        }
-        Route::get('/purchase-orders/{purchaseInvoice}/edit', [PurchaseInvoiceController::class, 'edit'])->name('purchase-orders.edit');
-        Route::put('/purchase-orders/{purchaseInvoice}', [PurchaseInvoiceController::class, 'update'])->name('purchase-orders.update');
-        Route::delete('/purchase-orders/{purchaseInvoice}', [PurchaseInvoiceController::class, 'destroy'])->name('purchase-orders.destroy');
-        Route::get('/purchase-orders/{purchaseInvoice}', [PurchaseInvoiceController::class, 'show'])->name('purchase-orders.show');
+        // Purchase Orders & Purchase Bills — one UI, the way sales invoices
+        // hold a proforma and a tax invoice. Vocabulary routes first so
+        // /purchase-invoices/create is not read as an id.
+        Route::post('/purchase-invoices/{purchaseInvoice}/payments', [PurchaseInvoiceController::class, 'recordPayment'])->name('purchase-invoices.payments.store');
+        Route::patch('/purchase-invoices/{purchaseInvoice}/status', [PurchaseInvoiceController::class, 'updateStatus'])->name('purchase-invoices.status');
+        Route::get('/purchase-invoices/{purchaseInvoice}/print', [PurchaseInvoiceController::class, 'print'])->name('purchase-invoices.print');
+        Route::post('/purchase-invoices/{purchaseInvoice}/convert', [PurchaseInvoiceController::class, 'convert'])->name('purchase-invoices.convert');
+        Route::resource('purchase-invoices', PurchaseInvoiceController::class);
 
-        Route::get('/purchase-bills/{purchaseInvoice}/edit', [PurchaseInvoiceController::class, 'edit'])->name('purchase-bills.edit');
-        Route::put('/purchase-bills/{purchaseInvoice}', [PurchaseInvoiceController::class, 'update'])->name('purchase-bills.update');
-        Route::delete('/purchase-bills/{purchaseInvoice}', [PurchaseInvoiceController::class, 'destroy'])->name('purchase-bills.destroy');
-        Route::get('/purchase-bills/{purchaseInvoice}', [PurchaseInvoiceController::class, 'show'])->name('purchase-bills.show');
+        /* Old split URLs keep working as a hop onto the one list. */
+        Route::redirect('/purchase-orders', '/purchase-invoices?invoice_type=order');
+        Route::redirect('/purchase-bills', '/purchase-invoices?invoice_type=bill');
 
         // Price Calculator
         Route::get('/price-calculator', [PriceCalculatorController::class, 'index'])->name('price-calculator.index');
