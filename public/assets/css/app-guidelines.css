@@ -1,0 +1,453 @@
+/*
+ * Shared design-system compatibility layer.
+ * Loaded after the shell, module, list, and responsive stylesheets. See
+ * docs/ui-design-guidelines.md before adding a new shared visual pattern.
+ */
+
+:root {
+    --ui-page-surface: var(--mc-soft, #eef3ff);
+    --ui-card-surface: var(--mc-card, #ffffff);
+    --ui-nested-surface: var(--mc-card-soft, #f8fbff);
+    --ui-border: var(--mc-border, #dfe7f3);
+    --ui-card-shadow: var(--mc-shadow, 0 14px 35px rgba(25, 42, 70, .08));
+    --ui-card-radius: 18px;
+    --ui-nested-radius: 14px;
+    --ui-control-radius: 11px;
+    --ui-content-gap: 16px;
+}
+
+body[data-ui-module] {
+    font-family: var(--app-font-family, "Inter", "Segoe UI", Roboto, Arial, sans-serif);
+    color: var(--mc-text, #17233b);
+}
+
+/* Shared card surfaces: white in light mode, theme-owned in dark mode. */
+body[data-ui-module] .master-card,
+body[data-ui-module] .master-section,
+body[data-ui-module] .master-tabs-card,
+body[data-ui-module] .master-modal-card,
+body[data-ui-module] .cf-card,
+body[data-ui-module] .cf-sub-card,
+body[data-ui-module] .cpa-card,
+body[data-ui-module] .client-detail-card {
+    background: var(--ui-card-surface);
+    border-color: var(--ui-border);
+    border-radius: var(--ui-card-radius);
+}
+
+body[data-ui-module] .master-card,
+body[data-ui-module] .master-tabs-card,
+body[data-ui-module] .cf-card,
+body[data-ui-module] .cpa-card,
+body[data-ui-module] .client-detail-card {
+    box-shadow: var(--ui-card-shadow);
+}
+
+body[data-ui-module] .master-section,
+body[data-ui-module] .cf-sub-card {
+    box-shadow: none;
+}
+
+/* A record's tab content stays distinct from the page canvas and the card
+   nested inside it remains a white/theme card. */
+body[data-ui-module] .master-tabs-panels,
+body[data-ui-module] .client-detail-panels,
+body[data-ui-module] .cf-panel {
+    background: var(--ui-nested-surface);
+}
+
+body[data-ui-module] .master-tabs {
+    gap: 8px;
+    padding: 12px;
+    border-bottom: 1px solid var(--ui-border);
+    background: var(--ui-nested-surface);
+}
+
+body[data-ui-module] .master-tab {
+    min-height: 40px;
+    padding: 9px 14px;
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-control-radius);
+    background: var(--ui-card-surface);
+    color: var(--mc-text-2);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+body[data-ui-module] .master-tab.is-active {
+    border-color: var(--master-primary, #4f83f1);
+    background: var(--master-primary, #4f83f1);
+    color: #fff;
+}
+
+body[data-ui-module] .master-tabs-panels {
+    padding: 18px;
+}
+
+body[data-ui-module] .master-tab:focus-visible,
+body[data-ui-module] .cf-tab:focus-visible {
+    outline: 2px solid var(--master-primary, #4f83f1);
+    outline-offset: 2px;
+}
+
+/* Compact, uniform statistics cards. Meaning stays on the edge and icon,
+   never as a tinted wash over the complete surface. */
+body[data-ui-module] .master-stats {
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+body[data-ui-module] .master-stat {
+    min-height: 82px;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--ui-border);
+    border-radius: 16px;
+    background: var(--ui-card-surface);
+    box-shadow: var(--ui-card-shadow);
+}
+
+body[data-ui-module] .master-stat.blue,
+body[data-ui-module] .master-stat.purple,
+body[data-ui-module] .master-stat.teal,
+body[data-ui-module] .master-stat.orange,
+body[data-ui-module] .master-stat.green,
+body[data-ui-module] .master-stat.red {
+    background: var(--ui-card-surface);
+}
+
+body[data-ui-module] .master-stat.blue { border-color: rgba(21, 159, 247, .42); }
+body[data-ui-module] .master-stat.purple { border-color: rgba(139, 92, 246, .42); }
+body[data-ui-module] .master-stat.teal { border-color: rgba(18, 203, 183, .42); }
+body[data-ui-module] .master-stat.orange { border-color: rgba(245, 158, 11, .42); }
+body[data-ui-module] .master-stat.green { border-color: rgba(16, 185, 129, .42); }
+body[data-ui-module] .master-stat.red { border-color: rgba(239, 71, 112, .42); }
+
+body[data-ui-module] .master-stat .icon {
+    display: inline-flex;
+    flex: 0 0 38px;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--ui-border);
+    border-radius: 12px;
+    background: var(--ui-nested-surface);
+    color: var(--mc-text-2);
+    font-size: 15px;
+}
+
+body[data-ui-module] .master-stat.blue .icon { color: var(--master-info, #159ff7); border-color: rgba(21, 159, 247, .24); background: rgba(21, 159, 247, .10); }
+body[data-ui-module] .master-stat.purple .icon { color: var(--master-purple, #8b5cf6); border-color: rgba(139, 92, 246, .24); background: rgba(139, 92, 246, .10); }
+body[data-ui-module] .master-stat.teal .icon { color: var(--master-teal, #12cbb7); border-color: rgba(18, 203, 183, .24); background: rgba(18, 203, 183, .10); }
+body[data-ui-module] .master-stat.orange .icon { color: var(--master-orange, #f59e0b); border-color: rgba(245, 158, 11, .24); background: rgba(245, 158, 11, .10); }
+body[data-ui-module] .master-stat.green .icon { color: var(--master-green, #10b981); border-color: rgba(16, 185, 129, .24); background: rgba(16, 185, 129, .10); }
+body[data-ui-module] .master-stat.red .icon { color: var(--master-red, #ef4770); border-color: rgba(239, 71, 112, .24); background: rgba(239, 71, 112, .10); }
+
+body[data-ui-module] .master-stat-title {
+    margin: 0 0 3px;
+    color: var(--mc-text-2);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+body[data-ui-module] .master-stat-value {
+    margin: 0;
+    color: var(--mc-text);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+/* A single list/detail table language across the four modules. Column sizing,
+   numeric alignment, status colors, and mobile transformations remain local. */
+body[data-ui-module] .master-table,
+body[data-ui-module] .master-items-table,
+body[data-ui-module] .cf-table,
+body[data-ui-module] .cpa-table {
+    color: var(--mc-text-2);
+    font-size: 13px;
+}
+
+body[data-ui-module] .master-table th,
+body[data-ui-module] .master-items-table th,
+body[data-ui-module] .cf-table th,
+body[data-ui-module] .cpa-table th {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--ui-border);
+    background: var(--mc-table-head, var(--ui-card-surface));
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    line-height: 1.35;
+    text-transform: uppercase;
+}
+
+body[data-ui-module] .master-table td,
+body[data-ui-module] .master-items-table td,
+body[data-ui-module] .cf-table td,
+body[data-ui-module] .cpa-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--ui-border);
+    background: transparent;
+    color: var(--mc-text-2);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.45;
+}
+
+body[data-ui-module] .master-table td strong,
+body[data-ui-module] .master-items-table td strong,
+body[data-ui-module] .cf-table td strong,
+body[data-ui-module] .cpa-table td strong {
+    color: var(--mc-text);
+    font-weight: 600;
+}
+
+body[data-ui-module] .master-list .master-table thead th {
+    background: var(--mc-table-head, var(--ui-card-surface));
+}
+
+/* Client detail screens also have a private table namespace; normalize those
+   legacy cell scales to the same shared table rhythm. */
+body[data-ui-module="clients"] .client-show .client-entry-table-wrap .master-table th,
+body[data-ui-module="clients"] .client-show .client-statement-table th,
+body[data-ui-module="clients"] .client-show .client-detail-tools .cpa-table th {
+    padding: 10px 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+body[data-ui-module="clients"] .client-show .client-entry-table-wrap .master-table td,
+body[data-ui-module="clients"] .client-show .client-statement-table td,
+body[data-ui-module="clients"] .client-show .client-detail-tools .cpa-table td {
+    padding: 10px 12px;
+    color: var(--mc-text-2);
+    font-size: 13px;
+    font-weight: 400;
+}
+
+body[data-ui-module="clients"] .client-show .client-entry-table-wrap .master-table td strong,
+body[data-ui-module="clients"] .client-show .client-statement-table td strong,
+body[data-ui-module="clients"] .client-show .client-detail-tools .cpa-table td strong {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Shared section/page headings stay restrained and readable. */
+body[data-ui-module] .master-header h1,
+body[data-ui-module] .ship-head h1,
+body[data-ui-module] .cf-header h1,
+body[data-ui-module] .emp-record-who h1 {
+    color: var(--mc-text);
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+body[data-ui-module] .master-section-title,
+body[data-ui-module] .cf-section-title h2,
+body[data-ui-module] .cpa-section-head h2,
+body[data-ui-module] .client-detail-title {
+    color: var(--mc-text);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+/* Cashflow settings' historical wrapper name differed by one character from
+   the stylesheet. Support the markup's singular class and keep its responsive
+   page padding; the old plural class remains valid for any older partial. */
+body[data-ui-module="cashflows"] .cf-setting,
+body[data-ui-module="cashflows"] .cf-settings,
+body[data-ui-module="cashflows"] .cf-setting *,
+body[data-ui-module="cashflows"] .cf-settings * {
+    box-sizing: border-box;
+}
+
+body[data-ui-module="cashflows"] .cf-setting,
+body[data-ui-module="cashflows"] .cf-settings,
+body[data-ui-module="cashflows"] .cf-page {
+    min-height: calc(100vh - 70px);
+    padding: 24px;
+    background: var(--ui-page-surface);
+    color: var(--mc-text);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+body[data-ui-module="cashflows"] .cf-card {
+    margin-bottom: 16px;
+}
+
+body[data-ui-module="cashflows"] .cf-sub-card {
+    margin-bottom: 16px;
+    padding: 16px;
+    border-width: 1px;
+    border-radius: var(--ui-nested-radius);
+    background: var(--ui-card-surface);
+}
+
+body[data-ui-module="cashflows"] .cf-summary {
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+body[data-ui-module="cashflows"] .cf-stat {
+    min-height: 82px;
+    padding: 14px;
+    border: 1px solid var(--ui-border);
+    border-radius: 16px;
+    background: var(--ui-card-surface);
+    box-shadow: var(--ui-card-shadow);
+}
+
+body[data-ui-module="cashflows"] .cf-stat.blue,
+body[data-ui-module="cashflows"] .cf-stat.purple,
+body[data-ui-module="cashflows"] .cf-stat.teal,
+body[data-ui-module="cashflows"] .cf-stat.orange {
+    background: var(--ui-card-surface);
+}
+
+body[data-ui-module="cashflows"] .cf-stat p {
+    margin: 0 0 4px;
+    color: var(--mc-text-2);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+body[data-ui-module="cashflows"] .cf-stat strong {
+    color: var(--mc-text);
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+body[data-ui-module="cashflows"] .cf-tabs {
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--ui-border);
+    background: var(--ui-nested-surface);
+}
+
+body[data-ui-module="cashflows"] .cf-tab {
+    min-height: 40px;
+    padding: 9px 14px;
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-control-radius);
+    background: var(--ui-card-surface);
+    color: var(--mc-text-2);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+body[data-ui-module="cashflows"] .cf-tab.active {
+    border-color: var(--master-primary, #4f83f1);
+    background: var(--master-primary, #4f83f1);
+    color: #fff;
+}
+
+body[data-ui-module="cashflows"] .cf-panel {
+    padding: 18px;
+}
+
+/* Domain-specific detail surfaces remain neutral; state is still signalled by
+   the icon, status chip, and thin accent border. */
+body[data-ui-module="shipments"] .ship-doc,
+body[data-ui-module="shipments"] .ship-cost-totals > div,
+body[data-ui-module="shipments"] .master-history-row,
+body[data-ui-module="shipments"] .master-attachment-card {
+    border-color: var(--ui-border);
+    background: var(--ui-card-surface);
+}
+
+body[data-ui-module="shipments"] .ship-doc.is-done {
+    border-color: rgba(16, 185, 129, .42);
+    background: var(--ui-card-surface);
+}
+
+body[data-ui-module="shipments"] .ship-doc.is-missing {
+    border-color: rgba(245, 158, 11, .42);
+    background: var(--ui-card-surface);
+}
+
+body[data-ui-module="shipments"] .ship-cost-totals > div {
+    border-radius: var(--ui-nested-radius);
+}
+
+body[data-ui-module="clients"] .client-detail-tabs-card {
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-card-radius);
+    background: var(--ui-card-surface);
+    box-shadow: var(--ui-card-shadow);
+}
+
+body[data-ui-module="clients"] .client-detail-panels {
+    padding: 18px;
+    border-top: 1px solid var(--ui-border);
+}
+
+body[data-ui-module="clients"] .client-detail-card,
+body[data-ui-module="clients"] .client-detail-tools .cpa-card {
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-card-radius);
+    background: var(--ui-card-surface);
+    box-shadow: var(--ui-card-shadow);
+}
+
+body[data-ui-module="clients"] .client-statement-metric,
+body[data-ui-module="clients"] .client-statement-other-currencies,
+body[data-ui-module="clients"] .cpa-secondary-form,
+body[data-ui-module="clients"] .cpa-support-shortcut,
+body[data-ui-module="clients"] .portal-credential-box,
+body[data-ui-module="clients"] .client-review-note {
+    border-color: var(--ui-border);
+    background: var(--ui-card-surface);
+}
+
+body[data-ui-module="users"] .emp-record-head {
+    background: var(--ui-card-surface);
+    background-image: none;
+}
+
+@media (max-width: 768px) {
+    body[data-ui-module] .master-tabs {
+        padding: 10px;
+    }
+
+    /* Preserve the shared list's stacked mobile cards while keeping the
+       normalized desktop table type scale. */
+    body[data-ui-module] .master-list .master-table td {
+        padding: 0;
+        border: 0;
+        background: transparent;
+    }
+
+    body[data-ui-module="shipments"] .master-items-table td {
+        padding: 8px 0;
+        border: 0;
+    }
+
+    body[data-ui-module] .master-tabs-panels,
+    body[data-ui-module="clients"] .client-detail-panels,
+    body[data-ui-module="cashflows"] .cf-panel {
+        padding: 12px;
+    }
+
+    body[data-ui-module="cashflows"] .cf-setting,
+    body[data-ui-module="cashflows"] .cf-settings,
+    body[data-ui-module="cashflows"] .cf-page {
+        padding: 16px;
+    }
+
+    body[data-ui-module="cashflows"] .cf-tabs {
+        gap: 6px;
+        padding: 8px;
+    }
+}

@@ -167,69 +167,128 @@
         </div>
 
         <form method="GET" action="{{ route('sales-invoices.index') }}">
-            <div class="master-filter-row">
-                <div class="master-search">
+            <div class="si-filter-toolbar" role="search" aria-label="Search and filter invoices">
+                <div class="master-search si-filter-search">
                     <span aria-hidden="true">⌕</span>
                     <input class="master-input" type="text" name="search" value="{{ $search }}"
                         placeholder="Search invoice, client, GSTIN, PO..." aria-label="Search invoices">
+                    <button class="si-search-submit" type="submit" aria-label="Search invoices">
+                        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    </button>
                 </div>
-                <select class="master-select" name="invoice_type" aria-label="Filter by type">
-                    <option value="all">All types</option>
-                    @foreach($typeOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <select class="master-select" name="status" aria-label="Filter by status">
-                    <option value="all">All statuses</option>
-                    @foreach($statusOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <select class="master-select" name="client_id" aria-label="Filter by client">
-                    <option value="all">All clients</option>
-                    @foreach($clients as $client)
-                        <option value="{{ $client->id }}" @selected((string) $clientId === (string) $client->id)>{{ $client->company_name }}</option>
-                    @endforeach
-                </select>
-                <select class="master-select" name="project_id" aria-label="Filter by project">
-                    <option value="all">All projects</option>
-                    @foreach($projects as $project)
-                        <option value="{{ $project->id }}" @selected((string) $projectId === (string) $project->id)>{{ $project->project_number }} - {{ $project->name }}</option>
-                    @endforeach
-                </select>
-                {{-- Two questions the office actually asks of a bill book: has the
-                     money come in, and how late is what has not. --}}
-                <select class="master-select" name="payment" aria-label="Filter by what has been received">
-                    <option value="all">Any payment state</option>
-                    @foreach($paymentLabels as $key => $label)
-                        <option value="{{ $key }}" @selected($payment === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <select class="master-select" name="chase" aria-label="Filter by what to chase">
-                    <option value="all">Nothing to chase</option>
-                    @foreach($chaseLabels as $chaseKey => $chaseLabel)
-                        <option value="{{ $chaseKey }}" @selected($chase === $chaseKey)>{{ $chaseLabel }}</option>
-                    @endforeach
-                </select>
-                <select class="master-select" name="ageing" aria-label="Filter by how late">
-                    <option value="all">Any age</option>
-                    <option value="overdue" @selected($ageing === 'overdue')>Late (all of it)</option>
-                    @foreach($ageingBuckets as $key => $label)
-                        <option value="{{ $key }}" @selected($ageing === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <input class="master-input desktop-only" type="date" name="date_from" value="{{ $dateFrom }}"
-                    aria-label="Invoiced from" title="Invoiced from">
-                <input class="master-input desktop-only" type="date" name="date_to" value="{{ $dateTo }}"
-                    aria-label="Invoiced to" title="Invoiced to">
+                <button type="button" class="master-btn master-btn-soft si-filter-open"
+                    data-drawer-open="invoiceFiltersDrawer" aria-haspopup="dialog"
+                    aria-controls="invoiceFiltersDrawer" aria-expanded="false"
+                    aria-label="Open invoice filters, {{ count($appliedChips) }} active">
+                    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                    <span>Filters</span>
+                    <span class="si-filter-count" aria-hidden="true">{{ count($appliedChips) }}</span>
+                </button>
+            </div>
 
-                <div class="master-list-filter-group">
+            <x-drawer id="invoiceFiltersDrawer" title="Filter invoices" eyebrow="Invoice filters"
+                subtitle="Refine the invoice list by type, customer, collection state, or date." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Invoice</h3>
+                    <div class="si-filter-grid">
+                        <div class="si-filter-field">
+                            <label class="master-label" for="siFilterInvoiceType">Invoice type</label>
+                            <select class="master-select" name="invoice_type" id="siFilterInvoiceType" aria-label="Filter by type">
+                                <option value="all">All types</option>
+                                @foreach($typeOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="si-filter-field">
+                            <label class="master-label" for="siFilterStatus">Status</label>
+                            <select class="master-select" name="status" id="siFilterStatus" aria-label="Filter by status">
+                                <option value="all">All statuses</option>
+                                @foreach($statusOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="si-filter-field">
+                            <label class="master-label" for="siFilterDateFrom">Invoiced from</label>
+                            <input class="master-input" type="date" name="date_from" id="siFilterDateFrom"
+                                value="{{ $dateFrom }}" aria-label="Invoiced from">
+                        </div>
+                        <div class="si-filter-field">
+                            <label class="master-label" for="siFilterDateTo">Invoiced to</label>
+                            <input class="master-input" type="date" name="date_to" id="siFilterDateTo"
+                                value="{{ $dateTo }}" aria-label="Invoiced to">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Customer &amp; project</h3>
+                    <div class="si-filter-grid">
+                        <div class="si-filter-field">
+                            <label class="master-label" for="siFilterClient">Client</label>
+                            <select class="master-select" name="client_id" id="siFilterClient" aria-label="Filter by client">
+                                <option value="all">All clients</option>
+                                @foreach($clients as $client)
+                                    <option value="{{ $client->id }}" @selected((string) $clientId === (string) $client->id)>{{ $client->company_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="si-filter-field">
+                            <label class="master-label" for="siFilterProject">Project</label>
+                            <select class="master-select" name="project_id" id="siFilterProject" aria-label="Filter by project">
+                                <option value="all">All projects</option>
+                                @foreach($projects as $project)
+                                    <option value="{{ $project->id }}" @selected((string) $projectId === (string) $project->id)>{{ $project->project_number }} - {{ $project->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Collections</h3>
+                    <div class="si-filter-grid">
+                        <div class="si-filter-field">
+                            <label class="master-label" for="siFilterPayment">Payment state</label>
+                            <select class="master-select" name="payment" id="siFilterPayment" aria-label="Filter by what has been received">
+                                <option value="all">Any payment state</option>
+                                @foreach($paymentLabels as $key => $label)
+                                    <option value="{{ $key }}" @selected($payment === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="si-filter-field">
+                            <label class="master-label" for="siFilterChase">Collection focus</label>
+                            <select class="master-select" name="chase" id="siFilterChase" aria-label="Filter by what to chase">
+                                <option value="all">Nothing to chase</option>
+                                @foreach($chaseLabels as $chaseKey => $chaseLabel)
+                                    <option value="{{ $chaseKey }}" @selected($chase === $chaseKey)>{{ $chaseLabel }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="si-filter-field">
+                            <label class="master-label" for="siFilterAgeing">Ageing</label>
+                            <select class="master-select" name="ageing" id="siFilterAgeing" aria-label="Filter by how late">
+                                <option value="all">Any age</option>
+                                <option value="overdue" @selected($ageing === 'overdue')>Late (all of it)</option>
+                                @foreach($ageingBuckets as $key => $label)
+                                    <option value="{{ $key }}" @selected($ageing === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <x-slot:footer>
                     @if ($filtersActive)
                         <a class="master-btn master-btn-soft" href="{{ route('sales-invoices.index') }}">Reset</a>
                     @endif
-                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
-                </div>
-            </div>
+                    <button class="master-btn master-btn-primary" type="submit">
+                        <i class="fa-solid fa-filter" aria-hidden="true"></i> Apply filters
+                    </button>
+                </x-slot:footer>
+            </x-drawer>
 
             @if ($filtersActive)
                 <div class="master-list-applied">
@@ -292,17 +351,16 @@
                     <i class="fas fa-percent" aria-hidden="true"></i> GST summary
                 </a>
 
-                <div class="master-list-density desktop-only" role="group" aria-label="Row density">
-                    <button type="button" class="master-list-density-btn" data-density="comfortable"
-                        aria-pressed="true">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact"
-                        aria-pressed="false">Compact</button>
+                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
+                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
+                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
                 </div>
             </div>
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table si-table">
+            <table class="master-table si-table" data-table-settings data-table-key="sales-invoices">
                 {{-- The ten columns, in the order the headings are written: the
                      pick box, the invoice (number, chips, date), the client, the
                      project, the three money columns, the due date, the state
@@ -322,14 +380,14 @@
                 </colgroup>
                 <thead>
                     <tr>
-                        <th scope="col" class="master-list-pick">
+                        <th scope="col" class="master-list-pick ui-mobile-secondary">
                             <input type="checkbox" data-bulk-all aria-label="Select every invoice on this page">
                         </th>
                         <th scope="col">Invoice</th>
                         <th scope="col">Client</th>
-                        <th scope="col">Project</th>
+                        <th scope="col" class="ui-mobile-secondary">Project</th>
                         <th scope="col" class="is-num">Total</th>
-                        <th scope="col" class="is-num">Received</th>
+                        <th scope="col" class="is-num ui-mobile-secondary">Received</th>
                         <th scope="col" class="is-num">Balance</th>
                         <th scope="col">Due</th>
                         <th scope="col">State</th>
@@ -348,7 +406,7 @@
                             $daysLate = $invoice->daysOverdue();
                         @endphp
                         <tr data-href="{{ route('sales-invoices.show', $invoice) }}">
-                            <td data-label="Pick" class="master-list-pick">
+                            <td data-label="Pick" class="master-list-pick ui-mobile-secondary">
                                 <input type="checkbox" name="ids[]" value="{{ $invoice->id }}" form="bulkForm"
                                     data-bulk-pick aria-label="Select {{ $invoice->invoice_number }}">
                             </td>
@@ -366,9 +424,9 @@
                             </td>
                             <td data-label="Client">
                                 <span class="si-client">{{ $invoice->client_company_name ?: 'No client' }}</span>
-                                <span class="master-sub">{{ $invoice->client_gstin ?: 'No GSTIN on file' }}</span>
+                                <span class="master-sub ui-mobile-secondary">{{ $invoice->client_gstin ?: 'No GSTIN on file' }}</span>
                             </td>
-                            <td data-label="Project">
+                            <td data-label="Project" class="ui-mobile-secondary">
                                 @if ($invoice->project?->project_number)
                                     {{ $invoice->project->project_number }}
                                     <span class="master-sub">{{ $invoice->project->name ?: 'Unnamed project' }}</span>
@@ -382,7 +440,7 @@
                                     {{ $invoice->items->count() }} {{ \Illuminate\Support\Str::plural('item', $invoice->items->count()) }}
                                 </span>
                             </td>
-                            <td data-label="Received" class="is-num">
+                            <td data-label="Received" class="is-num ui-mobile-secondary">
                                 <strong>{{ \App\Helpers\CommonHelper::indianCurrency($received) }}</strong>
                                 <span class="master-sub">
                                     @if ($invoice->payments_count > 0)
@@ -539,7 +597,7 @@
                     @endforelse
                 </tbody>
                 @if ($invoices->isNotEmpty())
-                    <tfoot>
+                    <tfoot class="ui-mobile-secondary">
                         <tr class="master-list-total">
                             <td colspan="4">
                                 <strong>Total — {{ $invoices->count() }} {{ \Illuminate\Support\Str::plural('invoice', $invoices->count()) }} shown</strong>

@@ -72,6 +72,17 @@ class Project extends Model
         return $this->hasMany(ProjectAttachment::class)->where('is_public', true)->latest('id');
     }
 
+    /** Client-safe shared files; vendor invoices remain private even if misflagged. */
+    public function clientPortalAttachments()
+    {
+        return $this->hasMany(ProjectAttachment::class)
+            ->where('is_public', true)
+            ->where(function ($query) {
+                $query->whereNull('category')->orWhereNotIn('category', ['vendor_invoice']);
+            })
+            ->latest('id');
+    }
+
     public function milestones()
     {
         return $this->hasMany(ProjectMilestone::class)->orderBy('project_product_id')->orderBy('sort_order')->orderBy('id');
@@ -110,6 +121,22 @@ class Project extends Model
     public function publicPayments()
     {
         return $this->hasMany(ProjectPayment::class)->where('is_public', true)->latest('payment_date')->latest('id');
+    }
+
+    public function clientVisiblePayments()
+    {
+        return $this->hasMany(ProjectPayment::class)
+            ->visibleToClient()
+            ->latest('payment_date')
+            ->latest('id');
+    }
+
+    public function publicShipments()
+    {
+        return $this->hasMany(\App\Models\Shipment::class, 'project_id')
+            ->where('client_id', $this->client_id)
+            ->where('show_client_portal', true)
+            ->latest('id');
     }
 
     public function logs()

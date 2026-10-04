@@ -1,0 +1,22 @@
+/* Shared page canvas and responsive content boundaries. */
+body[data-ui-shell] :is(.master-page, .master-form-page, .master-show, .cf-page, .cf-setting, .cf-settings, .ship-form-page, .task-form-page) {
+    background-color: var(--ui-page-surface);
+    color: var(--ui-text);
+}
+
+body[data-ui-shell] :is(.page-content, .cp-content) > * {
+    min-width: 0;
+}
+
+body[data-ui-shell] :is(.master-header, .cf-header, .cp-page-head) h1 {
+    color: var(--ui-text);
+    font-size: var(--ui-font-page-title);
+    font-weight: var(--ui-weight-bold);
+    line-height: var(--ui-line-tight);
+}
+
+@media (max-width: 767px) {
+    body[data-ui-shell] :is(.master-form-page, .master-show, .cf-page, .cf-setting, .cf-settings, .ship-form-page, .task-form-page) {
+        padding: var(--ui-space-4);
+    }
+}

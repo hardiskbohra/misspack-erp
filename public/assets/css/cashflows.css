@@ -3,8 +3,8 @@
    --------------------------------------------------------------------------
    Module stylesheet for the Cashflow section: the ledger list's own cells
    (dates, particular, money columns, settlement tones), the reports dashboard
-   (cf-*), cashflow settings (cf-settings*) and the detail badges. The list
-   chrome it sits in — chips, applied strip, density, pinned grid, totals row,
+   (cf-*), cashflow settings (.cf-setting/.cf-settings*) and the detail badges.
+   The list chrome it sits in — chips, applied strip, density, pinned grid, totals row,
    empty state — is master-list.css, shared with every other list screen.
    Loaded on cashflow screens via @push('styles').
 
@@ -67,7 +67,7 @@
         .cf-header h1 {
             margin: 0;
             font-size: 22px;
-            font-weight: 900
+            font-weight: 700
         }
 
         .cf-actions {
@@ -118,7 +118,7 @@
         .cf-stat p {
             margin: 0 0 6px;
             color: var(--mc-text-2);
-            font-weight: 900
+            font-weight: 700
         }
 
         .cf-stat strong {
@@ -139,7 +139,7 @@
         .cf-section h3 {
             margin: 0 0 16px;
             font-size: 16px;
-            font-weight: 900
+            font-weight: 700
         }
 
         .cf-table-wrap {
@@ -162,19 +162,19 @@
         .cf-table th {
             font-size: 11px;
             color: var(--mc-text-3);
-            font-weight: 900;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: .06em
         }
 
         .credit {
             color: #059669;
-            font-weight: 900
+            font-weight: 700
         }
 
         .debit {
             color: #e11d48;
-            font-weight: 900
+            font-weight: 700
         }
 
         .cf-sub {
@@ -190,7 +190,7 @@
             border-radius: 999px;
             padding: 6px 10px;
             font-size: 11px;
-            font-weight: 900;
+            font-weight: 700;
             text-transform: uppercase
         }
 
@@ -261,15 +261,18 @@
 
 /* ==========================================================================
    CASHFLOW SETTINGS — resources/views/cashflows/settings.blade.php
-   Settings page (cf-settings*).
+   Settings page (.cf-setting; .cf-settings remains an alias).
    ========================================================================== */
 
     .cf-settings,
-    .cf-settings * {
+    .cf-setting,
+    .cf-settings *,
+    .cf-setting * {
         box-sizing: border-box
     }
 
-    .cf-settings {
+    .cf-settings,
+    .cf-setting {
         background: var(--cf-bg);
         min-height: calc(100vh - 70px);
         padding: 28px;
@@ -297,7 +300,7 @@
     .cf-header h1 {
         margin: 0;
         font-size: 22px;
-        font-weight: 900
+        font-weight: 700
     }
 
     .cf-header p {
@@ -316,7 +319,7 @@
         padding: 14px 16px;
         margin-bottom: 18px;
         border-radius: 14px;
-        font-weight: 800
+        font-weight: 700
     }
 
     .cf-alert-success {
@@ -371,7 +374,7 @@
     .cf-section-title h2 {
         margin: 0;
         font-size: 18px;
-        font-weight: 900
+        font-weight: 700
     }
 
     .cf-section-title p {
@@ -408,7 +411,7 @@
     .cf-sub-card h3 {
         margin: 0 0 14px;
         font-size: 16px;
-        font-weight: 900
+        font-weight: 700
     }
 
     .cf-list {
@@ -437,7 +440,7 @@
 
     .cf-row .current-balance {
         font-size: 15px;
-        font-weight: 900;
+        font-weight: 700;
         color: var(--cf-green);
         padding: 10px 0
     }
@@ -448,7 +451,7 @@
         border-radius: 999px;
         padding: 10px 10px;
         font-size: 11px;
-        font-weight: 900;
+        font-weight: 700;
         text-transform: uppercase
     }
 
@@ -485,7 +488,8 @@
     }
 
     @media(max-width:1280px) {
-        .cf-settings {
+        .cf-settings,
+        .cf-setting {
             padding: 22px 18px
         }
 
@@ -508,7 +512,8 @@
     }
 
     @media(max-width:700px) {
-        .cf-settings {
+        .cf-settings,
+        .cf-setting {
             padding: 14px
         }
 
@@ -596,13 +601,13 @@
     .amount-credit {
         font-size: 30px;
         color: #059669;
-        font-weight: 900
+        font-weight: 700
     }
 
     .amount-debit {
         font-size: 30px;
         color: #e11d48;
-        font-weight: 900
+        font-weight: 700
     }
 
     .master-muted-box {
@@ -625,7 +630,7 @@
 
 .cf-sync-note a {
     color: #4f83f1;
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .cf-sync-chip {
@@ -636,7 +641,7 @@
     background: var(--mc-soft);
     color: #4f83f1;
     font-size: 10.5px;
-    font-weight: 800;
+    font-weight: 700;
     text-decoration: none;
     white-space: nowrap;
 }
@@ -787,7 +792,7 @@
     background: var(--mc-soft);
     color: var(--mc-text-2);
     font-size: 10px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .06em;
     text-transform: uppercase;
 }
@@ -919,7 +924,7 @@
    same screen. The padding and the header come from master-list.css; the
    ledger's own type scale tightens here, exactly as the shipment cells do. */
 
-@media (min-width: 769px) {
+@media (min-width: 768px) {
     .cashflow-index[data-density="compact"] .master-table {
         --cf-line: 18px;
         --cf-sub: 15px;
@@ -1189,7 +1194,7 @@
    The row becomes a card (master-list.css labels each cell); the money cells
    read as values rather than as a right-aligned column. */
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
     .cashflow-index .master-table td:last-child,
     .cashflow-documents .master-table td:last-child {
         text-align: left;
@@ -1282,7 +1287,7 @@
     background: var(--accent-light, rgba(79, 142, 247, .12));
     color: var(--master-primary, #4f83f1);
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .cashflow-reports .cf-report-more-grid {
@@ -1378,7 +1383,7 @@
 }
 
 .cashflow-reports .cf-report-table .cf-report-total-col {
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .cashflow-reports .cf-report-table thead a {
@@ -1435,7 +1440,7 @@ a.cf-report-value:hover {
     display: block;
     margin-top: 1px;
     font-size: 10.5px;
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .cashflow-reports .cf-report-delta.is-up {
@@ -1508,7 +1513,7 @@ a.cf-report-value:hover {
 .cashflow-reports .cf-report-bar-label {
     color: var(--mc-text-3);
     font-size: 10.5px;
-    font-weight: 800;
+    font-weight: 700;
     white-space: nowrap;
 }
 
@@ -1555,7 +1560,7 @@ a.cf-report-value:hover {
    Two classes plus the module root, so these win against the shell's own
    stacking rules on specificity alone: the module never has to name a class
    that belongs to the surface. */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
     .cf.cashflow-reports .cf-report-table,
     .cf.cashflow-reports .cf-report-table thead,
     .cf.cashflow-reports .cf-report-table tbody,

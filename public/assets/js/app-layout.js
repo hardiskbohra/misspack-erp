@@ -5,7 +5,9 @@
         var root = document.documentElement;
         var sidebarToggle = document.getElementById('sidebarToggle');
         var sidebarOverlay = document.getElementById('sidebarOverlay');
-        var mobileBreakpoint = window.matchMedia('(max-width: 1199px)');
+        var mobileBreakpoint = window.matchMedia('(max-width: 991px)');
+        var compactBreakpoint = window.matchMedia('(min-width: 992px) and (max-width: 1199px)');
+        var responsiveMode = null;
 
         function isMobileOrTablet() {
             return mobileBreakpoint.matches;
@@ -55,19 +57,35 @@
         }
 
         function applyResponsiveState() {
-            if (isMobileOrTablet()) {
+            var mode = isMobileOrTablet() ? 'tablet' : (compactBreakpoint.matches ? 'compact' : 'wide');
+
+            if (mode === 'tablet') {
                 forceMobileClosed();
+                responsiveMode = mode;
                 return;
             }
 
             closeMobileSidebar();
 
-            var saved = false;
-            try {
-                saved = localStorage.getItem('sidebarCollapsed') === '1';
-            } catch (e) {}
+            if (mode === 'compact') {
+                // The 992–1199px rail is compact by default, but its toggle can
+                // expand it until the viewport crosses into another range.
+                if (responsiveMode !== 'compact') {
+                    root.classList.add('sidebar-collapsed');
+                }
+                responsiveMode = mode;
+                return;
+            }
 
-            root.classList.toggle('sidebar-collapsed', saved);
+            if (responsiveMode !== 'wide') {
+                var saved = false;
+                try {
+                    saved = localStorage.getItem('sidebarCollapsed') === '1';
+                } catch (e) {}
+
+                root.classList.toggle('sidebar-collapsed', saved);
+            }
+            responsiveMode = mode;
         }
 
         if (sidebarToggle) {

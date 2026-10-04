@@ -1,0 +1,15 @@
+/* Menus and popovers float above page content but below modal layers. */
+body[data-ui-shell] :is(.master-dropdown-menu, .core-dropdown-menu, .select2-dropdown) {
+    z-index: var(--ui-z-dropdown);
+    border-color: var(--ui-border);
+    border-radius: var(--ui-radius-nested);
+    background-color: var(--ui-card-surface);
+    color: var(--ui-text);
+    box-shadow: var(--ui-shadow-popover);
+}
+
+body[data-ui-shell] :is(.master-dropdown-menu, .core-dropdown-menu) a:focus-visible,
+body[data-ui-shell] :is(.master-dropdown-menu, .core-dropdown-menu) button:focus-visible {
+    outline: 2px solid var(--ui-accent);
+    outline-offset: -2px;
+}

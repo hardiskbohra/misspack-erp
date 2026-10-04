@@ -86,6 +86,23 @@ layouts.forEach(layout => {
 const missing = [...new Set(linked)].filter(f => !fs.existsSync(path.join(CSS, f)));
 check('every stylesheet a layout links exists', missing.length === 0, missing.join(', '));
 
+const responsiveSource = read(path.join(ROOT, 'resources/css/layout/responsive.css'));
+const masterEntry = read(path.join(ROOT, 'resources/css/master.css'));
+check('responsive rules are the final design-system import',
+    masterEntry.lastIndexOf("@import './layout/responsive.css';") > masterEntry.lastIndexOf("@import './pages/module-adapters.css';"));
+check('all project breakpoint bands are defined',
+    ['min-width: 1440px', 'min-width: 1200px', 'max-width: 1439px', 'min-width: 992px', 'max-width: 1199px', 'min-width: 768px', 'max-width: 991px', 'max-width: 767px']
+        .every(band => responsiveSource.includes(band)));
+check('compact forms preserve intentional two-column variants',
+    /\.cf-form-grid:not\(\.two\)/.test(responsiveSource));
+check('mobile secondary data is opt-in, not globally discarded',
+    /\.ui-mobile-secondary/.test(responsiveSource) && /data-mobile-priority="secondary"/.test(responsiveSource));
+check('mobile card tables use labels and an opt-in wrapper',
+    /\.ui-mobile-cards/.test(responsiveSource) && /td\[data-label\]/.test(responsiveSource));
+check('secondary cells remain hidden after mobile-card display rules',
+    /\.ui-mobile-cards td\.ui-mobile-secondary/.test(responsiveSource)
+    && /\.ui-mobile-cards td\[data-mobile-priority="secondary"\]/.test(responsiveSource));
+
 layouts.forEach(layout => {
     const sheets = [...read(path.join(ROOT, layout)).matchAll(/assets\/css\/([a-z0-9._-]+\.css)/g)]
         .map(m => m[1]);
@@ -513,8 +530,8 @@ for (const file of walk(VIEWS).filter(f => f.endsWith('.blade.php'))) {
 /* Where a `master-*` name is worn but no sheet owns it, today. Modules already
    shipped keep their own naming until their turn; nothing new may join them. */
 const KNOWN = [
-    'master-alert-error', 'master-attention-card',
-    'master-calc-input', 'master-checkbox', 'master-delete-btn',
+    'master-attention-card',
+    'master-calc-input', 'master-delete-btn',
     'master-form-group',
     'master-save', 'master-search-form', 'master-text', 'master-wrap',
 ];

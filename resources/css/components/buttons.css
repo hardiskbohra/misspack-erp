@@ -1,0 +1,21 @@
+/* Shared action contract. Color variants remain owned by the component class. */
+body[data-ui-shell] :is(.core-button, .master-btn) {
+    min-height: 40px;
+    border-radius: var(--ui-radius-control);
+    font-family: var(--ui-font-family);
+    font-size: 13px;
+    font-weight: var(--ui-weight-semibold);
+    line-height: 1.2;
+    transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
+}
+
+body[data-ui-shell] :is(.core-button-sm, .master-btn-sm) {
+    min-height: 34px;
+}
+
+body[data-ui-shell] :is(.core-button, .master-btn):disabled,
+body[data-ui-shell] :is(.core-button, .master-btn)[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: .58;
+    transform: none;
+}

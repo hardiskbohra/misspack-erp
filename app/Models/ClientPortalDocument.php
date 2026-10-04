@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ClientPortalDocument extends Model
@@ -12,8 +11,8 @@ class ClientPortalDocument extends Model
     use HasFactory;
 
     protected $fillable = [
-        'client_id', 'client_portal_user_id', 'related_type', 'related_id', 'category', 'title',
-        'file_path', 'original_name', 'mime_type', 'file_size', 'extension', 'is_public_to_client',
+        'client_id', 'client_portal_user_id', 'related_type', 'related_id', 'project_product_id', 'category', 'title',
+        'file_path', 'storage_disk', 'original_name', 'mime_type', 'file_size', 'extension', 'is_public_to_client',
         'is_reviewed', 'notes',
     ];
 
@@ -32,14 +31,15 @@ class ClientPortalDocument extends Model
         return $this->belongsTo(ClientPortalUser::class, 'client_portal_user_id');
     }
 
-    public function fileUrl(): string
+    public function projectProduct()
     {
-        return Storage::disk('public')->url($this->file_path);
+        return $this->belongsTo(ProjectProduct::class, 'project_product_id');
     }
 
     public function isImage(): bool
     {
-        return Str::startsWith((string) $this->mime_type, 'image/');
+        return Str::startsWith((string) $this->mime_type, 'image/')
+            && in_array(strtolower((string) $this->extension), ['jpg', 'jpeg', 'png', 'webp', 'gif'], true);
     }
 
     public function categoryLabel(): string
@@ -51,6 +51,7 @@ class ClientPortalDocument extends Model
     {
         return [
             'general' => 'General Document',
+            'client_document' => 'Client Document',
             'kyc' => 'KYC Document',
             'artwork' => 'Artwork / Design',
             'po' => 'Purchase Order',

@@ -46,10 +46,7 @@
                     <div class="cp-muted">{{ $product->product_number }}</div>
                     <h3 style="margin:5px 0;">{{ $product->name }}</h3>
                     <div class="cp-muted">{{ $product->category ?: '-' }}</div>
-                    <div class="cp-muted">{{ $product->notes ?: '-' }}</div>
-                    <div style="margin:12px 0;">
-                        <span class="cp-badge status-{{ $product->status }}">{{ $product->statusLabel() }}</span>
-                    </div>
+                    <div class="cp-product-context">Shared for products linked to your published projects.</div>
                 </div>
             </div>
         @empty

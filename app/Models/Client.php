@@ -64,6 +64,16 @@ class Client extends Model
         return $this->hasMany(\App\Models\Project::class, 'client_id');
     }
 
+    public function portalUsers()
+    {
+        return $this->hasMany(ClientPortalUser::class, 'client_id')->orderBy('id');
+    }
+
+    public function portalConversations()
+    {
+        return $this->hasMany(ClientPortalConversation::class, 'client_id')->latest('last_message_at');
+    }
+
     public function scopeSearch(Builder $query, ?string $search): Builder
     {
         return $query->when($search, function (Builder $q) use ($search) {
@@ -71,13 +81,23 @@ class Client extends Model
                 $nested->where('client_number', 'like', "%{$search}%")
                     ->orWhere('company_name', 'like', "%{$search}%")
                     ->orWhere('brand_name', 'like', "%{$search}%")
+                    ->orWhere('client_type', 'like', "%{$search}%")
+                    ->orWhere('industry', 'like', "%{$search}%")
                     ->orWhere('gstin', 'like', "%{$search}%")
                     ->orWhere('pan', 'like', "%{$search}%")
+                    ->orWhere('tan', 'like', "%{$search}%")
                     ->orWhere('ceo_name', 'like', "%{$search}%")
                     ->orWhere('ceo_email', 'like', "%{$search}%")
+                    ->orWhere('ceo_contact', 'like', "%{$search}%")
                     ->orWhere('account_person_name', 'like', "%{$search}%")
+                    ->orWhere('account_person_email', 'like', "%{$search}%")
+                    ->orWhere('account_person_contact', 'like', "%{$search}%")
                     ->orWhere('marketing_person_name', 'like', "%{$search}%")
-                    ->orWhere('dispatch_person_name', 'like', "%{$search}%");
+                    ->orWhere('marketing_person_email', 'like', "%{$search}%")
+                    ->orWhere('marketing_person_contact', 'like', "%{$search}%")
+                    ->orWhere('dispatch_person_name', 'like', "%{$search}%")
+                    ->orWhere('dispatch_person_email', 'like', "%{$search}%")
+                    ->orWhere('dispatch_person_contact', 'like', "%{$search}%");
             });
         });
     }
@@ -121,12 +141,7 @@ class Client extends Model
     {
         return ['INR' => 'INR', 'USD' => 'USD', 'RMB' => 'RMB'];
     }
-    
-    public function portalUsers()
-    {
-        return $this->hasMany(\App\Models\ClientPortalUser::class, 'client_id');
-    }
-    
+
     public function portalUser()
     {
         return $this->hasOne(\App\Models\ClientPortalUser::class, 'client_id');

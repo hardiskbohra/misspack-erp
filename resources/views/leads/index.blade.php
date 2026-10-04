@@ -82,16 +82,16 @@
         </div>
 
         <div class="master-card master-table-card">
-            <div class="master-table-wrap">
-                <table class="master-table">
+            <div class="master-table-wrap ui-mobile-cards">
+                <table class="master-table" data-table-settings data-table-key="leads">
                     <thead>
                         <tr>
                             <th>Lead / Product</th>
                             <th>Client</th>
-                            <th>Qty / Capacity</th>
-                            <th>Finish / Print</th>
-                            <th>Assigned</th>
-                            <th>Quotes</th>
+                            <th class="ui-mobile-secondary">Qty / Capacity</th>
+                            <th class="ui-mobile-secondary">Finish / Print</th>
+                            <th class="ui-mobile-secondary">Assigned</th>
+                            <th class="ui-mobile-secondary">Quotes</th>
                             <th>Status</th>
                             <th>Action</th>
                         </tr>
@@ -99,7 +99,7 @@
                     <tbody>
                         @forelse($leads as $lead)
                             <tr>
-                                <td>
+                                <td data-label="Lead / Product">
                                     <div class="master-product">
                                         @if ($lead->product_image_path)
                                             <a href="{{ route('leads.image', $lead) }}" title="View product image"><img
@@ -114,18 +114,18 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td>{{ $lead->client?->company_name ?? ($lead->client_company_name ?? '-') }}<span
+                                <td data-label="Client">{{ $lead->client?->company_name ?? ($lead->client_company_name ?? '-') }}<span
                                         class="master-sub">{{ $lead->client_contact_name ?: '-' }}
                                         {{ $lead->client_mobile ?: '' }}</span></td>
-                                <td>{{ $lead->required_quantity ? number_format($lead->required_quantity) . ' pcs' : '-' }}<span
+                                <td data-label="Qty / Capacity" class="ui-mobile-secondary">{{ $lead->required_quantity ? number_format($lead->required_quantity) . ' pcs' : '-' }}<span
                                         class="master-sub">{{ $lead->capacity_value ? $lead->capacity_value . ' ' . $lead->capacity_unit : '-' }}</span>
                                 </td>
-                                <td>{{ $finishOptions[$lead->finish_required] ?? '-' }}<span
+                                <td data-label="Finish / Print" class="ui-mobile-secondary">{{ $finishOptions[$lead->finish_required] ?? '-' }}<span
                                         class="master-sub">{{ $printingOptions[$lead->printing_required] ?? '-' }}</span>
                                 </td>
-                                <td>{{ $lead->assignee?->name ?? ($lead->assignee?->email ?? '-') }}</td>
-                                <td>{{ $lead->vendor_quotes_count }}</td>
-                                <td><span
+                                <td data-label="Assigned" class="ui-mobile-secondary">{{ $lead->assignee?->name ?? ($lead->assignee?->email ?? '-') }}</td>
+                                <td data-label="Quotes" class="ui-mobile-secondary">{{ $lead->vendor_quotes_count }}</td>
+                                <td data-label="Status"><span
                                         class="master-badge priority-{{ $lead->priority }}">{{ $lead->priorityLabel() }}</span>
                                     <form method="POST" action="{{ route('leads.status.update', $lead) }}"
                                         class="master-status-form">@csrf @method('PATCH')<select name="status"
@@ -139,7 +139,7 @@
                                         </select>
                                     </form>
                                 </td>
-                                <td>
+                                <td data-label="Action">
                                     <div class="master-row-actions">
 
                                         <div class="master-dropdown">

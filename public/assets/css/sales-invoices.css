@@ -634,6 +634,119 @@
     margin-left: auto
 }
 
+/* Search stays at the top of the invoice list; the longer set of criteria lives
+   in the shared right-side drawer, so the list keeps one calm filter row. */
+.si-index .si-filter-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px 16px
+}
+
+.si-index .si-filter-search {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    margin: 0
+}
+
+.si-index .si-filter-search .master-input {
+    padding-right: 48px
+}
+
+.si-index .si-search-submit {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: inline-grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+    cursor: pointer
+}
+
+.si-index .si-search-submit:hover {
+    background: var(--mc-border);
+    color: var(--mc-text)
+}
+
+.si-index .si-search-submit:focus-visible,
+.si-index .si-filter-open:focus-visible {
+    outline: 2px solid var(--master-primary);
+    outline-offset: 2px
+}
+
+.si-index .si-filter-open {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 44px;
+    white-space: nowrap
+}
+
+.si-index .si-filter-count {
+    display: inline-grid;
+    min-width: 23px;
+    height: 23px;
+    place-items: center;
+    padding: 0 6px;
+    border: 1px solid var(--mc-border);
+    border-radius: 999px;
+    background: var(--mc-card);
+    color: var(--mc-text-2);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1
+}
+
+.si-index .si-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 12px
+}
+
+.si-index .si-filter-field {
+    min-width: 0
+}
+
+.si-index .si-filter-field .master-label {
+    display: block;
+    margin: 0 0 6px
+}
+
+.si-index .si-filter-field .master-select,
+.si-index .si-filter-field .master-input,
+.si-index .si-filter-field .select2-container {
+    width: 100% !important;
+    min-width: 0;
+    max-width: 100%
+}
+
+@media screen and (max-width: 767px) {
+    .si-index .si-filter-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 12px 14px 14px
+    }
+
+    .si-index .si-filter-search,
+    .si-index .si-filter-open {
+        width: 100%;
+        max-width: none
+    }
+
+    .si-index .si-filter-grid {
+        grid-template-columns: minmax(0, 1fr)
+    }
+}
+
 /* ---------------------------------------------------------------- the chase
    The record page's own card: when the office last asked for this money, how,
    and what came back. A list of small rows, not a table — two columns of the

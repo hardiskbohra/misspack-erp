@@ -71,8 +71,8 @@
         </div>
 
         <div class="master-card master-table-card">
-            <div class="master-table-wrap">
-                <table class="master-table">
+            <div class="master-table-wrap ui-mobile-cards">
+                <table class="master-table" data-table-settings data-table-key="vendor-quotes">
                     <thead>
                         <tr>
                             <th>Quote / Product</th>
@@ -86,7 +86,7 @@
                     <tbody>
                         @forelse($quotes as $quote)
                             <tr>
-                                <td>@php($productMedia = $quote->product?->primaryMedia())
+                                <td data-label="Quote / Product">@php($productMedia = $quote->product?->primaryMedia())
                                     @php($quoteImage = $quote->product_image_path ?: ($productMedia?->file_path ?: $quote->lead?->product_image_path))<div class="master-product">
                                         @if ($quoteImage)
                                             <a href="{{ route('vendor-quotes.image', $quote) }}"><img
@@ -100,25 +100,25 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td>{{ $quote->vendor?->vendor_contact_name ?? ($quote->vendor_contact_name ?? '-') }}
+                                <td data-label="Vendor">{{ $quote->vendor?->vendor_contact_name ?? ($quote->vendor_contact_name ?? '-') }}
                                     <span class="master-sub">
                                         {{ \Illuminate\Support\Str::limit($quote->vendor_name ?: '-', 25, '...') }}
                                     </span></td>
-                                <td>{!! $quote->items->isNotEmpty()
+                                <td data-label="Quantity">{!! $quote->items->isNotEmpty()
                                     ? $quote->items->map(fn($item) => number_format($item->quantity) . ' ' . $item->unit)->implode('<br>')
                                     : ($quote->quantity ? number_format($quote->quantity) . ' ' . $quote->unit : '-')
                                 !!}</td>
-                                <td>
+                                <td data-label="Vendor Price">
                                     {!! $quote->items->isNotEmpty()
                                     ? $quote->items->map(fn($item) => \App\Helpers\CommonHelper::amount($item->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : ''))->implode('<br>')
                                     : ($quote->vendor_unit_price
                                         ? \App\Helpers\CommonHelper::amount($quote->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : '')
                                         : '-')
                                 !!}</td>
-                                <td><span
+                                <td data-label="Status"><span
                                         class="master-badge status-{{ $quote->status }}">{{ $quote->statusLabel() }}</span>
                                 </td>
-                                <td>
+                                <td data-label="Action">
                                     
                                     <div class="master-row-actions">
 
@@ -159,7 +159,7 @@
                                     </div>
                                 </td>
                         </tr>@empty<tr>
-                                <td colspan="8" style="padding:70px;text-align:center;color:#687386;font-weight:900">No
+                                <td colspan="8" style="padding:70px;text-align:center;color:#687386;font-weight:700">No
                                     vendor quotes found.</td>
                             </tr>
                         @endforelse

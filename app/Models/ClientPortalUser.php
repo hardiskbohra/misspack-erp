@@ -47,6 +47,11 @@ class ClientPortalUser extends Model
         return $this->hasMany(ClientPortalComment::class);
     }
 
+    public function conversations()
+    {
+        return $this->hasMany(ClientPortalConversation::class, 'client_portal_user_id');
+    }
+
     public function setPassword(string $plainPassword): void
     {
         $this->password = Hash::make($plainPassword);

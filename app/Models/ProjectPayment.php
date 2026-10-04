@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -21,6 +22,18 @@ class ProjectPayment extends Model
         'amount' => 'decimal:2',
         'is_public' => 'boolean',
     ];
+
+    /**
+     * The client-facing receipt policy: the office must explicitly publish it,
+     * it must be money received (not an expense), and it must be finalized.
+     * Internal ledger/accounting statuses are deliberately not part of the portal.
+     */
+    public function scopeVisibleToClient(Builder $query): Builder
+    {
+        return $query->where('is_public', true)
+            ->where('transaction_type', 'inward')
+            ->whereIn('status', ['booked', 'reconciled']);
+    }
 
     public function project()
     {

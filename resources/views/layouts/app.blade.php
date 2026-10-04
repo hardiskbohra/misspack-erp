@@ -15,16 +15,18 @@
     {{-- Fonts / Icons --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     {{-- Apply saved desktop sidebar state before CSS paints --}}
     <script>
         (function () {
             try {
-                var isMobileOrTablet = window.matchMedia('(max-width: 1199px)').matches;
+                var isTabletOrMobile = window.matchMedia('(max-width: 991px)').matches;
+                var isCompactDesktop = window.matchMedia('(min-width: 992px) and (max-width: 1199px)').matches;
+                var savedCollapsed = localStorage.getItem('sidebarCollapsed') === '1';
 
-                if (!isMobileOrTablet && localStorage.getItem('sidebarCollapsed') === '1') {
+                if (!isTabletOrMobile && (isCompactDesktop || savedCollapsed)) {
                     document.documentElement.classList.add('sidebar-collapsed');
                 }
             } catch (e) {}
@@ -53,10 +55,22 @@
          the sheet that spaces and insets it. --}}
     <link rel="stylesheet" href="{{ $assetVer('assets/css/master-list.css') }}">
 
-    {{-- Central responsive layer (must load last so it can fill module gaps) --}}
+    {{-- Compatibility layer for the existing four-module markup; the shared
+         core design system follows and remains the canonical component owner. --}}
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/app-guidelines.css') }}">
     <link rel="stylesheet" href="{{ $assetVer('assets/css/responsive.css') }}">
+    @include('layouts.partials.design-system-styles')
 </head>
-<body>
+@php
+    $uiModule = match (true) {
+        request()->routeIs('shipments.*') => 'shipments',
+        request()->routeIs('clients.*') => 'clients',
+        request()->routeIs('cashflows.*') => 'cashflows',
+        request()->routeIs('users.*') => 'users',
+        default => null,
+    };
+@endphp
+<body data-ui-shell="app" @if($uiModule) data-ui-module="{{ $uiModule }}" @endif>
     @php
         /* An employee's menu is their own record, and this is the only menu the
            application shows them: the office's screens are behind a middleware
@@ -124,7 +138,8 @@
                             && ! (isset($item['except']) && request()->routeIs($item['except']));
                     @endphp
                     <a href="{{ route($item['route']) }}"
-                       class="sidebar-item {{ $itemActive ? 'active' : '' }}">
+                       class="sidebar-item {{ $itemActive ? 'active' : '' }}"
+                       aria-label="{{ $item['label'] }}" title="{{ $item['label'] }}">
                         <i class="{{ $item['icon'] }}"></i>
                         <span class="sidebar-text">{{ $item['label'] }}</span>
                     </a>
@@ -205,6 +220,7 @@
     <script src="{{ $assetVer('assets/js/money.js') }}"></script>
     <script src="{{ $assetVer('assets/js/app-layout.js') }}"></script>
     <script src="{{ $assetVer('assets/js/master-list.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/master-drawer.js') }}"></script>
 
     {{-- Flash Messages (custom alerts) --}}
     <script>

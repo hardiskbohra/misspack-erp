@@ -33,6 +33,9 @@ use App\Http\Controllers\ProjectTrackingController;
 use App\Http\Controllers\ProjectMilestoneController;
 use App\Http\Controllers\PublicProjectController;
 use App\Http\Controllers\ClientPortalAuthController;
+use App\Http\Controllers\ClientPortalAccountController;
+use App\Http\Controllers\ClientPortalSupportController;
+use App\Http\Controllers\ClientPortalSupportManagementController;
 use App\Http\Controllers\ClientPortalDashboardController;
 use App\Http\Controllers\ClientPortalDocumentController;
 use App\Http\Controllers\ClientPortalInvoiceController;
@@ -96,10 +99,16 @@ Route::middleware('auth')->group(function () {
         Route::get('/clients/{client}/portal', [ClientPortalManagementController::class, 'show'])->name('clients.portal.show');
         Route::post('/clients/{client}/portal', [ClientPortalManagementController::class, 'store'])->name('clients.portal.store');
         Route::post('/clients/{client}/portal/reset-password', [ClientPortalManagementController::class, 'resetPassword'])->name('clients.portal.resetPassword');
+        Route::post('/clients/{client}/portal/users/{portalUser}/reset-password', [ClientPortalManagementController::class, 'resetPortalUserPassword'])->name('clients.portal.users.resetPassword');
+        Route::post('/clients/{client}/portal/users/{portalUser}/mark-shared', [ClientPortalManagementController::class, 'markPortalUserShared'])->name('clients.portal.users.markShared');
         Route::post('/clients/{client}/portal/mark-shared', [ClientPortalManagementController::class, 'markShared'])->name('clients.portal.markShared');
         Route::post('/clients/{client}/portal/notifications', [ClientPortalManagementController::class, 'storeNotification'])->name('clients.portal.notifications.store');
-        Route::post('/clients/{client}/portal/invoices', [ClientPortalManagementController::class, 'storeInvoice'])->name('clients.portal.invoices.store');
-        Route::delete('/client-portal-invoices/{invoice}', [ClientPortalManagementController::class, 'destroyInvoice'])->name('clients.portal.invoices.destroy');
+        Route::post('/clients/{client}/portal/documents', [ClientPortalManagementController::class, 'storeDocument'])->name('clients.portal.documents.store');
+        Route::get('/clients/{client}/portal/support', [ClientPortalSupportManagementController::class, 'index'])->name('clients.portal.support.index');
+        Route::get('/clients/{client}/portal/support/{conversation}', [ClientPortalSupportManagementController::class, 'show'])->name('clients.portal.support.show');
+        Route::post('/clients/{client}/portal/support/{conversation}/messages', [ClientPortalSupportManagementController::class, 'reply'])->name('clients.portal.support.reply');
+        Route::patch('/clients/{client}/portal/support/{conversation}/status', [ClientPortalSupportManagementController::class, 'updateStatus'])->name('clients.portal.support.status');
+        Route::get('/clients/{client}/portal/documents/{document}/file', [ClientPortalManagementController::class, 'downloadDocument'])->name('clients.portal.documents.file');
 
         // Dashboard
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
@@ -158,6 +167,8 @@ Route::middleware('auth')->group(function () {
 
         // Client Management
         Route::post('/clients/quick', [ClientController::class, 'quickStore'])->name('clients.quickStore');
+        Route::post('/clients/saved-views', [ClientController::class, 'storeSavedView'])->name('clients.saved-views.store');
+        Route::delete('/clients/saved-views/{savedView}', [ClientController::class, 'destroySavedView'])->name('clients.saved-views.destroy');
         Route::patch('/clients/{client}/send-kyc', [ClientController::class, 'sendKyc'])->name('clients.sendKyc');
         Route::patch('/clients/{client}/status', [ClientController::class, 'updateStatus'])->name('clients.status.update');
         Route::resource('clients', ClientController::class);
@@ -298,7 +309,10 @@ Route::middleware('auth')->group(function () {
            here, revoked here, and the statement itself is rebuilt from the ledger
            on every open — never stored, so it cannot go stale. */
         Route::get('/cashflows/statements', [PartyStatementController::class, 'index'])->name('cashflows.statements');
-        Route::get('/cashflows/statements/pdf', [PartyStatementController::class, 'pdf'])->name('cashflows.statements.pdf');
+        Route::get('/cashflows/statements/{partyType}/{party}/pdf', [PartyStatementController::class, 'pdf'])
+            ->whereIn('partyType', ['client', 'vendor'])
+            ->whereNumber('party')
+            ->name('cashflows.statements.pdf');
         Route::post('/cashflows/statements/shares', [PartyStatementController::class, 'store'])->name('cashflows.statements.shares.store');
         Route::patch('/cashflow-statement-shares/{share}/revoke', [PartyStatementController::class, 'revoke'])->name('cashflows.statements.shares.revoke');
         Route::delete('/cashflow-statement-shares/{share}', [PartyStatementController::class, 'destroy'])->name('cashflows.statements.shares.destroy');
@@ -365,14 +379,19 @@ Route::prefix('client-portal')->name('client-portal.')->group(function () {
 
         Route::get('/', [ClientPortalDashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard', [ClientPortalDashboardController::class, 'index'])->name('dashboard.alias');
+        Route::get('/account', [ClientPortalAccountController::class, 'index'])->name('account.index');
+        Route::put('/account/profile', [ClientPortalAccountController::class, 'updateProfile'])->name('account.profile.update');
+        Route::put('/account/password', [ClientPortalAuthController::class, 'updatePassword'])->name('account.password.update');
 
         Route::get('/projects', [ClientPortalProjectController::class, 'index'])->name('projects.index');
         Route::get('/projects/{project}', [ClientPortalProjectController::class, 'show'])->name('projects.show');
+        Route::get('/projects/{project}/attachments/{attachment}', [ClientPortalProjectController::class, 'attachmentFile'])->name('projects.attachments.file');
         Route::post('/projects/{project}/comments', [ClientPortalProjectController::class, 'storeComment'])->name('projects.comments.store');
         Route::post('/projects/{project}/documents', [ClientPortalProjectController::class, 'upload'])->name('projects.documents.store');
 
         Route::get('/shipments', [ClientPortalShipmentController::class, 'index'])->name('shipments.index');
         Route::get('/shipments/{shipment}', [ClientPortalShipmentController::class, 'show'])->name('shipments.show');
+        Route::get('/shipments/{shipment}/attachments/{attachment}', [ClientPortalShipmentController::class, 'file'])->name('shipments.attachments.file');
         Route::post('/shipments/{shipment}/comments', [ClientPortalShipmentController::class, 'storeComment'])->name('shipments.comments.store');
         Route::post('/shipments/{shipment}/documents', [ClientPortalShipmentController::class, 'upload'])->name('shipments.documents.store');
 
@@ -381,15 +400,24 @@ Route::prefix('client-portal')->name('client-portal.')->group(function () {
         Route::post('/quotations/{quote}/comments', [ClientPortalQuoteController::class, 'storeComment'])->name('quotes.comments.store');
 
         Route::get('/invoices', [ClientPortalInvoiceController::class, 'index'])->name('invoices.index');
-        Route::get('/invoices/{invoice}', [ClientPortalInvoiceController::class, 'show'])->name('invoices.show');
-        Route::post('/invoices/{invoice}/comments', [ClientPortalInvoiceController::class, 'storeComment'])->name('invoices.comments.store');
-
+        Route::get('/invoices/sales/{invoice}/print', [ClientPortalInvoiceController::class, 'printSales'])->name('invoices.sales.print');
+        Route::get('/invoices/sales/{invoice}/attachments/{attachment}', [ClientPortalInvoiceController::class, 'salesAttachmentFile'])->name('invoices.sales.attachments.file');
+        Route::get('/invoices/sales/{invoice}', [ClientPortalInvoiceController::class, 'showSales'])->name('invoices.sales.show');
+        Route::post('/invoices/sales/{invoice}/comments', [ClientPortalInvoiceController::class, 'storeSalesComment'])->name('invoices.sales.comments.store');
         Route::get('/products', [ClientPortalProductController::class, 'index'])->name('products.index');
         Route::get('/products/{product}', [ClientPortalProductController::class, 'show'])->name('products.show');
 
         Route::get('/attachments', [ClientPortalDocumentController::class, 'index'])->name('attachments.index');
         Route::post('/attachments', [ClientPortalDocumentController::class, 'store'])->name('attachments.store');
+        Route::get('/attachments/{document}/file', [ClientPortalDocumentController::class, 'file'])->name('attachments.file');
         Route::delete('/attachments/{document}', [ClientPortalDocumentController::class, 'destroy'])->name('attachments.destroy');
+
+        Route::get('/support', [ClientPortalSupportController::class, 'index'])->name('support.index');
+        Route::post('/support', [ClientPortalSupportController::class, 'store'])->middleware('throttle:10,1')->name('support.store');
+        Route::get('/support/{conversation}', [ClientPortalSupportController::class, 'show'])->name('support.show');
+        Route::post('/support/{conversation}/messages', [ClientPortalSupportController::class, 'reply'])->middleware('throttle:20,1')->name('support.messages.store');
+        Route::patch('/support/{conversation}/close', [ClientPortalSupportController::class, 'close'])->name('support.close');
+        Route::patch('/support/{conversation}/reopen', [ClientPortalSupportController::class, 'reopen'])->name('support.reopen');
 
         Route::get('/payments', [ClientPortalPaymentController::class, 'index'])->name('payments.index');
 

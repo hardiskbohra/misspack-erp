@@ -211,24 +211,23 @@
                  right-hand slot every list uses, so a module can put its own
                  destinations next to the density switch. --}}
             <div class="master-list-toolbar-actions">
-                <div class="master-list-density desktop-only" role="group" aria-label="Row density">
-                    <button type="button" class="master-list-density-btn" data-density="comfortable"
-                        aria-pressed="true">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact"
-                        aria-pressed="false">Compact</button>
+                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
+                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
+                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
                 </div>
             </div>
         </div>
         <div class="master-table-wrap">
-            <table class="master-table">
+            <table class="master-table" data-table-settings data-table-key="shipments">
                 <thead>
                     <tr>
-                        <th scope="col">Pickup</th>
+                        <th scope="col" class="ui-mobile-secondary">Pickup</th>
                         <th scope="col">Shipment</th>
                         <th scope="col">Route</th>
-                        <th scope="col">Logistic</th>
+                        <th scope="col" class="ui-mobile-secondary">Logistic</th>
                         <th scope="col">ETA</th>
-                        <th scope="col" class="is-num">Charges</th>
+                        <th scope="col" class="is-num ui-mobile-secondary">Charges</th>
                         <th scope="col">Status</th>
                         <th scope="col">Action</th>
                     </tr>
@@ -258,7 +257,7 @@
                              anything interactive inside it keeps its own click. --}}
                         <tr class="ship-row {{ $shipment->isClosed() ? 'ship-row-closed' : '' }} is-clickable"
                             data-href="{{ route('shipments.show', $shipment) }}">
-                            <td data-label="Pickup">
+                            <td data-label="Pickup" class="ui-mobile-secondary">
                                 <span class="ship-date">{{ $shipment->pickup_date ? $shipment->pickup_date->format('d M') : '—' }}</span>
                                 @if ($shipment->project || $shipment->client)
                                     <span class="ship-tags">
@@ -290,7 +289,7 @@
                                 <strong>{{ $shipment->from_name ?: 'Origin' }} → {{ $shipment->to_name ?: 'Destination' }}</strong>
                                 <span class="master-sub desktop-only">{{ $shipment->from_city ?: '—' }} to {{ $shipment->to_city ?: '—' }}</span>
                             </td>
-                            <td class="ship-logistic" data-label="Logistic">
+                            <td class="ship-logistic ui-mobile-secondary" data-label="Logistic">
                                 {{ $shipment->logistic_partner ?: '—' }}
                                 <span class="master-sub">{{ $shipment->tracking_number ?: 'No tracking' }}</span>
                             </td>
@@ -310,7 +309,7 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="ship-money is-num" data-label="Charges">
+                            <td class="ship-money is-num ui-mobile-secondary" data-label="Charges">
                                 @if ((int) $shipment->costs_count > 0)
                                     @if ((float) $shipment->cost_same_currency > 0)
                                         {{ \App\Models\Shipment::formatAmount($shipment->currency, $shipment->cost_same_currency) }}
@@ -410,7 +409,7 @@
                         </tr>
                     @endforelse
                 </tbody>
-                <tfoot>
+                <tfoot class="ui-mobile-secondary">
                     <tr class="master-list-total">
                         <td colspan="5">
                             <strong>Total — {{ $shipments->count() }} {{ \Illuminate\Support\Str::plural('entry', $shipments->count()) }} shown</strong>

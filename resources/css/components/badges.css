@@ -1,0 +1,18 @@
+/* Status/badge geometry is shared; each business state keeps its own color. */
+body[data-ui-shell] :is(.core-badge, .master-badge, .cf-badge, .cpa-badge, .cp-badge, .master-status) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    gap: 5px;
+    border-radius: var(--ui-radius-pill);
+    font-size: 11px;
+    font-weight: var(--ui-weight-semibold);
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+body[data-ui-shell] :is(.core-badge, .master-badge, .cf-badge, .cpa-badge, .cp-badge, .master-status):focus-visible {
+    outline: 2px solid var(--ui-accent);
+    outline-offset: 2px;
+}

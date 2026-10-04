@@ -3,7 +3,8 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
+        "build": "node tools/build-css-architecture.js && vite build",
+        "build:design-system": "node tools/build-css-architecture.js",
         "dev": "vite"
     },
     "devDependencies": {

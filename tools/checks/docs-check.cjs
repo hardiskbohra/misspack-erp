@@ -325,7 +325,7 @@ check('the three fields share one row, and step down as the width drops',
         .test(cashflowsCss)
     && /@media \(max-width: 1100px\)[\s\S]{0,240}\.cf-doc-upload-fields\s*\{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/
         .test(cashflowsCss)
-    && /@media \(max-width: 768px\)[\s\S]{0,600}\.cf-doc-upload-fields\s*\{\s*grid-template-columns: 1fr;/
+    && /@media \(max-width: 767px\)[\s\S]{0,600}\.cf-doc-upload-fields\s*\{\s*grid-template-columns: 1fr;/
         .test(cashflowsCss));
 
 check('the card badge is the shared badge in the document tone',

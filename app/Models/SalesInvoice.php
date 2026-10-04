@@ -222,6 +222,91 @@ class SalesInvoice extends Model
         return round((float) $this->amount_paid + $this->ledgerReceived(), 2);
     }
 
+    /** Client-safe received amount: the opening figure plus finalized receipts only. */
+    public function clientPortalReceivedAmount(): float
+    {
+        if ($this->relationLoaded('payments')) {
+            $ledger = $this->payments
+                ->whereIn('accounting_status', ['booked', 'reconciled'])
+                ->sum(fn ($payment) => (float) $payment->credit_amount - (float) $payment->debit_amount);
+
+            return round((float) $this->amount_paid + (float) $ledger, 2);
+        }
+
+        if (array_key_exists('client_portal_received_credit', $this->attributes)
+            || array_key_exists('client_portal_received_debit', $this->attributes)) {
+            return round(
+                (float) $this->amount_paid
+                    + (float) ($this->attributes['client_portal_received_credit'] ?? 0)
+                    - (float) ($this->attributes['client_portal_received_debit'] ?? 0),
+                2
+            );
+        }
+
+        if (! $this->exists) {
+            return (float) $this->amount_paid;
+        }
+
+        $ledger = $this->payments()
+            ->whereIn('accounting_status', ['booked', 'reconciled'])
+            ->selectRaw('coalesce(sum(credit_amount - debit_amount), 0) as received')
+            ->value('received');
+
+        return round((float) $this->amount_paid + (float) $ledger, 2);
+    }
+
+    public function clientPortalBalanceDue(): float
+    {
+        if ($this->isSuperseded()) {
+            return 0.0;
+        }
+
+        return round(max((float) $this->total_amount - $this->clientPortalReceivedAmount(), 0), 2);
+    }
+
+    public function clientPortalStateKey(?\DateTimeInterface $today = null): string
+    {
+        if ($this->status === 'cancelled') {
+            return 'cancelled';
+        }
+        if ($this->isSuperseded()) {
+            return 'converted';
+        }
+        if ($this->status === 'draft') {
+            return 'draft';
+        }
+        if ($this->due_date && $this->clientPortalBalanceDue() > 0.01
+            && $this->due_date->lt($today ?: Carbon::today())) {
+            return 'overdue';
+        }
+
+        $received = $this->clientPortalReceivedAmount();
+        if ((float) $this->total_amount > 0 && $received >= (float) $this->total_amount - 0.01) {
+            return 'paid';
+        }
+        if ($received > 0.01) {
+            return 'partial';
+        }
+
+        return in_array($this->status, ['sent', 'accepted'], true) ? $this->status : 'sent';
+    }
+
+    public function clientPortalStateLabel(?\DateTimeInterface $today = null): string
+    {
+        $key = $this->clientPortalStateKey($today);
+
+        return [
+            'draft' => 'Draft',
+            'cancelled' => 'Cancelled',
+            'converted' => 'Converted',
+            'overdue' => 'Overdue',
+            'paid' => 'Paid',
+            'partial' => 'Partly paid',
+            'accepted' => 'Accepted',
+            'sent' => 'Awaiting payment',
+        ][$key] ?? Str::headline($key);
+    }
+
     /** What is still owed on it. */
     public function balanceDue(): float
     {
@@ -376,6 +461,16 @@ class SalesInvoice extends Model
         return $query
             ->withSum('payments as received_credit', 'credit_amount')
             ->withSum('payments as received_debit', 'debit_amount');
+    }
+
+    /** Portal totals count only receipts the office has finalized. */
+    public function scopeWithClientPortalReceived(Builder $query): Builder
+    {
+        $finalizedPayments = fn (Builder $payments) => $payments->whereIn('accounting_status', ['booked', 'reconciled']);
+
+        return $query
+            ->withSum(['payments as client_portal_received_credit' => $finalizedPayments], 'credit_amount')
+            ->withSum(['payments as client_portal_received_debit' => $finalizedPayments], 'debit_amount');
     }
 
     /**

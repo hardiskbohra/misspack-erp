@@ -449,7 +449,7 @@ body {
     color:var(--cp-muted);
 }
 
-@media(max-width:1199px) {
+@media(max-width:991px) {
     .cp-sidebar {
         transform:translateX(-100%);
         transition:.2s;

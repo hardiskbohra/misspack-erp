@@ -11,9 +11,10 @@
     <link rel="stylesheet" href="{{ asset('assets/vendor/select2/css/select2.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/select2-theme.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-alert.css') }}">
+    @include('layouts.partials.design-system-styles')
 </head>
 
-<body>
+<body data-ui-shell="public">
     @php
         /* Plain PHP inside a @php block: a Blade directive here is compiled a
            second time into PHP syntax inside PHP and the view dies parsing. */
@@ -72,7 +73,7 @@
         {{ $client->revision_note ?: 'Please update the required information and resubmit.' }}</div>@endif
 
         <form method="POST" action="{{ route('clients.publicKyc.submit', $client->public_token) }}"
-               id="kycSubmitForm">
+               id="kycSubmitForm" data-client-form>
             @csrf
             <input type="hidden" name="client_number" value="{{ $client->client_number }}">
             <input type="hidden" name="status" value="{{ $client->status }}">
@@ -293,6 +294,7 @@
     <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
     <script src="{{ asset('assets/js/master-alert.js') }}"></script>
     <script src="{{ asset('assets/js/master-selects.js') }}"></script>
+    <script src="{{ asset('assets/js/client-form.js') }}"></script>
     <script>
         window.kycToast = @json($kycToast);
     </script>

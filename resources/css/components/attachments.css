@@ -1,0 +1,16 @@
+/* Attachment preview cards use a neutral surface; document state and type
+   remain in their own icon/metadata elements. */
+body[data-ui-shell] :is(.core-attachment-card, .master-attachment-card, .vendor-attachment, .pd-attachment) {
+    min-width: 0;
+    border-color: var(--ui-border);
+    border-radius: var(--ui-radius-nested);
+    background-color: var(--ui-card-surface);
+}
+
+body[data-ui-shell] :is(.core-attachment-grid, .master-attachments-grid, .pd-attachment-grid) {
+    min-width: 0;
+}
+
+body[data-ui-shell] :is(.core-attachment-card, .master-attachment-card, .vendor-attachment, .pd-attachment) img {
+    max-width: 100%;
+}

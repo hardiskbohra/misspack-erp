@@ -455,7 +455,7 @@ check('the module sheet styles its own cells and not the surface',
     !/\.master-list/.test(strip(cashCss)));
 
 check('the matrix is not stacked into cards on a phone',
-    /@media \(max-width: 768px\) \{[\s\S]{0,600}\.cf\.cashflow-reports \.cf-report-table/.test(strip(cashCss))
+    /@media \(max-width: 767px\) \{[\s\S]{0,600}\.cf\.cashflow-reports \.cf-report-table/.test(strip(cashCss))
     && /\.cf\.cashflow-reports \.cf-report-table thead \{\s*\n\s*display: table-header-group;/.test(strip(cashCss)));
 
 check('the party column stays with its row while the periods scroll',

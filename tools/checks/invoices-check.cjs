@@ -299,7 +299,7 @@ const chrome = [
     'class="master-stats"',
     'class="master-list-bar"',
     'class="master-list-chips"',
-    'class="master-filter-row"',
+    'class="si-filter-toolbar"',
     'class="master-list-applied"',
     'class="master-card master-table-card master-card--flat"',
     'class="master-list-toolbar"',
@@ -313,6 +313,23 @@ check('the list wears the chrome every other listing wears',
     && /<x-pagination :items="\$invoices" \/>/.test(view)
     && (view.match(/data-label="/g) || []).length >= 9,
     'the module does not draw its own list; it fills the shared one');
+
+const filterDrawerStart = view.indexOf('<x-drawer id="invoiceFiltersDrawer"');
+const filterDrawerEnd = view.indexOf('</x-drawer>', filterDrawerStart);
+const filterDrawer = filterDrawerStart >= 0 && filterDrawerEnd > filterDrawerStart
+    ? view.slice(filterDrawerStart, filterDrawerEnd)
+    : '';
+check('invoice filters move into the shared right drawer while search stays visible',
+    /data-drawer-open="invoiceFiltersDrawer"/.test(view)
+    && /aria-haspopup="dialog"/.test(view)
+    && /aria-controls="invoiceFiltersDrawer"/.test(view)
+    && /name="search"/.test(view.slice(0, filterDrawerStart))
+    && ['invoice_type', 'status', 'client_id', 'project_id', 'payment', 'chase', 'ageing', 'date_from', 'date_to']
+        .every(name => filterDrawer.includes('name="' + name + '"'))
+    && /Apply filters/.test(filterDrawer)
+    && /Reset/.test(filterDrawer)
+    && /count\(\$appliedChips\)/.test(view),
+    'the drawer keeps all server filters, a visible search, and the active-filter count');
 
 check('the page rhythm belongs to the shell, not to an inline style',
     /\.master-list > \.master-card \+ \.master-card/.test(listCss)
@@ -334,7 +351,7 @@ const colClasses = [...colgroup.matchAll(/class="(si-col-[a-z]+)"/g)].map(m => m
 const headCount = (view.slice(view.indexOf('<thead>'), view.indexOf('</thead>')).match(/<th\b/g) || []).length;
 
 check('the listing sizes its own columns',
-    /<table class="master-table si-table">/.test(view)
+    /<table class="master-table si-table"[^>]*>/.test(view)
     && colClasses.length === headCount
     && colClasses.every(name => new RegExp('\\.si-index \\.' + name + ' \\{\\s*\\n\\s*width:').test(sheet))
     && /\.si-index \.si-table \{\s*\n\s*table-layout: fixed;\s*\n\s*min-width: 1080px/.test(sheet)

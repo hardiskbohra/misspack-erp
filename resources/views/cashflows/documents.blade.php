@@ -235,17 +235,16 @@
             {{-- The same right-hand slot the ledger uses: a list's own
                  destinations sit beside the density switch. --}}
             <div class="master-list-toolbar-actions">
-                <div class="master-list-density desktop-only" role="group" aria-label="Row density">
-                    <button type="button" class="master-list-density-btn" data-density="comfortable"
-                        aria-pressed="true">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact"
-                        aria-pressed="false">Compact</button>
+                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
+                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
+                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
                 </div>
             </div>
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table">
+            <table class="master-table" data-table-settings data-table-key="cashflow-documents">
                 <thead>
                     <tr>
                         <th scope="col">File</th>

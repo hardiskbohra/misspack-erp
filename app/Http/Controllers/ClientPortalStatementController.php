@@ -40,7 +40,7 @@ class ClientPortalStatementController extends ClientPortalBaseController
             $dateTo = $presets['this_month']['to'];
         }
 
-        $currencies = $statements->currencies('client', $client->id);
+        $currencies = $statements->currencies('client', $client->id, true);
         $currency = strtoupper((string) $request->query('currency', ''));
         if ($currency === '' || ! in_array($currency, $currencies, true)) {
             $currency = $currencies[0] ?? 'INR';
@@ -48,7 +48,8 @@ class ClientPortalStatementController extends ClientPortalBaseController
 
         $statement = $statements->build('client', $client->id, $dateFrom, $dateTo, [
             'currency' => $currency,
-            'ageing' => true,
+            'ageing' => false,
+            'client_portal' => true,
         ]);
 
         abort_if($statement === null, 404);

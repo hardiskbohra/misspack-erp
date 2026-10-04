@@ -1,0 +1,11 @@
+/* Stable topbar content sizing for long page titles and action groups. */
+body[data-ui-shell="app"] .topbar,
+body[data-ui-shell="portal"] .cp-topbar {
+    min-width: 0;
+}
+
+body[data-ui-shell="app"] .topbar-title,
+body[data-ui-shell="portal"] .cp-breadcrumb {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}

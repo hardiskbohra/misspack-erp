@@ -10,11 +10,12 @@
      */
     $trackStage = $shipment->trackingStage();
     $trackStages = \App\Models\Shipment::trackingStages();
+    $showDelayReason = $showDelayReason ?? true;
 @endphp
 
 @if ($trackStage === null)
     <div class="ship-track-cancelled">
-        This shipment was cancelled{{ $shipment->delay_reason ? ' — '.$shipment->delay_reason : '' }}.
+        This shipment was cancelled{{ $showDelayReason && $shipment->delay_reason ? ' — '.$shipment->delay_reason : '' }}.
     </div>
 @else
     <ol class="ship-track">
@@ -23,7 +24,7 @@
             <li class="{{ $trackIndex < $trackStage ? 'is-done' : ($trackIndex === $trackStage ? 'is-current' : '') }}">
                 {{ $label }}
                 @if ($trackIndex === $trackStage && $shipment->status === \App\Models\Shipment::STATUS_DELAYED)
-                    <span class="ship-track-note">Delayed{{ $shipment->delay_reason ? ' · '.$shipment->delay_reason : '' }}</span>
+                    <span class="ship-track-note">Delayed{{ $showDelayReason && $shipment->delay_reason ? ' · '.$shipment->delay_reason : '' }}</span>
                 @endif
             </li>
         @endforeach
