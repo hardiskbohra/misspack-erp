@@ -157,9 +157,11 @@
                         <a href="#vendor-block-products">Products <span class="vendor-jump-count">{{ $products->count() }}</span></a>
                         <a href="#vendor-block-shipments">Shipments <span class="vendor-jump-count">{{ $shipments->count() }}</span></a>
                     </nav>
-                    @include('vendors.partials.projects')
-                    @include('vendors.partials.products')
-                    @include('vendors.partials.shipments')
+                    <div class="vendor-blocks">
+                        @include('vendors.partials.projects')
+                        @include('vendors.partials.products')
+                        @include('vendors.partials.shipments')
+                    </div>
                 </section>
             @elseif ($tab === 'money')
                 {{-- The order the office asks the money questions in: what do I
@@ -171,13 +173,17 @@
                         <a href="#vendor-block-ledger">Ledger <span class="vendor-jump-count">{{ $vendorPaymentEntries->count() }}</span></a>
                         <a href="#vendor-block-statement">Statement <span class="vendor-jump-count">{{ $statementEntries->count() }}</span></a>
                     </nav>
-                    @include('vendors.partials.payables')
-                    @include('vendors.partials.payments')
-                    @include('vendors.partials.statement')
+                    <div class="vendor-blocks">
+                        @include('vendors.partials.payables')
+                        @include('vendors.partials.payments')
+                        @include('vendors.partials.statement')
+                    </div>
                 </section>
             @elseif ($tab === 'documents')
                 <section class="master-tab-panel" id="vendor-panel-documents" role="tabpanel" aria-labelledby="vendor-tab-documents">
-                    @include('vendors.partials.attachments')
+                    <div class="vendor-blocks">
+                        @include('vendors.partials.attachments')
+                    </div>
                 </section>
             @elseif ($tab === 'comments')
                 @include('vendors.partials.comments')

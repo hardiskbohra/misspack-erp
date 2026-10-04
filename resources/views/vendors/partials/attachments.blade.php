@@ -1,7 +1,7 @@
-<section class="vendor-block" aria-labelledby="vendor-block-attachments">
+<section class="master-card master-card--flat vendor-detail-card vendor-block-card" id="vendor-block-attachments" aria-labelledby="vendor-block-attachments-title">
     <div class="vendor-panel-head">
         <div>
-            <h2 class="vendor-detail-title">Documents</h2>
+            <h2 class="vendor-detail-title" id="vendor-block-attachments-title">Documents</h2>
             <p class="vendor-detail-help">Certificates, bank proofs, price lists and signed paperwork for this supplier.</p>
         </div>
         <div class="vendor-panel-meta">

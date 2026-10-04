@@ -1622,16 +1622,34 @@ class VendorController extends Controller
         ]);
     }
 
+    /**
+     * The next number in the vendor series: MP-VEN-001, MP-VEN-002, and on.
+     *
+     * One series for the whole file, not one per day — a supplier is looked up
+     * by this number on a purchase order, so the number has to be a position in
+     * the file rather than a date. The last code in the series is read and
+     * incremented, and the loop skips anything already taken (including a
+     * number somebody typed by hand), so two vendors created at the same minute
+     * cannot share one.
+     */
     private function makeVendorNumber(): string
     {
-        $prefix = 'VEN-'.now()->format('ymd').'-';
-        $next = str_pad((string) (Vendor::whereDate('created_at', today())->count() + 1), 4, '0', STR_PAD_LEFT);
-        $number = $prefix.$next;
+        $prefix = 'MP-VEN-';
 
-        while (Vendor::where('vendor_number', $number)->exists()) {
-            $next = str_pad((string) ((int) $next + 1), 4, '0', STR_PAD_LEFT);
-            $number = $prefix.$next;
-        }
+        $last = Vendor::query()
+            ->whereNotNull('vendor_number')
+            ->where('vendor_number', 'like', $prefix.'%')
+            ->orderByRaw('LENGTH(vendor_number) DESC')
+            ->orderByDesc('vendor_number')
+            ->value('vendor_number');
+
+        $next = $last ? ((int) preg_replace('/\D/', '', substr($last, strlen($prefix)))) + 1 : 1;
+        $next = max($next, 1);
+
+        do {
+            $number = $prefix.str_pad((string) $next, 3, '0', STR_PAD_LEFT);
+            $next++;
+        } while (Vendor::where('vendor_number', $number)->exists());
 
         return $number;
     }

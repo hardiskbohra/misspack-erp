@@ -11,7 +11,7 @@
     $openRows = $payables['rows'];
     $hasOverdue = $payables['overdue'] > 0;
 @endphp
-<section class="vendor-block" id="vendor-block-payables" aria-labelledby="vendor-block-payables-heading">
+<section class="master-card master-card--flat vendor-detail-card vendor-block-card" id="vendor-block-payables" aria-labelledby="vendor-block-payables-heading">
     <div class="vendor-panel-head vendor-panel-head--spaced">
         <div>
             <h2 class="vendor-detail-title" id="vendor-block-payables-heading">Payables</h2>
@@ -58,6 +58,13 @@
                         </thead>
                         <tbody>
                             @foreach ($openRows as $bill)
+                                @php($billPayload = [
+                                    'id' => $bill['id'],
+                                    'particular' => $bill['particular'],
+                                    'invoice' => $bill['invoice'],
+                                    'currency' => $bill['currency'],
+                                    'amount' => $bill['foreign_left'],
+                                ])
                                 <tr>
                                     <td data-label="Bill">
                                         <strong>{{ $bill['particular'] ?: 'Ledger entry' }}</strong>
@@ -92,13 +99,7 @@
                                     </td>
                                     <td data-label="Action">
                                         <button type="button" class="master-btn master-btn-soft master-btn-sm payBillBtn"
-                                            data-bill='@json([
-                                                "id" => $bill["id"],
-                                                "particular" => $bill["particular"],
-                                                "invoice" => $bill["invoice"],
-                                                "currency" => $bill["currency"],
-                                                "amount" => $bill["foreign_left"],
-                                            ])'>
+                                            data-bill='@json($billPayload)'>
                                             <i class="fa-solid fa-arrow-up-right-dots" aria-hidden="true"></i> Record payment
                                         </button>
                                     </td>

@@ -2535,18 +2535,21 @@ body[data-ui-module="users"] .emp-record-head {
 .vendor-jump {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 18px;
+    gap: 6px;
+    margin: 0 0 16px;
+    padding: 8px;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-card);
 }
 
 .vendor-jump a {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 14px;
-    border: 1px solid var(--mc-border);
-    border-radius: 999px;
-    background: var(--mc-card);
+    min-height: 34px;
+    padding: 6px 10px;
+    border-radius: 9px;
     color: var(--mc-text-2);
     font-size: 12px;
     font-weight: 600;
@@ -2555,8 +2558,9 @@ body[data-ui-module="users"] .emp-record-head {
 
 .vendor-jump a:hover,
 .vendor-jump a:focus-visible {
-    border-color: var(--master-primary, #4f83f1);
+    background: var(--mc-card-soft);
     color: var(--master-primary, #4f83f1);
+    outline: none;
 }
 
 .vendor-jump-count {
@@ -2573,10 +2577,48 @@ body[data-ui-module="users"] .emp-record-head {
     font-variant-numeric: tabular-nums;
 }
 
-.vendor-block + .vendor-block {
-    margin-top: 30px;
-    padding-top: 26px;
-    border-top: 1px solid var(--mc-border);
+/* A composite tab stacks its blocks as cards. The guideline puts cards inside
+   a soft tab panel; each block is one of them, and what sits inside a block is
+   flat — the card is the only frame — except for tiles, which take the nested
+   treatment: the same surface with a quieter border. */
+.vendor-blocks {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.vendor-block-card .vendor-panel-head,
+.vendor-block-card .vendor-currency-summary,
+.vendor-block-card .vendor-detail-grid + .vendor-detail-grid {
+    margin-bottom: 0;
+    margin-top: 0;
+}
+
+.vendor-block-card .vendor-detail-card,
+.vendor-block-card .vendor-table-card,
+.vendor-block-card > .master-card--flat {
+    gap: 12px;
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+}
+
+.vendor-block-card .vendor-ageing-card,
+.vendor-block-card .vendor-product-card,
+.vendor-block-card .vendor-currency-card,
+.vendor-block-card .vendor-attachment {
+    border-color: var(--mc-border);
+    box-shadow: none;
+}
+
+/* The record's cards keep one rhythm whatever container they sit in: the
+   spend card is a sibling of the grids, and used to touch the card above it. */
+.vendor-show .vendor-detail-card + .vendor-detail-grid,
+.vendor-show .vendor-detail-grid + .vendor-detail-card,
+.vendor-show .vendor-detail-card + .vendor-detail-card,
+.vendor-show .vendor-detail-grid + .vendor-detail-grid {
+    margin-top: 16px;
 }
 
 .vendor-pill.is-alert {
@@ -2893,21 +2935,26 @@ a.vendor-timeline-item:focus-visible {
     margin-top: 10px;
 }
 
+/* The jump nav is a control bar, not a row of buttons — the same shape and
+   states as the client form's. */
 .vendor-form-nav {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin: 16px 0;
+    gap: 6px;
+    margin: 0 0 14px;
+    padding: 10px;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-card);
 }
 
 .vendor-form-nav a {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    padding: 8px 14px;
-    border: 1px solid var(--mc-border);
-    border-radius: 999px;
-    background: var(--mc-card);
+    min-height: 34px;
+    padding: 6px 10px;
+    border-radius: 9px;
     color: var(--mc-text-2);
     font-size: 12px;
     font-weight: 600;
@@ -2916,24 +2963,65 @@ a.vendor-timeline-item:focus-visible {
 
 .vendor-form-nav a:hover,
 .vendor-form-nav a:focus-visible {
-    border-color: var(--master-primary, #4f83f1);
+    background: var(--mc-card-soft);
     color: var(--master-primary, #4f83f1);
+    outline: none;
+}
+
+/* Each section is its own card inside the form card, so a long form reads as
+   a stack of named groups rather than one undivided sheet. */
+.vendor-form .master-form-card {
+    padding: 20px;
 }
 
 .vendor-form .vendor-form-section {
-    padding: 22px 0;
-    border-bottom: 1px solid var(--mc-border);
+    margin: 0 0 14px;
+    padding: 21px;
+    border: 1px solid var(--mc-border);
+    border-radius: 16px;
+    background: var(--mc-card);
+    scroll-margin-top: 90px;
 }
 
 .vendor-form .vendor-form-section:last-of-type {
-    border-bottom: 0;
+    margin-bottom: 0;
+}
+
+/* Two to three columns of fields: wide enough to sit three across on a desk,
+   never so wide that a two-word label and its input drift apart. */
+.vendor-form .master-detail-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 13px 18px;
+}
+
+.vendor-form .master-field {
+    min-width: 0;
+}
+
+.vendor-form .master-field.full {
+    grid-column: 1 / -1;
+}
+
+.vendor-form .master-field.two {
+    grid-column: span 2;
+}
+
+.vendor-form .master-textarea {
+    min-height: 108px;
 }
 
 .vendor-form .master-section-title {
-    margin: 0;
+    margin: 0 0 5px;
     color: var(--mc-text);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
+    letter-spacing: .02em;
+}
+
+/* The shared title draws a full-width rule in the primary colour; inside a
+   form section it reads as a divider, so it takes the border token. */
+.vendor-form .master-section-title::after {
+    background: var(--mc-border);
 }
 
 .vendor-form-section-note {
@@ -2998,10 +3086,23 @@ a.vendor-timeline-item:focus-visible {
 @media (max-width: 1199px) {
     .vendor-index .vendor-table th:nth-child(4) { width: 140px; }
     .vendor-index .vendor-table th:nth-child(5) { width: 140px; }
+
+    /* Two fields across on a smaller desk: three squeeze the labels. */
+    .vendor-form .master-detail-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .vendor-form .master-field.two {
+        grid-column: 1 / -1;
+    }
 }
 
 @media (max-width: 991px) {
     .vendor-detail-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .vendor-block-card .vendor-detail-grid {
         grid-template-columns: minmax(0, 1fr);
     }
 
@@ -3029,6 +3130,55 @@ a.vendor-timeline-item:focus-visible {
         height: 46px;
         border-radius: 14px;
         font-size: 16px;
+    }
+
+    .vendor-form-nav {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    .vendor-form-nav a {
+        white-space: nowrap;
+    }
+
+    .vendor-form .master-form-card {
+        padding: 10px;
+    }
+
+    .vendor-form .vendor-form-section {
+        padding: 16px;
+    }
+
+    .vendor-form .master-detail-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .vendor-form .master-field.full,
+    .vendor-form .master-field.two {
+        grid-column: auto;
+    }
+
+    .vendor-form .master-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        margin: 12px -10px -10px;
+        padding: 12px 10px max(12px, env(safe-area-inset-bottom));
+        border-top: 1px solid var(--mc-border);
+        background: var(--mc-card);
+    }
+
+    .vendor-form .master-actions .master-btn {
+        flex: 1 1 0;
+    }
+
+    .vendor-jump {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    .vendor-jump a {
+        white-space: nowrap;
     }
 
     .vendor-panel-head {

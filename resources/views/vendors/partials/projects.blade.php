@@ -1,8 +1,8 @@
 @php($running = $projectProducts->reject(fn ($row) => in_array($row->status, ['delivered', 'cancelled'], true))->count())
-<section class="vendor-block" aria-labelledby="vendor-block-projects">
+<section class="master-card master-card--flat vendor-detail-card vendor-block-card" id="vendor-block-projects" aria-labelledby="vendor-block-projects-title">
     <div class="vendor-panel-head">
         <div>
-            <h2 class="vendor-detail-title">Projects running with this vendor</h2>
+            <h2 class="vendor-detail-title" id="vendor-block-projects-title">Projects running with this vendor</h2>
             <p class="vendor-detail-help">Every product this supplier was mapped to, newest first. Values are the project product row totals.</p>
         </div>
         <div class="vendor-panel-meta">

@@ -57,7 +57,7 @@
                     <input class="master-input @error('vendor_number') is-invalid @enderror" id="vendor_vendor_number" name="vendor_number"
                         value="{{ old('vendor_number', $vendor->vendor_number) }}" maxlength="255"
                         placeholder="Auto-generated if left blank" autocomplete="off">
-                    <div class="master-help">New vendor numbers are assigned automatically. Change only if you use an external reference.</div>
+                    <div class="master-help">New vendors are numbered in series — MP-VEN-001, MP-VEN-002. Change only if you use an external reference.</div>
                 </div>
                 <div class="master-field">
                     <label class="master-label" for="vendor_vendor_name">Vendor name <span class="master-required" aria-hidden="true">*</span></label>

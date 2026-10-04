@@ -1,7 +1,7 @@
-<section class="vendor-block" aria-labelledby="vendor-block-payments">
+<section class="master-card master-card--flat vendor-detail-card vendor-block-card" id="vendor-block-ledger" aria-labelledby="vendor-block-ledger-title">
     <div class="vendor-panel-head">
         <div>
-            <h2 class="vendor-detail-title">Vendor-currency ledger</h2>
+            <h2 class="vendor-detail-title" id="vendor-block-ledger-title">Vendor-currency ledger</h2>
             <p class="vendor-detail-help">Bills raised and payments made in the vendor's own currency — the account the statement is built from.</p>
         </div>
         <div class="vendor-panel-meta">

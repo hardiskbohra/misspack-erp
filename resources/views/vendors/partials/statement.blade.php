@@ -1,7 +1,7 @@
-<section class="vendor-block" aria-labelledby="vendor-block-statement">
+<section class="master-card master-card--flat vendor-detail-card vendor-block-card" id="vendor-block-statement" aria-labelledby="vendor-block-statement-title">
     <div class="vendor-panel-head">
         <div>
-            <h2 class="vendor-detail-title">Statement of account</h2>
+            <h2 class="vendor-detail-title" id="vendor-block-statement-title">Statement of account</h2>
             <p class="vendor-detail-help">The vendor-currency ledger in date order, with the balance after each row. Each currency is its own account.</p>
         </div>
         <div class="vendor-panel-meta">

@@ -63,6 +63,16 @@
             @else
                 <div class="vendor-contact-list">
                     @foreach ($contacts as $contact)
+                        @php($contactPayload = [
+                            'id' => $contact->id,
+                            'name' => $contact->name,
+                            'designation' => $contact->designation,
+                            'email' => $contact->email,
+                            'mobile' => $contact->mobile,
+                            'whatsapp' => $contact->whatsapp,
+                            'notes' => $contact->notes,
+                            'url' => route('vendors.contacts.update', ['vendor' => $vendor, 'contact' => $contact]),
+                        ])
                         <article class="vendor-contact-card">
                             <div class="vendor-contact-head">
                                 <span class="vendor-comment-avatar" aria-hidden="true">{{ strtoupper(mb_substr($contact->name ?: 'C', 0, 1)) }}</span>
@@ -73,16 +83,7 @@
                                 <div class="master-row-actions">
                                     <button type="button" class="master-icon-btn editContactBtn"
                                         aria-label="Edit {{ $contact->name }}"
-                                        data-contact='@json([
-                                            "id" => $contact->id,
-                                            "name" => $contact->name,
-                                            "designation" => $contact->designation,
-                                            "email" => $contact->email,
-                                            "mobile" => $contact->mobile,
-                                            "whatsapp" => $contact->whatsapp,
-                                            "notes" => $contact->notes,
-                                            "url" => route("vendors.contacts.update", ["vendor" => $vendor, "contact" => $contact]),
-                                        ])'>
+                                        data-contact='@json($contactPayload)'>
                                         <i class="fas fa-pen" aria-hidden="true"></i>
                                     </button>
                                     <form method="POST" action="{{ route('vendors.contacts.destroy', ['vendor' => $vendor, 'contact' => $contact]) }}"

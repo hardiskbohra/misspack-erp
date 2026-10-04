@@ -1,7 +1,7 @@
-<section class="vendor-block" aria-labelledby="vendor-block-shipments">
+<section class="master-card master-card--flat vendor-detail-card vendor-block-card" id="vendor-block-shipments" aria-labelledby="vendor-block-shipments-title">
     <div class="vendor-panel-head">
         <div>
-            <h2 class="vendor-detail-title">Vendor-related shipments</h2>
+            <h2 class="vendor-detail-title" id="vendor-block-shipments-title">Vendor-related shipments</h2>
             <p class="vendor-detail-help">Shipments linked to this vendor by record, or where the vendor is the pickup, drop or logistics partner.</p>
         </div>
         <div class="vendor-panel-meta">
