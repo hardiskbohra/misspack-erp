@@ -310,7 +310,6 @@ class ClientController extends Controller
     {
         $available = Schema::hasTable('cashflow_entries');
         $paymentEntries = collect();
-        $paymentTotalsByCurrency = collect();
 
         if ($available) {
             $query = CashflowEntry::query()
@@ -324,13 +323,6 @@ class ClientController extends Controller
                     }
                 });
 
-            $paymentTotalsByCurrency = (clone $query)
-                ->reorder()
-                ->select('currency')
-                ->selectRaw('COUNT(*) as entry_count, COALESCE(SUM(credit_amount), 0) as credits, COALESCE(SUM(debit_amount), 0) as debits')
-                ->groupBy('currency')
-                ->orderBy('currency')
-                ->get();
             $paymentEntries = (clone $query)
                 ->with(['account', 'category'])
                 ->latest('entry_date')->latest('id')
@@ -341,7 +333,6 @@ class ClientController extends Controller
         return [
             'paymentEntriesAvailable' => $available,
             'paymentEntries' => $paymentEntries,
-            'paymentTotalsByCurrency' => $paymentTotalsByCurrency,
             'paymentDirectionOptions' => CashflowEntry::transactionTypeOptions(),
             'paymentModeOptions' => CashflowEntry::paymentModeOptions(),
         ];

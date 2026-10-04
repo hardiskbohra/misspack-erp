@@ -1,22 +1,5 @@
 @if($paymentEntriesAvailable)
     <div class="client-detail-tools client-financial-entries">
-        @if($paymentTotalsByCurrency->isNotEmpty())
-            <section class="client-payment-summaries" aria-label="Payment totals by currency">
-                @foreach($paymentTotalsByCurrency as $summary)
-                    @php($summaryCurrency = $summary->currency ?: 'INR')
-                    <article class="cpa-card client-payment-summary">
-                        <div class="client-payment-summary-head"><span>{{ \App\Helpers\CommonHelper::currencyLabel($summaryCurrency) }}</span><span class="cpa-badge">{{ number_format($summary->entry_count) }} entries</span></div>
-                        <div class="client-payment-summary-grid">
-                            <div><span>Receipts</span><strong>{{ \App\Helpers\CommonHelper::amount($summary->credits, $summaryCurrency) }}</strong></div>
-                            <div><span>Payments / refunds</span><strong>{{ \App\Helpers\CommonHelper::amount($summary->debits, $summaryCurrency) }}</strong></div>
-                            <div><span>Net movement</span><strong>{{ \App\Helpers\CommonHelper::amount((float) $summary->credits - (float) $summary->debits, $summaryCurrency) }}</strong></div>
-                        </div>
-                    </article>
-                @endforeach
-                <p class="client-payment-currency-note">Totals are grouped by currency and are not converted or combined.</p>
-            </section>
-        @endif
-
         <section class="cpa-card client-entry-table-card" aria-labelledby="client-payment-entries-heading">
             <div class="cpa-section-head">
                 <div><p class="cpa-eyebrow">Cashflow ledger</p><h2 id="client-payment-entries-heading">Payment entries</h2></div>
