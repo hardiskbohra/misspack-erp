@@ -277,7 +277,7 @@
             setRow('rowSubtotal', 'previewSubtotal', money(gross), true);
             setRow('rowLineDiscount', 'previewLineDiscount', minus(taxable - gross), round2(taxable - gross) !== 0);
             setRow('rowInvoiceDiscount', 'previewInvoiceDiscount', minus(invoiceDiscount), invoiceDiscount > 0);
-            setRow('rowTaxable', 'previewTaxable', money(taxableAfter), true);
+            setRow('rowTaxable', 'previewTaxable', money(taxableAfter), !exportSale);
             setRow('rowCgst', 'previewCgst', money(cgst), cgst !== 0);
             setRow('rowSgst', 'previewSgst', money(sgst), sgst !== 0);
             setRow('rowIgst', 'previewIgst', money(igst), igst !== 0);
@@ -317,7 +317,7 @@
                 '    <td><input class="master-input" name="items[' + i + '][unit]" value="' + esc(val(item.unit, 'pcs')) + '"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.01" min="0" name="items[' + i + '][unit_price]" value="' + esc(val(item.unit_price, 0)) + '"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.01" min="0" name="items[' + i + '][discount_percent]" value="' + esc(val(item.discount_percent, 0)) + '"></td>',
-                '    <td class="is-num"><input class="master-input calc" type="number" step="0.05" min="0" name="items[' + i + '][gst_percent]" value="' + esc(val(item.gst_percent, 18)) + '"></td>',
+                '    <td class="is-num si-tax-col"><input class="master-input calc" type="number" step="0.05" min="0" name="items[' + i + '][gst_percent]" value="' + esc(val(item.gst_percent, 0)) + '"></td>',
                 '    <td class="is-num"><strong class="line-total">₹ 0.00</strong>',
                 '        <input type="hidden" name="items[' + i + '][remarks]" value="' + esc(val(item.remarks, '')) + '"></td>',
                 '    <td class="is-num"><button type="button" class="master-btn master-btn-ghost master-remove" aria-label="Remove this line"><i class="fas fa-xmark" aria-hidden="true"></i></button></td>',
@@ -372,10 +372,35 @@
             var el = document.getElementById(id);
             if (el) el.addEventListener('input', calculateTotals);
         });
+        function applyImportUi() {
+            var gstTypeEl = document.getElementById('gstType');
+            var isImport = gstTypeEl && gstTypeEl.value === 'export';
+            document.querySelectorAll('.si-tax-col, [data-import-hide]').forEach(function (el) {
+                el.hidden = isImport;
+            });
+            var itemsWrap = document.querySelector('.si-items');
+            if (itemsWrap) itemsWrap.classList.toggle('is-import', isImport);
+            if (isImport) {
+                body.querySelectorAll('input[name$="[gst_percent]"]').forEach(function (input) {
+                    if (!input.value || input.value === '18') input.value = '0';
+                });
+            }
+        }
+
         ['discountType', 'gstType', 'invoiceCurrency'].forEach(function (id) {
             var el = document.getElementById(id);
-            if (el) el.addEventListener('change', calculateTotals);
+            if (el) el.addEventListener('change', function () {
+                if (id === 'invoiceCurrency') {
+                    var gstTypeEl = document.getElementById('gstType');
+                    if (gstTypeEl && el.value && el.value !== 'INR') {
+                        gstTypeEl.value = 'export';
+                    }
+                }
+                applyImportUi();
+                calculateTotals();
+            });
         });
+        applyImportUi();
 
         /* The next PO / bill number is already in the field. Switching type
            swaps it for the other series unless the office has typed their own. */
@@ -539,7 +564,15 @@
                 gstTypeManuallyChanged = false;
                 if (gstAutoState) gstAutoState.value = 'true';
                 applySnapshot(clientSelect.options[clientSelect.selectedIndex], false);
-                autoSelectGstType();
+                var currencyEl = clientForm.querySelector('[name="currency"]');
+                var gstTypeEl = document.getElementById('gstType');
+                if (currencyEl && gstTypeEl && currencyEl.value && currencyEl.value !== 'INR') {
+                    gstTypeEl.value = 'export';
+                }
+                applyImportUi();
+                if (!currencyEl || currencyEl.value === 'INR') {
+                    autoSelectGstType();
+                }
                 calculateTotals();
             }
 

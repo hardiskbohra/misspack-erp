@@ -16,7 +16,7 @@
                 'unit' => 'pcs',
                 'unit_price' => 0,
                 'discount_percent' => 0,
-                'gst_percent' => 18,
+                'gst_percent' => 0,
             ]];
         }
         $initialInvoiceItems = array_values($invoiceItems);
@@ -137,7 +137,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="master-field">
+                    <div class="master-field" id="placeOfSupplyField" data-import-hide>
                         <label class="master-label">Place of supply</label>
                         <input class="master-input" name="place_of_supply" value="{{ old('place_of_supply', $invoice->place_of_supply) }}">
                     </div>
@@ -235,7 +235,7 @@
                                 <th width="8%">Unit</th>
                                 <th width="12%" class="is-num">Rate</th>
                                 <th width="9%" class="is-num">Disc %</th>
-                                <th width="9%" class="is-num">GST %</th>
+                                <th width="9%" class="is-num si-tax-col">GST %</th>
                                 <th width="12%" class="is-num">Amount</th>
                                 <th></th>
                             </tr>

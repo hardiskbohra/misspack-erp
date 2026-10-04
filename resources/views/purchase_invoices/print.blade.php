@@ -14,6 +14,7 @@
 
 @php
     $currency = (string) ($invoice->currency ?: 'INR');
+    $isImport = $invoice->gst_type === 'export';
     $money = fn ($amount) => \App\Helpers\CommonHelper::amount((float) $amount, $currency);
     $invoiceItems = $invoice->items->values();
     $lineDiscountTotal = round((float) $invoiceItems->sum('discount_amount'), 2);
@@ -180,10 +181,12 @@
                 <span>{{ $secondaryDateLabel }}</span>
                 <strong>{{ optional($secondaryDate)->format('d M Y') ?: '—' }}</strong>
             </div>
+            @unless ($isImport)
             <div class="invoice-fact">
                 <span>Place of supply</span>
                 <strong>{{ $invoice->place_of_supply ?: '—' }}</strong>
             </div>
+            @endunless
             <div class="invoice-fact">
                 <span>Vendor bill</span>
                 <strong>{{ $invoice->vendor_bill_number ?: '—' }}</strong>
@@ -239,21 +242,30 @@
         <div class="items-wrap">
             <table class="items">
                 <colgroup>
-                    <col style="width: 36%">
-                    <col style="width: 9%">
-                    <col style="width: 14%">
-                    <col style="width: 19%">
-                    <col style="width: 8%">
-                    <col style="width: 14%">
+                    <col style="width: {{ $isImport ? '52%' : '36%' }}">
+                    <col style="width: 12%">
+                    <col style="width: 18%">
+                    @unless ($isImport)
+                        <col style="width: 16%">
+                        <col style="width: 8%">
+                        <col style="width: 10%">
+                    @endunless
+                    @if ($isImport)
+                        <col style="width: 18%">
+                    @endif
                 </colgroup>
                 <thead>
                     <tr>
                         <th>Item description / HSN-SAC</th>
                         <th class="right">Qty</th>
                         <th class="right">Rate</th>
-                        <th class="right">Taxable value</th>
-                        <th class="right">GST rate</th>
-                        <th class="right">Tax amount</th>
+                        @unless ($isImport)
+                            <th class="right">Taxable value</th>
+                            <th class="right">GST rate</th>
+                            <th class="right">Tax amount</th>
+                        @else
+                            <th class="right">Amount</th>
+                        @endunless
                     </tr>
                 </thead>
                 <tbody>
@@ -279,13 +291,17 @@
                                 {{ $quantity }}@if ($item->unit) <span class="unit-label">{{ $item->unit }}</span>@endif
                             </td>
                             <td class="right">{{ $money($item->unit_price) }}</td>
-                            <td class="right item-taxable">
-                                {{ $line['taxable_amount'] !== null ? $money($line['taxable_amount']) : '—' }}
-                            </td>
-                            <td class="right">{{ $gstPercent }}%</td>
-                            <td class="right item-tax">
-                                {{ $invoiceTaxTotal > 0 && $line['tax_amount'] !== null ? $money($line['tax_amount']) : '—' }}
-                            </td>
+                            @unless ($isImport)
+                                <td class="right item-taxable">
+                                    {{ $line['taxable_amount'] !== null ? $money($line['taxable_amount']) : '—' }}
+                                </td>
+                                <td class="right">{{ $gstPercent }}%</td>
+                                <td class="right item-tax">
+                                    {{ $invoiceTaxTotal > 0 && $line['tax_amount'] !== null ? $money($line['tax_amount']) : '—' }}
+                                </td>
+                            @else
+                                <td class="right">{{ $money($item->line_total) }}</td>
+                            @endunless
                         </tr>
                     @endforeach
                 </tbody>
@@ -337,6 +353,7 @@
                                     <td>-{{ $money($invoice->discount_amount) }}</td>
                                 </tr>
                             @endif
+                            @unless ($isImport)
                             <tr class="taxable-row">
                                 <td>Taxable value</td>
                                 <td>{{ $money($invoice->taxable_amount) }}</td>
@@ -350,6 +367,7 @@
                             @if ((float) $invoice->igst_amount > 0)
                                 <tr><td>IGST</td><td>{{ $money($invoice->igst_amount) }}</td></tr>
                             @endif
+                            @endunless
                             @if ((float) $invoice->freight_amount !== 0.0)
                                 <tr><td>Freight</td><td>{{ $money($invoice->freight_amount) }}</td></tr>
                             @endif

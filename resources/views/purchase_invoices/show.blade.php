@@ -6,6 +6,7 @@
 @php
     $paidAmount = $invoice->paidAmount();
     $balanceAmount = $invoice->balanceDue();
+    $isImport = $invoice->gst_type === 'export';
     $taxAmount = (float) $invoice->cgst_amount + (float) $invoice->sgst_amount + (float) $invoice->igst_amount;
     $chargesAmount = (float) $invoice->freight_amount + (float) $invoice->packing_amount + (float) $invoice->other_charges;
     $stateKey = $invoice->stateKey();
@@ -115,6 +116,7 @@
                 <p class="master-sub">{{ $invoice->isOrder() ? 'Raise a bill to pay this order' : ($payments->count().' payments') }}</p>
             </div>
         </div>
+        @unless ($isImport)
         <div class="master-stat master-stat--flat purple">
             <span class="icon"><i class="fas fa-percent"></i></span>
             <div>
@@ -123,6 +125,7 @@
                 <p class="master-sub">{{ $invoice->gstTypeLabel() }}</p>
             </div>
         </div>
+        @endunless
         <div class="master-stat master-stat--flat orange">
             <span class="icon"><i class="fas fa-scale-balanced"></i></span>
             <div>
@@ -146,33 +149,48 @@
             </div>
         @else
             <div class="master-table-wrap">
-                <table class="master-table">
+                <table class="master-table si-lines">
+                    <colgroup>
+                        <col style="width: 4%">
+                        <col>
+                        <col style="width: 12%">
+                        <col style="width: 16%">
+                        @unless ($isImport)
+                            <col style="width: 16%">
+                            <col style="width: 10%">
+                        @endunless
+                        <col style="width: 16%">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>#</th>
                             <th>Product</th>
                             <th class="is-num">Qty</th>
                             <th class="is-num">Rate</th>
-                            <th class="is-num">Taxable</th>
-                            <th class="is-num">GST</th>
-                            <th class="is-num">Line total</th>
+                            @unless ($isImport)
+                                <th class="is-num">Taxable</th>
+                                <th class="is-num">GST</th>
+                            @endunless
+                            <th class="is-num">Amount</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($invoice->items as $item)
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>
+                                <td data-label="#">{{ $loop->iteration }}</td>
+                                <td data-label="Product">
                                     <strong>{{ $item->product_name }}</strong>
                                     @if (filled($item->description))
                                         <span class="master-sub">{!! nl2br(e($item->description)) !!}</span>
                                     @endif
                                 </td>
-                                <td class="is-num">{{ $figure($item->quantity) }} {{ $item->unit }}</td>
-                                <td class="is-num">{{ \App\Helpers\CommonHelper::amount($item->unit_price, $invoice->currency) }}</td>
-                                <td class="is-num">{{ \App\Helpers\CommonHelper::amount($item->taxable_amount, $invoice->currency) }}</td>
-                                <td class="is-num">{{ $figure($item->gst_percent) }}%</td>
-                                <td class="is-num">{{ \App\Helpers\CommonHelper::amount($item->line_total, $invoice->currency) }}</td>
+                                <td data-label="Qty" class="is-num">{{ $figure($item->quantity) }} {{ $item->unit }}</td>
+                                <td data-label="Rate" class="is-num">{{ \App\Helpers\CommonHelper::amount($item->unit_price, $invoice->currency) }}</td>
+                                @unless ($isImport)
+                                    <td data-label="Taxable" class="is-num">{{ \App\Helpers\CommonHelper::amount($item->taxable_amount, $invoice->currency) }}</td>
+                                    <td data-label="GST" class="is-num">{{ $figure($item->gst_percent) }}%</td>
+                                @endunless
+                                <td data-label="Amount" class="is-num">{{ \App\Helpers\CommonHelper::amount($item->line_total, $invoice->currency) }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -205,9 +223,11 @@
                     <span class="master-empty-value">None</span>
                 @endif
             </div>
+            @unless ($isImport)
             @if ((float) $invoice->cgst_amount > 0)<div class="si-total-row"><span>CGST</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->cgst_amount, $invoice->currency) }}</strong></div>@endif
             @if ((float) $invoice->sgst_amount > 0)<div class="si-total-row"><span>SGST</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->sgst_amount, $invoice->currency) }}</strong></div>@endif
             @if ((float) $invoice->igst_amount > 0)<div class="si-total-row"><span>IGST</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->igst_amount, $invoice->currency) }}</strong></div>@endif
+            @endunless
             @if ($chargesAmount > 0)
                 @if ((float) $invoice->freight_amount > 0)<div class="si-total-row"><span>Freight</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->freight_amount, $invoice->currency) }}</strong></div>@endif
                 @if ((float) $invoice->packing_amount > 0)<div class="si-total-row"><span>Packing</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->packing_amount, $invoice->currency) }}</strong></div>@endif

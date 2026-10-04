@@ -50,32 +50,34 @@ class PurchaseInvoiceController extends Controller
            `only_full_group_by`. A query with no columns of its own takes one
            aggregate select cleanly — the same rule the invoices listing keeps. */
         $paid = $this->paidSql();
-        $figures = $this->filteredQuery($filters)->reorder()->selectRaw(
-            'coalesce(sum(case when purchase_invoices.invoice_type = \'bill\''
-                .' and purchase_invoices.status <> \'cancelled\' then purchase_invoices.total_amount else 0 end), 0) as billed'
-            .', coalesce(sum(case when purchase_invoices.invoice_type = \'order\''
-                .' and purchase_invoices.converted_invoice_id is null and purchase_invoices.status <> \'cancelled\''
-                .' then purchase_invoices.total_amount else 0 end), 0) as open'
-            .', coalesce(sum(case when purchase_invoices.invoice_type = \'bill\''
-                .' and purchase_invoices.status <> \'cancelled\' then '.$paid.' else 0 end), 0) as paid'
-            .', coalesce(sum(case when purchase_invoices.invoice_type = \'bill\''
-                .' and purchase_invoices.status <> \'cancelled\' and '.$paid.' < purchase_invoices.total_amount - 0.01'
-                .' then purchase_invoices.total_amount - '.$paid.' else 0 end), 0) as outstanding'
-            .', coalesce(sum(case when purchase_invoices.invoice_type = \'bill\''
-                .' and purchase_invoices.due_date is not null and purchase_invoices.due_date < ?'
-                .' and purchase_invoices.status not in (\'draft\', \'cancelled\')'
-                .' and '.$paid.' < purchase_invoices.total_amount - 0.01'
-                .' then purchase_invoices.total_amount - '.$paid.' else 0 end), 0) as overdue'
-        )
-            ->addBinding([now()->toDateString()], 'select')
-            ->first();
+        $currencyBits = [];
+        foreach (['INR', 'USD', 'RMB'] as $code) {
+            $c = "purchase_invoices.currency = '".$code."'";
+            $currencyBits[] = "coalesce(sum(case when $c and purchase_invoices.invoice_type = 'bill'"
+                ." and purchase_invoices.status <> 'cancelled' then purchase_invoices.total_amount else 0 end), 0) as billed_".$code;
+            $currencyBits[] = "coalesce(sum(case when $c and purchase_invoices.invoice_type = 'order'"
+                ." and purchase_invoices.converted_invoice_id is null and purchase_invoices.status <> 'cancelled'"
+                ." then purchase_invoices.total_amount else 0 end), 0) as open_".$code;
+            $currencyBits[] = "coalesce(sum(case when $c and purchase_invoices.invoice_type = 'bill'"
+                ." and purchase_invoices.status <> 'cancelled' then ".$paid." else 0 end), 0) as paid_".$code;
+            $currencyBits[] = "coalesce(sum(case when $c and purchase_invoices.invoice_type = 'bill'"
+                ." and purchase_invoices.status <> 'cancelled' and ".$paid." < purchase_invoices.total_amount - 0.01"
+                ." then purchase_invoices.total_amount - ".$paid." else 0 end), 0) as outstanding_".$code;
+        }
+        $figures = $this->filteredQuery($filters)->reorder()->selectRaw(implode(', ', $currencyBits))->first();
+
+        $byCurrency = [];
+        foreach (['INR', 'USD', 'RMB'] as $code) {
+            $byCurrency[$code] = [
+                'billed' => (float) ($figures->{'billed_'.$code} ?? 0),
+                'open' => (float) ($figures->{'open_'.$code} ?? 0),
+                'paid' => (float) ($figures->{'paid_'.$code} ?? 0),
+                'outstanding' => (float) ($figures->{'outstanding_'.$code} ?? 0),
+            ];
+        }
 
         $totals = collect([
-            'billed' => (float) ($figures->billed ?? 0),
-            'paid' => (float) ($figures->paid ?? 0),
-            'outstanding' => (float) ($figures->outstanding ?? 0),
-            'open' => (float) ($figures->open ?? 0),
-            'overdue' => (float) ($figures->overdue ?? 0),
+            'byCurrency' => $byCurrency,
             'drafts' => PurchaseInvoice::query()->where('status', 'draft')->count(),
         ]);
 
@@ -230,13 +232,25 @@ class PurchaseInvoiceController extends Controller
     /** The header tiles: the same shape for both documents, in their own words. */
     private function statCards($totals): array
     {
-        return [
-            ['label' => 'Billed (filtered)', 'value' => $totals['billed'], 'tone' => 'blue'],
-            ['label' => 'Open orders', 'value' => $totals['open'], 'tone' => 'purple', 'note' => 'Not yet billed'],
-            ['label' => 'Paid (filtered)', 'value' => $totals['paid'], 'tone' => 'teal'],
-            ['label' => 'Outstanding (filtered)', 'value' => $totals['outstanding'], 'tone' => 'orange'],
-            ['label' => 'Drafts', 'value' => $totals['drafts'], 'tone' => 'purple', 'money' => false],
-        ];
+        $tones = ['INR' => 'blue', 'USD' => 'teal', 'RMB' => 'orange'];
+        $cards = [];
+
+        foreach (['INR', 'USD', 'RMB'] as $code) {
+            $row = $totals['byCurrency'][$code] ?? ['billed' => 0, 'open' => 0, 'paid' => 0, 'outstanding' => 0];
+            $cards[] = [
+                'label' => $code.' (filtered)',
+                'value' => $row['billed'],
+                'open' => $row['open'],
+                'paid' => $row['paid'],
+                'outstanding' => $row['outstanding'],
+                'currency' => $code,
+                'tone' => $tones[$code],
+            ];
+        }
+
+        $cards[] = ['label' => 'Drafts', 'value' => $totals['drafts'], 'tone' => 'purple', 'money' => false];
+
+        return $cards;
     }
 
     public function create(Request $request): View
@@ -254,7 +268,7 @@ class PurchaseInvoiceController extends Controller
                 'invoice_type' => $type,
                 'invoice_number' => $nextNumbers[$type],
                 'currency' => 'INR',
-                'gst_type' => 'intra_state',
+                'gst_type' => 'export',
                 'discount_type' => 'amount',
                 'status' => 'draft',
                 'invoice_date' => now()->toDateString(),

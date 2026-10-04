@@ -35,18 +35,19 @@
     <div class="master-stats">
         @foreach ($stats as $stat)
             <div class="master-stat master-stat--flat {{ $stat['tone'] }}">
-                <span class="icon">{{ ($stat['money'] ?? true) ? '₹' : '✎' }}</span>
+                <span class="icon">{{ ($stat['money'] ?? true) ? \App\Helpers\CommonHelper::symbol($stat['currency'] ?? 'INR') : '✎' }}</span>
                 <div>
                     <p class="master-stat-title">{{ $stat['label'] }}</p>
                     <p class="master-stat-value">
                         @if ($stat['money'] ?? true)
-                            {{ \App\Helpers\CommonHelper::indianCurrency($stat['value']) }}
+                            {{ \App\Helpers\CommonHelper::amount($stat['value'], $stat['currency'] ?? 'INR') }}
                         @else
                             {{ $stat['value'] }}
                         @endif
                     </p>
-                    @if (! empty($stat['note']))
-                        <p class="master-sub">{{ $stat['note'] }}</p>
+                    @if (($stat['money'] ?? true) && isset($stat['open']))
+                        <p class="master-sub">Open {{ \App\Helpers\CommonHelper::amount($stat['open'], $stat['currency']) }}
+                            · outstanding {{ \App\Helpers\CommonHelper::amount($stat['outstanding'] ?? 0, $stat['currency']) }}</p>
                     @endif
                 </div>
             </div>
@@ -347,15 +348,13 @@
                                 <strong>Total — {{ $invoices->count() }} shown</strong>
                                 <span class="master-sub">Filtered totals cover every page · a converted order counts once</span>
                             </td>
-                            <td class="is-num">
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['billed'] + $pageTotals['open']) }}</strong>
-                                <span class="master-sub">Billed + open orders</span>
-                            </td>
-                            <td class="is-num">
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['paid']) }}</strong>
-                            </td>
-                            <td class="is-num">
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['outstanding']) }}</strong>
+                            <td class="is-num" colspan="3">
+                                @foreach (($pageTotals['byCurrency'] ?? []) as $code => $row)
+                                    @if (($row['billed'] + $row['open'] + $row['paid'] + $row['outstanding']) > 0)
+                                        <span class="master-sub">{{ $code }} billed {{ \App\Helpers\CommonHelper::amount($row['billed'], $code) }}
+                                            · open {{ \App\Helpers\CommonHelper::amount($row['open'], $code) }}</span>
+                                    @endif
+                                @endforeach
                             </td>
                             <td colspan="3"></td>
                         </tr>

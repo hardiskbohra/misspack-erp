@@ -63,6 +63,22 @@
     overflow-x: auto
 }
 
+.si-items.is-import .si-tax-col {
+    display: none
+}
+
+.si-show .si-lines th,
+.si-show .si-lines td {
+    vertical-align: middle
+}
+
+.si-show .si-lines th.is-num,
+.si-show .si-lines td.is-num {
+    text-align: right;
+    white-space: nowrap;
+    width: 1%
+}
+
 /* A cell may hold a product select, a name and a description: the row reads
    from the top rather than from the middle of its tallest cell. */
 .si-items .master-table td {
