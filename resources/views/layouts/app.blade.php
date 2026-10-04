@@ -67,6 +67,7 @@
         request()->routeIs('clients.*') => 'clients',
         request()->routeIs('cashflows.*') => 'cashflows',
         request()->routeIs('users.*') => 'users',
+        request()->routeIs('vendors.*') => 'vendors',
         default => null,
     };
 @endphp

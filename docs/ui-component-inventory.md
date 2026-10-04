@@ -40,6 +40,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Filterable table | Shared | Visible search and quick chips stay in the list toolbar; secondary criteria open in the shared, theme-aware right drawer across administrative and client-portal modules |
 | Selectable table | Partial | `.master-list-pick` and bulk controls on some lists; not available on every data table |
 | Column chooser | Shared | `master-list.js` creates an accessible per-table chooser for `data-table-settings` tables; visibility preferences persist by `data-table-key` in localStorage and action columns remain visible |
+| Saved views | Shared | Named filter sets are stored per user and module in `saved_views` (`app/Services/SavedViews.php`) and rendered by the `.master-list-saved*` chrome in the list toolbar; clients, shipments, cashflows, sales invoices and vendors use the same store |
 | Server-side pagination | Shared | Laravel paginator/query pagination in module controllers and shared view partial |
 | Grid view | Partial | Product/catalogue and portal cards; not a general table/grid switch |
 | List view | Shared | `.master-list` list chrome for the administrative index pages |

@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SavedView;
 use App\Models\Vendor;
 use App\Models\VendorAttachment;
 use App\Models\VendorComment;
 use App\Models\VendorPaymentAttachment;
 use App\Models\VendorPaymentEntry;
+use App\Services\SavedViews;
 use App\Services\VendorPaymentCashflowSync;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,30 +22,54 @@ use Illuminate\View\View;
 
 class VendorController extends Controller
 {
-    public function index(Request $request): View
+    /**
+     * The record's tabs: the questions an office asks about a supplier, in the
+     * order it asks them. One list, read by the controller and drawn by the
+     * view, so a `?tab=` guard can never disagree with the strip about what
+     * exists.
+     *
+     * The profile facts are split the way a vendor file is: who they are, who
+     * answers the phone, where they ship from, and what the money side needs
+     * (tax, bank, terms). The three ledgers stay apart for the same reason the
+     * statement module keeps them apart — a manual vendor-currency entry, the
+     * INR cashflow mirror, and the statement a vendor can be sent are three
+     * questions, not three renderings of one.
+     */
+    private const SHOW_TABS = [
+        'overview' => 'Overview',
+        'profile' => 'Profile',
+        'contacts' => 'Contacts',
+        'addresses' => 'Addresses',
+        'commercial' => 'Commercial',
+        'projects' => 'Projects',
+        'products' => 'Products',
+        'quotes' => 'Quotes',
+        'payments' => 'Payments',
+        'statement' => 'Statement',
+        'shipments' => 'Shipments',
+        'attachments' => 'Attachments',
+        'comments' => 'Comments',
+    ];
+
+    public function index(Request $request): View|RedirectResponse
     {
+        if ($savedQuery = $this->resolveSavedView($request)) {
+            return redirect()->route('vendors.index', $savedQuery);
+        }
+
         $search = $request->query('search');
+        $search = is_string($search) ? trim($search) : '';
+        $search = $search !== '' ? mb_substr($search, 0, 150) : null;
+
         $status = $request->query('status', 'all');
+        if (! is_string($status) || ! array_key_exists($status, ['all' => 'All'] + Vendor::statusOptions())) {
+            $status = 'all';
+        }
+
         $type = $request->query('type', 'all');
-        $country = $request->query('country', 'all');
-
-        $vendors = Vendor::query()
-            ->with('creator')
-            ->search($search)
-            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
-            ->when($type !== 'all', fn ($q) => $q->where('vendor_type', $type))
-            ->when($country !== 'all', fn ($q) => $q->where('country', $country))
-            ->latest('id')
-            ->paginate(10)
-            ->withQueryString();
-
-        $stats = [
-            'total' => Vendor::count(),
-            'active' => Vendor::where('status', Vendor::STATUS_ACTIVE)->count(),
-            'on_hold' => Vendor::where('status', Vendor::STATUS_ON_HOLD)->count(),
-            'blacklisted' => Vendor::where('status', Vendor::STATUS_BLACKLISTED)->count(),
-            'international' => Vendor::whereNotNull('country')->where('country', '!=', 'India')->count(),
-        ];
+        if (! is_string($type) || ! array_key_exists($type, ['all' => 'All'] + Vendor::typeOptions())) {
+            $type = 'all';
+        }
 
         $countries = Vendor::query()
             ->whereNotNull('country')
@@ -52,18 +78,105 @@ class VendorController extends Controller
             ->orderBy('country')
             ->pluck('country');
 
+        $country = $request->query('country', 'all');
+        if (! is_string($country) || ($country !== 'all' && ! $countries->contains($country))) {
+            $country = 'all';
+        }
+
+        $vendors = Vendor::query()
+            ->with('creator')
+            ->search($search)
+            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
+            ->when($type !== 'all', fn ($q) => $q->where('vendor_type', $type))
+            ->when($country !== 'all', fn ($q) => $q->where('country', $country))
+            ->latest('id')
+            ->paginate(25)
+            ->withQueryString();
+
+        /* The status chips count the module, not the page — a chip that shows
+           the number of rows it happens to be sitting above is a chip you
+           cannot use to decide where to go. */
+        $statusCounts = Vendor::query()
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        $stats = [
+            'total' => (int) $statusCounts->sum(),
+            'active' => (int) ($statusCounts[Vendor::STATUS_ACTIVE] ?? 0),
+            'inactive' => (int) ($statusCounts[Vendor::STATUS_INACTIVE] ?? 0),
+            'on_hold' => (int) ($statusCounts[Vendor::STATUS_ON_HOLD] ?? 0),
+            'blacklisted' => (int) ($statusCounts[Vendor::STATUS_BLACKLISTED] ?? 0),
+            'international' => Vendor::query()
+                ->whereNotNull('country')
+                ->where('country', '!=', '')
+                ->where('country', '!=', 'India')
+                ->count(),
+            'with_contact' => Vendor::query()->whereNotNull('contact_person_name')->where('contact_person_name', '!=', '')->count(),
+        ];
+
         return view('vendors.index', [
             'vendors' => $vendors,
             'stats' => $stats,
+            'statusCounts' => $statusCounts,
             'countries' => $countries,
             'search' => $search,
             'status' => $status,
             'type' => $type,
             'country' => $country,
+            'filtersActive' => filled($search) || $status !== 'all' || $type !== 'all' || $country !== 'all',
             'statusOptions' => Vendor::statusOptions(),
             'typeOptions' => Vendor::typeOptions(),
             'currencyOptions' => Vendor::currencyOptions(),
+            'savedViews' => app(SavedViews::class)->forUser(Auth::id(), 'vendors'),
         ]);
+    }
+
+    /** Restore a named filter set as the normal list URL and controls. */
+    private function resolveSavedView(Request $request): array
+    {
+        $id = (int) $request->query('saved_view', 0);
+        $savedViews = app(SavedViews::class);
+
+        if (! $id || ! $savedViews->available()) {
+            return [];
+        }
+
+        $view = SavedView::query()
+            ->where('module', 'vendors')
+            ->where(function ($query) {
+                $query->where('user_id', Auth::id())->orWhere('is_shared', true);
+            })
+            ->find($id);
+
+        return $view ? $savedViews->queryFor($view) : [];
+    }
+
+    public function storeSavedView(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:60'],
+            'is_shared' => ['nullable', 'boolean'],
+        ]);
+
+        app(SavedViews::class)->save(
+            (int) Auth::id(),
+            'vendors',
+            $data['name'],
+            $request->query(),
+            $request->boolean('is_shared')
+        );
+
+        return back()->with('success', 'View "'.$data['name'].'" saved.');
+    }
+
+    public function destroySavedView(SavedView $savedView): RedirectResponse
+    {
+        abort_unless($savedView->module === 'vendors' && (int) $savedView->user_id === (int) Auth::id(), 403);
+
+        app(SavedViews::class)->delete((int) Auth::id(), (int) $savedView->id);
+
+        return back()->with('success', 'Saved view removed.');
     }
 
     public function create(): View
@@ -105,9 +218,9 @@ class VendorController extends Controller
             'vendor_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:2048'],
             'vendor_name' => ['required', 'string', 'max:255'],
             'brand_name' => ['nullable', 'string', 'max:255'],
-            'vendor_type' => ['required', 'in:manufacturer,trader,distributor,service_provider'],
+            'vendor_type' => ['nullable', 'in:manufacturer,trader,distributor,service_provider'],
             'category' => ['nullable', 'string', 'max:255'],
-            'status' => ['required', 'in:active,inactive,on_hold,blacklisted'],
+            'status' => ['nullable', 'in:active,inactive,on_hold,blacklisted'],
             'contact_person_name' => ['nullable', 'string', 'max:255'],
             'contact_person_email' => ['nullable', 'email', 'max:255'],
             'contact_person_mobile' => ['nullable', 'string', 'max:40'],
@@ -123,6 +236,8 @@ class VendorController extends Controller
         unset($data['vendor_image']);
         $data['vendor_number'] = $this->makeVendorNumber();
         $data['created_by'] = Auth::id();
+        $data['vendor_type'] = $data['vendor_type'] ?? 'manufacturer';
+        $data['status'] = $data['status'] ?? Vendor::STATUS_ACTIVE;
         $data['preferred_currency'] = $data['preferred_currency'] ?? 'INR';
 
         if ($request->hasFile('vendor_image')) {
@@ -136,18 +251,36 @@ class VendorController extends Controller
             ->with('success', 'Quick vendor created successfully.');
     }
 
-    public function show(Vendor $vendor): View
+    public function show(Request $request, Vendor $vendor): View
     {
+        $tab = (string) $request->query('tab', 'overview');
+        $tab = array_key_exists($tab, self::SHOW_TABS) ? $tab : 'overview';
+
         $relations = ['creator'];
         if (Schema::hasTable('vendor_comments')) {
             $relations[] = 'comments.creator';
         }
-        if (Schema::hasTable('vendor_attachments')) {
+        if (Schema::hasTable('vendor_attachments') && in_array($tab, ['attachments', 'overview'], true)) {
             $relations[] = 'attachments.uploader';
         }
         $vendor->load($relations);
 
-        return view('vendors.show', array_merge($this->formData($vendor), $this->dashboardData($vendor)));
+        $data = $this->dashboardData($vendor);
+
+        return view('vendors.show', array_merge($this->formData($vendor), $data, [
+            'tabs' => self::SHOW_TABS,
+            'tab' => $tab,
+            'tabCounts' => [
+                'projects' => (int) ($data['summary']['project_products_count'] ?? 0),
+                'products' => (int) ($data['summary']['products_count'] ?? 0),
+                'quotes' => (int) ($data['summary']['vendor_quotes_count'] ?? 0),
+                'payments' => (int) ($data['summary']['statement_count'] ?? 0),
+                'shipments' => (int) ($data['summary']['shipments_count'] ?? 0),
+                'attachments' => $vendor->relationLoaded('attachments') ? $vendor->attachments->count() : (int) ($data['summary']['attachments_count'] ?? 0),
+                'comments' => $vendor->relationLoaded('comments') ? $vendor->comments->count() : 0,
+            ],
+            'recordUrl' => fn (string $key) => route('vendors.show', ['vendor' => $vendor, 'tab' => $key]),
+        ]));
     }
 
     public function edit(Vendor $vendor): View
@@ -203,14 +336,18 @@ class VendorController extends Controller
             'created_by' => Auth::id(),
         ]);
 
-        return back()->with('success', 'Vendor comment added successfully.');
+        return $this->backToTab($vendor, 'comments', 'Vendor comment added successfully.');
     }
 
     public function destroyComment(VendorComment $comment): RedirectResponse
     {
+        $vendor = $comment->vendor;
+
         $comment->delete();
 
-        return back()->with('success', 'Vendor comment deleted successfully.');
+        return $vendor
+            ? $this->backToTab($vendor, 'comments', 'Vendor comment deleted successfully.')
+            : redirect()->route('vendors.index')->with('success', 'Vendor comment deleted successfully.');
     }
 
     public function storeAttachment(Request $request, Vendor $vendor): RedirectResponse
@@ -243,18 +380,22 @@ class VendorController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Vendor document uploaded successfully.');
+        return $this->backToTab($vendor, 'attachments', 'Vendor document uploaded successfully.');
     }
 
     public function destroyAttachment(VendorAttachment $attachment): RedirectResponse
     {
+        $vendor = $attachment->vendor;
+
         if ($attachment->file_path) {
             Storage::disk('public')->delete($attachment->file_path);
         }
 
         $attachment->delete();
 
-        return back()->with('success', 'Vendor document deleted successfully.');
+        return $vendor
+            ? $this->backToTab($vendor, 'attachments', 'Vendor document deleted successfully.')
+            : redirect()->route('vendors.index')->with('success', 'Vendor document deleted successfully.');
     }
 
     public function storePayment(Request $request, Vendor $vendor): RedirectResponse
@@ -301,7 +442,7 @@ class VendorController extends Controller
             return $entry;
         });
 
-        return back()->with('success', $this->paymentSavedMessage($entry, 'added'));
+        return $this->backToTab($vendor, 'payments', $this->paymentSavedMessage($entry, 'added'));
     }
     
     public function updatePayment(Request $request, Vendor $vendor, VendorPaymentEntry $entry): RedirectResponse {
@@ -345,7 +486,7 @@ class VendorController extends Controller
             $this->storeVendorPaymentAttachments($request,$entry);
         });
     
-        return back()->with('success', $this->paymentSavedMessage($entry, 'updated'));
+        return $this->backToTab($vendor, 'payments', $this->paymentSavedMessage($entry, 'updated'));
     }
 
     public function destroyPayment(VendorPaymentEntry $entry): RedirectResponse
@@ -365,23 +506,48 @@ class VendorController extends Controller
             $entry->delete();
         });
 
-        return back()->with(
-            'success',
-            $hadCashflow
-                ? 'Vendor payment entry and its linked INR cashflow entry were deleted.'
-                : 'Vendor payment entry deleted successfully.'
-        );
+        $vendor = $entry->vendor;
+
+        if (! $vendor) {
+            return redirect()->route('vendors.index')->with(
+                'success',
+                $hadCashflow
+                    ? 'Vendor payment entry and its linked INR cashflow entry were deleted.'
+                    : 'Vendor payment entry deleted successfully.'
+            );
+        }
+
+        return $this->backToTab($vendor, 'payments', $hadCashflow
+            ? 'Vendor payment entry and its linked INR cashflow entry were deleted.'
+            : 'Vendor payment entry deleted successfully.');
     }
 
     public function destroyPaymentAttachment(VendorPaymentAttachment $attachment): RedirectResponse
     {
+        $vendor = $attachment->entry?->vendor;
+
         if ($attachment->file_path) {
             Storage::disk('public')->delete($attachment->file_path);
         }
 
         $attachment->delete();
 
-        return back()->with('success', 'Attachment deleted successfully.');
+        return $vendor
+            ? $this->backToTab($vendor, 'payments', 'Attachment deleted successfully.')
+            : redirect()->route('vendors.index')->with('success', 'Attachment deleted successfully.');
+    }
+
+    /**
+     * Every write lands back on the tab it was made from. A redirect to
+     * `back()` would depend on the referer, and a form posted from a modal on
+     * the payments tab has to come home to the payments tab even when the
+     * browser sent no referer at all.
+     */
+    private function backToTab(Vendor $vendor, string $tab, string $message): RedirectResponse
+    {
+        return redirect()
+            ->route('vendors.show', ['vendor' => $vendor, 'tab' => $tab])
+            ->with('success', $message);
     }
 
     private function cashflowSync(): VendorPaymentCashflowSync
@@ -658,12 +824,31 @@ class VendorController extends Controller
             $relations[] = 'cashflowEntry';
         }
 
-        return VendorPaymentEntry::query()
+        $entries = VendorPaymentEntry::query()
             ->with($relations)
             ->where('vendor_id', $vendor->id)
             ->orderBy('transaction_date')
             ->orderBy('id')
             ->get();
+
+        /* The statement reads as an account: each row carries the balance the
+           account stood at after it. The balance is per currency — a vendor
+           billed in RMB and paid in rupees holds two balances, and adding them
+           is wrong by the exchange rate — so it is accumulated per currency
+           rather than over the whole list. */
+        $running = [];
+
+        foreach ($entries as $entry) {
+            $currency = $entry->foreign_currency ?: 'RMB';
+            $movement = $entry->transaction_type === 'credit'
+                ? (float) $entry->foreign_amount
+                : -(float) $entry->foreign_amount;
+
+            $running[$currency] = round(($running[$currency] ?? 0) + $movement, 4);
+            $entry->setAttribute('running_balance', $running[$currency]);
+        }
+
+        return $entries;
     }
 
     private function vendorCurrencySummary($entries): array
@@ -873,9 +1058,9 @@ class VendorController extends Controller
             'vendor_number' => ['nullable', 'string', 'max:255', 'unique:vendors,vendor_number,'.($vendor?->id ?? 'NULL')],
             'vendor_name' => ['required', 'string', 'max:255'],
             'brand_name' => ['nullable', 'string', 'max:255'],
-            'vendor_type' => ['required', 'in:manufacturer,trader,distributor,service_provider'],
+            'vendor_type' => ['nullable', 'in:manufacturer,trader,distributor,service_provider'],
             'category' => ['nullable', 'string', 'max:255'],
-            'status' => ['required', 'in:active,inactive,on_hold,blacklisted'],
+            'status' => ['nullable', 'in:active,inactive,on_hold,blacklisted'],
 
             'contact_person_name' => ['nullable', 'string', 'max:255'],
             'contact_person_email' => ['nullable', 'email', 'max:255'],

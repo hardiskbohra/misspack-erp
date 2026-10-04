@@ -39,7 +39,8 @@ resources/css/
 │   ├── attachments.css
 │   └── activity.css
 └── pages/
-    └── module-adapters.css       # bridge for existing module markup
+    ├── module-adapters.css       # bridge for existing module markup
+    └── vendors.css               # vendor list, record and form composition
 ```
 
 ## Cascade and ownership
@@ -73,6 +74,7 @@ Page CSS may own domain composition (grid columns, ordering, widths) and states 
 - Opt a table into user preferences with `data-table-settings` and a unique `data-table-key`; action columns remain visible and defaults should keep the primary identifier/status/amount useful. Tables preserve their mobile card/scroll treatment.
 - Existing component aliases are listed in `docs/ui-component-inventory.md`; update the inventory when a shared component is added, promoted, or retired.
 - `resources/css/pages/module-adapters.css` is a temporary bridge for the recent Shipments, Clients, Cashflows, and Users normalization. It is imported after shared components but before the global responsive pass, and should shrink as those views adopt core components.
+- `resources/css/pages/vendors.css` is the vendor module's page sheet (list cells, status/type tones, record composition, form sections, the vendor-quote price-break rows and the quote-image viewer). It is imported beside `module-adapters.css`, so it ships in the design-system bundle and the legacy `public/assets/css/vendors.css` that the vendor views used to link has been removed. Its rules stay scoped to `.vendor-index`, `.vendor-show`, `.vendor-form`, `.vendor-quote-form` and `.image-view-page`, and it declares no generic button, card, field, table, tab, badge or modal.
 - Existing page styles still linked from `public/assets/css/` are the legacy page layer. When migrating one, update all Blade links to the resource entry/appropriate page source, check its relative image/font URLs, and remove the old duplicate only after the Vite build and page are verified.
 
 ## Quality gates

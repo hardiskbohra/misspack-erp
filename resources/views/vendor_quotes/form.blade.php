@@ -3,9 +3,6 @@
 @section('page-title', $quote->exists ? 'Edit Vendor Quote' : 'Add Vendor Quote')
 
 @section('content')
-@push('styles')
-    <link rel="stylesheet" href="{{ asset('assets/css/vendors.css') }}">
-@endpush
 @php($isEdit = $quote->exists)
 @php($productMedia = $quote->product?->primaryMedia())
 @php($quoteImage = $quote->product_image_path ?: ($productMedia?->file_path ?: $quote->lead?->product_image_path))

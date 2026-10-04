@@ -1,25 +1,40 @@
 /* ==========================================================================
-   VENDORS.JS — Vendor module (admin screens)
+   VENDORS.JS — the vendor module
    --------------------------------------------------------------------------
-   Loaded via @push('scripts') on vendor module pages:
+   Loaded by:
 
-     - vendors/index.blade.php        Quick Vendor + delete modals
-     - vendors/show.blade.php         Tab navigation, ledger modals,
-                                      payment INR auto-calc, edit-entry prefill
-     - vendor_quotes/index.blade.php  Quick Quote modal
-     - vendor_quotes/form.blade.php   Quantity price-break rows
+     - resources/views/vendors/index.blade.php   the list: row navigation,
+                                                 quick add, delete
+     - resources/views/vendors/show.blade.php    the record: ledger dialogs,
+                                                 INR auto-calc, edit prefill
+     - resources/views/vendors/form.blade.php    the form: image preview
+     - resources/views/vendor_quotes/*           quick quote + price rows
 
-   Modals use the shared master-* modal system (master-index.css): the
-   .open class toggles visibility and .master-modal-open locks page scroll.
-   All bindings are guarded, so the file is safe on any vendor page.
+   The dialogs are the shared ones: `.master-modal` from master-index.css and
+   the lifecycle in app-layout.js (`window.MasterModal`) — which moves focus
+   into the card, returns it to the opener, and closes on Escape or a backdrop
+   click. The fallback below exists so a page still works when the shared
+   script has not run; it is deliberately the same three lines, not a second
+   modal system.
+
+   The record's tabs are links: every panel has its own URL, so the script
+   only marks the clicked tab immediately and lets the browser navigate.
    ========================================================================== */
 (function () {
     'use strict';
 
-    /* ---------------- Shared master-* modal helpers ---------------- */
+    function byId(id) {
+        return document.getElementById(id);
+    }
 
     function openModal(modal) {
-        if (!modal || modal.classList.contains('open')) return;
+        if (!modal) return;
+
+        if (window.MasterModal) {
+            window.MasterModal.open(modal);
+            return;
+        }
+
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('master-modal-open');
@@ -27,6 +42,12 @@
 
     function closeModal(modal) {
         if (!modal) return;
+
+        if (window.MasterModal) {
+            window.MasterModal.close(modal);
+            return;
+        }
+
         modal.classList.remove('open');
         modal.setAttribute('aria-hidden', 'true');
         if (!document.querySelector('.master-modal.open')) {
@@ -36,223 +57,190 @@
 
     document.addEventListener('DOMContentLoaded', function () {
 
-        /* Generic modal wiring, safe on every vendor page:
-             - [data-close-modal] buttons (value = modal id, or nearest modal)
-             - backdrop click
-             - Escape key                                            */
-        document.querySelectorAll('[data-close-modal]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var target = btn.dataset.closeModal
-                    ? document.getElementById(btn.dataset.closeModal)
-                    : btn.closest('.master-modal');
-                closeModal(target);
-            });
-        });
+        /* ------------------------------------------------ the list ---- */
 
-        document.querySelectorAll('.master-modal').forEach(function (modal) {
-            modal.addEventListener('click', function (event) {
-                if (event.target === modal) closeModal(modal);
-            });
-        });
-
-        document.addEventListener('keydown', function (event) {
-            if (event.key !== 'Escape') return;
-            document.querySelectorAll('.master-modal.open').forEach(closeModal);
-        });
-
-        /* ---------- vendors/index: Quick Vendor + delete modals ---------- */
-
-        var quickVendorModal = document.getElementById('quickVendorModal');
-        var deleteVendorModal = document.getElementById('deleteVendorModal');
-        var deleteVendorForm = document.getElementById('deleteVendorForm');
-        var deleteVendorDesc = document.getElementById('deleteVendorDesc');
-
-        document.getElementById('openQuickVendorModal')?.addEventListener('click', function () {
-            openModal(quickVendorModal);
-        });
-        document.getElementById('closeQuickVendorModal')?.addEventListener('click', function () {
-            closeModal(quickVendorModal);
-        });
-        document.getElementById('cancelQuickVendorModal')?.addEventListener('click', function () {
-            closeModal(quickVendorModal);
-        });
-
-        if (deleteVendorForm && deleteVendorDesc) {
-            document.querySelectorAll('.master-delete-btn').forEach(function (button) {
-                button.addEventListener('click', function () {
-                    deleteVendorDesc.textContent = 'Are you sure you want to delete "' +
-                        button.dataset.name + '"? This action cannot be undone.';
-                    deleteVendorForm.action = button.dataset.deleteUrl;
-                    openModal(deleteVendorModal);
-                });
-            });
+        if (window.MasterList) {
+            window.MasterList.rowNavigation({ root: '.vendor-index' });
+            window.MasterList.gridShadow({ root: '.vendor-index' });
+            window.MasterList.density({ root: '.vendor-index', key: 'misspack.vendors.density' });
+            window.MasterList.saveViewToggle();
         }
 
-        document.getElementById('closeDeleteVendorModal')?.addEventListener('click', function () {
-            closeModal(deleteVendorModal);
-        });
-        document.getElementById('cancelDeleteVendorModal')?.addEventListener('click', function () {
-            closeModal(deleteVendorModal);
-        });
+        var quickModal = byId('quickVendorModal');
+        var deleteModal = byId('deleteVendorModal');
+        var deleteForm = byId('deleteVendorForm');
+        var deleteDescription = byId('deleteVendorDesc');
 
-        /* ---------- vendors/show: tab navigation (persisted) ---------- */
-
-        var vendorShow = document.querySelector('.vendor-show');
-        if (vendorShow) {
-            var tabKey = 'vendor_show_tab_' + (vendorShow.dataset.vendorId || '');
-            var tabs = vendorShow.querySelectorAll('.vendor-tab');
-
-            tabs.forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    vendorShow.querySelectorAll('.vendor-tab').forEach(function (b) {
-                        b.classList.remove('active');
-                    });
-                    vendorShow.querySelectorAll('.vendor-panel').forEach(function (panel) {
-                        panel.classList.remove('active');
-                    });
-                    btn.classList.add('active');
-                    var panel = vendorShow.querySelector('[data-panel="' + btn.dataset.tab + '"]');
-                    if (panel) panel.classList.add('active');
-                    try {
-                        localStorage.setItem(tabKey, btn.dataset.tab);
-                    } catch (e) {}
-                });
+        /* The header's primary action and the empty state's CTA both open the
+           quick dialog; both are bound so neither depends on the other. */
+        document.querySelectorAll('[data-open-quick-vendor]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                openModal(quickModal);
+                byId('quick_vendor_name')?.focus();
             });
+        });
 
-            /* A hash (e.g. #payments from the cashflow module) wins over the
-               remembered tab so cross-module links land on the right panel. */
-            var hashTab = (window.location.hash || '').replace('#', '');
-            var requestedTab = hashTab || null;
-            if (!requestedTab) {
-                try {
-                    requestedTab = localStorage.getItem(tabKey);
-                } catch (e) {
-                    requestedTab = null;
+        document.querySelectorAll('.master-delete-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                if (deleteDescription) {
+                    deleteDescription.textContent = 'Delete “' + (button.dataset.name || 'this vendor') +
+                        '”? Their uploaded documents go with the record.';
                 }
-            }
-            var requestedBtn = requestedTab
-                ? vendorShow.querySelector('.vendor-tab[data-tab="' + requestedTab + '"]')
-                : null;
-            if (requestedBtn) requestedBtn.click();
+                if (deleteForm) {
+                    deleteForm.action = button.dataset.deleteUrl || '';
+                }
+                openModal(deleteModal);
+            });
+        });
+
+        /* A failed save re-opens the dialog it came from, so the reader does
+           not have to find their way back to it. */
+        var reopenMarker = document.querySelector('[data-open-dialog]');
+        var reopen = reopenMarker ? reopenMarker.getAttribute('data-open-dialog') : '';
+
+        if (reopen === 'quick-vendor') {
+            openModal(quickModal);
         }
 
-        /* ---------- vendors/show: payment modals + INR auto-calc ---------- */
+        /* ---------------------------------------------- the record ---- */
 
-        document.getElementById('openAddPaymentModal')?.addEventListener('click', function () {
-            openModal(document.getElementById('addPaymentModal'));
-        });
-        document.getElementById('openAddAttachmentModal')?.addEventListener('click', function () {
-            openModal(document.getElementById('addAttachmentModal'));
-        });
-        document.getElementById('openAddCommentModal')?.addEventListener('click', function () {
-            openModal(document.getElementById('addCommentModal'));
+        [['openAddPaymentModal', 'addPaymentModal'],
+         ['openAddPaymentModalEmpty', 'addPaymentModal'],
+         ['openAddAttachmentModal', 'addAttachmentModal'],
+         ['openAddAttachmentModalEmpty', 'addAttachmentModal'],
+         ['openAddCommentModal', 'addCommentModal'],
+         ['openAddCommentModalEmpty', 'addCommentModal']
+        ].forEach(function (pair) {
+            byId(pair[0])?.addEventListener('click', function () {
+                openModal(byId(pair[1]));
+            });
         });
 
-        /* Both ledger modals carry the same field names, so the auto-calc is
-           wired per form (the add + edit modals each get their own). */
-        document.querySelectorAll('.vendor-payment-form').forEach(function (form) {
-            var foreignAmount = form.querySelector('input[name="foreign_amount"]');
-            var foreignCurrency = form.querySelector('select[name="foreign_currency"]');
-            var exchangeRate = form.querySelector('input[name="exchange_rate"]');
-            var amountInInr = form.querySelector('input[name="amount_in_inr"]');
-            if (!foreignAmount || !foreignCurrency || !exchangeRate || !amountInInr) return;
+        /* Mark the clicked tab at once; the navigation is the browser's. */
+        document.querySelectorAll('[data-vendor-tab-link]').forEach(function (link) {
+            link.addEventListener('click', function () {
+                var strip = link.closest('.master-tabs');
+                if (!strip) return;
 
-            function calculateInrAmount() {
-                var amount = parseFloat(foreignAmount.value || '0');
-                var rate = parseFloat(exchangeRate.value || '0');
-                if (foreignCurrency.value === 'INR' && amount > 0 && !amountInInr.value) {
-                    amountInInr.value = amount.toFixed(2);
-                    return;
-                }
-                if (amount > 0 && rate > 0) {
-                    amountInInr.value = (amount * rate).toFixed(2);
-                }
+                strip.querySelectorAll('.master-tab').forEach(function (tab) {
+                    tab.classList.remove('is-active');
+                    tab.setAttribute('aria-selected', 'false');
+                });
+                link.classList.add('is-active');
+                link.setAttribute('aria-selected', 'true');
+            });
+        });
+
+        /* Both ledger dialogs carry the same field names, so the auto-calc is
+           wired per form — the add and the edit modal each get their own. */
+        function calculateInrAmount(form) {
+            var amount = parseFloat(form.elements.foreign_amount?.value || '0');
+            var rate = parseFloat(form.elements.exchange_rate?.value || '0');
+            var amountInInr = form.elements.amount_in_inr;
+            var currency = form.elements.foreign_currency?.value;
+
+            if (!amountInInr) return;
+
+            if (currency === 'INR' && amount > 0) {
+                amountInInr.value = amount.toFixed(2);
+                return;
             }
 
-            foreignAmount.addEventListener('input', calculateInrAmount);
-            exchangeRate.addEventListener('input', calculateInrAmount);
-            foreignCurrency.addEventListener('change', calculateInrAmount);
-        });
-
-        /* ---------- vendor payment -> INR cashflow sync (one entry, both ledgers) ----------
-
-           A payment (debit) is mirrored into the cashflow module automatically,
-           so the checkbox is on by default and only matters for payments. Bills
-           (credit) do not move cash, so nothing is mirrored for them unless the
-           user deliberately ticks the box. */
+            if (amount > 0 && rate > 0) {
+                amountInInr.value = (amount * rate).toFixed(2);
+            }
+        }
 
         document.querySelectorAll('.vendor-payment-form').forEach(function (form) {
-            var typeSelect = form.querySelector('select[name="transaction_type"]');
+            var amountField = form.elements.foreign_amount;
+            var rateField = form.elements.exchange_rate;
+            var currencyField = form.elements.foreign_currency;
+
+            [amountField, rateField].forEach(function (field) {
+                field?.addEventListener('input', function () { calculateInrAmount(form); });
+            });
+            currencyField?.addEventListener('change', function () { calculateInrAmount(form); });
+
+            /* A payment (debit) is mirrored into the cashflow module, so the
+               checkbox is on by default and only matters for payments: a bill
+               creates a payable, not a cash movement. The box is only
+               auto-flipped when the type actually changes, so a deliberate
+               untick survives while the other fields are edited. */
+            var typeSelect = form.elements.transaction_type;
             var syncCheckbox = form.querySelector('input[type="checkbox"][name="also_create_cashflow"]');
+            var accountSelect = form.elements.paid_account_id;
             var hint = form.querySelector('.vendor-sync-hint');
-            var accountSelect = form.querySelector('select[name="paid_account_id"]');
-            if (!typeSelect || !syncCheckbox) return;
-
             var defaultHint = hint ? hint.textContent : '';
 
-            function applySyncState(initial) {
-                var isPayment = typeSelect.value === 'debit';
+            if (typeSelect && syncCheckbox) {
+                var applySyncState = function (keepChoice) {
+                    var isPayment = typeSelect.value === 'debit';
 
-                if (!initial) {
-                    // Only auto-flip the box when the type actually changes, so a
-                    // deliberate untick survives while the user edits other fields.
-                    syncCheckbox.checked = isPayment;
-                }
-
-                if (accountSelect) {
-                    accountSelect.required = isPayment && syncCheckbox.checked;
-                }
-
-                if (hint) {
-                    if (!isPayment) {
-                        hint.textContent = 'A bill creates a payable, not a cash movement — tick the box only if money also left the account.';
-                    } else if (!syncCheckbox.checked) {
-                        hint.textContent = 'Cashflow entry will be skipped for this payment.';
-                    } else {
-                        hint.textContent = defaultHint;
+                    if (!keepChoice) {
+                        syncCheckbox.checked = isPayment;
                     }
-                }
-            }
 
-            applySyncState(true);
+                    if (accountSelect) {
+                        accountSelect.required = isPayment && syncCheckbox.checked;
+                    }
 
-            typeSelect.addEventListener('change', function () {
-                applySyncState(false);
-            });
+                    if (hint) {
+                        if (!isPayment) {
+                            hint.textContent = 'A bill creates a payable, not a cash movement — tick the box only if money also left the account.';
+                        } else if (!syncCheckbox.checked) {
+                            hint.textContent = 'Cashflow entry will be skipped for this payment.';
+                        } else {
+                            hint.textContent = defaultHint;
+                        }
+                    }
+                };
 
-            syncCheckbox.addEventListener('change', function () {
                 applySyncState(true);
-            });
+                typeSelect.addEventListener('change', function () { applySyncState(false); });
+                syncCheckbox.addEventListener('change', function () { applySyncState(true); });
+            }
         });
 
         /* Edit-entry prefill from the row's data-payment payload. */
-        var editPaymentModal = document.getElementById('editPaymentModal');
-        var editPaymentForm = document.getElementById('editPaymentForm');
+        var editPaymentModal = byId('editPaymentModal');
+        var editPaymentForm = byId('editPaymentForm');
+        var editPaymentSubtitle = byId('editPaymentSubtitle');
 
-        function setField(form, name, value) {
+        var setField = function (form, name, value) {
             var field = form.elements[name];
             if (!field) return;
+
             if (field.type === 'checkbox') {
-                field.checked = !!value;
+                field.checked = Boolean(value);
             } else {
-                field.value = value ?? '';
+                field.value = value === null || value === undefined ? '' : value;
             }
-        }
+        };
 
-        document.querySelectorAll('.editPaymentBtn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var payment = JSON.parse(this.dataset.payment || '{}');
-                editPaymentForm.action = '/vendors/' + payment.vendor_id + '/payments/' + payment.id;
+        document.querySelectorAll('.editPaymentBtn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                if (!editPaymentForm) return;
 
-                setField(editPaymentForm, 'invoice_number', payment.invoice_number ?? '');
-
-                var paymentDate = payment.transaction_date;
-                if (paymentDate) {
-                    paymentDate = String(paymentDate).substring(0, 10);
+                var payment = {};
+                try {
+                    payment = JSON.parse(button.dataset.payment || '{}');
+                } catch (error) {
+                    return;
                 }
-                setField(editPaymentForm, 'transaction_date', paymentDate);
 
-                setField(editPaymentForm, 'particular', payment.particular ?? '');
+                /* The update route carries both ids: a vendor payment entry is
+                   only ever edited under the vendor that owns it. The template
+                   comes from the server, so a sub-path install still matches. */
+                var paymentUrlTemplate = editPaymentForm.dataset.paymentUrl || '';
+                editPaymentForm.action = paymentUrlTemplate
+                    ? paymentUrlTemplate.replace('__ENTRY__', payment.id)
+                    : '/vendors/' + payment.vendor_id + '/payments/' + payment.id;
+
+                var paymentDate = payment.transaction_date ? String(payment.transaction_date).substring(0, 10) : '';
+
+                setField(editPaymentForm, 'transaction_date', paymentDate);
+                setField(editPaymentForm, 'invoice_number', payment.invoice_number);
+                setField(editPaymentForm, 'particular', payment.particular);
                 setField(editPaymentForm, 'foreign_amount', payment.foreign_amount);
                 setField(editPaymentForm, 'foreign_currency', payment.foreign_currency);
                 setField(editPaymentForm, 'exchange_rate', payment.exchange_rate);
@@ -264,44 +252,77 @@
                 setField(editPaymentForm, 'paid_account_id', payment.paid_account_id);
                 setField(editPaymentForm, 'payment_mode', payment.payment_mode);
                 setField(editPaymentForm, 'bank_reference_number', payment.bank_reference_number);
-                setField(editPaymentForm, 'remarks', payment.remarks ?? '');
+                setField(editPaymentForm, 'remarks', payment.remarks);
 
                 /* The mirror is what matters, not a form flag: keep the box in
                    step with whether a cashflow entry is actually linked. */
                 var syncBox = editPaymentForm.querySelector('input[type="checkbox"][name="also_create_cashflow"]');
                 if (syncBox) {
-                    syncBox.checked = !!payment.cashflow_entry_id;
+                    syncBox.checked = Boolean(payment.cashflow_entry_id);
                     syncBox.dispatchEvent(new Event('change'));
+                }
+
+                if (editPaymentSubtitle) {
+                    editPaymentSubtitle.textContent = payment.invoice_number
+                        ? 'Entry for invoice ' + payment.invoice_number
+                        : 'Update this vendor ledger row';
                 }
 
                 openModal(editPaymentModal);
             });
         });
 
-        /* ---------- vendor_quotes/index: Quick Quote modal ---------- */
+        /* ------------------------------------------------ the form ---- */
 
-        document.getElementById('openQuickQuoteModal')?.addEventListener('click', function () {
-            openModal(document.getElementById('quickQuoteModal'));
+        var imageInput = document.querySelector('[data-vendor-image-input]');
+        var imagePreview = document.querySelector('[data-vendor-image-preview]');
+
+        imageInput?.addEventListener('change', function () {
+            var file = imageInput.files && imageInput.files[0];
+            if (!file || !imagePreview) return;
+
+            var reader = new FileReader();
+            reader.onload = function (event) {
+                if (imagePreview.tagName === 'IMG') {
+                    imagePreview.src = event.target.result;
+                    return;
+                }
+
+                var image = document.createElement('img');
+                image.className = imagePreview.className;
+                image.setAttribute('data-vendor-image-preview', '');
+                image.setAttribute('alt', '');
+                image.src = event.target.result;
+                imagePreview.replaceWith(image);
+                imagePreview = image;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        /* ---------------------------------------- vendor_quotes ---- */
+
+        byId('openQuickQuoteModal')?.addEventListener('click', function () {
+            openModal(byId('quickQuoteModal'));
         });
     });
 
     /* ---------- vendor_quotes/form: quantity price-break rows ---------- */
 
     /* Kept global: rows call removeQuotePriceRow(this) from inline onclick. */
-    window.removeQuotePriceRow = function (btn) {
+    window.removeQuotePriceRow = function (button) {
         var tbody = document.querySelector('#quotePricesTable tbody');
-        if (tbody && tbody.children.length > 1) btn.closest('tr').remove();
+        if (tbody && tbody.children.length > 1) button.closest('tr').remove();
     };
 
     document.addEventListener('DOMContentLoaded', function () {
-        var addQuotePriceRow = document.getElementById('addQuotePriceRow');
+        var addQuotePriceRow = byId('addQuotePriceRow');
         if (!addQuotePriceRow) return;
 
         var quoteTbody = document.querySelector('#quotePricesTable tbody');
         var quotePriceIndex = quoteTbody ? quoteTbody.children.length : 0;
 
         addQuotePriceRow.addEventListener('click', function () {
-            var template = document.getElementById('quotePriceRowTemplate');
+            var template = byId('quotePriceRowTemplate');
             if (quoteTbody && template) {
                 quoteTbody.insertAdjacentHTML('beforeend',
                     template.innerHTML.replaceAll('__INDEX__', quotePriceIndex++));

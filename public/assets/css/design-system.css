@@ -1619,6 +1619,1254 @@ body[data-ui-module="users"] .emp-record-head {
 
 
 
+/* --- resources/css/pages/vendors.css --- */
+/* ==========================================================================
+   VENDORS.CSS — the vendor module's own cells
+   --------------------------------------------------------------------------
+   The list (resources/views/vendors/index.blade.php), the record
+   (resources/views/vendors/show.blade.php + partials) and the form
+   (resources/views/vendors/form.blade.php).
+
+   This sheet is deliberately small. Everything the three screens wear — the
+   tile strip, the chips, the filter row, the applied strip, the toolbar, the
+   table, the density switch, the empty state, the mobile cards, the dialogs,
+   the tabs, the facts vocabulary and the form grid — is the shared surface
+   (master-list.css, master-index.css, master-detail.css, master-form.css,
+   master-show.css) plus the canonical design-system components. What is left
+   here is what is genuinely the vendor module's:
+
+     - the status and vendor-type tones (light and dark);
+     - the vendor cell in the list (avatar, name, second line, terms);
+     - the record's identity row, its fact cards, its mini lists, its
+       currency summary, document grid and comment cards;
+     - the form page's jump nav and section composition.
+
+   It must not define a generic button, card, field, table, tab, badge or
+   modal: those belong to the shared sheets, and a module-local copy of one
+   drifts the moment the shared one is fixed (the users sheet learned that
+   with its private modal system).
+
+   The vendor_quotes screens still load this file for their price-break rows;
+   those two rules are kept at the foot of the sheet.
+   ========================================================================== */
+
+/* ==========================================================================
+   1. STATUS AND TYPE TONES
+   Light first, then the dark-theme counterpart for every hue — a status that
+   cannot be read on the dark panel is a status that is not there.
+   ========================================================================== */
+
+.vendor-index .status-active,
+.vendor-show .status-active {
+    background: #e8fff7;
+    color: #0e9f6e;
+}
+
+.vendor-index .status-inactive,
+.vendor-show .status-inactive {
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+}
+
+.vendor-index .status-on-hold,
+.vendor-show .status-on-hold {
+    background: #fff4e5;
+    color: #b45309;
+}
+
+.vendor-index .status-blacklisted,
+.vendor-show .status-blacklisted {
+    background: #ffeaf0;
+    color: #be123c;
+}
+
+:root[data-theme="dark"] .vendor-index .status-active,
+:root[data-theme="dark"] .vendor-show .status-active {
+    background: rgba(16, 185, 129, .18);
+    color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .vendor-index .status-on-hold,
+:root[data-theme="dark"] .vendor-show .status-on-hold {
+    background: rgba(245, 158, 11, .18);
+    color: #fcd34d;
+}
+
+:root[data-theme="dark"] .vendor-index .status-blacklisted,
+:root[data-theme="dark"] .vendor-show .status-blacklisted {
+    background: rgba(239, 71, 112, .2);
+    color: #fda4af;
+}
+
+.vendor-type-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.vendor-index .type-manufacturer,
+.vendor-show .type-manufacturer {
+    background: #eaf1ff;
+    color: #3f7cf4;
+}
+
+.vendor-index .type-trader,
+.vendor-show .type-trader {
+    background: #fff4e5;
+    color: #b45309;
+}
+
+.vendor-index .type-distributor,
+.vendor-show .type-distributor {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.vendor-index .type-service-provider,
+.vendor-show .type-service-provider {
+    background: #ece7ff;
+    color: #6d28d9;
+}
+
+:root[data-theme="dark"] .vendor-index .type-manufacturer,
+:root[data-theme="dark"] .vendor-show .type-manufacturer {
+    background: rgba(79, 131, 241, .2);
+    color: #93b4ff;
+}
+
+:root[data-theme="dark"] .vendor-index .type-trader,
+:root[data-theme="dark"] .vendor-show .type-trader {
+    background: rgba(245, 158, 11, .18);
+    color: #fcd34d;
+}
+
+:root[data-theme="dark"] .vendor-index .type-distributor,
+:root[data-theme="dark"] .vendor-show .type-distributor {
+    background: rgba(16, 185, 129, .18);
+    color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .vendor-index .type-service-provider,
+:root[data-theme="dark"] .vendor-show .type-service-provider {
+    background: rgba(139, 92, 246, .22);
+    color: #c4b5fd;
+}
+
+/* A neutral meta chip (currency, rating, entry status) — the shared
+   .master-chip is the record page's own meta chip, so this sheet does not
+   restate it; the vendor meta chip only tightens its geometry. */
+.vendor-meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border: 1px solid var(--mc-border);
+    border-radius: 999px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+.vendor-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-2);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.vendor-pill.is-pinned {
+    border-color: rgba(79, 131, 241, .35);
+    color: var(--master-primary, #4f83f1);
+}
+
+/* ==========================================================================
+   2. THE LIST — resources/views/vendors/index.blade.php
+   ========================================================================== */
+
+.vendor-index .vendor-table th:nth-child(1) { width: 260px; }
+.vendor-index .vendor-table th:nth-child(2) { width: 170px; }
+.vendor-index .vendor-table th:nth-child(3) { width: 220px; }
+.vendor-index .vendor-table th:nth-child(4) { width: 160px; }
+.vendor-index .vendor-table th:nth-child(5) { width: 160px; }
+.vendor-index .vendor-table th:nth-child(6) { width: 130px; }
+.vendor-index .vendor-table th:nth-child(7) { width: 90px; }
+
+.vendor-index .vendor-row.is-clickable {
+    cursor: pointer;
+}
+
+.vendor-index .vendor-row.is-clickable:hover {
+    background: var(--mc-hover, var(--mc-card-soft));
+}
+
+.vendor-table-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.vendor-table-avatar {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-2);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .02em;
+}
+
+.vendor-index .vendor-avatar-tone-0 { background: #3b82f6; color: #fff; border-color: transparent; }
+.vendor-index .vendor-avatar-tone-1 { background: #10b981; color: #fff; border-color: transparent; }
+.vendor-index .vendor-avatar-tone-2 { background: #f59e0b; color: #fff; border-color: transparent; }
+.vendor-index .vendor-avatar-tone-3 { background: #ef4444; color: #fff; border-color: transparent; }
+.vendor-index .vendor-avatar-tone-4 { background: #8b5cf6; color: #fff; border-color: transparent; }
+.vendor-index .vendor-avatar-tone-5 { background: #06b6d4; color: #fff; border-color: transparent; }
+
+.vendor-table-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.vendor-table-name {
+    color: var(--mc-text);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.vendor-table-name:hover,
+.vendor-table-name:focus-visible {
+    color: var(--master-primary, #4f83f1);
+}
+
+.vendor-table-meta {
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.vendor-contact-line {
+    display: block;
+    color: var(--mc-text-2);
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.vendor-contact-line:hover,
+.vendor-contact-line:focus-visible {
+    color: var(--master-primary, #4f83f1);
+}
+
+.vendor-index .vendor-table td:last-child,
+.vendor-index .vendor-table th:last-child {
+    text-align: right;
+}
+
+.vendor-index .vendor-table .master-row-actions {
+    justify-content: flex-end;
+}
+
+.vendor-table-actions-cell {
+    width: 90px;
+}
+
+.vendor-modal-foot {
+    margin: 10px 0 0;
+}
+
+/* ==========================================================================
+   3. THE RECORD — resources/views/vendors/show.blade.php
+   ========================================================================== */
+
+.vendor-show .vendor-record-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.vendor-record-identity {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+}
+
+.vendor-record-mark {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    object-fit: cover;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-2);
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: .02em;
+}
+
+.vendor-record-copy h1 {
+    margin: 0;
+    color: var(--mc-text);
+    font-size: 21px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.vendor-record-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+    color: var(--mc-text-3);
+    font-size: 12px;
+}
+
+.vendor-record-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* ---- the fact cards ---- */
+
+.vendor-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.vendor-detail-grid + .vendor-detail-grid {
+    margin-top: 16px;
+}
+
+.vendor-detail-grid--lists {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.vendor-detail-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.vendor-detail-title {
+    margin: 0;
+    color: var(--mc-text);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.vendor-detail-note {
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.vendor-detail-link {
+    color: var(--master-primary, #4f83f1);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.vendor-detail-link:hover,
+.vendor-detail-link:focus-visible {
+    text-decoration: underline;
+}
+
+.vendor-detail-address {
+    margin: 0;
+    font-style: normal;
+    line-height: 1.6;
+}
+
+.vendor-detail-notes {
+    white-space: pre-line;
+}
+
+.vendor-detail-help {
+    margin: 0;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.vendor-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: auto;
+}
+
+/* ---- the mini lists on the overview ---- */
+
+.vendor-card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.vendor-card-link {
+    color: var(--master-primary, #4f83f1);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.vendor-card-link:hover,
+.vendor-card-link:focus-visible {
+    text-decoration: underline;
+}
+
+.vendor-mini-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--mc-border);
+}
+
+.vendor-mini-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.vendor-mini-row strong {
+    display: block;
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.vendor-mini-row small {
+    display: block;
+    margin-top: 2px;
+    color: var(--mc-text-3);
+    font-size: 11px;
+}
+
+.vendor-mini-row b {
+    flex: 0 0 auto;
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.vendor-mini-note {
+    margin: 0;
+    color: var(--mc-text-2);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.vendor-empty-text {
+    margin: 0;
+    color: var(--mc-text-3);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* ---- panel head, used by the tab panels ---- */
+
+.vendor-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.vendor-panel-head--spaced {
+    margin-top: 26px;
+}
+
+.vendor-panel-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.vendor-table-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.vendor-table-card .master-table-wrap {
+    margin-top: 0;
+}
+
+.vendor-table-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+
+.vendor-table-link strong {
+    color: var(--mc-text);
+    font-weight: 600;
+}
+
+.vendor-table-link:hover strong,
+.vendor-table-link:focus-visible strong {
+    color: var(--master-primary, #4f83f1);
+}
+
+.vendor-file-link {
+    display: inline-block;
+    margin-right: 8px;
+    color: var(--master-primary, #4f83f1);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    text-decoration: none;
+}
+
+.vendor-sync-link {
+    display: block;
+    margin-top: 4px;
+    color: var(--master-primary, #4f83f1);
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.vendor-sync-link:hover,
+.vendor-sync-link:focus-visible {
+    text-decoration: underline;
+}
+
+/* ---- money tones (debit / credit stay local to the figure) ---- */
+
+.vendor-amount-debit {
+    color: var(--master-red, #ef4770);
+}
+
+.vendor-amount-credit {
+    color: var(--master-green, #10b981);
+}
+
+.vendor-amount-negative {
+    color: var(--master-red, #ef4770);
+}
+
+/* ---- the statement's currency cards ---- */
+
+.vendor-currency-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.vendor-currency-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.vendor-currency-card-label {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.vendor-currency-card-figures {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 14px;
+}
+
+.vendor-currency-card-figures > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.vendor-currency-card-figures span {
+    color: var(--mc-text-3);
+    font-size: 11px;
+}
+
+.vendor-currency-card-figures strong {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---- products ---- */
+
+.vendor-product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+}
+
+.vendor-product-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    color: inherit;
+    text-decoration: none;
+}
+
+.vendor-product-card:hover .vendor-product-copy strong,
+.vendor-product-card:focus-visible .vendor-product-copy strong {
+    color: var(--master-primary, #4f83f1);
+}
+
+.vendor-product-media {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-3);
+}
+
+.vendor-product-media.is-empty {
+    font-size: 18px;
+}
+
+.vendor-product-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.vendor-product-copy strong {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.vendor-product-copy small {
+    color: var(--mc-text-3);
+    font-size: 11px;
+}
+
+/* ---- documents ---- */
+
+.vendor-attachment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.vendor-attachment {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+}
+
+.vendor-attachment-media {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 130px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-3);
+}
+
+.vendor-attachment-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.vendor-attachment-media.is-file {
+    flex-direction: column;
+    gap: 6px;
+    font-size: 22px;
+}
+
+.vendor-attachment-media.is-file span {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+}
+
+.vendor-attachment-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.vendor-attachment-copy strong {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.vendor-attachment-note {
+    color: var(--mc-text-2);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.vendor-attachment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.vendor-attachment-actions form {
+    margin: 0;
+}
+
+.vendor-attachment-empty {
+    grid-column: 1 / -1;
+}
+
+/* ---- comments ---- */
+
+.vendor-comment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+}
+
+.vendor-comment {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+}
+
+.vendor-comment.is-pinned {
+    border-left: 3px solid var(--master-primary, #4f83f1);
+}
+
+.vendor-comment-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.vendor-comment-head form {
+    margin: 0;
+}
+
+.vendor-comment-author {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.vendor-comment-author strong {
+    display: block;
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.vendor-comment-avatar {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-2);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.vendor-comment-body {
+    margin: 0;
+    color: var(--mc-text-2);
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-line;
+}
+
+/* ---- the ledger dialogs ---- */
+
+.vendor-payment-form .master-modal-grid {
+    row-gap: 14px;
+}
+
+.vendor-sync-field {
+    gap: 6px;
+}
+
+.vendor-sync-hint {
+    color: var(--mc-text-3);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.vendor-row-delete {
+    color: var(--master-red, #ef4770);
+}
+
+/* The mirror checkbox: the field row reads as one line, and the box carries
+   the module's accent so a ticked sync is visible at a glance. */
+.vendor-sync-field .master-check {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.vendor-cashflow-sync {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--master-primary, #4f83f1);
+    cursor: pointer;
+}
+
+/* ==========================================================================
+   4. THE FORM — resources/views/vendors/form.blade.php
+   The same composition as the client form page: heading, error summary,
+   jump nav, sectioned card, sticky actions. The shared pieces (header card,
+   field grid, labels, errors, actions) come from master-form / master-show.
+   ========================================================================== */
+
+.vendor-form .master-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.vendor-form-heading h1 {
+    margin: 0;
+    color: var(--mc-text);
+    font-size: 21px;
+    font-weight: 600;
+}
+
+.vendor-form-heading p {
+    margin: 6px 0 0;
+    max-width: 62ch;
+    color: var(--mc-text-2);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.vendor-form-heading .master-breadcrumb {
+    margin-top: 10px;
+}
+
+.vendor-form-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.vendor-form-nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 999px;
+    background: var(--mc-card);
+    color: var(--mc-text-2);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.vendor-form-nav a:hover,
+.vendor-form-nav a:focus-visible {
+    border-color: var(--master-primary, #4f83f1);
+    color: var(--master-primary, #4f83f1);
+}
+
+.vendor-form .vendor-form-section {
+    padding: 22px 0;
+    border-bottom: 1px solid var(--mc-border);
+}
+
+.vendor-form .vendor-form-section:last-of-type {
+    border-bottom: 0;
+}
+
+.vendor-form .master-section-title {
+    margin: 0;
+    color: var(--mc-text);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.vendor-form-section-note {
+    margin: 6px 0 16px;
+    max-width: 76ch;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.vendor-form-subsection + .vendor-form-subsection {
+    margin-top: 20px;
+}
+
+.vendor-form-subsection-title {
+    margin: 0 0 10px;
+    color: var(--mc-text-2);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.vendor-image-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.vendor-image-preview {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 84px;
+    height: 84px;
+    border-radius: 18px;
+    object-fit: cover;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-3);
+    font-size: 24px;
+}
+
+.vendor-image-field {
+    flex: 1 1 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+}
+
+.vendor-form .master-actions.is-sticky {
+    padding: 16px 0 0;
+}
+
+/* ==========================================================================
+   5. VENDOR QUOTES — resources/views/vendor_quotes/*.blade.php
+   --------------------------------------------------------------------------
+   The quote list is a shared master-* list screen and brings its own sheet;
+   what is left here is the price-break table on the quote form and the
+   standalone quote-image viewer, which are not part of the vendor redesign
+   and are carried across unchanged so those two screens keep their look.
+   ========================================================================== */
+
+.vendor-quote-form .master-items {
+    overflow-x: auto;
+}
+
+/* ---------------- Quote image viewer ---------------- */
+
+.image-view-page {
+    --img-primary: #4f83f1;
+    --img-primary-2: #6366f1;
+    --img-dark: var(--mc-text);
+    --img-muted: #687386;
+    --img-border: var(--mc-border);
+    --img-bg: var(--mc-soft);
+    --img-soft: var(--mc-soft);
+    --img-white: var(--mc-card);
+    --img-shadow: 0 14px 35px rgba(25, 42, 70, 0.08);
+    background: var(--img-bg);
+    min-height: calc(100vh - 70px);
+    padding: 28px;
+    color: var(--img-dark);
+    font-size: 14px;
+}
+
+.image-view-page,
+.image-view-page * {
+    box-sizing: border-box;
+}
+
+.image-card {
+    background: var(--img-white);
+    border: 1px solid var(--img-border);
+    border-radius: 18px;
+    box-shadow: var(--img-shadow);
+}
+
+.image-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 28px;
+    margin-bottom: 24px;
+}
+
+.image-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.image-header p {
+    margin: 5px 0 0;
+    color: var(--img-muted);
+    font-weight: 700;
+}
+
+.image-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.image-stage {
+    padding: 24px;
+    display: grid;
+    place-items: center;
+    min-height: 620px;
+}
+
+.image-frame {
+    width: 100%;
+    min-height: 540px;
+    border: 1px dashed var(--img-border);
+    border-radius: 18px;
+    background: var(--mc-card-soft);
+    display: grid;
+    place-items: center;
+    overflow: auto;
+    padding: 18px;
+}
+
+.image-frame img {
+    max-width: 100%;
+    max-height: 74vh;
+    object-fit: contain;
+    border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+    background: var(--mc-card);
+}
+
+.image-empty {
+    text-align: center;
+    color: var(--img-muted);
+    font-weight: 700;
+}
+
+.image-empty .icon {
+    width: 88px;
+    height: 88px;
+    margin: 0 auto 16px;
+    border-radius: 22px;
+    background: var(--img-soft);
+    color: var(--img-primary);
+    display: grid;
+    place-items: center;
+    font-size: 36px;
+}
+
+.image-meta {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    padding: 0 24px 24px;
+}
+
+.image-meta-item {
+    padding: 14px;
+    border: 1px solid var(--img-border);
+    border-radius: 14px;
+    background: var(--mc-card-soft);
+}
+
+.image-meta-item span {
+    display: block;
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 5px;
+}
+
+.image-meta-item strong {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+    .image-meta {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .image-view-page {
+        padding: 14px;
+    }
+
+    .image-header {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 18px;
+    }
+
+    .image-actions,
+    .image-actions .master-btn {
+        width: 100%;
+    }
+
+    .image-stage {
+        padding: 16px;
+        min-height: 420px;
+    }
+
+    .image-frame {
+        min-height: 360px;
+    }
+
+    .image-meta {
+        grid-template-columns: 1fr;
+        padding: 0 16px 16px;
+    }
+}
+
+/* ==========================================================================
+   6. RESPONSIVE — the shared breakpoint bands, module composition only
+   ========================================================================== */
+
+@media (max-width: 1199px) {
+    .vendor-index .vendor-table th:nth-child(4) { width: 140px; }
+    .vendor-index .vendor-table th:nth-child(5) { width: 140px; }
+}
+
+@media (max-width: 991px) {
+    .vendor-detail-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .vendor-record-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .vendor-record-actions {
+        justify-content: flex-start;
+    }
+
+    .vendor-currency-card-figures {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 767px) {
+    .vendor-record-identity {
+        align-items: flex-start;
+    }
+
+    .vendor-record-mark {
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+        font-size: 16px;
+    }
+
+    .vendor-panel-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .vendor-panel-meta {
+        justify-content: flex-start;
+    }
+
+    .vendor-mini-row {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .vendor-mini-row b {
+        text-align: left;
+    }
+
+    .vendor-attachment-grid,
+    .vendor-comment-grid,
+    .vendor-product-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .vendor-record-actions .master-btn {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+}
+
+
+
 /* --- resources/css/layout/responsive.css --- */
 /*
  * Project-wide responsive contract.

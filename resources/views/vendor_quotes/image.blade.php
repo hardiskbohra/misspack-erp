@@ -3,9 +3,6 @@
 @section('page-title', 'Vendor Quote Product Image')
 
 @section('content')
-@push('styles')
-    <link rel="stylesheet" href="{{ asset('assets/css/vendors.css') }}">
-@endpush
 
 <div class="image-view-page">
     <div class="image-card image-header">

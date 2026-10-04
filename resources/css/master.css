@@ -31,4 +31,5 @@
 @import './components/activity.css';
 
 @import './pages/module-adapters.css';
+@import './pages/vendors.css';
 @import './layout/responsive.css';

@@ -174,7 +174,12 @@ Route::middleware('auth')->group(function () {
         Route::resource('clients', ClientController::class);
 
         // Vendor Management
+        /* The list's own vocabulary routes come first: `/vendors/saved-views`
+           read by the resource route below is a vendor whose id is
+           "saved-views". */
         Route::post('/vendors/quick', [VendorController::class, 'quickStore'])->name('vendors.quickStore');
+        Route::post('/vendors/saved-views', [VendorController::class, 'storeSavedView'])->name('vendors.saved-views.store');
+        Route::delete('/vendors/saved-views/{savedView}', [VendorController::class, 'destroySavedView'])->name('vendors.saved-views.destroy');
 
         Route::post('/vendors/{vendor}/attachments', [VendorController::class, 'storeAttachment'])->name('vendors.attachments.store');
         Route::delete('/vendor-attachments/{attachment}', [VendorController::class, 'destroyAttachment'])->name('vendors.attachments.destroy');
