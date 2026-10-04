@@ -475,6 +475,11 @@ class VendorController extends Controller
         $data['created_by'] = Auth::id();
         $data['amount_in_inr'] = $this->normalizeInrAmount($data);
         $data['due_date'] = $this->resolveDueDate($data, $vendor);
+
+        if (! Schema::hasColumn('vendor_payment_entries', 'due_date')) {
+            unset($data['due_date']);
+        }
+
         unset($data['attachments'], $data['also_create_cashflow']);
 
         $this->assertCashflowMirrorPossible($data, $syncCashflow);
@@ -523,7 +528,11 @@ class VendorController extends Controller
 
         $data['amount_in_inr'] = $this->normalizeInrAmount($data);
         $data['due_date'] = $this->resolveDueDate($data, $vendor);
-    
+
+        if (! Schema::hasColumn('vendor_payment_entries', 'due_date')) {
+            unset($data['due_date']);
+        }
+
         // These are not columns in vendor_payment_entries
         unset($data['attachments'],$data['also_create_cashflow']);
 
@@ -670,9 +679,14 @@ class VendorController extends Controller
             return null;
         }
 
+        /* Only a term that reads as a number of days is a due date: "30 days"
+           and "Net 30" are, "30% advance" is not — guessing the second from
+           the first is how a ledger starts dating bills that were never
+           agreed. */
         $terms = (string) ($vendor->payment_terms ?? '');
 
-        if (preg_match('/(\d{1,3})/', $terms, $matches)) {
+        if (preg_match('/(\d{1,3})\s*(?:calendar\s+)?days?\b/i', $terms, $matches)
+            || preg_match('/\bnet\s*(\d{1,3})\b/i', $terms, $matches)) {
             return Carbon::parse($data['transaction_date'])->addDays((int) $matches[1])->toDateString();
         }
 

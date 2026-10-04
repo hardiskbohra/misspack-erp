@@ -31,7 +31,6 @@
             </div>
             <div class="master-facts">
                 <div class="master-info"><span>Contact person</span><strong @class(['master-empty-value' => $empty($vendor->contact_person_name)])>{{ $vendor->contact_person_name ?: 'Not on file' }}</strong></div>
-                <div class="master-info"><span>Designation</span><strong @class(['master-empty-value' => $empty($vendor->contact_designation)])>{{ $vendor->contact_designation ?: 'Not on file' }}</strong></div>
                 <div class="master-info"><span>Email</span>
                     @if ($vendor->contact_person_email)
                         <a class="vendor-detail-link" href="mailto:{{ $vendor->contact_person_email }}">{{ $vendor->contact_person_email }}</a>
