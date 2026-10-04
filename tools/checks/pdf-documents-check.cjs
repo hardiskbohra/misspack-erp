@@ -111,7 +111,7 @@ check('payslip, statement and invoice retain readable aligned print typography',
     && /body\.stmt-standalone \.stmt\s*\{[^}]*--stmt-text:\s*var\(--pdf-ink, #1b2a41\)[^}]*background:\s*#fff/.test(statementCss)
     && /\.pdf-print-sheet\s*\{[^}]*--stmt-text: var\(--pdf-ink\) !important/.test(documentCss)
     && /\.items td\.right,[\s\S]*?text-align:\s*right/.test(invoiceCss)
-    && /\.items td,\s*\.summary td\s*\{[^}]*font-size:\s*9pt/.test(invoiceCss)
+    && /font-size:\s*9\.5pt/.test(documentCss)
     && /\.ps-table thead\s*\{\s*display:\s*table-header-group/.test(payslipCss)
     && /\.stmt-table thead\s*\{\s*display:\s*table-header-group/.test(statementCss));
 
@@ -126,6 +126,40 @@ check('invoice totals remain currency-correct and tax labels do not double-count
     && /<td>IGST<\/td>/.test(invoiceView)
     && /Received to date/.test(invoiceView)
     && /Balance due/.test(invoiceView));
+
+const invoiceSectionOrder = [
+    'class="invoice-top"',
+    'class="invoice-facts"',
+    'class="parties"',
+    'class="items"',
+    'class="invoice-bottom"',
+    'class="terms-panel"',
+].map(marker => invoiceView.indexOf(marker));
+check('invoice follows the reference hierarchy without inventing a subject',
+    invoiceSectionOrder.every((position, index) => position > -1 && (index === 0 || position > invoiceSectionOrder[index - 1]))
+    && /Bill to/.test(invoiceView)
+    && /Ship to/.test(invoiceView)
+    && /Bank details/.test(invoiceView)
+    && /Authorised Signatory/.test(invoiceView)
+    && !/Subject/.test(invoiceView));
+
+check('discounted invoice line amounts reconcile to the stored tax and taxable totals',
+    /largest-remainder allocation/.test(invoiceView)
+    && /\$remainingCents = \$targetCents - array_sum\(\$allocatedCents\)/.test(invoiceView)
+    && /\$allocatedCents\[\$order\[\$cent % \$count\]\]\+\+/.test(invoiceView)
+    && /\$lineTaxableAmounts = \$allocateCents\(\(float\) \$invoice->taxable_amount, \$taxableWeights\)/.test(invoiceView)
+    && /\$lineCgstAmounts = \$allocateCents\(\(float\) \$invoice->cgst_amount, \$cgstWeights\)/.test(invoiceView)
+    && /\$lineSgstAmounts = \$allocateCents\(\(float\) \$invoice->sgst_amount, \$sgstWeights\)/.test(invoiceView)
+    && /\$lineIgstAmounts = \$allocateCents\(\(float\) \$invoice->igst_amount, \$igstWeights\)/.test(invoiceView)
+    && /\$lineDiscountAmount = \$lineTaxableAmountsAvailable/.test(invoiceView)
+    && /\$item->taxable_amount - \$lineTaxableAmount/.test(invoiceView)
+    && /'discount_amount' => \$lineDiscountAmount/.test(invoiceView)
+    && /'taxable_amount' => \$lineTaxableAmountsAvailable/.test(invoiceView)
+    && /'tax_amount' => \$lineTaxesAvailable/.test(invoiceView)
+    && /\$money\(\$line\['tax_amount'\]\)/.test(invoiceView)
+    && /Total discount/.test(invoiceView)
+    && /lineFiguresUnavailable/.test(invoiceView)
+    && !/\$money\(\$item->(?:cgst|sgst|igst)_amount\)/.test(invoiceView));
 
 check('cashflow reports use the shared paper shell but keep their landscape data need',
     /class="pdf-preview"/.test(cashflowView)
