@@ -396,8 +396,7 @@ class PurchaseInvoice extends Model
     public function scopeWithPaid(Builder $query): Builder
     {
         return $query
-            ->withSum('payments as paid_total', 'amount_in_inr')
-            ->withSum('ledgerEntries as ledger_credit_total', 'credit_amount');
+            ->withSum('payments as paid_total', 'amount_in_inr');
     }
 
     public function scopeSearch(Builder $query, ?string $search): Builder
