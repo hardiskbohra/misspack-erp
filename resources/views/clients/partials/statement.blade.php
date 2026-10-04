@@ -51,10 +51,17 @@
                         @endforeach
                     </select>
                 </div>
+            @else
+                <input type="hidden" name="currency" value="{{ $statement['currency'] }}">
             @endif
-            <div class="client-statement-filter-submit"><button class="master-btn master-btn-primary" type="submit">Apply filters</button></div>
+            <div class="client-statement-filter-submit">
+                <button class="master-btn master-btn-soft client-statement-pdf-link" type="submit" formmethod="GET" formaction="{{ route('cashflows.statements.pdf', ['partyType' => 'client', 'party' => $client->id]) }}" formtarget="_blank" name="ageing" value="0" aria-label="Download statement PDF for the selected period">
+                    <i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i> Download PDF
+                </button>
+                <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+            </div>
         </form>
-        <p class="client-statement-source">{{ $statement['source_note'] }} · Balance as on {{ ($statement['period']['to'] ?? $statement['generated_at'])->format('d M Y') }}</p>
+        <p class="client-statement-source">{{ rtrim($statement['source_note'], '. ') }} · Balance as on {{ ($statement['period']['to'] ?? $statement['generated_at'])->format('d M Y') }}</p>
     </section>
 
     <div class="client-statement-metrics" aria-label="Statement totals">
@@ -70,8 +77,7 @@
 
     <section class="master-card master-card--flat client-detail-card client-detail-card--wide client-statement-entries" aria-labelledby="client-statement-entries-heading">
         <div class="cpa-section-head">
-            <div><p class="cpa-eyebrow">Transactions</p><h2 id="client-statement-entries-heading">Statement entries</h2></div>
-            <span class="cpa-badge">{{ number_format($totals['count']) }} {{ \Illuminate\Support\Str::plural('entry', $totals['count']) }}</span>
+            <h2 id="client-statement-entries-heading">Transactions</h2>
         </div>
         <div class="master-table-wrap client-statement-table-wrap">
             <table class="master-table client-statement-table">
