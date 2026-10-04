@@ -1,0 +1,525 @@
+/* ========================================================================
+   PURCHASE-INVOICES-PRINT — the A4 sheet for a purchase order / purchase bill
+   ------------------------------------------------------------------------
+   The content half of the purchase document's print view. The paper, the
+   toolbar and the print reset belong to `document-print.css`, which loads after
+   this file; everything here is `.pi-print-*` so no class is shared with another
+   document's sheet and a change to one never moves the other.
+
+   Print is the purchase module's delivery mechanism: a purchase order goes to
+   the supplier as a PDF, and the supplier's own bill is checked against the
+   purchase bill we hold. So the sheet is read in two directions — the office
+   reconciles the columns, the supplier reads the terms.
+   ======================================================================== */
+
+.pi-print {
+    --pi-ink: var(--pdf-ink, #1b2a41);
+    --pi-muted: var(--pdf-muted, #667085);
+    --pi-border: var(--pdf-border, #dfe5ef);
+    --pi-soft: var(--pdf-surface-soft, #f7f9fc);
+    --pi-accent: var(--pdf-accent, var(--ui-accent, #4f83f1));
+    --pi-danger: #b42318;
+    --pi-success: #067647;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* ------------------------------------------------------------- letterhead
+   Who is buying, then what the document is. The identity block is right-aligned
+   on the same line as the letterhead so the eye reads across. */
+.pi-print-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--pi-ink);
+}
+
+.pi-print-brand {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    min-width: 0;
+}
+
+.pi-print-logo {
+    width: 74px;
+    height: auto;
+    flex: 0 0 74px;
+    object-fit: contain;
+}
+
+.pi-print-company {
+    margin: 0 0 4px;
+    color: var(--pi-ink);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: .01em;
+}
+
+.pi-print-detail {
+    margin: 0 0 2px;
+    color: var(--pi-muted);
+    font-size: 11.5px;
+    line-height: 1.45;
+}
+
+.pi-print-identity {
+    flex: 0 0 auto;
+    text-align: right;
+}
+
+.pi-print-eyebrow {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--pi-muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.pi-print-identity h1 {
+    margin: 0 0 8px;
+    color: var(--pi-ink);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+.pi-print-number {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 0 0 8px;
+    color: var(--pi-muted);
+    font-size: 11.5px;
+}
+
+.pi-print-number strong {
+    color: var(--pi-ink);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .01em;
+}
+
+.pi-print-status {
+    display: inline-block;
+    padding: 3px 10px;
+    border: 1px solid var(--pi-border);
+    border-radius: 999px;
+    background: var(--pi-soft);
+    color: var(--pi-ink);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------- facts
+   The six answers a supplier's accounts desk asks for first. A hairline strip,
+   not a wall of cards: printing is the one place where ink matters. */
+.pi-print-facts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border: 1px solid var(--pi-border);
+    border-radius: 10px;
+    background: var(--pi-soft);
+    overflow: hidden;
+}
+
+.pi-print-fact {
+    padding: 9px 12px;
+    border-right: 1px solid var(--pi-border);
+    border-bottom: 1px solid var(--pi-border);
+}
+
+.pi-print-fact:nth-child(3n) {
+    border-right: 0;
+}
+
+.pi-print-fact:nth-last-child(-n + 3) {
+    border-bottom: 0;
+}
+
+.pi-print-fact span {
+    display: block;
+    margin-bottom: 1px;
+    color: var(--pi-muted);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.pi-print-fact strong {
+    color: var(--pi-ink);
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.pi-print-fact small {
+    display: block;
+    margin-top: 1px;
+    color: var(--pi-muted);
+    font-size: 10.5px;
+}
+
+/* -------------------------------------------------------------- parties */
+.pi-print-parties {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.pi-print-party {
+    padding: 12px 14px;
+    border: 1px solid var(--pi-border);
+    border-radius: 10px;
+}
+
+.pi-print-party h2 {
+    margin: 0 0 6px;
+    color: var(--pi-muted);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.pi-print-party-name {
+    margin: 0 0 3px;
+    color: var(--pi-ink);
+    font-size: 13.5px;
+    font-weight: 700;
+}
+
+.pi-print-party-contact {
+    margin: 4px 0 0;
+    color: var(--pi-muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+/* ---------------------------------------------------------------- lines
+   Ten columns on A4 portrait: narrow but honest, with the money columns
+   right-aligned so a ruler can be laid down the page. */
+.pi-print-items-wrap {
+    border: 1px solid var(--pi-border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.pi-print-items {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11.5px;
+}
+
+.pi-print-items thead th {
+    padding: 8px 8px;
+    border-bottom: 1px solid var(--pi-border);
+    background: var(--pi-soft);
+    color: var(--pi-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.pi-print-items thead th.is-num {
+    text-align: right;
+}
+
+.pi-print-items td {
+    padding: 8px 8px;
+    border-bottom: 1px solid var(--pi-border);
+    vertical-align: top;
+    color: var(--pi-body, #344054);
+}
+
+.pi-print-items tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.pi-print-items td.is-num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.pi-print-items td strong {
+    color: var(--pi-ink);
+    font-weight: 600;
+}
+
+.pi-print-col-sr {
+    width: 26px;
+    color: var(--pi-muted) !important;
+}
+
+.pi-print-col-hsn {
+    width: 68px;
+}
+
+.pi-print-item-note {
+    display: block;
+    margin-top: 2px;
+    color: var(--pi-muted);
+    font-size: 10.5px;
+    line-height: 1.4;
+}
+
+.pi-print-empty {
+    padding: 18px 8px !important;
+    color: var(--pi-muted) !important;
+    text-align: center;
+}
+
+/* ------------------------------------------------- terms, totals, signature
+   The sheet's last band: what was agreed on the left, what it comes to on the
+   right, and the signature line under both. */
+.pi-print-foot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 262px;
+    gap: 18px;
+    align-items: start;
+}
+
+.pi-print-terms-block {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+.pi-print-words {
+    margin: 0;
+    padding: 9px 12px;
+    border: 1px dashed var(--pi-border);
+    border-radius: 10px;
+    color: var(--pi-ink);
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.pi-print-words span {
+    margin-right: 6px;
+    color: var(--pi-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.pi-print-note h2 {
+    margin: 0 0 5px;
+    color: var(--pi-muted);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.pi-print-note p {
+    margin: 0 0 3px;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.pi-print-signature {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: auto;
+    padding-top: 18px;
+    color: var(--pi-ink);
+    font-size: 11.5px;
+}
+
+.pi-print-signature-space {
+    display: block;
+    height: 44px;
+    border-bottom: 1px solid var(--pi-ink);
+}
+
+.pi-print-signature-label {
+    color: var(--pi-muted);
+    font-size: 10.5px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.pi-print-totals table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--pi-border);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 11.5px;
+}
+
+.pi-print-totals td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--pi-border);
+    color: var(--pi-body, #344054);
+}
+
+.pi-print-totals td:last-child {
+    text-align: right;
+    white-space: nowrap;
+    color: var(--pi-ink);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.pi-print-totals tr:last-child td {
+    border-bottom: 0;
+}
+
+.pi-print-discount td:last-child {
+    color: var(--pi-success);
+}
+
+.pi-print-grand td {
+    padding-top: 9px;
+    padding-bottom: 9px;
+    border-top: 2px solid var(--pi-ink);
+    background: var(--pi-soft);
+    color: var(--pi-ink) !important;
+    font-size: 12.5px;
+    font-weight: 700;
+}
+
+.pi-print-balance td {
+    padding-top: 9px;
+    padding-bottom: 9px;
+    border-top: 1px solid var(--pi-ink);
+    color: var(--pi-danger) !important;
+    font-size: 12.5px;
+    font-weight: 700;
+}
+
+.pi-print-rate {
+    margin: 8px 0 0;
+    color: var(--pi-muted);
+    font-size: 10.5px;
+    line-height: 1.5;
+}
+
+/* The supplier's own conditions, in small type at the foot — the part of a
+   purchase document a supplier's accounts desk actually reads. */
+.pi-print-terms-copy {
+    padding: 12px 14px;
+    border: 1px solid var(--pi-border);
+    border-radius: 10px;
+    background: var(--pi-soft);
+}
+
+.pi-print-terms-copy h2 {
+    margin: 0 0 6px;
+    color: var(--pi-muted);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.pi-print-terms-copy div {
+    color: var(--pi-body, #344054);
+    font-size: 10.5px;
+    line-height: 1.55;
+    white-space: pre-line;
+}
+
+.pi-print-footer {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--pi-border);
+    color: var(--pi-muted);
+    font-size: 10.5px;
+    text-align: center;
+}
+
+/* --------------------------------------------------------------- screens
+   The sheet is built at A4 width and shrunk only when the screen is narrower
+   than the paper; the print reset in `document-print.css` undoes the shrink. */
+@media screen and (max-width: 900px) {
+    .pi-print-facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pi-print-fact:nth-child(3n) {
+        border-right: 1px solid var(--pi-border);
+    }
+
+    .pi-print-fact:nth-child(2n) {
+        border-right: 0;
+    }
+
+    .pi-print-fact:nth-last-child(-n + 3) {
+        border-bottom: 1px solid var(--pi-border);
+    }
+
+    .pi-print-fact:nth-last-child(-n + 2) {
+        border-bottom: 0;
+    }
+
+    .pi-print-parties,
+    .pi-print-foot {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    .pi-print-items-wrap {
+        overflow-x: auto;
+    }
+
+    .pi-print-items {
+        min-width: 720px;
+    }
+
+    .pi-print-totals table {
+        max-width: 320px;
+        margin-left: auto;
+    }
+}
+
+@media print {
+    .pi-print {
+        gap: 5mm;
+    }
+
+    .pi-print-facts,
+    .pi-print-party,
+    .pi-print-items-wrap,
+    .pi-print-totals table,
+    .pi-print-terms-copy,
+    .pi-print-words {
+        border-radius: 0;
+    }
+
+    .pi-print-items-wrap {
+        overflow: visible;
+    }
+
+    .pi-print-items td,
+    .pi-print-items thead th {
+        padding: 5px 6px;
+    }
+
+    .pi-print-items thead {
+        display: table-header-group;
+    }
+
+    .pi-print-items tr,
+    .pi-print-party,
+    .pi-print-totals {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}

@@ -159,32 +159,49 @@ class PurchaseInvoiceController extends Controller
         ];
     }
 
-    /** What is on, said the way the office said it. */
+    /**
+     * What is on, said the way the office said it.
+     *
+     * The shape is the strip's: one entry per filter, `query` naming the query
+     * keys removing that chip has to drop (one for a filter, both ends for a
+     * date range). The labels are the drawer's own words, so the strip and the
+     * drawer cannot describe the same filter two ways.
+     */
     private function appliedChips(array $filters): array
     {
         $statuses = PurchaseInvoice::statusOptions() + ['overdue' => 'Overdue'];
         $chips = [];
 
+        $add = function (string $key, string $label, string $value, array $query) use (&$chips) {
+            $chips[] = ['key' => $key, 'label' => $label, 'value' => $value, 'query' => $query];
+        };
+
         if ($filters['search'] !== '') {
-            $chips['search'] = ['label' => 'Search', 'value' => $filters['search']];
+            $add('search', 'Search', $filters['search'], ['search']);
         }
         if ($filters['status'] !== 'all') {
-            $chips['status'] = ['label' => 'Status', 'value' => $statuses[$filters['status']] ?? $filters['status']];
+            $add('status', 'Status', $statuses[$filters['status']] ?? $filters['status'], ['status']);
         }
         if ($filters['payment'] !== 'all') {
-            $chips['payment'] = ['label' => 'Payment', 'value' => self::PAYMENT_LABELS[$filters['payment']] ?? $filters['payment']];
+            $add('payment', 'Payment', self::PAYMENT_LABELS[$filters['payment']] ?? $filters['payment'], ['payment']);
         }
         if ($filters['currency'] !== 'all') {
-            $chips['currency'] = ['label' => 'Currency', 'value' => $filters['currency']];
+            $add('currency', 'Currency', $filters['currency'], ['currency']);
         }
         if ($filters['vendor'] > 0) {
-            $chips['vendor'] = ['label' => 'Vendor', 'value' => Vendor::query()->whereKey($filters['vendor'])->value('vendor_name') ?: '#'.$filters['vendor']];
+            $add('vendor', 'Vendor',
+                Vendor::query()->whereKey($filters['vendor'])->value('vendor_name') ?: '#'.$filters['vendor'],
+                ['vendor']);
         }
         if ($filters['project'] > 0) {
-            $chips['project'] = ['label' => 'Project', 'value' => Project::query()->whereKey($filters['project'])->value('name') ?: '#'.$filters['project']];
+            $add('project', 'Project',
+                Project::query()->whereKey($filters['project'])->value('name') ?: '#'.$filters['project'],
+                ['project']);
         }
         if ($filters['dateFrom'] || $filters['dateTo']) {
-            $chips['dates'] = ['label' => 'Document date', 'value' => trim(($filters['dateFrom'] ?: '…').' → '.($filters['dateTo'] ?: '…'))];
+            $add('dates', 'Document date',
+                trim(($filters['dateFrom'] ?: '…').' → '.($filters['dateTo'] ?: '…')),
+                ['date_from', 'date_to']);
         }
 
         return $chips;
@@ -240,7 +257,10 @@ class PurchaseInvoiceController extends Controller
                 'status' => 'draft',
                 'invoice_date' => now()->toDateString(),
             ] + PurchaseInvoice::defaultBuyerDetails()),
-            'sourceOrder' => $this->sourceOrder($request),
+            /* A bill is raised from an order by the order's own Convert action, and
+               not by a second create screen that could leave the two unlinked:
+               there is one way to convert, so there is one place the lock lives. */
+            'sourceOrder' => null,
         ]));
     }
 
@@ -524,6 +544,7 @@ class PurchaseInvoiceController extends Controller
         return view('purchase_invoices.print', [
             'invoice' => $purchaseInvoice,
             'docType' => $purchaseInvoice->invoice_type,
+            'publicMode' => false,
         ]);
     }
 
@@ -536,7 +557,9 @@ class PurchaseInvoiceController extends Controller
         return view('purchase_invoices.print', [
             'invoice' => $invoice,
             'docType' => $invoice->invoice_type,
-            'public' => true,
+            /* The public link is a print link and nothing else: with no session
+               there is no "Back" to go to and no office chrome to leak. */
+            'publicMode' => true,
         ]);
     }
 
@@ -878,13 +901,6 @@ class PurchaseInvoiceController extends Controller
     }
 
     /** The lines a new bill starts with: the order's, or one blank line. */
-    private function sourceOrder(Request $request): ?PurchaseInvoice
-    {
-        $id = (int) $request->query('from_order', 0);
-
-        return $id > 0 ? PurchaseInvoice::query()->whereKey($id)->where('invoice_type', 'order')->first() : null;
-    }
-
     private function productName($productId): ?string
     {
         if (! $productId) {
@@ -996,6 +1012,11 @@ class PurchaseInvoiceController extends Controller
         return [
             'vendors' => $vendors,
             'vendorSnapshots' => $vendors->mapWithKeys(fn ($vendor) => [$vendor->id => $this->vendorSnapshot($vendor)])->all(),
+            /* One list, two readers: the controller writes the snapshot onto the
+               option as JSON, and the form hands the field names to the script. */
+            'vendorSnapshotFields' => $vendors->isNotEmpty()
+                ? array_keys($this->vendorSnapshot($vendors->first()))
+                : [],
             'projects' => $this->projects(),
             'products' => $this->products(),
             'statusOptions' => PurchaseInvoice::statusOptionsFor($type),
@@ -1005,8 +1026,18 @@ class PurchaseInvoiceController extends Controller
             'buyerDefaults' => PurchaseInvoice::defaultBuyerDetails(),
             'defaultTerms' => PurchaseInvoice::defaultTerms(),
             'docLabels' => PurchaseInvoice::DOC_LABELS,
+            'accounts' => $this->accounts(),
+            'money' => fn ($value, $currency = 'INR') => \App\Helpers\CommonHelper::amount($value, $currency),
             'routePrefix' => $type === PurchaseInvoice::TYPE_ORDER ? 'purchase-orders' : 'purchase-bills',
         ];
+    }
+
+    /** The bank/cash accounts a payment can be made from. */
+    private function accounts()
+    {
+        return class_exists(\App\Models\CashflowAccount::class) && Schema::hasTable('cashflow_accounts')
+            ? \App\Models\CashflowAccount::query()->orderBy('account_name')->get()
+            : collect();
     }
 
     private function vendors()
