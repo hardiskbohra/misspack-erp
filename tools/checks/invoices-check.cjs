@@ -797,6 +797,12 @@ check('selected invoice actions sit on their own toolbar row',
     && /\.master-list \.master-list-toolbar-actions\s*\{[^}]*flex-wrap:\s*wrap/.test(listCss),
     'the selection bar follows the standing list actions instead of overflowing beside them');
 
+check('bulk controls share one padded row on desktop and wrap at tablet widths',
+    /\.master-list \.master-list-bulk\s*\{[^}]*flex-wrap:\s*nowrap[^}]*padding:\s*10px 12px/.test(listCss)
+    && /\.master-list \.master-list-bulk-count\s*\{[^}]*margin-right:\s*auto/.test(listCss)
+    && /@media\s*\(max-width:\s*991px\)[\s\S]*?\.master-list \.master-list-bulk\s*\{[^}]*flex-wrap:\s*wrap/.test(listCss),
+    'a narrow viewport must not clip the selection tools, and the card needs room inside its border');
+
 check('the sweep is capped and the export takes a selection',
     /array_slice\(array_values\(array_unique\(array_filter\(\$ids\)\)\), 0, 500\)/.test(controller)
     && /\$selected !== \[\]/.test(controller)

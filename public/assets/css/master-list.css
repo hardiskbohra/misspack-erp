@@ -476,20 +476,20 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     max-width: 100%;
     box-sizing: border-box;
-    padding: 3px 3px 3px 12px;
+    padding: 10px 12px;
     border: 1px solid var(--mc-border);
     border-radius: 12px;
     background: var(--mc-card-soft);
 }
 
-/* Selection controls get a full row below the standing table actions instead
-   of competing with exports and density controls for the same horizontal space. */
+/* Selection actions keep their own toolbar row, with one padded control row
+   inside the panel when the viewport has room. */
 .master-list .master-list-toolbar > .master-list-bulk {
     flex: 1 0 100%;
-    justify-content: flex-end;
+    justify-content: flex-start;
 }
 
 .master-list .master-list-bulk[hidden] {
@@ -497,15 +497,44 @@
 }
 
 .master-list .master-list-bulk .master-select {
-    width: auto;
+    flex: 0 1 240px;
+    width: 240px;
     min-width: 190px;
+    max-width: 100%;
+}
+
+.master-list .master-list-bulk .master-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .master-list .master-list-bulk-count {
+    margin-right: auto;
     font-size: 11.5px;
     font-weight: 700;
     white-space: nowrap;
     color: var(--mc-text-2);
+}
+
+@media (max-width: 991px) {
+    .master-list .master-list-bulk {
+        flex-wrap: wrap;
+    }
+
+    .master-list .master-list-bulk-count {
+        flex: 0 0 100%;
+        margin-right: 0;
+    }
+
+    .master-list .master-list-bulk .master-select {
+        flex: 1 1 190px;
+        width: auto;
+        max-width: none;
+    }
+
+    .master-list .master-list-bulk .master-btn {
+        flex: 1 1 auto;
+    }
 }
 
 /* The pick column: a checkbox that owns its own narrow column, so ticking a row
