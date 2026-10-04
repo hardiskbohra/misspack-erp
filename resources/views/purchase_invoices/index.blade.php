@@ -241,11 +241,11 @@
                                 @endif
                             </td>
                             <td data-label="Total" class="is-num">
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->total_amount) }}</strong>
+                                <strong>{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</strong>
                             </td>
                             <td data-label="Paid" class="is-num ui-mobile-secondary">
                                 @if ($invoice->isBill())
-                                    <strong>{{ \App\Helpers\CommonHelper::indianCurrency($paidAmt) }}</strong>
+                                    <strong>{{ \App\Helpers\CommonHelper::amount($paidAmt, $invoice->currency) }}</strong>
                                 @else
                                     <span class="master-empty-value">Not payable</span>
                                 @endif
@@ -257,7 +257,7 @@
                                     <span class="master-empty-value">Raise a bill</span>
                                 @else
                                     <strong class="si-balance {{ $balance > 0 ? ($invoice->isOverdue() ? 'is-due' : '') : 'is-clear' }}">
-                                        {{ \App\Helpers\CommonHelper::indianCurrency($balance) }}
+                                        {{ \App\Helpers\CommonHelper::amount($balance, $invoice->currency) }}
                                     </strong>
                                 @endif
                             </td>
@@ -295,7 +295,7 @@
                                                     data-invoice-id="{{ $invoice->id }}"
                                                     data-invoice-number="{{ $invoice->invoice_number }}"
                                                     data-invoice-amount="{{ number_format($balance, 2, '.', '') }}"
-                                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balance) }}">
+                                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balance, $invoice->currency) }}">
                                                     <i class="fas fa-indian-rupee-sign"></i> Record payment
                                                 </button>
                                             @endif

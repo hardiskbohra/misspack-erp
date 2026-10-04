@@ -59,7 +59,7 @@
                     data-invoice-id="{{ $invoice->id }}"
                     data-invoice-number="{{ $invoice->invoice_number }}"
                     data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
-                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}">
+                    data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}">
                     Record payment
                 </button>
             @endif
@@ -103,7 +103,7 @@
             <span class="icon"><i class="fas fa-file-invoice"></i></span>
             <div>
                 <p class="master-stat-title">Total</p>
-                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($invoice->total_amount) }}</p>
+                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</p>
                 <p class="master-sub">{{ $invoice->items->count() }} {{ \Illuminate\Support\Str::plural('line', $invoice->items->count()) }}</p>
             </div>
         </div>
@@ -111,7 +111,7 @@
             <span class="icon"><i class="fas fa-indian-rupee-sign"></i></span>
             <div>
                 <p class="master-stat-title">{{ $invoice->isBill() ? 'Paid' : 'Not payable' }}</p>
-                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($invoice->isBill() ? $paidAmount : 0) }}</p>
+                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($invoice->isBill() ? $paidAmount : 0, $invoice->currency) }}</p>
                 <p class="master-sub">{{ $invoice->isOrder() ? 'Raise a bill to pay this order' : ($payments->count().' payments') }}</p>
             </div>
         </div>
@@ -119,7 +119,7 @@
             <span class="icon"><i class="fas fa-percent"></i></span>
             <div>
                 <p class="master-stat-title">GST</p>
-                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($taxAmount) }}</p>
+                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($taxAmount, $invoice->currency) }}</p>
                 <p class="master-sub">{{ $invoice->gstTypeLabel() }}</p>
             </div>
         </div>
@@ -127,7 +127,7 @@
             <span class="icon"><i class="fas fa-scale-balanced"></i></span>
             <div>
                 <p class="master-stat-title">Balance due</p>
-                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}</p>
+                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}</p>
                 <p class="master-sub">{{ $invoice->isOverdue() ? $daysLate.' days late' : ($invoice->isBill() ? 'On this bill' : 'Orders are not owed') }}</p>
             </div>
         </div>
@@ -169,10 +169,10 @@
                                     @endif
                                 </td>
                                 <td class="is-num">{{ $figure($item->quantity) }} {{ $item->unit }}</td>
-                                <td class="is-num">{{ \App\Helpers\CommonHelper::indianCurrency($item->unit_price) }}</td>
-                                <td class="is-num">{{ \App\Helpers\CommonHelper::indianCurrency($item->taxable_amount) }}</td>
+                                <td class="is-num">{{ \App\Helpers\CommonHelper::amount($item->unit_price, $invoice->currency) }}</td>
+                                <td class="is-num">{{ \App\Helpers\CommonHelper::amount($item->taxable_amount, $invoice->currency) }}</td>
                                 <td class="is-num">{{ $figure($item->gst_percent) }}%</td>
-                                <td class="is-num">{{ \App\Helpers\CommonHelper::indianCurrency($item->line_total) }}</td>
+                                <td class="is-num">{{ \App\Helpers\CommonHelper::amount($item->line_total, $invoice->currency) }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -197,23 +197,23 @@
         </div>
         <div class="master-card master-section">
             <div class="master-section-head"><div><h2 class="master-section-title">Summary</h2></div></div>
-            <div class="si-total-row"><span>Subtotal</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->subtotal) }}</strong></div>
+            <div class="si-total-row"><span>Subtotal</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->subtotal, $invoice->currency) }}</strong></div>
             <div class="si-total-row"><span>Discount</span>
                 @if ((float) $invoice->discount_amount > 0)
-                    <strong>− {{ \App\Helpers\CommonHelper::indianCurrency($invoice->discount_amount) }}</strong>
+                    <strong>− {{ \App\Helpers\CommonHelper::amount($invoice->discount_amount, $invoice->currency) }}</strong>
                 @else
                     <span class="master-empty-value">None</span>
                 @endif
             </div>
-            @if ((float) $invoice->cgst_amount > 0)<div class="si-total-row"><span>CGST</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->cgst_amount) }}</strong></div>@endif
-            @if ((float) $invoice->sgst_amount > 0)<div class="si-total-row"><span>SGST</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->sgst_amount) }}</strong></div>@endif
-            @if ((float) $invoice->igst_amount > 0)<div class="si-total-row"><span>IGST</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->igst_amount) }}</strong></div>@endif
+            @if ((float) $invoice->cgst_amount > 0)<div class="si-total-row"><span>CGST</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->cgst_amount, $invoice->currency) }}</strong></div>@endif
+            @if ((float) $invoice->sgst_amount > 0)<div class="si-total-row"><span>SGST</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->sgst_amount, $invoice->currency) }}</strong></div>@endif
+            @if ((float) $invoice->igst_amount > 0)<div class="si-total-row"><span>IGST</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->igst_amount, $invoice->currency) }}</strong></div>@endif
             @if ($chargesAmount > 0)
-                @if ((float) $invoice->freight_amount > 0)<div class="si-total-row"><span>Freight</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->freight_amount) }}</strong></div>@endif
-                @if ((float) $invoice->packing_amount > 0)<div class="si-total-row"><span>Packing</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->packing_amount) }}</strong></div>@endif
-                @if ((float) $invoice->other_charges > 0)<div class="si-total-row"><span>Other</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->other_charges) }}</strong></div>@endif
+                @if ((float) $invoice->freight_amount > 0)<div class="si-total-row"><span>Freight</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->freight_amount, $invoice->currency) }}</strong></div>@endif
+                @if ((float) $invoice->packing_amount > 0)<div class="si-total-row"><span>Packing</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->packing_amount, $invoice->currency) }}</strong></div>@endif
+                @if ((float) $invoice->other_charges > 0)<div class="si-total-row"><span>Other</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->other_charges, $invoice->currency) }}</strong></div>@endif
             @endif
-            <div class="si-total-row is-grand"><span>Grand total</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->total_amount) }}</strong></div>
+            <div class="si-total-row is-grand"><span>Grand total</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</strong></div>
             @if (filled($invoice->amount_in_words))
                 <p class="si-words">{{ $invoice->amount_in_words }}</p>
             @endif
@@ -232,7 +232,7 @@
                         data-invoice-id="{{ $invoice->id }}"
                         data-invoice-number="{{ $invoice->invoice_number }}"
                         data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
-                        data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}">Record</button>
+                        data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}">Record</button>
                 @endif
             </div>
             @if ($payments->isEmpty())
@@ -256,8 +256,8 @@
                 </div>
             @endif
             <div class="si-pay-foot">
-                <div><span>Paid</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::indianCurrency($paidAmount) }}</strong></div>
-                <div><span>Still open</span><strong class="{{ $balanceAmount > 0 ? 'si-due' : 'si-clear' }}">{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}</strong></div>
+                <div><span>Paid</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($paidAmount, $invoice->currency) }}</strong></div>
+                <div><span>Still open</span><strong class="{{ $balanceAmount > 0 ? 'si-due' : 'si-clear' }}">{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}</strong></div>
             </div>
         </div>
     @endif

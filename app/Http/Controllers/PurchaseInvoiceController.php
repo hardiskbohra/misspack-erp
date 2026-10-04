@@ -888,6 +888,7 @@ class PurchaseInvoiceController extends Controller
             'vendor_state' => $vendor->state,
             'vendor_country' => $vendor->country,
             'vendor_pincode' => $vendor->pincode,
+            'currency' => $vendor->preferred_currency ?: 'INR',
         ];
     }
 
@@ -913,7 +914,7 @@ class PurchaseInvoiceController extends Controller
     /**
      * The document number, in its own series.
      *
-     * `MP/PO/{FY}/001` for orders and `MP/PB/{FY}/001` for bills, the same
+     * `MP/PO/{FY}/001` for orders and `MP/BILL/{FY}/001` for bills, the same
      * financial-year shape the sales invoices use, continuing after the highest
      * number already issued rather than counting rows — a deleted draft must
      * never hand out a number twice.
@@ -924,7 +925,9 @@ class PurchaseInvoiceController extends Controller
             ? now()->format('y').'-'.now()->addYear()->format('y')
             : now()->subYear()->format('y').'-'.now()->format('y');
 
-        $prefix = $type === PurchaseInvoice::TYPE_ORDER ? "MP/PO/{$financialYear}/" : "MP/PB/{$financialYear}/";
+        $prefix = $type === PurchaseInvoice::TYPE_ORDER
+            ? "MP/PO/{$financialYear}/"
+            : "MP/BILL/{$financialYear}/";
 
         $last = PurchaseInvoice::query()
             ->where('invoice_type', $type)

@@ -99,8 +99,17 @@
         var rowIndex = 0;
         var ledgerReceived = parseFloat(body.getAttribute('data-ledger-received')) || 0;
 
+        function currencySymbol() {
+            var el = document.getElementById('invoiceCurrency');
+            var code = el ? String(el.value || 'INR').toUpperCase() : 'INR';
+            if (code === 'USD') return '$';
+            if (code === 'RMB' || code === 'CNY') return '¥';
+            if (code === 'INR') return '₹';
+            return code + ' ';
+        }
+
         function money(v) {
-            return '₹ ' + (Number(v || 0)).toLocaleString('en-IN', {
+            return currencySymbol() + (Number(v || 0)).toLocaleString('en-IN', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
@@ -363,7 +372,7 @@
             var el = document.getElementById(id);
             if (el) el.addEventListener('input', calculateTotals);
         });
-        ['discountType', 'gstType'].forEach(function (id) {
+        ['discountType', 'gstType', 'invoiceCurrency'].forEach(function (id) {
             var el = document.getElementById(id);
             if (el) el.addEventListener('change', calculateTotals);
         });
@@ -510,6 +519,7 @@
                 if (gstAutoState) gstAutoState.value = 'true';
                 applySnapshot(clientSelect.options[clientSelect.selectedIndex], false);
                 autoSelectGstType();
+                calculateTotals();
             }
 
             /* Through `onChange`, so a pick made in the select2 list is heard:
