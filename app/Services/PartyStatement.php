@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Helpers\DateRanges;
 use App\Models\CashflowEntry;
 use App\Models\Client;
+use App\Models\ProjectPayment;
 use App\Models\SalesInvoice;
 use App\Models\Vendor;
 use App\Models\VendorPaymentEntry;
@@ -129,7 +130,7 @@ class PartyStatement
      * A statement is offered in each of them because each is a different
      * statement — not because one is a conversion of the other.
      */
-    public function currencies(string $type, int $id): array
+    public function currencies(string $type, int $id, bool $clientPortal = false): array
     {
         $preferred = strtoupper((string) ($this->findParty($type, $id)?->preferred_currency ?: 'INR'));
         $found = [];
@@ -138,6 +139,24 @@ class PartyStatement
             if (Schema::hasTable('vendor_payment_entries')) {
                 $found = VendorPaymentEntry::where('vendor_id', $id)
                     ->select('foreign_currency')->distinct()->pluck('foreign_currency')->all();
+            }
+        } elseif ($clientPortal) {
+            $client = $this->findParty('client', $id);
+            if ($client instanceof Client) {
+                $invoices = $this->clientPortalInvoices($client);
+                $payments = $this->clientPortalProjectPayments($id);
+                $excludedCashflowIds = $this->projectPaymentCashflowIds($payments);
+                $receipts = $this->clientPortalInvoiceCashflowEntries(
+                    $id,
+                    $invoices->modelKeys(),
+                    $excludedCashflowIds
+                );
+
+                $found = array_merge(
+                    $invoices->pluck('currency')->all(),
+                    $payments->pluck('currency')->all(),
+                    $receipts->pluck('currency')->all()
+                );
             }
         } else {
             if (Schema::hasTable('sales_invoices')) {
@@ -451,9 +470,10 @@ class PartyStatement
         $to = DateRanges::normalise($to);
 
         $currency = strtoupper((string) ($options['currency'] ?? $this->defaultCurrency($type, $id)));
-        $rows = $this->statementRows($type, $party, $currency);
+        $clientPortal = $type === 'client' && (bool) ($options['client_portal'] ?? false);
+        $rows = $this->statementRows($type, $party, $currency, $clientPortal);
 
-        [$opening, $moving] = $this->splitOpening($rows, $from);
+        [$opening, $moving] = $this->splitOpening($rows, $from, $to);
 
         $sign = $type === 'vendor' ? -1 : 1; // balance = sign × (debit − credit)
         $running = $opening;
@@ -488,12 +508,12 @@ class PartyStatement
                 'closing' => round($running, 2),
                 'count' => count($moving),
             ],
-            'other_currencies' => $this->otherCurrencies($type, $party, $currency, $from, $to),
+            'other_currencies' => $this->otherCurrencies($type, $party, $currency, $from, $to, $clientPortal),
             'generated_at' => Carbon::now(config('app.business_timezone', 'Asia/Kolkata')),
             'issuer' => SalesInvoice::defaultSellerDetails(),
         ];
 
-        $statement['ageing'] = ($options['ageing'] ?? true)
+        $statement['ageing'] = ($options['ageing'] ?? true) && ! $clientPortal
             ? $this->ageing($type, $id, $currency)
             : null;
 
@@ -506,69 +526,179 @@ class PartyStatement
     }
 
     /** @return array<int, array<string, mixed>> */
-    private function statementRows(string $type, $party, string $currency): array
+    private function statementRows(string $type, $party, string $currency, bool $clientPortal = false): array
     {
         return $type === 'vendor'
             ? $this->vendorStatementRows($party, $currency)
-            : $this->clientStatementRows($party, $currency);
+            : $this->clientStatementRows($party, $currency, $clientPortal);
     }
 
     /** @return array<int, array<string, mixed>> */
-    private function clientStatementRows(Client $client, string $currency): array
+    private function clientStatementRows(Client $client, string $currency, bool $clientPortal = false): array
     {
         $rows = [];
+        $projectPayments = collect();
 
-        if (Schema::hasTable('sales_invoices')) {
-            $invoices = SalesInvoice::query()
-                ->where('client_id', $client->id)
-                ->where('status', '!=', 'cancelled')
-                ->notSuperseded()
-                ->orderBy('invoice_date')->orderBy('id')
-                ->get();
-
-            foreach ($invoices as $invoice) {
-                if (strtoupper((string) ($invoice->currency ?: 'INR')) !== $currency) {
-                    continue;
-                }
-
-                $rows[] = [
-                    'date' => $invoice->invoice_date,
-                    'particular' => 'Sales invoice'.($invoice->invoice_type ? ' ('.$invoice->invoice_type.')' : ''),
-                    'reference' => $invoice->invoice_number,
-                    'status' => method_exists($invoice, 'statusLabel') ? $invoice->statusLabel() : null,
-                    'debit' => (float) $invoice->total_amount,
-                    'credit' => 0.0,
-                    'kind' => 'invoice',
-                ];
-            }
+        if ($clientPortal) {
+            $invoices = $this->clientPortalInvoices($client);
+            $projectPayments = $this->clientPortalProjectPayments($client->id);
+            $entries = $this->clientPortalInvoiceCashflowEntries(
+                $client->id,
+                $invoices->modelKeys(),
+                $this->projectPaymentCashflowIds($projectPayments)
+            );
+        } else {
+            $invoices = Schema::hasTable('sales_invoices')
+                ? SalesInvoice::query()
+                    ->where('client_id', $client->id)
+                    ->where('status', '!=', 'cancelled')
+                    ->notSuperseded()
+                    ->orderBy('invoice_date')->orderBy('id')
+                    ->get()
+                : collect();
+            $entries = Schema::hasTable('cashflow_entries')
+                ? $this->partyCashflow($client->id, 'client', (string) $client->company_name)
+                : collect();
         }
 
-        if (Schema::hasTable('cashflow_entries')) {
-            $entries = $this->partyCashflow($client->id, 'client', (string) $client->company_name);
+        foreach ($invoices as $invoice) {
+            if (strtoupper((string) ($invoice->currency ?: 'INR')) !== $currency) {
+                continue;
+            }
 
-            foreach ($entries as $entry) {
-                if (strtoupper((string) ($entry->currency ?: 'INR')) !== $currency) {
-                    continue;
-                }
+            $rows[] = [
+                'date' => $invoice->invoice_date,
+                'particular' => 'Sales invoice'.($invoice->invoice_type ? ' ('.$invoice->invoice_type.')' : ''),
+                'reference' => $invoice->invoice_number,
+                'status' => method_exists($invoice, 'statusLabel') ? $invoice->statusLabel() : null,
+                'debit' => (float) $invoice->total_amount,
+                'credit' => 0.0,
+                'kind' => 'invoice',
+            ];
 
-                $credit = (float) $entry->credit_amount;
-                $debit = (float) $entry->debit_amount;
-
+            $openingReceipt = (float) $invoice->amount_paid;
+            if ($openingReceipt > 0) {
                 $rows[] = [
-                    'date' => $entry->entry_date,
-                    'particular' => $credit > 0 ? 'Receipt' : 'Refund / payment out',
-                    'reference' => $entry->invoice_bill_number ?: $entry->bank_reference_number,
-                    'status' => method_exists($entry, 'statusLabel') ? $entry->statusLabel() : null,
-                    'debit' => $debit,
-                    'credit' => $credit,
+                    'date' => $invoice->invoice_date,
+                    'particular' => 'Advance recorded on invoice',
+                    'reference' => $invoice->invoice_number,
+                    'status' => null,
+                    'debit' => 0.0,
+                    'credit' => $openingReceipt,
                     'kind' => 'receipt',
                 ];
             }
         }
 
+        foreach ($entries as $entry) {
+            if (strtoupper((string) ($entry->currency ?: 'INR')) !== $currency) {
+                continue;
+            }
+
+            $credit = (float) $entry->credit_amount;
+            $debit = (float) $entry->debit_amount;
+
+            $rows[] = [
+                'date' => $entry->entry_date,
+                'particular' => $credit > 0 ? 'Receipt' : 'Refund / payment out',
+                'reference' => $entry->invoice_bill_number ?: $entry->bank_reference_number,
+                'status' => method_exists($entry, 'statusLabel') ? $entry->statusLabel() : null,
+                'debit' => $debit,
+                'credit' => $credit,
+                'kind' => 'receipt',
+            ];
+        }
+
+        foreach ($projectPayments as $payment) {
+            if (strtoupper((string) ($payment->currency ?: 'INR')) !== $currency) {
+                continue;
+            }
+
+            $projectName = $payment->project?->name;
+            $rows[] = [
+                'date' => $payment->payment_date,
+                'particular' => $projectName ? 'Project receipt · '.$projectName : 'Project receipt',
+                'reference' => $payment->reference_number,
+                'status' => $payment->statusLabel(),
+                'debit' => 0.0,
+                'credit' => (float) $payment->amount,
+                'kind' => 'receipt',
+            ];
+        }
+
         usort($rows, fn ($a, $b) => [$a['date'], $a['kind'] === 'invoice' ? 0 : 1] <=> [$b['date'], $b['kind'] === 'invoice' ? 0 : 1]);
 
         return $rows;
+    }
+
+    /** ERP invoices that the office has explicitly published to this client. */
+    private function clientPortalInvoices(Client $client): Collection
+    {
+        if (! Schema::hasTable('sales_invoices') || ! Schema::hasColumn('sales_invoices', 'show_client_portal')) {
+            return collect();
+        }
+
+        return SalesInvoice::query()
+            ->where('client_id', $client->id)
+            ->where('show_client_portal', true)
+            ->where('status', '!=', 'draft')
+            ->where('status', '!=', 'cancelled')
+            ->notSuperseded()
+            ->orderBy('invoice_date')->orderBy('id')
+            ->get();
+    }
+
+    /** Receipts explicitly published against projects visible to this client. */
+    private function clientPortalProjectPayments(int $clientId): Collection
+    {
+        if (! Schema::hasTable('project_payments')
+            || ! Schema::hasTable('projects')
+            || ! Schema::hasColumn('projects', 'client_id')
+            || ! Schema::hasColumn('projects', 'show_client_portal')) {
+            return collect();
+        }
+
+        return ProjectPayment::query()
+            ->with('project')
+            ->whereHas('project', fn ($projects) => $projects
+                ->where('client_id', $clientId)
+                ->where('show_client_portal', true))
+            ->visibleToClient()
+            ->orderBy('payment_date')->orderBy('id')
+            ->get();
+    }
+
+    /** Ledger receipts linked to a published invoice and fully booked. */
+    private function clientPortalInvoiceCashflowEntries(int $clientId, array $invoiceIds, array $excludeIds = []): Collection
+    {
+        if ($invoiceIds === []
+            || ! Schema::hasTable('cashflow_entries')
+            || ! Schema::hasColumn('cashflow_entries', 'client_id')
+            || ! Schema::hasColumn('cashflow_entries', 'sales_invoice_id')
+            || ! Schema::hasColumn('cashflow_entries', 'accounting_status')
+            || ! Schema::hasColumn('cashflow_entries', 'transaction_type')) {
+            return collect();
+        }
+
+        return CashflowEntry::query()
+            ->where('client_id', $clientId)
+            ->whereIn('sales_invoice_id', $invoiceIds)
+            ->whereIn('accounting_status', ['booked', 'reconciled'])
+            ->whereIn('transaction_type', ['credit', 'debit'])
+            ->when($excludeIds !== [], fn ($query) => $query->whereNotIn('id', $excludeIds))
+            ->orderBy('entry_date')->orderBy('id')
+            ->get();
+    }
+
+    /** Cashflow IDs already represented by visible project receipt rows. */
+    private function projectPaymentCashflowIds(Collection $payments): array
+    {
+        return $payments->pluck('cashflow_entry_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -656,22 +786,22 @@ class PartyStatement
             ->get();
     }
 
-    /** The rows before the period open it; the rest of the list runs it. */
-    private function splitOpening(array $rows, ?string $from): array
+    /** Earlier rows open the period; only rows within it run the balance. */
+    private function splitOpening(array $rows, ?string $from, ?string $to): array
     {
-        if ($from === null) {
-            return [0.0, $rows];
-        }
-
         $opening = 0.0;
         $moving = [];
 
         foreach ($rows as $row) {
             $date = $row['date'] instanceof Carbon ? $row['date']->toDateString() : (string) $row['date'];
 
-            if ($date < $from) {
+            if ($from !== null && $date < $from) {
                 $opening += (float) $row['debit'] - (float) $row['credit'];
 
+                continue;
+            }
+
+            if ($to !== null && $date !== '' && $date > $to) {
                 continue;
             }
 
@@ -682,7 +812,7 @@ class PartyStatement
     }
 
     /** Rows in a currency other than this statement's, so the foot can own up. */
-    private function otherCurrencies(string $type, $party, string $currency, ?string $from, ?string $to): array
+    private function otherCurrencies(string $type, $party, string $currency, ?string $from, ?string $to, bool $clientPortal = false): array
     {
         $found = [];
 
@@ -733,6 +863,43 @@ class PartyStatement
                         'credit' => (float) $entry->credit_amount,
                     ])->all());
             }
+        } elseif ($clientPortal) {
+            $invoices = $this->clientPortalInvoices($party);
+            $payments = $this->clientPortalProjectPayments((int) $party->id);
+            $entries = $this->clientPortalInvoiceCashflowEntries(
+                (int) $party->id,
+                $invoices->modelKeys(),
+                $this->projectPaymentCashflowIds($payments)
+            );
+
+            $collect($invoices->map(fn ($invoice) => [
+                'currency' => strtoupper((string) ($invoice->currency ?: 'INR')),
+                'date' => $invoice->invoice_date,
+                'debit' => (float) $invoice->total_amount,
+                'credit' => 0.0,
+            ])->all());
+
+            $collect($invoices->filter(fn ($invoice) => (float) $invoice->amount_paid > 0)
+                ->map(fn ($invoice) => [
+                    'currency' => strtoupper((string) ($invoice->currency ?: 'INR')),
+                    'date' => $invoice->invoice_date,
+                    'debit' => 0.0,
+                    'credit' => (float) $invoice->amount_paid,
+                ])->all());
+
+            $collect($entries->map(fn ($entry) => [
+                'currency' => strtoupper((string) ($entry->currency ?: 'INR')),
+                'date' => $entry->entry_date,
+                'debit' => (float) $entry->debit_amount,
+                'credit' => (float) $entry->credit_amount,
+            ])->all());
+
+            $collect($payments->map(fn ($payment) => [
+                'currency' => strtoupper((string) ($payment->currency ?: 'INR')),
+                'date' => $payment->payment_date,
+                'debit' => 0.0,
+                'credit' => (float) $payment->amount,
+            ])->all());
         } else {
             if (Schema::hasTable('sales_invoices')) {
                 $collect(SalesInvoice::where('client_id', $party->id)->where('status', '!=', 'cancelled')
@@ -742,6 +909,16 @@ class PartyStatement
                         'date' => $invoice->invoice_date,
                         'debit' => (float) $invoice->total_amount,
                         'credit' => 0.0,
+                    ])->all());
+
+                $collect(SalesInvoice::where('client_id', $party->id)
+                    ->where('status', '!=', 'cancelled')->notSuperseded()->get()
+                    ->filter(fn ($invoice) => (float) $invoice->amount_paid > 0)
+                    ->map(fn ($invoice) => [
+                        'currency' => strtoupper((string) ($invoice->currency ?: 'INR')),
+                        'date' => $invoice->invoice_date,
+                        'debit' => 0.0,
+                        'credit' => (float) $invoice->amount_paid,
                     ])->all());
             }
 

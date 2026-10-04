@@ -1,0 +1,12 @@
+/* Shared elevation and stacking order. Keep z-index values intentional. */
+:root {
+    --ui-shadow-card: var(--mc-shadow, 0 14px 35px rgba(25, 42, 70, .08));
+    --ui-shadow-popover: 0 16px 38px rgba(23, 35, 59, .16);
+    --ui-shadow-focus: 0 0 0 3px rgba(79, 131, 241, .16);
+    --ui-z-dropdown: 1300;
+    --ui-z-sticky: 1060;
+    --ui-z-overlay: 1180;
+    --ui-z-drawer: 1200;
+    --ui-z-modal: 9999;
+    --ui-z-toast: 10000;
+}

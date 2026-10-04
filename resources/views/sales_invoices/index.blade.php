@@ -292,17 +292,16 @@
                     <i class="fas fa-percent" aria-hidden="true"></i> GST summary
                 </a>
 
-                <div class="master-list-density desktop-only" role="group" aria-label="Row density">
-                    <button type="button" class="master-list-density-btn" data-density="comfortable"
-                        aria-pressed="true">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact"
-                        aria-pressed="false">Compact</button>
+                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
+                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
+                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
                 </div>
             </div>
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table si-table">
+            <table class="master-table si-table" data-table-settings data-table-key="sales-invoices">
                 {{-- The ten columns, in the order the headings are written: the
                      pick box, the invoice (number, chips, date), the client, the
                      project, the three money columns, the due date, the state
@@ -322,14 +321,14 @@
                 </colgroup>
                 <thead>
                     <tr>
-                        <th scope="col" class="master-list-pick">
+                        <th scope="col" class="master-list-pick ui-mobile-secondary">
                             <input type="checkbox" data-bulk-all aria-label="Select every invoice on this page">
                         </th>
                         <th scope="col">Invoice</th>
                         <th scope="col">Client</th>
-                        <th scope="col">Project</th>
+                        <th scope="col" class="ui-mobile-secondary">Project</th>
                         <th scope="col" class="is-num">Total</th>
-                        <th scope="col" class="is-num">Received</th>
+                        <th scope="col" class="is-num ui-mobile-secondary">Received</th>
                         <th scope="col" class="is-num">Balance</th>
                         <th scope="col">Due</th>
                         <th scope="col">State</th>
@@ -348,7 +347,7 @@
                             $daysLate = $invoice->daysOverdue();
                         @endphp
                         <tr data-href="{{ route('sales-invoices.show', $invoice) }}">
-                            <td data-label="Pick" class="master-list-pick">
+                            <td data-label="Pick" class="master-list-pick ui-mobile-secondary">
                                 <input type="checkbox" name="ids[]" value="{{ $invoice->id }}" form="bulkForm"
                                     data-bulk-pick aria-label="Select {{ $invoice->invoice_number }}">
                             </td>
@@ -366,9 +365,9 @@
                             </td>
                             <td data-label="Client">
                                 <span class="si-client">{{ $invoice->client_company_name ?: 'No client' }}</span>
-                                <span class="master-sub">{{ $invoice->client_gstin ?: 'No GSTIN on file' }}</span>
+                                <span class="master-sub ui-mobile-secondary">{{ $invoice->client_gstin ?: 'No GSTIN on file' }}</span>
                             </td>
-                            <td data-label="Project">
+                            <td data-label="Project" class="ui-mobile-secondary">
                                 @if ($invoice->project?->project_number)
                                     {{ $invoice->project->project_number }}
                                     <span class="master-sub">{{ $invoice->project->name ?: 'Unnamed project' }}</span>
@@ -382,7 +381,7 @@
                                     {{ $invoice->items->count() }} {{ \Illuminate\Support\Str::plural('item', $invoice->items->count()) }}
                                 </span>
                             </td>
-                            <td data-label="Received" class="is-num">
+                            <td data-label="Received" class="is-num ui-mobile-secondary">
                                 <strong>{{ \App\Helpers\CommonHelper::indianCurrency($received) }}</strong>
                                 <span class="master-sub">
                                     @if ($invoice->payments_count > 0)
@@ -539,7 +538,7 @@
                     @endforelse
                 </tbody>
                 @if ($invoices->isNotEmpty())
-                    <tfoot>
+                    <tfoot class="ui-mobile-secondary">
                         <tr class="master-list-total">
                             <td colspan="4">
                                 <strong>Total — {{ $invoices->count() }} {{ \Illuminate\Support\Str::plural('invoice', $invoices->count()) }} shown</strong>

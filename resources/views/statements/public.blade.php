@@ -7,11 +7,12 @@
     <title>Statement of account — {{ $statement['party']['name'] }}</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="stylesheet" href="{{ asset('assets/css/statement.css') }}">
+    @include('layouts.partials.design-system-styles')
 </head>
 
 {{-- What the party sees. No app chrome, no menu, no other party's name on the
      page: one statement, printable, and readable in the reader's own theme. --}}
-<body class="stmt-standalone">
+<body class="stmt-standalone" data-ui-shell="public">
     <div class="stmt-public-bar no-print">
         <div>
             <p class="stmt-public-brand">{{ $statement['issuer']['seller_company_name'] }}</p>

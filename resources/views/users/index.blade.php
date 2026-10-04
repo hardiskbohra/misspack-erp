@@ -191,25 +191,24 @@
                 <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('users.export', $baseFilters) }}">
                     <i class="fas fa-file-csv" aria-hidden="true"></i> Export CSV
                 </a>
-                <div class="master-list-density desktop-only" role="group" aria-label="Row density">
-                    <button type="button" class="master-list-density-btn" data-density="comfortable"
-                        aria-pressed="true">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact"
-                        aria-pressed="false">Compact</button>
+                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
+                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
+                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
                 </div>
             </div>
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table">
+            <table class="master-table" data-table-settings data-table-key="users">
                 <thead>
                     <tr>
                         <th scope="col">Person</th>
                         <th scope="col">Role</th>
-                        <th scope="col">Contact</th>
-                        <th scope="col">Department</th>
-                        <th scope="col">Designation</th>
-                        <th scope="col">Joined</th>
+                        <th scope="col" class="ui-mobile-secondary">Contact</th>
+                        <th scope="col" class="ui-mobile-secondary">Department</th>
+                        <th scope="col" class="ui-mobile-secondary">Designation</th>
+                        <th scope="col" class="ui-mobile-secondary">Joined</th>
                         <th scope="col">Status</th>
                         <th scope="col">Action</th>
                     </tr>
@@ -254,19 +253,19 @@
                             <td data-label="Role">
                                 <span class="emp-pill {{ $user->isAdmin() ? 'is-info' : 'is-ok' }}">{{ $user->roleLabel() }}</span>
                             </td>
-                            <td data-label="Contact">
+                            <td data-label="Contact" class="ui-mobile-secondary">
                                 {{ $user->mobile ?: '—' }}
                                 <span class="master-sub">{{ $user->email }}</span>
                             </td>
-                            <td data-label="Department">{{ $user->department ?: '—' }}</td>
-                            <td data-label="Designation">{{ $user->designation ?: '—' }}</td>
-                            <td data-label="Joined">{{ $user->date_of_joining?->format('d M Y') ?: '—' }}</td>
+                            <td data-label="Department" class="ui-mobile-secondary">{{ $user->department ?: '—' }}</td>
+                            <td data-label="Designation" class="ui-mobile-secondary">{{ $user->designation ?: '—' }}</td>
+                            <td data-label="Joined" class="ui-mobile-secondary">{{ $user->date_of_joining?->format('d M Y') ?: '—' }}</td>
                             <td data-label="Status">
                                 @if ($user->isEmployee())
                                     <span class="emp-pill is-{{ $user->employmentStatusTone() === 'ok' ? 'ok' : ($user->employmentStatusTone() === 'warn' ? 'warn' : 'off') }}">
                                         {{ $user->employmentStatusLabel() }}
                                     </span>
-                                    <span class="master-sub">
+                                    <span class="master-sub ui-mobile-secondary">
                                         {{ (int) $user->payslips_count }} {{ \Illuminate\Support\Str::plural('payslip', (int) $user->payslips_count) }}
                                         · {{ (int) $user->employee_documents_count }} {{ \Illuminate\Support\Str::plural('document', (int) $user->employee_documents_count) }}
                                     </span>

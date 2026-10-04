@@ -127,7 +127,7 @@ body {
     color: var(--dark);
     font-size: 25px;
     line-height: 1.1;
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .brand p {
@@ -154,7 +154,7 @@ body {
     color: #2f3a4c;
     font-size: 19px !important;
     line-height: 1.15;
-    font-weight: 800;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .5px;
 }
@@ -168,7 +168,7 @@ body {
     border: 1px solid #f8d5df;
     border-radius: 6px;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .title p {
@@ -295,7 +295,7 @@ body {
     color: var(--dark);
     border-bottom: 2px solid #ded7e8;
     font-size: 8px;
-    font-weight: 800;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .4px;
     text-align: left;
@@ -402,7 +402,7 @@ body {
     background: var(--purple);
     color: #fff;
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .summary tr:last-child td:first-child {

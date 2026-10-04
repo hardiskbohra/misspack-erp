@@ -49,7 +49,7 @@
 .cq-header h1 {
     margin:0;
     font-size:22px;
-    font-weight:900;
+    font-weight:700;
 }
 
 .cq-toolbar {
@@ -102,7 +102,7 @@ master-search-form .master-input {
     padding:14px 16px;
     margin-bottom:18px;
     border-radius:14px;
-    font-weight:800;
+    font-weight:700;
 }
 
 .cq-alert-success {
@@ -138,7 +138,7 @@ master-search-form .master-input {
 }
 
 .cq-id {
-    font-weight:900;
+    font-weight:700;
     color:var(--cq-primary);
 }
 
@@ -155,7 +155,7 @@ master-search-form .master-input {
     border-radius:999px;
     padding:6px 11px;
     font-size:11px;
-    font-weight:900;
+    font-weight:700;
     text-transform:uppercase;
 }
 

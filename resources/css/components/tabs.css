@@ -1,0 +1,41 @@
+/* Standard tabs: restrained inactive surfaces, obvious active state, keyboard
+   focus, and horizontal scrolling rather than compressed labels. */
+body[data-ui-shell] :is(.master-tabs, .cf-tabs, .core-tablist) {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-2);
+    min-width: 0;
+    overflow-x: auto;
+    padding: var(--ui-space-3);
+    border-bottom: 1px solid var(--ui-border);
+    background: var(--ui-muted-surface);
+    overscroll-behavior-inline: contain;
+}
+
+body[data-ui-shell] :is(.master-tab, .cf-tab, .core-tab) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 40px;
+    padding: 9px 14px;
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-radius-control);
+    background: var(--ui-card-surface);
+    color: var(--ui-text-secondary);
+    font-size: 13px;
+    font-weight: var(--ui-weight-semibold);
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+body[data-ui-shell] :is(.master-tab.is-active, .cf-tab.active, .core-tab[aria-selected="true"]) {
+    border-color: var(--ui-accent);
+    background: var(--ui-accent);
+    color: #fff;
+}
+
+body[data-ui-shell] :is(.master-tabs-panels, .client-detail-panels, .cf-panel, .core-tabpanel) {
+    background: var(--ui-muted-surface);
+}

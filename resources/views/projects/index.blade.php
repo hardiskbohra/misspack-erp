@@ -176,6 +176,28 @@
                             @endif
                         </div>
                         <div class="projects-footer-actions">
+                            <button type="button" class="master-btn master-btn-soft master-btn-sm"
+                                aria-label="Quick details for {{ $project->name }}" title="Quick details"
+                                aria-haspopup="dialog" aria-controls="projectQuickDetails" aria-expanded="false"
+                                data-drawer-open="projectQuickDetails" data-drawer-eyebrow="Project"
+                                data-drawer-title="{{ $project->name }}"
+                                data-drawer-subtitle="{{ $project->project_number }}"
+                                data-drawer-client="{{ $project->client?->company_name ?: 'Client #'.$project->client_id }}"
+                                data-drawer-assignee="{{ $project->assignedUser?->name ?: 'Unassigned' }}"
+                                data-drawer-stage="{{ $project->stageLabel() }}"
+                                data-drawer-status="{{ $project->statusLabel() }}"
+                                data-drawer-health="{{ $project->healthLabel() }}"
+                                data-drawer-priority="{{ $project->priorityLabel() }}"
+                                data-drawer-progress="{{ $project->progress_percent }}%"
+                                data-drawer-start-date="{{ optional($project->start_date)->format('d M Y') ?: 'No start date' }}"
+                                data-drawer-target-date="{{ optional($project->target_date)->format('d M Y') ?: 'No target date' }}"
+                                data-drawer-estimated="{{ \App\Helpers\CommonHelper::amount($project->estimated_value, $project->currency) }}"
+                                data-drawer-received="{{ \App\Helpers\CommonHelper::amount($totals['inward'], $project->currency) }}"
+                                data-drawer-expense="{{ \App\Helpers\CommonHelper::amount($totals['outward'], $project->currency) }}"
+                                data-drawer-outstanding="{{ \App\Helpers\CommonHelper::amount($totals['outstanding'], $project->currency) }}"
+                                data-drawer-record-url="{{ route('projects.show', $project) }}">
+                                <i class="fa-solid fa-circle-info" aria-hidden="true"></i> Details
+                            </button>
                             <a href="{{ route('projects.show', $project) }}"
                                 class="master-btn master-btn-primary master-btn-sm">Open</a>
                             <a href="{{ route('projects.edit', $project) }}"
@@ -209,6 +231,35 @@
 
         <x-pagination :items="$projects" />
     </div>
+
+    <x-drawer id="projectQuickDetails" title="Project details" eyebrow="Project quick view" size="wide">
+        <section class="core-drawer-section">
+            <h3 class="core-drawer-section-title">Overview</h3>
+            <div class="core-drawer-fields">
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Client</span><span class="core-drawer-field-value" data-drawer-bind="client"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Assignee</span><span class="core-drawer-field-value" data-drawer-bind="assignee"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Stage</span><span class="core-drawer-field-value" data-drawer-bind="stage"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Progress</span><span class="core-drawer-field-value" data-drawer-bind="progress"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Status</span><span class="core-drawer-field-value" data-drawer-bind="status"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Health</span><span class="core-drawer-field-value" data-drawer-bind="health"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Priority</span><span class="core-drawer-field-value" data-drawer-bind="priority"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Start date</span><span class="core-drawer-field-value" data-drawer-bind="start-date"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Target date</span><span class="core-drawer-field-value" data-drawer-bind="target-date"></span></div>
+            </div>
+        </section>
+        <section class="core-drawer-section">
+            <h3 class="core-drawer-section-title">Financial snapshot</h3>
+            <div class="core-drawer-fields">
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Estimated</span><span class="core-drawer-field-value" data-drawer-bind="estimated"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Received</span><span class="core-drawer-field-value" data-drawer-bind="received"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Expense</span><span class="core-drawer-field-value" data-drawer-bind="expense"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Outstanding</span><span class="core-drawer-field-value" data-drawer-bind="outstanding"></span></div>
+            </div>
+        </section>
+        <x-slot:footer>
+            <a class="master-btn master-btn-primary" data-drawer-href-bind="record-url">Open full project</a>
+        </x-slot:footer>
+    </x-drawer>
 
     <div class="projects-modal" id="quickProjectModal" aria-hidden="true">
         <div class="projects-modal-backdrop" data-close-modal></div>

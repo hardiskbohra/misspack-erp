@@ -323,17 +323,16 @@
                     <i class="fa-regular fa-folder-open" aria-hidden="true"></i> Document archive
                 </a>
 
-                <div class="master-list-density desktop-only" role="group" aria-label="Row density">
-                    <button type="button" class="master-list-density-btn" data-density="comfortable"
-                        aria-pressed="true">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact"
-                        aria-pressed="false">Compact</button>
+                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
+                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
+                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
                 </div>
             </div>
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table">
+            <table class="master-table" data-table-settings data-table-key="cashflows">
                 <thead>
                     <tr>
                         <th scope="col">Date</th>
@@ -369,7 +368,7 @@
                         <tr class="cf-row is-clickable" data-href="{{ route('cashflows.show', $entry) }}">
                             <td data-label="Date">
                                 <span class="cf-date">{{ $entry->entry_date?->format('d M') }}</span>
-                                <span class="master-sub">{{ $entry->entry_date?->format('Y') }}</span>
+                                <span class="master-sub ui-mobile-secondary">{{ $entry->entry_date?->format('Y') }}</span>
                             </td>
                             <td class="cf-particular" data-label="Particular">
                                 <strong>{{ $entry->particular }}</strong>
@@ -395,16 +394,16 @@
                                          analysis builder never name the same entry differently --}}
                                     {{ $entry->partyLabel() ?: '-' }}
                                     @if ($entry->invoice_bill_number || $entry->bank_reference_number)
-                                        · {{ $entry->invoice_bill_number ?: $entry->bank_reference_number }}
+                                        <span class="ui-mobile-secondary"> · {{ $entry->invoice_bill_number ?: $entry->bank_reference_number }}</span>
                                     @endif
                                     @if ($entry->payment_mode)
-                                        <span class="cf-tag">{{ $paymentModeOptions[$entry->payment_mode] ?? strtoupper($entry->payment_mode) }}</span>
+                                        <span class="cf-tag ui-mobile-secondary">{{ $paymentModeOptions[$entry->payment_mode] ?? strtoupper($entry->payment_mode) }}</span>
                                     @endif
                                 </span>
                             </td>
                             <td class="cf-account" data-label="Account">
                                 {{ $entry->account?->account_name ?: '—' }}
-                                <span class="master-sub">{{ $entry->account?->typeLabel() ?: 'No account' }}</span>
+                                <span class="master-sub ui-mobile-secondary">{{ $entry->account?->typeLabel() ?: 'No account' }}</span>
                             </td>
                             <td class="cf-money is-num cf-credit" data-label="Credit">
                                 {{ $entry->credit_amount > 0 ? \App\Helpers\CommonHelper::amount($entry->credit_amount, $entry->currency) : '—' }}

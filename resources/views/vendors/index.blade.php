@@ -66,15 +66,15 @@
     </div>
 
     <div class="master-card master-table-card">
-        <div class="master-table-wrap">
-            <table class="master-table">
+        <div class="master-table-wrap ui-mobile-cards">
+            <table class="master-table" data-table-settings data-table-key="vendors">
                 <thead>
                     <tr>
                         <th>Vendor</th>
                         <th>Type</th>
-                        <th>Contact</th>
-                        <th>Location</th>
-                        <th>Website / Alibaba</th>
+                        <th class="ui-mobile-secondary">Contact</th>
+                        <th class="ui-mobile-secondary">Location</th>
+                        <th class="ui-mobile-secondary">Website / Alibaba</th>
                         <th>Status</th>
                         <th>Action</th>
                     </tr>
@@ -84,7 +84,7 @@
                     @php($statusClass = str_replace('_', '-', $vendor->status))
                     @php($typeClass = str_replace('_', '-', $vendor->vendor_type))
                     <tr>
-                        <td>
+                        <td data-label="Vendor">
                             <a href="{{ route('vendors.show', $vendor) }}" style="text-decoration:none;">
                                 <div class="master-profile">
                                     @if($vendor->image_path)
@@ -94,33 +94,54 @@
                                         <span class="master-avatar">{{ strtoupper(substr($vendor->vendor_name, 0, 1)) }}</span>
                                     @endif
                                     <div><span class="master-sub">{{ $vendor->vendor_number }}</span><span
-                                            class="master-id">{{ $vendor->contact_person_name ?: '-' }}</span><span
+                                            class="master-id ui-mobile-secondary">{{ $vendor->contact_person_name ?: '-' }}</span><span
                                             class="master-sub">{{ \Illuminate\Support\Str::limit($vendor->vendor_name, 25, '…') }}</span></div>
                                 </div>
                             </a>
                         </td>
-                        <td><span class="master-badge type-{{ $typeClass }}">{{ $vendor->typeLabel() }}</span>
+                        <td data-label="Type"><span class="master-badge type-{{ $typeClass }}">{{ $vendor->typeLabel() }}</span>
                             <span class="master-sub">{{ $vendor->category ?: '-' }}</span></td>
-                        <td><span
+                        <td data-label="Contact" class="ui-mobile-secondary"><span
                                 class="master-sub">{{ $vendor->contact_person_email ?: '-' }}</span><span
                                 class="master-sub">{{ $vendor->contact_person_mobile ?: '-' }}</span></td>
-                        <td>{{ $vendor->city ?: '-' }}<span class="master-sub">{{ $vendor->country ?: '-' }}</span></td>
-                        <td>
+                        <td data-label="Location" class="ui-mobile-secondary">{{ $vendor->city ?: '-' }}<span class="master-sub">{{ $vendor->country ?: '-' }}</span></td>
+                        <td data-label="Website / Alibaba" class="ui-mobile-secondary">
                             @if($vendor->website)<a href="{{ $vendor->website }}" target="_blank">Website</a>@else -
                             @endif
                             <span class="master-sub">@if($vendor->alibaba_link)<a href="{{ $vendor->alibaba_link }}"
                             target="_blank">Alibaba Link</a>@else No Alibaba link @endif</span>
                         </td>
-                        <td><span class="master-badge status-{{ $statusClass }}">{{ $vendor->statusLabel() }}</span>
+                        <td data-label="Status"><span class="master-badge status-{{ $statusClass }}">{{ $vendor->statusLabel() }}</span>
                         </td>
-                        <td>
-                            <div class="master-row-actions"><a href="{{ route('vendors.show', $vendor) }}"
-                                    class="master-icon-btn green" title="View">👁</a><a
-                                    href="{{ route('vendors.edit', $vendor) }}" class="master-icon-btn"
-                                    title="Edit">✎</a><button type="button"
-                                    class="master-icon-btn danger master-delete-btn" title="Delete"
-                                    data-id="{{ $vendor->id }}" data-name="{{ $vendor->vendor_name }}"
-                                    data-delete-url="{{ route('vendors.destroy', $vendor) }}">🗑</button></div>
+                        <td data-label="Action">
+                            <div class="master-row-actions">
+                                <button type="button" class="master-icon-btn" title="Quick details"
+                                    aria-label="Quick details for {{ $vendor->vendor_name }}"
+                                    aria-haspopup="dialog" aria-controls="vendorQuickDetails" aria-expanded="false"
+                                    data-drawer-open="vendorQuickDetails" data-drawer-eyebrow="Vendor"
+                                    data-drawer-title="{{ $vendor->vendor_name }}"
+                                    data-drawer-subtitle="{{ $vendor->vendor_number }}"
+                                    data-drawer-contact-name="{{ $vendor->contact_person_name }}"
+                                    data-drawer-contact-email="{{ $vendor->contact_person_email }}"
+                                    data-drawer-contact-mailto="{{ $vendor->contact_person_email ? 'mailto:'.$vendor->contact_person_email : '' }}"
+                                    data-drawer-contact-mobile="{{ $vendor->contact_person_mobile }}"
+                                    data-drawer-contact-tel="{{ $vendor->contact_person_mobile ? 'tel:'.preg_replace('/[^0-9+]/', '', $vendor->contact_person_mobile) : '' }}"
+                                    data-drawer-type="{{ $vendor->typeLabel() }}"
+                                    data-drawer-category="{{ $vendor->category }}"
+                                    data-drawer-location="{{ collect([$vendor->city, $vendor->state, $vendor->country])->filter()->implode(', ') }}"
+                                    data-drawer-status="{{ $vendor->statusLabel() }}"
+                                    data-drawer-website="{{ $vendor->website }}"
+                                    data-drawer-alibaba="{{ $vendor->alibaba_link }}"
+                                    data-drawer-record-url="{{ route('vendors.show', $vendor) }}">
+                                    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                                </button>
+                                <a href="{{ route('vendors.edit', $vendor) }}" class="master-icon-btn"
+                                    title="Edit" aria-label="Edit {{ $vendor->vendor_name }}">✎</a>
+                                <button type="button" class="master-icon-btn danger master-delete-btn" title="Delete"
+                                    aria-label="Delete {{ $vendor->vendor_name }}" data-id="{{ $vendor->id }}"
+                                    data-name="{{ $vendor->vendor_name }}"
+                                    data-delete-url="{{ route('vendors.destroy', $vendor) }}">🗑</button>
+                            </div>
                         </td>
                     </tr>
                     @empty
@@ -136,6 +157,64 @@
 
         <x-pagination :items="$vendors" />
     </div>
+
+    <x-drawer id="vendorQuickDetails" title="Vendor details" eyebrow="Vendor quick view" size="medium">
+        <section class="core-drawer-section">
+            <h3 class="core-drawer-section-title">Vendor profile</h3>
+            <div class="core-drawer-fields">
+                <div class="core-drawer-field" data-drawer-field>
+                    <span class="core-drawer-field-label">Vendor type</span>
+                    <span class="core-drawer-field-value" data-drawer-bind="type"></span>
+                </div>
+                <div class="core-drawer-field" data-drawer-field>
+                    <span class="core-drawer-field-label">Category</span>
+                    <span class="core-drawer-field-value" data-drawer-bind="category" data-drawer-empty="Not set"></span>
+                </div>
+                <div class="core-drawer-field" data-drawer-field>
+                    <span class="core-drawer-field-label">Status</span>
+                    <span class="core-drawer-field-value" data-drawer-bind="status"></span>
+                </div>
+                <div class="core-drawer-field" data-drawer-field>
+                    <span class="core-drawer-field-label">Location</span>
+                    <span class="core-drawer-field-value" data-drawer-bind="location" data-drawer-empty="Not provided"></span>
+                </div>
+            </div>
+        </section>
+        <section class="core-drawer-section">
+            <h3 class="core-drawer-section-title">Contact</h3>
+            <div class="core-drawer-fields">
+                <div class="core-drawer-field" data-drawer-field>
+                    <span class="core-drawer-field-label">Contact person</span>
+                    <span class="core-drawer-field-value" data-drawer-bind="contact-name" data-drawer-empty="Not provided"></span>
+                </div>
+                <div class="core-drawer-field" data-drawer-field>
+                    <span class="core-drawer-field-label">Mobile</span>
+                    <a class="core-drawer-field-value" data-drawer-href-bind="contact-tel" data-drawer-hide-if-empty>
+                        <span data-drawer-bind="contact-mobile"></span>
+                    </a>
+                </div>
+                <div class="core-drawer-field" data-drawer-field>
+                    <span class="core-drawer-field-label">Email</span>
+                    <a class="core-drawer-field-value" data-drawer-href-bind="contact-mailto" data-drawer-hide-if-empty>
+                        <span data-drawer-bind="contact-email"></span>
+                    </a>
+                </div>
+                <div class="core-drawer-field" data-drawer-field>
+                    <span class="core-drawer-field-label">Website</span>
+                    <a class="core-drawer-field-value" data-drawer-href-bind="website" target="_blank" rel="noopener noreferrer"
+                        data-drawer-hide-if-empty>Visit website</a>
+                </div>
+                <div class="core-drawer-field" data-drawer-field>
+                    <span class="core-drawer-field-label">Alibaba</span>
+                    <a class="core-drawer-field-value" data-drawer-href-bind="alibaba" target="_blank" rel="noopener noreferrer"
+                        data-drawer-hide-if-empty>Open Alibaba profile</a>
+                </div>
+            </div>
+        </section>
+        <x-slot:footer>
+            <a class="master-btn master-btn-primary" data-drawer-href-bind="record-url">Open full vendor record</a>
+        </x-slot:footer>
+    </x-drawer>
 
     <div class="master-modal" id="quickVendorModal" aria-hidden="true">
         <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="quickVendorTitle">

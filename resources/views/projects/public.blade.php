@@ -8,8 +8,9 @@
     <link rel="stylesheet" href="{{ asset('assets/vendor/select2/css/select2.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/select2-theme.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-alert.css') }}">
+    @include('layouts.partials.design-system-styles')
 </head>
-<body>
+<body data-ui-shell="public">
 <div class="portal-shell">
     <div class="portal-top">
         <div class="portal-logo">

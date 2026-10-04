@@ -1,0 +1,16 @@
+/* Activity-feed contract for new screens; current project activity/timeline
+   views are mapped in docs/ui-component-inventory.md. */
+body[data-ui-shell] :is(.core-activity-feed, .activity-feed) {
+    display: grid;
+    gap: var(--ui-space-3);
+    min-width: 0;
+}
+
+body[data-ui-shell] :is(.core-activity-item, .activity-item) {
+    min-width: 0;
+    padding: var(--ui-space-3);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-radius-nested);
+    background: var(--ui-card-surface);
+    color: var(--ui-text);
+}

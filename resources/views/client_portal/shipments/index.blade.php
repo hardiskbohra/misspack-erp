@@ -23,14 +23,14 @@
     </form>
 </div>
 <div class="cp-card">
-    <div class="cp-table-wrap">
-        <table class="cp-table">
+    <div class="cp-table-wrap ui-mobile-cards">
+        <table class="cp-table" data-table-settings data-table-key="portal-shipments">
             <thead>
                 <tr>
                     <th>Shipment</th>
                     <th>Route</th>
-                    <th>Pickup / Drop</th>
-                    <th>Logistic</th>
+                    <th class="ui-mobile-secondary">Pickup / Drop</th>
+                    <th class="ui-mobile-secondary">Logistic</th>
                     <th>ETA</th>
                     <th>Status</th>
                     <th>Action</th>
@@ -39,17 +39,17 @@
             <tbody>
                 @forelse($shipments as $shipment)
                     <tr>
-                        <td><strong>{{ $shipment->shipment_number }}</strong><span class="cp-muted"
+                        <td data-label="Shipment"><strong>{{ $shipment->shipment_number }}</strong><span class="cp-muted"
                                 style="display:block;">{{ $shipment->identity_name }}</span></td>
-                        <td>{{ $shipment->from_name ?: '-' }} → {{ $shipment->to_name ?: '-' }}<span class="cp-muted"
+                        <td data-label="Route">{{ $shipment->from_name ?: '-' }} → {{ $shipment->to_name ?: '-' }}<span class="cp-muted"
                                 style="display:block;">{{ $shipment->from_city ?: '-' }} to
                                 {{ $shipment->to_city ?: '-' }}</span></td>
-                        <td>{{ optional($shipment->pickup_date)->format('d M Y') ?: '-' }}<span class="cp-muted"
+                        <td data-label="Pickup / Drop" class="ui-mobile-secondary">{{ optional($shipment->pickup_date)->format('d M Y') ?: '-' }}<span class="cp-muted"
                                 style="display:block;">Drop:
                                 {{ optional($shipment->drop_date)->format('d M Y') ?: '-' }}</span></td>
-                        <td>{{ $shipment->logistic_partner ?: '-' }}<span class="cp-muted"
+                        <td data-label="Logistic" class="ui-mobile-secondary">{{ $shipment->logistic_partner ?: '-' }}<span class="cp-muted"
                                 style="display:block;">{{ $shipment->tracking_number ?: 'No tracking' }}</span></td>
-                        <td>
+                        <td data-label="ETA">
                             @if ($shipment->eta_date)
                                 <span class="ship-eta ship-eta-{{ $shipment->etaState() }}">{{ $shipment->eta_date->format('d M') }}</span>
                                 <span class="cp-muted" style="display:block;">{{ $shipment->etaLabel() }}</span>
@@ -57,10 +57,10 @@
                                 <span class="cp-muted">No ETA</span>
                             @endif
                         </td>
-                        <td><span
+                        <td data-label="Status"><span
                                 class="cp-badge status-{{ $shipment->status }}">{{ $shipment->statusLabel() }}</span>
                         </td>
-                        <td><a class="master-btn master-btn-soft master-btn-sm"
+                        <td data-label="Action"><a class="master-btn master-btn-soft master-btn-sm"
                                 href="{{ route('client-portal.shipments.show', $shipment->id) }}">Open</a></td>
                 </tr>@empty<tr>
                         <td colspan="7">

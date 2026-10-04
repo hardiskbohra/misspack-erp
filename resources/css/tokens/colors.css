@@ -1,0 +1,26 @@
+/* Color and surface tokens. Existing --mc-* values remain the compatibility
+   source; standalone pages receive safe light/dark fallbacks. */
+:root {
+    --ui-page-surface: var(--mc-soft, #eef3ff);
+    --ui-card-surface: var(--mc-card, #ffffff);
+    --ui-muted-surface: var(--mc-card-soft, #f8fbff);
+    --ui-border: var(--mc-border, #dfe7f3);
+    --ui-text: var(--mc-text, #17233b);
+    --ui-text-secondary: var(--mc-text-2, #536079);
+    --ui-text-muted: var(--mc-text-3, #7d8aa0);
+    --ui-accent: var(--master-primary, #4f83f1);
+    --ui-info: var(--master-info, #159ff7);
+    --ui-success: var(--master-green, #10b981);
+    --ui-warning: var(--master-orange, #f59e0b);
+    --ui-danger: var(--master-red, #ef4770);
+}
+
+:root[data-theme="dark"] {
+    --ui-page-surface: var(--mc-soft, #1d2c4d);
+    --ui-card-surface: var(--mc-card, #1a2540);
+    --ui-muted-surface: var(--mc-card-soft, #17223e);
+    --ui-border: var(--mc-border, #2a3854);
+    --ui-text: var(--mc-text, #e8edf6);
+    --ui-text-secondary: var(--mc-text-2, #aab6c9);
+    --ui-text-muted: var(--mc-text-3, #7f8ba1);
+}

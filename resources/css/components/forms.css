@@ -1,0 +1,47 @@
+/* Forms use one control shape and visible validation/focus affordances. */
+body[data-ui-shell] :is(.core-text-input, .core-select, .core-textarea, .master-input, .master-select, .master-textarea) {
+    border-color: var(--ui-border);
+    border-radius: var(--ui-radius-control);
+    background-color: var(--ui-card-surface);
+    color: var(--ui-text);
+    font-family: var(--ui-font-family);
+    font-size: 14px;
+}
+
+body[data-ui-shell] :is(.core-text-input, .core-select, .master-input, .master-select) {
+    min-height: 40px;
+}
+
+body[data-ui-shell] :is(.core-label, .master-label) {
+    color: var(--ui-text);
+    font-size: 12px;
+    font-weight: var(--ui-weight-semibold);
+    line-height: 1.35;
+}
+
+body[data-ui-shell] :is(.core-text-input, .core-select, .core-textarea, .master-input, .master-select, .master-textarea):focus-visible {
+    border-color: var(--ui-accent);
+    box-shadow: var(--ui-shadow-focus);
+    outline: none;
+}
+
+body[data-ui-shell] :is(.core-text-input, .core-select, .core-textarea, .master-input, .master-select, .master-textarea)[aria-invalid="true"],
+body[data-ui-shell] :is(.core-text-input, .core-select, .core-textarea, .master-input, .master-select, .master-textarea).is-invalid {
+    border-color: var(--ui-danger);
+}
+
+body[data-ui-shell] :is(.master-check, .core-checkbox-label) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-2);
+    color: var(--ui-text-secondary);
+    font-size: 13px;
+    font-weight: var(--ui-weight-medium);
+    line-height: 1.4;
+}
+
+body[data-ui-shell] :is(.core-field-error, .master-error, .master-field-error) {
+    color: var(--ui-danger);
+    font-size: var(--ui-font-sm);
+    line-height: 1.4;
+}

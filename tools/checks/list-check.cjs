@@ -49,6 +49,7 @@ const cashflowJs = fs.readFileSync(path.join(ROOT, 'public/assets/js/cashflows.j
 const layoutJs = fs.readFileSync(LAYOUT_JS, 'utf8');
 const layoutCss = fs.readFileSync(MASTER_INDEX, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const listCss = fs.readFileSync(LIST_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+const tableCss = fs.readFileSync(path.join(ROOT, 'resources/css/components/tables.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const cashView = fs.readFileSync(CASHFLOW_VIEW, 'utf8');
 const cashCss = fs.readFileSync(CASHFLOW_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const model = fs.readFileSync(MODEL, 'utf8');
@@ -78,8 +79,8 @@ check('no cell spans more columns than the table has',
    attribute — the stacked-card label, for one — is not the guard's business,
    so the pin reads the class and what follows it, not the exact tag text */
 check('the charges column is marked as numeric',
-    /<th scope="col" class="is-num">Charges<\/th>/.test(view)
-    && /class="ship-money is-num"/.test(view)
+    /<th scope="col" class="[^"]*\bis-num\b[^"]*">Charges<\/th>/.test(view)
+    && /class="[^"]*\bship-money\b[^"]*\bis-num\b[^"]*"/.test(view)
     && /<td class="is-num"[^>]*>\s*<strong>\{\{ \\App\\Models\\Shipment::formatInr\(\$pageSpendInr\)/.test(view));
 check('the totals row keeps the money in the charges column',
     /<td class="is-num"[^>]*>\s*<strong>[\s\S]{0,200}Filtered total/.test(view));
@@ -265,11 +266,13 @@ check('the applied strip is themed rather than light-only',
     && /\.master-list-applied-x:hover \{[\s\S]{0,80}var\(--danger-light\)/.test(listCss));
 
 /* row density — a long list should let the reader decide how long */
-const densityContract = view => /role="group" aria-label="Row density"/.test(view)
-    && (view.match(/class="master-list-density-btn"/g) || []).length === 2
-    && (view.match(/aria-pressed="(true|false)"/g) || []).length >= 2;
+const densityContract = view => /role="group" aria-label="Table density"/.test(view)
+    && (view.match(/class="master-list-density-btn"/g) || []).length === 3
+    && /data-density="standard" aria-pressed="true">Standard/.test(view)
+    && /data-density="comfortable" aria-pressed="false">Comfortable/.test(view)
+    && /data-density="compact" aria-pressed="false">Compact/.test(view);
 
-check('the density control states and carries its own state',
+check('the three density controls expose their pressed state',
     densityContract(view) && /class="master-list-density desktop-only"/.test(view));
 
 /* one implementation: the module passes its root and its storage key to the
@@ -278,8 +281,10 @@ check('the density choice is remembered on the device by the shared toolkit',
     /misspack\.shipments\.density/.test(js) && /misspack\.cashflows\.density/.test(cashflowJs)
     && /localStorage/.test(listJs) && /setAttribute\('data-density'/.test(listJs)
     && /MasterList\.density/.test(js) && /MasterList\.density/.test(cashflowJs));
-check('both densities actually change the row geometry',
-    /\[data-density="compact"\] \.master-table th,[\s\S]{0,120}padding: 7px 14px/.test(listCss)
+check('all three density presets actually change row geometry',
+    /master-list\[data-density="comfortable"\] \.master-table :is\(th, td\),[\s\S]{0,200}padding: 14px 16px/.test(tableCss)
+    && /master-list\[data-density="standard"\] \.master-table :is\(th, td\),[\s\S]{0,200}padding: 10px 12px/.test(tableCss)
+    && /master-list\[data-density="compact"\] \.master-table :is\(th, td\),[\s\S]{0,200}padding: 6px 10px/.test(tableCss)
     && /--ship-line: 18px/.test(css));
 check('the density is applied before the table paints',
     /document\.readyState === 'loading'/.test(js + cashflowJs)
@@ -438,7 +443,7 @@ const CHROME = [
     ['applied chips', /class="master-list-applied-chip"/],
     ['clear-all escape', /class="master-list-applied-clear"/],
     ['table bar + order hint', /class="master-list-toolbar"[\s\S]{0,600}class="master-list-hint"/],
-    ['density control', /class="master-list-density desktop-only" role="group" aria-label="Row density"/],
+    ['density control', /class="master-list-density desktop-only" role="group" aria-label="Table density"[\s\S]{0,500}data-density="compact" aria-pressed="false">Compact/],
     ['group divider', /class="master-list-group"/],
     ['group count', /class="master-list-group-count"/],
     ['totals row', /class="master-list-total"/],
@@ -501,7 +506,7 @@ check('the ledger columns line up like the shipment list',
     && /class="is-num">Debit</.test(cashView)
     && /class="is-num">Balance</.test(cashView)
     && (cashView.match(/class="cf-money is-num/g) || []).length === 3
-    && /class="ship-money is-num"/.test(view));
+    && /class="[^"]*\bship-money\b[^"]*\bis-num\b[^"]*"/.test(view));
 
 const cashStatuses = [...fs.readFileSync(path.join(ROOT, 'app/Models/CashflowEntry.php'), 'utf8')
     .matchAll(/function accountingStatusOptions\(\): array[\s\S]*?return \[([\s\S]*?)\];/g)]
@@ -563,10 +568,10 @@ const onlyInMedia = (cssText, query, needle) => {
 };
 
 check('the mobile card labels only exist below the card breakpoint',
-    onlyInMedia(listCss, 'max-width: 768px', 'td[data-label]::before'));
+    onlyInMedia(listCss, 'max-width: 767px', 'td[data-label]::before'));
 
 check('the density chrome only exists above the card breakpoint',
-    onlyInMedia(listCss, 'min-width: 769px', 'data-density="compact"'));
+    onlyInMedia(listCss, 'min-width: 768px', 'data-density="compact"'));
 
 /* ---- table shell integrity ----
    A table lays out as one box: the header and the body share a column grid
@@ -645,7 +650,7 @@ const moduleRestacks = restacked('shipments.css').filter(r => r.list).map(r => r
 
 check('the module sheet leaves the list shell alone; the shared sheet owns it',
     moduleRestacks.length === 0
-    && onlyInMedia(listCss, 'max-width: 768px', '.master-list .master-table tbody'),
+    && onlyInMedia(listCss, 'max-width: 767px', '.master-list .master-table tbody'),
     moduleRestacks.join(' | '));
 
 /* the shell is pinned node by node: table, then the boxes inside it. Each pin
@@ -655,7 +660,7 @@ const SHELL_PINS = ['display: table;', 'display: table-header-group;', 'display:
     'display: table-row;', 'display: table-cell;'];
 
 check('the shared sheet pins the shell above the phone band',
-    SHELL_PINS.every(pin => onlyInMedia(listCss, 'min-width: 769px', pin)));
+    SHELL_PINS.every(pin => onlyInMedia(listCss, 'min-width: 768px', pin)));
 
 /* a table wider than its card scrolls in its wrapper; a table without one has
    nowhere to scroll, so the shell is part of the markup contract too */
@@ -689,9 +694,10 @@ check('every table in a view sits in a .master-table-wrap',
    The whole chrome — not only the two rules above — belongs to the surface.
    This is what stops a fourth list from arriving with its own idea of the bar,
    the applied strip or the toolbar: a module sheet styles its own cells and
-   nothing that starts with .master-list. */
+   nothing that starts with .master-list. The compiled design-system fallback
+   is a duplicate aggregate, so it is excluded from this source-sheet scan. */
 const chromeOwners = CSS_SHEETS
-    .filter(f => f !== 'master-list.css')
+    .filter(f => !['master-list.css', 'design-system.css'].includes(f))
     .filter(f => /\.master-list\b/.test(fs.readFileSync(path.join(CSS_DIR, f), 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '')));
 check('no sheet but the surface styles the list chrome',

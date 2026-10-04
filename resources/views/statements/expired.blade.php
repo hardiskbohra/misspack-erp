@@ -7,6 +7,7 @@
     <title>Statement link unavailable</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="stylesheet" href="{{ asset('assets/css/statement.css') }}">
+    @include('layouts.partials.design-system-styles')
 </head>
 
 @php
@@ -27,7 +28,7 @@
     };
 @endphp
 
-<body class="stmt-standalone stmt-centered">
+<body class="stmt-standalone stmt-centered" data-ui-shell="public">
     <div class="stmt-expired">
         <p class="stmt-expired-mark" aria-hidden="true">🔒</p>
         <h1 class="stmt-expired-title">{{ $heading }}</h1>

@@ -1,0 +1,12 @@
+/* Pagination remains compact, centered, and keyboard-visible across tables. */
+body[data-ui-shell] :is(.core-pagination, .master-pagination, .cp-pagination) {
+    color: var(--ui-text-secondary);
+    font-size: 13px;
+}
+
+body[data-ui-shell] :is(.core-pagination, .master-pagination, .cp-pagination) a,
+body[data-ui-shell] :is(.core-pagination, .master-pagination, .cp-pagination) button {
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: var(--ui-radius-control);
+}

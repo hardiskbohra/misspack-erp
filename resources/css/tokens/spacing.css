@@ -1,0 +1,14 @@
+/* 4 px base / 8 px rhythm. Components may tighten on compact viewports. */
+:root {
+    --ui-space-1: 4px;
+    --ui-space-2: 8px;
+    --ui-space-3: 12px;
+    --ui-space-4: 16px;
+    --ui-space-5: 20px;
+    --ui-space-6: 24px;
+    --ui-space-8: 32px;
+    --ui-radius-control: 11px;
+    --ui-radius-nested: 14px;
+    --ui-radius-card: 18px;
+    --ui-radius-pill: 999px;
+}

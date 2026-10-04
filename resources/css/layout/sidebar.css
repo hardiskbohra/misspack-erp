@@ -1,0 +1,12 @@
+/* Navigation keeps its existing open/collapsed behavior; shared rules only
+   normalize focus visibility and prevent long labels from forcing overflow. */
+body[data-ui-shell="app"] .sidebar-item,
+body[data-ui-shell="portal"] .cp-nav-link {
+    min-width: 0;
+}
+
+body[data-ui-shell="app"] .sidebar-item > span,
+body[data-ui-shell="portal"] .cp-nav-link > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}

@@ -47,7 +47,7 @@
 .cq-header h1 {
     margin:0;
     font-size:22px;
-    font-weight:900;
+    font-weight:700;
 }
 
 .cq-form-card {
@@ -65,7 +65,7 @@
     margin:0 0 16px;
     color: var(--mc-text-3);
     font-size:12px;
-    font-weight:900;
+    font-weight:700;
     letter-spacing:.08em;
     text-transform:uppercase;
 }
@@ -94,7 +94,7 @@
     padding:14px 16px;
     margin-bottom:18px;
     border-radius:14px;
-    font-weight:800;
+    font-weight:700;
     color:#be123c;
     background:#fff0f4;
     border:1px solid #fecdd3;

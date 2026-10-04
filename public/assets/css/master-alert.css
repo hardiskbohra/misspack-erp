@@ -88,7 +88,7 @@
 .ma-toast-title {
     display: block;
     font-size: 13px;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--ma-ink);
     margin-bottom: 2px;
 }
@@ -201,7 +201,7 @@
 
 .ma-dialog-title {
     font-size: 17px;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--ma-ink);
     margin-bottom: 8px;
 }

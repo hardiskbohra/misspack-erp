@@ -8,11 +8,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('assets/css/product-public.css') }}">
+    @include('layouts.partials.design-system-styles')
 </head>
 
-<body>
+<body data-ui-shell="public">
 
 @php($mediaItems=[])
 @foreach($product->media as $media)
@@ -45,7 +46,7 @@
         <div class="card gallery">
             <div class="main-media" id="mainMedia">
                 @if (!count($mediaItems))
-                    <div style="text-align:center;color:#687386;font-weight:900">📦<br>No media uploaded.</div>
+                    <div style="text-align:center;color:#687386;font-weight:700">📦<br>No media uploaded.</div>
                 @endif
             </div>
             @if (count($mediaItems) > 1)

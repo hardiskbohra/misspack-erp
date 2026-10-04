@@ -63,7 +63,7 @@ class ClientPortalQuoteController extends ClientPortalBaseController
     {
         $quote = $this->findQuoteForClient($request, $quote);
         $portalUser = $this->portalUser($request);
-        $data = $request->validate(['body' => ['required', 'string']]);
+        $data = $request->validate(['body' => ['required', 'string', 'max:4000']]);
 
         ClientPortalComment::create([
             'client_id' => $portalUser->client_id,

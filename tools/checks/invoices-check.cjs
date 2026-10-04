@@ -334,7 +334,7 @@ const colClasses = [...colgroup.matchAll(/class="(si-col-[a-z]+)"/g)].map(m => m
 const headCount = (view.slice(view.indexOf('<thead>'), view.indexOf('</thead>')).match(/<th\b/g) || []).length;
 
 check('the listing sizes its own columns',
-    /<table class="master-table si-table">/.test(view)
+    /<table class="master-table si-table"[^>]*>/.test(view)
     && colClasses.length === headCount
     && colClasses.every(name => new RegExp('\\.si-index \\.' + name + ' \\{\\s*\\n\\s*width:').test(sheet))
     && /\.si-index \.si-table \{\s*\n\s*table-layout: fixed;\s*\n\s*min-width: 1080px/.test(sheet)

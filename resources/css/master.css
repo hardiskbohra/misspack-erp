@@ -1,0 +1,34 @@
+/*
+ * MissPack ERP design-system entry point.
+ * Order is deliberate: tokens -> shell -> components -> page adapters -> responsive rules.
+ * New page CSS belongs in resources/css/pages and should use core-* patterns;
+ * legacy page assets remain in public/assets/css until they are migrated.
+ */
+@import './tokens/colors.css';
+@import './tokens/typography.css';
+@import './tokens/spacing.css';
+@import './tokens/elevation.css';
+
+@import './layout/app-shell.css';
+@import './layout/sidebar.css';
+@import './layout/topbar.css';
+@import './layout/page.css';
+
+@import './components/buttons.css';
+@import './components/cards.css';
+@import './components/forms.css';
+@import './components/tables.css';
+@import './components/badges.css';
+@import './components/tabs.css';
+@import './components/modals.css';
+@import './components/drawers.css';
+@import './components/alerts.css';
+@import './components/dropdowns.css';
+@import './components/pagination.css';
+@import './components/timeline.css';
+@import './components/kanban.css';
+@import './components/attachments.css';
+@import './components/activity.css';
+
+@import './pages/module-adapters.css';
+@import './layout/responsive.css';
