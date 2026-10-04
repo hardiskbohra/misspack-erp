@@ -42,7 +42,7 @@
             <p style="margin:0 0 6px;font-weight:700;">
                 This INR entry is generated from a vendor payment
                 @if (\Illuminate\Support\Facades\Route::has('vendors.show'))
-                    — <a href="{{ route('vendors.show', $linkedVendorPayment->vendor_id) }}#payments">open the vendor ledger</a>
+                    — <a href="{{ route('vendors.show', ['vendor' => $linkedVendorPayment->vendor_id, 'tab' => 'payments']) }}">open the vendor ledger</a>
                 @endif
             </p>
             <p style="margin:0;font-weight:600;color:#687386;">

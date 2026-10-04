@@ -65,6 +65,7 @@
     $uiModule = match (true) {
         request()->routeIs('shipments.*') => 'shipments',
         request()->routeIs('clients.*') => 'clients',
+        request()->routeIs('vendors.*') => 'vendors',
         request()->routeIs('cashflows.*') => 'cashflows',
         request()->routeIs('users.*') => 'users',
         default => null,

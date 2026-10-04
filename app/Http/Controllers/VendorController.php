@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\DateRanges;
 use App\Models\Vendor;
 use App\Models\VendorAttachment;
 use App\Models\VendorComment;
 use App\Models\VendorPaymentAttachment;
 use App\Models\VendorPaymentEntry;
+use App\Services\PartyStatement;
 use App\Services\VendorPaymentCashflowSync;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,28 +22,61 @@ use Illuminate\View\View;
 
 class VendorController extends Controller
 {
+    private const SHOW_TABS = [
+        'overview' => 'Overview',
+        'profile' => 'Business profile',
+        'contacts' => 'Contacts',
+        'commercial' => 'Commercial',
+        'quotes' => 'Quotes',
+        'projects' => 'Projects',
+        'products' => 'Products',
+        'payments' => 'Payments',
+        'statement' => 'Statement',
+        'shipments' => 'Shipments',
+        'attachments' => 'Documents',
+        'comments' => 'Notes',
+    ];
+
     public function index(Request $request): View
     {
         $search = $request->query('search');
+        $search = is_string($search) ? trim($search) : '';
+        $search = $search !== '' ? mb_substr($search, 0, 150) : null;
+
         $status = $request->query('status', 'all');
+        $status = is_string($status) && array_key_exists($status, ['all' => 'All'] + Vendor::statusOptions())
+            ? $status
+            : 'all';
+
         $type = $request->query('type', 'all');
+        $type = is_string($type) && array_key_exists($type, ['all' => 'All'] + Vendor::typeOptions())
+            ? $type
+            : 'all';
+
         $country = $request->query('country', 'all');
+        $country = is_string($country) ? trim(mb_substr($country, 0, 255)) : 'all';
+        $country = $country !== '' ? $country : 'all';
 
         $vendors = Vendor::query()
-            ->with('creator')
             ->search($search)
             ->when($status !== 'all', fn ($q) => $q->where('status', $status))
             ->when($type !== 'all', fn ($q) => $q->where('vendor_type', $type))
             ->when($country !== 'all', fn ($q) => $q->where('country', $country))
             ->latest('id')
-            ->paginate(10)
+            ->paginate(25)
             ->withQueryString();
 
+        $statusCounts = Vendor::query()
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
         $stats = [
-            'total' => Vendor::count(),
-            'active' => Vendor::where('status', Vendor::STATUS_ACTIVE)->count(),
-            'on_hold' => Vendor::where('status', Vendor::STATUS_ON_HOLD)->count(),
-            'blacklisted' => Vendor::where('status', Vendor::STATUS_BLACKLISTED)->count(),
+            'total' => (int) $statusCounts->sum(),
+            'active' => (int) ($statusCounts[Vendor::STATUS_ACTIVE] ?? 0),
+            'inactive' => (int) ($statusCounts[Vendor::STATUS_INACTIVE] ?? 0),
+            'on_hold' => (int) ($statusCounts[Vendor::STATUS_ON_HOLD] ?? 0),
+            'blacklisted' => (int) ($statusCounts[Vendor::STATUS_BLACKLISTED] ?? 0),
             'international' => Vendor::whereNotNull('country')->where('country', '!=', 'India')->count(),
         ];
 
@@ -136,8 +171,11 @@ class VendorController extends Controller
             ->with('success', 'Quick vendor created successfully.');
     }
 
-    public function show(Vendor $vendor): View
+    public function show(Request $request, Vendor $vendor, PartyStatement $statements): View
     {
+        $tab = $request->query('tab', 'overview');
+        $tab = is_string($tab) && array_key_exists($tab, self::SHOW_TABS) ? $tab : 'overview';
+
         $relations = ['creator'];
         if (Schema::hasTable('vendor_comments')) {
             $relations[] = 'comments.creator';
@@ -147,7 +185,17 @@ class VendorController extends Controller
         }
         $vendor->load($relations);
 
-        return view('vendors.show', array_merge($this->formData($vendor), $this->dashboardData($vendor)));
+        $statementData = $tab === 'statement'
+            ? $this->vendorStatementData($request, $vendor, $statements)
+            : [];
+
+        return view('vendors.show', [
+            ...$this->formData($vendor),
+            ...$this->dashboardData($vendor),
+            ...$statementData,
+            'tabs' => self::SHOW_TABS,
+            'tab' => $tab,
+        ]);
     }
 
     public function edit(Vendor $vendor): View
@@ -473,6 +521,103 @@ class VendorController extends Controller
         }
     }
 
+    private function vendorStatementData(Request $request, Vendor $vendor, PartyStatement $statements): array
+    {
+        $presets = DateRanges::presets();
+        $requestedPeriod = $request->query('period');
+        $period = is_string($requestedPeriod) ? $requestedPeriod : null;
+        $dateFrom = DateRanges::normalise($request->query('date_from'));
+        $dateTo = DateRanges::normalise($request->query('date_to'));
+
+        if ($period === 'all') {
+            $dateFrom = $dateTo = null;
+        } elseif ($period !== null && isset($presets[$period])) {
+            $dateFrom = $presets[$period]['from'];
+            $dateTo = $presets[$period]['to'];
+        } elseif (! $dateFrom && ! $dateTo) {
+            $dateFrom = $presets['this_month']['from'];
+            $dateTo = $presets['this_month']['to'];
+        }
+
+        if ($dateFrom && $dateTo && $dateFrom > $dateTo) {
+            [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+        }
+
+        $currencyOptions = $this->vendorCurrencyOptions($vendor, $statements);
+        $defaultCurrency = $statements->defaultCurrency('vendor', (int) $vendor->id);
+        $requestedCurrency = $request->query('currency');
+        $currency = strtoupper(is_string($requestedCurrency) ? trim($requestedCurrency) : $defaultCurrency);
+        if ($currency === '' || ! in_array($currency, $currencyOptions, true)) {
+            $currency = $defaultCurrency;
+        }
+
+        $statement = $statements->build('vendor', (int) $vendor->id, $dateFrom, $dateTo, [
+            'currency' => $currency,
+            'ageing' => false,
+        ]);
+        abort_if($statement === null, 404);
+
+        $activeRange = ($dateFrom || $dateTo) ? DateRanges::keyOf($dateFrom, $dateTo) : 'all';
+        $periodKey = in_array($period, array_merge(array_keys($presets), ['all', 'custom']), true)
+            ? $period
+            : ($activeRange ?: 'custom');
+
+        return [
+            'statement' => $statement,
+            'currencyOptions' => $currencyOptions,
+            'currency' => $currency,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'dateRangeLabels' => DateRanges::LABELS,
+            'periodOptions' => DateRanges::LABELS + ['all' => 'All time', 'custom' => 'Custom dates'],
+            'periodKey' => $periodKey,
+        ];
+    }
+
+    /** Include name-linked cashflow currencies so older currency rows remain filterable. */
+    private function vendorCurrencyOptions(Vendor $vendor, PartyStatement $statements): array
+    {
+        $preferred = $statements->defaultCurrency('vendor', (int) $vendor->id);
+        $currencies = $statements->currencies('vendor', (int) $vendor->id);
+        if (Schema::hasTable('cashflow_entries') && Schema::hasColumn('cashflow_entries', 'currency')) {
+            $hasVendorId = Schema::hasColumn('cashflow_entries', 'vendor_id');
+            $hasRelatedType = Schema::hasColumn('cashflow_entries', 'related_party_type');
+            $hasRelatedName = Schema::hasColumn('cashflow_entries', 'related_party_name');
+
+            if ($hasVendorId || ($hasRelatedType && $hasRelatedName)) {
+                $legacyCurrencies = \App\Models\CashflowEntry::query()
+                    ->where(function ($query) use ($vendor, $hasVendorId, $hasRelatedType, $hasRelatedName) {
+                        if ($hasVendorId) {
+                            $query->where('vendor_id', $vendor->id);
+                        }
+                        if ($hasRelatedType && $hasRelatedName) {
+                            $method = $hasVendorId ? 'orWhere' : 'where';
+                            $query->{$method}(function ($related) use ($vendor) {
+                                $related->where('related_party_type', 'vendor')
+                                    ->where('related_party_name', 'like', '%'.$vendor->vendor_name.'%');
+                            });
+                        }
+                    })
+                    ->whereNotNull('currency')
+                    ->select('currency')
+                    ->distinct()
+                    ->pluck('currency')
+                    ->all();
+
+                $currencies = array_merge($currencies, $legacyCurrencies);
+            }
+        }
+
+        $currencies = array_values(array_unique(array_filter(array_map(
+            fn ($code) => strtoupper(trim((string) $code)),
+            $currencies
+        ))));
+        $otherCurrencies = array_values(array_diff($currencies, [$preferred]));
+        sort($otherCurrencies);
+
+        return array_merge([$preferred], $otherCurrencies);
+    }
+
     private function dashboardData(Vendor $vendor): array
     {
         $projectProducts = $this->vendorProjectProducts($vendor);
@@ -482,7 +627,7 @@ class VendorController extends Controller
         $shipments = $this->vendorShipments($vendor);
         $products = $this->vendorProducts($projectProducts, $vendorQuotes);
         $cashflowAccounts = $this->cashflowAccounts();
-        $projectsForPayment = $this->projectsForVendorPayment($vendor);
+        $projectsForPayment = $this->projectsForVendorPayment($vendor, $vendorPaymentEntries->pluck('project_id'));
         $attachmentOptions = class_exists(VendorAttachment::class) ? VendorAttachment::categoryOptions() : [];
         $commentsAvailable = Schema::hasTable('vendor_comments');
         $attachmentsAvailable = Schema::hasTable('vendor_attachments');
@@ -535,6 +680,7 @@ class VendorController extends Controller
             'cashflow_count' => $statementEntries->count(),
             'shipments_count' => $shipments->count(),
             'attachments_count' => $vendor->relationLoaded('attachments') ? $vendor->attachments->count() : 0,
+            'comments_count' => $vendor->relationLoaded('comments') ? $vendor->comments->count() : 0,
             'vendor_currency' => $preferredCurrency,
             'vendor_bill_foreign' => $preferredCurrencySummary['bill'],
             'vendor_expense_foreign' => $preferredCurrencySummary['expense'],
@@ -716,20 +862,22 @@ class VendorController extends Controller
         return \App\Models\CashflowAccount::query()->orderBy('account_name')->get();
     }
 
-    private function projectsForVendorPayment(Vendor $vendor)
+    private function projectsForVendorPayment(Vendor $vendor, $paymentProjectIds = [])
     {
         if (! class_exists(\App\Models\Project::class) || ! Schema::hasTable('projects')) {
             return collect();
         }
 
-        $projectIds = collect();
+        $projectIds = collect($paymentProjectIds)->filter();
         if (class_exists(\App\Models\ProjectProduct::class) && Schema::hasTable('project_products') && Schema::hasColumn('project_products', 'vendor_id')) {
-            $projectIds = \App\Models\ProjectProduct::where('vendor_id', $vendor->id)->pluck('project_id');
+            $projectIds = $projectIds->merge(\App\Models\ProjectProduct::where('vendor_id', $vendor->id)->pluck('project_id'));
         }
+        $projectIds = $projectIds->filter()->unique()->values();
 
         $query = \App\Models\Project::query()->orderByDesc('id');
         if ($projectIds->isNotEmpty()) {
-            $query->whereIn('id', $projectIds->filter()->unique()->values());
+            // Keep every currently linked project available to payment edit forms.
+            return $query->whereIn('id', $projectIds)->get();
         }
 
         return $query->limit(100)->get();

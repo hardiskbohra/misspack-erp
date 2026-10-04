@@ -21,7 +21,7 @@
                 ({{ $linkedVendorPayment->relationLoaded('vendor') && $linkedVendorPayment->vendor ? $linkedVendorPayment->vendor->vendor_name : 'Vendor' }}).
                 Amount, date, reference and account come from the vendor ledger —
                 @if (\Illuminate\Support\Facades\Route::has('vendors.show'))
-                    <a href="{{ route('vendors.show', $linkedVendorPayment->vendor_id) }}#payments">edit the vendor payment</a> to change them here as well.
+                    <a href="{{ route('vendors.show', ['vendor' => $linkedVendorPayment->vendor_id, 'tab' => 'payments']) }}">edit the vendor payment</a> to change them here as well.
                 @else
                     edit the vendor payment to change them here as well.
                 @endif

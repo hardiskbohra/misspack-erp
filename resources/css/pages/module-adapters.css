@@ -52,6 +52,7 @@ body[data-ui-module] .cf-sub-card {
    nested inside it remains a white/theme card. */
 body[data-ui-module] .master-tabs-panels,
 body[data-ui-module] .client-detail-panels,
+body[data-ui-module] .vendor-detail-panels,
 body[data-ui-module] .cf-panel {
     background: var(--ui-nested-surface);
 }

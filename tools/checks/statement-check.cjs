@@ -320,8 +320,23 @@ check('the nav reaches the new surface',
 check('the ledger item no longer lights up while a statement is open',
     /'except' => \['cashflows\.documents', 'cashflows\.statements', 'cashflows\.statements\.\*'\]/.test(read('resources/views/layouts/app.blade.php')));
 check('a party page offers its own statement',
-    /partyType' => 'client', 'party' => \$client->id/.test(read('resources/views/clients/show.blade.php'))
-    && /partyType' => 'vendor', 'party' => \$vendor->id/.test(read('resources/views/vendors/show.blade.php')));
+    /partyType' => 'client', 'party' => \$client->id/.test(read('resources/views/clients/partials/statement.blade.php'))
+    && /partyType' => 'vendor', 'party' => \$vendor->id/.test(read('resources/views/vendors/partials/statement.blade.php')));
+
+const vendorStatementView = read('resources/views/vendors/partials/statement.blade.php');
+check('the vendor statement keeps period, custom date, and currency filters',
+    /name="period"/.test(vendorStatementView)
+    && /name="date_from"/.test(vendorStatementView)
+    && /name="date_to"/.test(vendorStatementView)
+    && /name="currency"/.test(vendorStatementView)
+    && /getElementById\('vendorStatementPeriod'\)\.value='custom'/.test(vendorStatementView));
+check('the vendor statement retains its PDF export',
+    /cashflows\.statements\.pdf/.test(vendorStatementView)
+    && /Download PDF/.test(vendorStatementView));
+check('vendor detail tabs are the target of linked payment workflows',
+    /'tab' => 'payments'/.test(read('resources/views/cashflows/form.blade.php'))
+    && /'tab' => 'payments'/.test(read('resources/views/cashflows/index.blade.php'))
+    && /'tab' => 'payments'/.test(read('resources/views/cashflows/show.blade.php')));
 
 /* ------------------------------------------------------------------- PHP */
 
