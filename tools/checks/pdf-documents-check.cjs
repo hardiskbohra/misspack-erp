@@ -143,6 +143,7 @@ check('invoice follows the reference hierarchy without inventing a subject',
     && /Authorised Signatory/.test(invoiceView)
     && !/Subject/.test(invoiceView));
 
+const invoiceItemsTable = (invoiceView.match(/<table class="items">([\s\S]*?)<\/table>/) || [])[1] || '';
 check('discounted invoice line amounts reconcile to the stored tax and taxable totals',
     /largest-remainder allocation/.test(invoiceView)
     && /\$remainingCents = \$targetCents - array_sum\(\$allocatedCents\)/.test(invoiceView)
@@ -151,15 +152,24 @@ check('discounted invoice line amounts reconcile to the stored tax and taxable t
     && /\$lineCgstAmounts = \$allocateCents\(\(float\) \$invoice->cgst_amount, \$cgstWeights\)/.test(invoiceView)
     && /\$lineSgstAmounts = \$allocateCents\(\(float\) \$invoice->sgst_amount, \$sgstWeights\)/.test(invoiceView)
     && /\$lineIgstAmounts = \$allocateCents\(\(float\) \$invoice->igst_amount, \$igstWeights\)/.test(invoiceView)
-    && /\$lineDiscountAmount = \$lineTaxableAmountsAvailable/.test(invoiceView)
-    && /\$item->taxable_amount - \$lineTaxableAmount/.test(invoiceView)
-    && /'discount_amount' => \$lineDiscountAmount/.test(invoiceView)
     && /'taxable_amount' => \$lineTaxableAmountsAvailable/.test(invoiceView)
     && /'tax_amount' => \$lineTaxesAvailable/.test(invoiceView)
     && /\$money\(\$line\['tax_amount'\]\)/.test(invoiceView)
-    && /Total discount/.test(invoiceView)
     && /lineFiguresUnavailable/.test(invoiceView)
+    && !/Total discount|discount_amount/.test(invoiceItemsTable)
+    && (invoiceItemsTable.match(/<col style=/g) || []).length === 6
     && !/\$money\(\$item->(?:cgst|sgst|igst)_amount\)/.test(invoiceView));
+
+check('party GSTIN and PAN use unboxed address text',
+    /<p class="party-detail">[\s\S]*?GSTIN \{\{ \$invoice->client_gstin \}\}[\s\S]*?PAN \{\{ \$invoice->client_pan \}\}[\s\S]*?<\/p>/.test(invoiceView)
+    && !/party-tax/.test(invoiceView + invoiceCss));
+
+const grandTotalRule = (invoiceCss.match(/\.summary tr\.grand-total td\s*\{([^}]*)\}/) || [])[1] || '';
+check('grand total is bold dark text on a plain surface',
+    /background:\s*var\(--invoice-surface\)/.test(grandTotalRule)
+    && /color:\s*var\(--invoice-text\)/.test(grandTotalRule)
+    && /font-weight:\s*700/.test(grandTotalRule)
+    && !/background:\s*var\(--invoice-brand\)/.test(grandTotalRule));
 
 check('cashflow reports use the shared paper shell but keep their landscape data need',
     /class="pdf-preview"/.test(cashflowView)

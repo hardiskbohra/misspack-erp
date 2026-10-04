@@ -263,24 +263,6 @@
     font-style: italic;
 }
 
-.party-tax {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 6px;
-    margin-top: 6px;
-}
-
-.party-tax span {
-    display: inline-block;
-    padding: 2px 5px;
-    border: 1px solid var(--invoice-border-soft);
-    border-radius: 4px;
-    color: var(--invoice-muted);
-    font-size: 9.5px;
-    line-height: 1.25;
-    overflow-wrap: anywhere;
-}
-
 /* --------------------------------------------------------------- line items */
 
 .items-wrap {
@@ -573,10 +555,10 @@
 .summary tr.grand-total td {
     padding-top: 8px;
     padding-bottom: 8px;
-    border-top: 2px solid var(--invoice-brand);
+    border-top: 1px solid var(--invoice-border);
     border-bottom: 0;
-    background: var(--invoice-brand);
-    color: #fff;
+    background: var(--invoice-surface);
+    color: var(--invoice-text);
     font-size: 12px;
     font-weight: 700;
 }

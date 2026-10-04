@@ -86,15 +86,9 @@
         $lineIgstAmounts,
         $lineTaxesAvailable
     ) {
-        $lineTaxableAmount = $lineTaxableAmounts[$index] ?? 0.0;
-        $lineDiscountAmount = $lineTaxableAmountsAvailable
-            ? round(max((float) $item->discount_amount, 0) + max((float) $item->taxable_amount - $lineTaxableAmount, 0), 2)
-            : null;
-
         return [
             'item' => $item,
-            'discount_amount' => $lineDiscountAmount,
-            'taxable_amount' => $lineTaxableAmountsAvailable ? $lineTaxableAmount : null,
+            'taxable_amount' => $lineTaxableAmountsAvailable ? ($lineTaxableAmounts[$index] ?? 0.0) : null,
             'tax_amount' => $lineTaxesAvailable
                 ? ($lineCgstAmounts[$index] ?? 0.0) + ($lineSgstAmounts[$index] ?? 0.0) + ($lineIgstAmounts[$index] ?? 0.0)
                 : null,
@@ -225,10 +219,10 @@
                         </p>
                     @endif
                     @if ($invoice->client_gstin || $invoice->client_pan)
-                        <div class="party-tax">
-                            @if ($invoice->client_gstin)<span>GSTIN {{ $invoice->client_gstin }}</span>@endif
-                            @if ($invoice->client_pan)<span>PAN {{ $invoice->client_pan }}</span>@endif
-                        </div>
+                        <p class="party-detail">
+                            @if ($invoice->client_gstin) GSTIN {{ $invoice->client_gstin }} @endif
+                            @if ($invoice->client_pan) · PAN {{ $invoice->client_pan }} @endif
+                        </p>
                     @endif
                     @if ($invoice->client_contact_name || $invoice->client_mobile || $invoice->client_email)
                         <p class="party-contact">
@@ -268,20 +262,18 @@
         <div class="items-wrap">
             <table class="items">
                 <colgroup>
-                    <col style="width: 31%">
+                    <col style="width: 36%">
                     <col style="width: 9%">
-                    <col style="width: 13%">
-                    <col style="width: 10%">
-                    <col style="width: 17%">
+                    <col style="width: 14%">
+                    <col style="width: 19%">
                     <col style="width: 8%">
-                    <col style="width: 12%">
+                    <col style="width: 14%">
                 </colgroup>
                 <thead>
                     <tr>
                         <th>Item description / HSN-SAC</th>
                         <th class="right">Qty</th>
                         <th class="right">Rate</th>
-                        <th class="right">Total discount</th>
                         <th class="right">Taxable value</th>
                         <th class="right">GST rate</th>
                         <th class="right">Tax amount</th>
@@ -310,9 +302,6 @@
                                 {{ $quantity }}@if ($item->unit) <span class="unit-label">{{ $item->unit }}</span>@endif
                             </td>
                             <td class="right">{{ $money($item->unit_price) }}</td>
-                            <td class="right">
-                                {{ $line['discount_amount'] !== null && $line['discount_amount'] > 0 ? '-'.$money($line['discount_amount']) : '—' }}
-                            </td>
                             <td class="right item-taxable">
                                 {{ $line['taxable_amount'] !== null ? $money($line['taxable_amount']) : '—' }}
                             </td>
