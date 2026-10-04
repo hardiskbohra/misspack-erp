@@ -159,6 +159,12 @@ check('column chooser protects the action column, keeps a visible column, and ca
     && /if \(!visibility\.some\(Boolean\)\)/.test(listJs)
     && /Restore defaults/.test(listJs)
     && /localStorage\.removeItem\(key\)/.test(listJs));
+check('visible table columns reclaim the grid width and restore its original sizing',
+    /function captureColumnSizing\(table, count\)/.test(listJs)
+    && /sizing\.widths\[index\] \/ visibleWidth\) \* 100/.test(listJs)
+    && /sizing\.inlineWidths\[index\]/.test(listJs)
+    && /sizing\.minWidth \* visibleWidth \/ sizing\.totalWidth/.test(listJs)
+    && /applyColumnVisibility\(table, visibility, columnSizing\)/.test(listJs));
 check('column chooser exposes labelled controls and state to assistive technology',
     /aria-haspopup', 'dialog'/.test(listJs)
     && /aria-expanded', open \? 'true' : 'false'/.test(listJs)

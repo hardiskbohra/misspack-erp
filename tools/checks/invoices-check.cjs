@@ -791,6 +791,12 @@ check('the sweep keeps every promise the bar makes',
     && /action="\{\{ route\('sales-invoices\.bulk'\) \}\}"/.test(view),
     'a bulk delete that takes a sent invoice is a document the client holds, deleted');
 
+check('selected invoice actions sit on their own toolbar row',
+    /class="master-list-toolbar-actions">[\s\S]*?<\/div>\s*\n\s*\{\{-- This form has its own toolbar row[\s\S]*?<form id="bulkForm"/.test(view)
+    && /\.master-list \.master-list-toolbar > \.master-list-bulk\s*\{[^}]*flex:\s*1 0 100%/.test(listCss)
+    && /\.master-list \.master-list-toolbar-actions\s*\{[^}]*flex-wrap:\s*wrap/.test(listCss),
+    'the selection bar follows the standing list actions instead of overflowing beside them');
+
 check('the sweep is capped and the export takes a selection',
     /array_slice\(array_values\(array_unique\(array_filter\(\$ids\)\)\), 0, 500\)/.test(controller)
     && /\$selected !== \[\]/.test(controller)

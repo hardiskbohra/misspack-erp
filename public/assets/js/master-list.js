@@ -105,7 +105,38 @@ window.MasterList = (function () {
         return label || ('Column ' + (index + 1));
     }
 
-    function applyColumnVisibility(table, columns) {
+    /* Keep each visible column's original share of the table, then normalize
+       the remaining shares when preferences hide columns. This lets fixed
+       colgroups fill their table again instead of leaving a blank strip at the
+       right; restoring every column hands sizing back to the module sheet. */
+    function captureColumnSizing(table, count) {
+        var groups = Array.prototype.slice.call(table.children).filter(function (child) {
+            return child.tagName === 'COLGROUP';
+        });
+        if (groups.length !== 1) return null;
+
+        var columns = Array.prototype.slice.call(groups[0].children);
+        if (columns.length !== count || columns.some(function (col) { return col.span !== 1; })) return null;
+
+        var widths = columns.map(function (col) {
+            var width = col.getBoundingClientRect().width;
+            if (!(width > 0)) width = parseFloat(window.getComputedStyle(col).width) || 0;
+            return width;
+        });
+        if (widths.some(function (width) { return !(width > 0); })) return null;
+
+        var minWidth = parseFloat(window.getComputedStyle(table).minWidth) || 0;
+        return {
+            columns: columns,
+            widths: widths,
+            totalWidth: widths.reduce(function (total, width) { return total + width; }, 0),
+            inlineWidths: columns.map(function (col) { return col.style.width; }),
+            minWidth: minWidth,
+            inlineMinWidth: table.style.minWidth,
+        };
+    }
+
+    function applyColumnVisibility(table, columns, sizing) {
         Array.prototype.slice.call(table.rows).forEach(function (row) {
             var columnIndex = 0;
             Array.prototype.slice.call(row.cells).forEach(function (cell) {
@@ -142,6 +173,28 @@ window.MasterList = (function () {
                 index += span;
             });
         });
+
+        if (!sizing) return;
+
+        var visibleWidth = sizing.widths.reduce(function (total, width, index) {
+            return total + (columns[index] ? width : 0);
+        }, 0);
+        if (!(visibleWidth > 0)) return;
+
+        var allVisible = columns.every(Boolean);
+        sizing.columns.forEach(function (col, index) {
+            if (allVisible) {
+                col.style.width = sizing.inlineWidths[index];
+            } else {
+                col.style.width = columns[index]
+                    ? ((sizing.widths[index] / visibleWidth) * 100).toFixed(4) + '%'
+                    : '0px';
+            }
+        });
+
+        table.style.minWidth = allVisible || !sizing.minWidth
+            ? sizing.inlineMinWidth
+            : Math.ceil(sizing.minWidth * visibleWidth / sizing.totalWidth) + 'px';
     }
 
     function preferenceKey(table, kind) {
@@ -215,6 +268,7 @@ window.MasterList = (function () {
                 defaultVisible: !header.hasAttribute('data-column-default-hidden'),
             };
         });
+        var columnSizing = captureColumnSizing(table, columns.length);
         var defaults = columns.map(function (column) { return column.defaultVisible || column.locked; });
         var visibility = defaults.slice();
 
@@ -299,7 +353,7 @@ window.MasterList = (function () {
             try {
                 window.localStorage.setItem(key, JSON.stringify(visibility));
             } catch (e) { /* The table still updates for this page. */ }
-            applyColumnVisibility(table, visibility);
+            applyColumnVisibility(table, visibility, columnSizing);
         }
 
         function setOpen(open, focusFirst) {
@@ -332,7 +386,7 @@ window.MasterList = (function () {
             visibility = defaults.slice();
             checkboxes.forEach(function (checkbox, index) { checkbox.checked = visibility[index]; });
             try { window.localStorage.removeItem(key); } catch (e) {}
-            applyColumnVisibility(table, visibility);
+            applyColumnVisibility(table, visibility, columnSizing);
         });
         document.addEventListener('click', function (event) {
             if (!root.contains(event.target) && !panel.hidden) {
@@ -347,7 +401,7 @@ window.MasterList = (function () {
             }
         });
 
-        applyColumnVisibility(table, visibility);
+        applyColumnVisibility(table, visibility, columnSizing);
     }
 
     function tableSettings() {

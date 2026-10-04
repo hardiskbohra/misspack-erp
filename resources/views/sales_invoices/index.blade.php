@@ -303,31 +303,6 @@
             </p>
 
             <div class="master-list-toolbar-actions">
-                {{-- One action, many rows. The checkboxes in the table point at
-                     this form by id (`form="bulkForm"`): a form wrapping the
-                     table would nest the row menus' own forms inside it, and a
-                     nested form never submits. --}}
-                <form id="bulkForm" method="POST" action="{{ route('sales-invoices.bulk') }}"
-                    class="master-list-bulk" data-bulk-bar hidden>
-                    @csrf
-                    <span class="master-list-bulk-count" data-bulk-count>0 selected</span>
-                    <select class="master-select" name="action" aria-label="Action for the selected invoices">
-                        @foreach ($bulkActions as $actionKey => $actionLabel)
-                            <option value="{{ $actionKey }}">{{ $actionLabel }}</option>
-                        @endforeach
-                    </select>
-                    <button class="master-btn master-btn-primary master-btn-sm" type="submit">Apply</button>
-                    <a class="master-btn master-btn-soft master-btn-sm" data-bulk-export
-                        href="{{ route('sales-invoices.export') }}">
-                        <i class="fas fa-file-csv" aria-hidden="true"></i> Export selected
-                    </a>
-                    <a class="master-btn master-btn-soft master-btn-sm" data-bulk-gst
-                        href="{{ route('sales-invoices.gstExport') }}">
-                        <i class="fas fa-percent" aria-hidden="true"></i> GST summary
-                    </a>
-                    <button class="master-btn master-btn-light master-btn-sm" type="button" data-bulk-clear>Clear</button>
-                </form>
-
                 <a class="master-btn master-btn-ghost master-btn-sm" href="{{ route('sales-invoices.export', request()->query()) }}">
                     <i class="fas fa-file-csv" aria-hidden="true"></i> Export CSV
                 </a>
@@ -342,6 +317,29 @@
                     <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
                 </div>
             </div>
+
+            {{-- This form has its own toolbar row. The table checkboxes point to
+                 it by id; wrapping the table would nest each row menu's forms. --}}
+            <form id="bulkForm" method="POST" action="{{ route('sales-invoices.bulk') }}"
+                class="master-list-bulk" data-bulk-bar hidden>
+                @csrf
+                <span class="master-list-bulk-count" data-bulk-count>0 selected</span>
+                <select class="master-select" name="action" aria-label="Action for the selected invoices">
+                    @foreach ($bulkActions as $actionKey => $actionLabel)
+                        <option value="{{ $actionKey }}">{{ $actionLabel }}</option>
+                    @endforeach
+                </select>
+                <button class="master-btn master-btn-primary master-btn-sm" type="submit">Apply</button>
+                <a class="master-btn master-btn-soft master-btn-sm" data-bulk-export
+                    href="{{ route('sales-invoices.export') }}">
+                    <i class="fas fa-file-csv" aria-hidden="true"></i> Export selected
+                </a>
+                <a class="master-btn master-btn-soft master-btn-sm" data-bulk-gst
+                    href="{{ route('sales-invoices.gstExport') }}">
+                    <i class="fas fa-percent" aria-hidden="true"></i> GST summary
+                </a>
+                <button class="master-btn master-btn-light master-btn-sm" type="button" data-bulk-clear>Clear</button>
+            </form>
         </div>
 
         <div class="master-table-wrap">

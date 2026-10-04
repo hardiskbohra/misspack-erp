@@ -400,6 +400,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    flex-wrap: wrap;
     padding: 12px 16px 0;
 }
 
@@ -408,7 +409,10 @@
 .master-list .master-list-toolbar-actions {
     display: inline-flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 10px;
+    flex-wrap: wrap;
+    min-width: 0;
 }
 
 .master-list .master-list-hint {
@@ -472,10 +476,20 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 3px 3px 3px 12px;
     border: 1px solid var(--mc-border);
     border-radius: 12px;
     background: var(--mc-card-soft);
+}
+
+/* Selection controls get a full row below the standing table actions instead
+   of competing with exports and density controls for the same horizontal space. */
+.master-list .master-list-toolbar > .master-list-bulk {
+    flex: 1 0 100%;
+    justify-content: flex-end;
 }
 
 .master-list .master-list-bulk[hidden] {
