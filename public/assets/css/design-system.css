@@ -2987,8 +2987,9 @@ a.vendor-timeline-item:focus-visible {
     margin-bottom: 0;
 }
 
-/* Two to three columns of fields: wide enough to sit three across on a desk,
-   never so wide that a two-word label and its input drift apart. */
+/* Two to three columns of fields. Three across from 992 px up — the shared
+   responsive layer already drops the band to two at 768–991 px and to one on
+   a phone — so nothing here has to re-declare those bands. */
 .vendor-form .master-detail-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 13px 18px;
@@ -3086,15 +3087,6 @@ a.vendor-timeline-item:focus-visible {
 @media (max-width: 1199px) {
     .vendor-index .vendor-table th:nth-child(4) { width: 140px; }
     .vendor-index .vendor-table th:nth-child(5) { width: 140px; }
-
-    /* Two fields across on a smaller desk: three squeeze the labels. */
-    .vendor-form .master-detail-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .vendor-form .master-field.two {
-        grid-column: 1 / -1;
-    }
 }
 
 @media (max-width: 991px) {
