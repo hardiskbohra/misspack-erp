@@ -24,6 +24,13 @@ This is the shared visual contract for the ERP application shell and its modules
 
 **Project-wide cap: no text may exceed `font-weight: 700`.** This applies to application, public, portal, print, preview, inline, embedded, and checked-in vendor styles, as well as font files requested from external providers. Use weight and size sparingly; avoid extra-bold/black text for headings, labels, table headers, badges, and buttons.
 
+## Print and PDF documents
+
+- Use the shared Inter stack and tabular figures; keep document body text at roughly 10 pt (13 px), captions/field labels at 8–9 pt, and line-height around 1.4–1.5. Do not shrink dense financial tables below a legible size to force a one-page fit.
+- Use A4 portrait with 12 mm margins for invoices, payslips and account statements unless a document has a clear landscape data need. Use a white paper surface and dark text regardless of the app or device theme; never carry a dark-mode canvas into a PDF.
+- Print output removes browser/app chrome, shadows and rounded-card framing. Keep a simple hierarchy of issuer, document identity/date, counterparties, itemized figures, tax/totals, payment terms and sign-off.
+- Right-align currency values with tabular numerals and use the shared currency formatter. Label taxable values, discounts, GST heads and balances distinctly; repeat table headers and avoid splitting a table row across pages.
+
 ## Surfaces and spacing
 
 - Cards use a theme surface, a 1 px theme border, an 18 px outer radius, and the shared shadow. Nested cards use the same surface with a quieter border; do not use another pastel card fill.

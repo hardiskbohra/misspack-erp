@@ -24,6 +24,7 @@
     --ps-warn-fg: #b45309;
     --ps-net-bg: linear-gradient(135deg, rgba(79, 131, 241, .10), rgba(99, 102, 241, .05));
     --ps-net-fg: #2f5fd0;
+    --ps-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
 }
 
 :root[data-theme="dark"] {
@@ -44,6 +45,9 @@
     border-radius: 18px;
     padding: 22px 24px;
     color: var(--ps-text);
+    font-family: var(--ps-font);
+    font-size: 13px;
+    line-height: 1.5;
     font-variant-numeric: tabular-nums;
 }
 
@@ -161,7 +165,7 @@
 .ps-fact-label {
     display: block;
     color: var(--ps-text-3);
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: .09em;
     text-transform: uppercase;
@@ -190,14 +194,15 @@
 .ps-table td {
     padding: 8px 10px;
     border-bottom: 1px solid var(--ps-line);
-    font-size: 12.5px;
+    font-size: 13px;
+    line-height: 1.45;
     text-align: left;
     vertical-align: top;
 }
 
 .ps-table thead th {
     color: var(--ps-text-3);
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: .09em;
     text-transform: uppercase;
@@ -288,6 +293,9 @@ body.ps-standalone {
     margin: 0;
     padding: 18px;
     background: #eef2f9;
+    color: #1b2a41;
+    font-family: var(--ps-font);
+    line-height: 1.5;
 }
 
 body.ps-standalone .payslip {
@@ -317,7 +325,7 @@ body.ps-standalone .payslip {
 
 /* --------------------------------------------------------------- narrow */
 
-@media (max-width: 900px) {
+@media screen and (max-width: 900px) {
     .ps-facts,
     .ps-payment {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -336,7 +344,7 @@ body.ps-standalone .payslip {
     }
 }
 
-@media (max-width: 620px) {
+@media screen and (max-width: 620px) {
     .payslip {
         padding: 16px;
     }
@@ -355,7 +363,7 @@ body.ps-standalone .payslip {
 
 @media print {
     @page {
-        size: A4;
+        size: A4 portrait;
         margin: 12mm;
     }
 
@@ -363,6 +371,10 @@ body.ps-standalone .payslip {
     body {
         padding: 0 !important;
         background: #fff !important;
+        color: #1f2937 !important;
+        font-family: var(--ps-font) !important;
+        font-size: 10pt;
+        line-height: 1.4;
     }
 
     body.ps-standalone .payslip,
@@ -374,7 +386,24 @@ body.ps-standalone .payslip {
         border-radius: 0;
         box-shadow: none;
         background: #fff;
-        color: #000;
+        color: #1f2937;
+        font-size: 10pt;
+        line-height: 1.4;
+    }
+
+    .ps-head,
+    .ps-facts,
+    .ps-net,
+    .ps-payment,
+    .ps-foot {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .ps-table tr,
+    .ps-note {
+        break-inside: avoid;
+        page-break-inside: avoid;
     }
 
     .ps-print-foot,

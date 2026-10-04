@@ -151,7 +151,7 @@ class PartyStatementController extends Controller
 
         return response()->view('cashflows.statement-pdf', [
             'statement' => $statement,
-            'pdfFallbackMessage' => 'Install barryvdh/laravel-dompdf for a direct PDF download. This page prints — use Print > Save as PDF.',
+            'pdfFallbackMessage' => 'Use the print dialog and choose Save as PDF to download this statement.',
         ]);
     }
 

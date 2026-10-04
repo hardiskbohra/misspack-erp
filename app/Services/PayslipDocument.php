@@ -120,7 +120,7 @@ class PayslipDocument
 
         return response()->view('employees.payslip-pdf', [
             'doc' => $doc,
-            'pdfFallbackMessage' => 'Install barryvdh/laravel-dompdf for a direct PDF download. This page prints — use Print > Save as PDF.',
+            'pdfFallbackMessage' => 'Use the print dialog and choose Save as PDF to download this payslip.',
         ]);
     }
 

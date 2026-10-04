@@ -219,7 +219,7 @@ check('a statement is never built for a party that no longer exists',
     /abort_if\(\$statement === null, 404\)/.test(showMethod) && /abort_if\(\$statement === null, 404\)/.test(controller));
 check('the PDF degrades to a printable page when dompdf is absent',
     /class_exists\(\\Barryvdh\\DomPDF\\Facade\\Pdf::class\)/.test(controller)
-    && /Install barryvdh\/laravel-dompdf/.test(controller)
+    && /Use the print dialog and choose Save as PDF to download this statement\./.test(controller)
     && /\$pdfFallbackMessage/.test(pdfView));
 check('the period survives the jump from the list to the statement',
     /'period' => \$periodKey/.test(surface) && /array_filter\(\['partyType'/.test(surface));

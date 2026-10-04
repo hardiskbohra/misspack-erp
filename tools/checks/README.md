@@ -27,6 +27,8 @@ node tools/checks/docs-check.cjs      # the paperwork behind an entry: one table
                                       # before the resource route, one definition of "missing"
 node tools/checks/statement-check.cjs # a party statement: opening + debit − credit = closing, the
                                       # ageing adds up to the closing, and an expiring link is real
+node tools/checks/pdf-documents-check.cjs # invoice, payslip and statement typography, A4 paper,
+                                          # currency/tax labels and light-theme print output
 node tools/checks/report-check.cjs    # the report builder: a cell sums the same rows it opens,
                                       # a bucket is dates and not a dialect, a comparison is the
                                       # axis shifted, and "not set" is a row you can drill
@@ -57,7 +59,7 @@ All of them exit non-zero on failure, so they can be wired into CI or a
 pre-push hook:
 
 ```bash
-for c in design blade php mark list ui-components status cost docs statement report employees invoices; do
+for c in design blade php mark list ui-components status cost docs statement pdf-documents report employees invoices; do
   node "tools/checks/$c-check.cjs" || exit 1
 done
 ```

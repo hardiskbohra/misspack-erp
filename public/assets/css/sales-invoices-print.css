@@ -1,28 +1,21 @@
-/* ==========================================================================
-   SALES-INVOICES-PRINT.CSS — Invoice print view
-   Standalone page: resources/views/sales_invoices/print.blade.php
-   (own <html> shell - self-contained palette + @page print rules; element
-   selectors are safe here because the page has no shared foundation)
-   ========================================================================== */
+/* ========================================================================
+   SALES INVOICE — screen preview and print/PDF
+   A4 portrait, Inter, restrained ink, tabular money and explicit tax rows.
+   ======================================================================== */
 
 :root {
-    --pink: #2f3a4c;
-    --pink-dark: #d93660;
-    --pink-soft: #fff1f5;
-    --purple: #2f3a4c;
-    --purple-dark: #6043c4;
-    --purple-soft: #f4f1ff;
-    --teal: #19a995;
-    --teal-soft: #edfaf8;
-    --blue-soft: #f1f7ff;
-    --dark: #202033;
-    --text: #414252;
-    --muted: #74768a;
-    --border: #dedde7;
-    --border-light: #eceaf1;
-    --background: #f3f1f6;
-    --white: #ffffff;
-    --font: Arial, Helvetica, sans-serif;
+    --invoice-brand: #2f3a4c;
+    --invoice-accent: #315fbd;
+    --invoice-accent-soft: #eef3ff;
+    --invoice-text: #273449;
+    --invoice-body: #344054;
+    --invoice-muted: #667085;
+    --invoice-border: #d8e0ec;
+    --invoice-border-soft: #e7ebf2;
+    --invoice-surface: #ffffff;
+    --invoice-surface-soft: #f7f9fc;
+    --invoice-page: #f1f4f9;
+    --invoice-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
 }
 
 *,
@@ -38,19 +31,19 @@ body {
 }
 
 body {
-    background: var(--background);
-    color: var(--text);
-    font-family: var(--font);
-    font-size: 11px;
-    line-height: 1.4;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
+    background: var(--invoice-page);
+    color: var(--invoice-body);
+    font-family: var(--invoice-font);
+    font-size: 12px;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
 }
 
 .toolbar {
     width: 210mm;
-    margin: 15px auto;
+    margin: 16px auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -59,55 +52,53 @@ body {
 
 .master-btn {
     appearance: none;
-    border: 0;
-    border-radius: 7px;
-    background: var(--purple);
-    color: #fff;
+    min-height: 38px;
     padding: 9px 15px;
-    font-family: var(--font);
-    font-size: 11px;
-    font-weight: 700;
+    border: 1px solid var(--invoice-brand);
+    border-radius: 8px;
+    background: var(--invoice-brand);
+    color: #fff;
+    font-family: var(--invoice-font);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
     text-decoration: none;
     cursor: pointer;
-    box-shadow: 0 3px 10px rgba(118, 87, 217, .18);
 }
 
 .master-btn:hover {
-    background: var(--purple-dark);
+    background: #202a3a;
 }
 
 .page {
+    position: relative;
     width: 210mm;
     min-height: 297mm;
     margin: 0 auto 20px;
     padding: 9mm;
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 12px 35px rgba(30, 25, 50, .12);
-    position: relative;
     overflow: hidden;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+    border: 1px solid var(--invoice-border);
+    border-radius: 10px;
+    background: var(--invoice-surface);
+    box-shadow: 0 14px 38px rgba(30, 42, 64, .10);
 }
 
 .page::before {
-    content: "";
-    display: block;
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 5px;
-    background: var(--pink);
+    inset: 0 0 auto;
+    height: 4px;
+    background: var(--invoice-brand);
+    content: "";
 }
+
+/* --------------------------------------------------------------- letterhead */
 
 .top {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 155px;
+    grid-template-columns: minmax(0, 1fr) minmax(170px, 205px);
     gap: 18px;
-    padding: 3px 0 11px;
-    border-bottom: 1px solid var(--border);
+    padding: 4px 0 12px;
+    border-bottom: 1px solid var(--invoice-border);
 }
 
 .brand {
@@ -116,220 +107,268 @@ body {
 
 .brand-logo {
     display: block;
-    height: 48px;
     width: auto;
+    max-width: 190px;
+    height: 46px;
+    margin: 0 0 8px;
     object-fit: contain;
     object-position: left center;
 }
 
-.brand h1 {
-    margin: 0;
-    color: var(--dark);
-    font-size: 25px;
-    line-height: 1.1;
+.brand-company {
+    margin: 0 0 4px;
+    color: var(--invoice-text);
+    font-size: 19px;
     font-weight: 700;
+    line-height: 1.25;
 }
 
-.brand p {
-    margin: 4px 0;
-    color: #2f3a4c;
-    font-size: 10px;
+.brand-detail {
+    margin: 3px 0 0;
+    color: var(--invoice-muted);
+    font-size: 11.5px;
     line-height: 1.45;
-}
-
-.brand p:first-of-type {
-    margin-top: 6px;
-    color: #2f3a4c;
-    font-size: 14px;
-    font-weight: 700;
+    overflow-wrap: anywhere;
 }
 
 .title {
-    text-align: right;
     align-self: start;
+    min-width: 0;
+    text-align: right;
 }
 
 .title h2 {
     margin: 0;
-    color: #2f3a4c;
-    font-size: 19px !important;
-    line-height: 1.15;
+    color: var(--invoice-brand);
+    font-size: 21px;
     font-weight: 700;
+    line-height: 1.2;
     text-transform: uppercase;
-    letter-spacing: .5px;
+    letter-spacing: .035em;
 }
 
 .title strong {
     display: inline-block;
-    margin-top: 7px;
-    padding: 5px 9px;
-    background: var(--pink-soft);
-    color: var(--pink-dark);
-    border: 1px solid #f8d5df;
-    border-radius: 6px;
-    font-size: 12px;
+    max-width: 100%;
+    margin-top: 8px;
+    padding: 6px 10px;
+    border: 1px solid #cfdaef;
+    border-radius: 7px;
+    background: var(--invoice-accent-soft);
+    color: var(--invoice-accent);
+    font-size: 13px;
     font-weight: 700;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
 }
 
 .title p {
-    display: inline-block;
-    margin: 7px 0 0;
-    padding: 4px 9px;
-    background: var(--teal-soft);
-    color: #087f72;
-    border-radius: 12px;
-    font-size: 9px;
-    font-weight: 700;
+    display: table;
+    margin: 8px 0 0 auto;
+    padding: 4px 10px;
+    border: 1px solid var(--invoice-border);
+    border-radius: 999px;
+    background: var(--invoice-surface-soft);
+    color: var(--invoice-body);
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1.25;
     text-transform: uppercase;
-    letter-spacing: .3px;
+    letter-spacing: .04em;
 }
+
+/* ---------------------------------------------------------- invoice facts */
 
 .info-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    margin-top: 10px;
-    border: 1px solid var(--border);
-    border-radius: 7px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 12px;
     overflow: hidden;
+    border: 1px solid var(--invoice-border);
+    border-radius: 8px;
+    background: var(--invoice-border);
+    gap: 1px;
 }
 
 .info-grid div {
     min-width: 0;
-    padding: 7px 8px;
-    border-right: 1px solid var(--border);
-}
-
-.info-grid div:last-child {
-    border-right: 0;
-}
-
-.info-grid div:nth-child(1) {
-    background: var(--pink-soft);
-}
-
-.info-grid div:nth-child(2) {
-    background: var(--purple-soft);
-}
-
-.info-grid div:nth-child(3) {
-    background: var(--blue-soft);
-}
-
-.info-grid div:nth-child(4) {
-    background: var(--teal-soft);
+    padding: 8px 10px;
+    background: var(--invoice-surface);
 }
 
 .info-grid span {
     display: block;
-    margin-bottom: 2px;
-    color: var(--muted);
-    font-size: 8px;
-    font-weight: 700;
+    margin-bottom: 3px;
+    color: var(--invoice-muted);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.3;
     text-transform: uppercase;
-    letter-spacing: .5px;
+    letter-spacing: .055em;
 }
 
 .info-grid strong {
     display: block;
-    color: var(--dark);
-    font-size: 10px;
-    font-weight: 700;
+    color: var(--invoice-text);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
 }
+
+.info-grid small {
+    display: block;
+    margin-top: 3px;
+    color: var(--invoice-muted);
+    font-size: 10.5px;
+    line-height: 1.3;
+}
+
+/* ------------------------------------------------------------- counterparties */
 
 .meta {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-top: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 12px;
 }
 
 .box {
     min-width: 0;
-    padding: 9px;
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    box-shadow: none;
+    padding: 11px;
+    border: 1px solid var(--invoice-border);
+    border-radius: 8px;
+    background: var(--invoice-surface);
+    color: var(--invoice-body);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
 }
 
 .box h3 {
-    margin: -9px -9px 8px;
-    padding: 6px 9px;
-    background: var(--purple);
-    color: #fff;
-    border-radius: 6px 6px 0 0;
-    font-size: 9px;
+    margin: -11px -11px 8px;
+    padding: 7px 11px;
+    border-bottom: 1px solid var(--invoice-border);
+    border-radius: 8px 8px 0 0;
+    background: #f3f5f8;
+    color: var(--invoice-brand);
+    font-size: 10.5px;
     font-weight: 700;
+    line-height: 1.25;
     text-transform: uppercase;
-    letter-spacing: .6px;
+    letter-spacing: .06em;
 }
 
-.box strong {
-    color: var(--dark);
-    font-weight: 700;
+.box > strong {
+    color: var(--invoice-text);
+    font-size: 13px;
+    font-weight: 600;
 }
+
+.box-detail {
+    margin: 5px 0 0;
+    color: var(--invoice-muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+/* ---------------------------------------------------------------- line items */
 
 .items {
     width: 100%;
-    margin-top: 11px;
+    margin-top: 12px;
+    border: 1px solid var(--invoice-border);
     border-collapse: separate;
     border-spacing: 0;
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    overflow: hidden;
+    border-radius: 8px;
     table-layout: fixed;
+    overflow: hidden;
 }
 
 .items th,
 .items td {
-    padding: 6px 7px;
+    padding: 7px 6px;
     border: 0;
-    border-bottom: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--invoice-border-soft);
+    color: var(--invoice-body);
+    font-size: 11.5px;
+    line-height: 1.4;
     vertical-align: top;
-    word-wrap: break-word;
     overflow-wrap: anywhere;
 }
 
 .items th {
-    background: #f4f1f8;
-    color: var(--dark);
-    border-bottom: 2px solid #ded7e8;
-    font-size: 8px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .4px;
+    background: #f4f6f9;
+    color: #536079;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.3;
     text-align: left;
+    text-transform: uppercase;
+    letter-spacing: .035em;
 }
 
-.items th:first-child {
-    border-radius: 6px 0 0 0;
+.items th.right,
+.items th.center {
+    text-align: right;
 }
 
-.items th:last-child {
-    border-radius: 0 6px 0 0;
+.items th.center,
+.items td.center {
+    text-align: center;
+}
+
+.items td.right,
+.items th.right {
+    text-align: right;
+    white-space: nowrap;
+    overflow-wrap: normal;
 }
 
 .items tbody tr:nth-child(even) td {
-    background: #fcfbfd;
+    background: #fbfcfe;
 }
 
 .items tbody tr:last-child td {
     border-bottom: 0;
 }
 
-.items td {
-    font-size: 10px;
-    color: var(--text);
+.item-description {
+    overflow-wrap: anywhere;
 }
 
-.items td strong {
-    color: var(--dark);
-    font-size: 10px;
+.item-name {
+    display: block;
+    color: var(--invoice-text);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
 }
 
-.items td em {
-    color: var(--muted);
-    font-size: 9px;
+.item-detail {
+    display: block;
+    margin-top: 2px;
+    color: var(--invoice-body);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.item-remark {
+    color: var(--invoice-muted);
+    font-style: italic;
+}
+
+.item-meta {
+    display: block;
+    margin-top: 4px;
+    color: var(--invoice-muted);
+    font-size: 10.5px;
+    line-height: 1.3;
+}
+
+.item-taxable {
+    color: var(--invoice-text) !important;
+    font-weight: 600;
 }
 
 .right {
@@ -340,35 +379,64 @@ body {
     text-align: center !important;
 }
 
+/* ------------------------------------------------------------- totals + terms */
+
 .totals {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 10px;
-    margin-top: 10px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, .95fr);
+    align-items: start;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.totals-notes {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.amount-words,
+.invoice-terms {
+    min-width: 0;
+    padding: 10px 11px;
+    border: 1px solid var(--invoice-border);
+    border-radius: 7px;
+    background: var(--invoice-surface-soft);
+    color: var(--invoice-body);
+    font-size: 11.5px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
 }
 
 .amount-words {
-    min-height: 52px;
-    padding: 9px;
-    background: #faf8fc;
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--pink);
-    border-radius: 6px;
-    color: var(--dark);
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1.5;
+    border-left: 3px solid var(--invoice-brand);
 }
 
-.amount-words span {
-    color: var(--muted) !important;
-    font-weight: 500;
+.amount-words strong,
+.invoice-terms strong {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--invoice-muted);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.amount-words span,
+.invoice-terms span {
+    display: block;
+    color: var(--invoice-text);
+    white-space: pre-line;
 }
 
 .summary {
-    border: 1px solid var(--border);
-    border-radius: 7px;
+    min-width: 0;
     overflow: hidden;
+    border: 1px solid var(--invoice-border);
+    border-radius: 8px;
+    background: var(--invoice-surface);
 }
 
 .summary table {
@@ -377,218 +445,209 @@ body {
 }
 
 .summary td {
-    padding: 5px 8px;
-    border-bottom: 1px solid var(--border-light);
-    font-size: 9px;
-}
-
-.summary tr:last-child td {
-    border-bottom: 0;
+    padding: 6px 9px;
+    border-bottom: 1px solid var(--invoice-border-soft);
+    color: var(--invoice-body);
+    font-size: 11.5px;
+    line-height: 1.35;
 }
 
 .summary td:first-child {
-    color: var(--text);
+    color: var(--invoice-muted);
 }
 
 .summary td:last-child {
-    text-align: right;
-    color: var(--dark);
+    color: var(--invoice-text);
     font-weight: 600;
+    text-align: right;
     white-space: nowrap;
 }
 
-.summary tr:last-child td {
-    padding: 8px;
-    background: var(--purple);
+.summary tr.taxable-row td {
+    border-top: 1px solid var(--invoice-border);
+    color: var(--invoice-text);
+    font-weight: 600;
+}
+
+.summary tr.grand-total td {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-bottom: 0;
+    background: var(--invoice-brand);
     color: #fff;
-    font-size: 11px;
+    font-size: 12.5px;
     font-weight: 700;
 }
 
-.summary tr:last-child td:first-child {
-    color: #fff;
+.summary tr.settlement-row td {
+    background: #fff;
+}
+
+.summary tr.balance-due td {
+    border-bottom: 0;
+    background: var(--invoice-accent-soft);
+    color: var(--invoice-brand);
+    font-weight: 700;
+}
+
+/* ---------------------------------------------------------- bank + signoff */
+
+.bank-details {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+}
+
+.bank-details > div {
+    display: grid;
+    grid-template-columns: minmax(92px, 30%) minmax(0, 1fr);
+    gap: 8px;
+}
+
+.bank-details dt {
+    color: var(--invoice-muted);
+    font-size: 10.5px;
+    font-weight: 600;
+}
+
+.bank-details dd {
+    min-width: 0;
+    margin: 0;
+    color: var(--invoice-body);
+    font-size: 11.5px;
+    font-weight: 500;
+    overflow-wrap: anywhere;
 }
 
 .bank-sign {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-top: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 12px;
+    margin-top: 12px;
 }
 
 .bank-sign .box {
-    background: #faf9fd;
+    margin: 0;
+    background: var(--invoice-surface);
 }
 
 .sign {
-    min-height: 105px;
-    padding: 9px;
-    background: #fff8fa;
-    border: 1px solid #efdce3;
-    border-radius: 7px;
-    text-align: right;
+    min-height: 88px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    align-items: stretch;
+    align-items: flex-end;
+    border: 1px solid var(--invoice-border);
+    border-radius: 8px;
+    background: var(--invoice-surface-soft);
+    text-align: right;
 }
 
 .sign strong {
-    color: var(--purple);
-    font-size: 10px;
-}
-
-.sign .brand-logo {
-    height: 55px;
-    width: auto;
-    margin-left: auto;
-    margin-right: 0;
-    object-position: right center;
+    color: var(--invoice-brand);
+    font-size: 12px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
 }
 
 .sign span {
-    color: var(--muted);
-    font-size: 9px;
-    font-weight: 700;
+    color: var(--invoice-muted);
+    font-size: 10.5px;
+    font-weight: 600;
 }
 
 .footer-note {
-    margin-top: 9px;
-    padding-top: 7px;
-    border-top: 1px dashed var(--border);
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--invoice-border-soft);
+    color: var(--invoice-muted);
+    font-size: 10px;
+    line-height: 1.4;
     text-align: center;
-    color: var(--muted);
-    font-size: 8.5px;
 }
 
+/* ------------------------------------------------------------- print / PDF */
+
 @media print {
+    @page {
+        size: A4 portrait;
+        margin: 12mm;
+    }
+
     html,
     body {
-        width: 210mm;
-        min-height: 297mm;
+        width: auto;
+        min-height: 0;
         margin: 0;
         padding: 0;
         background: #fff !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        color-adjust: exact !important;
+        color: #1f2937;
+        font-family: var(--invoice-font);
+        font-size: 10pt;
+        line-height: 1.4;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 
-    .toolbar {
+    .toolbar,
+    .no-print {
         display: none !important;
     }
 
     .page {
-        width: 210mm !important;
-        min-height: 297mm !important;
+        width: auto !important;
+        min-height: 0 !important;
         margin: 0 !important;
-        padding: 8mm !important;
+        padding: 0 !important;
+        overflow: visible !important;
         border: 0 !important;
         border-radius: 0 !important;
-        box-shadow: none !important;
         background: #fff !important;
-        overflow: visible !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        color-adjust: exact !important;
+        box-shadow: none !important;
     }
 
     .page::before {
-        display: block !important;
-        background: #2f3a4c !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    .info-grid div:nth-child(1) {
-        background: #fff1f5 !important;
-    }
-
-    .info-grid div:nth-child(2) {
-        background: #f4f1ff !important;
-    }
-
-    .info-grid div:nth-child(3) {
-        background: #f1f7ff !important;
-    }
-
-    .info-grid div:nth-child(4) {
-        background: #edfaf8 !important;
-    }
-
-    .box h3 {
-        background: #2f3a4c !important;
-        color: #fff !important;
-    }
-
-    .items th {
-        background: #f4f1f8 !important;
-        color: #202033 !important;
-    }
-
-    .items tbody tr:nth-child(even) td {
-        background: #fcfbfd !important;
-    }
-
-    .summary tr:last-child td {
-        background: #2f3a4c !important;
-        color: #fff !important;
-    }
-
-    .amount-words {
-        background: #faf8fc !important;
-    }
-
-    .sign {
-        background: #fff8fa !important;
-    }
-
-    .bank-sign .box {
-        background: #faf9fd !important;
-    }
-
-    .title strong {
-        background: #fff1f5 !important;
-        color: #d93660 !important;
-    }
-
-    .title p {
-        background: #edfaf8 !important;
-        color: #087f72 !important;
+        display: none !important;
     }
 
     .top,
     .info-grid,
     .meta,
     .totals,
-    .bank-sign,
+    .totals-notes,
     .amount-words,
-    .summary {
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
+    .invoice-terms,
+    .summary,
+    .bank-sign,
+    .sign {
+        break-inside: avoid;
+        page-break-inside: avoid;
     }
 
     .items tr {
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-    }
-
-    .items {
-        page-break-before: auto;
-        page-break-after: auto;
+        break-inside: avoid;
+        page-break-inside: avoid;
     }
 
     .items thead {
         display: table-header-group;
     }
 
-    .items tbody tr:hover td {
-        background: inherit !important;
+    .items th,
+    .info-grid span,
+    .info-grid small,
+    .box h3,
+    .amount-words strong,
+    .invoice-terms strong,
+    .sign span {
+        font-size: 8pt;
     }
 
-    a {
-        color: inherit !important;
-        text-decoration: none !important;
+    .items td,
+    .summary td {
+        font-size: 9pt;
     }
 
     .box,
@@ -596,14 +655,18 @@ body {
     .summary,
     .info-grid,
     .amount-words,
+    .invoice-terms,
     .sign {
-        border-color: #dedde7 !important;
+        border-color: #d5dbe5;
     }
 
-    @page {
-
+    a {
+        color: inherit !important;
+        text-decoration: none !important;
     }
 }
+
+/* -------------------------------------------------------------- responsive */
 
 @media screen and (max-width: 900px) {
     body {
@@ -617,7 +680,7 @@ body {
 
     .page {
         width: 100%;
-        min-height: auto;
+        min-height: 0;
         margin: 0;
         padding: 20px 15px;
         border-radius: 0;
@@ -625,28 +688,34 @@ body {
     }
 
     .top {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .title {
         text-align: left;
     }
 
-    .info-grid {
-        grid-template-columns: 1fr 1fr;
+    .title p {
+        margin-left: 0;
     }
 
-    .info-grid div:nth-child(2) {
-        border-right: 0;
+    .info-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .meta,
     .totals,
     .bank-sign {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .items {
-        font-size: 10px;
+        table-layout: auto;
+    }
+
+    .items th,
+    .items td {
+        padding: 7px 5px;
+        font-size: 10.5px;
     }
 }
