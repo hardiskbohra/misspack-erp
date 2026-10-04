@@ -65,10 +65,35 @@
     </section>
 
     <div class="client-statement-metrics" aria-label="Statement totals">
-        <section class="client-statement-metric"><span>Opening balance</span><strong>{{ $money($statement['opening']) }}</strong></section>
-        <section class="client-statement-metric"><span>Total debits</span><strong>{{ $money($totals['debit']) }}</strong></section>
-        <section class="client-statement-metric"><span>Total credits</span><strong>{{ $money($totals['credit']) }}</strong></section>
-        <section class="client-statement-metric is-balance"><span>Closing balance</span><strong>{{ $money($totals['closing']) }}</strong><small>{{ $totals['closing'] >= 0 ? 'Receivable' : 'Client credit' }}</small></section>
+        <section class="master-stat master-stat--flat blue client-statement-metric">
+            <span class="icon" aria-hidden="true"><i class="fa-solid fa-wallet"></i></span>
+            <div class="client-statement-metric-copy">
+                <p class="master-stat-title">Opening balance</p>
+                <p class="master-stat-value">{{ $money($statement['opening']) }}</p>
+            </div>
+        </section>
+        <section class="master-stat master-stat--flat orange client-statement-metric">
+            <span class="icon" aria-hidden="true"><i class="fa-solid fa-arrow-up"></i></span>
+            <div class="client-statement-metric-copy">
+                <p class="master-stat-title">Total debits</p>
+                <p class="master-stat-value">{{ $money($totals['debit']) }}</p>
+            </div>
+        </section>
+        <section class="master-stat master-stat--flat teal client-statement-metric">
+            <span class="icon" aria-hidden="true"><i class="fa-solid fa-arrow-down"></i></span>
+            <div class="client-statement-metric-copy">
+                <p class="master-stat-title">Total credits</p>
+                <p class="master-stat-value">{{ $money($totals['credit']) }}</p>
+            </div>
+        </section>
+        <section class="master-stat master-stat--flat purple client-statement-metric is-balance">
+            <span class="icon" aria-hidden="true"><i class="fa-solid fa-scale-balanced"></i></span>
+            <div class="client-statement-metric-copy">
+                <p class="master-stat-title">Closing balance</p>
+                <p class="master-stat-value">{{ $money($totals['closing']) }}</p>
+                <p class="master-sub client-statement-balance-label">{{ $totals['closing'] >= 0 ? 'Receivable' : 'Client credit' }}</p>
+            </div>
+        </section>
     </div>
 
     @if($otherCurrencies)

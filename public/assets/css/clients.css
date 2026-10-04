@@ -940,7 +940,7 @@
 /* --------------------------------------------------------------------------
    Portal management screen (cpa-* namespace — self-contained)
    -------------------------------------------------------------------------- */
-.client-portal-admin{display:flex;flex-direction:column;gap:18px}.cpa-hero{background:linear-gradient(135deg,#4f83f1,#6366f1);border-radius:24px;padding:24px;color:#fff;display:flex;justify-content:space-between;gap:18px;box-shadow:0 18px 45px rgba(79,131,241,.22)}.cpa-eyebrow{margin:0 0 6px;text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:900;opacity:.78}.cpa-hero h1{margin:0;font-size:30px;font-weight:900}.cpa-hero p{margin:8px 0 0;opacity:.9}.cpa-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.cpa-alert{border-radius:16px;padding:13px 15px;font-weight:800}.cpa-alert-success{background:#e8fff7;color:#047857;border:1px solid #a7f3d0}.cpa-alert-error{background:#fff0f4;color:#be123c;border:1px solid #fecdd3}.cpa-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.cpa-card{background: var(--mc-card);border: 1px solid var(--mc-border);border-radius:22px;box-shadow:0 14px 35px rgba(25,42,70,.08);padding:20px}.cpa-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px}.cpa-section-head h2{margin:0}.cpa-badge{background: var(--mc-card-soft);color: var(--mc-text-2);border-radius:999px;padding:7px 10px;font-size:12px;font-weight:900}.cpa-badge.active{background:#e8fff7;color:#047857}.cpa-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.cpa-checks{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.cpa-checks label{display:flex;gap:8px;align-items:center;font-weight:800;color: var(--mc-text-2)}.cpa-submit{grid-column:1/-1;display:flex;justify-content:flex-end}.cpa-password-box{margin-top:14px;background:var(--mc-card);border:1px solid #fedf89;border-radius:16px;padding:14px}.cpa-password-box span{display:block;color:#7a4b08;font-weight:900;font-size:12px;text-transform:uppercase}.cpa-password-box strong{font-size:24px;display:inline-block;margin:7px 10px 7px 0}.cpa-actions-wrap{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}.cpa-muted{color: var(--mc-text-2);font-weight:700}.cpa-empty{padding:24px;border: 1px dashed var(--mc-border);border-radius:16px;text-align:center;color: var(--mc-text-2);font-weight:800;background: var(--mc-card-soft)}.cpa-table-wrap{overflow:auto}.cpa-table{width:100%;border-collapse:collapse;min-width:760px}.cpa-table th,.cpa-table td{padding:14px 16px;border-bottom: 1px solid var(--mc-border);text-align:left}.cpa-table th{font-size:12px;text-transform:uppercase;color: var(--mc-text-3)}.cpa-table span{display:block;color: var(--mc-text-2);font-size:12px}@media(max-width:991px){.cpa-grid{grid-template-columns:1fr}.cpa-hero{flex-direction:column}}@media(max-width:767px){.cpa-form-grid,.cpa-checks{grid-template-columns:1fr}.cpa-actions,.cpa-actions .master-btn,.cpa-actions-wrap .master-btn{width:100%}.cpa-submit .master-btn{width:100%}.cpa-card{padding:15px}}
+.client-portal-admin{display:flex;flex-direction:column;gap:18px}.cpa-hero{background:linear-gradient(135deg,#4f83f1,#6366f1);border-radius:24px;padding:24px;color:#fff;display:flex;justify-content:space-between;gap:18px;box-shadow:0 18px 45px rgba(79,131,241,.22)}.cpa-eyebrow{margin:0 0 6px;text-transform:uppercase;letter-spacing:.09em;font-size:10px;font-weight:700;opacity:.78}.cpa-hero h1{margin:0;font-size:30px;font-weight:900}.cpa-hero p{margin:8px 0 0;opacity:.9}.cpa-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.cpa-alert{border-radius:16px;padding:13px 15px;font-weight:800}.cpa-alert-success{background:#e8fff7;color:#047857;border:1px solid #a7f3d0}.cpa-alert-error{background:#fff0f4;color:#be123c;border:1px solid #fecdd3}.cpa-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.cpa-card{background: var(--mc-card);border: 1px solid var(--mc-border);border-radius:22px;box-shadow:0 14px 35px rgba(25,42,70,.08);padding:20px}.cpa-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px}.cpa-section-head h2{margin:0}.cpa-badge{background: var(--mc-card-soft);color: var(--mc-text-2);border-radius:999px;padding:5px 8px;font-size:11px;font-weight:600}.cpa-badge.active{background:#e8fff7;color:#047857}.cpa-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.cpa-checks{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.cpa-submit{grid-column:1/-1;display:flex;justify-content:flex-end}.cpa-password-box{margin-top:14px;background:var(--mc-card);border:1px solid #fedf89;border-radius:16px;padding:14px}.cpa-password-box span{display:block;color:#7a4b08;font-weight:700;font-size:12px;text-transform:uppercase}.cpa-password-box strong{font-size:24px;display:inline-block;margin:7px 10px 7px 0}.cpa-actions-wrap{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}.cpa-muted{color: var(--mc-text-2);font-weight:500}.cpa-empty{padding:16px 18px;border: 1px dashed var(--mc-border);border-radius:16px;text-align:center;color: var(--mc-text-2);font-size:13px;font-weight:500;line-height:1.5;background: var(--mc-card-soft)}.cpa-table-wrap{overflow:auto}.cpa-table{width:100%;border-collapse:collapse;min-width:760px}.cpa-table th,.cpa-table td{padding:14px 16px;border-bottom: 1px solid var(--mc-border);text-align:left}.cpa-table th{font-size:12px;text-transform:uppercase;color: var(--mc-text-3)}.cpa-table span{display:block;color: var(--mc-text-2);font-size:12px}@media(max-width:991px){.cpa-grid{grid-template-columns:1fr}.cpa-hero{flex-direction:column}}@media(max-width:767px){.cpa-form-grid,.cpa-checks{grid-template-columns:1fr}.cpa-actions,.cpa-actions .master-btn,.cpa-actions-wrap .master-btn{width:100%}.cpa-submit .master-btn{width:100%}.cpa-card{padding:15px}}
 
 /* Multi-user portal access and secure support workspace controls */
 .cpa-secondary-user{padding:14px 0;border-top:1px solid var(--mc-border)}
@@ -1169,6 +1169,7 @@
 }
 
 .client-show .client-detail-tools .cpa-grid {
+    align-items: start;
     gap: 16px;
 }
 
@@ -1192,11 +1193,15 @@
 .client-show .client-detail-tools .cpa-eyebrow {
     color: var(--mc-text-3);
     font-size: 10px;
-    letter-spacing: .1em;
+    font-weight: 700;
+    letter-spacing: .08em;
 }
 
 .client-show .cpa-badge {
+    padding: 5px 8px;
     border: 1px solid var(--mc-border);
+    font-size: 11px;
+    font-weight: 600;
 }
 
 .client-show .cpa-badge.active {
@@ -1603,16 +1608,15 @@
 }
 
 .client-show .client-statement-filter-form {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 8px 12px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) max-content;
+    align-items: end;
+    gap: 10px 12px;
 }
 
 .client-show .client-statement-filter-form .master-field {
-    flex: 1 1 180px;
     min-width: 0;
-    max-width: 250px;
+    max-width: none;
     margin: 0;
 }
 
@@ -1631,11 +1635,9 @@
 
 .client-show .client-statement-filter-submit {
     display: flex;
-    flex: 0 0 auto;
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
-    margin-left: auto;
 }
 
 .client-show .client-statement-filter-submit .master-btn {
@@ -1644,7 +1646,7 @@
 }
 
 .client-show .client-statement-source {
-    margin: 8px 0 0;
+    margin: 10px 0 0;
     color: var(--mc-text-3);
     font-size: 10.5px;
     line-height: 1.45;
@@ -1653,45 +1655,59 @@
 .client-show .client-statement-metrics {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
+    align-items: stretch;
+    gap: 12px;
+    margin: 0;
 }
 
 .client-show .client-statement-metric {
-    display: flex;
     min-width: 0;
-    flex-direction: column;
-    gap: 4px;
-    padding: 12px 16px;
-    border: 1px solid var(--mc-border);
-    border-radius: 14px;
+    min-height: 84px;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
     background: var(--mc-card);
-    box-shadow: var(--mc-shadow);
 }
 
-.client-show .client-statement-metric > span {
-    color: var(--mc-text-3);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-transform: uppercase;
+.client-show .client-statement-metric .icon {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
 }
 
-.client-show .client-statement-metric > strong {
-    color: var(--mc-text);
-    font-size: 15px;
-    font-weight: 650;
+.client-show .client-statement-metric-copy {
+    position: relative;
+    min-width: 0;
+    padding-bottom: 14px;
+}
+
+.client-show .client-statement-metric-copy .master-stat-title {
+    margin-bottom: 3px;
+    color: var(--mc-text-2);
+    font-size: 14px;
+    font-weight: 500;
     line-height: 1.3;
+}
+
+.client-show .client-statement-metric-copy .master-stat-value {
+    color: var(--mc-text);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
 }
 
-.client-show .client-statement-metric small {
+.client-show .client-statement-balance-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    margin: 0;
     color: var(--mc-text-3);
-    font-size: 10px;
-}
-
-.client-show .client-statement-metric.is-balance {
-    border-color: rgba(79, 131, 241, .45);
-    background: var(--mc-card);
+    font-size: 11px;
+    line-height: 14px;
 }
 
 .client-show .client-statement-other-currencies {
@@ -1764,6 +1780,15 @@
 }
 
 @media (max-width: 960px) {
+    .client-show .client-statement-filter-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .client-show .client-statement-filter-submit {
+        grid-column: 1 / -1;
+        margin-left: 0;
+    }
+
     .client-show .client-statement-metrics {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -1826,7 +1851,6 @@
     }
 
     .client-show .client-statement-filter-form .master-field {
-        flex: initial;
         max-width: none;
     }
 
@@ -1858,11 +1882,29 @@
     }
 
     .client-show .client-statement-metric {
-        padding: 11px;
+        min-height: 76px;
+        gap: 8px;
+        padding: 10px;
+        border-radius: 14px;
     }
 
-    .client-show .client-statement-metric > strong {
-        font-size: 13px;
+    .client-show .client-statement-metric .icon {
+        flex-basis: 30px;
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+    }
+
+    .client-show .client-statement-metric-copy {
+        padding-bottom: 13px;
+    }
+
+    .client-show .client-statement-metric-copy .master-stat-title {
+        font-size: 12px;
+    }
+
+    .client-show .client-statement-metric-copy .master-stat-value {
+        font-size: 15px;
     }
 
     .client-show .client-document-modal {
@@ -1910,4 +1952,35 @@
 :root[data-theme="dark"] .client-show .client-statement-metric,
 :root[data-theme="dark"] .client-show .client-statement-other-currencies {
     background-color: var(--mc-card);
+}
+
+
+:root[data-theme="dark"] .client-show .client-statement-metric.master-stat--flat.blue {
+    border-color: rgba(79, 142, 247, .35);
+}
+
+:root[data-theme="dark"] .client-show .client-statement-metric.master-stat--flat.orange {
+    border-color: rgba(245, 158, 11, .35);
+}
+
+:root[data-theme="dark"] .client-show .client-statement-metric.master-stat--flat.teal {
+    border-color: rgba(18, 203, 183, .35);
+}
+
+:root[data-theme="dark"] .client-show .client-statement-metric.master-stat--flat.purple {
+    border-color: rgba(139, 92, 246, .35);
+}
+
+:root[data-theme="dark"] .client-show .cpa-badge.active {
+    border-color: rgba(16, 185, 129, .3);
+    background: rgba(16, 185, 129, .14);
+    color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .client-show .cpa-password-box {
+    border-color: rgba(245, 158, 11, .38);
+}
+
+:root[data-theme="dark"] .client-show .cpa-password-box span {
+    color: #fcd34d;
 }
