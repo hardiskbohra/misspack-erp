@@ -19,6 +19,12 @@ body[data-ui-shell] :is(.core-label, .master-label) {
     line-height: 1.35;
 }
 
+/* A master field already supplies a 7px vertical flex gap. Reset the legacy
+   label margins so they do not compound with it throughout forms and drawers. */
+body[data-ui-shell] .master-field > .master-label {
+    margin: 0;
+}
+
 body[data-ui-shell] :is(.core-text-input, .core-select, .core-textarea, .master-input, .master-select, .master-textarea):focus-visible {
     border-color: var(--ui-accent);
     box-shadow: var(--ui-shadow-focus);

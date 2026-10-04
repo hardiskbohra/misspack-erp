@@ -21,6 +21,8 @@ const adminLayout = read('resources/views/layouts/app.blade.php');
 const portalLayout = read('resources/views/client_portal/layouts/app.blade.php');
 const listJs = read('public/assets/js/master-list.js');
 const tableCss = read('resources/css/components/tables.css');
+const formCss = read('resources/css/components/forms.css');
+const legacyFormCss = read('public/assets/css/master-form.css');
 const responsiveCss = read('resources/css/layout/responsive.css');
 const inventory = read('docs/ui-component-inventory.md');
 
@@ -64,6 +66,10 @@ check('drawer field rows stay top-aligned and collapse to one column on phones',
     /align-content:\s*start/.test(drawerCss)
     && /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/.test(drawerCss)
     && /grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(drawerCss));
+check('form labels use the field gap without stacked legacy margins',
+    /\.master-label\s*\{\s*display:\s*block;\s*margin:\s*0;/.test(legacyFormCss)
+    && /\.master-field\s*\{[^}]*gap:\s*7px/.test(legacyFormCss)
+    && /body\[data-ui-shell\] \.master-field > \.master-label\s*\{\s*margin:\s*0;/.test(formCss));
 check('admin and portal layouts both load the shared drawer behavior',
     /assets\/js\/master-drawer\.js/.test(adminLayout)
     && /assets\/js\/master-drawer\.js/.test(portalLayout));

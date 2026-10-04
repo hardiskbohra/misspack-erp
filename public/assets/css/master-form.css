@@ -216,8 +216,7 @@
 
 .master-label {
     display: block;
-    margin-top: 10px;
-    margin-bottom: 10px;
+    margin: 0;
     /* was a hard #111111: correct on a white card, but in the dark theme it
        painted near-black labels on the dark panel. The token carries the same
        near-black in light and the panel's own text colour in dark. */
