@@ -73,8 +73,12 @@ class PurchaseBillLedger
             'exchange_rate' => $this->rate($invoice),
             'transaction_type' => 'credit',
             'entry_category' => 'bill',
+            /* The office reconciles against the vendor's own number, so the
+               ledger row carries it: our number says which document of ours
+               posted, theirs says which of theirs is being paid. */
             'particular' => trim('Purchase bill '.$invoice->invoice_number
-                .($order ? ' against '.$order->invoice_number : '')),
+                .($order ? ' against '.$order->invoice_number : '')
+                .($invoice->vendor_bill_number ? ' · vendor bill '.$invoice->vendor_bill_number : '')),
             'status' => 'booked',
             'amount_in_inr' => $this->rupees($invoice),
             'remarks' => 'Auto-posted from purchase bill '.$invoice->invoice_number.'.',

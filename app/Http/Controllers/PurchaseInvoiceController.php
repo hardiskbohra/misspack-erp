@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\DateRanges;
 use App\Models\Product;
 use App\Models\Project;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchaseInvoiceItem;
+use App\Models\SavedView;
 use App\Models\Vendor;
 use App\Models\VendorPaymentEntry;
 use App\Services\PurchaseBillLedger;
+use App\Services\PurchaseInvoiceFilters;
+use App\Services\SavedViews;
 use App\Services\VendorPaymentCashflowSync;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,11 +40,33 @@ use Illuminate\View\View;
  */
 class PurchaseInvoiceController extends Controller
 {
+    /**
+     * The sweep actions, and what each one means.
+     *
+     * They are the row menu's own actions in a loop — a sweep must not be able
+     * to do something a person could not do one row at a time, so `bulk()` calls
+     * the same status transitions and refuses the same rows, and says what it
+     * left alone.
+     */
+    private const BULK_ACTIONS = [
+        'advance' => 'Mark sent / received',
+        'approve' => 'Approve',
+        'cancel' => 'Cancel',
+        'delete_drafts' => 'Delete drafts only',
+    ];
+
     /** The orders a document can be in at each stage, from the model's own flow. */
     public function index(Request $request): View
     {
+        // Jumping back into a saved view re-runs its filters.
+        if ($savedQuery = $this->resolveSavedView($request)) {
+            return redirect()->route($this->docType($request) === PurchaseInvoice::TYPE_ORDER
+                ? 'purchase-orders.index'
+                : 'purchase-bills.index', $savedQuery);
+        }
+
         $type = $this->docType($request);
-        $filters = $this->filtersFromRequest($request);
+        $filters = $this->filters();
 
         /* Figures and rows each get a query of their own: `withSum` writes a
            correlated subquery into the column list and `selectRaw` appends to
@@ -88,6 +114,11 @@ class PurchaseInvoiceController extends Controller
             'pageTotals' => $totals,
             'chipCounts' => $this->chipCounts($filters, $type, $invoices->total()),
             'appliedChips' => $this->appliedChips($filters),
+            'bulkActions' => $this->bulkActions($type),
+            'savedViews' => app(SavedViews::class)->forUser(Auth::id(), $this->viewModule($type)),
+            'dateRanges' => DateRanges::presets(),
+            'dateRangeLabels' => DateRanges::LABELS,
+            'activeRange' => DateRanges::keyOf($filters['dateFrom'], $filters['dateTo']),
             ...$filters,
         ]));
     }
@@ -129,34 +160,24 @@ class PurchaseInvoiceController extends Controller
             ->when($filters['dateTo'] ?? null, fn ($query, $date) => $query->whereDate('purchase_invoices.invoice_date', '<=', $date));
     }
 
-    /** The filter vocabulary: what the drawer offers and what a chip can carry. */
-    private function filtersFromRequest(Request $request): array
+    /**
+     * The filter vocabulary: what the drawer offers and what a chip can carry.
+     *
+     * The parsing lives in `PurchaseInvoiceFilters`, which the CSV exports read
+     * too — a filter that the screen and the file name differently is a filter
+     * nobody trusts.
+     *
+     * @return array<string, mixed>
+     */
+    private function filters(?Request $request = null): array
     {
-        $status = (string) $request->query('status', 'all');
-        if ($status !== 'all' && ! array_key_exists($status, PurchaseInvoice::statusOptions() + ['overdue' => 'Overdue'])) {
-            $status = 'all';
-        }
+        return app(PurchaseInvoiceFilters::class)->fromRequest($request ?: request());
+    }
 
-        $payment = (string) $request->query('payment', 'all');
-        if (! in_array($payment, ['all', 'nothing', 'partial', 'paid'], true)) {
-            $payment = 'all';
-        }
-
-        $currency = (string) $request->query('currency', 'all');
-        if ($currency !== 'all' && ! array_key_exists($currency, PurchaseInvoice::currencyOptions())) {
-            $currency = 'all';
-        }
-
-        return [
-            'search' => trim((string) $request->query('search', '')),
-            'status' => $status,
-            'payment' => $payment,
-            'currency' => $currency,
-            'vendor' => (int) $request->query('vendor', 0),
-            'project' => (int) $request->query('project', 0),
-            'dateFrom' => $request->query('date_from') ?: null,
-            'dateTo' => $request->query('date_to') ?: null,
-        ];
+    /** The words the chips wears, for the exports' own "Filtered by" line. */
+    private function filterLabels(array $filters): array
+    {
+        return app(PurchaseInvoiceFilters::class)->labels($filters);
     }
 
     /**
@@ -169,43 +190,9 @@ class PurchaseInvoiceController extends Controller
      */
     private function appliedChips(array $filters): array
     {
-        $statuses = PurchaseInvoice::statusOptions() + ['overdue' => 'Overdue'];
-        $chips = [];
-
-        $add = function (string $key, string $label, string $value, array $query) use (&$chips) {
-            $chips[] = ['key' => $key, 'label' => $label, 'value' => $value, 'query' => $query];
-        };
-
-        if ($filters['search'] !== '') {
-            $add('search', 'Search', $filters['search'], ['search']);
-        }
-        if ($filters['status'] !== 'all') {
-            $add('status', 'Status', $statuses[$filters['status']] ?? $filters['status'], ['status']);
-        }
-        if ($filters['payment'] !== 'all') {
-            $add('payment', 'Payment', self::PAYMENT_LABELS[$filters['payment']] ?? $filters['payment'], ['payment']);
-        }
-        if ($filters['currency'] !== 'all') {
-            $add('currency', 'Currency', $filters['currency'], ['currency']);
-        }
-        if ($filters['vendor'] > 0) {
-            $add('vendor', 'Vendor',
-                Vendor::query()->whereKey($filters['vendor'])->value('vendor_name') ?: '#'.$filters['vendor'],
-                ['vendor']);
-        }
-        if ($filters['project'] > 0) {
-            $add('project', 'Project',
-                Project::query()->whereKey($filters['project'])->value('name') ?: '#'.$filters['project'],
-                ['project']);
-        }
-        if ($filters['dateFrom'] || $filters['dateTo']) {
-            $add('dates', 'Document date',
-                trim(($filters['dateFrom'] ?: '…').' → '.($filters['dateTo'] ?: '…')),
-                ['date_from', 'date_to']);
-        }
-
-        return $chips;
+        return app(PurchaseInvoiceFilters::class)->applied($filters);
     }
+
 
     /** How many rows each status chip would show, over the rest of the filters. */
     private function chipCounts(array $filters, string $type, int $all): array
@@ -219,6 +206,15 @@ class PurchaseInvoiceController extends Controller
         /* Late is a question about the money, not a stored word, so it is asked
            the way the filter asks it. */
         $counts['overdue'] = $this->filteredQuery(array_merge($filters, ['status' => 'overdue']), $type)->count();
+
+        /* The quick periods count what that period alone would show: "This month
+           18" is eighteen documents in this month under the rest of the view. */
+        foreach (DateRanges::presets() as $rangeKey => $range) {
+            $counts[$rangeKey] = $this->filteredQuery(array_merge($filters, [
+                'dateFrom' => $range['from'],
+                'dateTo' => $range['to'],
+            ]), $type)->count();
+        }
 
         return $counts;
     }
@@ -347,24 +343,36 @@ class PurchaseInvoiceController extends Controller
 
         $type = $purchaseInvoice->invoice_type;
         $number = $purchaseInvoice->invoice_number;
-        $order = PurchaseInvoice::query()->where('converted_invoice_id', $purchaseInvoice->id)->first();
 
-        DB::transaction(function () use ($purchaseInvoice, $order) {
-            (new PurchaseBillLedger())->remove($purchaseInvoice);
-            $purchaseInvoice->items()->delete();
-            $purchaseInvoice->delete();
+        $this->deleteDocument($purchaseInvoice);
 
-            /* The order the bill came from goes back to being an order: the
-               link is what made it history, and the bill is gone. */
+        return redirect()->route($type === 'order' ? 'purchase-orders.index' : 'purchase-bills.index')
+            ->with('success', $number.' deleted.');
+    }
+
+    /**
+     * Delete a document, and everything that pointed at it.
+     *
+     * One path, because there are two doors: the row menu and the sweep. A bill
+     * takes its ledger posting with it, and the order it came from goes back to
+     * being an order — the link is what made it history, and the bill is gone.
+     * Items go with the row itself (`cascadeOnDelete`).
+     */
+    private function deleteDocument(PurchaseInvoice $invoice): void
+    {
+        $order = PurchaseInvoice::query()->where('converted_invoice_id', $invoice->id)->first();
+
+        DB::transaction(function () use ($invoice, $order) {
+            (new PurchaseBillLedger())->remove($invoice);
+            $invoice->items()->delete();
+            $invoice->delete();
+
             if ($order) {
                 $order->converted_invoice_id = null;
                 $order->status = 'approved';
                 $order->save();
             }
         });
-
-        return redirect()->route($type === 'order' ? 'purchase-orders.index' : 'purchase-bills.index')
-            ->with('success', $number.' deleted.');
     }
 
     /**
@@ -561,6 +569,365 @@ class PurchaseInvoiceController extends Controller
                there is no "Back" to go to and no office chrome to leak. */
             'publicMode' => true,
         ]);
+    }
+
+    /* ------------------------------------------------------------------
+       The list's own work: the files it exports, the sweep, the saved views
+       ------------------------------------------------------------------ */
+
+    /**
+     * The CSV the office works from — the list on screen, as a file.
+     *
+     * Same filters and same money rule as the rows: `paidAmount()` is the
+     * opening figure plus what the vendor ledger says, and the CSV is not
+     * allowed a second opinion about that. "Export the selected rows" is this
+     * same file, narrowed to what was ticked.
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $type = $this->docType($request);
+        $filters = $this->filters($request);
+        $selected = app(PurchaseInvoiceFilters::class)->selectedIds($request);
+
+        $query = $this->filteredQuery($filters, $type)->withPaid();
+
+        if ($selected !== []) {
+            $query->whereIn('purchase_invoices.id', $selected);
+        }
+
+        $rows = $query->latest('invoice_date')->latest('id')->get();
+        $labels = $this->filterLabels($filters);
+        $applied = $this->appliedChips($filters);
+
+        return response()->streamDownload(function () use ($rows, $selected, $applied, $labels, $type) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+
+            $row = fn (array $cells) => fputcsv($out, $cells);
+            $money = fn ($value) => number_format((float) $value, 2, '.', '');
+
+            $row([$type === PurchaseInvoice::TYPE_ORDER ? 'Purchase orders' : 'Purchase bills']);
+            $row(['Taken', now()->format('d M Y H:i')]);
+            $row(['Rows', $rows->count()]);
+            $row(['Filtered by', $this->filteredByLine($selected, $applied, $labels)]);
+            $row([]);
+
+            $row([
+                'Document', 'Type', 'Status', 'Date', 'Due / expected', 'Vendor', 'GSTIN', 'Project',
+                'Currency', 'Total', $type === PurchaseInvoice::TYPE_ORDER ? 'Billed' : 'Paid',
+                $type === PurchaseInvoice::TYPE_ORDER ? 'Open value' : 'Balance',
+                'Days late', "Vendor's bill", 'Our reference',
+            ]);
+
+            foreach ($rows as $invoice) {
+                $isOrder = $invoice->isOrder();
+
+                $row([
+                    $invoice->invoice_number,
+                    $invoice->typeLabel(),
+                    $invoice->stateLabel(),
+                    optional($invoice->invoice_date)->format('Y-m-d'),
+                    optional($isOrder ? $invoice->expected_date : $invoice->due_date)->format('Y-m-d'),
+                    $invoice->vendor_company_name,
+                    $invoice->vendor_gstin,
+                    $invoice->project?->project_number,
+                    $invoice->currency,
+                    $money($invoice->total_amount),
+                    $money($isOrder ? $invoice->billedAmount() : $invoice->paidAmount()),
+                    $money($isOrder ? ($invoice->isSuperseded() ? 0 : $invoice->total_amount) : $invoice->balanceDue()),
+                    $invoice->daysOverdue() ?: '',
+                    $invoice->vendor_bill_number,
+                    $invoice->our_reference,
+                ]);
+            }
+        }, ($type === PurchaseInvoice::TYPE_ORDER ? 'purchase-orders-' : 'purchase-bills-').now()->format('Y-m-d').'.csv',
+            ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /**
+     * The input-credit register: HSN and rate-wise, for the period on screen.
+     *
+     * Drafts and cancellations are left out on purpose — a bill nobody has
+     * received is not a purchase, and GST is not claimable on a document that
+     * was withdrawn. The rows come from the **items**, which is where HSN and
+     * rate live; the header only carries totals.
+     */
+    public function gstExport(Request $request): StreamedResponse
+    {
+        $type = $this->docType($request);
+        $filters = $this->filters($request);
+        $selected = app(PurchaseInvoiceFilters::class)->selectedIds($request);
+
+        $invoices = $this->filteredQuery($filters, $type)
+            ->whereNotIn('purchase_invoices.status', ['draft', 'cancelled']);
+
+        if ($selected !== []) {
+            $invoices->whereIn('purchase_invoices.id', $selected);
+        }
+
+        $rows = PurchaseInvoiceItem::query()
+            ->whereIn('purchase_invoice_id', (clone $invoices)->reorder()->select('purchase_invoices.id'))
+            ->selectRaw('coalesce(hsn_sac, "") as hsn_sac, gst_percent, count(distinct purchase_invoice_id) as documents'
+                .', sum(quantity) as quantity, sum(taxable_amount) as taxable, sum(cgst_amount) as cgst'
+                .', sum(sgst_amount) as sgst, sum(igst_amount) as igst, sum(line_total) as total')
+            ->groupBy('hsn_sac', 'gst_percent')
+            ->orderBy('hsn_sac')
+            ->orderBy('gst_percent')
+            ->get();
+
+        $labels = $this->filterLabels($filters);
+        $applied = $this->appliedChips($filters);
+
+        return response()->streamDownload(function () use ($rows, $selected, $applied, $labels, $type) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+
+            $row = fn (array $cells) => fputcsv($out, $cells);
+            $money = fn ($value) => number_format((float) $value, 2, '.', '');
+
+            $row(['GST summary — '.($type === PurchaseInvoice::TYPE_ORDER ? 'purchase orders' : 'purchase bills')]);
+            $row(['Taken', now()->format('d M Y H:i')]);
+            $row(['Filtered by', $this->filteredByLine($selected, $applied, $labels)]);
+            $row(['Rows are the document items, grouped by HSN/SAC and rate. Drafts and cancelled documents are excluded.']);
+            $row([]);
+
+            $row(['HSN / SAC', 'GST %', 'Documents', 'Quantity', 'Taxable', 'CGST', 'SGST', 'IGST', 'Total']);
+
+            $totals = ['taxable' => 0.0, 'cgst' => 0.0, 'sgst' => 0.0, 'igst' => 0.0, 'total' => 0.0];
+
+            foreach ($rows as $line) {
+                foreach ($totals as $key => $value) {
+                    $totals[$key] = $value + (float) $line->{$key};
+                }
+
+                $row([
+                    $line->hsn_sac,
+                    number_format((float) $line->gst_percent, 2, '.', ''),
+                    $line->documents,
+                    number_format((float) $line->quantity, 3, '.', ''),
+                    $money($line->taxable),
+                    $money($line->cgst),
+                    $money($line->sgst),
+                    $money($line->igst),
+                    $money($line->total),
+                ]);
+            }
+
+            $row([]);
+            $row(['Total', '', '', '', $money($totals['taxable']), $money($totals['cgst']),
+                $money($totals['sgst']), $money($totals['igst']), $money($totals['total'])]);
+        }, 'purchase-gst-summary-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /**
+     * One action, many rows.
+     *
+     * The sweep may only do what a person could do one row at a time, so it uses
+     * the same transitions — and it says what it left alone and why. A row of the
+     * other document type is not touched at all: the URL decides the document,
+     * and a tick from a stale page is not a permission to change the other one.
+     */
+    public function bulk(Request $request): RedirectResponse
+    {
+        $type = $this->docType($request);
+
+        $data = $request->validate([
+            'action' => ['required', Rule::in(array_keys($this->bulkActions($type)))],
+            'ids' => ['required', 'array', 'min:1', 'max:500'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $invoices = PurchaseInvoice::query()
+            ->where('invoice_type', $type)
+            ->whereIn('id', $data['ids'])
+            ->get();
+
+        $done = 0;
+        $skipped = 0;
+
+        DB::transaction(function () use ($invoices, $data, &$done, &$skipped) {
+            foreach ($invoices as $invoice) {
+                $changed = match ($data['action']) {
+                    'advance' => $this->bulkAdvance($invoice),
+                    'approve' => $invoice->isOrder() && in_array($invoice->status, ['draft', 'sent'], true)
+                        ? (bool) $invoice->forceFill([
+                            'status' => 'approved',
+                            'approved_at' => $invoice->approved_at ?: now(),
+                        ])->save()
+                        : false,
+                    'cancel' => $this->bulkCancel($invoice),
+                    'delete_drafts' => $this->bulkDeleteDraft($invoice),
+                    default => false,
+                };
+
+                $changed ? $done++ : $skipped++;
+            }
+        });
+
+        $message = $done.' '.Str::plural('document', $done).' — '
+            .mb_strtolower($this->bulkActions($type)[$data['action']]).' done.';
+
+        if ($skipped) {
+            $message .= ' '.$skipped.' left alone — already past that step, cancelled, or already paid.';
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * Delete a draft that never left the desk — through the row menu's own path,
+     * because its ledger posting and any order it came from are part of deleting
+     * it, not something a sweep may skip.
+     */
+    private function bulkDeleteDraft(PurchaseInvoice $invoice): bool
+    {
+        if ($invoice->status !== 'draft' || $invoice->isSuperseded() || (float) $invoice->ledgerPaid() > 0.01) {
+            return false;
+        }
+
+        $this->deleteDocument($invoice);
+
+        return true;
+    }
+
+    /** Draft to sent (an order) or to received (a bill) — and nothing else. */
+    private function bulkAdvance(PurchaseInvoice $invoice): bool
+    {
+        if ($invoice->status !== 'draft') {
+            return false;
+        }
+
+        $target = $invoice->isOrder() ? 'sent' : 'received';
+
+        $invoice->status = $target;
+        $invoice->{$target === 'sent' ? 'sent_at' : 'received_at'} = now();
+
+        $invoice->save();
+
+        return true;
+    }
+
+    /** Cancel, unless the room the document is in makes that a lie. */
+    private function bulkCancel(PurchaseInvoice $invoice): bool
+    {
+        if (in_array($invoice->status, ['cancelled', 'paid'], true) || $invoice->isSuperseded()) {
+            return false;
+        }
+
+        /* A bill somebody has paid against is not cancelled by a sweep: the money
+           in the vendor ledger refers to it, and writing it off is a decision. */
+        if ((float) $invoice->ledgerPaid() > 0.01) {
+            return false;
+        }
+
+        $invoice->status = 'cancelled';
+        $invoice->cancelled_at = $invoice->cancelled_at ?: now();
+        $invoice->save();
+
+        return true;
+    }
+
+    /** Save the query string on screen as a view this office can jump back into. */
+    public function storeSavedView(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:60'],
+            'is_shared' => ['nullable', 'boolean'],
+        ]);
+
+        app(SavedViews::class)->save(
+            Auth::id(),
+            $this->viewModule($this->docType($request)),
+            $data['name'],
+            request()->query(),
+            $request->boolean('is_shared')
+        );
+
+        return back()->with('success', 'View "'.$data['name'].'" saved.');
+    }
+
+    public function destroySavedView(Request $request, SavedView $savedView): RedirectResponse
+    {
+        abort_unless((int) $savedView->user_id === (int) Auth::id(), 403);
+
+        app(SavedViews::class)->delete(Auth::id(), $savedView->id);
+
+        return back()->with('success', 'Saved view removed.');
+    }
+
+    /**
+     * When the request carries `?saved_view=ID`, the saved query is what should be
+     * rendered — this turns it back into the URL the list already speaks.
+     *
+     * @return array<string, string>
+     */
+    private function resolveSavedView(Request $request): array
+    {
+        $id = (int) $request->query('saved_view', 0);
+
+        if (! $id) {
+            return [];
+        }
+
+        $view = SavedView::query()
+            ->where('module', $this->viewModule($this->docType($request)))
+            ->where(function ($query) {
+                $query->where('user_id', Auth::id())->orWhere('is_shared', true);
+            })
+            ->find($id);
+
+        return $view ? app(SavedViews::class)->queryFor($view) : [];
+    }
+
+    /** Orders and bills keep their own saved views: a view is a question about one list. */
+    private function viewModule(string $type): string
+    {
+        return $type === PurchaseInvoice::TYPE_ORDER ? 'purchase-orders' : 'purchase-bills';
+    }
+
+    /**
+     * The sweep actions this document type offers.
+     *
+     * A bill is never "approved" — it is received — and an order is never
+     * "received": the same controller offers each list its own verbs, so the
+     * dropdown on screen and the validation behind it cannot disagree.
+     *
+     * @return array<string, string>
+     */
+    private function bulkActions(string $type): array
+    {
+        $actions = self::BULK_ACTIONS;
+        $actions['advance'] = $type === PurchaseInvoice::TYPE_ORDER ? 'Mark sent' : 'Mark received';
+
+        if ($type !== PurchaseInvoice::TYPE_ORDER) {
+            unset($actions['approve']);
+        }
+
+        return $actions;
+    }
+
+    /**
+     * One spelling of "what this file was filtered by", used by both exports —
+     * two files that describe the same screen must describe it in the same words.
+     *
+     * @param  array<int, int>  $selected
+     * @param  array<int, array{key: string, label: string, value: string}>  $applied
+     * @param  array<string, string>  $labels
+     */
+    private function filteredByLine(array $selected, array $applied, array $labels): string
+    {
+        if ($selected !== []) {
+            return 'Selected on screen ('.count($selected).')';
+        }
+
+        if ($applied === []) {
+            return 'Everything';
+        }
+
+        return implode(' · ', array_map(
+            fn ($chip) => $chip['label'].': '.($labels[$chip['key']] ?? $chip['value']),
+            $applied
+        ));
     }
 
     /* ------------------------------------------------------------------
@@ -1106,9 +1473,4 @@ class PurchaseInvoiceController extends Controller
         abort_unless($invoice->invoice_type === $this->docType($request), 404);
     }
 
-    private const PAYMENT_LABELS = [
-        'nothing' => 'Nothing paid',
-        'partial' => 'Part paid',
-        'paid' => 'Fully paid',
-    ];
 }

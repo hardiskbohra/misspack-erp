@@ -14,6 +14,9 @@
         <a class="master-btn master-btn-primary" href="{{ route('purchase-bills.create') }}">+ New Purchase Bill</a>
         <a class="master-btn master-btn-soft" href="{{ route('purchase-orders.index') }}">Purchase Orders</a>
     @endif
+    {{-- The file the office takes away, with whatever the screen is filtered by:
+         the CSV asks the same query, never a copy of it. --}}
+    <a class="master-btn master-btn-ghost desktop-only" href="{{ route($prefix.'.export', request()->query()) }}">Export CSV</a>
 @endsection
 
 @section('content')
@@ -90,6 +93,45 @@
                 {{-- The money questions (nothing paid / part paid / paid) and how
                      late a bill is live in the filter row, where they read as the
                      lists they are. --}}
+            </div>
+
+            {{-- The quick periods: the same range-object the shared helper gives
+                 every listing, so "this month" means the same thing here. --}}
+            <div class="master-list-chips">
+                @foreach ($dateRanges as $rangeKey => $range)
+                    <a class="master-list-chip {{ $activeRange === $rangeKey ? 'is-active' : '' }}"
+                        href="{{ route($prefix.'.index', $chipBase->all() + ['date_from' => $range['from'], 'date_to' => $range['to']]) }}">
+                        {{ $dateRangeLabels[$rangeKey] }}
+                        <span class="master-list-chip-count">{{ $chipCounts[$rangeKey] ?? 0 }}</span>
+                    </a>
+                @endforeach
+            </div>
+
+            {{-- A saved view is a filter set with a name. The link re-runs it; the
+                 cross removes it, and only its own owner can do that. --}}
+            <div class="master-list-saved">
+                @foreach ($savedViews as $view)
+                    <span class="master-list-saved-chip">
+                        <a href="{{ route($prefix.'.index', ['saved_view' => $view->id]) }}"
+                            title="{{ $view->is_shared ? 'Shared view' : 'Your view' }}">{{ $view->name }}</a>
+                        @if ((int) $view->user_id === (int) auth()->id())
+                            <form method="POST" action="{{ route($prefix.'.saved-views.destroy', $view) }}">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" title="Remove saved view">&times;</button>
+                            </form>
+                        @endif
+                    </span>
+                @endforeach
+                <button type="button" class="master-btn master-btn-soft master-btn-sm" id="toggleSaveView">☆ Save this view</button>
+                <form method="POST" action="{{ route($prefix.'.saved-views.store', request()->except(['page', 'saved_view'])) }}"
+                    class="master-list-save-view" id="saveViewForm" hidden>
+                    @csrf
+                    <input class="master-input" name="name" placeholder="View name" maxlength="60"
+                        aria-label="Saved view name" required>
+                    <label class="master-check"><input type="checkbox" name="is_shared" value="1"> Share</label>
+                    <button class="master-btn master-btn-primary master-btn-sm">Save</button>
+                </form>
             </div>
         </div>
 
@@ -232,6 +274,30 @@
                     <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
                 </div>
             </div>
+
+            {{-- The bulk bar has a row of its own. The table's checkboxes point to
+                 it by id; wrapping the table would nest each row menu's forms, and
+                 a form inside a form is not a form. --}}
+            <form id="purchaseBulkForm" method="POST" action="{{ route($prefix.'.bulk') }}"
+                class="master-list-bulk" data-bulk-bar hidden>
+                @csrf
+                <span class="master-list-bulk-count" data-bulk-count>0 selected</span>
+                <select class="master-select" name="action" aria-label="Action for the selected {{ $noun }}s">
+                    @foreach ($bulkActions as $actionKey => $actionLabel)
+                        <option value="{{ $actionKey }}">{{ $actionLabel }}</option>
+                    @endforeach
+                </select>
+                <button class="master-btn master-btn-primary master-btn-sm" type="submit">Apply</button>
+                <a class="master-btn master-btn-soft master-btn-sm" data-bulk-export
+                    href="{{ route($prefix.'.export') }}">
+                    <i class="fas fa-file-csv" aria-hidden="true"></i> Export selected
+                </a>
+                <a class="master-btn master-btn-soft master-btn-sm" data-bulk-gst
+                    href="{{ route($prefix.'.gstExport') }}">
+                    <i class="fas fa-percent" aria-hidden="true"></i> GST summary
+                </a>
+                <button class="master-btn master-btn-light master-btn-sm" type="button" data-bulk-clear>Clear</button>
+            </form>
         </div>
 
         <div class="master-table-wrap">
@@ -282,8 +348,8 @@
                         @endphp
                         <tr data-href="{{ route($prefix.'.show', $invoice) }}">
                             <td data-label="Pick" class="master-list-pick ui-mobile-secondary">
-                                <input type="checkbox" value="{{ $invoice->id }}" disabled
-                                    aria-label="Select {{ $invoice->invoice_number }}" title="Bulk actions arrive with the second stage">
+                                <input type="checkbox" name="ids[]" value="{{ $invoice->id }}" form="purchaseBulkForm"
+                                    data-bulk-pick aria-label="Select {{ $invoice->invoice_number }}">
                             </td>
                             <td data-label="Document">
                                 <a class="pi-number" href="{{ route($prefix.'.show', $invoice) }}">{{ $invoice->invoice_number }}</a>

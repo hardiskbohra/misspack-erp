@@ -243,6 +243,15 @@ Route::middleware('auth')->group(function () {
             Route::patch("/{$purchasePath}/{purchaseInvoice}/status", [PurchaseInvoiceController::class, 'updateStatus'])->name("{$purchasePath}.status");
             Route::get("/{$purchasePath}/{purchaseInvoice}/print", [PurchaseInvoiceController::class, 'print'])->name("{$purchasePath}.print");
             Route::post("/{$purchasePath}/{purchaseInvoice}/convert", [PurchaseInvoiceController::class, 'convert'])->name("{$purchasePath}.convert");
+            /* The list's own work, before the routes that take a document id:
+               `/purchase-orders/export` is a file, not an order whose id is
+               "export". */
+            Route::get("/{$purchasePath}/export", [PurchaseInvoiceController::class, 'export'])->name("{$purchasePath}.export");
+            Route::get("/{$purchasePath}/gst-export", [PurchaseInvoiceController::class, 'gstExport'])->name("{$purchasePath}.gstExport");
+            /* one action, many rows — the row menu's own actions, in a loop */
+            Route::post("/{$purchasePath}/bulk", [PurchaseInvoiceController::class, 'bulk'])->name("{$purchasePath}.bulk");
+            Route::post("/{$purchasePath}/saved-views", [PurchaseInvoiceController::class, 'storeSavedView'])->name("{$purchasePath}.saved-views.store");
+            Route::delete("/{$purchasePath}/saved-views/{savedView}", [PurchaseInvoiceController::class, 'destroySavedView'])->name("{$purchasePath}.saved-views.destroy");
             Route::get("/{$purchasePath}/create", [PurchaseInvoiceController::class, 'create'])->name("{$purchasePath}.create");
             Route::post("/{$purchasePath}", [PurchaseInvoiceController::class, 'store'])->name("{$purchasePath}.store");
             Route::get("/{$purchasePath}", [PurchaseInvoiceController::class, 'index'])->name("{$purchasePath}.index");

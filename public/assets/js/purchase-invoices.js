@@ -462,7 +462,8 @@
 
     /* ============================================================ the listing
        The same chrome as every other listing: row navigation, the grid shadow,
-       and the density switch, all from the shared `MasterList`. */
+       the density switch and the "save this view" toggle, all from the shared
+       `MasterList`. */
     onReady(function () {
         var list = document.querySelector('.pi-index');
         if (!list || typeof window.MasterList === 'undefined') return;
@@ -470,6 +471,80 @@
         window.MasterList.rowNavigation({ root: '.pi-index' });
         window.MasterList.gridShadow({ root: '.pi-index' });
         window.MasterList.density({ root: '.pi-index', key: 'purchaseDensity' });
+        window.MasterList.saveViewToggle();
+    });
+
+    /* ---------------------------------------------------------- the sweep
+       Ticking rows is the month-end move: mark a batch sent, approve the lot, or
+       take the selection to the CSV and the GST register. The boxes are attached
+       to the bulk form by id — a form inside a form is not a form — so the bar
+       lives in the toolbar while the boxes live in the table. */
+    onReady(function () {
+        var form = document.getElementById('purchaseBulkForm');
+        var bar = document.querySelector('[data-bulk-bar]');
+        var picks = document.querySelectorAll('[data-bulk-pick]');
+
+        if (!form || !bar || !picks.length) return;
+
+        var count = form.querySelector('[data-bulk-count]');
+        var all = document.querySelector('[data-bulk-all]');
+        var exportLink = form.querySelector('[data-bulk-export]');
+        var gstLink = form.querySelector('[data-bulk-gst]');
+        var clear = form.querySelector('[data-bulk-clear]');
+
+        var selected = function () {
+            return Array.prototype.filter.call(picks, function (pick) { return pick.checked; });
+        };
+
+        /* The exporters are the screen's own, narrowed: what was ticked goes in
+           the URL, so the file and the screen can never disagree about the rows. */
+        var withIds = function (link, ids) {
+            if (!link) return;
+
+            var url = link.getAttribute('href').split('?')[0];
+            var query = ids.map(function (id) { return 'ids[]=' + encodeURIComponent(id); });
+
+            link.setAttribute('href', query.length ? url + '?' + query.join('&') : url);
+        };
+
+        var sync = function () {
+            var ids = selected().map(function (pick) { return pick.value; });
+
+            bar.hidden = ids.length === 0;
+
+            if (count) {
+                count.textContent = ids.length === 1 ? '1 selected' : ids.length + ' selected';
+            }
+
+            withIds(exportLink, ids);
+            withIds(gstLink, ids);
+
+            if (all) {
+                all.checked = ids.length > 0 && ids.length === picks.length;
+                all.indeterminate = ids.length > 0 && ids.length < picks.length;
+            }
+        };
+
+        picks.forEach(function (pick) {
+            pick.addEventListener('change', sync);
+        });
+
+        if (all) {
+            all.addEventListener('change', function () {
+                picks.forEach(function (pick) { pick.checked = all.checked; });
+                sync();
+            });
+        }
+
+        if (clear) {
+            clear.addEventListener('click', function () {
+                picks.forEach(function (pick) { pick.checked = false; });
+                if (all) all.checked = false;
+                sync();
+            });
+        }
+
+        sync();
     });
 
     /* --------------------------------------------------- the payment dialog
