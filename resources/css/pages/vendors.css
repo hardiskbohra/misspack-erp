@@ -990,12 +990,14 @@
     box-shadow: none;
 }
 
-/* The record's cards keep one rhythm whatever container they sit in: the
-   spend card is a sibling of the grids, and used to touch the card above it. */
-.vendor-show .vendor-detail-card + .vendor-detail-grid,
-.vendor-show .vendor-detail-grid + .vendor-detail-card,
-.vendor-show .vendor-detail-card + .vendor-detail-card,
-.vendor-show .vendor-detail-grid + .vendor-detail-grid {
+/* The record's rows keep one rhythm: the spend card sits between two grids with
+   nothing to space it. Scoped to the panel's own children, because a card that
+   is the second cell of a grid row is an adjacent sibling too — a margin there
+   pushes that card down and the row stops lining up. */
+.vendor-show .master-tab-panel > .vendor-detail-grid + .vendor-detail-grid,
+.vendor-show .master-tab-panel > .vendor-detail-grid + .vendor-detail-card,
+.vendor-show .master-tab-panel > .vendor-detail-card + .vendor-detail-grid,
+.vendor-show .master-tab-panel > .vendor-detail-card + .vendor-detail-card {
     margin-top: 16px;
 }
 

@@ -24,7 +24,10 @@
 
     <div class="vendor-detail-grid">
         <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-snapshot-heading">
-            <h2 class="vendor-detail-title" id="vendor-snapshot-heading">Supplier snapshot</h2>
+            <div class="vendor-card-head">
+                <h2 class="vendor-detail-title" id="vendor-snapshot-heading">Supplier snapshot</h2>
+                <a class="vendor-card-link" href="{{ $recordUrl('profile') }}">Full profile</a>
+            </div>
             <div class="master-facts">
                 <div class="master-info"><span>Vendor number</span><strong @class(['master-empty-value' => $empty($vendor->vendor_number)])>{{ $vendor->vendor_number ?: 'Not on file' }}</strong></div>
                 <div class="master-info"><span>Type</span><strong>{{ $vendor->typeLabel() }}</strong></div>
@@ -34,9 +37,8 @@
                 <div class="master-info"><span>Rating</span><strong @class(['master-empty-value' => ! $vendor->rating])>{{ $vendor->rating ? str_repeat('★', $vendor->rating).' ('.$vendor->rating.' of 5)' : 'Not rated' }}</strong></div>
                 <div class="master-info"><span>Preferred currency</span><strong>{{ $vendor->preferred_currency ?: 'INR' }}</strong></div>
                 <div class="master-info"><span>Lead time</span><strong @class(['master-empty-value' => $vendor->lead_time_days === null])>{{ $vendor->lead_time_days !== null ? $vendor->lead_time_days.' days' : 'Not set' }}</strong></div>
-                <div class="master-info is-wide"><span>Payment terms</span><strong @class(['master-empty-value' => $empty($vendor->payment_terms)])>{{ $vendor->payment_terms ?: 'Not on file' }}</strong></div>
-                <div class="master-info"><span>Record created</span><strong>{{ $vendor->created_at?->format('d M Y') ?: '—' }}</strong></div>
-                <div class="master-info"><span>Added by</span><strong @class(['master-empty-value' => ! $vendor->creator])>{{ $vendor->creator?->name ?: 'Not on file' }}</strong></div>
+                <div class="master-info"><span>Payment terms</span><strong @class(['master-empty-value' => $empty($vendor->payment_terms)])>{{ $vendor->payment_terms ?: 'Not on file' }}</strong></div>
+                <div class="master-info"><span>Record created</span><strong @class(['master-empty-value' => ! $vendor->created_at])>{{ $vendor->created_at?->format('d M Y') ?: '—' }}@if ($vendor->creator) <span class="vendor-detail-note">by {{ $vendor->creator->name }}</span>@endif</strong></div>
             </div>
         </section>
 
@@ -65,7 +67,7 @@
                 </div>
                 <div class="master-info"><span>WhatsApp</span><strong @class(['master-empty-value' => $empty($vendor->whatsapp_number)])>{{ $vendor->whatsapp_number ?: 'Not on file' }}</strong></div>
                 <div class="master-info"><span>Alternate contact</span><strong @class(['master-empty-value' => $empty($vendor->alternate_contact)])>{{ $vendor->alternate_contact ?: 'Not on file' }}</strong></div>
-                <div class="master-info is-wide"><span>Website</span>
+                <div class="master-info"><span>Website</span>
                     @if ($vendor->website)
                         <a class="vendor-detail-link" href="{{ $vendor->website }}" target="_blank" rel="noopener noreferrer">{{ $vendor->website }}</a>
                     @else
