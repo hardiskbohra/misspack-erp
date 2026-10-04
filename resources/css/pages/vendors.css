@@ -990,9 +990,9 @@
     gap: 14px;
     padding: 16px 20px;
     margin-bottom: 16px;
-    border: 1px solid rgba(239, 71, 112, .38);
+    border: 1px solid rgba(239, 71, 112, .42);
     border-radius: 16px;
-    background: rgba(239, 71, 112, .07);
+    background: var(--mc-card);
 }
 
 .vendor-attention-icon {
