@@ -105,55 +105,75 @@
                 <input type="hidden" name="role" value="{{ $role }}">
             @endif
 
-            <div class="master-filter-row">
+            <div class="master-filter-row core-filter-toolbar">
                 <div class="master-search">
                     <span aria-hidden="true">⌕</span>
                     <input class="master-input" type="text" name="search" value="{{ $search }}"
                         placeholder="Name, email, mobile, code…" aria-label="Search the team">
                 </div>
+                <x-filter-trigger drawer="userFiltersDrawer" label="Filters" :count="count($filterChips)" />
+            </div>
 
-                @if ($availableFilters['department'] ?? true)
-                    <select class="master-select" name="department" aria-label="Filter by department">
-                        <option value="all">All departments</option>
-                        @foreach ($departments as $department)
-                            <option value="{{ $department }}" @selected($department === ($filters['department'] ?? null))>{{ $department }}</option>
-                        @endforeach
-                    </select>
-                @endif
+            <x-drawer id="userFiltersDrawer" title="Filter the team" eyebrow="Team filters"
+                subtitle="Narrow the list by department, employment status, code, or joining period." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Employment details</h3>
+                    <div class="core-drawer-fields">
+                        @if ($availableFilters['department'] ?? true)
+                            <div class="master-field">
+                                <label class="master-label" for="userFilterDepartment">Department</label>
+                                <select class="master-select" id="userFilterDepartment" name="department" aria-label="Filter by department">
+                                    <option value="all">All departments</option>
+                                    @foreach ($departments as $department)
+                                        <option value="{{ $department }}" @selected($department === ($filters['department'] ?? null))>{{ $department }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
 
-                @if ($availableFilters['status'] ?? true)
-                    <select class="master-select desktop-only" name="status" aria-label="Filter by employment status">
-                        <option value="all">Any status</option>
-                        @foreach ($employmentStatuses as $key => $label)
-                            <option value="{{ $key }}" @selected(($filters['status'] ?? null) === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                @endif
+                        @if ($availableFilters['status'] ?? true)
+                            <div class="master-field">
+                                <label class="master-label" for="userFilterStatus">Employment status</label>
+                                <select class="master-select" id="userFilterStatus" name="status" aria-label="Filter by employment status">
+                                    <option value="all">Any status</option>
+                                    @foreach ($employmentStatuses as $key => $label)
+                                        <option value="{{ $key }}" @selected(($filters['status'] ?? null) === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
 
-                @if ($availableFilters['code'] ?? true)
-                    <select class="master-select desktop-only" name="code" aria-label="Filter by employee code">
-                        <option value="all">Code: any</option>
-                        <option value="present" @selected(($filters['code'] ?? null) === 'present')>Has a code</option>
-                        <option value="missing" @selected(($filters['code'] ?? null) === 'missing')>No code yet</option>
-                    </select>
-                @endif
+                        @if ($availableFilters['code'] ?? true)
+                            <div class="master-field">
+                                <label class="master-label" for="userFilterCode">Employee code</label>
+                                <select class="master-select" id="userFilterCode" name="code" aria-label="Filter by employee code">
+                                    <option value="all">Code: any</option>
+                                    <option value="present" @selected(($filters['code'] ?? null) === 'present')>Has a code</option>
+                                    <option value="missing" @selected(($filters['code'] ?? null) === 'missing')>No code yet</option>
+                                </select>
+                            </div>
+                        @endif
 
-                @if ($availableFilters['joined'] ?? true)
-                    <select class="master-select desktop-only" name="joined" aria-label="Filter by joining period">
-                        <option value="all">Joined: any time</option>
-                        @foreach (\App\Helpers\DateRanges::LABELS as $key => $label)
-                            <option value="{{ $key }}" @selected(($filters['joined'] ?? null) === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                @endif
-
-                <div class="master-list-filter-group">
+                        @if ($availableFilters['joined'] ?? true)
+                            <div class="master-field">
+                                <label class="master-label" for="userFilterJoined">Joining period</label>
+                                <select class="master-select" id="userFilterJoined" name="joined" aria-label="Filter by joining period">
+                                    <option value="all">Joined: any time</option>
+                                    @foreach (\App\Helpers\DateRanges::LABELS as $key => $label)
+                                        <option value="{{ $key }}" @selected(($filters['joined'] ?? null) === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
+                    </div>
+                </section>
+                <x-slot:footer>
                     @if ($filtersActive)
                         <a class="master-btn master-btn-soft" href="{{ route('users.index') }}">Reset</a>
                     @endif
                     <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
-                </div>
-            </div>
+                </x-slot:footer>
+            </x-drawer>
 
             {{-- What is actually filtering, one removable chip each. Built from
                  the controller's own list, so a filter that can be applied can
@@ -191,25 +211,24 @@
                 <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('users.export', $baseFilters) }}">
                     <i class="fas fa-file-csv" aria-hidden="true"></i> Export CSV
                 </a>
-                <div class="master-list-density desktop-only" role="group" aria-label="Row density">
-                    <button type="button" class="master-list-density-btn" data-density="comfortable"
-                        aria-pressed="true">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact"
-                        aria-pressed="false">Compact</button>
+                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
+                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
+                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
                 </div>
             </div>
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table">
+            <table class="master-table" data-table-settings data-table-key="users">
                 <thead>
                     <tr>
                         <th scope="col">Person</th>
                         <th scope="col">Role</th>
-                        <th scope="col">Contact</th>
-                        <th scope="col">Department</th>
-                        <th scope="col">Designation</th>
-                        <th scope="col">Joined</th>
+                        <th scope="col" class="ui-mobile-secondary">Contact</th>
+                        <th scope="col" class="ui-mobile-secondary">Department</th>
+                        <th scope="col" class="ui-mobile-secondary">Designation</th>
+                        <th scope="col" class="ui-mobile-secondary">Joined</th>
                         <th scope="col">Status</th>
                         <th scope="col">Action</th>
                     </tr>
@@ -254,19 +273,19 @@
                             <td data-label="Role">
                                 <span class="emp-pill {{ $user->isAdmin() ? 'is-info' : 'is-ok' }}">{{ $user->roleLabel() }}</span>
                             </td>
-                            <td data-label="Contact">
+                            <td data-label="Contact" class="ui-mobile-secondary">
                                 {{ $user->mobile ?: '—' }}
                                 <span class="master-sub">{{ $user->email }}</span>
                             </td>
-                            <td data-label="Department">{{ $user->department ?: '—' }}</td>
-                            <td data-label="Designation">{{ $user->designation ?: '—' }}</td>
-                            <td data-label="Joined">{{ $user->date_of_joining?->format('d M Y') ?: '—' }}</td>
+                            <td data-label="Department" class="ui-mobile-secondary">{{ $user->department ?: '—' }}</td>
+                            <td data-label="Designation" class="ui-mobile-secondary">{{ $user->designation ?: '—' }}</td>
+                            <td data-label="Joined" class="ui-mobile-secondary">{{ $user->date_of_joining?->format('d M Y') ?: '—' }}</td>
                             <td data-label="Status">
                                 @if ($user->isEmployee())
                                     <span class="emp-pill is-{{ $user->employmentStatusTone() === 'ok' ? 'ok' : ($user->employmentStatusTone() === 'warn' ? 'warn' : 'off') }}">
                                         {{ $user->employmentStatusLabel() }}
                                     </span>
-                                    <span class="master-sub">
+                                    <span class="master-sub ui-mobile-secondary">
                                         {{ (int) $user->payslips_count }} {{ \Illuminate\Support\Str::plural('payslip', (int) $user->payslips_count) }}
                                         · {{ (int) $user->employee_documents_count }} {{ \Illuminate\Support\Str::plural('document', (int) $user->employee_documents_count) }}
                                     </span>

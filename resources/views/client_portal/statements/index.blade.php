@@ -6,6 +6,7 @@
 @section('content')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/statement.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/document-print.css') }}">
 @endpush
 @php
     $party = $statement['party'];
@@ -24,38 +25,50 @@
 </div>
 
 <div class="cp-card no-print" style="padding:16px 18px;margin-bottom:18px;">
-    <form method="GET" class="cp-form-grid" action="{{ route('client-portal.statement.index') }}">
-        <div class="master-field">
-            <label class="master-label" for="statementPeriod">Period</label>
-            <select class="master-select" id="statementPeriod" name="period">
-                @foreach ($periodOptions as $key => $label)
-                    <option value="{{ $key }}" @selected($periodKey === $key)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="master-field">
-            <label class="master-label" for="statementFrom">From</label>
-            <input class="master-input" id="statementFrom" type="date" name="date_from" value="{{ $dateFrom }}">
-        </div>
-        <div class="master-field">
-            <label class="master-label" for="statementTo">To</label>
-            <input class="master-input" id="statementTo" type="date" name="date_to" value="{{ $dateTo }}">
-        </div>
-        @if (count($currencyOptions) > 1)
-            <div class="master-field">
-                <label class="master-label" for="statementCurrency">Currency</label>
-                <select class="master-select" id="statementCurrency" name="currency">
-                    @foreach ($currencyOptions as $code)
-                        <option value="{{ $code }}" @selected($statement['currency'] === $code)>
-                            {{ \App\Helpers\CommonHelper::currencyLabel($code) }}</option>
-                    @endforeach
-                </select>
-            </div>
-        @endif
-        <div style="display:flex;align-items:end;gap:10px;">
-            <button class="master-btn master-btn-primary" type="submit">Show</button>
+    <form method="GET" action="{{ route('client-portal.statement.index') }}">
+        <div class="core-filter-toolbar">
+            <x-filter-trigger drawer="portalStatementFiltersDrawer" label="Statement period"
+                :count="(($periodKey !== 'this_month' || filled($dateFrom) || filled($dateTo)) ? 1 : 0) + ($statement['currency'] !== 'INR' ? 1 : 0)" />
             <button class="master-btn master-btn-soft" type="button" onclick="window.print()">Print</button>
         </div>
+        <x-drawer id="portalStatementFiltersDrawer" title="Statement period" eyebrow="Statement filters"
+            subtitle="Choose the statement period, date range, and currency." size="medium">
+            <section class="core-drawer-section">
+                <h3 class="core-drawer-section-title">Reporting period</h3>
+                <div class="core-drawer-fields">
+                    <div class="master-field">
+                        <label class="master-label" for="statementPeriod">Period</label>
+                        <select class="master-select" id="statementPeriod" name="period">
+                            @foreach ($periodOptions as $key => $label)
+                                <option value="{{ $key }}" @selected($periodKey === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label" for="statementFrom">From</label>
+                        <input class="master-input" id="statementFrom" type="date" name="date_from" value="{{ $dateFrom }}">
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label" for="statementTo">To</label>
+                        <input class="master-input" id="statementTo" type="date" name="date_to" value="{{ $dateTo }}">
+                    </div>
+                    @if (count($currencyOptions) > 1)
+                        <div class="master-field">
+                            <label class="master-label" for="statementCurrency">Currency</label>
+                            <select class="master-select" id="statementCurrency" name="currency">
+                                @foreach ($currencyOptions as $code)
+                                    <option value="{{ $code }}" @selected($statement['currency'] === $code)>
+                                        {{ \App\Helpers\CommonHelper::currencyLabel($code) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+                </div>
+            </section>
+            <x-slot:footer>
+                <button class="master-btn master-btn-primary" type="submit">Show statement</button>
+            </x-slot:footer>
+        </x-drawer>
     </form>
 </div>
 

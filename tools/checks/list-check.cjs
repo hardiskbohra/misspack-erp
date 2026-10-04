@@ -49,6 +49,7 @@ const cashflowJs = fs.readFileSync(path.join(ROOT, 'public/assets/js/cashflows.j
 const layoutJs = fs.readFileSync(LAYOUT_JS, 'utf8');
 const layoutCss = fs.readFileSync(MASTER_INDEX, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const listCss = fs.readFileSync(LIST_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+const tableCss = fs.readFileSync(path.join(ROOT, 'resources/css/components/tables.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const cashView = fs.readFileSync(CASHFLOW_VIEW, 'utf8');
 const cashCss = fs.readFileSync(CASHFLOW_CSS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const model = fs.readFileSync(MODEL, 'utf8');
@@ -78,8 +79,8 @@ check('no cell spans more columns than the table has',
    attribute — the stacked-card label, for one — is not the guard's business,
    so the pin reads the class and what follows it, not the exact tag text */
 check('the charges column is marked as numeric',
-    /<th scope="col" class="is-num">Charges<\/th>/.test(view)
-    && /class="ship-money is-num"/.test(view)
+    /<th scope="col" class="[^"]*\bis-num\b[^"]*">Charges<\/th>/.test(view)
+    && /class="[^"]*\bship-money\b[^"]*\bis-num\b[^"]*"/.test(view)
     && /<td class="is-num"[^>]*>\s*<strong>\{\{ \\App\\Models\\Shipment::formatInr\(\$pageSpendInr\)/.test(view));
 check('the totals row keeps the money in the charges column',
     /<td class="is-num"[^>]*>\s*<strong>[\s\S]{0,200}Filtered total/.test(view));
@@ -253,8 +254,16 @@ check('the list rules use theme tokens rather than fixed colours',
 /* applied filters — a filter nobody can see is a filter nobody can undo */
 const appliedChips = [...view.matchAll(/\$chipUrl\('(\w+)'\)/g)].map(m => m[1]);
 check('every filter the page can hold is shown as an applied chip',
-    ['search', 'status', 'currency', 'from_date', 'attention'].every(key => appliedChips.includes(key)),
+    ['search', 'status', 'type', 'currency', 'from_date', 'to_date', 'attention'].every(key => appliedChips.includes(key)),
     appliedChips.join(', '));
+const shipmentDrawerStart = view.indexOf('<x-drawer id="shipmentFiltersDrawer"');
+const shipmentDrawerEnd = view.indexOf('</x-drawer>', shipmentDrawerStart);
+const shipmentFilterDrawer = shipmentDrawerStart >= 0 && shipmentDrawerEnd > shipmentDrawerStart
+    ? view.slice(shipmentDrawerStart, shipmentDrawerEnd)
+    : '';
+check('shipment type and both pickup-date bounds stay in the drawer',
+    ['type', 'from_date', 'to_date'].every(name => shipmentFilterDrawer.includes('name="' + name + '"'))
+    && ['type', 'from_date', 'to_date'].every(name => appliedChips.includes(name)));
 check('an applied chip removes only its own filter and keeps the rest',
     /request\(\)->except\(\[\$key, 'page', 'saved_view'\]\)/.test(view)
     && /'saved_view'/.test(view));
@@ -265,11 +274,13 @@ check('the applied strip is themed rather than light-only',
     && /\.master-list-applied-x:hover \{[\s\S]{0,80}var\(--danger-light\)/.test(listCss));
 
 /* row density — a long list should let the reader decide how long */
-const densityContract = view => /role="group" aria-label="Row density"/.test(view)
-    && (view.match(/class="master-list-density-btn"/g) || []).length === 2
-    && (view.match(/aria-pressed="(true|false)"/g) || []).length >= 2;
+const densityContract = view => /role="group" aria-label="Table density"/.test(view)
+    && (view.match(/class="master-list-density-btn"/g) || []).length === 3
+    && /data-density="standard" aria-pressed="true">Standard/.test(view)
+    && /data-density="comfortable" aria-pressed="false">Comfortable/.test(view)
+    && /data-density="compact" aria-pressed="false">Compact/.test(view);
 
-check('the density control states and carries its own state',
+check('the three density controls expose their pressed state',
     densityContract(view) && /class="master-list-density desktop-only"/.test(view));
 
 /* one implementation: the module passes its root and its storage key to the
@@ -278,8 +289,10 @@ check('the density choice is remembered on the device by the shared toolkit',
     /misspack\.shipments\.density/.test(js) && /misspack\.cashflows\.density/.test(cashflowJs)
     && /localStorage/.test(listJs) && /setAttribute\('data-density'/.test(listJs)
     && /MasterList\.density/.test(js) && /MasterList\.density/.test(cashflowJs));
-check('both densities actually change the row geometry',
-    /\[data-density="compact"\] \.master-table th,[\s\S]{0,120}padding: 7px 14px/.test(listCss)
+check('all three density presets actually change row geometry',
+    /master-list\[data-density="comfortable"\] \.master-table :is\(th, td\),[\s\S]{0,200}padding: 14px 16px/.test(tableCss)
+    && /master-list\[data-density="standard"\] \.master-table :is\(th, td\),[\s\S]{0,200}padding: 10px 12px/.test(tableCss)
+    && /master-list\[data-density="compact"\] \.master-table :is\(th, td\),[\s\S]{0,200}padding: 6px 10px/.test(tableCss)
     && /--ship-line: 18px/.test(css));
 check('the density is applied before the table paints',
     /document\.readyState === 'loading'/.test(js + cashflowJs)
@@ -438,7 +451,7 @@ const CHROME = [
     ['applied chips', /class="master-list-applied-chip"/],
     ['clear-all escape', /class="master-list-applied-clear"/],
     ['table bar + order hint', /class="master-list-toolbar"[\s\S]{0,600}class="master-list-hint"/],
-    ['density control', /class="master-list-density desktop-only" role="group" aria-label="Row density"/],
+    ['density control', /class="master-list-density desktop-only" role="group" aria-label="Table density"[\s\S]{0,500}data-density="compact" aria-pressed="false">Compact/],
     ['group divider', /class="master-list-group"/],
     ['group count', /class="master-list-group-count"/],
     ['totals row', /class="master-list-total"/],
@@ -501,7 +514,7 @@ check('the ledger columns line up like the shipment list',
     && /class="is-num">Debit</.test(cashView)
     && /class="is-num">Balance</.test(cashView)
     && (cashView.match(/class="cf-money is-num/g) || []).length === 3
-    && /class="ship-money is-num"/.test(view));
+    && /class="[^"]*\bship-money\b[^"]*\bis-num\b[^"]*"/.test(view));
 
 const cashStatuses = [...fs.readFileSync(path.join(ROOT, 'app/Models/CashflowEntry.php'), 'utf8')
     .matchAll(/function accountingStatusOptions\(\): array[\s\S]*?return \[([\s\S]*?)\];/g)]
@@ -563,10 +576,10 @@ const onlyInMedia = (cssText, query, needle) => {
 };
 
 check('the mobile card labels only exist below the card breakpoint',
-    onlyInMedia(listCss, 'max-width: 768px', 'td[data-label]::before'));
+    onlyInMedia(listCss, 'max-width: 767px', 'td[data-label]::before'));
 
 check('the density chrome only exists above the card breakpoint',
-    onlyInMedia(listCss, 'min-width: 769px', 'data-density="compact"'));
+    onlyInMedia(listCss, 'min-width: 768px', 'data-density="compact"'));
 
 /* ---- table shell integrity ----
    A table lays out as one box: the header and the body share a column grid
@@ -645,7 +658,7 @@ const moduleRestacks = restacked('shipments.css').filter(r => r.list).map(r => r
 
 check('the module sheet leaves the list shell alone; the shared sheet owns it',
     moduleRestacks.length === 0
-    && onlyInMedia(listCss, 'max-width: 768px', '.master-list .master-table tbody'),
+    && onlyInMedia(listCss, 'max-width: 767px', '.master-list .master-table tbody'),
     moduleRestacks.join(' | '));
 
 /* the shell is pinned node by node: table, then the boxes inside it. Each pin
@@ -655,7 +668,7 @@ const SHELL_PINS = ['display: table;', 'display: table-header-group;', 'display:
     'display: table-row;', 'display: table-cell;'];
 
 check('the shared sheet pins the shell above the phone band',
-    SHELL_PINS.every(pin => onlyInMedia(listCss, 'min-width: 769px', pin)));
+    SHELL_PINS.every(pin => onlyInMedia(listCss, 'min-width: 768px', pin)));
 
 /* a table wider than its card scrolls in its wrapper; a table without one has
    nowhere to scroll, so the shell is part of the markup contract too */
@@ -686,13 +699,14 @@ check('every table in a view sits in a .master-table-wrap',
     bareTables.length === 0, bareTables.join(', '));
 
 /* ---- one owner for the chrome ----
-   The whole chrome — not only the two rules above — belongs to the surface.
-   This is what stops a fourth list from arriving with its own idea of the bar,
-   the applied strip or the toolbar: a module sheet styles its own cells and
-   nothing that starts with .master-list. */
+   The list controls — bars, filters, applied strips, density and empty states —
+   belong to the shared surface. Module compatibility sheets may normalize a
+   table cell beneath the list root, but must not redraw those controls. The
+   generated fallback duplicates its source and is excluded from this scan. */
+const chromeSelector = /\.master-list-(?:bar|chip|saved|save-view|applied|toolbar|hint|density|bulk|group|total|empty)\b/;
 const chromeOwners = CSS_SHEETS
-    .filter(f => f !== 'master-list.css')
-    .filter(f => /\.master-list\b/.test(fs.readFileSync(path.join(CSS_DIR, f), 'utf8')
+    .filter(f => !['master-list.css', 'design-system.css'].includes(f))
+    .filter(f => chromeSelector.test(fs.readFileSync(path.join(CSS_DIR, f), 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '')));
 check('no sheet but the surface styles the list chrome',
     chromeOwners.length === 0, chromeOwners.join(', '));
@@ -830,15 +844,23 @@ check('both lists open with the same strip of tiles',
 /* ---- the ledger keeps every door open ----
    Both ways to record an entry, and the account an entry lands in, stay one
    click from the list: the quick dialog, the detailed form, and the add-account
-   button sitting with the account filter it belongs to. */
-const accountFilterAt = cashView.indexOf('class="cf-account-filter"');
+   button sitting with its account selector inside the shared filter drawer. */
+const accountLabelAt = cashView.indexOf('for="cashflowFilterAccount"');
+const accountSelectAt = cashView.indexOf('name="account_id"', accountLabelAt);
 const accountButtonAt = cashView.indexOf('id="openAccountModal"');
-const applyGroupAt = cashView.indexOf('class="master-list-filter-group"');
+const statusLabelAt = cashView.indexOf('for="cashflowFilterAccountingStatus"');
+const cashDrawerStart = cashView.indexOf('<x-drawer id="cashflowFiltersDrawer"');
+const cashDrawerEnd = cashView.indexOf('</x-drawer>', cashDrawerStart);
+const cashFooterAt = cashView.indexOf('<x-slot:footer>', accountButtonAt);
 check('the ledger keeps every door open',
     cashView.includes("route('cashflows.create')")
     && cashView.includes("route('cashflows.quickStore')")
-    && accountFilterAt !== -1 && accountButtonAt > accountFilterAt && accountButtonAt < applyGroupAt,
-    'add-account button sits in the control row: ' + accountFilterAt + ' < ' + accountButtonAt + ' < ' + applyGroupAt);
+    && accountLabelAt > cashDrawerStart && accountSelectAt > accountLabelAt
+    && accountButtonAt > accountSelectAt && statusLabelAt > accountButtonAt
+    && /class="master-btn master-btn-ghost cf-account-add" id="openAccountModal"/.test(cashView)
+    && accountButtonAt < cashFooterAt && cashFooterAt < cashDrawerEnd
+    && /\.cashflow-index \.core-drawer-fields \.cf-account-add \{[^}]*align-self:\s*flex-start/.test(cashCss),
+    'the account and status selectors share a grid row, with add-account directly below its selector');
 
 /* ---- same composition, same order ----
    The two lists are the same screen with different data, so they render the
@@ -878,6 +900,26 @@ const ruleBody = (text, selector) => {
 
 const shipCell = ruleBody(css, '.ship-index .master-table th,');
 const cashCell = ruleBody(cashCss, '.cashflow-index .master-table th,');
+const cashHeader = ruleBody(cashCss, '.cashflow-index .master-table th {');
+const cashLink = ruleBody(cashCss, '.cashflow-index .cf-entry-link {');
+const listDensityButton = ruleBody(listCss, '.master-list .master-list-density-btn {');
+const sharedDensityButton = ruleBody(tableCss, 'body[data-ui-shell] .core-table-density-btn {');
+
+check('the cashflow row key is a blue hyperlink with a hand cursor',
+    /<a class="cf-entry-link" href="\{\{ route\('cashflows\.show', \$entry\) \}\}">[\s\S]*?\$entry->particular/.test(cashView)
+    && /color:\s*var\(--ui-accent\)/.test(cashLink)
+    && /cursor:\s*pointer/.test(cashLink)
+    && /\.cashflow-index \.cf-entry-link:hover,[\s\S]{0,100}focus-visible/.test(cashCss)
+    && /text-decoration:\s*underline/.test(ruleBody(cashCss, '.cashflow-index .cf-entry-link:hover,')));
+check('cashflow table headers use the strong theme text colour',
+    /color:\s*var\(--mc-text\)/.test(cashHeader));
+check('density buttons have consistent, touch-friendly vertical padding',
+    /min-height:\s*40px/.test(listDensityButton)
+    && /padding:\s*9px 12px/.test(listDensityButton)
+    && /align-items:\s*center/.test(listDensityButton)
+    && /min-height:\s*40px/.test(sharedDensityButton)
+    && /padding:\s*9px 12px/.test(sharedDensityButton)
+    && /align-items:\s*center/.test(sharedDensityButton));
 
 check('both lists measure their table the same way',
     /padding:\s*12px 14px/.test(shipCell) && /padding:\s*12px 14px/.test(cashCell)

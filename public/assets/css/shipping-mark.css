@@ -36,9 +36,10 @@ body {
     align-items: center;
     gap: 14px;
     flex-wrap: wrap;
-    /* matches the label width, so the preview and the toolbar line up */
-    max-width: 85mm;
-    margin: 0 auto 14px;
+    /* The controls are a screen header, not part of the label's print width. */
+    width: 100%;
+    max-width: none;
+    margin: 0 0 14px;
     padding: 12px 14px;
     background: #fff;
     border: 1px solid #dfe7f3;
@@ -278,7 +279,7 @@ body {
     display: block;
     line-height: 1.2;
     font-size: 6pt;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .1em;
     text-transform: uppercase;
     color: #667085;
@@ -318,7 +319,7 @@ body {
     display: block;
     margin-top: .3mm;
     font-size: 8.5pt;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1.2;
     overflow-wrap: anywhere;
 }
@@ -338,7 +339,7 @@ body {
     border: 1.2px dashed #101828;
     border-radius: 1.4mm;
     font-size: 7.5pt;
-    font-weight: 900;
+    font-weight: 700;
 }
 
 /* ---------------- footer: branding + codes ---------------- */
@@ -364,7 +365,7 @@ body {
 .mark-website {
     display: block;
     font-size: 8pt;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: .01em;
     color: #101828;
 }
@@ -429,7 +430,7 @@ body {
     max-width: 19mm;
     margin-inline: auto;
     font-size: 5pt;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .02em;
     text-transform: uppercase;
     line-height: 1.05;

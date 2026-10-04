@@ -1,0 +1,8 @@
+/* Alerts keep semantic tones but share shape, readable density, and wrapping. */
+body[data-ui-shell] :is(.core-alert, .master-alert, .cf-alert, .cpa-alert, .cp-alert, .cp-flash) {
+    border-radius: var(--ui-radius-nested);
+    font-size: 13px;
+    font-weight: var(--ui-weight-medium);
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}

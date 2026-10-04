@@ -8,8 +8,9 @@
     <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/client-portal-login.css') }}">
 @endpush
+    @include('layouts.partials.design-system-styles')
 </head>
-<body>
+<body data-ui-shell="public">
 <div class="login-wrap">
     <div class="login-brand">
         <div class="brand-logo"><strong>MissPack</strong><span>PACKED PERFECT</span></div>

@@ -38,9 +38,11 @@
 
         <div class="master-card">
             <form method="GET" action="{{ route('leads.index') }}">
-                <div class="master-toolbar">
+                <div class="master-toolbar core-filter-toolbar">
                     <div class="master-search"><span>⌕</span><input class="master-input" type="text" name="search"
-                            value="{{ $search }}" placeholder="Search lead, client, product, requirement..."></div>
+                            value="{{ $search }}" placeholder="Search lead, client, product, requirement..."
+                            aria-label="Search leads"></div>
+                    <x-filter-trigger drawer="leadFiltersDrawer" :count="(filled($search) ? 1 : 0) + ($status !== 'all' ? 1 : 0) + ($priority !== 'all' ? 1 : 0) + ($source !== 'all' ? 1 : 0) + ($assignedTo !== 'all' ? 1 : 0)" />
                     <div class="master-actions-top"><button type="button" class="master-btn master-btn-primary"
                             id="openQuickLeadModal">+ Quick Lead</button><a href="{{ route('leads.create') }}"
                             class="master-btn master-btn-soft">Detailed Form</a><a href="{{ route('leads.public.create') }}"
@@ -50,48 +52,69 @@
                             class="master-btn master-btn-light">Settings</a><a href="{{ route('vendor-quotes.index') }}"
                             class="master-btn master-btn-light">Vendor Quotes</a></div>
                 </div>
-                <div class="master-filter-row"><select class="master-select" name="status">
-                        <option value="all">All Status</option>
-                        @foreach ($statusOptions as $key => $label)
-                            <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    <select class="master-select" name="priority">
-                        <option value="all">All Priority</option>
-                        @foreach ($priorityOptions as $key => $label)
-                            <option value="{{ $key }}" @selected($priority === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    <select class="master-select" name="source">
-                        <option value="all">All Sources</option>
-                        @foreach ($sourceOptions as $key => $label)
-                            <option value="{{ $key }}" @selected($source === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    <select class="master-select" name="assigned_to">
-                        <option value="all">All Assignees</option>
-                        @foreach ($users as $user)
-                            <option value="{{ $user->id }}" @selected((string) $assignedTo === (string) $user->id)>
-                                {{ $user->name ?? $user->email }}</option>
-                        @endforeach
-                    </select>
-                    <button class="master-btn master-btn-primary" type="submit">Filter</button><a
-                        class="master-btn master-btn-light" href="{{ route('leads.index') }}">Reset</a>
-                </div>
+                <x-drawer id="leadFiltersDrawer" title="Filter leads" eyebrow="Lead filters"
+                    subtitle="Narrow the pipeline by status, priority, source, or owner." size="medium">
+                    <section class="core-drawer-section">
+                        <h3 class="core-drawer-section-title">Pipeline</h3>
+                        <div class="core-drawer-fields">
+                            <div class="master-field">
+                                <label class="master-label" for="leadFilterStatus">Status</label>
+                                <select class="master-select" id="leadFilterStatus" name="status">
+                                    <option value="all">All statuses</option>
+                                    @foreach ($statusOptions as $key => $label)
+                                        <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label" for="leadFilterPriority">Priority</label>
+                                <select class="master-select" id="leadFilterPriority" name="priority">
+                                    <option value="all">All priorities</option>
+                                    @foreach ($priorityOptions as $key => $label)
+                                        <option value="{{ $key }}" @selected($priority === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label" for="leadFilterSource">Source</label>
+                                <select class="master-select" id="leadFilterSource" name="source">
+                                    <option value="all">All sources</option>
+                                    @foreach ($sourceOptions as $key => $label)
+                                        <option value="{{ $key }}" @selected($source === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label" for="leadFilterAssignee">Assignee</label>
+                                <select class="master-select" id="leadFilterAssignee" name="assigned_to">
+                                    <option value="all">All assignees</option>
+                                    @foreach ($users as $user)
+                                        <option value="{{ $user->id }}" @selected((string) $assignedTo === (string) $user->id)>
+                                            {{ $user->name ?? $user->email }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+                    <x-slot:footer>
+                        <a class="master-btn master-btn-soft" href="{{ route('leads.index') }}">Reset</a>
+                        <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                    </x-slot:footer>
+                </x-drawer>
             </form>
         </div>
 
         <div class="master-card master-table-card">
-            <div class="master-table-wrap">
-                <table class="master-table">
+            <div class="master-table-wrap ui-mobile-cards">
+                <table class="master-table" data-table-settings data-table-key="leads">
                     <thead>
                         <tr>
                             <th>Lead / Product</th>
                             <th>Client</th>
-                            <th>Qty / Capacity</th>
-                            <th>Finish / Print</th>
-                            <th>Assigned</th>
-                            <th>Quotes</th>
+                            <th class="ui-mobile-secondary">Qty / Capacity</th>
+                            <th class="ui-mobile-secondary">Finish / Print</th>
+                            <th class="ui-mobile-secondary">Assigned</th>
+                            <th class="ui-mobile-secondary">Quotes</th>
                             <th>Status</th>
                             <th>Action</th>
                         </tr>
@@ -99,7 +122,7 @@
                     <tbody>
                         @forelse($leads as $lead)
                             <tr>
-                                <td>
+                                <td data-label="Lead / Product">
                                     <div class="master-product">
                                         @if ($lead->product_image_path)
                                             <a href="{{ route('leads.image', $lead) }}" title="View product image"><img
@@ -114,18 +137,18 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td>{{ $lead->client?->company_name ?? ($lead->client_company_name ?? '-') }}<span
+                                <td data-label="Client">{{ $lead->client?->company_name ?? ($lead->client_company_name ?? '-') }}<span
                                         class="master-sub">{{ $lead->client_contact_name ?: '-' }}
                                         {{ $lead->client_mobile ?: '' }}</span></td>
-                                <td>{{ $lead->required_quantity ? number_format($lead->required_quantity) . ' pcs' : '-' }}<span
+                                <td data-label="Qty / Capacity" class="ui-mobile-secondary">{{ $lead->required_quantity ? number_format($lead->required_quantity) . ' pcs' : '-' }}<span
                                         class="master-sub">{{ $lead->capacity_value ? $lead->capacity_value . ' ' . $lead->capacity_unit : '-' }}</span>
                                 </td>
-                                <td>{{ $finishOptions[$lead->finish_required] ?? '-' }}<span
+                                <td data-label="Finish / Print" class="ui-mobile-secondary">{{ $finishOptions[$lead->finish_required] ?? '-' }}<span
                                         class="master-sub">{{ $printingOptions[$lead->printing_required] ?? '-' }}</span>
                                 </td>
-                                <td>{{ $lead->assignee?->name ?? ($lead->assignee?->email ?? '-') }}</td>
-                                <td>{{ $lead->vendor_quotes_count }}</td>
-                                <td><span
+                                <td data-label="Assigned" class="ui-mobile-secondary">{{ $lead->assignee?->name ?? ($lead->assignee?->email ?? '-') }}</td>
+                                <td data-label="Quotes" class="ui-mobile-secondary">{{ $lead->vendor_quotes_count }}</td>
+                                <td data-label="Status"><span
                                         class="master-badge priority-{{ $lead->priority }}">{{ $lead->priorityLabel() }}</span>
                                     <form method="POST" action="{{ route('leads.status.update', $lead) }}"
                                         class="master-status-form">@csrf @method('PATCH')<select name="status"
@@ -139,7 +162,7 @@
                                         </select>
                                     </form>
                                 </td>
-                                <td>
+                                <td data-label="Action">
                                     <div class="master-row-actions">
 
                                         <div class="master-dropdown">

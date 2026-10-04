@@ -64,14 +64,14 @@
         }
 
         .brand {
-            font-weight: 900;
+            font-weight: 700;
             color: var(--primary);
             letter-spacing: .03em
         }
 
         .brand-title {
             font-size: 24px;
-            font-weight: 900;
+            font-weight: 700;
             color: #4f83f1;
         }
 
@@ -422,7 +422,7 @@
             right:20px;
         }
         
-        @media(max-width:768px){
+        @media(max-width:767px){
         
             .lightbox-arrow{
                 width:42px;
@@ -436,7 +436,7 @@
         
         }
 
-        @media (max-width:992px){
+        @media (max-width:991px){
 
             .page{
                 padding:20px;
@@ -466,7 +466,7 @@
         
         }
         
-        @media (max-width:768px){
+        @media (max-width:767px){
 
             .page{
                 padding:12px;

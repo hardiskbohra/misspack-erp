@@ -97,7 +97,7 @@
                                 </a>
                                 @if ($office)
                                     <a class="master-btn master-btn-ghost master-btn-sm"
-                                        href="{{ $page(['payslip' => $slip->id]).'#payslip-edit' }}"
+                                        href="{{ $page(['payslip' => $slip->id]).'#payslipEdit' }}"
                                         title="Change the month's figures or its state">
                                         <i class="fas fa-pen" aria-hidden="true"></i> Modify
                                     </a>
@@ -131,7 +131,7 @@
                                 @endif
                             @elseif ($office && $row['generatable'])
                                 <a class="master-btn master-btn-primary master-btn-sm"
-                                    href="{{ $page(['month' => $row['period']]).'#payslip-form' }}"
+                                    href="{{ $page(['month' => $row['period']]).'#payslipForm' }}"
                                     title="Print the payslip for this month from its figures">
                                     <i class="fas fa-file-circle-plus" aria-hidden="true"></i> Generate payslip
                                 </a>

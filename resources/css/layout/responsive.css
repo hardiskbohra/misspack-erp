@@ -1,0 +1,334 @@
+/*
+ * Project-wide responsive contract.
+ * Breakpoints: >=1440 full layout; 1200-1439 full sidebar; 992-1199 compact
+ * sidebar; 768-991 reduced-column tablet; <768 mobile-first essentials.
+ * Keep this layer last so legacy page sheets cannot undo the shell/grid rules.
+ */
+
+body[data-ui-shell] :is(.main-wrap, .page-content, .cp-shell, .cp-main, .cp-content, .master) {
+    min-width: 0;
+}
+
+body[data-ui-shell] :is(img, video, canvas, svg) {
+    max-width: 100%;
+}
+
+body[data-ui-shell] :is(.master-grid, .master-grid-main, .master-grid-2, .master-grid-3, .master-grid-4, .master-detail-grid, .master-info-grid, .master-form-grid, .master-modal-grid, .master-modal-three-grid, .cf-grid, .cf-form-grid, .cpa-grid, .cpa-form-grid, .cpa-checks, .client-detail-grid, .client-detail-panels, .cp-grid-2, .cp-grid-3, .cp-grid-4, .cp-grid-6, .cp-form-row, .cp-form-grid, .cp-dashboard-columns, .cp-dashboard-stat-grid, .cp-support-grid, .cp-support-conversation-layout, .cp-account-grid, .pd-panel-grid, .pd-inline-form, .pd-product-form, .pd-tracking-form, .pd-attachment-form, .pd-payment-form, .pd-metrics, .pmile-stats, .pmile-form, .projects-stats, .projects-mini-grid, .projects-two-col, .vendor-kpi-grid, .vendor-grid-2, .vendor-grid-3, .vendor-info-grid, .lm-grid, .cq-grid, .cq-info-grid, .master-top-grid, .master-stats, .master-metrics-grid, .master-module-grid, .master-attention-grid, .master-period-form, .master-filter-form, .cf-filter-grid, .client-statement-filter-form, .cp-payment-filters) > * {
+    min-width: 0;
+}
+
+body[data-ui-shell] :is(.master-table-wrap, .cf-table-wrap, .cpa-table-wrap, .cp-table-wrap, .cq-table-wrap, .vendor-table-wrap) {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media screen and (min-width: 1440px) {
+    body[data-ui-shell="app"] .page-content {
+        padding: 32px clamp(32px, 2.2vw, 48px);
+    }
+
+    body[data-ui-shell="app"] .master {
+        width: 100%;
+        max-width: 1920px;
+        margin-inline: auto;
+    }
+
+    body[data-ui-shell="portal"] .cp-content {
+        max-width: 1800px;
+        padding: 30px clamp(32px, 2.2vw, 48px) 56px;
+    }
+}
+
+@media screen and (min-width: 1200px) and (max-width: 1439px) {
+    body[data-ui-shell="app"] .page-content {
+        padding: 24px;
+    }
+
+    body[data-ui-shell="portal"] .cp-content {
+        padding: 26px 28px 48px;
+    }
+}
+
+/* Compact desktop: the admin rail is 82px by default. The client workspace
+   uses the same icon-rail idea, with labels retained for assistive technology
+   and a native title tooltip for pointer users. */
+@media screen and (min-width: 992px) and (max-width: 1199px) {
+    body[data-ui-shell="app"] .page-content {
+        padding: 20px;
+    }
+
+    body[data-ui-shell] :is(.master-stats, .master-top-grid, .master-metrics-grid.six, .master-metrics-grid.four, .master-module-grid, .master-attention-grid, .cf-summary, .cp-dashboard-stat-grid, .projects-stats, .projects-mini-grid, .vendor-kpi-grid, .pd-metrics, .pmile-stats) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    body[data-ui-shell] :is(.master-detail-grid, .master-modal-three-grid, .pd-inline-form, .pd-product-form, .pd-tracking-form, .pd-attachment-form, .pd-payment-form, .pmile-form) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    body[data-ui-shell] .cf-form-grid:not(.two) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    body[data-ui-shell] :is(.master-filter-form, .master-period-form, .cf-filter-grid, .client-statement-filter-form, .cp-payment-filters, .projects-filter-form) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    body[data-ui-shell="portal"] .cp-sidebar {
+        width: 78px;
+        transform: translateX(0);
+    }
+
+    body[data-ui-shell="portal"] .cp-main {
+        width: calc(100% - 78px);
+        margin-left: 78px;
+    }
+
+    body[data-ui-shell="portal"] .cp-toggle {
+        display: none !important;
+    }
+
+    body[data-ui-shell="portal"] .cp-logo {
+        justify-content: center;
+        padding-inline: 8px;
+    }
+
+    body[data-ui-shell="portal"] :is(.cp-logo-copy, .cp-client-switcher > span:not(.cp-client-avatar), .cp-client-switcher > i, .cp-nav-section, .cp-help-card, .cp-user-copy, .cp-sidebar-user > a) {
+        display: none !important;
+    }
+
+    body[data-ui-shell="portal"] .cp-client-switcher {
+        justify-content: center;
+        margin: 12px 8px 8px;
+        padding: 8px 4px;
+    }
+
+    body[data-ui-shell="portal"] .cp-nav {
+        padding-inline: 8px;
+    }
+
+    body[data-ui-shell="portal"] .cp-nav-link {
+        justify-content: center;
+        gap: 0;
+        padding-inline: 0;
+    }
+
+    body[data-ui-shell="portal"] .cp-nav-link > span:not(.cp-nav-count):not(.cp-nav-pulse) {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    body[data-ui-shell="portal"] :is(.cp-nav-count, .cp-nav-pulse) {
+        position: absolute;
+        top: 3px;
+        right: 6px;
+        margin-left: 0;
+    }
+
+    body[data-ui-shell="portal"] .cp-sidebar-footer {
+        padding-inline: 8px;
+    }
+
+    body[data-ui-shell="portal"] .cp-sidebar-user {
+        justify-content: center;
+    }
+
+    body[data-ui-shell="portal"] .cp-content {
+        padding: 22px 20px 42px;
+    }
+}
+
+/* Tablet: off-canvas navigation preserves the content width; dense four-plus
+   column layouts reduce to two, and explicitly secondary table/detail fields
+   drop out to create breathing room without removing primary workflows. */
+@media screen and (min-width: 768px) and (max-width: 991px) {
+    body[data-ui-shell] .ui-mobile-secondary,
+    body[data-ui-shell] [data-mobile-priority="secondary"] {
+        display: none !important;
+    }
+
+    body[data-ui-shell="app"] .page-content {
+        padding: 18px;
+    }
+
+    body[data-ui-shell="portal"] .cp-content {
+        padding: 20px 18px 40px;
+    }
+
+    body[data-ui-shell] :is(.master-stats, .master-top-grid, .master-metrics-grid.six, .master-metrics-grid.four, .master-module-grid, .master-attention-grid, .cf-summary, .cp-dashboard-stat-grid, .cp-grid-4, .cp-grid-6, .projects-stats, .projects-mini-grid, .vendor-kpi-grid, .pd-metrics, .pmile-stats) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    body[data-ui-shell] :is(.master-detail-grid, .master-form-grid, .master-modal-grid, .master-modal-three-grid, .master-info-grid, .cf-form-grid, .cpa-form-grid, .cpa-checks, .client-review-fields, .client-review-note-grid, .client-statement-filter-form, .pd-info-list, .pd-inline-form, .pd-product-form, .pd-tracking-form, .pd-attachment-form, .pd-payment-form, .pmile-form, .pmile-edit-form, .projects-filter-form, .vendor-info-grid, .lm-grid, .cq-grid) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    body[data-ui-shell] :is(.master-grid, .master-grid-main, .master-grid-2, .master-grid-3, .master-grid-4, .master-form-page .master-grid, .master-show .master-grid, .pd-panel-grid, .cp-dashboard-columns, .cp-support-grid, .cp-support-conversation-layout, .cp-account-grid, .cp-grid-2, .client-detail-grid, .client-show .master-grid, .client-show .client-detail-grid, .vendor-grid-2, .vendor-grid-3, .cpa-grid, .projects-two-col, .cq-info-grid) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body[data-ui-shell] :is(.master-filter-form, .master-period-form, .cf-filter-grid, .cp-payment-filters, .projects-filter-form, .client-statement-filter-form) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    body[data-ui-shell] :is(.master-toolbar, .master-list-bar, .master-toolbar-right, .cp-page-head, .cp-top-actions, .master-header-actions) {
+        flex-wrap: wrap;
+    }
+
+    body[data-ui-shell] :is(.master-grid, .master-grid-main, .pd-panel-grid, .cp-dashboard-columns, .cp-support-grid, .cp-support-conversation-layout, .cp-account-grid) > * {
+        min-width: 0;
+    }
+}
+
+/* Phone: preserve the main path through every module, collapse secondary
+   context only when explicitly marked, and keep controls/tables usable. */
+@media screen and (max-width: 767px) {
+    body[data-ui-shell="app"] .page-content {
+        padding: 12px;
+    }
+
+    body[data-ui-shell="portal"] .cp-content {
+        padding: 16px 12px 32px;
+    }
+
+    body[data-ui-shell] :is(.master-grid, .master-grid-main, .master-grid-2, .master-grid-3, .master-grid-4, .master-form-grid, .master-detail-grid, .master-info-grid, .master-modal-grid, .master-modal-three-grid, .cf-grid, .cf-form-grid, .cpa-grid, .cpa-form-grid, .cpa-checks, .client-detail-grid, .client-review-fields, .client-review-note-grid, .client-statement-filter-form, .cp-grid-2, .cp-grid-3, .cp-grid-4, .cp-grid-6, .cp-form-row, .cp-form-grid, .cp-dashboard-columns, .cp-support-grid, .cp-support-conversation-layout, .cp-account-grid, .pd-panel-grid, .pd-inline-form, .pd-product-form, .pd-tracking-form, .pd-attachment-form, .pd-payment-form, .pmile-form, .pmile-edit-form, .projects-two-col, .projects-filter-form, .vendor-grid-2, .vendor-grid-3, .vendor-info-grid, .lm-grid, .cq-grid, .cq-info-grid, .master-period-form, .master-filter-form, .cf-filter-grid, .client-statement-filter-form, .cp-payment-filters) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body[data-ui-shell] :is(.master-stats, .master-top-grid, .master-metrics-grid.six, .master-metrics-grid.four, .master-module-grid, .master-attention-grid, .cf-summary, .cp-dashboard-stat-grid, .projects-stats, .projects-mini-grid, .vendor-kpi-grid, .pd-metrics, .pmile-stats) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    body[data-ui-shell] :is(.master-header, .master-list-bar, .master-list-filter-group, .master-toolbar, .master-toolbar-right, .cp-page-head, .cp-top-actions) {
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    body[data-ui-shell] :is(.master-header, .master-toolbar, .master-list-bar, .cp-page-head) > :is(.master-header-actions, .master-toolbar-right) {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    body[data-ui-shell] :is(.master-card, .master-section, .cf-card, .cf-sub-card, .cp-card, .cpa-card, .client-detail-card) {
+        min-width: 0;
+    }
+
+    body[data-ui-shell] :is(.master-table-wrap, .cf-table-wrap, .cpa-table-wrap, .cp-table-wrap, .cq-table-wrap, .vendor-table-wrap) {
+        max-width: 100%;
+    }
+
+    /* Tables explicitly opting in become labelled, stacked record cards. The
+       standard master-list already has its own tested mobile card treatment. */
+    body[data-ui-shell] .ui-mobile-cards {
+        overflow: visible;
+    }
+
+    body[data-ui-shell] .ui-mobile-cards :is(table, tbody, tr) {
+        display: block !important;
+        width: 100%;
+        min-width: 0 !important;
+    }
+
+    body[data-ui-shell] .ui-mobile-cards thead {
+        display: none !important;
+    }
+
+    body[data-ui-shell] .ui-mobile-cards tr {
+        margin: 0 0 10px;
+        padding: 12px 14px;
+        border: 1px solid var(--ui-border);
+        border-radius: var(--ui-radius-nested);
+        background: var(--ui-card-surface);
+        box-shadow: var(--ui-shadow-card);
+    }
+
+    body[data-ui-shell] .ui-mobile-cards td:not([colspan]) {
+        display: flex !important;
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+        min-width: 0;
+        padding: 8px 0;
+        border: 0;
+        border-bottom: 1px solid var(--ui-border);
+        background: transparent;
+        text-align: left;
+        overflow-wrap: anywhere;
+    }
+
+    body[data-ui-shell] .ui-mobile-cards td[data-label]::before {
+        content: attr(data-label);
+        color: var(--ui-text-muted);
+        font-size: 10px;
+        font-weight: var(--ui-weight-semibold);
+        letter-spacing: .06em;
+        line-height: 1.3;
+        text-transform: uppercase;
+    }
+
+    body[data-ui-shell] .ui-mobile-cards td[colspan] {
+        display: block !important;
+        width: 100%;
+        padding: 10px 0;
+        border: 0;
+        background: transparent;
+    }
+
+    body[data-ui-shell] .ui-mobile-cards tr > td:last-child {
+        border-bottom: 0;
+    }
+
+    /* Authors mark redundant metadata/columns with this class or attribute.
+       Required fields and primary actions are never hidden by a generic rule. */
+    body[data-ui-shell] .ui-mobile-secondary,
+    body[data-ui-shell] [data-mobile-priority="secondary"],
+    /* A mobile-card cell has its own display rule; this higher-specificity
+       pair guarantees an opted-out cell stays hidden instead of becoming a
+       flex row. */
+    body[data-ui-shell] .ui-mobile-cards td.ui-mobile-secondary,
+    body[data-ui-shell] .ui-mobile-cards td[data-mobile-priority="secondary"] {
+        display: none !important;
+    }
+
+    /* Persisted column preferences must not be undone by the mobile-card
+       display rules above. */
+    body[data-ui-shell] .ui-mobile-cards td[data-column-hidden],
+    body[data-ui-shell] td[data-column-hidden] {
+        display: none !important;
+    }
+
+    body[data-ui-shell] :is(.master-filter-form, .master-period-form, .cf-filter-grid, .client-statement-filter-form, .cp-payment-filters, .projects-filter-form) > * {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    body[data-ui-shell] :is(.master-input, .master-select, .master-textarea, .core-text-input, .core-select, .core-textarea) {
+        max-width: 100%;
+    }
+
+    body[data-ui-shell] :is(.master-toolbar-right, .master-row-actions, .master-list-empty-actions, .cp-hero-actions, .cp-support-detail-actions) {
+        flex-wrap: wrap;
+    }
+
+    body[data-ui-shell] :is(.master-modal-footer, .master-form-actions, .master-submit-row) {
+        gap: 8px;
+    }
+}
+
+@media screen and (prefers-reduced-motion: reduce) {
+    body[data-ui-shell] *,
+    body[data-ui-shell] *::before,
+    body[data-ui-shell] *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}

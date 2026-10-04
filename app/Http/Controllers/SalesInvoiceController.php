@@ -681,7 +681,11 @@ class SalesInvoiceController extends Controller
 
     public function publicShow(string $token): View
     {
-        $invoice = SalesInvoice::where('public_token', $token)->where('show_client_portal', true)->with(['items', 'publicAttachments'])->firstOrFail();
+        $invoice = SalesInvoice::where('public_token', $token)
+            ->where('show_client_portal', true)
+            ->where('status', '!=', 'draft')
+            ->with(['items', 'publicAttachments'])
+            ->firstOrFail();
         return view('sales_invoices.print', ['invoice' => $invoice, 'publicMode' => true]);
     }
 

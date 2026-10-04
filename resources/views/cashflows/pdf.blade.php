@@ -3,7 +3,12 @@
 
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <title>Cashflow Report</title>
+    <link rel="stylesheet" href="{{ asset('assets/css/document-print.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/cashflows-pdf.css') }}">
 </head>
 
@@ -22,11 +27,12 @@
         . ' · ' . $measures[$measure];
 @endphp
 
-<body @if(!empty($pdfFallbackMessage)) onload="setTimeout(function(){ window.print(); }, 500)" @endif>
+<body class="pdf-preview" @if(!empty($pdfFallbackMessage)) onload="setTimeout(function(){ window.print(); }, 500)" @endif>
     @if(!empty($pdfFallbackMessage))
-        <div class="notice no-print">{{ $pdfFallbackMessage }}</div>
+        <div class="pdf-notice notice no-print">{{ $pdfFallbackMessage }}</div>
     @endif
 
+    <main class="pdf-sheet pdf-sheet--landscape">
     <div class="header">
         <div>
             <div class="brand">MissPack Cashflow Report</div>
@@ -136,6 +142,7 @@
         Every figure opens in the ledger at
         {{ route('cashflows.reports') }} — the paper is a copy, the app is the record.
     </div>
+    </main>
 </body>
 
 </html>

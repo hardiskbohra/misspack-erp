@@ -1,15 +1,17 @@
 /* ==========================================================================
    RESPONSIVE.CSS — MissPack ERP central mobile/tablet layer
    --------------------------------------------------------------------------
-   Loaded LAST (after @stack('styles')) in the admin + client-portal layouts,
-   so it can safely fill gaps left by module stylesheets without being
-   overridden. It never restyles desktop widths.
+   Legacy responsive helpers are loaded after @stack('styles') in the admin
+   and client-portal layouts. The final, project-wide breakpoint overrides now
+   live in resources/css/layout/responsive.css and load after this sheet.
 
-   Breakpoints (aligned with app-layout.css / app-layout.js):
-     > 1199px   desktop — persistent sidebar (280px / 82px mini)
-     768–1199px tablet  — sidebar becomes an off-canvas drawer
-     ≤ 767px    mobile  — single-column content, scroll regions, sheets
-     ≤ 480px    tiny    — full-bleed modal sheets
+   Project breakpoints (aligned with the shared design-system layer):
+     ≥ 1440px   full layout and full sidebar
+     1200–1439px full sidebar with the standard desktop layout
+     992–1199px compact icon sidebar
+     768–991px  reduced-column tablet layout with drawer navigation
+     < 768px    mobile essentials, stacked forms/cards, and touch targets
+     ≤ 480px    tiny phones — full-bleed modal sheets
 
    UX rules implemented here:
      1. No horizontal PAGE scroll — wide content scrolls inside its own

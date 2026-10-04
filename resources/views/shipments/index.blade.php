@@ -19,7 +19,9 @@
     /* "Reset" and "clear filters" only make sense when something is filtered. */
     $filtersActive = trim((string) $search) !== ''
         || ($status && $status !== 'all')
+        || ($type && $type !== 'all')
         || filled($fromDate)
+        || filled($toDate)
         || filled($attention)
         || ($currency && $currency !== 'all');
 
@@ -108,35 +110,69 @@
         </div>
 
         <form method="GET" action="{{ route('shipments.index') }}">
-
-            <div class="master-filter-row">
+            @if (filled($attention))
+                <input type="hidden" name="attention" value="{{ $attention }}">
+            @endif
+            <div class="master-filter-row core-filter-toolbar">
                 <div class="master-search">
                     <span aria-hidden="true">⌕</span>
                     <input class="master-input" type="text" name="search" value="{{ $search }}"
                         placeholder="Search shipment, tracking, BOE, partner..." aria-label="Search shipments">
                 </div>
-                <select class="master-select" name="status" aria-label="Filter by status">
-                    <option value="all">All Status</option>
-                    @foreach($statusOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <select class="master-select desktop-only" name="currency" hidden>
-                    <option value="all">All Currency</option>
-                    @foreach($currencyOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($currency === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <input class="master-input desktop-only" type="date" name="from_date"
-                    value="{{ $fromDate }}" aria-label="Pickup date from" title="Pickup date from">
-
-                <div class="master-list-filter-group">
+                <x-filter-trigger drawer="shipmentFiltersDrawer"
+                    :count="(filled($search) ? 1 : 0) + (($status && $status !== 'all') ? 1 : 0) + (($type && $type !== 'all') ? 1 : 0) + (($currency && $currency !== 'all') ? 1 : 0) + (filled($fromDate) ? 1 : 0) + (filled($toDate) ? 1 : 0) + (filled($attention) ? 1 : 0)" />
+            </div>
+            <x-drawer id="shipmentFiltersDrawer" title="Filter shipments" eyebrow="Shipment filters"
+                subtitle="Narrow shipments by status, type, currency, pickup date, or attention." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Shipment details</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="shipmentFilterStatus">Status</label>
+                            <select class="master-select" id="shipmentFilterStatus" name="status" aria-label="Filter by status">
+                                <option value="all">All statuses</option>
+                                @foreach($statusOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="shipmentFilterType">Shipment type</label>
+                            <select class="master-select" id="shipmentFilterType" name="type" aria-label="Filter by shipment type">
+                                <option value="all">All shipment types</option>
+                                @foreach($typeOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="shipmentFilterCurrency">Currency</label>
+                            <select class="master-select" id="shipmentFilterCurrency" name="currency" aria-label="Filter by currency">
+                                <option value="all">All currencies</option>
+                                @foreach($currencyOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($currency === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="shipmentFilterFromDate">Pickup date from</label>
+                            <input class="master-input" id="shipmentFilterFromDate" type="date" name="from_date"
+                                value="{{ $fromDate }}" aria-label="Pickup date from">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="shipmentFilterToDate">Pickup date to</label>
+                            <input class="master-input" id="shipmentFilterToDate" type="date" name="to_date"
+                                value="{{ $toDate }}" aria-label="Pickup date to">
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
                     @if ($filtersActive)
                         <a class="master-btn master-btn-soft" href="{{ route('shipments.index') }}">Reset</a>
                     @endif
                     <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
-                </div>
-            </div>
+                </x-slot:footer>
+            </x-drawer>
 
             {{-- What is actually filtering, one removable chip each — including
                  filters that arrived from a saved view or a URL and therefore
@@ -163,6 +199,15 @@
                         </span>
                     @endif
 
+                    @if ($type && $type !== 'all')
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Type</span>
+                            <span class="master-list-applied-value">{{ $typeOptions[$type] ?? $type }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('type') }}"
+                                aria-label="Remove the shipment type filter" title="Remove the shipment type filter">&times;</a>
+                        </span>
+                    @endif
+
                     @if ($currency && $currency !== 'all')
                         <span class="master-list-applied-chip">
                             <span class="master-list-applied-key">Currency</span>
@@ -178,6 +223,15 @@
                             <span class="master-list-applied-value">{{ \App\Helpers\DateRanges::display($fromDate) }}</span>
                             <a class="master-list-applied-x" href="{{ $chipUrl('from_date') }}"
                                 aria-label="Remove the pickup-date filter" title="Remove the pickup-date filter">&times;</a>
+                        </span>
+                    @endif
+
+                    @if (filled($toDate))
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Pickup to</span>
+                            <span class="master-list-applied-value">{{ \App\Helpers\DateRanges::display($toDate) }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('to_date') }}"
+                                aria-label="Remove the pickup end-date filter" title="Remove the pickup end-date filter">&times;</a>
                         </span>
                     @endif
 
@@ -211,24 +265,23 @@
                  right-hand slot every list uses, so a module can put its own
                  destinations next to the density switch. --}}
             <div class="master-list-toolbar-actions">
-                <div class="master-list-density desktop-only" role="group" aria-label="Row density">
-                    <button type="button" class="master-list-density-btn" data-density="comfortable"
-                        aria-pressed="true">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact"
-                        aria-pressed="false">Compact</button>
+                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
+                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
+                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
                 </div>
             </div>
         </div>
         <div class="master-table-wrap">
-            <table class="master-table">
+            <table class="master-table" data-table-settings data-table-key="shipments">
                 <thead>
                     <tr>
-                        <th scope="col">Pickup</th>
+                        <th scope="col" class="ui-mobile-secondary">Pickup</th>
                         <th scope="col">Shipment</th>
                         <th scope="col">Route</th>
-                        <th scope="col">Logistic</th>
+                        <th scope="col" class="ui-mobile-secondary">Logistic</th>
                         <th scope="col">ETA</th>
-                        <th scope="col" class="is-num">Charges</th>
+                        <th scope="col" class="is-num ui-mobile-secondary">Charges</th>
                         <th scope="col">Status</th>
                         <th scope="col">Action</th>
                     </tr>
@@ -258,7 +311,7 @@
                              anything interactive inside it keeps its own click. --}}
                         <tr class="ship-row {{ $shipment->isClosed() ? 'ship-row-closed' : '' }} is-clickable"
                             data-href="{{ route('shipments.show', $shipment) }}">
-                            <td data-label="Pickup">
+                            <td data-label="Pickup" class="ui-mobile-secondary">
                                 <span class="ship-date">{{ $shipment->pickup_date ? $shipment->pickup_date->format('d M') : '—' }}</span>
                                 @if ($shipment->project || $shipment->client)
                                     <span class="ship-tags">
@@ -290,7 +343,7 @@
                                 <strong>{{ $shipment->from_name ?: 'Origin' }} → {{ $shipment->to_name ?: 'Destination' }}</strong>
                                 <span class="master-sub desktop-only">{{ $shipment->from_city ?: '—' }} to {{ $shipment->to_city ?: '—' }}</span>
                             </td>
-                            <td class="ship-logistic" data-label="Logistic">
+                            <td class="ship-logistic ui-mobile-secondary" data-label="Logistic">
                                 {{ $shipment->logistic_partner ?: '—' }}
                                 <span class="master-sub">{{ $shipment->tracking_number ?: 'No tracking' }}</span>
                             </td>
@@ -310,7 +363,7 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="ship-money is-num" data-label="Charges">
+                            <td class="ship-money is-num ui-mobile-secondary" data-label="Charges">
                                 @if ((int) $shipment->costs_count > 0)
                                     @if ((float) $shipment->cost_same_currency > 0)
                                         {{ \App\Models\Shipment::formatAmount($shipment->currency, $shipment->cost_same_currency) }}
@@ -410,7 +463,7 @@
                         </tr>
                     @endforelse
                 </tbody>
-                <tfoot>
+                <tfoot class="ui-mobile-secondary">
                     <tr class="master-list-total">
                         <td colspan="5">
                             <strong>Total — {{ $shipments->count() }} {{ \Illuminate\Support\Str::plural('entry', $shipments->count()) }} shown</strong>

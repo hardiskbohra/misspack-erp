@@ -44,48 +44,57 @@
         </div>
 
         <div class="projects-card projects-filter-card">
-            <form method="GET" action="{{ route('projects.index') }}" class="projects-filter-form">
-                <div class="master-field projects-search-field">
-                    <label class="master-label">Search</label>
-                    <input class="master-input" type="text" name="search" value="{{ $search }}"
-                        placeholder="Search project no, name, status, scope...">
+            <form method="GET" action="{{ route('projects.index') }}">
+                <div class="core-filter-toolbar">
+                    <div class="master-field projects-search-field">
+                        <label class="master-label" for="projectSearch">Search</label>
+                        <input class="master-input" id="projectSearch" type="text" name="search" value="{{ $search }}"
+                            placeholder="Search project no, name, status, scope...">
+                    </div>
+                    <x-filter-trigger drawer="projectFiltersDrawer" :count="(filled($search) ? 1 : 0) + ($status !== 'all' ? 1 : 0) + ($clientId !== 'all' ? 1 : 0) + ($health !== 'all' ? 1 : 0)" />
                 </div>
-                <div class="master-field">
-                    <label class="master-label">Status</label>
-                    <select class="master-select" name="status">
-                        <option value="all" {{ $status === 'all' ? 'selected' : '' }}>All Status</option>
-                        @foreach ($statusOptions as $key => $label)
-                            <option value="{{ $key }}" {{ $status === $key ? 'selected' : '' }}>
-                                {{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="master-field">
-                    <label class="master-label">Client</label>
-                    <select class="master-select" name="client_id">
-                        <option value="all" {{ $clientId === 'all' ? 'selected' : '' }}>All Clients</option>
-                        @foreach ($clients as $client)
-                            <option value="{{ $client->id }}"
-                                {{ (string) $clientId === (string) $client->id ? 'selected' : '' }}>
-                                {{ $client->company_name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="master-field">
-                    <label class="master-label">Health</label>
-                    <select class="master-select" name="health">
-                        <option value="all" {{ $health === 'all' ? 'selected' : '' }}>All Health</option>
-                        @foreach ($healthOptions as $key => $label)
-                            <option value="{{ $key }}" {{ $health === $key ? 'selected' : '' }}>
-                                {{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="projects-filter-actions">
-                    <button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-filter"></i>
-                        Filter</button>
-                    <a class="master-btn master-btn-soft" href="{{ route('projects.index') }}">Reset</a>
-                </div>
+                <x-drawer id="projectFiltersDrawer" title="Filter projects" eyebrow="Project filters"
+                    subtitle="Narrow projects by status, client, or project health." size="medium">
+                    <section class="core-drawer-section">
+                        <h3 class="core-drawer-section-title">Project details</h3>
+                        <div class="core-drawer-fields">
+                            <div class="master-field">
+                                <label class="master-label" for="projectFilterStatus">Status</label>
+                                <select class="master-select" id="projectFilterStatus" name="status">
+                                    <option value="all" @selected($status === 'all')>All statuses</option>
+                                    @foreach ($statusOptions as $key => $label)
+                                        <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label" for="projectFilterClient">Client</label>
+                                <select class="master-select" id="projectFilterClient" name="client_id">
+                                    <option value="all" @selected($clientId === 'all')>All clients</option>
+                                    @foreach ($clients as $client)
+                                        <option value="{{ $client->id }}" @selected((string) $clientId === (string) $client->id)>
+                                            {{ $client->company_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label" for="projectFilterHealth">Health</label>
+                                <select class="master-select" id="projectFilterHealth" name="health">
+                                    <option value="all" @selected($health === 'all')>All health</option>
+                                    @foreach ($healthOptions as $key => $label)
+                                        <option value="{{ $key }}" @selected($health === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+                    <x-slot:footer>
+                        <a class="master-btn master-btn-soft" href="{{ route('projects.index') }}">Reset</a>
+                        <button class="master-btn master-btn-primary" type="submit">
+                            <i class="fa-solid fa-filter" aria-hidden="true"></i> Apply filters
+                        </button>
+                    </x-slot:footer>
+                </x-drawer>
             </form>
         </div>
 
@@ -176,6 +185,28 @@
                             @endif
                         </div>
                         <div class="projects-footer-actions">
+                            <button type="button" class="master-btn master-btn-soft master-btn-sm"
+                                aria-label="Quick details for {{ $project->name }}" title="Quick details"
+                                aria-haspopup="dialog" aria-controls="projectQuickDetails" aria-expanded="false"
+                                data-drawer-open="projectQuickDetails" data-drawer-eyebrow="Project"
+                                data-drawer-title="{{ $project->name }}"
+                                data-drawer-subtitle="{{ $project->project_number }}"
+                                data-drawer-client="{{ $project->client?->company_name ?: 'Client #'.$project->client_id }}"
+                                data-drawer-assignee="{{ $project->assignedUser?->name ?: 'Unassigned' }}"
+                                data-drawer-stage="{{ $project->stageLabel() }}"
+                                data-drawer-status="{{ $project->statusLabel() }}"
+                                data-drawer-health="{{ $project->healthLabel() }}"
+                                data-drawer-priority="{{ $project->priorityLabel() }}"
+                                data-drawer-progress="{{ $project->progress_percent }}%"
+                                data-drawer-start-date="{{ optional($project->start_date)->format('d M Y') ?: 'No start date' }}"
+                                data-drawer-target-date="{{ optional($project->target_date)->format('d M Y') ?: 'No target date' }}"
+                                data-drawer-estimated="{{ \App\Helpers\CommonHelper::amount($project->estimated_value, $project->currency) }}"
+                                data-drawer-received="{{ \App\Helpers\CommonHelper::amount($totals['inward'], $project->currency) }}"
+                                data-drawer-expense="{{ \App\Helpers\CommonHelper::amount($totals['outward'], $project->currency) }}"
+                                data-drawer-outstanding="{{ \App\Helpers\CommonHelper::amount($totals['outstanding'], $project->currency) }}"
+                                data-drawer-record-url="{{ route('projects.show', $project) }}">
+                                <i class="fa-solid fa-circle-info" aria-hidden="true"></i> Details
+                            </button>
                             <a href="{{ route('projects.show', $project) }}"
                                 class="master-btn master-btn-primary master-btn-sm">Open</a>
                             <a href="{{ route('projects.edit', $project) }}"
@@ -209,6 +240,35 @@
 
         <x-pagination :items="$projects" />
     </div>
+
+    <x-drawer id="projectQuickDetails" title="Project details" eyebrow="Project quick view" size="wide">
+        <section class="core-drawer-section">
+            <h3 class="core-drawer-section-title">Overview</h3>
+            <div class="core-drawer-fields">
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Client</span><span class="core-drawer-field-value" data-drawer-bind="client"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Assignee</span><span class="core-drawer-field-value" data-drawer-bind="assignee"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Stage</span><span class="core-drawer-field-value" data-drawer-bind="stage"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Progress</span><span class="core-drawer-field-value" data-drawer-bind="progress"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Status</span><span class="core-drawer-field-value" data-drawer-bind="status"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Health</span><span class="core-drawer-field-value" data-drawer-bind="health"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Priority</span><span class="core-drawer-field-value" data-drawer-bind="priority"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Start date</span><span class="core-drawer-field-value" data-drawer-bind="start-date"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Target date</span><span class="core-drawer-field-value" data-drawer-bind="target-date"></span></div>
+            </div>
+        </section>
+        <section class="core-drawer-section">
+            <h3 class="core-drawer-section-title">Financial snapshot</h3>
+            <div class="core-drawer-fields">
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Estimated</span><span class="core-drawer-field-value" data-drawer-bind="estimated"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Received</span><span class="core-drawer-field-value" data-drawer-bind="received"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Expense</span><span class="core-drawer-field-value" data-drawer-bind="expense"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Outstanding</span><span class="core-drawer-field-value" data-drawer-bind="outstanding"></span></div>
+            </div>
+        </section>
+        <x-slot:footer>
+            <a class="master-btn master-btn-primary" data-drawer-href-bind="record-url">Open full project</a>
+        </x-slot:footer>
+    </x-drawer>
 
     <div class="projects-modal" id="quickProjectModal" aria-hidden="true">
         <div class="projects-modal-backdrop" data-close-modal></div>

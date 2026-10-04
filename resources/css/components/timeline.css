@@ -1,0 +1,12 @@
+/* A timeline is a readable chronological list, not a colored panel. */
+body[data-ui-shell] :is(.core-timeline, .timeline, .pd-timeline, .ship-track) {
+    color: var(--ui-text);
+}
+
+body[data-ui-shell] :is(.core-timeline-item, .timeline-item, .pd-timeline-item) {
+    min-width: 0;
+}
+
+body[data-ui-shell] :is(.core-timeline-meta, .timeline-meta, .timeline-remarks, .pd-timeline-content p) {
+    color: var(--ui-text-secondary);
+}

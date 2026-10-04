@@ -1,0 +1,261 @@
+/* Table contract shared by core/master, Cashflow, client, and portal tables.
+   Layout variants stay on their scroll/card wrappers. */
+body[data-ui-shell] :is(.core-table, .master-table, .master-items-table, .cf-table, .cpa-table, .cp-table, .cq-table) {
+    color: var(--ui-text-secondary);
+    font-size: 13px;
+}
+
+body[data-ui-shell] :is(.core-table, .master-table, .master-items-table, .cf-table, .cpa-table, .cp-table, .cq-table) th {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--ui-border);
+    background: var(--mc-table-head, var(--ui-card-surface));
+    color: var(--ui-text-muted);
+    font-size: 11px;
+    font-weight: var(--ui-weight-semibold);
+    letter-spacing: .04em;
+    line-height: 1.35;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+body[data-ui-shell] :is(.core-table, .master-table, .master-items-table, .cf-table, .cpa-table, .cp-table, .cq-table) td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--ui-border);
+    background-color: transparent;
+    color: var(--ui-text-secondary);
+    font-size: 13px;
+    font-weight: var(--ui-weight-regular);
+    line-height: 1.45;
+}
+
+body[data-ui-shell] :is(.core-table, .master-table, .master-items-table, .cf-table, .cpa-table, .cp-table, .cq-table) td strong {
+    color: var(--ui-text);
+    font-weight: var(--ui-weight-semibold);
+}
+
+body[data-ui-shell] :is(.core-table-wrap, .master-table-wrap, .cf-table-wrap, .cpa-table-wrap, .cp-table-wrap) {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+}
+
+@media (max-width: 767px) {
+    /* Keep the shared stacked/mobile-card list treatment intact. */
+    body[data-ui-shell] .master-list .master-table td {
+        padding: 0;
+        border: 0;
+        background: transparent;
+    }
+
+    /* Shipment product rows become labelled cards on narrow screens. */
+    body[data-ui-shell] .master-items-table td {
+        padding: 8px 0;
+        border: 0;
+    }
+}
+
+/* The shared DataTable preferences toolbar is mounted beside an opted-in
+   table. The chooser is a non-modal popover, so table controls remain usable
+   and the table stays in the document's normal flow. */
+body[data-ui-shell] .core-table-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 0 0 10px;
+}
+
+body[data-ui-shell] .core-table-density {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--ui-border);
+    border-radius: 10px;
+    background: var(--ui-nested-surface);
+}
+
+body[data-ui-shell] .core-table-density-btn {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ui-text-muted);
+    font: inherit;
+    font-size: 11px;
+    font-weight: var(--ui-weight-medium, 500);
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+body[data-ui-shell] .core-table-density-btn.is-active {
+    background: var(--ui-card-surface);
+    color: var(--ui-text);
+    box-shadow: var(--ui-shadow-focus);
+}
+
+body[data-ui-shell] .core-table-density-btn:focus-visible,
+body[data-ui-shell] .core-column-chooser-trigger:focus-visible,
+body[data-ui-shell] .core-column-chooser-close:focus-visible,
+body[data-ui-shell] .core-column-chooser-reset:focus-visible {
+    outline: 2px solid var(--ui-accent);
+    outline-offset: 2px;
+}
+
+body[data-ui-shell] .core-column-chooser {
+    position: relative;
+    z-index: var(--ui-z-dropdown);
+}
+
+body[data-ui-shell] .core-column-chooser-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: var(--ui-z-dropdown);
+    width: min(320px, calc(100vw - 24px));
+    max-height: min(70vh, 520px);
+    overflow: auto;
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-radius-card);
+    background: var(--ui-card-surface);
+    color: var(--ui-text);
+    box-shadow: var(--ui-shadow-popover);
+}
+
+body[data-ui-shell] .core-column-chooser-panel[hidden] {
+    display: none !important;
+}
+
+body[data-ui-shell] .core-column-chooser-head,
+body[data-ui-shell] .core-column-chooser-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+}
+
+body[data-ui-shell] .core-column-chooser-head {
+    border-bottom: 1px solid var(--ui-border);
+    font-size: 13px;
+}
+
+body[data-ui-shell] .core-column-chooser-close {
+    display: inline-grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ui-text-muted);
+    font: inherit;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+body[data-ui-shell] .core-column-chooser-list {
+    display: grid;
+    gap: 2px;
+    padding: 8px;
+}
+
+body[data-ui-shell] .core-column-chooser-option {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 9px;
+    border-radius: 9px;
+    color: var(--ui-text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+body[data-ui-shell] .core-column-chooser-option:hover {
+    background: var(--ui-nested-surface);
+}
+
+body[data-ui-shell] .core-column-chooser-option input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex: 0 0 16px;
+    accent-color: var(--ui-accent);
+}
+
+body[data-ui-shell] .core-column-chooser-option small {
+    margin-left: auto;
+    color: var(--ui-text-muted);
+    font-size: 10px;
+}
+
+body[data-ui-shell] .core-column-chooser-foot {
+    justify-content: flex-end;
+    border-top: 1px solid var(--ui-border);
+}
+
+body[data-ui-shell] .core-column-chooser-reset {
+    padding: 5px 8px;
+    border: 0;
+    background: transparent;
+    color: var(--ui-accent);
+    font: inherit;
+    font-size: 11px;
+    font-weight: var(--ui-weight-semibold, 600);
+    cursor: pointer;
+}
+
+body[data-ui-shell] th[data-column-hidden],
+body[data-ui-shell] td[data-column-hidden] {
+    display: none !important;
+}
+
+body[data-ui-shell] col[data-column-hidden] {
+    visibility: collapse !important;
+    width: 0 !important;
+}
+
+@media (min-width: 768px) {
+    body[data-ui-shell] .master-list[data-density="comfortable"] .master-table :is(th, td),
+    body[data-ui-shell] table[data-density="comfortable"] :is(th, td) {
+        padding: 14px 16px;
+    }
+
+    body[data-ui-shell] .master-list[data-density="standard"] .master-table :is(th, td),
+    body[data-ui-shell] table[data-density="standard"] :is(th, td) {
+        padding: 10px 12px;
+    }
+
+    body[data-ui-shell] .master-list[data-density="compact"] .master-table :is(th, td),
+    body[data-ui-shell] table[data-density="compact"] :is(th, td) {
+        padding: 6px 10px;
+        line-height: 1.35;
+    }
+
+    body[data-ui-shell] .master-list[data-density="compact"] .master-table td,
+    body[data-ui-shell] table[data-density="compact"] td {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 991px) {
+    /* Tablet widths automatically reduce explicitly secondary columns; keep
+       the chooser off this layout so hidden responsive fields cannot look
+       like a failed manual preference. */
+    body[data-ui-shell] .core-column-chooser.desktop-only {
+        display: none !important;
+    }
+}
+
+@media (max-width: 767px) {
+    body[data-ui-shell] .core-table-toolbar.desktop-only {
+        display: none !important;
+    }
+}

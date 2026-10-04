@@ -25,7 +25,7 @@
 
     <div class="task-card">
         @if($errors->any())
-            <div style="background:#fff0f4;color:#be123c;border:1px solid #fecdd3;border-radius:14px;padding:12px 14px;font-weight:800;margin-bottom:16px;">Please fix the errors and try again.</div>
+            <div style="background:#fff0f4;color:#be123c;border:1px solid #fecdd3;border-radius:14px;padding:12px 14px;font-weight:700;margin-bottom:16px;">Please fix the errors and try again.</div>
         @endif
 
         <form method="POST" action="{{ $isEdit ? route('tasks.update', $task) : route('tasks.store') }}">

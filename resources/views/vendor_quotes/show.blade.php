@@ -128,7 +128,7 @@
                     <div class="price">
                         {{ $quote->selling_price_inr ? \App\Helpers\CommonHelper::indianCurrency($quote->selling_price_inr) : '-' }}
                     </div>
-                    <p style="color:#687386;font-weight:800">Selling Price</p>
+                    <p style="color:#687386;font-weight:700">Selling Price</p>
                     <div class="landing">Landing Cost:
                         {{ $quote->landing_cost_inr ? \App\Helpers\CommonHelper::indianCurrency($quote->landing_cost_inr) : '-' }}</div>
                 </div>

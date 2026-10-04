@@ -155,7 +155,7 @@ i,
 
 .fa-solid,
 .fas {
-    font-weight: 900 !important;
+    font-weight: 700 !important;
 }
 
 .fa-regular,
@@ -236,7 +236,7 @@ input[type="week"],
 
 .sidebar-logo-text {
     font-size: 20px;
-    font-weight: 800;
+    font-weight: 700;
     color: #fff;
     letter-spacing: 0.4px;
 }
@@ -391,7 +391,7 @@ html.sidebar-collapsed .sidebar-logo-text {
 html.sidebar-collapsed .sidebar-logo-text::after {
     content: "M";
     font-size: 22px;
-    font-weight: 900;
+    font-weight: 700;
     color: #fff;
 }
 
@@ -418,9 +418,9 @@ html.sidebar-collapsed .sidebar-item i {
 }
 
 /* Collapsed (mini) mode keeps menu names visible under their icons.
-   Scoped to desktop: the <=1199px drawer keeps the normal side-by-side
-   rows (it re-shows .sidebar-text with !important). */
-@media (min-width: 1200px) {
+   Scoped to compact desktop and wider: the <=991px drawer keeps the normal
+   side-by-side rows (it re-shows .sidebar-text with !important). */
+@media (min-width: 992px) {
     html.sidebar-collapsed .sidebar-item {
         flex-direction: column;
         justify-content: center;
@@ -722,7 +722,7 @@ html.sidebar-collapsed .main-wrap {
     display: none;
 }
 
-@media (max-width: 1199px) {
+@media (max-width: 991px) {
     html,
     body {
         overflow-x: hidden;

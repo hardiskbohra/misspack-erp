@@ -63,7 +63,7 @@ class EmployeePayslipController extends Controller
             $this->fileColumns($request, null, $user)
         ));
 
-        return back()->with('success', 'Payslip for '.$payslip->periodLabel().' saved.');
+        return $this->returnToSalary($request, $user, 'Payslip for '.$payslip->periodLabel().' saved.');
     }
 
     public function update(Request $request, User $user, EmployeePayslip $payslip): RedirectResponse
@@ -95,11 +95,11 @@ class EmployeePayslipController extends Controller
 
         $payslip->update($columns);
 
-        return back()->with('success', 'Payslip for '.$payslip->periodLabel().' updated.');
+        return $this->returnToSalary($request, $user, 'Payslip for '.$payslip->periodLabel().' updated.');
     }
 
     /** Removing a payslip removes the paper too — the row is the record. */
-    public function destroy(User $user, EmployeePayslip $payslip): RedirectResponse
+    public function destroy(Request $request, User $user, EmployeePayslip $payslip): RedirectResponse
     {
         $this->assertOwned($user, $payslip);
 
@@ -110,7 +110,7 @@ class EmployeePayslipController extends Controller
         $label = $payslip->periodLabel();
         $payslip->delete();
 
-        return back()->with('success', 'The payslip for '.$label.' was removed.');
+        return $this->returnToSalary($request, $user, 'The payslip for '.$label.' was removed.');
     }
 
     /**
@@ -134,6 +134,23 @@ class EmployeePayslipController extends Controller
 
         return DocumentUpload::download($payslip->file_path, $payslip->fileName())
             ?? back()->with('error', 'That payslip has no file attached to it.');
+    }
+
+    /**
+     * Successful writes return to the salary table, not the transient URL that
+     * opened a create/edit dialog. Leaving `month` or `payslip` on that URL
+     * would render the just-submitted dialog open again and hide its success toast.
+     */
+    private function returnToSalary(Request $request, User $user, string $message): RedirectResponse
+    {
+        $parameters = ['user' => $user, 'tab' => 'salary'];
+        $year = (string) $request->query('year', '');
+
+        if (preg_match('/^\\d{4}$/', $year)) {
+            $parameters['year'] = (int) $year;
+        }
+
+        return redirect()->route('users.show', $parameters)->with('success', $message);
     }
 
     /* ------------------------------------------------------------------ */

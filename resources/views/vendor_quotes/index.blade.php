@@ -35,44 +35,65 @@
 
         <div class="master-card">
             <form method="GET" action="{{ route('vendor-quotes.index') }}">
-                <div class="master-toolbar">
-                    <div class="master-search"><span>⌕</span><input class="master-input" name="search"
-                            value="{{ $search }}" placeholder="Search vendor, quote, lead, product..."></div>
-                    <div style="display:flex;gap:12px;flex-wrap:wrap"><button type="button"
-                            class="master-btn master-btn-primary" id="openQuickQuoteModal">+ Quick Quote</button><a
-                            class="master-btn master-btn-soft" href="{{ route('vendor-quotes.create') }}">Detailed
-                            Form</a><a class="master-btn master-btn-light" href="{{ route('leads.index') }}">Leads</a><a
-                            class="master-btn master-btn-light" href="{{ route('leads.settings.index') }}">Settings</a>
+            <div class="master-toolbar core-filter-toolbar">
+                <div class="master-search"><span aria-hidden="true">⌕</span><input class="master-input" name="search"
+                        value="{{ $search }}" placeholder="Search vendor, quote, lead, product..."
+                        aria-label="Search vendor quotes"></div>
+                <x-filter-trigger drawer="vendorQuoteFiltersDrawer"
+                    :count="(filled($search) ? 1 : 0) + ($status !== 'all' ? 1 : 0) + ($leadId !== 'all' ? 1 : 0) + ($currency !== 'all' ? 1 : 0)" />
+                <div style="display:flex;gap:12px;flex-wrap:wrap"><button type="button"
+                        class="master-btn master-btn-primary" id="openQuickQuoteModal">+ Quick Quote</button><a
+                        class="master-btn master-btn-soft" href="{{ route('vendor-quotes.create') }}">Detailed
+                        Form</a><a class="master-btn master-btn-light" href="{{ route('leads.index') }}">Leads</a><a
+                        class="master-btn master-btn-light" href="{{ route('leads.settings.index') }}">Settings</a>
+                </div>
+            </div>
+            <x-drawer id="vendorQuoteFiltersDrawer" title="Filter vendor quotes" eyebrow="Quote filters"
+                subtitle="Narrow quotes by status, lead, or currency." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Quote details</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="vendorQuoteFilterStatus">Status</label>
+                            <select class="master-select" id="vendorQuoteFilterStatus" name="status">
+                                <option value="all">All statuses</option>
+                                @foreach ($statusOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="vendorQuoteFilterLead">Lead</label>
+                            <select class="master-select" id="vendorQuoteFilterLead" name="lead_id">
+                                <option value="all">All leads</option>
+                                @foreach ($leads as $lead)
+                                    <option value="{{ $lead->id }}" @selected((string) $leadId === (string) $lead->id)>
+                                        {{ $lead->lead_number }} - {{ $lead->title }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="vendorQuoteFilterCurrency">Currency</label>
+                            <select class="master-select" id="vendorQuoteFilterCurrency" name="currency">
+                                <option value="all">All currencies</option>
+                                @foreach ($currencyOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($currency === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
-                </div>
-                <div class="master-filter-row"><select class="master-select" name="status">
-                        <option value="all">All Status</option>
-                        @foreach ($statusOptions as $key => $label)
-                            <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    <select class="master-select" name="lead_id">
-                        <option value="all">All Leads</option>
-                        @foreach ($leads as $lead)
-                            <option value="{{ $lead->id }}" @selected((string) $leadId === (string) $lead->id)>{{ $lead->lead_number }} -
-                                {{ $lead->title }}</option>
-                        @endforeach
-                    </select>
-                    <select class="master-select" name="currency">
-                        <option value="all">All Currency</option>
-                        @foreach ($currencyOptions as $key => $label)
-                            <option value="{{ $key }}" @selected($currency === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    <button class="master-btn master-btn-primary" type="submit">Filter</button><a
-                        class="master-btn master-btn-light" href="{{ route('vendor-quotes.index') }}">Reset</a>
-                </div>
+                </section>
+                <x-slot:footer>
+                    <a class="master-btn master-btn-soft" href="{{ route('vendor-quotes.index') }}">Reset</a>
+                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                </x-slot:footer>
+            </x-drawer>
             </form>
         </div>
 
         <div class="master-card master-table-card">
-            <div class="master-table-wrap">
-                <table class="master-table">
+            <div class="master-table-wrap ui-mobile-cards">
+                <table class="master-table" data-table-settings data-table-key="vendor-quotes">
                     <thead>
                         <tr>
                             <th>Quote / Product</th>
@@ -86,7 +107,7 @@
                     <tbody>
                         @forelse($quotes as $quote)
                             <tr>
-                                <td>@php($productMedia = $quote->product?->primaryMedia())
+                                <td data-label="Quote / Product">@php($productMedia = $quote->product?->primaryMedia())
                                     @php($quoteImage = $quote->product_image_path ?: ($productMedia?->file_path ?: $quote->lead?->product_image_path))<div class="master-product">
                                         @if ($quoteImage)
                                             <a href="{{ route('vendor-quotes.image', $quote) }}"><img
@@ -100,25 +121,25 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td>{{ $quote->vendor?->vendor_contact_name ?? ($quote->vendor_contact_name ?? '-') }}
+                                <td data-label="Vendor">{{ $quote->vendor?->vendor_contact_name ?? ($quote->vendor_contact_name ?? '-') }}
                                     <span class="master-sub">
                                         {{ \Illuminate\Support\Str::limit($quote->vendor_name ?: '-', 25, '...') }}
                                     </span></td>
-                                <td>{!! $quote->items->isNotEmpty()
+                                <td data-label="Quantity">{!! $quote->items->isNotEmpty()
                                     ? $quote->items->map(fn($item) => number_format($item->quantity) . ' ' . $item->unit)->implode('<br>')
                                     : ($quote->quantity ? number_format($quote->quantity) . ' ' . $quote->unit : '-')
                                 !!}</td>
-                                <td>
+                                <td data-label="Vendor Price">
                                     {!! $quote->items->isNotEmpty()
                                     ? $quote->items->map(fn($item) => \App\Helpers\CommonHelper::amount($item->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : ''))->implode('<br>')
                                     : ($quote->vendor_unit_price
                                         ? \App\Helpers\CommonHelper::amount($quote->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : '')
                                         : '-')
                                 !!}</td>
-                                <td><span
+                                <td data-label="Status"><span
                                         class="master-badge status-{{ $quote->status }}">{{ $quote->statusLabel() }}</span>
                                 </td>
-                                <td>
+                                <td data-label="Action">
                                     
                                     <div class="master-row-actions">
 
@@ -159,7 +180,7 @@
                                     </div>
                                 </td>
                         </tr>@empty<tr>
-                                <td colspan="8" style="padding:70px;text-align:center;color:#687386;font-weight:900">No
+                                <td colspan="8" style="padding:70px;text-align:center;color:#687386;font-weight:700">No
                                     vendor quotes found.</td>
                             </tr>
                         @endforelse

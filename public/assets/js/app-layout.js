@@ -5,16 +5,41 @@
         var root = document.documentElement;
         var sidebarToggle = document.getElementById('sidebarToggle');
         var sidebarOverlay = document.getElementById('sidebarOverlay');
-        var mobileBreakpoint = window.matchMedia('(max-width: 1199px)');
+        var mobileBreakpoint = window.matchMedia('(max-width: 991px)');
+        var compactBreakpoint = window.matchMedia('(min-width: 992px) and (max-width: 1199px)');
+        var responsiveMode = null;
 
         function isMobileOrTablet() {
             return mobileBreakpoint.matches;
+        }
+
+        /* Each request starts with a fresh sidebar at scrollTop 0. Keep the
+           current route visible inside the menu's own scroll area without
+           moving the page or disturbing the top and bottom sidebar chrome. */
+        function keepActiveSidebarItemVisible() {
+            window.requestAnimationFrame(function () {
+                var nav = document.querySelector('.sidebar-nav');
+                var activeItem = nav && nav.querySelector('.sidebar-item.active');
+                if (!nav || !activeItem) return;
+
+                var navBounds = nav.getBoundingClientRect();
+                var itemBounds = activeItem.getBoundingClientRect();
+                var clippedAtTop = navBounds.top - itemBounds.top;
+                var clippedAtBottom = itemBounds.bottom - navBounds.bottom;
+
+                if (clippedAtTop > 0) {
+                    nav.scrollTop -= clippedAtTop;
+                } else if (clippedAtBottom > 0) {
+                    nav.scrollTop += clippedAtBottom;
+                }
+            });
         }
 
         function openMobileSidebar() {
             root.classList.remove('sidebar-collapsed');
             root.classList.add('sidebar-mobile-open');
             document.body.classList.add('sidebar-open-body');
+            keepActiveSidebarItemVisible();
         }
 
         function closeMobileSidebar() {
@@ -34,6 +59,7 @@
             }
 
             root.classList.toggle('sidebar-collapsed', collapsed);
+            keepActiveSidebarItemVisible();
 
             try {
                 localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
@@ -55,19 +81,38 @@
         }
 
         function applyResponsiveState() {
-            if (isMobileOrTablet()) {
+            var mode = isMobileOrTablet() ? 'tablet' : (compactBreakpoint.matches ? 'compact' : 'wide');
+
+            if (mode === 'tablet') {
                 forceMobileClosed();
+                responsiveMode = mode;
+                keepActiveSidebarItemVisible();
                 return;
             }
 
             closeMobileSidebar();
 
-            var saved = false;
-            try {
-                saved = localStorage.getItem('sidebarCollapsed') === '1';
-            } catch (e) {}
+            if (mode === 'compact') {
+                // The 992–1199px rail is compact by default, but its toggle can
+                // expand it until the viewport crosses into another range.
+                if (responsiveMode !== 'compact') {
+                    root.classList.add('sidebar-collapsed');
+                }
+                responsiveMode = mode;
+                keepActiveSidebarItemVisible();
+                return;
+            }
 
-            root.classList.toggle('sidebar-collapsed', saved);
+            if (responsiveMode !== 'wide') {
+                var saved = false;
+                try {
+                    saved = localStorage.getItem('sidebarCollapsed') === '1';
+                } catch (e) {}
+
+                root.classList.toggle('sidebar-collapsed', saved);
+            }
+            responsiveMode = mode;
+            keepActiveSidebarItemVisible();
         }
 
         if (sidebarToggle) {
@@ -117,7 +162,7 @@
            Module JS only needs to OPEN its modals (per-page ids/behaviour).
            ================================================================== */
         function openMasterModal(modal) {
-            if (!modal || modal.classList.contains('open')) return;
+            if (!modal) return;
             modal.classList.add('open');
             modal.setAttribute('aria-hidden', 'false');
             document.body.classList.add('master-modal-open');
@@ -148,6 +193,11 @@
                 if (e.target === modal) closeMasterModal(modal);
             });
         });
+
+        /* Some pages render a requested dialog open from its URL (for example,
+           a salary row's Generate payslip link). Bring the page scroll lock into
+           the same state as a dialog opened through `MasterModal.open()`. */
+        document.querySelectorAll('.master-modal.open').forEach(openMasterModal);
 
         document.addEventListener('keydown', function (e) {
             if (e.key !== 'Escape') return;

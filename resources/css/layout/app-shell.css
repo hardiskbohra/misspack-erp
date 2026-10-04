@@ -1,0 +1,21 @@
+/* Global shell contract. Geometry is still owned by app-layout.css; this
+   layer normalizes its type, sizing, focus, and theme surfaces. */
+body[data-ui-shell] {
+    color: var(--ui-text);
+    font-family: var(--ui-font-family);
+    font-size: var(--ui-font-body);
+    line-height: var(--ui-line-body);
+}
+
+body[data-ui-shell] :where(*, *::before, *::after) {
+    box-sizing: border-box;
+}
+
+body[data-ui-shell] :is(.main-wrap, .page-content, .cp-shell, .cp-main, .cp-content) {
+    min-width: 0;
+}
+
+body[data-ui-shell] :is(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--ui-accent);
+    outline-offset: 2px;
+}

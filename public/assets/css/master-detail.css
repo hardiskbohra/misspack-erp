@@ -572,7 +572,7 @@
     padding: 18px;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 767px) {
     .master-tabs {
         padding: 10px;
     }

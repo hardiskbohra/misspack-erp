@@ -10,29 +10,42 @@
     <div class="master product-index">
         <div class="master-card">
             <form method="GET" action="{{ route('products.index') }}">
-                <div class="master-filter-row">
-                    <div class="master-search"><span>⌕</span><input class="master-input" name="search" value="{{ $search }}"
-                            placeholder="Search product, SKU, material..."></div>
-                    
-                    <select class="master-select" name="status">
-                        <option value="all">All Status</option>
-                        @foreach (\App\Models\Product::statusOptions() as $key => $label)
-                            <option value="{{ $key }}" {{ $status === $key ? 'selected' : '' }}>{{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <select class="master-select" name="category">
-                        <option value="all">All Categories</option>
-                        @foreach ($categories as $cat)
-                            <option value="{{ $cat }}" {{ $category === $cat ? 'selected' : '' }}>{{ $cat }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <button class="master-btn master-btn-primary" type="submit">Filter</button>
-                    <a class="master-btn master-btn-light" href="{{ route('products.index') }}">Reset</a>
+                <div class="master-filter-row core-filter-toolbar">
+                    <div class="master-search"><span aria-hidden="true">⌕</span><input class="master-input" name="search" value="{{ $search }}"
+                            placeholder="Search product, SKU, material..." aria-label="Search products"></div>
+                    <x-filter-trigger drawer="productFiltersDrawer" :count="(filled($search) ? 1 : 0) + ($status !== 'all' ? 1 : 0) + ($category !== 'all' ? 1 : 0)" />
                     <button type="button" class="master-btn master-btn-primary" id="openQuickProductModal">+ Quick Product</button>
-                    <!--<a class="master-btn master-btn-soft" href="{{ route('products.create') }}">Detailed Form</a>-->
                 </div>
+                <x-drawer id="productFiltersDrawer" title="Filter products" eyebrow="Product filters"
+                    subtitle="Narrow the catalogue by availability status or category." size="medium">
+                    <section class="core-drawer-section">
+                        <h3 class="core-drawer-section-title">Product details</h3>
+                        <div class="core-drawer-fields">
+                            <div class="master-field">
+                                <label class="master-label" for="productFilterStatus">Status</label>
+                                <select class="master-select" id="productFilterStatus" name="status">
+                                    <option value="all">All statuses</option>
+                                    @foreach (\App\Models\Product::statusOptions() as $key => $label)
+                                        <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label" for="productFilterCategory">Category</label>
+                                <select class="master-select" id="productFilterCategory" name="category">
+                                    <option value="all">All categories</option>
+                                    @foreach ($categories as $cat)
+                                        <option value="{{ $cat }}" @selected($category === $cat)>{{ $cat }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+                    <x-slot:footer>
+                        <a class="master-btn master-btn-soft" href="{{ route('products.index') }}">Reset</a>
+                        <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                    </x-slot:footer>
+                </x-drawer>
             </form>
         </div>
         <div>

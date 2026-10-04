@@ -325,7 +325,7 @@ check('the three fields share one row, and step down as the width drops',
         .test(cashflowsCss)
     && /@media \(max-width: 1100px\)[\s\S]{0,240}\.cf-doc-upload-fields\s*\{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/
         .test(cashflowsCss)
-    && /@media \(max-width: 768px\)[\s\S]{0,600}\.cf-doc-upload-fields\s*\{\s*grid-template-columns: 1fr;/
+    && /@media \(max-width: 767px\)[\s\S]{0,600}\.cf-doc-upload-fields\s*\{\s*grid-template-columns: 1fr;/
         .test(cashflowsCss));
 
 check('the card badge is the shared badge in the document tone',
@@ -393,8 +393,13 @@ check('two documents with one name both survive the pack',
 /* "Send the accountant this party's papers for this month" is two filters and
    one button, so the party is a filter of its own — reading the same two names
    the row prints, and named in the applied strip like every other filter. */
+const archiveDrawerStart = archiveView.indexOf('<x-drawer id="cashflowDocumentFiltersDrawer"');
+const archiveDrawerEnd = archiveView.indexOf('</x-drawer>', archiveDrawerStart);
+const archiveDrawer = archiveDrawerStart >= 0 && archiveDrawerEnd > archiveDrawerStart
+    ? archiveView.slice(archiveDrawerStart, archiveDrawerEnd)
+    : '';
 check('the archive filters by party, on its own and in the URL',
-    /<select class="master-select" name="party" aria-label="Filter by party">/.test(archiveView)
+    /<select class="master-select"[^>]*name="party"[^>]*aria-label="Filter by party">/.test(archiveDrawer)
     && /'party' => trim\(\(string\) \$request->query\('party'\)\)/.test(controller)
     && /private function partyOptions\(\): array/.test(controller)
     && /'partyOptions' => \$this->partyOptions\(\),/.test(controller));

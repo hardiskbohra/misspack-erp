@@ -4,14 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <title>Shipment Summary — {{ $shipment->shipment_number }}</title>
     <link rel="stylesheet" href="{{ $assetVer('assets/css/shipment-print.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/document-print.css') }}">
 </head>
 
-<body>
+<body class="pdf-preview">
     @include('shipments.print.partials.toolbar', ['document' => 'summary'])
 
-    <div class="print-sheet">
+    <main class="print-sheet pdf-sheet">
         <header class="print-head">
             <div>
                 <span class="print-brand">{{ config('app.name', 'MissPack') }}</span>
@@ -139,7 +143,7 @@
                 </tbody>
             </table>
         </section>
-    </div>
+    </main>
 </body>
 
 </html>

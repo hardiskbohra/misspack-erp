@@ -453,7 +453,7 @@
                         <div class="master-modal {{ $openPayslipDialog === 'create' ? 'open' : '' }}" id="payslipForm"
                             aria-hidden="{{ $openPayslipDialog === 'create' ? 'false' : 'true' }}">
                             <div class="master-modal-card is-wide" role="dialog" aria-modal="true" aria-labelledby="payslipFormTitle">
-                                <form method="POST" action="{{ route('users.payslips.store', $user) }}" enctype="multipart/form-data">
+                                <form method="POST" action="{{ route('users.payslips.store', ['user' => $user, 'tab' => 'salary', 'year' => $year]) }}" enctype="multipart/form-data">
                                     @csrf
                                     @include('employees.partials.payslip-form', [
                                         'mode' => 'create',
@@ -474,14 +474,14 @@
                                 {{-- outside the card on purpose: a dialog cannot hold a
                                      second form, so the remove button submits this one --}}
                                 <form method="POST" id="payslipEditDelete"
-                                    action="{{ route('users.payslips.destroy', ['user' => $user, 'payslip' => $editingPayslip]) }}">
+                                    action="{{ route('users.payslips.destroy', ['user' => $user, 'payslip' => $editingPayslip, 'tab' => 'salary', 'year' => $year]) }}">
                                     @csrf
                                     @method('DELETE')
                                 </form>
 
                                 <div class="master-modal-card is-wide" role="dialog" aria-modal="true" aria-labelledby="payslipEditTitle">
                                     <form method="POST" enctype="multipart/form-data"
-                                        action="{{ route('users.payslips.update', ['user' => $user, 'payslip' => $editingPayslip]) }}">
+                                        action="{{ route('users.payslips.update', ['user' => $user, 'payslip' => $editingPayslip, 'tab' => 'salary', 'year' => $year]) }}">
                                         @csrf
                                         @method('PUT')
                                         @include('employees.partials.payslip-form', [

@@ -299,7 +299,7 @@ const chrome = [
     'class="master-stats"',
     'class="master-list-bar"',
     'class="master-list-chips"',
-    'class="master-filter-row"',
+    'class="si-filter-toolbar"',
     'class="master-list-applied"',
     'class="master-card master-table-card master-card--flat"',
     'class="master-list-toolbar"',
@@ -313,6 +313,22 @@ check('the list wears the chrome every other listing wears',
     && /<x-pagination :items="\$invoices" \/>/.test(view)
     && (view.match(/data-label="/g) || []).length >= 9,
     'the module does not draw its own list; it fills the shared one');
+
+const filterDrawerStart = view.indexOf('<x-drawer id="invoiceFiltersDrawer"');
+const filterDrawerEnd = view.indexOf('</x-drawer>', filterDrawerStart);
+const filterDrawer = filterDrawerStart >= 0 && filterDrawerEnd > filterDrawerStart
+    ? view.slice(filterDrawerStart, filterDrawerEnd)
+    : '';
+check('invoice filters move into the shared right drawer while search stays visible',
+    /<x-filter-trigger drawer="invoiceFiltersDrawer"/.test(view)
+    && /:count="count\(\$appliedChips\)"/.test(view)
+    && /name="search"/.test(view.slice(0, filterDrawerStart))
+    && ['invoice_type', 'status', 'client_id', 'project_id', 'payment', 'chase', 'ageing', 'date_from', 'date_to']
+        .every(name => filterDrawer.includes('name="' + name + '"'))
+    && /Apply filters/.test(filterDrawer)
+    && /Reset/.test(filterDrawer)
+    && /count\(\$appliedChips\)/.test(view),
+    'the drawer keeps all server filters, a visible search, and the active-filter count');
 
 check('the page rhythm belongs to the shell, not to an inline style',
     /\.master-list > \.master-card \+ \.master-card/.test(listCss)
@@ -334,7 +350,7 @@ const colClasses = [...colgroup.matchAll(/class="(si-col-[a-z]+)"/g)].map(m => m
 const headCount = (view.slice(view.indexOf('<thead>'), view.indexOf('</thead>')).match(/<th\b/g) || []).length;
 
 check('the listing sizes its own columns',
-    /<table class="master-table si-table">/.test(view)
+    /<table class="master-table si-table"[^>]*>/.test(view)
     && colClasses.length === headCount
     && colClasses.every(name => new RegExp('\\.si-index \\.' + name + ' \\{\\s*\\n\\s*width:').test(sheet))
     && /\.si-index \.si-table \{\s*\n\s*table-layout: fixed;\s*\n\s*min-width: 1080px/.test(sheet)
@@ -775,6 +791,18 @@ check('the sweep keeps every promise the bar makes',
     && /action="\{\{ route\('sales-invoices\.bulk'\) \}\}"/.test(view),
     'a bulk delete that takes a sent invoice is a document the client holds, deleted');
 
+check('selected invoice actions sit on their own toolbar row',
+    /class="master-list-toolbar-actions">[\s\S]*?<\/div>\s*\n\s*\{\{-- This form has its own toolbar row[\s\S]*?<form id="bulkForm"/.test(view)
+    && /\.master-list \.master-list-toolbar > \.master-list-bulk\s*\{[^}]*flex:\s*1 0 100%/.test(listCss)
+    && /\.master-list \.master-list-toolbar-actions\s*\{[^}]*flex-wrap:\s*wrap/.test(listCss),
+    'the selection bar follows the standing list actions instead of overflowing beside them');
+
+check('bulk controls share one padded row on desktop and wrap at tablet widths',
+    /\.master-list \.master-list-bulk\s*\{[^}]*flex-wrap:\s*nowrap[^}]*padding:\s*10px 12px/.test(listCss)
+    && /\.master-list \.master-list-bulk-count\s*\{[^}]*margin-right:\s*auto/.test(listCss)
+    && /@media\s*\(max-width:\s*991px\)[\s\S]*?\.master-list \.master-list-bulk\s*\{[^}]*flex-wrap:\s*wrap/.test(listCss),
+    'a narrow viewport must not clip the selection tools, and the card needs room inside its border');
+
 check('the sweep is capped and the export takes a selection',
     /array_slice\(array_values\(array_unique\(array_filter\(\$ids\)\)\), 0, 500\)/.test(controller)
     && /\$selected !== \[\]/.test(controller)
@@ -970,6 +998,52 @@ check('a pick made in a select2 list reaches the handler that fills the form',
     && ! /clientSelect\.addEventListener\('change'/.test(js),
     'a DOM `change` listener is the one binding select2 never fires — the office '
     + 'picks a client and the form sits there empty until the invoice is saved');
+
+check('creating an invoice asks about portal visibility without interrupting private creation',
+    /class="master-form" @if \(! \$isEdit\) data-invoice-portal-confirm data-invoice-auto-gst="\{\{ old\('_invoice_auto_gst', 'true'\) \}\}" @endif/.test(form)
+    && /name="_invoice_auto_gst" value="\{\{ old\('_invoice_auto_gst', 'true'\) \}\}"/.test(form)
+    && /@else\s*<input type="hidden" name="show_client_portal" value="0" data-invoice-portal-choice>/.test(form)
+    && /@if \(\$isEdit\)\s*<label class="master-check full"><input type="checkbox" name="show_client_portal"/.test(form)
+    && /portalPromptForm\.addEventListener\('submit', function \(event\)/.test(js)
+    && /window\.MasterAlert\.confirm\(/.test(js)
+    && /confirmText: 'Yes'/.test(js)
+    && /cancelText: 'No'/.test(js)
+    && /portalChoice\.value = showInPortal \? '1' : '0';/.test(js)
+    && /portalPromptForm\.requestSubmit/.test(js)
+    && ! /window\.confirm/.test(js),
+    'Yes makes it visible, No creates it privately, and editing keeps its visibility toggle');
+
+check('billing and shipping addresses share a responsive two-column group',
+    /class="si-address-pair"/.test(form)
+    && /aria-labelledby="billingAddressLabel"/.test(form)
+    && /aria-labelledby="shippingAddressLabel"/.test(form)
+    && /\.si-address-pair\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/.test(sheet)
+    && /@media \(max-width: 991px\)[\s\S]*?\.si-address-pair\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(sheet),
+    'the address groups sit side by side on wide screens and stack when narrow');
+
+check('GST type follows the billing state or GSTIN against MissPack Gujarat',
+    /function stateCodeFromName\(value\)/.test(js)
+    && /function stateCodeFromGstin\(value\)/.test(js)
+    && /gujarat: '24'/.test(js)
+    && /var clientStateCode = stateCodeFromName\(billingState && billingState\.value\)\s*\|\| stateCodeFromGstin\(clientGstin && clientGstin\.value\)/.test(js)
+    && /var sellerStateCode = stateCodeFromName\(sellerState && sellerState\.value\)[\s\S]*?\|\| '24'/.test(js)
+    && /if \(!clientStateCode\) return;[\s\S]*?clientStateCode !== sellerStateCode[\s\S]*?'inter_state'[\s\S]*?'intra_state'/.test(js)
+    && /field\.addEventListener\('input', autoSelectGstType\)/.test(js)
+    && /gstTypeManuallyChanged/.test(js)
+    && /gstAutoState\.value = 'false'/.test(js)
+    && /gstAutoState\.value = 'true'/.test(js),
+    'intra-state is CGST plus SGST; a different GST state code selects IGST');
+
+check('overdue remains filterable but is not a listing stat',
+    ! /Overdue \(filtered\)/.test(view)
+    && /name="ageing"/.test(view),
+    'the late-invoice filter stays available without taking a statistics tile');
+
+check('invoice form cards keep one consistent gap between sections',
+    /\.si-form\s*\{[^}]*display: flex;[^}]*flex-direction: column;[^}]*gap: 20px/.test(sheet)
+    && /\.si-form \.master-section\s*\{\s*margin-bottom: 0\s*\}/.test(sheet)
+    && /\.si-form > \.master-header,\s*\.si-form > \.master-actions\s*\{\s*margin: 0\s*\}/.test(sheet),
+    'the form container owns a 20px card rhythm without doubled legacy margins');
 
 /* ---------------------------------------------------------------- report */
 

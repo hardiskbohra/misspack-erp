@@ -41,15 +41,22 @@
    re-timing the ledger's tables and money rows on the page next door.
    ========================================================================== */
 
-/* The form page is a stack of cards, and the gap is the shell's own rhythm —
-   the 16px `.master-section` puts between two cards on every other form in the
-   office. It has to be said out loud here because the page is a flex column,
-   where the cards' margins do not collapse: without it the last field of one
-   card sits against the first field of the next. */
+/* The form page is a stack of cards. Let the container own one consistent
+   20px rhythm; reset legacy card/header/action margins so they cannot collapse
+   or add a second gap at the grid-to-attachments boundary. */
 .si-form {
     display: flex;
     flex-direction: column;
-    gap: 16px
+    gap: 20px
+}
+
+.si-form .master-section {
+    margin-bottom: 0
+}
+
+.si-form > .master-header,
+.si-form > .master-actions {
+    margin: 0
 }
 
 .si-items {
@@ -125,20 +132,41 @@
     margin: 10px 0 0
 }
 
-/* The billing and shipping halves of the client's record, each part in its own
-   field: the printed invoice lays the parts out, and the office can correct a
-   pincode without retyping the street. The head carries the section label and
-   the one click that copies billing over to shipping. */
+/* Billing and shipping are parallel address groups on desktop. Each keeps the
+   invoice's named fields, while smaller viewports stack the groups to preserve
+   comfortable control widths. */
+.si-address-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 20px;
+    margin-top: 20px
+}
+
+.si-address-block {
+    min-width: 0
+}
+
 .si-address-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin: 20px 0 10px
+    margin: 0 0 8px
 }
 
 .si-address-head .master-section-label {
     margin: 0
+}
+
+.si-address-pair .master-form-grid {
+    margin-top: 0
+}
+
+@media (max-width: 991px) {
+    .si-address-pair {
+        grid-template-columns: minmax(0, 1fr)
+    }
 }
 
 /* ==========================================================================
@@ -632,6 +660,97 @@
 
 .si-index .master-dropdown-toggle {
     margin-left: auto
+}
+
+/* Search stays at the top of the invoice list; the longer set of criteria lives
+   in the shared right-side drawer, so the list keeps one calm filter row. */
+.si-index .si-filter-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px 16px
+}
+
+.si-index .si-filter-search {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    margin: 0
+}
+
+.si-index .si-filter-search .master-input {
+    padding-right: 48px
+}
+
+.si-index .si-search-submit {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: inline-grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+    cursor: pointer
+}
+
+.si-index .si-search-submit:hover {
+    background: var(--mc-border);
+    color: var(--mc-text)
+}
+
+.si-index .si-search-submit:focus-visible {
+    outline: 2px solid var(--master-primary);
+    outline-offset: 2px
+}
+
+.si-index .core-filter-trigger {
+    min-height: 44px
+}
+
+.si-index .si-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 12px
+}
+
+.si-index .si-filter-field {
+    min-width: 0
+}
+
+.si-index .si-filter-field .master-label {
+    display: block;
+    margin: 0 0 6px
+}
+
+.si-index .si-filter-field .master-select,
+.si-index .si-filter-field .master-input,
+.si-index .si-filter-field .select2-container {
+    width: 100% !important;
+    min-width: 0;
+    max-width: 100%
+}
+
+@media screen and (max-width: 767px) {
+    .si-index .si-filter-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 12px 14px 14px
+    }
+
+    .si-index .si-filter-search,
+    .si-index .core-filter-trigger {
+        width: 100%;
+        max-width: none
+    }
+
+    .si-index .si-filter-grid {
+        grid-template-columns: minmax(0, 1fr)
+    }
 }
 
 /* ---------------------------------------------------------------- the chase

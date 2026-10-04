@@ -1,311 +1,293 @@
-/* ==========================================================================
-   VENDORS.JS — Vendor module (admin screens)
-   --------------------------------------------------------------------------
-   Loaded via @push('scripts') on vendor module pages:
-
-     - vendors/index.blade.php        Quick Vendor + delete modals
-     - vendors/show.blade.php         Tab navigation, ledger modals,
-                                      payment INR auto-calc, edit-entry prefill
-     - vendor_quotes/index.blade.php  Quick Quote modal
-     - vendor_quotes/form.blade.php   Quantity price-break rows
-
-   Modals use the shared master-* modal system (master-index.css): the
-   .open class toggles visibility and .master-modal-open locks page scroll.
-   All bindings are guarded, so the file is safe on any vendor page.
-   ========================================================================== */
+/* Vendor directory/detail interactions and the separate vendor-quote helpers. */
 (function () {
     'use strict';
 
-    /* ---------------- Shared master-* modal helpers ---------------- */
+    var activeModal = null;
+    var returnFocusTo = null;
 
-    function openModal(modal) {
-        if (!modal || modal.classList.contains('open')) return;
+    function focusableIn(modal) {
+        if (!modal) return [];
+        return Array.from(modal.querySelectorAll(
+            'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )).filter(function (element) {
+            return !element.hidden && element.getAttribute('aria-hidden') !== 'true';
+        });
+    }
+
+    function focusAfterOpen(modal, preferred) {
+        var target = preferred || focusableIn(modal)[0] || modal.querySelector('[role="dialog"]');
+        if (target && typeof target.focus === 'function') target.focus();
+    }
+
+    function openModal(modal, trigger, preferredFocus) {
+        if (!modal) return;
+        if (activeModal && activeModal !== modal) closeModal(activeModal, false);
+        if (modal.classList.contains('open')) return;
+
+        returnFocusTo = trigger || document.activeElement;
+        activeModal = modal;
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('master-modal-open');
+
+        var schedule = window.requestAnimationFrame || function (callback) { window.setTimeout(callback, 0); };
+        schedule(function () { focusAfterOpen(modal, preferredFocus); });
     }
 
-    function closeModal(modal) {
+    function closeModal(modal, restoreFocus) {
         if (!modal) return;
+        if (restoreFocus === undefined) restoreFocus = true;
         modal.classList.remove('open');
         modal.setAttribute('aria-hidden', 'true');
-        if (!document.querySelector('.master-modal.open')) {
-            document.body.classList.remove('master-modal-open');
+
+        if (activeModal === modal) activeModal = null;
+        document.body.classList.toggle('master-modal-open', Boolean(document.querySelector('.master-modal.open')));
+
+        if (restoreFocus && returnFocusTo && returnFocusTo.isConnected) returnFocusTo.focus();
+        if (restoreFocus) returnFocusTo = null;
+    }
+
+    function bindModalClose(modal) {
+        if (!modal) return;
+        modal.querySelectorAll('[data-close-modal]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                closeModal(modal);
+            });
+        });
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal) closeModal(modal);
+        });
+    }
+
+    function setField(form, name, value) {
+        var field = form && form.elements ? form.elements[name] : null;
+        if (!field) return;
+        if (field.type === 'checkbox') {
+            field.checked = Boolean(value);
+        } else {
+            field.value = value == null ? '' : value;
+        }
+    }
+
+    function bindPaymentForm(form) {
+        if (!form) return;
+        var foreignAmount = form.querySelector('input[name="foreign_amount"]');
+        var foreignCurrency = form.querySelector('select[name="foreign_currency"]');
+        var exchangeRate = form.querySelector('input[name="exchange_rate"]');
+        var amountInInr = form.querySelector('input[name="amount_in_inr"]');
+        var typeSelect = form.querySelector('select[name="transaction_type"]');
+        var syncCheckbox = form.querySelector('input[type="checkbox"][name="also_create_cashflow"]');
+        var accountSelect = form.querySelector('select[name="paid_account_id"]');
+        var hint = form.querySelector('.vendor-sync-hint');
+        if (!foreignAmount || !foreignCurrency || !exchangeRate || !amountInInr) return;
+
+        function calculateInrAmount() {
+            var amount = parseFloat(foreignAmount.value || '0');
+            var rate = parseFloat(exchangeRate.value || '0');
+            if (foreignCurrency.value === 'INR' && amount > 0 && !amountInInr.value) {
+                amountInInr.value = amount.toFixed(2);
+                return;
+            }
+            if (amount > 0 && rate > 0) amountInInr.value = (amount * rate).toFixed(2);
+        }
+
+        foreignAmount.addEventListener('input', calculateInrAmount);
+        exchangeRate.addEventListener('input', calculateInrAmount);
+        foreignCurrency.addEventListener('change', calculateInrAmount);
+
+        if (!typeSelect || !syncCheckbox) return;
+        var defaultHint = hint ? hint.textContent.trim() : '';
+
+        function applySyncState(autoFlip) {
+            var isPayment = typeSelect.value === 'debit';
+            if (autoFlip) syncCheckbox.checked = isPayment;
+            if (accountSelect) accountSelect.required = isPayment && syncCheckbox.checked;
+
+            if (!hint) return;
+            if (!isPayment) {
+                hint.textContent = 'A bill creates a payable, not a cash movement — tick the box only if money also left the account.';
+            } else if (!syncCheckbox.checked) {
+                hint.textContent = 'Cashflow entry will be skipped for this payment.';
+            } else {
+                hint.textContent = defaultHint;
+            }
+        }
+
+        applySyncState(false);
+        typeSelect.addEventListener('change', function () { applySyncState(true); });
+        syncCheckbox.addEventListener('change', function () { applySyncState(false); });
+    }
+
+    function bindEditPayments() {
+        var modal = document.getElementById('editPaymentModal');
+        var form = document.getElementById('editPaymentForm');
+        if (!modal || !form) return;
+
+        document.querySelectorAll('.editPaymentBtn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var payment;
+                try {
+                    payment = JSON.parse(button.dataset.payment || '{}');
+                } catch (error) {
+                    return;
+                }
+                if (!payment.id || !button.dataset.updateUrl) return;
+
+                form.action = button.dataset.updateUrl;
+                setField(form, '_vendor_payment_entry_id', payment.id);
+                setField(form, 'invoice_number', payment.invoice_number);
+                setField(form, 'transaction_date', payment.transaction_date ? String(payment.transaction_date).substring(0, 10) : '');
+                setField(form, 'particular', payment.particular);
+                setField(form, 'foreign_amount', payment.foreign_amount);
+                setField(form, 'foreign_currency', payment.foreign_currency);
+                setField(form, 'exchange_rate', payment.exchange_rate);
+                setField(form, 'amount_in_inr', payment.amount_in_inr);
+                setField(form, 'transaction_type', payment.transaction_type);
+                setField(form, 'entry_category', payment.entry_category);
+                setField(form, 'status', payment.status);
+                setField(form, 'project_id', payment.project_id);
+                setField(form, 'paid_account_id', payment.paid_account_id);
+                setField(form, 'payment_mode', payment.payment_mode);
+                setField(form, 'bank_reference_number', payment.bank_reference_number);
+                setField(form, 'remarks', payment.remarks);
+
+                var syncCheckbox = form.querySelector('input[type="checkbox"][name="also_create_cashflow"]');
+                if (syncCheckbox) {
+                    /* Existing cashflow link state is authoritative; do not create
+                       a duplicate simply because the row is being edited. */
+                    syncCheckbox.checked = Boolean(payment.cashflow_entry_id);
+                    syncCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                openModal(modal, button, form.querySelector('[name="transaction_date"]'));
+            });
+        });
+    }
+
+    function bindVendorDirectory() {
+        var quickModal = document.getElementById('quickVendorModal');
+        var deleteModal = document.getElementById('deleteVendorModal');
+        var deleteForm = document.getElementById('deleteVendorForm');
+        var deleteDescription = document.getElementById('deleteVendorDesc');
+        var openQuickButton = document.getElementById('openQuickVendorModal');
+
+        openQuickButton?.addEventListener('click', function () {
+            openModal(quickModal, this, document.getElementById('quick_vendor_name'));
+        });
+
+        ['closeQuickVendorModal', 'cancelQuickVendorModal'].forEach(function (id) {
+            document.getElementById(id)?.addEventListener('click', function () { closeModal(quickModal); });
+        });
+
+        document.querySelectorAll('.master-delete-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                if (deleteDescription) {
+                    deleteDescription.textContent = 'Are you sure you want to delete “' +
+                        (button.dataset.name || 'this vendor') + '”? This action cannot be undone.';
+                }
+                if (deleteForm) deleteForm.action = button.dataset.deleteUrl || '';
+                openModal(deleteModal, button, document.getElementById('cancelDeleteVendorModal'));
+            });
+        });
+
+        ['closeDeleteVendorModal', 'cancelDeleteVendorModal'].forEach(function (id) {
+            document.getElementById(id)?.addEventListener('click', function () { closeModal(deleteModal); });
+        });
+    }
+
+    function bindVendorDetail() {
+        document.getElementById('openAddPaymentModal')?.addEventListener('click', function () {
+            openModal(document.getElementById('addPaymentModal'), this);
+        });
+        document.getElementById('openAddAttachmentModal')?.addEventListener('click', function () {
+            openModal(document.getElementById('addAttachmentModal'), this);
+        });
+        document.getElementById('openAddCommentModal')?.addEventListener('click', function () {
+            openModal(document.getElementById('addCommentModal'), this);
+        });
+
+        document.querySelectorAll('.vendor-payment-form').forEach(bindPaymentForm);
+        bindEditPayments();
+    }
+
+    function bindVendorForm() {
+        var currencySelect = document.getElementById('vendor_preferred_currency');
+        var currencyLabels = document.querySelectorAll('[data-vendor-currency-label]');
+        if (!currencySelect || !currencyLabels.length) return;
+
+        function updateCurrencyLabels() {
+            var currency = currencySelect.value || 'INR';
+            currencyLabels.forEach(function (label) { label.textContent = currency; });
+        }
+
+        updateCurrencyLabels();
+        currencySelect.addEventListener('change', updateCurrencyLabels);
+    }
+
+    function bindQuoteScreens() {
+        document.getElementById('openQuickQuoteModal')?.addEventListener('click', function () {
+            var modal = document.getElementById('quickQuoteModal');
+            openModal(modal, this);
+        });
+
+        var addPriceRow = document.getElementById('addQuotePriceRow');
+        var priceBody = document.querySelector('#quotePricesTable tbody');
+        if (addPriceRow && priceBody) {
+            var priceIndex = priceBody.children.length;
+            addPriceRow.addEventListener('click', function () {
+                var template = document.getElementById('quotePriceRowTemplate');
+                if (!template) return;
+                priceBody.insertAdjacentHTML('beforeend', template.innerHTML.replaceAll('__INDEX__', priceIndex++));
+            });
         }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        if (window.MasterList) {
+            window.MasterList.density({ root: '.vendor-index', key: 'misspack.vendors.density' });
+            window.MasterList.gridShadow({ root: '.vendor-index' });
+        }
 
-        /* Generic modal wiring, safe on every vendor page:
-             - [data-close-modal] buttons (value = modal id, or nearest modal)
-             - backdrop click
-             - Escape key                                            */
-        document.querySelectorAll('[data-close-modal]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var target = btn.dataset.closeModal
-                    ? document.getElementById(btn.dataset.closeModal)
-                    : btn.closest('.master-modal');
-                closeModal(target);
-            });
-        });
+        bindVendorDirectory();
+        bindVendorDetail();
+        bindVendorForm();
+        bindQuoteScreens();
 
-        document.querySelectorAll('.master-modal').forEach(function (modal) {
-            modal.addEventListener('click', function (event) {
-                if (event.target === modal) closeModal(modal);
-            });
+        document.querySelectorAll('.master-modal').forEach(bindModalClose);
+        document.querySelectorAll('.master-modal[data-auto-open="true"]').forEach(function (modal) {
+            var firstInvalid = modal.querySelector('[aria-invalid="true"], .is-invalid');
+            openModal(modal, null, firstInvalid || undefined);
         });
 
         document.addEventListener('keydown', function (event) {
-            if (event.key !== 'Escape') return;
-            document.querySelectorAll('.master-modal.open').forEach(closeModal);
-        });
-
-        /* ---------- vendors/index: Quick Vendor + delete modals ---------- */
-
-        var quickVendorModal = document.getElementById('quickVendorModal');
-        var deleteVendorModal = document.getElementById('deleteVendorModal');
-        var deleteVendorForm = document.getElementById('deleteVendorForm');
-        var deleteVendorDesc = document.getElementById('deleteVendorDesc');
-
-        document.getElementById('openQuickVendorModal')?.addEventListener('click', function () {
-            openModal(quickVendorModal);
-        });
-        document.getElementById('closeQuickVendorModal')?.addEventListener('click', function () {
-            closeModal(quickVendorModal);
-        });
-        document.getElementById('cancelQuickVendorModal')?.addEventListener('click', function () {
-            closeModal(quickVendorModal);
-        });
-
-        if (deleteVendorForm && deleteVendorDesc) {
-            document.querySelectorAll('.master-delete-btn').forEach(function (button) {
-                button.addEventListener('click', function () {
-                    deleteVendorDesc.textContent = 'Are you sure you want to delete "' +
-                        button.dataset.name + '"? This action cannot be undone.';
-                    deleteVendorForm.action = button.dataset.deleteUrl;
-                    openModal(deleteVendorModal);
-                });
-            });
-        }
-
-        document.getElementById('closeDeleteVendorModal')?.addEventListener('click', function () {
-            closeModal(deleteVendorModal);
-        });
-        document.getElementById('cancelDeleteVendorModal')?.addEventListener('click', function () {
-            closeModal(deleteVendorModal);
-        });
-
-        /* ---------- vendors/show: tab navigation (persisted) ---------- */
-
-        var vendorShow = document.querySelector('.vendor-show');
-        if (vendorShow) {
-            var tabKey = 'vendor_show_tab_' + (vendorShow.dataset.vendorId || '');
-            var tabs = vendorShow.querySelectorAll('.vendor-tab');
-
-            tabs.forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    vendorShow.querySelectorAll('.vendor-tab').forEach(function (b) {
-                        b.classList.remove('active');
-                    });
-                    vendorShow.querySelectorAll('.vendor-panel').forEach(function (panel) {
-                        panel.classList.remove('active');
-                    });
-                    btn.classList.add('active');
-                    var panel = vendorShow.querySelector('[data-panel="' + btn.dataset.tab + '"]');
-                    if (panel) panel.classList.add('active');
-                    try {
-                        localStorage.setItem(tabKey, btn.dataset.tab);
-                    } catch (e) {}
-                });
-            });
-
-            /* A hash (e.g. #payments from the cashflow module) wins over the
-               remembered tab so cross-module links land on the right panel. */
-            var hashTab = (window.location.hash || '').replace('#', '');
-            var requestedTab = hashTab || null;
-            if (!requestedTab) {
-                try {
-                    requestedTab = localStorage.getItem(tabKey);
-                } catch (e) {
-                    requestedTab = null;
-                }
+            if (!activeModal || !activeModal.classList.contains('open')) return;
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeModal(activeModal);
+                return;
             }
-            var requestedBtn = requestedTab
-                ? vendorShow.querySelector('.vendor-tab[data-tab="' + requestedTab + '"]')
-                : null;
-            if (requestedBtn) requestedBtn.click();
-        }
+            if (event.key !== 'Tab') return;
 
-        /* ---------- vendors/show: payment modals + INR auto-calc ---------- */
-
-        document.getElementById('openAddPaymentModal')?.addEventListener('click', function () {
-            openModal(document.getElementById('addPaymentModal'));
-        });
-        document.getElementById('openAddAttachmentModal')?.addEventListener('click', function () {
-            openModal(document.getElementById('addAttachmentModal'));
-        });
-        document.getElementById('openAddCommentModal')?.addEventListener('click', function () {
-            openModal(document.getElementById('addCommentModal'));
-        });
-
-        /* Both ledger modals carry the same field names, so the auto-calc is
-           wired per form (the add + edit modals each get their own). */
-        document.querySelectorAll('.vendor-payment-form').forEach(function (form) {
-            var foreignAmount = form.querySelector('input[name="foreign_amount"]');
-            var foreignCurrency = form.querySelector('select[name="foreign_currency"]');
-            var exchangeRate = form.querySelector('input[name="exchange_rate"]');
-            var amountInInr = form.querySelector('input[name="amount_in_inr"]');
-            if (!foreignAmount || !foreignCurrency || !exchangeRate || !amountInInr) return;
-
-            function calculateInrAmount() {
-                var amount = parseFloat(foreignAmount.value || '0');
-                var rate = parseFloat(exchangeRate.value || '0');
-                if (foreignCurrency.value === 'INR' && amount > 0 && !amountInInr.value) {
-                    amountInInr.value = amount.toFixed(2);
-                    return;
-                }
-                if (amount > 0 && rate > 0) {
-                    amountInInr.value = (amount * rate).toFixed(2);
-                }
+            var focusable = focusableIn(activeModal);
+            if (!focusable.length) {
+                event.preventDefault();
+                activeModal.querySelector('[role="dialog"]')?.focus();
+                return;
             }
-
-            foreignAmount.addEventListener('input', calculateInrAmount);
-            exchangeRate.addEventListener('input', calculateInrAmount);
-            foreignCurrency.addEventListener('change', calculateInrAmount);
-        });
-
-        /* ---------- vendor payment -> INR cashflow sync (one entry, both ledgers) ----------
-
-           A payment (debit) is mirrored into the cashflow module automatically,
-           so the checkbox is on by default and only matters for payments. Bills
-           (credit) do not move cash, so nothing is mirrored for them unless the
-           user deliberately ticks the box. */
-
-        document.querySelectorAll('.vendor-payment-form').forEach(function (form) {
-            var typeSelect = form.querySelector('select[name="transaction_type"]');
-            var syncCheckbox = form.querySelector('input[type="checkbox"][name="also_create_cashflow"]');
-            var hint = form.querySelector('.vendor-sync-hint');
-            var accountSelect = form.querySelector('select[name="paid_account_id"]');
-            if (!typeSelect || !syncCheckbox) return;
-
-            var defaultHint = hint ? hint.textContent : '';
-
-            function applySyncState(initial) {
-                var isPayment = typeSelect.value === 'debit';
-
-                if (!initial) {
-                    // Only auto-flip the box when the type actually changes, so a
-                    // deliberate untick survives while the user edits other fields.
-                    syncCheckbox.checked = isPayment;
-                }
-
-                if (accountSelect) {
-                    accountSelect.required = isPayment && syncCheckbox.checked;
-                }
-
-                if (hint) {
-                    if (!isPayment) {
-                        hint.textContent = 'A bill creates a payable, not a cash movement — tick the box only if money also left the account.';
-                    } else if (!syncCheckbox.checked) {
-                        hint.textContent = 'Cashflow entry will be skipped for this payment.';
-                    } else {
-                        hint.textContent = defaultHint;
-                    }
-                }
+            var first = focusable[0];
+            var last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
             }
-
-            applySyncState(true);
-
-            typeSelect.addEventListener('change', function () {
-                applySyncState(false);
-            });
-
-            syncCheckbox.addEventListener('change', function () {
-                applySyncState(true);
-            });
-        });
-
-        /* Edit-entry prefill from the row's data-payment payload. */
-        var editPaymentModal = document.getElementById('editPaymentModal');
-        var editPaymentForm = document.getElementById('editPaymentForm');
-
-        function setField(form, name, value) {
-            var field = form.elements[name];
-            if (!field) return;
-            if (field.type === 'checkbox') {
-                field.checked = !!value;
-            } else {
-                field.value = value ?? '';
-            }
-        }
-
-        document.querySelectorAll('.editPaymentBtn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var payment = JSON.parse(this.dataset.payment || '{}');
-                editPaymentForm.action = '/vendors/' + payment.vendor_id + '/payments/' + payment.id;
-
-                setField(editPaymentForm, 'invoice_number', payment.invoice_number ?? '');
-
-                var paymentDate = payment.transaction_date;
-                if (paymentDate) {
-                    paymentDate = String(paymentDate).substring(0, 10);
-                }
-                setField(editPaymentForm, 'transaction_date', paymentDate);
-
-                setField(editPaymentForm, 'particular', payment.particular ?? '');
-                setField(editPaymentForm, 'foreign_amount', payment.foreign_amount);
-                setField(editPaymentForm, 'foreign_currency', payment.foreign_currency);
-                setField(editPaymentForm, 'exchange_rate', payment.exchange_rate);
-                setField(editPaymentForm, 'amount_in_inr', payment.amount_in_inr);
-                setField(editPaymentForm, 'transaction_type', payment.transaction_type);
-                setField(editPaymentForm, 'entry_category', payment.entry_category);
-                setField(editPaymentForm, 'status', payment.status);
-                setField(editPaymentForm, 'project_id', payment.project_id);
-                setField(editPaymentForm, 'paid_account_id', payment.paid_account_id);
-                setField(editPaymentForm, 'payment_mode', payment.payment_mode);
-                setField(editPaymentForm, 'bank_reference_number', payment.bank_reference_number);
-                setField(editPaymentForm, 'remarks', payment.remarks ?? '');
-
-                /* The mirror is what matters, not a form flag: keep the box in
-                   step with whether a cashflow entry is actually linked. */
-                var syncBox = editPaymentForm.querySelector('input[type="checkbox"][name="also_create_cashflow"]');
-                if (syncBox) {
-                    syncBox.checked = !!payment.cashflow_entry_id;
-                    syncBox.dispatchEvent(new Event('change'));
-                }
-
-                openModal(editPaymentModal);
-            });
-        });
-
-        /* ---------- vendor_quotes/index: Quick Quote modal ---------- */
-
-        document.getElementById('openQuickQuoteModal')?.addEventListener('click', function () {
-            openModal(document.getElementById('quickQuoteModal'));
         });
     });
 
-    /* ---------- vendor_quotes/form: quantity price-break rows ---------- */
-
-    /* Kept global: rows call removeQuotePriceRow(this) from inline onclick. */
-    window.removeQuotePriceRow = function (btn) {
-        var tbody = document.querySelector('#quotePricesTable tbody');
-        if (tbody && tbody.children.length > 1) btn.closest('tr').remove();
+    /* Quote form rows call this from a legacy inline onclick. */
+    window.removeQuotePriceRow = function (button) {
+        var body = document.querySelector('#quotePricesTable tbody');
+        if (body && body.children.length > 1 && button?.closest('tr')) button.closest('tr').remove();
     };
-
-    document.addEventListener('DOMContentLoaded', function () {
-        var addQuotePriceRow = document.getElementById('addQuotePriceRow');
-        if (!addQuotePriceRow) return;
-
-        var quoteTbody = document.querySelector('#quotePricesTable tbody');
-        var quotePriceIndex = quoteTbody ? quoteTbody.children.length : 0;
-
-        addQuotePriceRow.addEventListener('click', function () {
-            var template = document.getElementById('quotePriceRowTemplate');
-            if (quoteTbody && template) {
-                quoteTbody.insertAdjacentHTML('beforeend',
-                    template.innerHTML.replaceAll('__INDEX__', quotePriceIndex++));
-            }
-        });
-    });
 })();

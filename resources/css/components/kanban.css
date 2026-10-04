@@ -1,0 +1,19 @@
+/* Board behavior is page-owned; shared rules standardize neutral surfaces and
+   keep column/card content from forcing horizontal overflow. */
+body[data-ui-shell] :is(.core-kanban, .master-board) {
+    min-width: 0;
+}
+
+body[data-ui-shell] :is(.core-kanban-column, .master-column) {
+    min-width: 0;
+    border-color: var(--ui-border);
+    background-color: var(--ui-muted-surface);
+}
+
+body[data-ui-shell] :is(.core-kanban-card, .master-task-card) {
+    min-width: 0;
+    border-color: var(--ui-border);
+    border-radius: var(--ui-radius-nested);
+    background-color: var(--ui-card-surface);
+    box-shadow: var(--ui-shadow-card);
+}

@@ -16,17 +16,18 @@
         tabular-nums` is what makes that work in Inter.
 
    Theme: the app sets `data-theme` on <html>, so the dark rules key off that.
-   A standalone reader (the public link) has no attribute — there the reader's
-   own system preference decides, and only there (`body.stmt-standalone`).
+   A standalone statement reader follows its system preference. The centered
+   unavailable-link notice stays light so its status and account details remain
+   clear regardless of the reader's device theme.
    ========================================================================== */
 
 .stmt {
-    --stmt-bg: var(--mc-card, #ffffff);
-    --stmt-text: var(--mc-text, #1a2540);
-    --stmt-text-2: var(--mc-text-2, #5a6478);
-    --stmt-text-3: var(--mc-text-3, #7d8aa0);
-    --stmt-border: var(--mc-border, #e2e8f0);
-    --stmt-soft: var(--mc-soft, #f4f7ff);
+    --stmt-bg: var(--pdf-paper, var(--mc-card, #ffffff));
+    --stmt-text: var(--pdf-ink, var(--mc-text, #1a2540));
+    --stmt-text-2: var(--pdf-body, var(--mc-text-2, #536079));
+    --stmt-text-3: var(--pdf-muted, var(--mc-text-3, #667085));
+    --stmt-border: var(--pdf-border, var(--mc-border, #dfe5ef));
+    --stmt-soft: var(--pdf-surface-soft, #f7f9fc);
     --stmt-accent: var(--accent, #4f8ef7);
     --stmt-rule: rgba(26, 37, 64, 0.08);
     --stmt-positive: #047857;
@@ -45,13 +46,13 @@
     gap: 18px 32px;
     justify-content: space-between;
     padding-bottom: 16px;
-    border-bottom: 2px solid var(--stmt-text);
+    border-bottom: 2px solid var(--stmt-border);
 }
 
 .stmt-brand-name {
     margin: 0 0 4px;
     font-size: 17px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: -0.01em;
 }
 
@@ -79,7 +80,7 @@
 .stmt-party-name {
     margin: 2px 0 2px;
     font-size: 21px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: -0.02em;
 }
 
@@ -303,7 +304,7 @@
 .stmt-section-title {
     margin: 0 0 10px;
     font-size: 14px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: -0.01em;
 }
 
@@ -524,7 +525,7 @@ body.stmt-standalone .stmt {
 .stmt-public-brand {
     margin: 0;
     font-size: 14px;
-    font-weight: 800;
+    font-weight: 700;
     color: #1a2540;
 }
 
@@ -563,7 +564,7 @@ body.stmt-standalone .stmt {
 }
 
 .stmt-public-foot {
-    max-width: 1000px;
+    max-width: var(--pdf-sheet-width, 210mm);
     margin: 14px auto 0;
     color: #5a6478;
     font-size: 12px;
@@ -571,7 +572,7 @@ body.stmt-standalone .stmt {
 }
 
 .stmt-notice {
-    max-width: 1000px;
+    max-width: var(--pdf-sheet-width, 210mm);
     padding: 12px 16px;
     margin: 0 auto 14px;
     border-radius: 10px;
@@ -581,7 +582,7 @@ body.stmt-standalone .stmt {
 }
 
 .stmt-print-foot {
-    max-width: 1000px;
+    max-width: var(--pdf-sheet-width, 210mm);
     margin: 14px auto 0;
     color: #7d8aa0;
     font-size: 11.5px;
@@ -600,15 +601,18 @@ body.stmt-centered {
     min-height: 100vh;
     align-items: center;
     justify-content: center;
+    color-scheme: light;
+    color: var(--pdf-body, var(--mc-text-2, #344054));
+    background: var(--pdf-page-bg, var(--mc-soft, #eef2f8));
 }
 
 .stmt-expired {
     max-width: 560px;
     padding: 34px 36px;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    background: #fff;
-    box-shadow: 0 18px 50px rgba(26, 37, 64, 0.09);
+    border: 1px solid var(--pdf-border, var(--mc-border, #dfe5ef));
+    border-radius: 18px;
+    background: var(--pdf-paper, var(--mc-card, #fff));
+    box-shadow: var(--pdf-shadow, var(--mc-shadow, 0 16px 40px rgba(25, 42, 70, .10)));
     text-align: center;
 }
 
@@ -619,14 +623,14 @@ body.stmt-centered {
 
 .stmt-expired-title {
     margin: 0 0 8px;
+    color: var(--pdf-ink, var(--mc-text, #1b2a41));
     font-size: 20px;
-    font-weight: 800;
-    color: #1a2540;
+    font-weight: 700;
 }
 
 .stmt-expired-text {
     margin: 0;
-    color: #5a6478;
+    color: var(--pdf-body, var(--mc-text-2, #344054));
     font-size: 13.5px;
 }
 
@@ -636,14 +640,14 @@ body.stmt-centered {
     gap: 10px;
     padding: 14px;
     margin: 18px 0 0;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--pdf-border, var(--mc-border, #dfe5ef));
     border-radius: 10px;
-    background: #f7f9ff;
+    background: var(--pdf-surface-soft, var(--mc-card-soft, #f7f9fc));
     text-align: left;
 }
 
 .stmt-expired-facts dt {
-    color: #7d8aa0;
+    color: var(--pdf-muted, var(--mc-text-3, #667085));
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -652,14 +656,14 @@ body.stmt-centered {
 
 .stmt-expired-facts dd {
     margin: 2px 0 0;
-    color: #1a2540;
+    color: var(--pdf-ink, var(--mc-text, #1b2a41));
     font-size: 13px;
     font-weight: 600;
 }
 
 .stmt-expired-contact {
     margin: 18px 0 0;
-    color: #7d8aa0;
+    color: var(--pdf-muted, var(--mc-text-3, #667085));
     font-size: 12px;
 }
 
@@ -678,16 +682,15 @@ body.stmt-centered {
     --stmt-warn: #fcd34d;
 }
 
-/* A standalone reader has no theme attribute: their system decides. Kept to
-   `body.stmt-standalone` so a light-mode app on a dark-mode machine never
-   flips the document inside the app. */
+/* A standalone statement reader has no theme attribute: their system decides.
+   Keep this preference off the centered unavailable-link page, which remains a
+   light status card regardless of the reader's device theme. */
 @media (prefers-color-scheme: dark) {
-    body.stmt-standalone {
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) {
         background: #0f1628;
     }
 
-    body.stmt-standalone .stmt,
-    body.stmt-standalone .stmt-expired {
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt {
         border-color: #2a3854;
         background: #1a2540;
         box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
@@ -703,29 +706,42 @@ body.stmt-centered {
         --stmt-warn: #fcd34d;
     }
 
-    body.stmt-standalone .stmt-public-brand,
-    body.stmt-standalone .stmt-expired-title,
-    body.stmt-standalone .stmt-expired-facts dd {
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt-public-brand {
         color: #e8edf6;
     }
 
-    body.stmt-standalone .stmt-public-sub,
-    body.stmt-standalone .stmt-public-expiry,
-    body.stmt-standalone .stmt-public-foot,
-    body.stmt-standalone .stmt-expired-text,
-    body.stmt-standalone .stmt-expired-contact {
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt-public-sub,
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt-public-expiry,
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt-public-foot {
         color: #aab6c9;
     }
+}
 
-    body.stmt-standalone .stmt-expired-facts {
-        border-color: #2a3854;
-        background: #17223e;
-    }
+/* A PDF fallback is a paper document, never a dark-theme screen. Keep the
+   standalone preview light too, even when the device itself prefers dark. */
+body.stmt-standalone.stmt-print {
+    color-scheme: light;
+    color: #1a2540;
+    background: #f1f5fb;
+}
+
+body.stmt-standalone.stmt-print .stmt {
+    --stmt-bg: var(--pdf-paper, #fff);
+    --stmt-text: var(--pdf-ink, #1b2a41);
+    --stmt-text-2: var(--pdf-body, #344054);
+    --stmt-text-3: var(--pdf-muted, #667085);
+    --stmt-border: var(--pdf-border, #dfe5ef);
+    --stmt-soft: var(--pdf-surface-soft, #f7f9fc);
+    --stmt-rule: var(--pdf-border-soft, #e9edf4);
+    --stmt-positive: #047857;
+    --stmt-warn: #a15c00;
+    background: #fff;
+    color: #1a2540;
 }
 
 /* ---------------------------------------------------------- responsive */
 
-@media (max-width: 900px) {
+@media screen and (max-width: 900px) {
 
     .stmt-meta,
     .stmt-figures,
@@ -742,7 +758,7 @@ body.stmt-centered {
     }
 }
 
-@media (max-width: 640px) {
+@media screen and (max-width: 640px) {
     body.stmt-standalone {
         padding: 12px 10px 32px;
     }
@@ -765,20 +781,34 @@ body.stmt-centered {
 
 @media print {
     @page {
-        size: A4;
+        size: A4 portrait;
         margin: 12mm;
     }
 
     body.stmt-standalone {
         padding: 0;
+        color-scheme: light;
+        color: #1a2540;
         background: #fff;
+        font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
     }
 
     body.stmt-standalone .stmt {
+        --stmt-bg: var(--pdf-paper, #fff);
+        --stmt-text: var(--pdf-ink, #1b2a41);
+        --stmt-text-2: var(--pdf-body, #344054);
+        --stmt-text-3: var(--pdf-muted, #667085);
+        --stmt-border: var(--pdf-border, #dfe5ef);
+        --stmt-soft: var(--pdf-surface-soft, #f7f9fc);
+        --stmt-rule: var(--pdf-border-soft, #e9edf4);
+        --stmt-positive: #047857;
+        --stmt-warn: #a15c00;
         max-width: none;
         padding: 0;
         border: 0;
+        background: #fff;
         box-shadow: none;
+        color: #1a2540;
     }
 
     .no-print,
@@ -791,7 +821,8 @@ body.stmt-centered {
     }
 
     .stmt {
-        font-size: 11.5px;
+        font-size: 10pt;
+        line-height: 1.4;
     }
 
     .stmt-head {

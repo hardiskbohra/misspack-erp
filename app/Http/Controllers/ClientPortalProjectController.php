@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClientPortalDocument;
+use App\Models\ProjectAttachment;
 use App\Services\ClientPortalNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,22 +52,33 @@ class ClientPortalProjectController extends ClientPortalBaseController
         $load = [
             'products',
             'publicTrackingUpdates.product',
-            'publicAttachments.product',
+            'clientPortalAttachments.product',
             'publicComments.user',
             'publicComments.product',
-            'publicPayments',
+            'publicMilestones',
+            'clientVisiblePayments',
         ];
 
         if (class_exists(\App\Models\Shipment::class)
             && Schema::hasTable('shipments')
-            && Schema::hasColumn('shipments', 'project_id')) {
-            $load[] = 'shipments';
+            && Schema::hasColumn('shipments', 'project_id')
+            && Schema::hasColumn('shipments', 'client_id')
+            && Schema::hasColumn('shipments', 'show_client_portal')) {
+            $load[] = 'publicShipments';
         }
 
         $project->load($load);
+        $portalDocuments = ClientPortalDocument::query()
+            ->where('client_id', $this->client($request)->id)
+            ->where('related_type', 'project')
+            ->where('related_id', $project->id)
+            ->where('is_public_to_client', true)
+            ->with('projectProduct')
+            ->latest('id')
+            ->get();
 
-        if (! $project->relationLoaded('shipments')) {
-            $project->setRelation('shipments', collect());
+        if (! $project->relationLoaded('publicShipments')) {
+            $project->setRelation('publicShipments', collect());
         }
 
         $portalComments = \App\Models\ClientPortalComment::where('client_id', $this->client($request)->id)
@@ -77,7 +89,37 @@ class ClientPortalProjectController extends ClientPortalBaseController
             ->latest('id')
             ->get();
 
-        return view('client_portal.projects.show', compact('project', 'portalComments'));
+        return view('client_portal.projects.show', compact('project', 'portalComments', 'portalDocuments'));
+    }
+
+    public function attachmentFile(Request $request, int $project, ProjectAttachment $attachment)
+    {
+        $visibleProject = $this->findProjectForClient($request, $project);
+        abort_unless(
+            (int) $attachment->project_id === (int) $visibleProject->id
+                && $attachment->is_public
+                && $attachment->category !== 'vendor_invoice'
+                && $attachment->file_path,
+            404
+        );
+
+        $disk = Storage::disk('public');
+        abort_unless($disk->exists($attachment->file_path), 404);
+
+        $extension = strtolower(pathinfo($attachment->file_path, PATHINFO_EXTENSION));
+        $isSafeInlineImage = in_array($extension, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true)
+            && str_starts_with(strtolower((string) $attachment->mime_type), 'image/');
+
+        return $disk->response(
+            $attachment->file_path,
+            $attachment->original_name ?: basename($attachment->file_path),
+            [
+                'Content-Type' => $attachment->mime_type ?: 'application/octet-stream',
+                'X-Content-Type-Options' => 'nosniff',
+                'Cache-Control' => 'private, no-store',
+            ],
+            $isSafeInlineImage ? 'inline' : 'attachment'
+        );
     }
 
     public function storeComment(Request $request, int $project): RedirectResponse
@@ -87,7 +129,7 @@ class ClientPortalProjectController extends ClientPortalBaseController
 
         $data = $request->validate([
             'project_product_id' => ['nullable', 'integer'],
-            'body' => ['required', 'string'],
+            'body' => ['required', 'string', 'max:4000']
         ]);
 
         if (! empty($data['project_product_id']) && ! $project->products()->whereKey($data['project_product_id'])->exists()) {
@@ -130,10 +172,10 @@ class ClientPortalProjectController extends ClientPortalBaseController
         $data = $request->validate([
             'project_product_id' => ['nullable', 'integer'],
             'title' => ['nullable', 'string', 'max:255'],
-            'category' => ['nullable', 'string', 'max:60'],
-            'notes' => ['nullable', 'string'],
-            'attachments' => ['required', 'array'],
-            'attachments.*' => ['required', 'file', 'max:20480'],
+            'category' => ['nullable', 'string', \Illuminate\Validation\Rule::in(['client_document', 'artwork', 'payment_proof', 'other'])],
+            'notes' => ['nullable', 'string', 'max:4000'],
+            'attachments' => ['required', 'array', 'max:10'],
+            'attachments.*' => ['required', 'file', 'max:20480', 'mimes:jpg,jpeg,png,webp,gif,heic,heif,pdf,doc,docx,xls,xlsx,csv,ppt,pptx,txt,zip'],
         ]);
 
         if (! empty($data['project_product_id']) && ! $project->products()->whereKey($data['project_product_id'])->exists()) {
@@ -144,39 +186,23 @@ class ClientPortalProjectController extends ClientPortalBaseController
         foreach ((array) $request->file('attachments', []) as $file) {
             $this->validateAllowedFile($file);
             $extension = strtolower((string) $file->getClientOriginalExtension());
-            $path = $file->store('client-portal/projects/'.$project->id, 'public');
-
-            if (class_exists(\App\Models\ProjectAttachment::class) && Schema::hasTable('project_attachments')) {
-                \App\Models\ProjectAttachment::create([
-                    'project_id' => $project->id,
-                    'project_product_id' => $data['project_product_id'] ?? null,
-                    'category' => $data['category'] ?? 'client_document',
-                    'title' => $data['title'] ?: $file->getClientOriginalName(),
-                    'file_path' => $path,
-                    'original_name' => $file->getClientOriginalName(),
-                    'mime_type' => $file->getClientMimeType(),
-                    'file_size' => $file->getSize(),
-                    'extension' => $extension,
-                    'is_photo' => in_array($extension, ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif'], true),
-                    'is_public' => true,
-                    'uploaded_by_type' => 'client',
-                    'client_name' => $portalUser->displayName(),
-                    'notes' => $data['notes'] ?? null,
-                ]);
-            }
+            $path = $file->store('client-portal/projects/'.$project->id, 'local');
 
             ClientPortalDocument::create([
                 'client_id' => $portalUser->client_id,
                 'client_portal_user_id' => $portalUser->id,
                 'related_type' => 'project',
                 'related_id' => $project->id,
+                'project_product_id' => $data['project_product_id'] ?? null,
                 'category' => $data['category'] ?? 'project',
-                'title' => $data['title'] ?: $file->getClientOriginalName(),
+                'title' => ($data['title'] ?? null) ?: $file->getClientOriginalName(),
                 'file_path' => $path,
+                'storage_disk' => 'local',
                 'original_name' => $file->getClientOriginalName(),
-                'mime_type' => $file->getClientMimeType(),
+                'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
                 'file_size' => $file->getSize(),
                 'extension' => $extension,
+                'is_public_to_client' => true,
                 'notes' => $data['notes'] ?? null,
             ]);
             $count++;

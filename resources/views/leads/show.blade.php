@@ -191,7 +191,7 @@
                                     data-confirm="Delete this comment?" style="margin-top:10px;">
                                     @csrf @method('DELETE')<button class="master-btn master-btn-danger"
                                         type="submit">Delete</button></form>
-                        </div>@empty<p style="color:#687386;font-weight:800;">No comments yet.</p>
+                        </div>@empty<p style="color:#687386;font-weight:700;">No comments yet.</p>
                         @endforelse
                     </div>
                 </div>
@@ -213,7 +213,7 @@
                             {{ $attachment->title }}</a>@else<a class="master-link"
                                 href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank">📎
                                 {{ $attachment->original_name }}</a>
-                        @endif @empty<p style="color:#687386;font-weight:800;">No attachments.</p>
+                        @endif @empty<p style="color:#687386;font-weight:700;">No attachments.</p>
                     @endforelse
                 </div>
             </div>

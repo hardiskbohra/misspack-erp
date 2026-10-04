@@ -13,9 +13,7 @@
 <div class="projects-list">
     @forelse($projects as $project)
         @php
-            $totals = $project->paymentTotals();
             $statusClass = 'projects-chip-status-' . $project->status;
-            $healthClass = 'projects-health-' . $project->health;
         @endphp
         <div class="projects-card projects-project-card" style="{{ $project->progress_percent == 100 ? 'background:#10b98150' : '' }}; line-height:1.1;">
             <div class="projects-top-bar">
@@ -30,7 +28,7 @@
                             <div class="projects-meta-row">
                                 <span>
                                     <i class="fa-solid fa-user-check"></i>
-                                    Neha Bohra
+                                    MissPack team
                                 </span>
                                 <span>
                                     <i class="fa-solid fa-calendar-days"></i>
@@ -58,25 +56,24 @@
             
             </div>
 
-            <div class="projects-mini-grid">
+            <div class="projects-mini-grid cp-project-safe-metrics">
                 <div>
-                    <span>Estimated</span>
-                    <h3>{{ \App\Helpers\CommonHelper::amount($project->estimated_value, $project->currency) }}</h3>
+                    <span>Started</span>
+                    <h3>{{ optional($project->start_date)->format('d M Y') ?: 'Not set' }}</h3>
                 </div>
                 <div>
-                    <span>Paid</span>
-                    <h3 class="projects-money-green">{{ \App\Helpers\CommonHelper::amount($totals['inward'], $project->currency) }}</h3>
+                    <span>Target</span>
+                    <h3>{{ optional($project->target_date)->format('d M Y') ?: 'Not set' }}</h3>
                 </div>
                 <div>
-                    <span>Balance</span>
-                    <h3>{{ \App\Helpers\CommonHelper::amount($totals['outstanding'], $project->currency) }}</h3>
+                    <span>Current stage</span>
+                    <h3>{{ $project->stageLabel() }}</h3>
                 </div>
             </div>
 
             <div class="projects-project-footer">
                 <div class="projects-footer-tags">
                     <span class="projects-chip {{ $statusClass }}">{{ $project->statusLabel() }}</span>
-                    <span class="projects-chip {{ $healthClass }}">{{ $project->healthLabel() }}</span>
                 </div>
                 <div class="projects-footer-actions">
                     <a href="{{ route('client-portal.projects.show', $project->id) }}"
@@ -87,10 +84,9 @@
     @empty
         <div class="projects-empty" style="line-height:1.5;">
             <div class="projects-empty-icon"><i class="fa-solid fa-briefcase"></i></div>
-            <h3>No projects found</h3>
-            <p>Create your first project/deal once a client finalises the quote.</p><br>
-            <button type="button" class="master-btn master-btn-primary"
-                data-open-modal="quickProjectModal">Quick Project</button>
+            <h3>No shared projects yet</h3>
+            <p>Projects published by MissPack will appear here. If you expected to see one, our support team can help.</p>
+            <a class="master-btn master-btn-primary" href="{{ route('client-portal.support.index') }}">Contact support</a>
         </div>
     @endforelse
 </div>

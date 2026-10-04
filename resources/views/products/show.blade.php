@@ -144,7 +144,7 @@
                                 @endif
                             </a>
                         @empty
-                            <p style="color:var(--master-muted);font-weight:800;">
+                            <p style="color:var(--master-muted);font-weight:700;">
                                 No shipment photos uploaded yet.
                             </p>
                         @endforelse

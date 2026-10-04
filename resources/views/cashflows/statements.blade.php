@@ -101,35 +101,51 @@
         </div>
 
         <form method="GET" action="{{ route('cashflows.statements') }}">
-            <div class="master-filter-row">
-                {{-- The type is the chips' dimension and nobody else's: one
-                     control per question, carried here so Apply keeps the chip
-                     that is lit. --}}
-                <input type="hidden" name="party_type" value="{{ $partyType }}">
+            {{-- The party-type chips remain quick filters; carry the active one
+                 while the Drawer criteria are applied. --}}
+            <input type="hidden" name="party_type" value="{{ $partyType }}">
 
+            <div class="master-filter-row core-filter-toolbar">
                 <div class="master-search">
                     <span aria-hidden="true">⌕</span>
                     <input class="master-input" type="text" name="q" value="{{ $q }}"
                         placeholder="Search party name..." aria-label="Search party">
                 </div>
-                <select class="master-select" name="currency" aria-label="Statement currency">
-                    @foreach ($currencyOptions as $code)
-                        <option value="{{ $code }}" @selected($currency === $code)>Statements in
-                            {{ \App\Helpers\CommonHelper::currencyLabel($code) }}</option>
-                    @endforeach
-                </select>
-                <input class="master-input desktop-only" type="date" name="date_from" value="{{ $dateFrom }}"
-                    aria-label="From" title="From">
-                <input class="master-input desktop-only" type="date" name="date_to" value="{{ $dateTo }}"
-                    aria-label="To" title="To">
-
-                <div class="master-list-filter-group">
+                <x-filter-trigger drawer="statementListFiltersDrawer" label="Filters"
+                    :count="(filled($q) ? 1 : 0) + ($partyType !== 'all' ? 1 : 0) + ($currency !== 'INR' ? 1 : 0) + ($activeRange !== 'this_month' ? 1 : 0)" />
+            </div>
+            <x-drawer id="statementListFiltersDrawer" title="Filter statements" eyebrow="Statement filters"
+                subtitle="Keep the statement period, date range, and reporting currency together." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Statement period</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="statementListCurrency">Currency</label>
+                            <select class="master-select" id="statementListCurrency" name="currency" aria-label="Statement currency">
+                                @foreach ($currencyOptions as $code)
+                                    <option value="{{ $code }}" @selected($currency === $code)>
+                                        Statements in {{ \App\Helpers\CommonHelper::currencyLabel($code) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="statementListDateFrom">From</label>
+                            <input class="master-input" id="statementListDateFrom" type="date" name="date_from" value="{{ $dateFrom }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="statementListDateTo">To</label>
+                            <input class="master-input" id="statementListDateTo" type="date" name="date_to" value="{{ $dateTo }}">
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
                     @if ($filtered)
                         <a class="master-btn master-btn-soft" href="{{ route('cashflows.statements', ['period' => 'this_month']) }}">Reset</a>
                     @endif
                     <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
-                </div>
-            </div>
+                </x-slot:footer>
+            </x-drawer>
 
             @if ($filtered)
                 <div class="master-list-applied">

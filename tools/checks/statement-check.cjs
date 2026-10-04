@@ -219,7 +219,7 @@ check('a statement is never built for a party that no longer exists',
     /abort_if\(\$statement === null, 404\)/.test(showMethod) && /abort_if\(\$statement === null, 404\)/.test(controller));
 check('the PDF degrades to a printable page when dompdf is absent',
     /class_exists\(\\Barryvdh\\DomPDF\\Facade\\Pdf::class\)/.test(controller)
-    && /Install barryvdh\/laravel-dompdf/.test(controller)
+    && /Use the print dialog and choose Save as PDF to download this statement\./.test(controller)
     && /\$pdfFallbackMessage/.test(pdfView));
 check('the period survives the jump from the list to the statement',
     /'period' => \$periodKey/.test(surface) && /array_filter\(\['partyType'/.test(surface));
@@ -296,6 +296,12 @@ check('the document has a dark theme of its own',
 check('a public reader follows their own theme, and only there',
     /@media \(prefers-color-scheme: dark\) \{[\s\S]{0,200}body\.stmt-standalone/.test(statementCss)
     && ! /prefers-color-scheme[\s\S]{0,80}\.cashflow-statement/.test(statementCss));
+check('the unavailable-link notice stays light with guideline surfaces',
+    /body\.stmt-centered\s*\{[^}]*color-scheme:\s*light[^}]*background:\s*var\(--pdf-page-bg/.test(statementCss)
+    && /\.stmt-expired\s*\{[^}]*background:\s*var\(--pdf-paper/.test(statementCss)
+    && /\.stmt-expired-facts\s*\{[^}]*background:\s*var\(--pdf-surface-soft/.test(statementCss)
+    && /body\.stmt-standalone:not\(\.stmt-print\):not\(\.stmt-centered\)/.test(statementCss)
+    && ! /body\.stmt-standalone:not\(\.stmt-print\) \.stmt-expired/.test(statementCss));
 check('the document prints without the app around it',
     /@media print \{/.test(statementCss) && /@page \{/.test(statementCss)
     && /\.no-print,[\s\S]{0,200}display: none !important;/.test(statementCss));
@@ -314,8 +320,23 @@ check('the nav reaches the new surface',
 check('the ledger item no longer lights up while a statement is open',
     /'except' => \['cashflows\.documents', 'cashflows\.statements', 'cashflows\.statements\.\*'\]/.test(read('resources/views/layouts/app.blade.php')));
 check('a party page offers its own statement',
-    /partyType' => 'client', 'party' => \$client->id/.test(read('resources/views/clients/show.blade.php'))
-    && /partyType' => 'vendor', 'party' => \$vendor->id/.test(read('resources/views/vendors/show.blade.php')));
+    /partyType' => 'client', 'party' => \$client->id/.test(read('resources/views/clients/partials/statement.blade.php'))
+    && /partyType' => 'vendor', 'party' => \$vendor->id/.test(read('resources/views/vendors/partials/statement.blade.php')));
+
+const vendorStatementView = read('resources/views/vendors/partials/statement.blade.php');
+check('the vendor statement keeps period, custom date, and currency filters',
+    /name="period"/.test(vendorStatementView)
+    && /name="date_from"/.test(vendorStatementView)
+    && /name="date_to"/.test(vendorStatementView)
+    && /name="currency"/.test(vendorStatementView)
+    && /getElementById\('vendorStatementPeriod'\)\.value='custom'/.test(vendorStatementView));
+check('the vendor statement retains its PDF export',
+    /cashflows\.statements\.pdf/.test(vendorStatementView)
+    && /Download PDF/.test(vendorStatementView));
+check('vendor detail tabs are the target of linked payment workflows',
+    /'tab' => 'payments'/.test(read('resources/views/cashflows/form.blade.php'))
+    && /'tab' => 'payments'/.test(read('resources/views/cashflows/index.blade.php'))
+    && /'tab' => 'payments'/.test(read('resources/views/cashflows/show.blade.php')));
 
 /* ------------------------------------------------------------------- PHP */
 

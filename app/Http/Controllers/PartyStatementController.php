@@ -151,7 +151,7 @@ class PartyStatementController extends Controller
 
         return response()->view('cashflows.statement-pdf', [
             'statement' => $statement,
-            'pdfFallbackMessage' => 'Install barryvdh/laravel-dompdf for a direct PDF download. This page prints — use Print > Save as PDF.',
+            'pdfFallbackMessage' => 'Use the print dialog and choose Save as PDF to download this statement.',
         ]);
     }
 
@@ -179,6 +179,12 @@ class PartyStatementController extends Controller
         abort_if($party === null, 404);
 
         $currency = strtoupper((string) ($data['currency'] ?? '')) ?: $this->statements->defaultCurrency($data['party_type'], (int) $data['party_id']);
+        if ($data['party_type'] === 'client') {
+            $visibleCurrencies = $this->statements->currencies('client', (int) $data['party_id'], true);
+            if (! in_array($currency, $visibleCurrencies, true)) {
+                $currency = $visibleCurrencies[0] ?? 'INR';
+            }
+        }
 
         $share = PartyStatementShare::issue([
             'party_type' => $data['party_type'],
@@ -247,7 +253,11 @@ class PartyStatementController extends Controller
             $share->party_id,
             $share->date_from?->toDateString(),
             $share->date_to?->toDateString(),
-            ['currency' => $share->party_currency, 'ageing' => (bool) $share->option('ageing', true)]
+            [
+                'currency' => $share->party_currency,
+                'ageing' => $share->party_type === 'client' ? false : (bool) $share->option('ageing', true),
+                'client_portal' => $share->party_type === 'client',
+            ]
         );
 
         if ($statement === null) {

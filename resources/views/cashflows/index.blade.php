@@ -220,50 +220,63 @@
         </div>
 
         <form method="GET" action="{{ route('cashflows.index') }}">
-            <div class="master-filter-row">
-                {{-- The chips own credit/debit and the missing-documents view, so
-                     the form carries them: no second control for a dimension the
-                     chips already answer with a count, and applying the filters
-                     below keeps the chip that is lit instead of dropping it. --}}
-                <input type="hidden" name="transaction_type" value="{{ $transactionType ?: 'all' }}">
-                <input type="hidden" name="documents" value="{{ $documents ?? 'all' }}">
+            {{-- The chips own credit/debit and the missing-documents view, so the
+                 form carries them through an Apply action without duplicating them. --}}
+            <input type="hidden" name="transaction_type" value="{{ $transactionType ?: 'all' }}">
+            <input type="hidden" name="documents" value="{{ $documents ?? 'all' }}">
 
+            <div class="master-filter-row core-filter-toolbar">
                 <div class="master-search">
                     <span aria-hidden="true">⌕</span>
                     <input class="master-input" type="text" name="search" value="{{ $search }}"
                         placeholder="Search particular, invoice, bank reference, party..." aria-label="Search cashflow entries">
                 </div>
-                <div class="cf-account-filter">
-                    <select class="master-select" name="account_id" aria-label="Filter by account">
-                        <option value="all">All Accounts</option>
-                        @foreach($accounts as $account)
-                            <option value="{{ $account->id }}" @selected((string) $accountId === (string) $account->id)>
-                                {{ $account->account_name }}</option>
-                        @endforeach
-                    </select>
-                    {{-- the account the entries are filtered by is the account you
-                         sometimes have to add first, so the two sit together --}}
-                    <button type="button" class="master-btn master-btn-ghost" id="openAccountModal"
-                        title="Add an account" aria-label="Add an account">+ New</button>
-                </div>
-                <select class="master-select" name="accounting_status" aria-label="Filter by accounting status">
-                    <option value="all">All Accounting Status</option>
-                    @foreach($accountingStatusOptions as $key => $label)
-                        <option value="{{ $key }}" @selected($accountingStatus === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <input class="master-input desktop-only" type="date" name="date_from" value="{{ $dateFrom }}"
-                    aria-label="Entries from" title="Entries from">
-                <input class="master-input desktop-only" type="date" name="date_to" value="{{ $dateTo }}"
-                    aria-label="Entries to" title="Entries to">
-
-                <div class="master-list-filter-group">
+                <x-filter-trigger drawer="cashflowFiltersDrawer"
+                    :count="$appliedChips->count() + ((filled($dateFrom) || filled($dateTo)) ? 1 : 0)" />
+            </div>
+            <x-drawer id="cashflowFiltersDrawer" title="Filter cashflow entries" eyebrow="Cashflow filters"
+                subtitle="Narrow ledger entries by account, accounting status, or date." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Ledger details</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="cashflowFilterAccount">Account</label>
+                            <select class="master-select" id="cashflowFilterAccount" name="account_id" aria-label="Filter by account">
+                                <option value="all">All accounts</option>
+                                @foreach($accounts as $account)
+                                    <option value="{{ $account->id }}" @selected((string) $accountId === (string) $account->id)>
+                                        {{ $account->account_name }}</option>
+                                @endforeach
+                            </select>
+                            <button type="button" class="master-btn master-btn-ghost cf-account-add" id="openAccountModal"
+                                title="Add an account" aria-label="Add an account">+ New</button>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="cashflowFilterAccountingStatus">Accounting status</label>
+                            <select class="master-select" id="cashflowFilterAccountingStatus" name="accounting_status" aria-label="Filter by accounting status">
+                                <option value="all">All accounting statuses</option>
+                                @foreach($accountingStatusOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($accountingStatus === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="cashflowFilterDateFrom">Entries from</label>
+                            <input class="master-input" id="cashflowFilterDateFrom" type="date" name="date_from" value="{{ $dateFrom }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="cashflowFilterDateTo">Entries to</label>
+                            <input class="master-input" id="cashflowFilterDateTo" type="date" name="date_to" value="{{ $dateTo }}">
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
                     @if ($filtersActive)
                         <a class="master-btn master-btn-soft" href="{{ route('cashflows.index') }}">Reset</a>
                     @endif
                     <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
-                </div>
-            </div>
+                </x-slot:footer>
+            </x-drawer>
 
             {{-- What is actually filtering, one removable chip each — including
                  filters that arrived from a saved view or a URL and therefore
@@ -323,17 +336,16 @@
                     <i class="fa-regular fa-folder-open" aria-hidden="true"></i> Document archive
                 </a>
 
-                <div class="master-list-density desktop-only" role="group" aria-label="Row density">
-                    <button type="button" class="master-list-density-btn" data-density="comfortable"
-                        aria-pressed="true">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact"
-                        aria-pressed="false">Compact</button>
+                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
+                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
+                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
                 </div>
             </div>
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table">
+            <table class="master-table" data-table-settings data-table-key="cashflows">
                 <thead>
                     <tr>
                         <th scope="col">Date</th>
@@ -369,10 +381,12 @@
                         <tr class="cf-row is-clickable" data-href="{{ route('cashflows.show', $entry) }}">
                             <td data-label="Date">
                                 <span class="cf-date">{{ $entry->entry_date?->format('d M') }}</span>
-                                <span class="master-sub">{{ $entry->entry_date?->format('Y') }}</span>
+                                <span class="master-sub ui-mobile-secondary">{{ $entry->entry_date?->format('Y') }}</span>
                             </td>
                             <td class="cf-particular" data-label="Particular">
-                                <strong>{{ $entry->particular }}</strong>
+                                <a class="cf-entry-link" href="{{ route('cashflows.show', $entry) }}">
+                                    <strong>{{ $entry->particular }}</strong>
+                                </a>
                                 @if (($entry->attachments_count ?? 0) > 0)
                                     <a class="cf-doc-chip" href="{{ route('cashflows.show', $entry) }}#documents"
                                         title="{{ $entry->attachments_count }} document(s) on file — open them">
@@ -380,7 +394,7 @@
                                     </a>
                                 @endif
                                 @if (! empty($mirroredPayments[$entry->id] ?? null))
-                                    <a class="cf-sync-chip" href="{{ route('vendors.show', $entry->vendor_id) }}#payments"
+                                    <a class="cf-sync-chip" href="{{ route('vendors.show', ['vendor' => $entry->vendor_id, 'tab' => 'payments']) }}"
                                         title="Auto-synced from a vendor payment — open the vendor ledger">↔ Vendor payment</a>
                                 @endif
                                 @if (! empty($mirroredShipmentCosts[$entry->id] ?? null))
@@ -395,16 +409,16 @@
                                          analysis builder never name the same entry differently --}}
                                     {{ $entry->partyLabel() ?: '-' }}
                                     @if ($entry->invoice_bill_number || $entry->bank_reference_number)
-                                        · {{ $entry->invoice_bill_number ?: $entry->bank_reference_number }}
+                                        <span class="ui-mobile-secondary"> · {{ $entry->invoice_bill_number ?: $entry->bank_reference_number }}</span>
                                     @endif
                                     @if ($entry->payment_mode)
-                                        <span class="cf-tag">{{ $paymentModeOptions[$entry->payment_mode] ?? strtoupper($entry->payment_mode) }}</span>
+                                        <span class="cf-tag ui-mobile-secondary">{{ $paymentModeOptions[$entry->payment_mode] ?? strtoupper($entry->payment_mode) }}</span>
                                     @endif
                                 </span>
                             </td>
                             <td class="cf-account" data-label="Account">
                                 {{ $entry->account?->account_name ?: '—' }}
-                                <span class="master-sub">{{ $entry->account?->typeLabel() ?: 'No account' }}</span>
+                                <span class="master-sub ui-mobile-secondary">{{ $entry->account?->typeLabel() ?: 'No account' }}</span>
                             </td>
                             <td class="cf-money is-num cf-credit" data-label="Credit">
                                 {{ $entry->credit_amount > 0 ? \App\Helpers\CommonHelper::amount($entry->credit_amount, $entry->currency) : '—' }}

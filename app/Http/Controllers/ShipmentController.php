@@ -914,7 +914,7 @@ class ShipmentController extends Controller
         }
 
         return response()->view($views[$document], $viewData + [
-            'pdfFallbackMessage' => "Install barryvdh/laravel-dompdf for a direct PDF download. Use your browser's Print > Save as PDF for now.",
+            'pdfFallbackMessage' => 'Use the print dialog and choose Save as PDF to download this shipment document.',
         ]);
     }
 

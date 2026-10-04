@@ -1,0 +1,16 @@
+/* Typography roles shared by the app shell, portal, public forms, and modules. */
+:root {
+    --ui-font-family: var(--app-font-family, "Inter", "Instrument Sans", "Segoe UI", Roboto, Arial, sans-serif);
+    --ui-font-xs: 11px;
+    --ui-font-sm: 12px;
+    --ui-font-body: 14px;
+    --ui-font-section: 16px;
+    --ui-font-page-title: 22px;
+    --ui-font-metric: 18px;
+    --ui-weight-regular: 400;
+    --ui-weight-medium: 500;
+    --ui-weight-semibold: 600;
+    --ui-weight-bold: 700;
+    --ui-line-body: 1.5;
+    --ui-line-tight: 1.25;
+}

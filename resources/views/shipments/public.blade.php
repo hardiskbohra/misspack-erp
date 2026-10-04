@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Shipment Tracking - {{ $shipment->shipment_number }} to {{ $shipment->to_name }}</title>
     <link rel="stylesheet" href="{{ $assetVer('assets/css/shipment-public.css') }}">
+    @include('layouts.partials.design-system-styles')
 </head>
-<body>
+<body data-ui-shell="public">
 @php($statusClass = str_replace('_', '-', $shipment->status))
 <div class="page">
     
@@ -125,7 +126,7 @@
                     @if($history->remarks)<div class="timeline-remarks">{{ $history->remarks }}</div>@endif
                 </div>
             @empty
-                <p style="color:var(--muted);font-weight:800;">Tracking details will be available soon.</p>
+                <p style="color:var(--muted);font-weight:700;">Tracking details will be available soon.</p>
             @endforelse
         </div>
     </div>
