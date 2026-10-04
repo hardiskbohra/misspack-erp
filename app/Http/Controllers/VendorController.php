@@ -921,7 +921,7 @@ class VendorController extends Controller
         ];
 
         $rows = [];
-        $overdueRows = [];
+        $overdueBills = 0;
         $outstanding = 0.0;
         $overdue = 0.0;
         $dueSoon = 0.0;
@@ -967,12 +967,12 @@ class VendorController extends Controller
             $rows[] = $bill;
 
             if ($isOverdue) {
-                $overdueRows[] = $bill;
+                $overdueBills++;
             }
         }
 
-        /* The chase list reads worst first; the table reads by what is due
-           next, with the late money at the top. */
+        /* Late money first, then what falls due soonest, then the rest — the
+           Money tab's table is the chase list, so it reads in chasing order. */
         $order = fn ($row) => $row['is_overdue'] ? 0 : ($row['is_due_soon'] ? 1 : 2);
 
         usort($rows, function ($a, $b) use ($order) {
@@ -980,20 +980,17 @@ class VendorController extends Controller
                 <=> [$order($b), $b['due']?->timestamp ?? PHP_INT_MAX];
         });
 
-        usort($overdueRows, fn ($a, $b) => ($a['due']?->timestamp ?? 0) <=> ($b['due']?->timestamp ?? 0));
-
         $nextDue = collect($rows)->filter(fn ($row) => $row['due'] && ! $row['is_overdue'])
             ->sortBy(fn ($row) => $row['due']->timestamp)
             ->first();
 
         return [
             'rows' => $rows,
-            'overdue_rows' => array_slice($overdueRows, 0, 6),
             'buckets' => $buckets,
             'outstanding' => round($outstanding, 2),
             'overdue' => round($overdue, 2),
             'due_soon' => round($dueSoon, 2),
-            'overdue_count' => count($overdueRows),
+            'overdue_count' => $overdueBills,
             'next_due' => $nextDue['due'] ?? null,
         ];
     }

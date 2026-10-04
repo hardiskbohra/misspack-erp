@@ -415,6 +415,14 @@
     margin-top: auto;
 }
 
+/* Under a table (not at the foot of a fact card) it needs its own gap: the
+   table wrap's margin is above the table, not below it. */
+.vendor-table-bleed + .vendor-detail-actions,
+.vendor-empty-text + .vendor-detail-actions,
+.vendor-panel-note + .vendor-detail-actions {
+    margin-top: 14px;
+}
+
 /* ---- the mini lists on the overview ---- */
 
 .vendor-card-head {
@@ -434,50 +442,6 @@
 .vendor-card-link:hover,
 .vendor-card-link:focus-visible {
     text-decoration: underline;
-}
-
-.vendor-mini-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--mc-border);
-}
-
-.vendor-mini-row:last-child {
-    border-bottom: 0;
-    padding-bottom: 0;
-}
-
-.vendor-mini-row strong {
-    display: block;
-    color: var(--mc-text);
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.vendor-mini-row small {
-    display: block;
-    margin-top: 2px;
-    color: var(--mc-text-3);
-    font-size: 11px;
-}
-
-.vendor-mini-row b {
-    flex: 0 0 auto;
-    color: var(--mc-text);
-    font-size: 13px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-}
-
-.vendor-mini-note {
-    margin: 0;
-    color: var(--mc-text-2);
-    font-size: 12px;
-    line-height: 1.5;
 }
 
 .vendor-empty-text {
@@ -574,51 +538,7 @@
 
 /* ---- the statement's currency cards ---- */
 
-.vendor-currency-summary {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 16px;
-    margin-bottom: 16px;
-}
 
-.vendor-currency-card {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    min-width: 0;
-    padding: 20px 22px;
-}
-
-.vendor-currency-card-label {
-    color: var(--mc-text);
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.vendor-currency-card-figures {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px 14px;
-}
-
-.vendor-currency-card-figures > div {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-}
-
-.vendor-currency-card-figures span {
-    color: var(--mc-text-3);
-    font-size: 11px;
-}
-
-.vendor-currency-card-figures strong {
-    color: var(--mc-text);
-    font-size: 13px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-}
 
 /* ---- products ---- */
 
@@ -869,26 +789,33 @@
 
 /* ---- payables, ageing and spend ---- */
 
+/* The five ages are one strip: a 1 px grid gap over the border token draws
+   every divider, so the strip divides the same way whether it is five cells
+   across a desk or two on a phone. */
 .vendor-ageing {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
-    margin-bottom: 16px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-border);
+    margin: 2px 0 14px;
 }
 
-.vendor-ageing-card {
+.vendor-ageing-cell {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 16px 18px;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
+    padding: 11px 14px;
+    background: var(--mc-card-soft);
 }
 
-.vendor-ageing-card.is-alert {
-    border-color: rgba(239, 71, 112, .42);
-}
-
-.vendor-ageing-card.is-empty {
-    opacity: .65;
+.vendor-ageing-cell.is-zero .vendor-ageing-amount {
+    color: var(--mc-text-3);
+    font-weight: 500;
 }
 
 .vendor-ageing-label {
@@ -901,13 +828,58 @@
 
 .vendor-ageing-amount {
     color: var(--mc-text);
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
 }
 
 .vendor-ageing-count {
     color: var(--mc-text-3);
     font-size: 11px;
+}
+
+/* A heading inside a card: the card head answers "what is this", this answers
+   "what am I looking at now". */
+.vendor-subhead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* The shared table wrap opens 20px above itself; a subhead that belongs to the
+   table is part of it, so the gap closes to a line. */
+.vendor-subhead + .master-table-wrap {
+    margin-top: 8px;
+}
+
+.vendor-subhead-title {
+    margin: 0;
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.vendor-subhead-note {
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.vendor-panel-note {
+    margin: 10px 0 0;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.vendor-panel-note a {
+    color: var(--mc-text);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
 .vendor-jump {
@@ -965,11 +937,39 @@
     gap: 16px;
 }
 
+.vendor-block-card {
+    padding: 18px 20px;
+}
+
+/* A money table needs every pixel: the padding belongs to the head and the
+   foot, and the first and last cells of the table carry their own inset so the
+   text still lines up with them. */
+.vendor-block-card > .vendor-table-bleed {
+    margin: 0 -20px;
+}
+
+.vendor-block-card > .vendor-table-bleed .master-table th:first-child,
+.vendor-block-card > .vendor-table-bleed .master-table td:first-child {
+    padding-left: 20px;
+}
+
+.vendor-block-card > .vendor-table-bleed .master-table th:last-child,
+.vendor-block-card > .vendor-table-bleed .master-table td:last-child {
+    padding-right: 20px;
+}
+
 .vendor-block-card .vendor-panel-head,
-.vendor-block-card .vendor-currency-summary,
 .vendor-block-card .vendor-detail-grid + .vendor-detail-grid {
     margin-bottom: 0;
     margin-top: 0;
+}
+
+/* A second section inside one card — the ledger and its cashflow mirror — is
+   separated by a rule rather than by a card: the card is the frame. */
+.vendor-block-card .vendor-panel-head--spaced {
+    margin-top: 2px;
+    padding-top: 16px;
+    border-top: 1px solid var(--mc-border);
 }
 
 .vendor-block-card .vendor-detail-card,
@@ -982,9 +982,7 @@
     box-shadow: none;
 }
 
-.vendor-block-card .vendor-ageing-card,
 .vendor-block-card .vendor-product-card,
-.vendor-block-card .vendor-currency-card,
 .vendor-block-card .vendor-attachment {
     border-color: var(--mc-border);
     box-shadow: none;
@@ -1074,11 +1072,6 @@
     grid-column: 1 / -1;
 }
 
-.vendor-mini-list {
-    display: flex;
-    flex-direction: column;
-}
-
 .vendor-mini-row {
     display: flex;
     align-items: flex-start;
@@ -1088,13 +1081,13 @@
     border-bottom: 1px solid var(--mc-border);
 }
 
+.vendor-mini-row:first-child {
+    padding-top: 0;
+}
+
 .vendor-mini-row:last-child {
     border-bottom: 0;
     padding-bottom: 0;
-}
-
-.vendor-mini-row:first-child {
-    padding-top: 0;
 }
 
 .vendor-mini-row > div {
@@ -1105,6 +1098,7 @@
 }
 
 .vendor-mini-row strong {
+    display: block;
     color: var(--mc-text);
     font-size: 13px;
     font-weight: 600;
@@ -1112,23 +1106,139 @@
 }
 
 .vendor-mini-row small {
+    display: block;
+    margin-top: 2px;
     color: var(--mc-text-3);
     font-size: 11px;
 }
 
 .vendor-mini-row > b {
+    flex: 0 0 auto;
     color: var(--mc-text);
     font-size: 13px;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
+    text-align: right;
     white-space: nowrap;
 }
 
 /* The bill table's action column is a button, not a number: it takes the
    width it needs and never wraps the label onto two lines. */
-.vendor-bill-table td:last-child,
-.vendor-bill-table th:last-child {
-    width: 190px;
+
+
+/* A money table reads row by row, so it takes a tighter row than the shared
+   18/20: the figures stay at body size and the air goes to the numbers rather
+   than around them. */
+/* The shared .master-table carries a 1280px floor for the list screens. A
+   money table has fewer, narrower columns than that, so it takes the card's
+   own width — the same way the client list sets its own floor. */
+.vendor-block-card .vendor-money-table {
+    width: 100%;
+    min-width: 0;
+}
+
+.vendor-money-table--ledger {
+    min-width: 860px;
+}
+
+.vendor-money-table--ledger th:nth-child(1) { width: 116px; }
+.vendor-money-table--ledger th:nth-child(4) { width: 152px; }
+.vendor-money-table--ledger th:nth-child(5) { width: 168px; }
+.vendor-money-table--ledger th:nth-child(6) { width: 150px; }
+
+.vendor-money-table--statement {
+    min-width: 720px;
+}
+
+.vendor-money-table--statement th:nth-child(1) { width: 104px; }
+.vendor-money-table--statement th:nth-child(4) { width: 172px; }
+.vendor-money-table--statement th:nth-child(5) { width: 152px; }
+.vendor-money-table--statement th:nth-child(6) { width: 216px; }
+
+.vendor-money-table--cashflow th:nth-child(1) { width: 96px; }
+.vendor-money-table--cashflow th:nth-child(3) { width: 168px; }
+.vendor-money-table--cashflow th:nth-child(4) { width: 228px; }
+
+.vendor-money-table--payables {
+    min-width: 720px;
+}
+
+.vendor-money-table--payables th:nth-child(1) { width: 32%; }
+.vendor-money-table--payables th:nth-child(2) { width: 132px; }
+.vendor-money-table--payables th:nth-child(5) { width: 170px; }
+
+.vendor-block-card .vendor-money-table th,
+.vendor-block-card .vendor-money-table td {
+    padding: 11px 14px;
+}
+
+.vendor-block-card .vendor-money-table td {
+    font-size: 13px;
+}
+
+.vendor-block-card .vendor-money-table th {
+    padding-top: 11px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+}
+
+/* "12 days late" is a badge, not a number: the semantic colour belongs on the
+   chip, and the date beside it stays plain text. */
+.vendor-late-chip {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 3px;
+    padding: 2px 8px;
+    border: 1px solid rgba(239, 71, 112, .42);
+    border-radius: 999px;
+    color: var(--master-red, #ef4770);
+    font-size: 11px;
+    font-weight: 600;
     white-space: nowrap;
+}
+
+/* ---- the ledger by currency, on the statement ---- */
+
+.vendor-currency-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-border);
+    margin: 2px 0 0;
+}
+
+.vendor-currency-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    padding: 11px 14px;
+    background: var(--mc-card-soft);
+}
+
+.vendor-currency-label {
+    color: var(--mc-text);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .02em;
+}
+
+.vendor-currency-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    color: var(--mc-text-3);
+    font-size: 12px;
+}
+
+.vendor-currency-line strong {
+    color: var(--mc-text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
 }
 
 /* ---- the six-month spend bars ---- */
@@ -1474,6 +1584,10 @@ a.vendor-timeline-item:focus-visible {
         grid-template-columns: minmax(0, 1fr);
     }
 
+    .vendor-ageing {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .vendor-block-card .vendor-detail-grid {
         grid-template-columns: minmax(0, 1fr);
     }
@@ -1487,9 +1601,6 @@ a.vendor-timeline-item:focus-visible {
         justify-content: flex-start;
     }
 
-    .vendor-currency-card-figures {
-        grid-template-columns: minmax(0, 1fr);
-    }
 }
 
 @media (max-width: 767px) {
@@ -1542,6 +1653,23 @@ a.vendor-timeline-item:focus-visible {
 
     .vendor-form .master-actions .master-btn {
         flex: 1 1 0;
+    }
+
+    .vendor-ageing {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* The tables become labelled cards here, so the bleed and its insets go. */
+    .vendor-block-card > .vendor-table-bleed {
+        margin: 0;
+    }
+
+    .vendor-block-card > .vendor-table-bleed .master-table th:first-child,
+    .vendor-block-card > .vendor-table-bleed .master-table td:first-child,
+    .vendor-block-card > .vendor-table-bleed .master-table th:last-child,
+    .vendor-block-card > .vendor-table-bleed .master-table td:last-child {
+        padding-left: 0;
+        padding-right: 0;
     }
 
     .vendor-jump {

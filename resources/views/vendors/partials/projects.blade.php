@@ -11,7 +11,7 @@
         </div>
     </div>
 
-    <div class="master-card master-card--flat vendor-table-card">
+    <div class="master-card master-card--flat vendor-table-card vendor-table-bleed">
         <div class="master-table-wrap ui-mobile-cards">
             <table class="master-table vendor-table">
                 <thead>
