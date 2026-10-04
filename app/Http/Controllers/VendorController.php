@@ -2,46 +2,85 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SavedView;
 use App\Models\Vendor;
 use App\Models\VendorAttachment;
 use App\Models\VendorComment;
+use App\Models\VendorContact;
 use App\Models\VendorPaymentAttachment;
 use App\Models\VendorPaymentEntry;
+use App\Services\SavedViews;
+use App\Services\VendorPaymentCashflowSync;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class VendorController extends Controller
 {
-    public function index(Request $request): View
+    /**
+     * The record's tabs: the questions an office asks about a supplier, in the
+     * order it asks them. One list, read by the controller and drawn by the
+     * view, so a `?tab=` guard can never disagree with the strip about what
+     * exists.
+     *
+     * The profile facts are split the way a vendor file is: who they are, who
+     * answers the phone, where they ship from, and what the money side needs
+     * (tax, bank, terms). The three ledgers stay apart for the same reason the
+     * statement module keeps them apart — a manual vendor-currency entry, the
+     * INR cashflow mirror, and the statement a vendor can be sent are three
+     * questions, not three renderings of one.
+     */
+    private const SHOW_TABS = [
+        'overview' => 'Overview',
+        'profile' => 'Profile',
+        'contacts' => 'Contacts',
+        'commercial' => 'Commercial',
+        'procurement' => 'Procurement',
+        'money' => 'Money',
+        'documents' => 'Documents',
+        'comments' => 'Comments',
+    ];
+
+    /**
+     * The tabs this record used to have, and the tab that answers the same
+     * question now. A link somebody bookmarked, or a URL pasted into a mail
+     * last month, still lands on the right panel instead of the overview.
+     */
+    private const TAB_ALIASES = [
+        'projects' => 'procurement',
+        'products' => 'procurement',
+        'shipments' => 'procurement',
+        'payments' => 'money',
+        'statement' => 'money',
+        'attachments' => 'documents',
+    ];
+
+    public function index(Request $request): View|RedirectResponse
     {
+        if ($savedQuery = $this->resolveSavedView($request)) {
+            return redirect()->route('vendors.index', $savedQuery);
+        }
+
         $search = $request->query('search');
+        $search = is_string($search) ? trim($search) : '';
+        $search = $search !== '' ? mb_substr($search, 0, 150) : null;
+
         $status = $request->query('status', 'all');
+        if (! is_string($status) || ! array_key_exists($status, ['all' => 'All'] + Vendor::statusOptions())) {
+            $status = 'all';
+        }
+
         $type = $request->query('type', 'all');
-        $country = $request->query('country', 'all');
-
-        $vendors = Vendor::query()
-            ->with('creator')
-            ->search($search)
-            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
-            ->when($type !== 'all', fn ($q) => $q->where('vendor_type', $type))
-            ->when($country !== 'all', fn ($q) => $q->where('country', $country))
-            ->latest('id')
-            ->paginate(10)
-            ->withQueryString();
-
-        $stats = [
-            'total' => Vendor::count(),
-            'active' => Vendor::where('status', Vendor::STATUS_ACTIVE)->count(),
-            'on_hold' => Vendor::where('status', Vendor::STATUS_ON_HOLD)->count(),
-            'blacklisted' => Vendor::where('status', Vendor::STATUS_BLACKLISTED)->count(),
-            'international' => Vendor::whereNotNull('country')->where('country', '!=', 'India')->count(),
-        ];
+        if (! is_string($type) || ! array_key_exists($type, ['all' => 'All'] + Vendor::typeOptions())) {
+            $type = 'all';
+        }
 
         $countries = Vendor::query()
             ->whereNotNull('country')
@@ -50,18 +89,137 @@ class VendorController extends Controller
             ->orderBy('country')
             ->pluck('country');
 
+        $country = $request->query('country', 'all');
+        if (! is_string($country) || ($country !== 'all' && ! $countries->contains($country))) {
+            $country = 'all';
+        }
+
+        /* The one filter the office reaches for when it is chasing money: the
+           vendors with a bill past its due date. */
+        $overdue = $request->query('overdue') === '1' ? '1' : 'all';
+
+        $vendors = Vendor::query()
+            ->with('creator')
+            ->when(Schema::hasTable('vendor_payment_entries'), function ($query) {
+                /* Payable per vendor, summed in the database: billed less paid,
+                   both in rupees, so a page of 25 vendors does not load 25
+                   ledgers to draw one column. */
+                $query->withSum(['paymentEntries as billed_inr' => function ($ledger) {
+                    $ledger->where('transaction_type', 'credit');
+                }], 'amount_in_inr')
+                    ->withSum(['paymentEntries as paid_inr' => function ($ledger) {
+                        $ledger->where('transaction_type', 'debit');
+                    }], 'amount_in_inr');
+            })
+            ->search($search)
+            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
+            ->when($type !== 'all', fn ($q) => $q->where('vendor_type', $type))
+            ->when($country !== 'all', fn ($q) => $q->where('country', $country))
+            ->when($overdue === '1' && Schema::hasTable('vendor_payment_entries') && Schema::hasColumn('vendor_payment_entries', 'due_date'), function ($query) {
+                $query->whereHas('paymentEntries', function ($ledger) {
+                    $ledger->where('transaction_type', 'credit')
+                        ->whereNotNull('due_date')
+                        ->whereDate('due_date', '<', Carbon::today());
+                });
+            })
+            ->latest('id')
+            ->paginate(25)
+            ->withQueryString();
+
+        /* The status chips count the module, not the page — a chip that shows
+           the number of rows it happens to be sitting above is a chip you
+           cannot use to decide where to go. */
+        $statusCounts = Vendor::query()
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        $stats = [
+            'total' => (int) $statusCounts->sum(),
+            'active' => (int) ($statusCounts[Vendor::STATUS_ACTIVE] ?? 0),
+            'inactive' => (int) ($statusCounts[Vendor::STATUS_INACTIVE] ?? 0),
+            'on_hold' => (int) ($statusCounts[Vendor::STATUS_ON_HOLD] ?? 0),
+            'blacklisted' => (int) ($statusCounts[Vendor::STATUS_BLACKLISTED] ?? 0),
+            'international' => Vendor::query()
+                ->whereNotNull('country')
+                ->where('country', '!=', '')
+                ->where('country', '!=', 'India')
+                ->count(),
+            'with_contact' => Vendor::query()->whereNotNull('contact_person_name')->where('contact_person_name', '!=', '')->count(),
+            'payable' => $this->modulePayable(),
+            'overdue_vendors' => $this->overdueVendorCount(),
+        ];
+
         return view('vendors.index', [
             'vendors' => $vendors,
             'stats' => $stats,
+            'statusCounts' => $statusCounts,
             'countries' => $countries,
             'search' => $search,
             'status' => $status,
             'type' => $type,
             'country' => $country,
+            'overdue' => $overdue,
+            'filtersActive' => filled($search) || $status !== 'all' || $type !== 'all' || $country !== 'all' || $overdue !== 'all',
             'statusOptions' => Vendor::statusOptions(),
             'typeOptions' => Vendor::typeOptions(),
             'currencyOptions' => Vendor::currencyOptions(),
+            'contactOptions' => Schema::hasTable('vendor_contacts'),
+            'statusActions' => [
+                'activate' => 'Mark active',
+                'deactivate' => 'Mark inactive',
+                'hold' => 'Put on hold',
+                'blacklist' => 'Blacklist',
+            ],
+            'savedViews' => app(SavedViews::class)->forUser(Auth::id(), 'vendors'),
         ]);
+    }
+
+    /** Restore a named filter set as the normal list URL and controls. */
+    private function resolveSavedView(Request $request): array
+    {
+        $id = (int) $request->query('saved_view', 0);
+        $savedViews = app(SavedViews::class);
+
+        if (! $id || ! $savedViews->available()) {
+            return [];
+        }
+
+        $view = SavedView::query()
+            ->where('module', 'vendors')
+            ->where(function ($query) {
+                $query->where('user_id', Auth::id())->orWhere('is_shared', true);
+            })
+            ->find($id);
+
+        return $view ? $savedViews->queryFor($view) : [];
+    }
+
+    public function storeSavedView(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:60'],
+            'is_shared' => ['nullable', 'boolean'],
+        ]);
+
+        app(SavedViews::class)->save(
+            (int) Auth::id(),
+            'vendors',
+            $data['name'],
+            $request->query(),
+            $request->boolean('is_shared')
+        );
+
+        return back()->with('success', 'View "'.$data['name'].'" saved.');
+    }
+
+    public function destroySavedView(SavedView $savedView): RedirectResponse
+    {
+        abort_unless($savedView->module === 'vendors' && (int) $savedView->user_id === (int) Auth::id(), 403);
+
+        app(SavedViews::class)->delete((int) Auth::id(), (int) $savedView->id);
+
+        return back()->with('success', 'Saved view removed.');
     }
 
     public function create(): View
@@ -103,9 +261,9 @@ class VendorController extends Controller
             'vendor_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:2048'],
             'vendor_name' => ['required', 'string', 'max:255'],
             'brand_name' => ['nullable', 'string', 'max:255'],
-            'vendor_type' => ['required', 'in:manufacturer,trader,distributor,service_provider'],
+            'vendor_type' => ['nullable', 'in:manufacturer,trader,distributor,service_provider'],
             'category' => ['nullable', 'string', 'max:255'],
-            'status' => ['required', 'in:active,inactive,on_hold,blacklisted'],
+            'status' => ['nullable', 'in:active,inactive,on_hold,blacklisted'],
             'contact_person_name' => ['nullable', 'string', 'max:255'],
             'contact_person_email' => ['nullable', 'email', 'max:255'],
             'contact_person_mobile' => ['nullable', 'string', 'max:40'],
@@ -121,6 +279,8 @@ class VendorController extends Controller
         unset($data['vendor_image']);
         $data['vendor_number'] = $this->makeVendorNumber();
         $data['created_by'] = Auth::id();
+        $data['vendor_type'] = $data['vendor_type'] ?? 'manufacturer';
+        $data['status'] = $data['status'] ?? Vendor::STATUS_ACTIVE;
         $data['preferred_currency'] = $data['preferred_currency'] ?? 'INR';
 
         if ($request->hasFile('vendor_image')) {
@@ -134,18 +294,38 @@ class VendorController extends Controller
             ->with('success', 'Quick vendor created successfully.');
     }
 
-    public function show(Vendor $vendor): View
+    public function show(Request $request, Vendor $vendor): View
     {
+        $tab = (string) $request->query('tab', 'overview');
+        $tab = self::TAB_ALIASES[$tab] ?? $tab;
+        $tab = array_key_exists($tab, self::SHOW_TABS) ? $tab : 'overview';
+
         $relations = ['creator'];
         if (Schema::hasTable('vendor_comments')) {
             $relations[] = 'comments.creator';
         }
-        if (Schema::hasTable('vendor_attachments')) {
+        if (Schema::hasTable('vendor_attachments') && in_array($tab, ['documents', 'overview'], true)) {
             $relations[] = 'attachments.uploader';
+        }
+        if (Schema::hasTable('vendor_contacts')) {
+            $relations[] = 'contacts';
         }
         $vendor->load($relations);
 
-        return view('vendors.show', array_merge($this->formData($vendor), $this->dashboardData($vendor)));
+        $data = $this->dashboardData($vendor);
+
+        return view('vendors.show', array_merge($this->formData($vendor), $data, [
+            'tabs' => self::SHOW_TABS,
+            'tab' => $tab,
+            'tabCounts' => [
+                'contacts' => $vendor->relationLoaded('contacts') ? $vendor->contacts->count() : 0,
+                'procurement' => (int) ($data['summary']['project_products_count'] ?? 0) + (int) ($data['summary']['shipments_count'] ?? 0),
+                'money' => (int) ($data['summary']['statement_count'] ?? 0) + (int) ($data['summary']['cashflow_count'] ?? 0),
+                'documents' => $vendor->relationLoaded('attachments') ? $vendor->attachments->count() : (int) ($data['summary']['attachments_count'] ?? 0),
+                'comments' => $vendor->relationLoaded('comments') ? $vendor->comments->count() : 0,
+            ],
+            'recordUrl' => fn (string $key) => route('vendors.show', ['vendor' => $vendor, 'tab' => $key]),
+        ]));
     }
 
     public function edit(Vendor $vendor): View
@@ -201,14 +381,18 @@ class VendorController extends Controller
             'created_by' => Auth::id(),
         ]);
 
-        return back()->with('success', 'Vendor comment added successfully.');
+        return $this->backToTab($vendor, 'comments', 'Vendor comment added successfully.');
     }
 
     public function destroyComment(VendorComment $comment): RedirectResponse
     {
+        $vendor = $comment->vendor;
+
         $comment->delete();
 
-        return back()->with('success', 'Vendor comment deleted successfully.');
+        return $vendor
+            ? $this->backToTab($vendor, 'comments', 'Vendor comment deleted successfully.')
+            : redirect()->route('vendors.index')->with('success', 'Vendor comment deleted successfully.');
     }
 
     public function storeAttachment(Request $request, Vendor $vendor): RedirectResponse
@@ -241,18 +425,22 @@ class VendorController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Vendor document uploaded successfully.');
+        return $this->backToTab($vendor, 'documents', 'Vendor document uploaded successfully.');
     }
 
     public function destroyAttachment(VendorAttachment $attachment): RedirectResponse
     {
+        $vendor = $attachment->vendor;
+
         if ($attachment->file_path) {
             Storage::disk('public')->delete($attachment->file_path);
         }
 
         $attachment->delete();
 
-        return back()->with('success', 'Vendor document deleted successfully.');
+        return $vendor
+            ? $this->backToTab($vendor, 'documents', 'Vendor document deleted successfully.')
+            : redirect()->route('vendors.index')->with('success', 'Vendor document deleted successfully.');
     }
 
     public function storePayment(Request $request, Vendor $vendor): RedirectResponse
@@ -261,6 +449,7 @@ class VendorController extends Controller
 
         $data = $request->validate([
             'transaction_date' => ['required', 'date'],
+            'due_date' => ['nullable', 'date', 'after_or_equal:transaction_date'],
             'invoice_number' => ['nullable', 'string', 'max:255'],
             'foreign_amount' => ['required', 'numeric', 'min:0'],
             'foreign_currency' => ['required', 'in:RMB,USD,INR'],
@@ -280,27 +469,32 @@ class VendorController extends Controller
             'attachments.*' => ['nullable', 'file', 'max:20480'],
         ]);
 
+        $syncCashflow = $request->boolean('also_create_cashflow');
+
         $data['vendor_id'] = $vendor->id;
         $data['created_by'] = Auth::id();
         $data['amount_in_inr'] = $this->normalizeInrAmount($data);
+        $data['due_date'] = $this->resolveDueDate($data, $vendor);
+
+        if (! Schema::hasColumn('vendor_payment_entries', 'due_date')) {
+            unset($data['due_date']);
+        }
+
         unset($data['attachments'], $data['also_create_cashflow']);
 
-        $entry = DB::transaction(function () use ($request, $data, $vendor) {
+        $this->assertCashflowMirrorPossible($data, $syncCashflow);
+
+        $entry = DB::transaction(function () use ($request, $data, $vendor, $syncCashflow) {
             $entry = VendorPaymentEntry::create($data);
 
-            if ($request->boolean('also_create_cashflow')) {
-                $cashflowId = $this->createCashflowFromVendorPayment($entry, $vendor);
-                if ($cashflowId) {
-                    $entry->update(['cashflow_entry_id' => $cashflowId]);
-                }
-            }
+            $this->cashflowSync()->sync($entry, $syncCashflow);
 
             $this->storeVendorPaymentAttachments($request, $entry);
 
             return $entry;
         });
 
-        return back()->with('success', 'Vendor payment/statement entry added successfully.');
+        return $this->backToTab($vendor, 'money', $this->paymentSavedMessage($entry, 'added'));
     }
     
     public function updatePayment(Request $request, Vendor $vendor, VendorPaymentEntry $entry): RedirectResponse {
@@ -310,6 +504,7 @@ class VendorController extends Controller
     
         $data = $request->validate([
             'transaction_date' => ['required', 'date'],
+            'due_date' => ['nullable','date','after_or_equal:transaction_date'],
             'invoice_number' => ['nullable','string','max:255'],
             'foreign_amount' => ['required','numeric','min:0'],
             'foreign_currency' => ['required','in:RMB,USD,INR'],
@@ -329,44 +524,173 @@ class VendorController extends Controller
             'attachments.*' => ['nullable','file','max:20480'],
         ]);
     
+        $syncCashflow = $request->boolean('also_create_cashflow');
+
         $data['amount_in_inr'] = $this->normalizeInrAmount($data);
-    
+        $data['due_date'] = $this->resolveDueDate($data, $vendor);
+
+        if (! Schema::hasColumn('vendor_payment_entries', 'due_date')) {
+            unset($data['due_date']);
+        }
+
         // These are not columns in vendor_payment_entries
         unset($data['attachments'],$data['also_create_cashflow']);
-    
-        DB::transaction(function () use ($request,$data,$vendor,$entry) {
+
+        $this->assertCashflowMirrorPossible($data, $syncCashflow);
+
+        DB::transaction(function () use ($request,$data,$vendor,$entry,$syncCashflow) {
             $entry->update($data);
+            $this->cashflowSync()->sync($entry, $syncCashflow);
             $this->storeVendorPaymentAttachments($request,$entry);
         });
     
-        return back()->with(
-            'success',
-            'Vendor payment/statement entry updated successfully.'
-        );
+        return $this->backToTab($vendor, 'money', $this->paymentSavedMessage($entry, 'updated'));
     }
 
     public function destroyPayment(VendorPaymentEntry $entry): RedirectResponse
     {
-        foreach ($entry->attachments as $attachment) {
-            if ($attachment->file_path) {
-                Storage::disk('public')->delete($attachment->file_path);
+        $hadCashflow = (bool) $entry->cashflow_entry_id;
+
+        DB::transaction(function () use ($entry) {
+            // Remove the INR mirror too — one entry, both ledgers.
+            $this->cashflowSync()->remove($entry);
+
+            foreach ($entry->attachments as $attachment) {
+                if ($attachment->file_path) {
+                    Storage::disk('public')->delete($attachment->file_path);
+                }
             }
+
+            $entry->delete();
+        });
+
+        $vendor = $entry->vendor;
+
+        if (! $vendor) {
+            return redirect()->route('vendors.index')->with(
+                'success',
+                $hadCashflow
+                    ? 'Vendor payment entry and its linked INR cashflow entry were deleted.'
+                    : 'Vendor payment entry deleted successfully.'
+            );
         }
 
-        $entry->delete();
-
-        return back()->with('success', 'Vendor payment entry deleted successfully.');
+        return $this->backToTab($vendor, 'money', $hadCashflow
+            ? 'Vendor payment entry and its linked INR cashflow entry were deleted.'
+            : 'Vendor payment entry deleted successfully.');
     }
 
     public function destroyPaymentAttachment(VendorPaymentAttachment $attachment): RedirectResponse
     {
+        $vendor = $attachment->entry?->vendor;
+
         if ($attachment->file_path) {
             Storage::disk('public')->delete($attachment->file_path);
         }
 
         $attachment->delete();
 
-        return back()->with('success', 'Attachment deleted successfully.');
+        return $vendor
+            ? $this->backToTab($vendor, 'money', 'Attachment deleted successfully.')
+            : redirect()->route('vendors.index')->with('success', 'Attachment deleted successfully.');
+    }
+
+    /**
+     * Every write lands back on the tab it was made from. A redirect to
+     * `back()` would depend on the referer, and a form posted from a modal on
+     * the payments tab has to come home to the payments tab even when the
+     * browser sent no referer at all.
+     */
+    private function backToTab(Vendor $vendor, string $tab, string $message): RedirectResponse
+    {
+        return redirect()
+            ->route('vendors.show', ['vendor' => $vendor, 'tab' => $tab])
+            ->with('success', $message);
+    }
+
+    private function cashflowSync(): VendorPaymentCashflowSync
+    {
+        return app(VendorPaymentCashflowSync::class);
+    }
+
+    /**
+     * A vendor payment entry that should be mirrored into INR cashflow needs
+     * an account to debit and an INR value — without them the mirror cannot
+     * exist, so the user is told here instead of silently losing the entry
+     * in the cashflow module.
+     */
+    private function assertCashflowMirrorPossible(array $data, bool $requested): void
+    {
+        if (! $requested || ($data['transaction_type'] ?? 'credit') !== 'debit') {
+            return;
+        }
+
+        $sync = $this->cashflowSync();
+        if (! $sync->available()) {
+            return; // cashflow module not installed/migrated — nothing to mirror
+        }
+
+        $errors = [];
+
+        if (empty($data['paid_account_id'])) {
+            $errors['paid_account_id'] = 'Select the paid account so the INR cashflow entry can be created.';
+        }
+
+        if ((float) ($data['amount_in_inr'] ?? 0) <= 0) {
+            $errors['amount_in_inr'] = 'Enter the exchange rate (or the INR amount) so the cashflow entry can be created.';
+        }
+
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
+    private function paymentSavedMessage(VendorPaymentEntry $entry, string $verb): string
+    {
+        if ($entry->cashflow_entry_id) {
+            return 'Vendor payment entry '.$verb.' and INR cashflow entry #'.$entry->cashflow_entry_id.' kept in sync.';
+        }
+
+        if ($entry->transaction_type === 'debit' && $entry->status !== 'cancelled') {
+            return 'Vendor payment entry '.$verb.' (not mirrored to cashflow).';
+        }
+
+        return 'Vendor payment/statement entry '.$verb.' successfully.';
+    }
+
+    /**
+     * A bill's due date. When the form leaves it blank the vendor's own terms
+     * decide it — "30 days" means thirty days from the bill date, which is how
+     * the terms are written on the file. Terms that name no number of days
+     * leave the date empty rather than inventing one: an absent due date is
+     * honest, a wrong one is a payment made late for no reason.
+     */
+    private function resolveDueDate(array $data, Vendor $vendor): ?string
+    {
+        if (($data['transaction_type'] ?? null) !== 'credit') {
+            return null;
+        }
+
+        if (filled($data['due_date'] ?? null)) {
+            return $data['due_date'];
+        }
+
+        if (($data['entry_category'] ?? null) === 'payment') {
+            return null;
+        }
+
+        /* Only a term that reads as a number of days is a due date: "30 days"
+           and "Net 30" are, "30% advance" is not — guessing the second from
+           the first is how a ledger starts dating bills that were never
+           agreed. */
+        $terms = (string) ($vendor->payment_terms ?? '');
+
+        if (preg_match('/(\d{1,3})\s*(?:calendar\s+)?days?\b/i', $terms, $matches)
+            || preg_match('/\bnet\s*(\d{1,3})\b/i', $terms, $matches)) {
+            return Carbon::parse($data['transaction_date'])->addDays((int) $matches[1])->toDateString();
+        }
+
+        return null;
     }
 
     private function normalizeInrAmount(array $data): float
@@ -408,61 +732,27 @@ class VendorController extends Controller
         }
     }
 
-    private function createCashflowFromVendorPayment(VendorPaymentEntry $entry, Vendor $vendor): ?int
-    {
-        if (! class_exists(\App\Models\CashflowEntry::class) || ! Schema::hasTable('cashflow_entries') || ! $entry->paid_account_id) {
-            return null;
-        }
-
-        $entryClass = \App\Models\CashflowEntry::class;
-        $cashflow = new $entryClass;
-        $cashflow->entry_date = $entry->transaction_date;
-        $cashflow->particular = $entry->particular;
-        $cashflow->invoice_bill_number = $entry->invoice_number;
-        $cashflow->bank_reference_number = $entry->bank_reference_number;
-        $cashflow->transaction_type = $entry->transaction_type === 'debit' ? 'debit' : 'credit';
-        $cashflow->credit_amount = $entry->transaction_type === 'credit' ? $entry->amount_in_inr : 0;
-        $cashflow->debit_amount = $entry->transaction_type === 'debit' ? $entry->amount_in_inr : 0;
-        $cashflow->balance = null;
-        $cashflow->currency = 'INR';
-        $cashflow->account_id = $entry->paid_account_id;
-        $cashflow->category_id = null;
-        $cashflow->accounting_status = in_array($entry->status, ['paid', 'reconciled'], true) ? 'booked' : 'pending';
-        $cashflow->payment_mode = $entry->payment_mode;
-        $cashflow->client_id = null;
-        $cashflow->vendor_id = $vendor->id;
-        $cashflow->expense_head = $entry->entry_category;
-        $cashflow->related_party_type = 'vendor';
-        $cashflow->related_party_name = $vendor->vendor_name;
-        $cashflow->notes = trim(($entry->remarks ?: '').' Vendor currency: '.$entry->foreign_currency.' '.number_format((float) $entry->foreign_amount, 4));
-        $cashflow->created_by = Auth::id();
-
-        if (Schema::hasColumn('cashflow_entries', 'project_id')) {
-            $cashflow->project_id = $entry->project_id;
-        }
-
-        $cashflow->save();
-
-        return $cashflow->id;
-    }
-
     private function dashboardData(Vendor $vendor): array
     {
         $projectProducts = $this->vendorProjectProducts($vendor);
-        $vendorQuotes = $this->vendorQuotes($vendor);
         $statementEntries = $this->vendorStatementEntries($vendor); // cashflow entries
         $vendorPaymentEntries = $this->vendorPaymentEntries($vendor); // manual vendor-currency ledger
         $shipments = $this->vendorShipments($vendor);
-        $products = $this->vendorProducts($projectProducts, $vendorQuotes);
+        $products = $this->vendorProducts($projectProducts);
         $cashflowAccounts = $this->cashflowAccounts();
         $projectsForPayment = $this->projectsForVendorPayment($vendor);
         $attachmentOptions = class_exists(VendorAttachment::class) ? VendorAttachment::categoryOptions() : [];
+        $commentsAvailable = Schema::hasTable('vendor_comments');
+        $attachmentsAvailable = Schema::hasTable('vendor_attachments');
+        $contactsAvailable = Schema::hasTable('vendor_contacts');
+        $vendorActivity = $this->vendorActivity($vendor, $vendorPaymentEntries, $projectProducts, $shipments);
 
         $projectValue = (float) $projectProducts->sum('total_amount');
-        $quoteValue = (float) $vendorQuotes->sum(function ($quote) {
-            return $this->vendorQuoteValue($quote);
-        });
 
+        /* The payables settle the ledger first; spend and the ledger totals
+           then read from that settlement, so no two cards can disagree. */
+        $payables = $this->vendorPayables($vendorPaymentEntries);
+        $performance = $this->vendorPerformance($vendor, $vendorPaymentEntries, $payables);
         $currencySummary = $this->vendorCurrencySummary($vendorPaymentEntries);
         $preferredCurrency = $vendor->preferred_currency ?: 'RMB';
         $preferredCurrencySummary = $currencySummary[$preferredCurrency] ?? [
@@ -478,7 +768,7 @@ class VendorController extends Controller
         // Backward-compatible cashflow totals for vendors that have not started manual vendor ledger yet.
         if ($vendorPaymentEntries->isEmpty()) {
             $paidToVendor = (float) $statementEntries->sum(function ($entry) { return (float) ($entry->debit_amount ?? 0); });
-            $billedInr = $projectValue > 0 ? $projectValue : $quoteValue;
+            $billedInr = $projectValue;
             $needToPayInr = max($billedInr - $paidToVendor, 0);
             $otherExpensesInr = (float) $statementEntries->filter(function ($entry) {
                 return (float) ($entry->debit_amount ?? 0) > 0 && (! empty($entry->expense_head) || ($entry->related_party_type ?? null) === 'vendor');
@@ -493,9 +783,7 @@ class VendorController extends Controller
             'project_products_count' => $projectProducts->count(),
             'running_projects' => $runningProjects,
             'products_count' => $products->count(),
-            'vendor_quotes_count' => $vendorQuotes->count(),
             'project_value' => $projectValue,
-            'quote_value' => $quoteValue,
             'expected_payable' => $billedInr,
             'paid_to_vendor' => $paidToVendor,
             'received_from_vendor' => (float) $vendorPaymentEntries->where('transaction_type', 'credit')->where('entry_category', 'refund')->sum('amount_in_inr'),
@@ -519,7 +807,6 @@ class VendorController extends Controller
             'products' => Route::has('products.index') ? route('products.index') : '#',
             'cashflows' => Route::has('cashflows.index') ? route('cashflows.index') : '#',
             'shipments' => Route::has('shipments.index') ? route('shipments.index') : '#',
-            'vendorQuotes' => Route::has('vendor-quotes.index') ? route('vendor-quotes.index') : '#',
         ];
 
         $paymentOptions = [
@@ -532,9 +819,10 @@ class VendorController extends Controller
 
         return compact(
             'projectProducts',
-            'vendorQuotes',
             'statementEntries',
             'vendorPaymentEntries',
+            'payables',
+            'performance',
             'currencySummary',
             'shipments',
             'products',
@@ -543,8 +831,499 @@ class VendorController extends Controller
             'paymentOptions',
             'attachmentOptions',
             'summary',
-            'routes'
+            'routes',
+            'vendorActivity',
+            'commentsAvailable',
+            'attachmentsAvailable',
+            'contactsAvailable'
         );
+    }
+
+    /* ------------------------------------------------------------------
+       Payables: what is owed, what is late, and how late
+       ------------------------------------------------------------------ */
+
+    /**
+     * The ledger as a payable book. A bill or an expense raises what is owed;
+     * a payment settles it. Rows are matched oldest-first — the way a payment
+     * is actually applied — so a partly-paid bill shows one still-open row
+     * rather than a settled one and an unrelated credit.
+     *
+     * Everything here is in the row's own currency *and* in rupees: the
+     * foreign amounts are what the supplier invoices in, the rupee amounts
+     * are what the office pays with, and adding the two together is the one
+     * arithmetic this module must never do.
+     */
+    private function vendorPayables($entries): array
+    {
+        $today = Carbon::today();
+        $open = [];
+
+        foreach ($entries as $entry) {
+            if ($entry->status === 'cancelled') {
+                continue;
+            }
+
+            $currency = $entry->foreign_currency ?: 'RMB';
+            $foreign = (float) $entry->foreign_amount;
+            $rupees = (float) $entry->amount_in_inr;
+
+            /* A bill raises what is owed: a credit entry, except a refund —
+               money coming back from the vendor settles the account, it does
+               not create a new debt. Everything else (a payment, an
+               adjustment, a refund) is applied against the oldest bills in its
+               own currency. */
+            $isBill = $entry->transaction_type === 'credit' && $entry->entry_category !== 'refund';
+
+            if ($isBill) {
+                $open[] = [
+                    'id' => $entry->id,
+                    'particular' => (string) $entry->particular,
+                    'invoice' => (string) ($entry->invoice_number ?: ''),
+                    'date' => $entry->transaction_date,
+                    'due' => $entry->due_date,
+                    'currency' => $currency,
+                    'foreign_total' => $foreign,
+                    'rupee_total' => $rupees,
+                    'foreign_left' => $foreign,
+                    'rupee_left' => $rupees,
+                    'is_expense' => $entry->entry_category === 'expense',
+                ];
+
+                continue;
+            }
+
+            $remaining = $foreign;
+
+            foreach ($open as $index => $bill) {
+                if ($remaining <= 0) {
+                    break;
+                }
+                if ($bill['currency'] !== $currency) {
+                    continue;
+                }
+
+                $appliedForeign = min($remaining, $bill['foreign_left']);
+                $share = $bill['foreign_total'] > 0 ? $appliedForeign / $bill['foreign_total'] : 0;
+
+                $open[$index]['foreign_left'] = round($bill['foreign_left'] - $appliedForeign, 4);
+                $open[$index]['rupee_left'] = round($bill['rupee_left'] * (1 - $share), 2);
+                $remaining = round($remaining - $appliedForeign, 4);
+            }
+        }
+
+        $buckets = [
+            'not_due' => ['label' => 'Not yet due', 'amount' => 0.0, 'count' => 0],
+            'due_soon' => ['label' => 'Due within 7 days', 'amount' => 0.0, 'count' => 0],
+            'overdue_1_30' => ['label' => '1–30 days late', 'amount' => 0.0, 'count' => 0],
+            'overdue_31_60' => ['label' => '31–60 days late', 'amount' => 0.0, 'count' => 0],
+            'overdue_60_plus' => ['label' => '60+ days late', 'amount' => 0.0, 'count' => 0],
+        ];
+
+        $rows = [];
+        $overdueBills = 0;
+        $outstanding = 0.0;
+        $overdue = 0.0;
+        $dueSoon = 0.0;
+
+        foreach ($open as $bill) {
+            /* A bill is open while anything is left of it — in rupees when the
+               rupee figure is known, and otherwise in its own currency, so a
+               missing exchange rate cannot make a debt disappear. */
+            if ((float) $bill['rupee_left'] <= 0.009 && (float) $bill['foreign_left'] <= 0.0001) {
+                continue;
+            }
+
+            $left = (float) $bill['rupee_left'];
+            $outstanding += $left;
+
+            $daysLeft = $this->daysUntil($bill['due'], $today);
+
+            if ($daysLeft === null) {
+                $bucket = 'not_due';
+            } elseif ($daysLeft >= 0) {
+                $bucket = 'due_soon';
+                $dueSoon += $left;
+            } elseif ($daysLeft >= -30) {
+                $bucket = 'overdue_1_30';
+            } elseif ($daysLeft >= -60) {
+                $bucket = 'overdue_31_60';
+            } else {
+                $bucket = 'overdue_60_plus';
+            }
+
+            $buckets[$bucket]['amount'] += $left;
+            $buckets[$bucket]['count']++;
+
+            $isOverdue = $daysLeft !== null && $daysLeft < 0;
+            if ($isOverdue) {
+                $overdue += $left;
+            }
+
+            $bill['days_left'] = $daysLeft;
+            $bill['bucket'] = $bucket;
+            $bill['is_overdue'] = $isOverdue;
+            $bill['is_due_soon'] = $bucket === 'due_soon';
+            $rows[] = $bill;
+
+            if ($isOverdue) {
+                $overdueBills++;
+            }
+        }
+
+        /* Late money first, then what falls due soonest, then the rest — the
+           Money tab's table is the chase list, so it reads in chasing order. */
+        $order = fn ($row) => $row['is_overdue'] ? 0 : ($row['is_due_soon'] ? 1 : 2);
+
+        usort($rows, function ($a, $b) use ($order) {
+            return [$order($a), $a['due']?->timestamp ?? PHP_INT_MAX]
+                <=> [$order($b), $b['due']?->timestamp ?? PHP_INT_MAX];
+        });
+
+        $nextDue = collect($rows)->filter(fn ($row) => $row['due'] && ! $row['is_overdue'])
+            ->sortBy(fn ($row) => $row['due']->timestamp)
+            ->first();
+
+        return [
+            'rows' => $rows,
+            'buckets' => $buckets,
+            'outstanding' => round($outstanding, 2),
+            'overdue' => round($overdue, 2),
+            'due_soon' => round($dueSoon, 2),
+            'overdue_count' => $overdueBills,
+            'next_due' => $nextDue['due'] ?? null,
+        ];
+    }
+
+    /**
+     * What this supplier has been worth to us: the last six months of billed
+     * rupees as bars, and the ledger's own totals beside them. Everything here
+     * is derived from the same settled payables the Money tab shows, so the two
+     * can never report different numbers.
+     */
+    private function vendorPerformance(Vendor $vendor, $entries, array $payables): array
+    {
+        $bills = $entries->filter(function ($entry) {
+            return $entry->transaction_type === 'credit'
+                && $entry->status !== 'cancelled'
+                && $entry->entry_category !== 'refund';
+        });
+
+        $payments = $entries->filter(function ($entry) {
+            return $entry->transaction_type === 'debit' && $entry->status !== 'cancelled';
+        });
+
+        $billed = (float) $bills->sum('amount_in_inr');
+        $paid = (float) $payments->sum('amount_in_inr');
+
+        /* Six bars, oldest first; a month with no bill is a zero-height bar
+           rather than a missing column, so the shape of the run is readable. */
+        $series = [];
+        $peak = 0.0;
+
+        for ($monthsAgo = 5; $monthsAgo >= 0; $monthsAgo--) {
+            $month = Carbon::today()->startOfMonth()->subMonths($monthsAgo);
+            $amount = (float) $bills
+                ->filter(fn ($entry) => $entry->transaction_date
+                    && $entry->transaction_date->format('Y-m') === $month->format('Y-m'))
+                ->sum('amount_in_inr');
+
+            $peak = max($peak, $amount);
+            $series[] = ['label' => $month->format('M'), 'amount' => round($amount, 2)];
+        }
+
+        $billAmounts = $bills->pluck('amount_in_inr')->map(fn ($value) => (float) $value)->filter();
+        $dates = $entries->pluck('transaction_date')->filter();
+
+        return [
+            'series' => $series,
+            'peak' => $peak > 0 ? $peak : 1,
+            'billed' => round($billed, 2),
+            'paid' => round($paid, 2),
+            'settled_percent' => $billed > 0 ? (int) round(min($paid / $billed, 1) * 100) : ($paid > 0 ? 100 : 0),
+            'bills' => $bills->count(),
+            'payments' => $payments->count(),
+            'average_bill' => $billAmounts->count() > 0 ? round($billAmounts->sum() / $billAmounts->count(), 2) : 0.0,
+            'largest_bill' => round((float) ($billAmounts->max() ?: 0), 2),
+            'open_bills' => count($payables['rows']),
+            'first_entry' => $dates->min() ? Carbon::parse($dates->min()) : null,
+            'last_entry' => $dates->max() ? Carbon::parse($dates->max()) : null,
+        ];
+    }
+
+    /**
+     * Whole days from today to a date: negative once the date has passed. Done
+     * with timestamps rather than Carbon's diff helpers so the sign is this
+     * module's, not the version's.
+     */
+    private function daysUntil(?Carbon $date, ?Carbon $from = null): ?int
+    {
+        if (! $date) {
+            return null;
+        }
+
+        $from = ($from ?: Carbon::today())->copy()->startOfDay();
+
+        return (int) round(($date->copy()->startOfDay()->timestamp - $from->timestamp) / 86400);
+    }
+
+    /** Every vendor's payable, from the ledger, summed in the database. */
+    private function modulePayable(): float
+    {
+        if (! Schema::hasTable('vendor_payment_entries')) {
+            return 0.0;
+        }
+
+        $billed = (float) VendorPaymentEntry::query()->where('transaction_type', 'credit')->sum('amount_in_inr');
+        $paid = (float) VendorPaymentEntry::query()->where('transaction_type', 'debit')->sum('amount_in_inr');
+
+        return round(max($billed - $paid, 0), 2);
+    }
+
+    /**
+     * Vendors with money past its due date. Counted, not listed: the list
+     * filter is what turns this number into the rows behind it.
+     */
+    /** What is owed across every vendor and already past its due date. */
+    private function moduleOverdue(): float
+    {
+        if (! Schema::hasTable('vendor_payment_entries') || ! Schema::hasColumn('vendor_payment_entries', 'due_date')) {
+            return 0.0;
+        }
+
+        return round((float) VendorPaymentEntry::query()
+            ->where('transaction_type', 'credit')
+            ->whereNotNull('due_date')
+            ->whereDate('due_date', '<', Carbon::today())
+            ->sum('amount_in_inr'), 2);
+    }
+
+    private function overdueVendorCount(): int
+    {
+        if (! Schema::hasTable('vendor_payment_entries') || ! Schema::hasColumn('vendor_payment_entries', 'due_date')) {
+            return 0;
+        }
+
+        return (int) VendorPaymentEntry::query()
+            ->where('transaction_type', 'credit')
+            ->whereNotNull('due_date')
+            ->whereDate('due_date', '<', Carbon::today())
+            ->distinct()
+            ->count('vendor_id');
+    }
+
+    /* ------------------------------------------------------------------
+       Contacts
+       ------------------------------------------------------------------ */
+
+    public function storeContact(Request $request, Vendor $vendor): RedirectResponse
+    {
+        abort_unless(Schema::hasTable('vendor_contacts'), 404);
+
+        $data = $this->validatedContact($request);
+
+        $vendor->contacts()->create($data);
+
+        return $this->backToTab($vendor, 'contacts', 'Contact added to '.$vendor->vendor_name.'.');
+    }
+
+    public function updateContact(Request $request, Vendor $vendor, VendorContact $contact): RedirectResponse
+    {
+        abort_unless((int) $contact->vendor_id === (int) $vendor->id, 404);
+
+        $contact->update($this->validatedContact($request));
+
+        return $this->backToTab($vendor, 'contacts', 'Contact updated.');
+    }
+
+    public function destroyContact(Vendor $vendor, VendorContact $contact): RedirectResponse
+    {
+        abort_unless((int) $contact->vendor_id === (int) $vendor->id, 404);
+
+        $contact->delete();
+
+        return $this->backToTab($vendor, 'contacts', 'Contact removed.');
+    }
+
+    private function validatedContact(Request $request): array
+    {
+        return $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'designation' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'mobile' => ['nullable', 'string', 'max:40'],
+            'whatsapp' => ['nullable', 'string', 'max:40'],
+            'notes' => ['nullable', 'string'],
+        ]);
+    }
+
+    /* ------------------------------------------------------------------
+       Acting on many vendors at once, and on the whole list
+       ------------------------------------------------------------------ */
+
+    /**
+     * The list's bulk bar: one status change across the rows the office
+     * ticked. Ids are validated against the vendors table, so a tampered form
+     * cannot touch anything but vendors.
+     */
+    public function bulkStatus(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array'],
+            'ids.*' => ['integer'],
+            'action' => ['required', 'in:activate,deactivate,hold,blacklist'],
+        ]);
+
+        $map = [
+            'activate' => Vendor::STATUS_ACTIVE,
+            'deactivate' => Vendor::STATUS_INACTIVE,
+            'hold' => Vendor::STATUS_ON_HOLD,
+            'blacklist' => Vendor::STATUS_BLACKLISTED,
+        ];
+
+        $count = Vendor::query()->whereIn('id', $data['ids'])->update(['status' => $map[$data['action']]]);
+
+        return back()->with('success', $count.' '.\Illuminate\Support\Str::plural('vendor', $count).' moved to '.Vendor::statusOptions()[$map[$data['action']]].'.');
+    }
+
+    /**
+     * The list's Payables button: every dated bill, oldest due date first, so
+     * the sheet opens on the money that is already late. It honours the
+     * filters the list is wearing — exporting "all vendors" from a screen
+     * showing one status is how a spreadsheet starts disagreeing with the
+     * page it came from.
+     */
+    public function exportPayables(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        abort_unless(Schema::hasTable('vendor_payment_entries') && Schema::hasColumn('vendor_payment_entries', 'due_date'), 404);
+
+        $search = $request->query('search');
+        $search = is_string($search) ? trim($search) : '';
+
+        $status = $request->query('status', 'all');
+        if (! is_string($status) || ! array_key_exists($status, ['all' => 'All'] + Vendor::statusOptions())) {
+            $status = 'all';
+        }
+
+        $overdueOnly = $request->query('overdue') === '1';
+        $vendorOnly = $request->integer('vendor');
+
+        $rows = VendorPaymentEntry::query()
+            ->with('vendor')
+            ->where('transaction_type', 'credit')
+            ->whereNotNull('due_date')
+            ->when($vendorOnly > 0, fn ($query) => $query->where('vendor_id', $vendorOnly))
+            ->when($status !== 'all', fn ($query) => $query->whereHas('vendor', fn ($vendor) => $vendor->where('status', $status)))
+            ->when($search !== '', fn ($query) => $query->whereHas('vendor', fn ($vendor) => $vendor->search($search)))
+            ->when($overdueOnly, fn ($query) => $query->whereDate('due_date', '<', Carbon::today()))
+            ->orderBy('due_date')
+            ->get();
+
+        $filename = 'vendor-payables-'.Carbon::today()->format('Y-m-d').'.csv';
+
+        return response()->streamDownload(function () use ($rows) {
+            $out = fopen('php://output', 'w');
+
+            fputcsv($out, ['Vendor', 'Invoice', 'Bill date', 'Due date', 'Days late', 'Currency', 'Amount', 'Rupees']);
+
+            foreach ($rows as $row) {
+                $late = $this->daysUntil($row->due_date);
+
+                fputcsv($out, [
+                    $row->vendor?->vendor_name ?? 'Unassigned vendor',
+                    $row->invoice_number,
+                    $row->transaction_date?->format('Y-m-d'),
+                    $row->due_date?->format('Y-m-d'),
+                    $late !== null && $late < 0 ? abs($late) : 0,
+                    $row->foreign_currency,
+                    (float) $row->foreign_amount,
+                    (float) $row->amount_in_inr,
+                ]);
+            }
+
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    /* ------------------------------------------------------------------
+       The activity trail
+       ------------------------------------------------------------------ */
+
+    /**
+     * Everything that has already happened to this vendor, newest first: the
+     * ledger, the project rows, the documents and the comments. Four tabs
+     * answer four questions; "what changed lately" is one question, so its
+     * four lists are merged into one trail on the overview.
+     *
+     * The ledger is passed in because the money tab already queried it —
+     * asking the database for the same rows twice to draw one card would be
+     * the kind of quiet cost this module can avoid.
+     */
+    private function vendorActivity(Vendor $vendor, $paymentEntries, $projectProducts, $shipments): array
+    {
+        $events = [];
+
+        foreach ($paymentEntries as $entry) {
+            $events[] = [
+                'at' => $entry->created_at ?: $entry->transaction_date,
+                'icon' => $entry->transaction_type === 'credit' ? 'fa-solid fa-file-invoice-dollar' : 'fa-solid fa-arrow-up-right-dots',
+                'title' => (string) $entry->particular,
+                'meta' => ($entry->transaction_type === 'credit' ? 'Bill raised' : 'Payment made')
+                    .' · '.$entry->categoryLabel().' · '.\App\Helpers\CommonHelper::amount($entry->foreign_amount, $entry->foreign_currency ?: 'RMB'),
+                'url' => route('vendors.show', ['vendor' => $vendor, 'tab' => 'money']),
+            ];
+        }
+
+        foreach ($projectProducts as $row) {
+            $events[] = [
+                'at' => $row->created_at,
+                'icon' => 'fa-solid fa-diagram-project',
+                'title' => (string) $row->product_name,
+                'meta' => 'Mapped to '.($row->project?->project_number ?? 'a project').' · '.$row->statusLabel(),
+                'url' => $row->project ? route('projects.show', $row->project) : route('vendors.show', ['vendor' => $vendor, 'tab' => 'procurement']),
+            ];
+        }
+
+        foreach ($shipments as $shipment) {
+            $events[] = [
+                'at' => $shipment->created_at,
+                'icon' => 'fa-solid fa-truck',
+                'title' => (string) ($shipment->identity_name ?: $shipment->shipment_number ?? 'Shipment'),
+                'meta' => 'Shipment · '.$shipment->statusLabel(),
+                'url' => route('vendors.show', ['vendor' => $vendor, 'tab' => 'procurement']),
+            ];
+        }
+
+        if (Schema::hasTable('vendor_attachments') && $vendor->relationLoaded('attachments')) {
+            foreach ($vendor->attachments as $attachment) {
+                $events[] = [
+                    'at' => $attachment->created_at,
+                    'icon' => 'fa-regular fa-folder-open',
+                    'title' => (string) ($attachment->title ?: $attachment->original_name),
+                    'meta' => 'Document filed',
+                    'url' => route('vendors.show', ['vendor' => $vendor, 'tab' => 'documents']),
+                ];
+            }
+        }
+
+        if (Schema::hasTable('vendor_comments') && $vendor->relationLoaded('comments')) {
+            foreach ($vendor->comments as $comment) {
+                $events[] = [
+                    'at' => $comment->created_at,
+                    'icon' => $comment->is_pinned ? 'fa-solid fa-thumbtack' : 'fa-regular fa-comment',
+                    'title' => \Illuminate\Support\Str::limit((string) $comment->body, 90),
+                    'meta' => 'Comment by '.($comment->creator?->name ?: 'the internal team'),
+                    'url' => route('vendors.show', ['vendor' => $vendor, 'tab' => 'comments']),
+                ];
+            }
+        }
+
+        return collect($events)
+            ->filter(fn ($event) => $event['at'] !== null)
+            ->sortByDesc(fn ($event) => $event['at']->timestamp)
+            ->take(12)
+            ->values()
+            ->all();
     }
 
     private function vendorProjectProducts(Vendor $vendor)
@@ -568,52 +1347,16 @@ class VendorController extends Controller
             ->get();
     }
 
-    private function vendorQuotes(Vendor $vendor)
-    {
-        if (! class_exists(\App\Models\VendorQuote::class) || ! Schema::hasTable('vendor_quotes')) {
-            return collect();
-        }
-
-        $relations = [];
-        if (class_exists(\App\Models\VendorQuotePrice::class) && Schema::hasTable('vendor_quote_prices')) {
-            $relations[] = 'prices';
-        }
-        if (class_exists(\App\Models\Product::class) && Schema::hasTable('products')) {
-            $relations[] = 'product';
-        }
-        if (class_exists(\App\Models\Lead::class) && Schema::hasTable('leads')) {
-            $relations[] = 'lead';
-        }
-
-        $hasVendorId = Schema::hasColumn('vendor_quotes', 'vendor_id');
-        $hasVendorName = Schema::hasColumn('vendor_quotes', 'vendor_name');
-
-        if (! $hasVendorId && ! $hasVendorName) {
-            return collect();
-        }
-
-        return \App\Models\VendorQuote::query()
-            ->with($relations)
-            ->where(function ($query) use ($vendor, $hasVendorId, $hasVendorName) {
-                if ($hasVendorId) {
-                    $query->where('vendor_id', $vendor->id);
-                }
-                if ($hasVendorName) {
-                    $method = $hasVendorId ? 'orWhere' : 'where';
-                    $query->{$method}('vendor_name', 'like', '%'.$vendor->vendor_name.'%');
-                }
-            })
-            ->latest('id')
-            ->get();
-    }
-
     private function vendorPaymentEntries(Vendor $vendor)
     {
         if (! class_exists(VendorPaymentEntry::class) || ! Schema::hasTable('vendor_payment_entries')) {
             return collect();
         }
 
-        $relations = ['attachments', 'creator'];
+        $relations = ['creator'];
+        if (Schema::hasTable('vendor_payment_attachments')) {
+            $relations[] = 'attachments';
+        }
         if (class_exists(\App\Models\Project::class) && Schema::hasTable('projects')) {
             $relations[] = 'project';
         }
@@ -624,12 +1367,32 @@ class VendorController extends Controller
             $relations[] = 'cashflowEntry';
         }
 
-        return VendorPaymentEntry::query()
+        $entries = VendorPaymentEntry::query()
             ->with($relations)
             ->where('vendor_id', $vendor->id)
             ->orderBy('transaction_date')
             ->orderBy('id')
             ->get();
+
+        /* The statement reads as an account: each row carries the balance the
+           account stood at after it. The balance is per currency — a vendor
+           billed in RMB and paid in rupees holds two balances, and adding them
+           is wrong by the exchange rate — so it is accumulated per currency
+           rather than over the whole list. */
+        $running = [];
+
+        foreach ($entries as $entry) {
+            $currency = $entry->foreign_currency ?: 'RMB';
+            $movement = $entry->transaction_type === 'credit'
+                ? (float) $entry->foreign_amount
+                : -(float) $entry->foreign_amount;
+
+            $running[$currency] = round(($running[$currency] ?? 0) + $movement, 4);
+            $entry->setAttribute('running_balance', $running[$currency]);
+            $entry->setAttribute('days_to_due', $this->daysUntil($entry->due_date));
+        }
+
+        return $entries;
     }
 
     private function vendorCurrencySummary($entries): array
@@ -780,14 +1543,13 @@ class VendorController extends Controller
             ->get();
     }
 
-    private function vendorProducts($projectProducts, $vendorQuotes)
+    private function vendorProducts($projectProducts)
     {
         if (! class_exists(\App\Models\Product::class) || ! Schema::hasTable('products')) {
             return collect();
         }
 
         $ids = $projectProducts->pluck('product_id')
-            ->merge($vendorQuotes->pluck('product_id'))
             ->filter()
             ->unique()
             ->values();
@@ -811,27 +1573,6 @@ class VendorController extends Controller
             ->get();
     }
 
-    private function vendorQuoteValue($quote): float
-    {
-        $value = (float) ($quote->landing_cost_inr ?: 0);
-
-        if ($value <= 0 && $quote->vendor_unit_price && $quote->quantity) {
-            $value = (float) $quote->vendor_unit_price * (float) $quote->quantity;
-        }
-
-        if ($value <= 0 && $quote->relationLoaded('prices')) {
-            $value = (float) $quote->prices->sum(function ($price) {
-                $priceValue = (float) ($price->landing_cost_inr ?: 0);
-                if ($priceValue <= 0 && $price->vendor_unit_price && $price->quantity) {
-                    $priceValue = (float) $price->vendor_unit_price * (float) $price->quantity;
-                }
-                return $priceValue;
-            });
-        }
-
-        return $value;
-    }
-
     private function validatedData(Request $request, ?Vendor $vendor = null): array
     {
         return $request->validate([
@@ -839,9 +1580,9 @@ class VendorController extends Controller
             'vendor_number' => ['nullable', 'string', 'max:255', 'unique:vendors,vendor_number,'.($vendor?->id ?? 'NULL')],
             'vendor_name' => ['required', 'string', 'max:255'],
             'brand_name' => ['nullable', 'string', 'max:255'],
-            'vendor_type' => ['required', 'in:manufacturer,trader,distributor,service_provider'],
+            'vendor_type' => ['nullable', 'in:manufacturer,trader,distributor,service_provider'],
             'category' => ['nullable', 'string', 'max:255'],
-            'status' => ['required', 'in:active,inactive,on_hold,blacklisted'],
+            'status' => ['nullable', 'in:active,inactive,on_hold,blacklisted'],
 
             'contact_person_name' => ['nullable', 'string', 'max:255'],
             'contact_person_email' => ['nullable', 'email', 'max:255'],
@@ -878,16 +1619,34 @@ class VendorController extends Controller
         ]);
     }
 
+    /**
+     * The next number in the vendor series: MP-VEN-001, MP-VEN-002, and on.
+     *
+     * One series for the whole file, not one per day — a supplier is looked up
+     * by this number on a purchase order, so the number has to be a position in
+     * the file rather than a date. The last code in the series is read and
+     * incremented, and the loop skips anything already taken (including a
+     * number somebody typed by hand), so two vendors created at the same minute
+     * cannot share one.
+     */
     private function makeVendorNumber(): string
     {
-        $prefix = 'VEN-'.now()->format('ymd').'-';
-        $next = str_pad((string) (Vendor::whereDate('created_at', today())->count() + 1), 4, '0', STR_PAD_LEFT);
-        $number = $prefix.$next;
+        $prefix = 'MP-VEN-';
 
-        while (Vendor::where('vendor_number', $number)->exists()) {
-            $next = str_pad((string) ((int) $next + 1), 4, '0', STR_PAD_LEFT);
-            $number = $prefix.$next;
-        }
+        $last = Vendor::query()
+            ->whereNotNull('vendor_number')
+            ->where('vendor_number', 'like', $prefix.'%')
+            ->orderByRaw('LENGTH(vendor_number) DESC')
+            ->orderByDesc('vendor_number')
+            ->value('vendor_number');
+
+        $next = $last ? ((int) preg_replace('/\D/', '', substr($last, strlen($prefix)))) + 1 : 1;
+        $next = max($next, 1);
+
+        do {
+            $number = $prefix.str_pad((string) $next, 3, '0', STR_PAD_LEFT);
+            $next++;
+        } while (Vendor::where('vendor_number', $number)->exists());
 
         return $number;
     }

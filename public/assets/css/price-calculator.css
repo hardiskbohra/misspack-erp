@@ -1,0 +1,220 @@
+/* ==========================================================================
+   PRICE-CALCULATOR.CSS — Price Calculator module (index view)
+   --------------------------------------------------------------------------
+   Module stylesheet for the RMB → INR pricing wizard: step tabs, input
+   grid, cost ladder table, payment summary and print header.
+   Loaded on the calculator screen via @push('styles').
+
+   The wizard is a local design that borrows master-* class names with a
+   private --pc-* palette; it is page-scoped (this file only loads on the
+   calculator), so the shared master-* foundation is unaffected.
+   ========================================================================== */
+
+:root {
+        --pc-primary: #4f83f1;
+        --pc-primary-2: #6366f1;
+        --pc-info: #159ff7;
+        --pc-teal: #12cbb7;
+        --pc-purple: #8b5cf6;
+        --pc-orange: #f59e0b;
+        --pc-red: #ef4770;
+        --pc-green: #10b981;
+        --pc-dark: var(--mc-text);
+        --pc-muted: #687386;
+        --pc-border: var(--mc-border);
+        --pc-bg: var(--mc-soft);
+        --pc-soft: var(--mc-soft);
+        --pc-white: var(--mc-card);
+        --pc-yellow: #fff4c7;
+        --pc-yellow-border: #f6c343;
+        --pc-shadow: 0 14px 35px rgba(25, 42, 70, 0.08);
+    }
+
+    .master-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 18px 22px;
+        margin-bottom: 20px;
+    }
+
+    .master-toolbar-left, .master-toolbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .master-status { min-height: 38px; display: inline-flex; align-items: center; gap: 8px; padding: 9px 13px; border-radius: 12px; background: #e8fff7; color: #047857; font-weight: 600; white-space: nowrap; }
+
+    .master-btn-primary { background: linear-gradient(135deg, var(--master-primary), var(--master-primary-2)); color: #fff; }
+    .master-btn-soft { background: var(--master-soft); color: var(--master-primary); }
+    .master-btn-light { background: var(--mc-card-soft); color: var(--master-dark); }
+    .master-btn-danger { background: #fff0f4; color: #e11d48; }
+    .master-btn-green { background: #e8fff7; color: #0e9f6e; }
+    .master-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+    .master-wizard {
+        overflow: hidden;
+    }
+
+    .master-step-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0;
+        border-bottom: 1px solid var(--master-border);
+        background: var(--mc-card-soft);
+    }
+
+    .master-step-tab {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 18px 22px;
+        border: 0;
+        border-right: 1px solid var(--master-border);
+        background: transparent;
+        color: var(--master-muted);
+        text-align: left;
+        cursor: pointer;
+        transition: .2s ease;
+    }
+
+    .master-step-tab:last-child { border-right: 0; }
+    .master-step-tab.active { background: var(--mc-card); color: var(--master-primary); box-shadow: inset 0 -3px 0 var(--master-primary); }
+    .master-step-tab.done .master-step-number { background: #e8fff7; color: #047857; }
+    .master-step-number { width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 36px; background: var(--master-soft); color: var(--master-primary); font-weight: 600; }
+    .master-step-text strong { display: block; font-size: 16px; font-weight: 600; color: inherit; }
+    .master-step-text span { display: block; margin-top: 2px; font-size: 16px; font-weight: 500; color: var(--master-muted); }
+
+    .master-step-content { padding: 24px; }
+    .master-step-panel { display: none; }
+    .master-step-panel.active { display: block; }
+
+
+    .master-section-title h2 { margin: 0; font-size: 16px; font-weight: 600; }
+    .master-section-title p { margin: 5px 0 0; color: var(--master-muted); font-size: 13px; font-weight: 500; margin-bottom: 24px; }
+
+    .master-form-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 10px;
+    }
+
+    .master-field.full { grid-column: 1 / -1; }
+    .master-field.two { grid-column: span 2; }
+
+    .master-label { display: block; margin-bottom: 7px; color: var(--mc-text-2); font-size: 14px; font-weight: 600; }
+
+    .master-input, .master-select, .master-textarea {
+        width: 100%;
+        border: 1px solid var(--mc-border);
+        border-radius: 12px;
+        background: var(--mc-card);
+        color: var(--master-dark);
+        font-size: 14px;
+        font-weight: 500;
+        outline: none;
+        transition: .2s ease;
+    }
+
+    .master-input, .master-select { height: 44px; padding: 10px 14px; }
+    .master-textarea { min-height: 82px; padding: 10px 12px; resize: vertical; }
+    .master-input:focus, .master-select:focus, .master-textarea:focus { border-color: var(--master-primary); box-shadow: 0 0 0 3px rgba(79, 131, 241, .12); }
+
+    .master-yellow { background: var(--pc-yellow) !important; border-color: var(--pc-yellow-border) !important; }
+    .master-white-edit { background: var(--mc-card) !important; }
+    .master-output { background: var(--mc-card-soft) !important; color: #334155; cursor: not-allowed; }
+    .master-hint { font-size: 12px; color: var(--master-muted); font-weight: 500; margin-top: 6px; }
+
+    .master-mini-summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 50px;
+    }
+
+    .master-mini-card, .master-summary-item {
+        padding: 14px;
+        border: 1px solid  #333333;
+        border-radius: 14px;
+        background:  #fff4c7 !important;
+    }
+
+    .master-mini-card span, .master-summary-item span {
+        display: block;
+        color: var(--mc-text-3);
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        margin-bottom: 5px;
+    }
+
+    .master-mini-card strong, .master-summary-item strong {
+        display: block;
+        color: var(--master-dark);
+        font-size: 18px;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+    }
+
+    .master-summary-item.regular { background: var(--mc-card-soft) !important; border-color: #a7f3d0; }
+    .master-summary-item.highlight { background: linear-gradient(135deg, #e8fff7, #f0fdf4); border-color: #a7f3d0; }
+    .master-summary-item.highlight strong { color: #047857; font-size: 18px; }
+    .master-summary-item.red-highlight strong { color: #df350b; font-size: 18px; }
+    .master-summary-item.green-highlight strong { color: #047857; font-size: 18px; }
+
+    .master-step-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid var(--master-border);
+    }
+
+    .master-step-actions > div { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .master-summary-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(360px, .55fr);
+        gap: 20px;
+    }
+
+    .master-summary-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .master-sheet-wrap {
+        width: 100%;
+        overflow-x: auto;
+        border: 1px solid var(--master-border);
+        border-radius: 16px;
+    }
+
+    .master-sheet { width: 100%; min-width: 1040px; border-collapse: collapse; }
+    .master-sheet th, .master-sheet td { border-bottom: 1px solid var(--master-border); border-right: 1px solid var(--master-border); padding: 9px; vertical-align: middle; }
+    .master-sheet th { background: var(--mc-card-soft); color: var(--mc-text-3); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; text-align: left; }
+    .master-sheet td:last-child, .master-sheet th:last-child { border-right: 0; }
+    .master-sheet tr:last-child td { border-bottom: 0; }
+    .master-sheet .master-input, .master-sheet .master-select { height: 38px; border-radius: 10px; font-size: 13px; }
+
+    .master-actions-cell { display: flex; gap: 8px; align-items: center; }
+    .master-icon-btn { width: 34px; height: 34px; border: 0; border-radius: 10px; background: #eef5ff; color: var(--master-primary); cursor: pointer; font-weight: 600; }
+    .master-icon-btn.danger { background: #fff0f4; color: var(--master-red); }
+
+    .master-pill { display: inline-flex; border-radius: 999px; padding: 6px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; background: #eaf1ff; color: #3f7cf4; }
+
+    .master-info-box {
+        padding: 14px;
+        border: 1px solid var(--master-border);
+        border-radius: 14px;
+        background: var(--mc-card-soft);
+        color: var(--mc-text-2);
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.75;
+    }
+
+    .master-print-header { display: none; }

@@ -11,25 +11,36 @@
         </div>
     </div>
     <div class="master-card" style="padding:18px;margin-bottom:18px;">
-        <form method="GET" class="cp-grid-4">
-            <div class="cp-field">
-                <label>Search</label>
-                <input name="search" value="{{ $search }}" placeholder="Search product, SKU, category...">
+        <form method="GET" action="{{ route('client-portal.products.index') }}">
+            <div class="core-filter-toolbar">
+                <div class="master-field">
+                    <label class="master-label" for="portalProductSearch">Search</label>
+                    <input class="master-input" id="portalProductSearch" name="search" value="{{ $search }}" placeholder="Search product, SKU, category...">
+                </div>
+                <x-filter-trigger drawer="portalProductFiltersDrawer"
+                    :count="(filled($search) ? 1 : 0) + ($category !== 'all' ? 1 : 0)" />
             </div>
-            <div class="cp-field">
-                <label>Category</label>
-                <select name="category">
-                    <option value="all">All Categories</option>
-                    @foreach ($categories as $cat)
-                        <option value="{{ $cat }}" {{ $category === $cat ? 'selected' : '' }}>{{ $cat }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            <div style="display:flex;align-items:end;gap:10px;">
-                <button class="cp-btn cp-btn-primary">Filter</button>
-                <a class="cp-btn cp-btn-light" style="padding:8px 15px;" href="{{ route('client-portal.products.index') }}">Reset</a>
-            </div>
+            <x-drawer id="portalProductFiltersDrawer" title="Filter products" eyebrow="Product filters"
+                subtitle="Narrow related products by category." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Product category</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="portalProductFilterCategory">Category</label>
+                            <select class="master-select" id="portalProductFilterCategory" name="category">
+                                <option value="all">All categories</option>
+                                @foreach ($categories as $cat)
+                                    <option value="{{ $cat }}" @selected($category === $cat)>{{ $cat }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
+                    <a class="master-btn master-btn-soft" href="{{ route('client-portal.products.index') }}">Reset</a>
+                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                </x-slot:footer>
+            </x-drawer>
         </form>
     </div>
     <div class="cp-grid-4">
@@ -46,10 +57,7 @@
                     <div class="cp-muted">{{ $product->product_number }}</div>
                     <h3 style="margin:5px 0;">{{ $product->name }}</h3>
                     <div class="cp-muted">{{ $product->category ?: '-' }}</div>
-                    <div class="cp-muted">{{ $product->notes ?: '-' }}</div>
-                    <div style="margin:12px 0;">
-                        <span class="cp-badge status-{{ $product->status }}">{{ $product->statusLabel() }}</span>
-                    </div>
+                    <div class="cp-product-context">Shared for products linked to your published projects.</div>
                 </div>
             </div>
         @empty

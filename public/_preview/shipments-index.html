@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipment Tracking — MissPack ERP (preview)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/core.css?v=6abf109f">
+    <link rel="stylesheet" href="/assets/css/app-layout.css?v=6abf6a51">
+    <link rel="stylesheet" href="/assets/css/master-index.css?v=6abf04ad">
+    <link rel="stylesheet" href="/assets/css/master-show.css?v=6abf13a6">
+    <link rel="stylesheet" href="/assets/css/master-form.css?v=6abf0f9a">
+    <link rel="stylesheet" href="/assets/css/master-flat.css?v=6abf2c03">
+    <link rel="stylesheet" href="/assets/vendor/select2/css/select2.min.css?v=6abf7b0c">
+    <link rel="stylesheet" href="/assets/css/select2-theme.css?v=6abf2522">
+    <link rel="stylesheet" href="/assets/css/master-alert.css?v=6abf21b9">
+    <link rel="stylesheet" href="/assets/css/shipments.css?v=6abf53ed">
+    <link rel="stylesheet" href="/assets/css/responsive.css?v=6abf2e74">
+    <style>
+        a[href^="/theme"], form.theme-form { pointer-events: none; }
+        #previewThemeBtn { display: inline-flex; align-items: center; gap: 8px; }
+    </style>
+<body>
+    <aside class="sidebar" id="sidebar" aria-label="Main sidebar">
+        <div class="sidebar-logo">
+            <div>
+                <div class="sidebar-logo-text sidebar-text">MissPack</div>
+                <div class="sidebar-logo-sub sidebar-text">Packed Perfect</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">Dashboards</div>
+            <a href="#" class="sidebar-item"><i class="fas fa-th-large"></i><span class="sidebar-text">Dashboard</span></a>
+            <div class="sidebar-section">Management</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-layer-group"></i><span class="sidebar-text">Tasks</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-box-open"></i><span class="sidebar-text">Products</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-truck"></i><span class="sidebar-text">Shipments</span></a>
+            <div class="sidebar-section">Sales</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-users"></i><span class="sidebar-text">Clients</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-briefcase"></i><span class="sidebar-text">Projects</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-file-invoice-dollar"></i><span class="sidebar-text">Invoices</span></a>
+            <div class="sidebar-section">Purchase</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-user-gear"></i><span class="sidebar-text">Vendors</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-money-bill"></i><span class="sidebar-text">Vendor Quotes</span></a>
+            <div class="sidebar-section">Accounts</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-scale-balanced"></i><span class="sidebar-text">Cashflow</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-users-cog"></i><span class="sidebar-text">Users</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="user-avatar-sm">H</div>
+                <div class="sidebar-user-info sidebar-text">
+                    <div class="user-name">Hardik Bohra</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+                <button type="button" class="sidebar-logout-btn" title="Logout" aria-label="Logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="main-wrap" id="mainWrap">
+        <header class="topbar">
+            <button type="button" class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="topbar-title">Shipment Tracking</span>
+            <div class="topbar-page-actions"><button type="button" class="master-btn master-btn-primary">+ Quick Shipment</button></div>
+            <div class="topbar-spacer"></div>
+            <div class="topbar-actions">
+                <button type="button" class="topbar-btn desktop-only" aria-label="Search"><i class="fas fa-search"></i></button>
+                <button type="button" id="previewThemeBtn" class="theme-toggle desktop-only">
+                    <i class="fas fa-moon"></i> <span>Dark</span>
+                </button>
+                <button type="button" class="topbar-btn desktop-only" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="topbar-badge">3</span>
+                </button>
+                <div class="topbar-user-btn">
+                    <div class="user-avatar-sm topbar-avatar">H</div>
+                    <span class="topbar-user-name desktop-only">Hardik Bohra</span>
+                </div>
+            </div>
+        </header>
+
+                <main class="page-content">
+            <div class="ship ship-index">
+                <div class="master-stats desktop-only">
+        <div class="master-stat master-stat--flat blue">
+            <span class="icon">⇄</span>
+            <div>
+                <p class="master-stat-title">Total Shipments</p>
+                <p class="master-stat-value">31</p>
+            </div>
+        </div>
+        <div class="master-stat master-stat--flat purple">
+            <span class="icon">✈</span>
+            <div>
+                <p class="master-stat-title">In Transit</p>
+                <p class="master-stat-value">7</p>
+            </div>
+        </div>
+        <div class="master-stat master-stat--flat teal">
+            <span class="icon">✓</span>
+            <div>
+                <p class="master-stat-title">Delivered</p>
+                <p class="master-stat-value">21</p>
+            </div>
+        </div>
+        <div class="master-stat master-stat--flat orange">
+            <span class="icon">!</span>
+            <div>
+                <p class="master-stat-title">Hold / Delayed</p>
+                <p class="master-stat-value">2</p>
+            </div>
+        </div>
+        <div class="master-stat master-stat--flat green tooltip-container">
+            <span class="icon">₹</span>
+            <div>
+                <p class="master-stat-title">Spent (filtered)</p>
+                <p class="master-stat-value ship-spend-total">INR 4,86,500.00 &middot; USD 12,300.00</p>
+                <p class="master-sub">5 costed entries in this filter</p>
+                <span class="tooltip-text">Charges recorded on the shipments currently listed by the filters above. Currencies stay separate — they are never added together.</span>
+            </div>
+        </div>
+                </div>
+
+                <div class="master-card master-card--flat">
+                    <div class="ship-chip-bar">
+                        <div class="ship-chips">
+                            <a class="ship-chip" href="#">All shipments</a>
+                            <a class="ship-chip" href="#">Needs attention <span class="ship-chip-count">3</span></a>
+                            <a class="ship-chip is-active" href="#">Overdue ETA <span class="ship-chip-count">2</span></a>
+                            <a class="ship-chip" href="#">Arriving &le; 7 days <span class="ship-chip-count">2</span></a>
+                            <a class="ship-chip" href="#">Hold / delayed <span class="ship-chip-count">1</span></a>
+                            <a class="ship-chip" href="#">Docs pending <span class="ship-chip-count">3</span></a>
+                            <a class="ship-chip" href="#">E-way expiring <span class="ship-chip-count">2</span></a>
+                        </div>
+
+                        <div class="ship-saved-views">
+                            <span class="ship-saved-chip">
+                                <a href="#">Sea exports &mdash; overdue</a>
+                                <form method="POST" action="#" onsubmit="return false;"><button type="submit" title="Remove saved view">&times;</button></form>
+                            </span>
+                            <button type="button" class="master-btn master-btn-soft master-btn-sm" id="toggleSaveView">&#9734; Save this view</button>
+                            <form method="POST" action="#" class="ship-save-view" id="saveViewForm" hidden onsubmit="return false;">
+                                <input class="master-input" name="name" placeholder="View name" maxlength="60">
+                                <label class="master-check"><input type="checkbox" name="is_shared" value="1"> Share</label>
+                                <button class="master-btn master-btn-primary master-btn-sm">Save</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <form method="GET" action="#">
+                        <div class="master-filter-row">
+                            <div class="master-search">
+                                <span>⌕</span>
+                                <input class="master-input" type="text" name="search" placeholder="Search shipment, tracking, BOE, partner..." aria-label="Search shipments">
+                            </div>
+                            <select class="master-select" name="status" aria-label="Filter by status">
+                                <option value="all">All Status</option>
+                                <option value="in_transit">In Transit</option>
+                                <option value="delivered">Delivered</option>
+                            </select>
+                            <select class="master-select desktop-only" name="currency" aria-label="Filter by currency">
+                                <option value="all">All Currency</option>
+                                <option value="INR">INR</option>
+                                <option value="USD">USD</option>
+                                <option value="RMB">RMB</option>
+                            </select>
+                            <input class="master-input desktop-only" type="date" name="from_date" aria-label="Pickup date from" title="Pickup date from">
+                            <div class="ship-filter-group">
+                                <a class="master-btn master-btn-soft" href="#">Reset</a>
+                                <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="master-card master-table-card master-card--flat">
+                    <p class="ship-order-hint"
+                        title="Open shipments first, newest pickup date on top. Delivered and cancelled shipments sit in a closed block below, also newest first.">
+                        Open shipments first &middot; closed block below
+                    </p>
+                    <div class="master-table-wrap">
+                        <table class="master-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Pickup</th>
+                                    <th scope="col">Shipment</th>
+                                    <th scope="col">Route</th>
+                                    <th scope="col">Logistic</th>
+                                    <th scope="col">ETA</th>
+                                    <th scope="col" class="is-num">Charges</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                        <tr class="ship-row is-clickable" data-href="#">
+                            <td>
+                                <span class="ship-date">28 Sep</span>
+                                <span class="ship-tags">
+                                        <span class="ship-tag tooltip-container" aria-label="Project">P
+                                        <span class="tooltip-text">PRJ-1042 - Cotton Tote Program</span>
+                                    </span>
+                                    <span class="ship-tag tooltip-container" aria-label="Client">C
+                                        <span class="tooltip-text">ACME Corp</span>
+                                    </span>
+                                </span>
+                            </td>
+                            <td>
+                                <a class="ship-cell" href="#">
+                                    <span class="ship-cell-id">SHP-000031 <span class="master-badge ship-label-chip label-2">Urgent</span></span>
+                                    <span class="ship-cell-name">Green pigment samples from China</span>
+                                </a>
+                            </td>
+                            <td class="ship-route">
+                                <strong>MissPack Industries &rarr; ACME Corp</strong>
+                                <span class="master-sub desktop-only">Ahmedabad to New York</span>
+                            </td>
+                            <td class="ship-logistic">
+                                DHL Express
+                                <span class="master-sub">DHL-8841220</span>
+                            </td>
+                            <td>
+                                <span class="ship-eta ship-eta-due_soon">02 Oct</span>
+                                <span class="master-sub">Due in 1 day</span>
+                            </td>
+                                <td class="ship-money is-num">
+                                    ₹1,42,500
+                                    <span class="master-sub">Client</span>
+                                </td>
+                            <td><span class="master-badge ship-status status-in_transit">In Transit</span></td>
+                            <td>
+                                <div class="master-row-actions">
+                                    <div class="master-dropdown">
+                                        <button type="button" class="master-dropdown-toggle" aria-label="Actions" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <div class="master-dropdown-menu">
+                                            <a href="#"><i class="fas fa-eye"></i> View Shipment</a>
+                                            <a href="#"><i class="fas fa-pen"></i> Edit Shipment</a>
+                                            <a href="shipping-mark.html" target="_blank"><i class="fa-solid fa-tag"></i> Shipping Mark / Stickers</a>
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm">Public Link</button>
+                                            <button type="submit" class="master-btn master-btn-danger master-btn-sm"><i class="fas fa-trash"></i> Delete Shipment</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="ship-row is-clickable" data-href="#">
+                            <td>
+                                <span class="ship-date">26 Sep</span>
+                                <span class="ship-tags">
+                                        <span class="ship-tag tooltip-container" aria-label="Project">P
+                                        <span class="tooltip-text">PRJ-1042 - Cotton Tote Program</span>
+                                    </span>
+                                    <span class="ship-tag tooltip-container" aria-label="Client">C
+                                        <span class="tooltip-text">ACME Corp</span>
+                                    </span>
+                                </span>
+                            </td>
+                            <td>
+                                <a class="ship-cell" href="#">
+                                    <span class="master-sub">SHP-000030 &nbsp;
+                                    </span>
+                                    <span class="ship-cell-name">Cotton tote cartons - lot 2</span>
+                                </a>
+                            </td>
+                            <td class="ship-route">
+                                <strong>MissPack Industries &rarr; Kunshan Packaging</strong>
+                                <span class="master-sub desktop-only">Ahmedabad to Shanghai</span>
+                            </td>
+                            <td class="ship-logistic">
+                                Maersk
+                                <span class="master-sub">MAEU-4471902</span>
+                            </td>
+                            <td>
+                                <span class="ship-eta ship-eta-due_soon">01 Oct</span>
+                                <span class="master-sub">Due today</span>
+                            </td>
+                                <td class="ship-money is-num">
+                                    USD 8,400.00
+                                    <span class="master-sub">Company</span>
+                                </td>
+                            <td><span class="master-badge ship-status status-out_for_delivery">Out for Delivery</span></td>
+                            <td>
+                                <div class="master-row-actions">
+                                    <div class="master-dropdown">
+                                        <button type="button" class="master-dropdown-toggle" aria-label="Actions" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <div class="master-dropdown-menu">
+                                            <a href="#"><i class="fas fa-eye"></i> View Shipment</a>
+                                            <a href="#"><i class="fas fa-pen"></i> Edit Shipment</a>
+                                            <a href="shipping-mark.html" target="_blank"><i class="fa-solid fa-tag"></i> Shipping Mark / Stickers</a>
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm">Public Link</button>
+                                            <button type="submit" class="master-btn master-btn-danger master-btn-sm"><i class="fas fa-trash"></i> Delete Shipment</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="ship-row is-clickable" data-href="#">
+                            <td>
+                                <span class="ship-date">24 Sep</span>
+                                <span class="ship-tags">
+                                        <span class="ship-tag tooltip-container" aria-label="Project">P
+                                        <span class="tooltip-text">PRJ-1042 - Cotton Tote Program</span>
+                                    </span>
+                                    <span class="ship-tag tooltip-container" aria-label="Client">C
+                                        <span class="tooltip-text">ACME Corp</span>
+                                    </span>
+                                </span>
+                            </td>
+                            <td>
+                                <a class="ship-cell" href="#">
+                                    <span class="master-sub">SHP-000029 &nbsp;
+                                    </span>
+                                    <span class="ship-cell-name">Flexible pouches - sample set</span>
+                                </a>
+                            </td>
+                            <td class="ship-route">
+                                <strong>Rajkamal Plastics &rarr; Dafina Chemicals</strong>
+                                <span class="master-sub desktop-only">Mumbai to Nairobi</span>
+                            </td>
+                            <td class="ship-logistic">
+                                FedEx
+                                <span class="master-sub">FDX-2210045</span>
+                            </td>
+                            <td>
+                                <span class="ship-eta ship-eta-on_track">12 Oct</span>
+                                <span class="master-sub">Due in 11 days</span>
+                                <span class="ship-eway ship-eway-expired">E-way expired 3 days ago</span>
+                            </td>
+                                <td class="ship-money is-num">
+                                    RMB 36,800.00
+                                    <span class="master-sub">Client</span>
+                                </td>
+                            <td><span class="master-badge ship-status status-booked">Booked</span></td>
+                            <td>
+                                <div class="master-row-actions">
+                                    <div class="master-dropdown">
+                                        <button type="button" class="master-dropdown-toggle" aria-label="Actions" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <div class="master-dropdown-menu">
+                                            <a href="#"><i class="fas fa-eye"></i> View Shipment</a>
+                                            <a href="#"><i class="fas fa-pen"></i> Edit Shipment</a>
+                                            <a href="shipping-mark.html" target="_blank"><i class="fa-solid fa-tag"></i> Shipping Mark / Stickers</a>
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm">Public Link</button>
+                                            <button type="submit" class="master-btn master-btn-danger master-btn-sm"><i class="fas fa-trash"></i> Delete Shipment</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="ship-row is-clickable" data-href="#">
+                            <td>
+                                <span class="ship-date">22 Sep</span>
+                                <span class="ship-tags">
+                                        <span class="ship-tag tooltip-container" aria-label="Project">P
+                                        <span class="tooltip-text">PRJ-1042 - Cotton Tote Program</span>
+                                    </span>
+                                    <span class="ship-tag tooltip-container" aria-label="Client">C
+                                        <span class="tooltip-text">ACME Corp</span>
+                                    </span>
+                                </span>
+                            </td>
+                            <td>
+                                <a class="ship-cell" href="#">
+                                    <span class="ship-cell-id">SHP-000028 <span class="master-badge ship-label-chip label-2">Hold</span></span>
+                                    <span class="ship-cell-name">Solvent drums (customs query)</span>
+                                </a>
+                            </td>
+                            <td class="ship-route">
+                                <strong>Guangzhou Solvents &rarr; MissPack Industries</strong>
+                                <span class="master-sub desktop-only">Guangzhou to Mundra</span>
+                            </td>
+                            <td class="ship-logistic">
+                                BlueDart
+                                <span class="master-sub">BD-9912014</span>
+                            </td>
+                            <td>
+                                <span class="ship-eta ship-eta-overdue">29 Sep</span>
+                                <span class="master-sub">2 days overdue</span>
+                                <span class="ship-eway ship-eway-expiring">E-way valid 2 more days</span>
+                            </td>
+                                <td class="ship-money is-num">
+                                    INR 86,000.00
+                                    <span class="master-sub">Company</span>
+                                </td>
+                            <td><span class="master-badge ship-status status-custom_hold">Custom Hold</span></td>
+                            <td>
+                                <div class="master-row-actions">
+                                    <div class="master-dropdown">
+                                        <button type="button" class="master-dropdown-toggle" aria-label="Actions" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <div class="master-dropdown-menu">
+                                            <a href="#"><i class="fas fa-eye"></i> View Shipment</a>
+                                            <a href="#"><i class="fas fa-pen"></i> Edit Shipment</a>
+                                            <a href="shipping-mark.html" target="_blank"><i class="fa-solid fa-tag"></i> Shipping Mark / Stickers</a>
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm">Public Link</button>
+                                            <button type="submit" class="master-btn master-btn-danger master-btn-sm"><i class="fas fa-trash"></i> Delete Shipment</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="ship-group-row">
+                            <td colspan="8">
+                                <span>Closed &mdash; delivered / cancelled</span>
+                                <span class="ship-group-count">1 on this page</span>
+                            </td>
+                        </tr>
+                        <tr class="ship-row ship-row-closed is-clickable" data-href="#">
+                            <td>
+                                <span class="ship-date">20 Sep</span>
+                                <span class="ship-tags">
+                                        <span class="ship-tag tooltip-container" aria-label="Project">P
+                                        <span class="tooltip-text">PRJ-1042 - Cotton Tote Program</span>
+                                    </span>
+                                    <span class="ship-tag tooltip-container" aria-label="Client">C
+                                        <span class="tooltip-text">ACME Corp</span>
+                                    </span>
+                                </span>
+                            </td>
+                            <td>
+                                <a class="ship-cell" href="#">
+                                    <span class="master-sub">SHP-000027 &nbsp;
+                                    </span>
+                                    <span class="ship-cell-name">Printed rolls - final delivery</span>
+                                </a>
+                            </td>
+                            <td class="ship-route">
+                                <strong>MissPack Industries &rarr; ACME Corp</strong>
+                                <span class="master-sub desktop-only">Ahmedabad to New York</span>
+                            </td>
+                            <td class="ship-logistic">
+                                DHL Express
+                                <span class="master-sub">DHL-8813307</span>
+                            </td>
+                            <td>
+                                <span class="ship-eta ship-eta-none">19 Sep</span>
+                                <span class="master-sub">ETA 19 Sep 2026</span>
+                            </td>
+                                <td class="ship-money is-num">
+                                    INR 1,28,000.00
+                                    <span class="master-sub">Client</span>
+                                </td>
+                            <td><span class="master-badge ship-status status-delivered">Delivered</span></td>
+                            <td>
+                                <div class="master-row-actions">
+                                    <div class="master-dropdown">
+                                        <button type="button" class="master-dropdown-toggle" aria-label="Actions" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <div class="master-dropdown-menu">
+                                            <a href="#"><i class="fas fa-eye"></i> View Shipment</a>
+                                            <a href="#"><i class="fas fa-pen"></i> Edit Shipment</a>
+                                            <a href="shipping-mark.html" target="_blank"><i class="fa-solid fa-tag"></i> Shipping Mark / Stickers</a>
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm">Public Link</button>
+                                            <button type="submit" class="master-btn master-btn-danger master-btn-sm"><i class="fas fa-trash"></i> Delete Shipment</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="ship-row ship-row-closed is-clickable" data-href="#">
+                            <td>
+                                <span class="ship-date">18 Sep</span>
+                                <span class="ship-tags">
+                                        <span class="ship-tag tooltip-container" aria-label="Project">P
+                                        <span class="tooltip-text">PRJ-1042 - Cotton Tote Program</span>
+                                    </span>
+                                    <span class="ship-tag tooltip-container" aria-label="Client">C
+                                        <span class="tooltip-text">ACME Corp</span>
+                                    </span>
+                                </span>
+                            </td>
+                            <td>
+                                <a class="ship-cell" href="#">
+                                    <span class="master-sub">SHP-000026 &nbsp;
+                                    </span>
+                                    <span class="ship-cell-name">Kraft boxes - repeat order</span>
+                                </a>
+                            </td>
+                            <td class="ship-route">
+                                <strong>Kunshan Packaging &rarr; MissPack Industries</strong>
+                                <span class="master-sub desktop-only">Shanghai to Ahmedabad</span>
+                            </td>
+                            <td class="ship-logistic">
+                                Maersk
+                                <span class="master-sub">MAEU-4450771</span>
+                            </td>
+                            <td>
+                                <span class="ship-eta ship-eta-none">16 Sep</span>
+                                <span class="master-sub">ETA 16 Sep 2026</span>
+                            </td>
+                                <td class="ship-money is-num">
+                                    USD 3,900.00
+                                    <span class="master-sub">Company</span>
+                                </td>
+                            <td><span class="master-badge ship-status status-delivered">Delivered</span></td>
+                            <td>
+                                <div class="master-row-actions">
+                                    <div class="master-dropdown">
+                                        <button type="button" class="master-dropdown-toggle" aria-label="Actions" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <div class="master-dropdown-menu">
+                                            <a href="#"><i class="fas fa-eye"></i> View Shipment</a>
+                                            <a href="#"><i class="fas fa-pen"></i> Edit Shipment</a>
+                                            <a href="shipping-mark.html" target="_blank"><i class="fa-solid fa-tag"></i> Shipping Mark / Stickers</a>
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm">Public Link</button>
+                                            <button type="submit" class="master-btn master-btn-danger master-btn-sm"><i class="fas fa-trash"></i> Delete Shipment</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="ship-row ship-row-closed is-clickable" data-href="#">
+                            <td>
+                                <span class="ship-date">15 Sep</span>
+                                <span class="ship-tags">
+                                        <span class="ship-tag tooltip-container" aria-label="Project">P
+                                        <span class="tooltip-text">PRJ-1042 - Cotton Tote Program</span>
+                                    </span>
+                                    <span class="ship-tag tooltip-container" aria-label="Client">C
+                                        <span class="tooltip-text">ACME Corp</span>
+                                    </span>
+                                </span>
+                            </td>
+                            <td>
+                                <a class="ship-cell" href="#">
+                                    <span class="ship-cell-id">SHP-000025 <span class="master-badge ship-label-chip label-2">Cancelled</span></span>
+                                    <span class="ship-cell-name">Rush air freight (cancelled)</span>
+                                </a>
+                            </td>
+                            <td class="ship-route">
+                                <strong>MissPack Industries &rarr; Dafina Chemicals</strong>
+                                <span class="master-sub desktop-only">Ahmedabad to Nairobi</span>
+                            </td>
+                            <td class="ship-logistic">
+                                Emirates SkyCargo
+                                <span class="master-sub">EK-7712094</span>
+                            </td>
+                            <td>
+                                <span class="master-sub">No ETA</span>
+                            </td>
+                                <td class="ship-money is-num">
+                                    INR 0.00
+                                    <span class="master-sub">Client</span>
+                                </td>
+                            <td><span class="master-badge ship-status status-cancelled">Cancelled</span></td>
+                            <td>
+                                <div class="master-row-actions">
+                                    <div class="master-dropdown">
+                                        <button type="button" class="master-dropdown-toggle" aria-label="Actions" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <div class="master-dropdown-menu">
+                                            <a href="#"><i class="fas fa-eye"></i> View Shipment</a>
+                                            <a href="#"><i class="fas fa-pen"></i> Edit Shipment</a>
+                                            <a href="shipping-mark.html" target="_blank"><i class="fa-solid fa-tag"></i> Shipping Mark / Stickers</a>
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm">Public Link</button>
+                                            <button type="submit" class="master-btn master-btn-danger master-btn-sm"><i class="fas fa-trash"></i> Delete Shipment</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr class="ship-total-row">
+                                    <td colspan="5">
+                                        <strong>Total &mdash; 7 entries shown</strong>
+                                        <span class="master-sub">Charges recorded on the shipments on this page</span>
+                                    </td>
+                                    <td class="is-num">
+                                        <strong>INR 3,56,500.00 &middot; USD 12,300.00 &middot; RMB 36,800.00</strong>
+                                        <span class="master-sub">Filtered total (all pages): INR 4,86,500.00 &middot; USD 12,300.00 &middot; RMB 36,800.00</span>
+                                    </td>
+<td colspan="2"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+</main></main>
+    </div>
+
+    <script src="/assets/vendor/jquery/jquery.min.js?v=6abe6ebd"></script>
+    <script src="/assets/vendor/select2/js/select2.min.js?v=6abe1966"></script>
+    <script src="/assets/js/master-alert.js?v=6abf15d1"></script>
+    <script src="/assets/js/master-selects.js?v=6abf2a90"></script>
+    <script src="/assets/js/app-layout.js?v=6abf23b1"></script>
+    <script src="/assets/js/shipments.js?v=6abf0688"></script>
+    <script>
+        // Static preview: client-side theme toggle (Laravel's /theme/toggle is not available here)
+        (function () {
+            var html = document.documentElement;
+            try {
+                var t = new URLSearchParams(location.search).get('theme');
+                if (t === 'dark' || t === 'light') { html.setAttribute('data-theme', t); }
+            } catch (e) {}
+            function syncBtn() {
+                var dark = html.getAttribute('data-theme') === 'dark';
+                var btn = document.getElementById('previewThemeBtn');
+                btn.innerHTML = dark ? '<i class="fas fa-sun"></i> <span>Light</span>' : '<i class="fas fa-moon"></i> <span>Dark</span>';
+            }
+            syncBtn();
+            document.getElementById('previewThemeBtn').addEventListener('click', function () {
+                var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', next);
+                try { localStorage.setItem('preview-theme', next); } catch (e) {}
+                syncBtn();
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,582 @@
+/* ==========================================================================
+   TASKS.CSS — Tasks module (form + kanban index views)
+   --------------------------------------------------------------------------
+   Module stylesheet for the Tasks section:
+     - form page: .task-* design with its own --task-* :root palette
+     - index page: kanban board (.master-board / .master-task-card /
+       .master-dropzone / .master-column / .master-menu — a local kanban
+       design; these master-* classes are NOT part of the shared
+       foundation, which has no kanban components, so nothing leaks into
+       other modules' pages; this file is only loaded on task screens)
+   ========================================================================== */
+
+/* ==========================================================================
+   TASK FORM — resources/views/tasks/form.blade.php
+   Form page (.task-*, --task-*).
+   ========================================================================== */
+
+:root{--task-primary:#4f83f1;--task-primary-2:#6366f1;--task-dark: var(--mc-text);--task-border: var(--mc-border);--task-bg: var(--mc-soft);--task-shadow:0 14px 35px rgba(25,42,70,.08)}.task-form-page,.task-form-page *{box-sizing:border-box}.task-form-page{background:var(--task-bg);min-height:calc(100vh - 70px);padding:28px;color:var(--task-dark)}.task-hero{background:linear-gradient(135deg,var(--task-primary),var(--task-primary-2));border-radius:24px;padding:24px;color:#fff;display:flex;justify-content:space-between;gap:18px;margin-bottom:18px;box-shadow:0 18px 45px rgba(79,131,241,.22)}.task-hero h1{margin:0;font-size:28px}.task-hero p{margin:7px 0 0;opacity:.9}.task-card{background: var(--mc-card);border:1px solid var(--task-border);border-radius:22px;box-shadow:var(--task-shadow);padding:22px;max-width:1050px}.task-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.master-label span{color:#ef4770}.task-error{color:#be123c;font-size:12px;font-weight:700;margin-top:6px}.task-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}.task-preview{grid-column:1/-1;border:1px solid var(--task-border);border-radius:18px;overflow:hidden;background: var(--mc-card-soft);display:none}.task-preview img{width:100%;max-height:260px;object-fit:cover;display:block}@media(max-width:767px){.task-form-page{padding:14px}.task-hero,.task-actions{flex-direction:column}.task-grid{grid-template-columns:1fr}.task-actions .master-btn,.task-hero .master-btn{width:100%}.task-card{padding:16px}}
+
+/* ==========================================================================
+   TASK KANBAN BOARD — resources/views/tasks/index.blade.php
+   Board, columns, cards, menus, category/priority colours and the
+   task dialogs.
+   ========================================================================== */
+
+.master-page {
+            background: var(--mc-soft);
+            min-height: calc(100vh - 70px);
+            padding: 28px;
+            color: var(--mc-text)
+        }
+
+        .master-page * {
+            box-sizing: border-box
+        }
+
+        .master-hero {
+            background: linear-gradient(135deg, #4f83f1, #7b61ff);
+            border-radius: 26px;
+            padding: 24px;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            box-shadow: 0 18px 45px rgba(79, 131, 241, .22);
+            margin-bottom: 18px;
+        }
+
+        .master-eyebrow {
+            margin: 0 0 6px;
+            text-transform: uppercase;
+            letter-spacing: .13em;
+            font-size: 11px;
+            font-weight: 600;
+            opacity: .78
+        }
+
+        .master-hero h1 {
+            margin: 0;
+            font-size: 30px;
+            font-weight: 600
+        }
+
+        .master-hero p {
+            margin: 8px 0 0;
+            max-width: 780px;
+            opacity: .9
+        }
+
+        .master-hero-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .master-pill {
+            background: rgba(255, 255, 255, .16);
+            border: 1px solid rgba(255, 255, 255, .28);
+            border-radius: 999px;
+            padding: 10px 13px;
+            font-weight: 600
+        }
+
+        .master-pill.danger {
+            background: rgba(239, 71, 112, .2)
+        }
+
+        .master-top-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .master-stat {
+            background: var(--mc-card);
+            border: 1px solid var(--mc-border);
+            border-radius: 20px;
+            padding: 18px;
+            box-shadow: 0 14px 35px rgba(25, 42, 70, .08)
+        }
+
+        .master-stat span {
+            display: block;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: var(--mc-text-2);
+            font-weight: 600
+        }
+
+        .master-stat strong {
+            display: block;
+            margin-top: 7px;
+            font-size: 28px
+        }
+
+        .master-stat.new strong {
+            color: #ef4770
+        }
+
+        .master-stat.progress strong {
+            color: #4f83f1
+        }
+
+        .master-stat.complete strong {
+            color: #10b981
+        }
+
+        .master-stat.backlog strong {
+            color: var(--mc-text)
+        }
+
+        .master-card {
+            background: var(--mc-card);
+            border: 1px solid var(--mc-border);
+            border-radius: 22px;
+            box-shadow: 0 14px 35px rgba(25, 42, 70, .08)
+        }
+
+        .master-filter-card {
+            padding: 16px
+        }
+
+        .master-filter-form {
+            display: grid;
+            grid-template-columns: minmax(240px, 1.4fr) repeat(4, minmax(140px, .75fr)) auto;
+            gap: 12px;
+            align-items: end
+        }
+
+        .master-filter-actions {
+            display: flex;
+            gap: 8px
+        }
+
+        .master-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: -15px;
+        }
+
+        .master-toolbar-left,
+        .master-toolbar-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .master-help {
+            color: var(--mc-text-2);
+            font-weight: 500
+        }
+
+        .master-board {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(370px, 1fr));
+            gap: 18px;
+            align-items: start;
+            overflow-x: auto;
+            padding-bottom: 8px
+        }
+
+        .master-column {
+            background: var(--mc-card-soft);
+            border: 1px solid var(--mc-border);
+            border-radius: 24px;
+            min-height: 620px;
+            overflow: hidden
+        }
+
+        .master-column-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 18px 14px
+        }
+
+        .master-column-head>div {
+            display: flex;
+            align-items: center;
+            gap: 9px
+        }
+
+        .master-column-head h2 {
+            margin: 0;
+            font-size: 18px
+        }
+
+        .master-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ef4770;
+            box-shadow: 0 0 0 5px #fff0f4
+        }
+
+        .column-in-progress .master-dot {
+            background: #4f83f1;
+            box-shadow: 0 0 0 5px #eaf1ff
+        }
+
+        .column-completed .master-dot {
+            background: #10b981;
+            box-shadow: 0 0 0 5px #e8fff7
+        }
+
+        .column-backlog .master-dot {
+            background: #17233b;
+            box-shadow: 0 0 0 5px var(--mc-card-soft)
+        }
+
+        .master-count {
+            background: var(--mc-card);
+            border: 1px solid var(--mc-border);
+            color: #4f83f1;
+            border-radius: 999px;
+            min-width: 30px;
+            height: 30px;
+            display: grid;
+            place-items: center;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .master-dropzone {
+            padding: 0 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-height:700px;
+            max-height: 700px;
+            overflow: scroll;
+        }
+
+        .master-dropzone.drag-over {
+            background: rgba(79, 131, 241, .08);
+            border-radius: 18px
+        }
+
+        .master-task-card {
+            background: var(--mc-card);
+            border: 1px solid var(--mc-border);
+            border-radius: 20px;
+            box-shadow: 0 8px 22px rgba(25, 42, 70, .06);
+            padding: 14px;
+            padding-bottom: 20px;
+            cursor: grab;
+            transition: .2s
+        }
+
+        .master-task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 30px rgba(25, 42, 70, .11)
+        }
+
+        .master-task-card.dragging {
+            opacity: .55;
+            transform: rotate(2deg)
+        }
+
+        .master-task-image {
+            height: 170px;
+            border-radius: 18px;
+            overflow: hidden;
+            background: var(--mc-soft);
+            margin-bottom: 13px
+        }
+
+        .master-task-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block
+        }
+
+        .master-task-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px
+        }
+
+        .master-category {
+            display: inline-flex;
+            border-radius: 999px;
+            padding: 6px 10px;
+            background: var(--mc-soft);
+            color: #4f83f1;
+            font-size: 12px;
+            font-weight: 600
+        }
+
+        .category-design {
+            background: #e8fffb;
+            color: #0f9f8f
+        }
+
+        .category-development {
+            background: #fff4e5;
+            color: #d97706
+        }
+
+        .category-production {
+            background: #eaf1ff;
+            color: #3f7cf4
+        }
+
+        .category-shipment {
+            background: #ece7ff;
+            color: #7c3aed
+        }
+
+        .category-finance {
+            background: #e8fff7;
+            color: #0e9f6e
+        }
+
+        .category-purchase {
+            background: #fff8ec;
+            color: #b54708
+        }
+
+        .master-menu {
+            position: relative
+        }
+
+        .master-menu-list {
+            position: absolute;
+            right: 0;
+            top: 40px;
+            width: 170px;
+            background: var(--mc-card);
+            border: 1px solid var(--mc-border);
+            border-radius: 14px;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, .14);
+            display: none;
+            overflow: hidden;
+            z-index: 20
+        }
+
+        .master-menu.open .master-menu-list {
+            display: block
+        }
+
+        .master-menu-list button {
+            width: 100%;
+            border: 0;
+            background: none;
+            text-align: left;
+            padding: 12px 14px;
+            display: flex;
+            gap: 9px;
+            align-items: center;
+            cursor: pointer;
+            color: var(--mc-text);
+            font-weight: 500
+        }
+
+        .master-menu-list button:hover {
+            background: var(--mc-hover)
+        }
+
+        .master-menu-list .danger {
+            color: #e11d48
+        }
+
+        .master-menu-list form {
+            margin: 0
+        }
+
+        .master-task-card h3 {
+            margin: 12px 0 8px;
+            font-size: 16px;
+            line-height: 1.35
+        }
+
+        .master-task-card p {
+            margin: 0 0 12px;
+            color: var(--mc-text-2);
+            line-height: 1.5
+        }
+
+        .master-task-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            color: var(--mc-text-2);
+            font-size: 12px;
+            font-weight: 500
+        }
+
+        .master-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-top: 13px;
+            padding-top: 12px;
+            border-top: 1px solid var(--mc-border)
+        }
+
+        .master-priority,
+        .master-status {
+            border-radius: 999px;
+            padding: 6px 9px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase
+        }
+
+        .priority-low {
+            background: #e8fff7;
+            color: #0e9f6e
+        }
+
+        .priority-medium {
+            background: #eaf1ff;
+            color: #3f7cf4
+        }
+
+        .priority-high {
+            background: #fff4e5;
+            color: #d97706
+        }
+
+        .priority-urgent {
+            background: #ffeaf0;
+            color: #e11d48
+        }
+
+        .status-backlog {
+            background: var(--mc-card-soft);
+            color: var(--mc-text-2)
+        }
+
+        .status-new-request {
+            background: #fff0f4;
+            color: #ef4770
+        }
+
+        .status-in-progress {
+            background: #eaf1ff;
+            color: #3f7cf4
+        }
+
+        .status-completed {
+            background: #e8fff7;
+            color: #0e9f6e
+        }
+
+        .master-empty-column {
+            border: 1px dashed #ccd7ea;
+            border-radius: 18px;
+            padding: 28px;
+            text-align: center;
+            color: #8a95a8;
+            font-size: 13px;
+            font-weight: 400;
+            background: rgba(255, 255, 255, .55)
+        }
+
+        /* The modal chrome (overlay, card, header, body, footer, close button) is the
+   shared master-modal vocabulary from master-index.css. It used to be restated
+   here, which is what pinned this page's modals to their own layout — a block
+   overlay, a card that scrolled as a whole and a header class nothing else
+   used. Only task-specific pieces are styled below. */
+
+.master-image-preview {
+            grid-column: 1/-1;
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid var(--mc-border);
+            background: var(--mc-soft)
+        }
+
+        .master-image-preview img {
+            width: 100%;
+            max-height: 220px;
+            object-fit: cover;
+            display: block
+        }
+
+        .master-delete-text {
+            font-weight: 500;
+            color: var(--mc-text-2);
+            line-height: 1.5
+        }
+
+        @media(max-width:1399px) {
+            .master-filter-form {
+                grid-template-columns: 1fr 1fr
+            }
+
+            .master-field.search {
+                grid-column: 1/-1
+            }
+
+            .master-filter-actions {
+                grid-column: 1/-1
+            }
+
+            .master-top-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr))
+            }
+        }
+
+        @media(max-width:991px) {
+            .master-board {
+                grid-template-columns: repeat(4, 310px)
+            }
+        }
+
+        @media(max-width:767px) {
+            .master-page {
+                padding: 14px
+            }
+
+            .master-hero {
+                flex-direction: column;
+                padding: 20px
+            }
+
+            .master-hero h1 {
+                font-size: 24px
+            }
+
+            .master-hero-actions,
+            .master-hero-actions .master-btn,
+            .master-filter-actions .master-btn {
+                width: 100%
+            }
+
+            .master-top-grid,
+            .master-filter-form,
+            .master-toolbar {
+                align-items: stretch
+            }
+
+            .master-toolbar-left,
+            .master-toolbar-right,
+            .master-toolbar-left>* {
+                width: 100%
+            }
+
+            .master-board {
+                grid-template-columns: repeat(4, 285px);
+                gap: 12px
+            }
+
+            .master-column {
+                min-height: 560px
+            }
+
+            .master-task-image {
+                height: 150px
+            }
+
+        }

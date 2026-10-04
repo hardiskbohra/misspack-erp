@@ -1,2 +1,2 @@
-<script>window.location.href = @json(route('client-portal.dashboard'));</script>
+<meta http-equiv="refresh" content="0; url={{ route('client-portal.dashboard') }}">
 <p>Redirecting...</p>

@@ -1,1685 +1,759 @@
 @extends('layouts.app')
 
-@section('title', 'Users')
-@section('page-title', 'User Management')
-
-@push('styles')
-<style>
-    /* =========================================================
-       User Management Page
-       Inherits theme tokens from layouts.app:
-       --bg-card, --bg-input, --text-primary, --text-secondary,
-       --text-muted, --border, --accent, --accent-light,
-       --danger, --danger-light, --success, --warning, --shadow
-       ========================================================= */
-
-    /* ---------- Toolbar ---------- */
-    
-
-    .master-search-form {
-        flex: 1 1 320px;
-        max-width: 430px;
-        min-width: 220px;
-    }
-
-    .master-search {
-        position: relative;
-        width: 100%;
-    }
-
-    .master-search-icon {
-        position: absolute;
-        left: 14px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--text-muted);
-        font-size: 13px;
-        pointer-events: none;
-    }
-
-    .master-search-input {
-        width: 100%;
-        height: 46px;
-        background: var(--bg-card);
-        border: 1.5px solid var(--border);
-        border-radius: 13px;
-        padding: 11px 14px 11px 40px;
-        color: var(--text-primary);
-        font-size: 14px;
-        outline: none;
-        transition: all 0.2s;
-    }
-
-    .master-search-input::placeholder {
-        color: var(--text-muted);
-    }
-
-    .master-search-input:focus {
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px var(--accent-light);
-    }
-
-    /* ---------- Table ---------- */
-    .master-card {
-        border-radius: 20px;
-        overflow: hidden;
-    }
-
-    .master-table-wrap {
-        width: 100%;
-        overflow-x: auto;
-    }
-
-    .master-table {
-        width: 100%;
-        min-width: 960px;
-        border-collapse: collapse;
-    }
-
-    .master-table thead tr {
-        background: rgba(79, 142, 247, 0.04);
-        border-bottom: 1px solid var(--border);
-    }
-
-    .master-table th {
-        padding: 13px 18px;
-        text-align: left;
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.9px;
-        color: black;
-        white-space: nowrap;
-    }
-
-    .master-table td {
-        padding: 15px 18px;
-        font-size: 14px;
-        color: var(--text-primary);
-        border-bottom: 1px solid var(--border);
-        vertical-align: middle;
-    }
-
-    .master-table tbody tr:last-child td {
-        border-bottom: none;
-    }
-
-    .master-table tbody tr:hover {
-        background: var(--table-row-hover);
-    }
-
-    .master-col-number {
-        color: var(--text-muted);
-        font-size: 12px;
-        font-weight: 500;
-        width: 56px;
-        white-space: nowrap;
-    }
-
-    .master-person {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        min-width: 250px;
-    }
-
-    .master-avatar {
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 500;
-        font-size: 14px;
-        color: #fff;
-        flex: 0 0 42px;
-        overflow: hidden;
-    }
-
-    .master-avatar img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 50%;
-    }
-
-    .master-name {
-        font-weight: 500;
-        font-size: 14px;
-        color: var(--text-primary);
-        line-height: 1.25;
-    }
-
-    .master-email {
-        font-size: 12px;
-        color: var(--text-muted);
-        margin-top: 3px;
-        overflow-wrap: anywhere;
-    }
-
-    .master-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 11px;
-        border-radius: 999px;
-        font-size: 12px;
-        font-weight: 500;
-        line-height: 1.2;
-        white-space: nowrap;
-    }
-
-    .master-badge.department {
-        background: rgba(79, 142, 247, 0.12);
-        color: var(--accent);
-    }
-
-    .master-badge.designation {
-        background: rgba(56, 217, 169, 0.12);
-        color: var(--success);
-    }
-
-    .master-badge.verified {
-        background: rgba(56, 217, 169, 0.12);
-        color: var(--success);
-    }
-
-    .master-badge.pending {
-        background: rgba(245, 158, 11, 0.12);
-        color: var(--warning);
-    }
-
-    .master-muted {
-        color: var(--text-muted);
-    }
-
-    .master-actions {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-    }
-
-    .master-icon-btn {
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        border: 0;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 13px;
-        text-decoration: none;
-        transition: all 0.2s;
-    }
-
-    .master-icon-btn.edit {
-        background: var(--accent-light);
-        color: var(--accent);
-    }
-
-    .master-icon-btn.edit:hover {
-        background: var(--accent);
-        color: #fff;
-    }
-
-    .master-icon-btn.delete {
-        background: var(--danger-light);
-        color: var(--danger);
-    }
-
-    .master-icon-btn.delete:hover {
-        background: var(--danger);
-        color: #fff;
-    }
-
-    .master-empty {
-        text-align: center;
-        padding: 60px 20px;
-        color: var(--text-muted);
-    }
-
-    .master-empty i {
-        font-size: 48px;
-        opacity: 0.25;
-        margin-bottom: 16px;
-        display: block;
-    }
-
-    .master-pagination {
-        padding: 14px 18px;
-        border-top: 1px solid var(--border);
-    }
-
-    /* ---------- Modal ---------- */
-    .master-modal-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        z-index: 1200;
-        align-items: center;
-        justify-content: center;
-        padding: 18px;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(5px);
-    }
-
-    .master-modal-overlay.open {
-        display: flex;
-    }
-
-    .master-modal-box,
-    .master-confirm-box {
-        width: 100%;
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
-        overflow: hidden;
-        animation: usersModalPop .22s ease;
-    }
-
-    .master-modal-box {
-        max-width: 580px;
-        max-height: calc(100vh - 36px);
-        display: flex;
-        flex-direction: column;
-    }
-
-    .master-confirm-box {
-        max-width: 410px;
-        padding: 34px 30px;
-        text-align: center;
-    }
-
-    @keyframes usersModalPop {
-        from { transform: scale(.94) translateY(12px); opacity: 0; }
-        to { transform: scale(1) translateY(0); opacity: 1; }
-    }
-
-    .master-modal-head {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        padding: 20px 24px;
-        border-bottom: 1px solid var(--border);
-        flex: 0 0 auto;
-    }
-
-    .master-modal-icon {
-        width: 42px;
-        height: 42px;
-        border-radius: 12px;
-        background: var(--accent-light);
-        color: var(--accent);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 16px;
-        flex: 0 0 42px;
-    }
-
-    .master-modal-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: var(--text-primary);
-        line-height: 1.2;
-    }
-
-    .master-modal-subtitle {
-        font-size: 12px;
-        color: var(--text-muted);
-        margin-top: 3px;
-        font-weight: 500;
-    }
-
-    .master-modal-close {
-        margin-left: auto;
-        width: 34px;
-        height: 34px;
-        border-radius: 9px;
-        background: var(--bg-input);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        cursor: pointer;
-        font-size: 14px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-    }
-
-    .master-modal-close:hover {
-        background: var(--danger-light);
-        color: var(--danger);
-        border-color: var(--danger);
-    }
-
-    .master-modal-body {
-        padding: 22px 24px;
-        overflow-y: auto;
-        flex: 1 1 auto;
-    }
-
-    .master-modal-footer {
-        padding: 16px 24px;
-        border-top: 1px solid var(--border);
-        display: flex;
-        gap: 11px;
-        align-items: center;
-        flex-wrap: wrap;
-        flex: 0 0 auto;
-    }
-
-    .master-avatar-row {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        margin-bottom: 20px;
-        padding-bottom: 18px;
-        border-bottom: 1px solid var(--border);
-    }
-
-    .master-avatar-preview {
-        width: 66px;
-        height: 66px;
-        border-radius: 50%;
-        background: var(--accent-light);
-        color: var(--accent);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 22px;
-        font-weight: 500;
-        border: 3px solid var(--border);
-        overflow: hidden;
-        flex: 0 0 66px;
-    }
-
-    .master-avatar-preview img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 50%;
-    }
-
-    .master-avatar-info {
-        min-width: 0;
-    }
-
-    .master-avatar-info p {
-        font-size: 12px;
-        color: var(--text-muted);
-        margin-bottom: 10px;
-        line-height: 1.45;
-    }
-
-    .master-avatar-actions {
-        display: flex;
-        align-items: center;
-        gap: 9px;
-        flex-wrap: wrap;
-    }
-
-    .master-upload-btn,
-    .master-remove-avatar-btn {
-        border-radius: 10px;
-        padding: 8px 15px;
-        font-size: 12px;
-        font-weight: 500;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        transition: all 0.2s;
-    }
-
-    .master-upload-btn {
-        background: var(--accent);
-        color: #fff;
-        border: 1px solid var(--accent);
-    }
-
-    .master-upload-btn:hover {
-        background: var(--accent-hover);
-    }
-
-    .master-remove-avatar-btn {
-        background: var(--danger-light);
-        color: var(--danger);
-        border: 1px solid rgba(229, 62, 106, .25);
-    }
-
-    .master-remove-avatar-btn:hover {
-        background: var(--danger);
-        color: #fff;
-    }
-
-    .master-file-name {
-        font-size: 12px;
-        color: var(--text-muted);
-        overflow-wrap: anywhere;
-    }
-
-    .master-section-label {
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: var(--text-muted);
-        margin: 18px 0 12px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .master-section-label::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: var(--border);
-    }
-
-    .master-form-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 14px;
-    }
-
-    .master-form-field {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        min-width: 0;
-    }
-
-    .master-form-field.full {
-        grid-column: 1 / -1;
-    }
-
-    .master-required {
-        color: var(--danger);
-    }
-
-    .master-error {
-        font-size: 12px;
-        color: var(--danger);
-    }
-
-    .master-password-wrap {
-        position: relative;
-    }
-
-    .master-password-wrap .master-input {
-        padding-right: 42px;
-    }
-
-    .master-password-toggle {
-        position: absolute;
-        right: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: 0;
-        cursor: pointer;
-        color: var(--text-muted);
-        font-size: 13px;
-        padding: 2px;
-    }
-
-    .master-password-toggle:hover {
-        color: var(--accent);
-    }
-
-    .master-info-box {
-        background: rgba(79, 142, 247, 0.07);
-        border: 1px solid rgba(79, 142, 247, 0.2);
-        border-radius: 10px;
-        padding: 10px 14px;
-        font-size: 12px;
-        color: var(--accent);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 12px;
-        line-height: 1.45;
-    }
-
-    .master-delete-icon {
-        width: 66px;
-        height: 66px;
-        border-radius: 50%;
-        background: var(--danger-light);
-        color: var(--danger);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 26px;
-        margin: 0 auto 18px;
-    }
-
-    .master-delete-title {
-        font-size: 20px;
-        font-weight: 600;
-        margin-bottom: 8px;
-        color: var(--text-primary);
-    }
-
-    .master-delete-desc {
-        font-size: 14px;
-        color: var(--text-secondary);
-        margin-bottom: 26px;
-        line-height: 1.6;
-    }
-
-    .master-delete-actions {
-        display: flex;
-        gap: 12px;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-
-    /* ---------- Responsive ---------- */
-    @media (max-width: 1199px) {
-        .master-table {
-            min-width: 880px;
-        }
-    }
-
-    @media (max-width: 767px) {
-        .master-toolbar {
-            align-items: stretch;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .master-search-form,
-        .master-btn-primary {
-            width: 100%;
-            max-width: 100%;
-        }
-
-        .master-table-wrap {
-            overflow-x: visible;
-        }
-
-        .master-table {
-            min-width: 0;
-        }
-
-        .master-table thead {
-            display: none;
-        }
-
-        .master-table,
-        .master-table tbody,
-        .master-table tr,
-        .master-table td {
-            display: block;
-            width: 100%;
-        }
-
-        .master-table tbody {
-            padding: 12px;
-            display: grid;
-            gap: 12px;
-        }
-
-        .master-table tr {
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            background: var(--bg-card);
-            overflow: hidden;
-        }
-
-        .master-table tr:hover {
-            background: var(--bg-card);
-        }
-
-        .master-table td {
-            display: grid;
-            grid-template-columns: 112px minmax(0, 1fr);
-            gap: 12px;
-            align-items: center;
-            padding: 12px 14px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .master-table td:last-child {
-            border-bottom: 0;
-        }
-
-        .master-table td::before {
-            content: attr(data-label);
-            color: var(--text-muted);
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: .06em;
-        }
-
-        .master-table td.master-user-td {
-            grid-template-columns: 1fr;
-        }
-
-        .master-table td.master-user-td::before {
-            margin-bottom: 4px;
-        }
-
-        .master-col-number {
-            width: auto;
-        }
-
-        .master-person {
-            min-width: 0;
-        }
-
-        .master-actions {
-            justify-content: flex-start;
-        }
-
-        .master-pagination {
-            padding: 12px;
-        }
-
-        .master-modal-overlay {
-            align-items: flex-end;
-            padding: 10px;
-        }
-
-        .master-modal-box {
-            max-width: 100%;
-            max-height: calc(100vh - 20px);
-            border-radius: 18px 18px 0 0;
-        }
-
-        .master-modal-head,
-        .master-modal-body,
-        .master-modal-footer {
-            padding-left: 18px;
-            padding-right: 18px;
-        }
-
-        .master-form-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .master-form-field.full {
-            grid-column: 1;
-        }
-
-        .master-avatar-row {
-            align-items: flex-start;
-        }
-
-        .master-modal-footer {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .master-modal-footer .master-btn-primary,
-        .master-modal-footer {
-            width: 100%;
-        }
-
-        .master-confirm-box {
-            border-radius: 18px 18px 0 0;
-            max-width: 100%;
-        }
-
-        .master-delete-actions {
-            flex-direction: column;
-        }
-    }
-    
-    
-    @media (max-width: 767px) {
-        .master-toolbar,
-        .page-header {
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: stretch !important;
-            justify-content: flex-start !important;
-            gap: 12px !important;
-    
-            height: auto !important;
-            min-height: 0 !important;
-            max-height: none !important;
-    
-            margin-bottom: 16px !important;
-            padding-bottom: 0 !important;
-        }
-    
-        .master-search-form,
-        .page-header form {
-            width: 100% !important;
-            max-width: 100% !important;
-            flex: 0 0 auto !important;
-            margin: 0 !important;
-        }
-    
-        .master-search,
-        .search-wrap {
-            width: 100% !important;
-            max-width: 100% !important;
-        }
-    
-        .master-btn-primary,
-        .btn-add-user {
-            width: 100% !important;
-            justify-content: center !important;
-            margin: 0 !important;
-            flex: 0 0 auto !important;
-        }
-    
-        .master-card,
-        .table-card {
-            margin-top: 0 !important;
-        }
-    }
-
-    @media (max-width: 420px) {
-        .master-table td {
-            grid-template-columns: 92px minmax(0, 1fr);
-            gap: 10px;
-            padding: 11px 12px;
-        }
-
-        .master-avatar {
-            width: 38px;
-            height: 38px;
-            flex-basis: 38px;
-            font-size: 13px;
-        }
-
-        .master-name {
-            font-size: 13px;
-        }
-
-        .master-email {
-            font-size: 11px;
-        }
-
-        .master-badge {
-            white-space: normal;
-            line-height: 1.3;
-        }
-    }
-    
-    /* Desktop */
-    .master-mobile-list{
-        display:none;
-    }
-    
-    /* Mobile */
-    @media (max-width:767px){
-    
-        .master-table-wrap{
-            display:none;
-        }
-    
-        .master-mobile-list{
-            display:flex;
-            flex-direction:column;
-            gap:18px;
-        }
-    
-        .user-card{
-            background:#fff;
-            border-radius:18px;
-            overflow:hidden;
-            border:1px solid #ececec;
-            box-shadow: 0 4px 12px rgba(0,0,0,.12);
-        }
-        
-        .user-card-header{
-            display: flex;
-            align-items: center;
-            justify-content: center; /* Centers the whole group */
-            gap: 16px;
-            padding: 20px;
-            text-align: left;
-        }
-        
-        .user-card-header .master-avatar{
-            width: 90px;
-            height: 90px;
-            min-width: 90px;
-            min-height: 90px;
-            border-radius: 50%;
-            overflow: hidden;
-            border: 3px solid #fff;
-            box-shadow: 0 4px 12px rgba(0,0,0,.12);
-            flex-shrink: 0;
-        }
-        
-        .user-card-header .master-avatar img{
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-        
-        .user-card-info{
-            flex: 0 0 auto;      /* Remove flex:1 */
-            text-align: left;
-        }
-        
-        .user-card-info h4{
-            margin: 0;
-            font-size: 20px;
-            font-weight: 500;
-            line-height: 1.2;
-            color: #1f2a44;
-        }
-        
-        .user-card-info p{
-            margin: 6px 0 0;
-            font-size: 15px;
-            color: #777;
-            line-height: 1.2;
-        }
-    
-        .user-card-body{
-            padding:18px 20px;
-        }
-    
-        .user-row{
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            padding:10px 0;
-            border-bottom:1px solid #ececec;
-        }
-    
-        .user-row:last-child{
-            border-bottom:none;
-        }
-    
-        .user-row span:first-child{
-            color:#777;
-            font-size:14px;
-        }
-    
-        .user-row strong{
-            font-size:14px;
-            text-align:right;
-            word-break:break-word;
-        }
-    
-        .user-card-footer{
-            display:flex;
-            justify-content:center;
-            gap:20px;
-        }
-    
-        .user-card-footer .master-icon-btn{
-            width:46px;
-            height:46px;
-            border:none;
-            border-radius:50%;
-            background:#fff;
-            cursor:pointer;
-            font-size:18px;
-            box-shadow:0 2px 8px rgba(0,0,0,.08);
-        }
-    
-        .user-card-footer .edit{
-            color:#0d6efd;
-        }
-    
-        .user-card-footer .delete{
-            color:#dc3545;
-        }
-    }
-    
-    /* =========================================================
-       User Add/Edit Modal Mobile Responsive Fix
-       ========================================================= */
-    
-    @media (max-width: 767px) {
-        .modal-overlay,
-        .master-modal-overlay {
-            align-items: flex-end !important;
-            justify-content: center !important;
-            padding: 10px !important;
-            overflow-y: auto !important;
-        }
-    
-        .modal-box,
-        .master-modal-box {
-            width: 100% !important;
-            max-width: 100% !important;
-            max-height: calc(100vh - 20px) !important;
-            height: auto !important;
-            border-radius: 18px 18px 0 0 !important;
-            display: flex !important;
-            flex-direction: column !important;
-            overflow: hidden !important;
-        }
-    
-        .modal-head,
-        .master-modal-head {
-            flex: 0 0 auto !important;
-            padding: 16px 18px !important;
-        }
-    
-        .modal-body,
-        .master-modal-body {
-            flex: 1 1 auto !important;
-            max-height: calc(100vh - 170px) !important;
-            overflow-y: auto !important;
-            -webkit-overflow-scrolling: touch !important;
-            padding: 18px !important;
-        }
-    
-        .modal-foot,
-        .master-modal-footer {
-            flex: 0 0 auto !important;
-            padding: 14px 18px !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: stretch !important;
-            gap: 10px !important;
-        }
-    
-        .modal-foot button,
-        .master-modal-footer button,
-        .modal-foot .btn-submit,
-        .modal-foot .btn-cancel-m,
-        .master-modal-footer .master-btn-primary,
-        .master-modal-footer .master-btn-light {
-            width: 100% !important;
-            justify-content: center !important;
-        }
-    
-        .modal-grid,
-        .master-form-grid {
-            grid-template-columns: 1fr !important;
-            gap: 14px !important;
-        }
-    
-        .fg,
-        .fg.full,
-        .master-form-field,
-        .master-form-field.full {
-            grid-column: 1 / -1 !important;
-            width: 100% !important;
-            min-width: 0 !important;
-        }
-    
-        .finp,
-        .master-input {
-            width: 100% !important;
-            max-width: 100% !important;
-        }
-    
-        .av-row,
-        .master-avatar-row {
-            align-items: flex-start !important;
-            gap: 14px !important;
-        }
-    
-        .av-circle,
-        .master-avatar-preview {
-            width: 58px !important;
-            height: 58px !important;
-            flex: 0 0 58px !important;
-        }
-    
-        .av-info,
-        .master-avatar-info {
-            min-width: 0 !important;
-            flex: 1 !important;
-        }
-    
-        .av-btns,
-        .master-avatar-actions {
-            gap: 8px !important;
-        }
-    
-        .av-filename,
-        .master-file-name {
-            display: block !important;
-            width: 100% !important;
-            overflow-wrap: anywhere !important;
-        }
-    }
-    
-    @media (max-width: 420px) {
-        .modal-overlay,
-        .master-modal-overlay {
-            padding: 6px !important;
-        }
-    
-        .modal-box,
-        .master-modal-box {
-            max-height: calc(100vh - 12px) !important;
-            border-radius: 16px 16px 0 0 !important;
-        }
-    
-        .modal-head,
-        .master-modal-head {
-            padding: 14px 16px !important;
-        }
-    
-        .modal-body,
-        .master-modal-body {
-            max-height: calc(100vh - 155px) !important;
-            padding: 16px !important;
-        }
-    
-        .modal-foot,
-        .master-modal-footer {
-            padding: 12px 16px !important;
-        }
-    
-        .modal-head-title,
-        .master-modal-title {
-            font-size: 16px !important;
-        }
-    
-        .modal-head-sub,
-        .master-modal-subtitle {
-            font-size: 11px !important;
-        }
-    
-        .av-row,
-        .master-avatar-row {
-            flex-direction: column !important;
-            align-items: center !important;
-            text-align: center !important;
-        }
-    
-        .av-btns,
-        .master-avatar-actions {
-            justify-content: center !important;
-        }
-    }
-</style>
-@endpush
+@section('title', 'Team')
+@section('page-title', 'Team')
+
+@section('page-actions')
+    {{-- The page's primary action lives in the header, so it stays reachable
+         however far the list scrolls — the same slot every other list uses. --}}
+    <button type="button" class="master-btn master-btn-primary" data-open-add-modal>
+        <i class="fas fa-plus" aria-hidden="true"></i> Add user
+    </button>
+@endsection
 
 @section('content')
-<div class="users">
-    {{-- Toolbar --}}
-    <div class="master-toolbar" style="padding:0;padding-bottom:18px;">
-        <form method="GET" action="{{ route('users.index') }}" class="master-search-form">
-            <div class="master-search">
-                <i class="fas fa-search master-search-icon"></i>
-                <input type="text"
-                       name="search"
-                       class="master-search-input"
-                       placeholder="Search by name, email, department…"
-                       value="{{ $search }}">
-            </div>
-        </form>
+@push('styles')
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/users.css') }}">
+@endpush
 
-        <button type="button" class="master-btn master-btn-primary" data-open-add-modal>
-            <i class="fas fa-plus"></i> Add User
-        </button>
+@php
+    /* A failed save on the edit form comes back here with the person's id in the
+       query (`UserController::update`), because its dialog opens over the list
+       and the redirect has to land somewhere the dialog can reopen on. */
+    $reopenUserId = $errors->any() ? max(0, (int) request()->query('edit')) : 0;
+
+    /* One URL per removable filter: everything else stays, the page restarts,
+       and a filter that has no visible control above (it arrived from a URL or
+       a bookmark) can still be taken off. */
+    $chipUrl = function (string $key) {
+        $keep = collect(request()->except([$key, 'page']))
+            ->reject(fn ($value) => $value === null || $value === '' || $value === 'all');
+
+        return route('users.index', $keep->all());
+    };
+
+    $baseFilters = request()->except(['page']);
+    $roleLabels = ['all' => 'Everyone'] + $roles;
+@endphp
+
+<div class="users user-index master-list">
+
+    {{-- The five figures the office actually has about its people. They count
+         the module, not the page: a tile that changed with the filter would be
+         a tile you cannot trust. --}}
+    <div class="master-stats desktop-only">
+        <div class="master-stat master-stat--flat blue">
+            <span class="icon" aria-hidden="true">👥</span>
+            <div>
+                <p class="master-stat-title">People</p>
+                <p class="master-stat-value">{{ $stats['total'] }}</p>
+                <p class="master-sub">{{ $stats['employees'] }} employee{{ $stats['employees'] === 1 ? '' : 's' }} · {{ $stats['admins'] }} office</p>
+            </div>
+        </div>
+        <div class="master-stat master-stat--flat purple">
+            <span class="icon" aria-hidden="true">🏷</span>
+            <div>
+                <p class="master-stat-title">Employee codes</p>
+                <p class="master-stat-value">{{ $stats['with_code'] }}</p>
+                <p class="master-sub">of {{ $stats['employees'] }} employee{{ $stats['employees'] === 1 ? '' : 's' }} on the payroll</p>
+            </div>
+        </div>
+        <div class="master-stat master-stat--flat green">
+            <span class="icon" aria-hidden="true">₹</span>
+            <div>
+                <p class="master-stat-title">Paid in {{ $stats['month_label'] }}</p>
+                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['paid_this_month']) }}</p>
+                <p class="master-sub">salary credited this month</p>
+            </div>
+        </div>
+        <div class="master-stat master-stat--flat teal">
+            <span class="icon" aria-hidden="true">📄</span>
+            <div>
+                <p class="master-stat-title">Documents</p>
+                <p class="master-stat-value">{{ $stats['documents'] }}</p>
+                <p class="master-sub">papers filed for the team</p>
+            </div>
+        </div>
+        <div class="master-stat master-stat--flat {{ $stats['missing_id_proof'] ? 'orange' : 'green' }}">
+            <span class="icon" aria-hidden="true">{{ $stats['missing_id_proof'] ? '!' : '✓' }}</span>
+            <div>
+                <p class="master-stat-title">No ID proof</p>
+                <p class="master-stat-value">{{ $stats['missing_id_proof'] }}</p>
+                <p class="master-sub">employee{{ $stats['missing_id_proof'] === 1 ? '' : 's' }} still to file one</p>
+            </div>
+        </div>
     </div>
 
-    {{-- Users Table --}}
-    <div class="master-card">
+    <div class="master-card master-card--flat">
+        <div class="master-list-bar">
+            <div class="master-list-chips">
+                @foreach ($roleLabels as $key => $label)
+                    <a class="master-list-chip {{ ($role ?: 'all') === $key ? 'is-active' : '' }}"
+                        href="{{ route('users.index', collect(request()->except(['role', 'page']))->reject(fn ($v) => $v === null || $v === '' || $v === 'all')->all() + (array_key_exists($key, $roles) ? ['role' => $key] : [])) }}">
+                        {{ $key === 'admin' ? 'Office / admins' : ($key === 'employee' ? 'Employees' : $label) }}
+                        <span class="master-list-chip-count">{{ $roleCounts[$key] ?? 0 }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+
+        <form method="GET" action="{{ route('users.index') }}">
+            {{-- The role is a chip, and the chips are links: without this the
+                 chip would be silently dropped every time the filters below
+                 are applied. --}}
+            @if ($availableFilters['role'] ?? true)
+                <input type="hidden" name="role" value="{{ $role }}">
+            @endif
+
+            <div class="master-filter-row core-filter-toolbar">
+                <div class="master-search">
+                    <span aria-hidden="true">⌕</span>
+                    <input class="master-input" type="text" name="search" value="{{ $search }}"
+                        placeholder="Name, email, mobile, code…" aria-label="Search the team">
+                </div>
+                <x-filter-trigger drawer="userFiltersDrawer" label="Filters" :count="count($filterChips)" />
+            </div>
+
+            <x-drawer id="userFiltersDrawer" title="Filter the team" eyebrow="Team filters"
+                subtitle="Narrow the list by department, employment status, code, or joining period." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Employment details</h3>
+                    <div class="core-drawer-fields">
+                        @if ($availableFilters['department'] ?? true)
+                            <div class="master-field">
+                                <label class="master-label" for="userFilterDepartment">Department</label>
+                                <select class="master-select" id="userFilterDepartment" name="department" aria-label="Filter by department">
+                                    <option value="all">All departments</option>
+                                    @foreach ($departments as $department)
+                                        <option value="{{ $department }}" @selected($department === ($filters['department'] ?? null))>{{ $department }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
+
+                        @if ($availableFilters['status'] ?? true)
+                            <div class="master-field">
+                                <label class="master-label" for="userFilterStatus">Employment status</label>
+                                <select class="master-select" id="userFilterStatus" name="status" aria-label="Filter by employment status">
+                                    <option value="all">Any status</option>
+                                    @foreach ($employmentStatuses as $key => $label)
+                                        <option value="{{ $key }}" @selected(($filters['status'] ?? null) === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
+
+                        @if ($availableFilters['code'] ?? true)
+                            <div class="master-field">
+                                <label class="master-label" for="userFilterCode">Employee code</label>
+                                <select class="master-select" id="userFilterCode" name="code" aria-label="Filter by employee code">
+                                    <option value="all">Code: any</option>
+                                    <option value="present" @selected(($filters['code'] ?? null) === 'present')>Has a code</option>
+                                    <option value="missing" @selected(($filters['code'] ?? null) === 'missing')>No code yet</option>
+                                </select>
+                            </div>
+                        @endif
+
+                        @if ($availableFilters['joined'] ?? true)
+                            <div class="master-field">
+                                <label class="master-label" for="userFilterJoined">Joining period</label>
+                                <select class="master-select" id="userFilterJoined" name="joined" aria-label="Filter by joining period">
+                                    <option value="all">Joined: any time</option>
+                                    @foreach (\App\Helpers\DateRanges::LABELS as $key => $label)
+                                        <option value="{{ $key }}" @selected(($filters['joined'] ?? null) === $key)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
+                    </div>
+                </section>
+                <x-slot:footer>
+                    @if ($filtersActive)
+                        <a class="master-btn master-btn-soft" href="{{ route('users.index') }}">Reset</a>
+                    @endif
+                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                </x-slot:footer>
+            </x-drawer>
+
+            {{-- What is actually filtering, one removable chip each. Built from
+                 the controller's own list, so a filter that can be applied can
+                 always be taken off. --}}
+            @if ($filtersActive)
+                <div class="master-list-applied">
+                    <span class="master-list-applied-title">Filtered by</span>
+
+                    @foreach ($filterChips as $chip)
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">{{ $chip['label'] }}</span>
+                            <span class="master-list-applied-value">{{ $chip['value'] }}</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl($chip['key']) }}"
+                                aria-label="Remove the {{ strtolower($chip['label']) }} filter"
+                                title="Remove the {{ strtolower($chip['label']) }} filter">&times;</a>
+                        </span>
+                    @endforeach
+
+                    <a class="master-list-applied-clear" href="{{ route('users.index') }}">Clear all filters</a>
+                </div>
+            @endif
+        </form>
+    </div>
+
+    <div class="master-card master-table-card master-card--flat">
+        <div class="master-list-toolbar">
+            <p class="master-list-hint"
+                title="Employees first, then the office accounts, each block by name. An employee sees only their own workspace; an administrator sees the whole ERP.">
+                Employees first &middot; office accounts below
+            </p>
+
+            <div class="master-list-toolbar-actions">
+                {{-- The list as a spreadsheet, under the filters currently on
+                     screen — the same rows, one click. --}}
+                <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('users.export', $baseFilters) }}">
+                    <i class="fas fa-file-csv" aria-hidden="true"></i> Export CSV
+                </a>
+                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
+                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
+                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
+                </div>
+            </div>
+        </div>
+
         <div class="master-table-wrap">
-            <table class="master-table">
+            <table class="master-table" data-table-settings data-table-key="users">
                 <thead>
                     <tr>
-                        <th class="master-col-number">#</th>
-                        <th>User</th>
-                        <th>Mobile</th>
-                        <th>Department</th>
-                        <th>Designation</th>
-                        <th>Verified</th>
-                        <th>Action</th>
+                        <th scope="col">Person</th>
+                        <th scope="col">Role</th>
+                        <th scope="col" class="ui-mobile-secondary">Contact</th>
+                        <th scope="col" class="ui-mobile-secondary">Department</th>
+                        <th scope="col" class="ui-mobile-secondary">Designation</th>
+                        <th scope="col" class="ui-mobile-secondary">Joined</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($users as $i => $user)
-                        @php
-                            $colors = ['#4f8ef7','#6c63ff','#38d9a9','#f6ad55','#e879c0','#e53e6a','#22d3ee'];
-                            $color  = $colors[$user->id % count($colors)];
-                            $initials = $user->initials ?? strtoupper(substr($user->name ?? 'U', 0, 2));
-                        @endphp
-                        <tr>
-                            <td class="master-col-number" data-label="#">{{ $users->firstItem() + $i }}</td>
-                            <td class="master-user-td" data-label="User">
-                                <div class="master-person">
-                                    <div class="master-avatar" style="background:{{ $color }};">
-                                        @if($user->avatar)
-                                            <img src="{{ asset('storage/'.$user->avatar) }}" alt="{{ $user->name }}">
-                                        @else
-                                            {{ $initials }}
-                                        @endif
+                    @php($officeDividerShown = false)
+                    @forelse ($users as $user)
+                        @if (! $officeDividerShown && $user->isAdmin())
+                            @php($officeDividerShown = true)
+                            <tr class="master-list-group">
+                                {{-- the cell stays a table cell: display:flex on a
+                                     <td> takes it out of the table layout and the
+                                     colspan stops spanning, so the row lives in a
+                                     flex wrapper inside it --}}
+                                <td colspan="8">
+                                    <div class="master-list-group-inner">
+                                        <span>Office accounts — full access to the ERP</span>
+                                        <span class="master-list-group-count">
+                                            {{ $users->where('role', '!=', \App\Models\User::ROLE_EMPLOYEE)->count() }}
+                                        </span>
                                     </div>
-                                    <div>
-                                        <div class="master-name">{{ $user->name }}</div>
-                                        <div class="master-email">{{ $user->email }}</div>
-                                    </div>
-                                </div>
+                                </td>
+                            </tr>
+                        @endif
+
+                        {{-- The whole row opens the record (assets/js/users.js →
+                             MasterList.rowNavigation); anything interactive
+                             inside it keeps its own click. --}}
+                        <tr class="user-row is-clickable" data-href="{{ route('users.show', $user) }}">
+                            <td data-label="Person">
+                                <a class="user-cell" href="{{ route('users.show', $user) }}">
+                                    <span class="user-avatar-mini" aria-hidden="true">{{ $user->initials ?: strtoupper(substr($user->name, 0, 2)) }}</span>
+                                    <span class="user-cell-text">
+                                        <span class="user-cell-name">{{ $user->name }}</span>
+                                        <span class="master-sub">
+                                            {{ $user->employee_code ?: 'No employee code' }}
+                                            @if ($user->email_verified_at) · verified @endif
+                                        </span>
+                                    </span>
+                                </a>
                             </td>
-                            <td data-label="Mobile">{{ $user->mobile ?? '—' }}</td>
-                            <td data-label="Department">
-                                @if($user->department)
-                                    <span class="master-badge department">{{ $user->department }}</span>
+                            <td data-label="Role">
+                                <span class="emp-pill {{ $user->isAdmin() ? 'is-info' : 'is-ok' }}">{{ $user->roleLabel() }}</span>
+                            </td>
+                            <td data-label="Contact" class="ui-mobile-secondary">
+                                {{ $user->mobile ?: '—' }}
+                                <span class="master-sub">{{ $user->email }}</span>
+                            </td>
+                            <td data-label="Department" class="ui-mobile-secondary">{{ $user->department ?: '—' }}</td>
+                            <td data-label="Designation" class="ui-mobile-secondary">{{ $user->designation ?: '—' }}</td>
+                            <td data-label="Joined" class="ui-mobile-secondary">{{ $user->date_of_joining?->format('d M Y') ?: '—' }}</td>
+                            <td data-label="Status">
+                                @if ($user->isEmployee())
+                                    <span class="emp-pill is-{{ $user->employmentStatusTone() === 'ok' ? 'ok' : ($user->employmentStatusTone() === 'warn' ? 'warn' : 'off') }}">
+                                        {{ $user->employmentStatusLabel() }}
+                                    </span>
+                                    <span class="master-sub ui-mobile-secondary">
+                                        {{ (int) $user->payslips_count }} {{ \Illuminate\Support\Str::plural('payslip', (int) $user->payslips_count) }}
+                                        · {{ (int) $user->employee_documents_count }} {{ \Illuminate\Support\Str::plural('document', (int) $user->employee_documents_count) }}
+                                    </span>
                                 @else
-                                    <span class="master-muted">—</span>
-                                @endif
-                            </td>
-                            <td data-label="Designation">
-                                    {{ $user->designation ?? '-' }}
-                            </td>
-                            <td data-label="Verified">
-                                @if($user->email_verified_at)
-                                    <span class="master-badge verified"><i class="fas fa-check-circle"></i> Verified</span>
-                                @else
-                                    <span class="master-badge pending"><i class="fas fa-clock"></i> Pending</span>
+                                    <span class="emp-pill is-off">Office access</span>
                                 @endif
                             </td>
                             <td data-label="Action">
-                                <div class="master-actions">
-                                    <button type="button"
-                                            class="master-icon-btn edit"
-                                            title="Edit"
-                                            data-edit-user="{{ $user->id }}">
-                                        <i class="fas fa-pen"></i>
-                                    </button>
-
-                                    @if($user->id !== auth()->id())
-                                        <button type="button"
-                                                class="master-icon-btn delete"
-                                                title="Delete"
-                                                data-delete-user="{{ $user->id }}"
-                                                data-delete-name="{{ $user->name }}">
-                                            <i class="fas fa-trash-alt"></i>
+                                <div class="master-row-actions">
+                                    <div class="master-dropdown">
+                                        <button type="button" class="master-dropdown-toggle"
+                                            aria-label="Actions for {{ $user->name }}"
+                                            aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
                                         </button>
-                                    @endif
+
+                                        <div class="master-dropdown-menu">
+                                            <a href="{{ route('users.show', $user) }}">
+                                                <i class="fas fa-folder-open"></i>
+                                                Open record
+                                            </a>
+
+                                            <button type="button" data-edit-user="{{ $user->id }}">
+                                                <i class="fas fa-pen"></i>
+                                                Edit user
+                                            </button>
+
+                                            <a href="{{ route('users.show', [$user, 'tab' => 'salary']) }}">
+                                                <i class="fas fa-file-invoice-dollar"></i>
+                                                Payslips &amp; pay
+                                            </a>
+
+                                            <a href="{{ route('users.show', [$user, 'tab' => 'documents']) }}">
+                                                <i class="fas fa-folder-open"></i>
+                                                Documents
+                                            </a>
+
+                                            {{-- Nobody deletes themselves, and the last
+                                                 administrator cannot be deleted — the
+                                                 controller refuses both, so the menu
+                                                 does not offer what it cannot do. --}}
+                                            @if ((int) $user->id !== (int) auth()->id() && ! ($user->isAdmin() && ($roleCounts['admin'] ?? 0) <= 1))
+                                                <button type="button" class="danger" data-delete-user="{{ $user->id }}"
+                                                    data-delete-name="{{ $user->name }}">
+                                                    <i class="fas fa-trash" aria-hidden="true"></i>
+                                                    Delete user
+                                                </button>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7">
-                                <div class="master-empty">
-                                    <i class="fas fa-master-cog"></i>
-                                    <p>No users found.</p>
+                            <td colspan="8">
+                                <div class="master-list-empty">
+                                    <span class="master-list-empty-icon" aria-hidden="true">👥</span>
+                                    <p class="master-list-empty-title">
+                                        {{ $filtersActive ? 'Nobody matches these filters' : 'No users yet' }}
+                                    </p>
+                                    <p class="master-list-empty-text">
+                                        {{ $filtersActive
+                                            ? 'Adjust the search or the filters above — the counts on the role chips show what each side of the team holds.'
+                                            : 'Add the first person. An employee account gets their own workspace — profile, salary, payslips and documents.' }}
+                                    </p>
+                                    <div class="master-list-empty-actions">
+                                        @if ($filtersActive)
+                                            <a class="master-btn master-btn-soft" href="{{ route('users.index') }}">Clear filters</a>
+                                        @endif
+                                        <button type="button" class="master-btn master-btn-primary" data-open-add-modal>+ Add user</button>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
+                <tfoot>
+                    <tr class="master-list-total">
+                        <td colspan="7">
+                            <strong>Total — {{ $users->count() }} {{ \Illuminate\Support\Str::plural('person', $users->count()) }} shown</strong>
+                            <span class="master-sub">{{ $filtersActive ? 'of ' . $stats['total'] . ' in the team, with these filters' : $stats['employees'] . ' on the payroll' }}</span>
+                        </td>
+                        <td></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
-        
-        {{-- Mobile Cards --}}
-        <div class="master-mobile-list">
-            @forelse($users as $user)
-                @php
-                    $colors = ['#4f8ef7','#6c63ff','#38d9a9','#f6ad55','#e879c0','#e53e6a','#22d3ee'];
-                    $color  = $colors[$user->id % count($colors)];
-                    $initials = $user->initials ?? strtoupper(substr($user->name ?? 'U', 0, 2));
-                @endphp
-        
-                <div class="user-card">
-        
-                    <div class="user-card-header">
-                        <div class="master-avatar" style="background:{{ $color }}">
-                            @if($user->avatar)
-                                <img src="{{ asset('storage/'.$user->avatar) }}" alt="">
-                            @else
-                                {{ $initials }}
-                            @endif
-                        </div>
-                    
-                        <div class="user-card-info">
-                            <h4>{{ $user->name }}</h4>
-                            <p>{{ $user->designation ?? 'No Designation' }}</p>
+
+        <x-pagination :items="$users" />
+    </div>
+
+    {{-- ================= Add user =================
+         The shared modal sheet (.master-modal → .master-modal-card →
+         .master-modal-body): header and footer pinned, the body carries the
+         scroll, so the fields are reachable and the action row is always in
+         view. The form is the card's own child, which is what the sheet's
+         column layout hangs on — a modal without that pair is a sheet that
+         does not scroll. --}}
+    <div class="master-modal" id="addModal" aria-hidden="true">
+        <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="addUserTitle">
+            <form method="POST" action="{{ route('users.store') }}" enctype="multipart/form-data" id="addForm">
+                @csrf
+
+                <div class="master-modal-header">
+                    <div class="master-modal-heading">
+                        <span class="master-modal-icon" aria-hidden="true">＋</span>
+                        <div>
+                            <h3 class="master-modal-title" id="addUserTitle">Add a user</h3>
+                            <p class="master-modal-subtitle">The role decides which application they see</p>
                         </div>
                     </div>
-        
-                    <div class="user-card-body">
-        
-                        <div class="user-row">
-                            <span>Email</span>
-                            <strong>{{ $user->email }}</strong>
+                    <button type="button" class="master-modal-close" data-close-modal="addModal" aria-label="Close">&times;</button>
+                </div>
+
+                <div class="master-modal-body">
+                    @if ($errors->any())
+                        <div class="master-info-box is-danger">
+                            <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                            {{ $errors->first() }}
                         </div>
-        
-                        <div class="user-row">
-                            <span>Mobile</span>
-                            <strong>{{ $user->mobile ?? '—' }}</strong>
-                        </div>
-        
-                        <div class="user-row">
-                            <span>Department</span>
-                            <strong>{{ $user->department ?? '—' }}</strong>
-                        </div>
-        
-                        <div class="user-row">
-                            <span>Status</span>
-        
-                            @if($user->email_verified_at)
-                                <span class="master-badge verified">
-                                    <i class="fas fa-check-circle"></i> Verified
+                    @endif
+
+                    <div class="master-section-label">Who is this?</div>
+                    <div class="master-form-grid">
+                        <div class="master-field full">
+                            <label class="master-label" for="addRole">Role <span class="master-required">*</span></label>
+                            <select name="role" id="addRole" class="master-select" data-role-select required>
+                                @foreach ($roles as $key => $label)
+                                    <option value="{{ $key }}" @selected(old('role', 'employee') === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            <p class="master-info-box">
+                                <i class="fas fa-info-circle" aria-hidden="true"></i>
+                                <span data-role-hint-text>
+                                    An employee sees only their own workspace: profile, salary, payslips and documents.
                                 </span>
-                            @else
-                                <span class="master-badge pending">
-                                    <i class="fas fa-clock"></i> Pending
-                                </span>
-                            @endif
+                            </p>
+                            @error('role')<span class="master-error">{{ $message }}</span>@enderror
                         </div>
-        
                     </div>
-        
-                    <div class="user-card-footer" style="margin-bottom:10px;">
-        
-                        <button type="button"
-                                class="master-icon-btn edit"
-                                data-edit-user="{{ $user->id }}">
-                            <i class="fas fa-pen"></i>
-                        </button>
-        
-                        @if($user->id !== auth()->id())
-                            <button type="button"
-                                    class="master-icon-btn delete"
-                                    data-delete-user="{{ $user->id }}"
-                                    data-delete-name="{{ $user->name }}">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        @endif
-        
+
+                    <div class="master-section-label">Basic information</div>
+                    <div class="master-form-grid">
+                        <div class="master-field">
+                            <label class="master-label" for="addName">Full name <span class="master-required">*</span></label>
+                            <input type="text" name="name" id="addName" class="master-input {{ $errors->has('name') ? 'is-invalid' : '' }}"
+                                placeholder="e.g. Ramesh Patel" value="{{ old('name') }}" required>
+                            @error('name')<span class="master-error">{{ $message }}</span>@enderror
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="addEmail">Email address <span class="master-required">*</span></label>
+                            <input type="email" name="email" id="addEmail" class="master-input {{ $errors->has('email') ? 'is-invalid' : '' }}"
+                                placeholder="name@misspack.com" value="{{ old('email') }}" required>
+                            @error('email')<span class="master-error">{{ $message }}</span>@enderror
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="addMobile">Mobile <span class="master-required" data-role-required>*</span></label>
+                            <input type="text" name="mobile" id="addMobile" class="master-input" placeholder="+91 98765 43210" value="{{ old('mobile') }}">
+                            @error('mobile')<span class="master-error">{{ $message }}</span>@enderror
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="addCode">Employee code</label>
+                            <input type="text" name="employee_code" id="addCode" class="master-input"
+                                placeholder="Left blank: EMP-0001" value="{{ old('employee_code') }}">
+                            @error('employee_code')<span class="master-error">{{ $message }}</span>@enderror
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="addDepartment">Department</label>
+                            <input type="text" name="department" id="addDepartment" class="master-input" list="departmentList"
+                                placeholder="Technology" value="{{ old('department') }}">
+                            <datalist id="departmentList">
+                                @foreach ($departments as $department)
+                                    <option value="{{ $department }}"></option>
+                                @endforeach
+                            </datalist>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="addDesignation">Designation <span class="master-required" data-role-required>*</span></label>
+                            <input type="text" name="designation" id="addDesignation" class="master-input" placeholder="Senior Developer" value="{{ old('designation') }}">
+                            @error('designation')<span class="master-error">{{ $message }}</span>@enderror
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="addJoining">Date of joining <span class="master-required" data-role-required>*</span></label>
+                            <input type="date" name="date_of_joining" id="addJoining" class="master-input" value="{{ old('date_of_joining') }}">
+                            @error('date_of_joining')<span class="master-error">{{ $message }}</span>@enderror
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="addType">Employment type</label>
+                            <select name="employment_type" id="addType" class="master-select">
+                                <option value="">—</option>
+                                @foreach ($employmentTypes as $key => $label)
+                                    <option value="{{ $key }}" @selected(old('employment_type') === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="addStatus">Status</label>
+                            <select name="employment_status" id="addStatus" class="master-select">
+                                @foreach ($employmentStatuses as $key => $label)
+                                    <option value="{{ $key }}" @selected(old('employment_status', 'active') === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="addPan">PAN</label>
+                            <input type="text" name="pan_number" id="addPan" class="master-input" value="{{ old('pan_number') }}">
+                        </div>
                     </div>
-        
-                </div>
-        
-            @empty
-        
-                <div class="master-empty">
-                    No users found.
-                </div>
-        
-            @endforelse
-        </div>
 
-        <div class="master-pagination">
-            <x-pagination :items="$users" />
-        </div>
-    </div>
-</div>
-
-{{-- Add User Modal --}}
-<div class="master-modal-overlay" id="addModal" aria-hidden="true">
-    <div class="master-modal-box" role="dialog" aria-modal="true" aria-labelledby="addUserTitle">
-        <div class="master-modal-head">
-            <div class="master-modal-icon"><i class="fas fa-user-plus"></i></div>
-            <div>
-                <div class="master-modal-title" id="addUserTitle">Add User</div>
-                <div class="master-modal-subtitle">Create a new user account</div>
-            </div>
-            <button type="button" class="master-modal-close" data-close-modal="addModal" aria-label="Close">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-
-        <form method="POST" action="{{ route('users.store') }}" enctype="multipart/form-data" id="addForm">
-            @csrf
-            <div class="master-modal-body">
-                <div class="master-avatar-row">
-                    <div class="master-avatar-preview" id="addAvatarCircle"><i class="fas fa-user"></i></div>
-                    <div class="master-avatar-info">
-                        <p>Upload a profile photo. JPG, PNG or GIF, max 2MB.</p>
-                        <div class="master-avatar-actions">
-                            <label class="master-upload-btn" for="addAvatarFile">
-                                <i class="fas fa-upload"></i> Choose file
-                                <input type="file" id="addAvatarFile" name="avatar" accept="image/*" hidden>
+                    <div class="master-section-label">Photo</div>
+                    <div class="master-avatar-row" data-avatar-drop data-avatar-circle="addAvatarCircle"
+                        data-avatar-name="addAvName" data-avatar-remove="clear">
+                        <span class="master-avatar-picker">
+                            <label class="master-avatar-preview" id="addAvatarCircle" for="addAvatarFile"
+                                aria-label="Choose a photo" title="Choose a photo">
+                                <i class="fas fa-user" aria-hidden="true"></i>
                             </label>
-                            <span class="master-file-name" id="addAvName">No file chosen</span>
+                            <span class="master-avatar-camera" aria-hidden="true"><i class="fas fa-camera"></i></span>
+                        </span>
+                        <div class="master-avatar-info">
+                            <p>JPG, PNG, GIF or WEBP, up to 2 MB. Click the circle or drag a photo onto it.</p>
+                            <div class="master-avatar-actions">
+                                <label class="master-upload-btn" for="addAvatarFile">
+                                    <i class="fas fa-upload" aria-hidden="true"></i> Choose file
+                                    <input class="master-input" type="file" id="addAvatarFile" name="avatar"
+                                        accept="image/jpeg,image/png,image/gif,image/webp">
+                                </label>
+                                <button type="button" class="master-remove-avatar-btn" hidden>
+                                    <i class="fas fa-times" aria-hidden="true"></i> Clear
+                                </button>
+                                <span class="master-file-name" id="addAvName">No file chosen</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="master-section-label">Account security</div>
+                    <p class="master-sub">They sign in with this password, and can change it themselves later.</p>
+                    <div class="master-form-grid">
+                        <div class="master-field">
+                            <label class="master-label" for="addPw1">Password <span class="master-required">*</span></label>
+                            <div class="master-password-wrap">
+                                <input type="password" name="password" id="addPw1" class="master-input {{ $errors->has('password') ? 'is-invalid' : '' }}"
+                                    placeholder="Min. 6 characters" required autocomplete="new-password">
+                                <button type="button" class="master-password-toggle" data-toggle-password="addPw1" aria-label="Toggle password visibility"><i class="fas fa-eye" aria-hidden="true"></i></button>
+                            </div>
+                            @error('password')<span class="master-error">{{ $message }}</span>@enderror
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="addPw2">Confirm password <span class="master-required">*</span></label>
+                            <div class="master-password-wrap">
+                                <input type="password" name="password_confirmation" id="addPw2" class="master-input" placeholder="Repeat password" required autocomplete="new-password">
+                                <button type="button" class="master-password-toggle" data-toggle-password="addPw2" aria-label="Toggle password visibility"><i class="fas fa-eye" aria-hidden="true"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="master-section-label">Basic Information</div>
-                <div class="master-form-grid">
-                    <div class="master-form-field">
-                        <label class="master-label">Full Name <span class="master-required">*</span></label>
-                        <input type="text" name="name" class="master-input {{ $errors->has('name') ? 'is-invalid' : '' }}" placeholder="e.g. Jonathan Deo" value="{{ old('name') }}" required>
-                        @error('name')<span class="master-error">{{ $message }}</span>@enderror
-                    </div>
-                    <div class="master-form-field">
-                        <label class="master-label">Email Address <span class="master-required">*</span></label>
-                        <input type="email" name="email" class="master-input {{ $errors->has('email') ? 'is-invalid' : '' }}" placeholder="user@misspack.com" value="{{ old('email') }}" required>
-                        @error('email')<span class="master-error">{{ $message }}</span>@enderror
-                    </div>
-                    <div class="master-form-field">
-                        <label class="master-label">Mobile Number</label>
-                        <input type="text" name="mobile" class="master-input" placeholder="+91 9876543210" value="{{ old('mobile') }}">
-                    </div>
-                    <div class="master-form-field">
-                        <label class="master-label">Department</label>
-                        <input type="text" name="department" class="master-input" placeholder="Technology" value="{{ old('department') }}">
-                    </div>
-                    <div class="master-form-field full">
-                        <label class="master-label">Designation</label>
-                        <input type="text" name="designation" class="master-input" placeholder="Senior Developer" value="{{ old('designation') }}">
-                    </div>
+                <div class="master-modal-footer">
+                    <button type="button" class="master-btn master-btn-light" data-close-modal="addModal">Cancel</button>
+                    <button type="submit" class="master-btn master-btn-primary"><i class="fas fa-user-plus" aria-hidden="true"></i> Add user</button>
                 </div>
-
-                <div class="master-section-label">Account Security</div>
-                <div class="master-form-grid">
-                    <div class="master-form-field">
-                        <label class="master-label">Password <span class="master-required">*</span></label>
-                        <div class="master-password-wrap">
-                            <input type="password" name="password" id="addPw1" class="master-input {{ $errors->has('password') ? 'is-invalid' : '' }}" placeholder="Min. 6 characters" required>
-                            <button type="button" class="master-password-toggle" data-toggle-password="addPw1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
-                        </div>
-                        @error('password')<span class="master-error">{{ $message }}</span>@enderror
-                    </div>
-                    <div class="master-form-field">
-                        <label class="master-label">Confirm Password <span class="master-required">*</span></label>
-                        <div class="master-password-wrap">
-                            <input type="password" name="password_confirmation" id="addPw2" class="master-input" placeholder="Repeat password" required>
-                            <button type="button" class="master-password-toggle" data-toggle-password="addPw2" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="master-modal-footer">
-                <button type="submit" class="master-btn master-btn-primary"><i class="fas fa-user-plus"></i> Add User</button>
-                <button type="button" class="master-btn master-btn-light" data-close-modal="addModal">Cancel</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-{{-- Edit User Modal --}}
-<div class="master-modal-overlay" id="editModal" aria-hidden="true">
-    <div class="master-modal-box" role="dialog" aria-modal="true" aria-labelledby="editUserTitle">
-        <div class="master-modal-head">
-            <div class="master-modal-icon"><i class="fas fa-user-edit"></i></div>
-            <div>
-                <div class="master-modal-title" id="editUserTitle">Update User</div>
-                <div class="master-modal-subtitle" id="editModalSub">Update user details</div>
-            </div>
-            <button type="button" class="master-modal-close" data-close-modal="editModal" aria-label="Close">
-                <i class="fas fa-times"></i>
-            </button>
+            </form>
         </div>
-
-        <form method="POST" id="editForm" enctype="multipart/form-data">
-            @csrf
-            @method('PUT')
-            <input type="hidden" name="remove_avatar" id="editRemoveAvatar" value="0">
-
-            <div class="master-modal-body">
-                <div class="master-avatar-row">
-                    <div class="master-avatar-preview" id="editAvatarCircle"><i class="fas fa-user"></i></div>
-                    <div class="master-avatar-info">
-                        <p>Upload a new photo or remove the existing one.</p>
-                        <div class="master-avatar-actions">
-                            <label class="master-upload-btn" for="editAvatarFile">
-                                <i class="fas fa-upload"></i> Change Photo
-                                <input type="file" id="editAvatarFile" name="avatar" accept="image/*" hidden>
-                            </label>
-                            <button type="button" class="master-remove-avatar-btn" id="editRemoveBtn" style="display:none;">
-                                <i class="fas fa-trash-alt"></i> Remove
-                            </button>
-                            <span class="master-file-name" id="editAvName">No file chosen</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="master-section-label">Basic Information</div>
-                <div class="master-form-grid">
-                    <div class="master-form-field">
-                        <label class="master-label">Full Name <span class="master-required">*</span></label>
-                        <input type="text" name="name" id="editName" class="master-input" required>
-                    </div>
-                    <div class="master-form-field">
-                        <label class="master-label">Email Address <span class="master-required">*</span></label>
-                        <input type="email" name="email" id="editEmail" class="master-input" required>
-                    </div>
-                    <div class="master-form-field">
-                        <label class="master-label">Mobile Number</label>
-                        <input type="text" name="mobile" id="editMobile" class="master-input">
-                    </div>
-                    <div class="master-form-field">
-                        <label class="master-label">Department</label>
-                        <input type="text" name="department" id="editDepartment" class="master-input">
-                    </div>
-                    <div class="master-form-field full">
-                        <label class="master-label">Designation</label>
-                        <input type="text" name="designation" id="editDesignation" class="master-input">
-                    </div>
-                </div>
-
-                <div class="master-section-label">Change Password</div>
-                <div class="master-info-box">
-                    <i class="fas fa-info-circle"></i>
-                    Leave both fields blank to keep the current password unchanged.
-                </div>
-                <div class="master-form-grid">
-                    <div class="master-form-field">
-                        <label class="master-label">New Password</label>
-                        <div class="master-password-wrap">
-                            <input type="password" name="password" id="editPw1" class="master-input" placeholder="Min. 6 characters">
-                            <button type="button" class="master-password-toggle" data-toggle-password="editPw1" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
-                        </div>
-                    </div>
-                    <div class="master-form-field">
-                        <label class="master-label">Confirm New Password</label>
-                        <div class="master-password-wrap">
-                            <input type="password" name="password_confirmation" id="editPw2" class="master-input" placeholder="Repeat new password">
-                            <button type="button" class="master-password-toggle" data-toggle-password="editPw2" aria-label="Toggle password visibility"><i class="fas fa-eye"></i></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="master-modal-footer">
-                <button type="submit" class="master-btn master-btn-primary"><i class="fas fa-save"></i> Save Changes</button>
-                <button type="button" class="master-btn master-btn-light" data-close-modal="editModal">Cancel</button>
-            </div>
-        </form>
     </div>
-</div>
 
-{{-- Delete Confirmation --}}
-<div class="master-modal-overlay" id="deleteModal" aria-hidden="true">
-    <div class="master-confirm-box" role="dialog" aria-modal="true" aria-labelledby="deleteUserTitle">
-        <div class="master-delete-icon"><i class="fas fa-trash-alt"></i></div>
-        <div class="master-delete-title" id="deleteUserTitle">Delete User</div>
-        <div class="master-delete-desc" id="deleteDesc">Are you sure you want to delete this user? This action cannot be undone.</div>
-        <div class="master-delete-actions">
+    {{-- ================= Edit user ================= --}}
+    <div class="master-modal" id="editModal" aria-hidden="true">
+        <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="editUserTitle">
+            <form method="POST" id="editForm" enctype="multipart/form-data"
+                action="{{ $reopenUserId ? route('users.update', $reopenUserId) : '' }}">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="remove_avatar" id="editRemoveAvatar" value="0">
+
+                <div class="master-modal-header">
+                    <div class="master-modal-heading">
+                        <span class="master-modal-icon" aria-hidden="true">✎</span>
+                        <div>
+                            <h3 class="master-modal-title" id="editUserTitle">Edit user</h3>
+                            <p class="master-modal-subtitle" id="editModalSub">{{ $reopenUserId && old('name') ? 'Update the record for '.old('name') : 'Update the record' }}</p>
+                        </div>
+                    </div>
+                    <button type="button" class="master-modal-close" data-close-modal="editModal" aria-label="Close">&times;</button>
+                </div>
+
+                <div class="master-modal-body">
+                    <div class="master-section-label">Who is this?</div>
+                    <div class="master-form-grid">
+                        <div class="master-field full">
+                            <label class="master-label" for="editRole">Role <span class="master-required">*</span></label>
+                            <select name="role" id="editRole" class="master-select" data-role-select required @disabled($isSelf ?? false)>
+                                @foreach ($roles as $key => $label)
+                                    <option value="{{ $key }}" @selected(old('role') === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            <p class="master-sub" id="editRoleNote"></p>
+                        </div>
+                    </div>
+
+                    <div class="master-section-label">Basic information</div>
+                    <div class="master-form-grid">
+                        <div class="master-field">
+                            <label class="master-label" for="editName">Full name <span class="master-required">*</span></label>
+                            <input type="text" name="name" id="editName" class="master-input" value="{{ old('name') }}" required>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="editEmail">Email address <span class="master-required">*</span></label>
+                            <input type="email" name="email" id="editEmail" class="master-input" value="{{ old('email') }}" required>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="editMobile">Mobile <span class="master-required" data-role-required>*</span></label>
+                            <input type="text" name="mobile" id="editMobile" class="master-input" value="{{ old('mobile') }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="editCode">Employee code</label>
+                            <input type="text" name="employee_code" id="editCode" class="master-input" value="{{ old('employee_code') }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="editDepartment">Department</label>
+                            <input type="text" name="department" id="editDepartment" class="master-input" value="{{ old('department') }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="editDesignation">Designation <span class="master-required" data-role-required>*</span></label>
+                            <input type="text" name="designation" id="editDesignation" class="master-input" value="{{ old('designation') }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="editJoining">Date of joining <span class="master-required" data-role-required>*</span></label>
+                            <input type="date" name="date_of_joining" id="editJoining" class="master-input" value="{{ old('date_of_joining') }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="editType">Employment type</label>
+                            <select name="employment_type" id="editType" class="master-select">
+                                <option value="">—</option>
+                                @foreach ($employmentTypes as $key => $label)
+                                    <option value="{{ $key }}" @selected(old('employment_type') === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="editStatus">Status</label>
+                            <select name="employment_status" id="editStatus" class="master-select">
+                                @foreach ($employmentStatuses as $key => $label)
+                                    <option value="{{ $key }}" @selected(old('employment_status') === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="editPan">PAN</label>
+                            <input type="text" name="pan_number" id="editPan" class="master-input" value="{{ old('pan_number') }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="editBank">Bank</label>
+                            <input type="text" name="bank_name" id="editBank" class="master-input" value="{{ old('bank_name') }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="editAccount">Account number</label>
+                            <input type="text" name="bank_account_number" id="editAccount" class="master-input" value="{{ old('bank_account_number') }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="editIfsc">IFSC</label>
+                            <input type="text" name="bank_ifsc" id="editIfsc" class="master-input" value="{{ old('bank_ifsc') }}">
+                        </div>
+                        <div class="master-field full">
+                            <label class="master-label" for="editAddress">Address</label>
+                            <textarea name="address" id="editAddress" class="master-input" rows="2">{{ old('address') }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="master-section-label">Photo</div>
+                    <div class="master-avatar-row" data-avatar-drop data-avatar-circle="editAvatarCircle"
+                        data-avatar-name="editAvName" data-avatar-remove="delete">
+                        <span class="master-avatar-picker">
+                            <label class="master-avatar-preview" id="editAvatarCircle" for="editAvatarFile"
+                                aria-label="Change the photo" title="Change the photo">
+                                <i class="fas fa-user" aria-hidden="true"></i>
+                            </label>
+                            <span class="master-avatar-camera" aria-hidden="true"><i class="fas fa-camera"></i></span>
+                        </span>
+                        <div class="master-avatar-info">
+                            <p>JPG, PNG, GIF or WEBP, up to 2 MB. Click the circle or drag a photo onto it.</p>
+                            <div class="master-avatar-actions">
+                                <label class="master-upload-btn" for="editAvatarFile">
+                                    <i class="fas fa-upload" aria-hidden="true"></i> Change photo
+                                    <input class="master-input" type="file" id="editAvatarFile" name="avatar"
+                                        accept="image/jpeg,image/png,image/gif,image/webp">
+                                </label>
+                                <button type="button" class="master-remove-avatar-btn" id="editRemoveBtn" hidden>
+                                    <i class="fas fa-trash-alt" aria-hidden="true"></i> Remove
+                                </button>
+                                <span class="master-file-name" id="editAvName">No file chosen</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="master-section-label">Account security</div>
+                    <p class="master-sub">Leave both fields blank to keep the current password.</p>
+                    <div class="master-form-grid">
+                        <div class="master-field">
+                            <label class="master-label" for="editPw1">New password</label>
+                            <div class="master-password-wrap">
+                                <input type="password" name="password" id="editPw1" class="master-input {{ $errors->has('password') ? 'is-invalid' : '' }}" placeholder="Min. 6 characters" autocomplete="new-password">
+                                <button type="button" class="master-password-toggle" data-toggle-password="editPw1" aria-label="Toggle password visibility"><i class="fas fa-eye" aria-hidden="true"></i></button>
+                            </div>
+                            @error('password')<span class="master-error">{{ $message }}</span>@enderror
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="editPw2">Repeat new password</label>
+                            <div class="master-password-wrap">
+                                <input type="password" name="password_confirmation" id="editPw2" class="master-input" placeholder="Repeat new password" autocomplete="new-password">
+                                <button type="button" class="master-password-toggle" data-toggle-password="editPw2" aria-label="Toggle password visibility"><i class="fas fa-eye" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="master-modal-footer">
+                    <p class="master-sub master-modal-lead">
+                        <a id="editRecordLink" href="#">Open the full record — pay, payslips, documents</a>
+                    </p>
+                    <button type="button" class="master-btn master-btn-light" data-close-modal="editModal">Cancel</button>
+                    <button type="submit" class="master-btn master-btn-primary"><i class="fas fa-save" aria-hidden="true"></i> Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- ================= Delete ================= --}}
+    <div class="master-modal" id="deleteModal" aria-hidden="true">
+        <div class="master-modal-card is-narrow" role="dialog" aria-modal="true" aria-labelledby="deleteUserTitle">
             <form method="POST" id="deleteForm">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="master-btn-danger">Yes, Delete</button>
+
+                <div class="master-modal-header">
+                    <div class="master-modal-heading">
+                        <span class="master-modal-icon is-danger" aria-hidden="true">🗑</span>
+                        <div>
+                            <h3 class="master-modal-title" id="deleteUserTitle">Delete this user</h3>
+                            <p class="master-modal-subtitle">This cannot be undone</p>
+                        </div>
+                    </div>
+                    <button type="button" class="master-modal-close" data-close-modal="deleteModal" aria-label="Close">&times;</button>
+                </div>
+
+                <div class="master-modal-body">
+                    <p class="master-modal-text" id="deleteDesc">Are you sure you want to delete this user?</p>
+                    <p class="master-sub user-modal-foot">
+                        Their payslips, documents and uploaded files go with them. The salary entries
+                        already filed in the ledger stay, with the name kept on the row.
+                    </p>
+                </div>
+
+                <div class="master-modal-footer">
+                    <button type="button" class="master-btn master-btn-light" data-close-modal="deleteModal">Cancel</button>
+                    <button type="submit" class="master-btn master-btn-danger">Delete user</button>
+                </div>
             </form>
-            <button type="button" class="master-btn-light" data-close-modal="deleteModal">Cancel</button>
         </div>
     </div>
+
+    {{-- Validation failure on create/update re-opens the modal, so the reader
+         does not have to find their way back to the form. --}}
+    <span hidden data-open-dialog="{{ $errors->any() ? ($reopenUserId ? 'edit' : 'add') : '' }}"></span>
 </div>
 @endsection
 
 @push('scripts')
-<script>
-    (function () {
-        'use strict';
-
-        function byId(id) {
-            return document.getElementById(id);
-        }
-
-        function openModal(id) {
-            var modal = byId(id);
-            if (!modal) return;
-            modal.classList.add('open');
-            modal.setAttribute('aria-hidden', 'false');
-            document.body.classList.add('master-modal-open');
-        }
-
-        function closeModal(id) {
-            var modal = byId(id);
-            if (!modal) return;
-            modal.classList.remove('open');
-            modal.setAttribute('aria-hidden', 'true');
-            document.body.classList.remove('master-modal-open');
-        }
-
-        function resetAvatar(circleId, nameId) {
-            var circle = byId(circleId);
-            var name = byId(nameId);
-            if (circle) circle.innerHTML = '<i class="fas fa-user"></i>';
-            if (name) name.textContent = 'No file chosen';
-        }
-
-        function previewAvatar(input, circleId, nameId) {
-            if (!input.files || !input.files[0]) return;
-
-            var reader = new FileReader();
-            reader.onload = function (event) {
-                var circle = byId(circleId);
-                if (circle) {
-                    circle.innerHTML = '<img src="' + event.target.result + '" alt="Preview">';
-                }
-            };
-            reader.readAsDataURL(input.files[0]);
-
-            var fileName = byId(nameId);
-            if (fileName) fileName.textContent = input.files[0].name;
-
-            var removeButton = byId('editRemoveBtn');
-            if (removeButton) removeButton.style.display = 'inline-flex';
-
-            var removeInput = byId('editRemoveAvatar');
-            if (removeInput) removeInput.value = '0';
-        }
-
-        function togglePassword(fieldId, button) {
-            var field = byId(fieldId);
-            if (!field) return;
-
-            var show = field.type === 'password';
-            field.type = show ? 'text' : 'password';
-            button.innerHTML = show ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
-        }
-
-        function openAddModal() {
-            var form = byId('addForm');
-            if (form) form.reset();
-            resetAvatar('addAvatarCircle', 'addAvName');
-            openModal('addModal');
-        }
-
-        function openEditModal(userId) {
-            if (byId('editPw1')) byId('editPw1').value = '';
-            if (byId('editPw2')) byId('editPw2').value = '';
-            if (byId('editAvatarFile')) byId('editAvatarFile').value = '';
-            if (byId('editAvName')) byId('editAvName').textContent = 'No file chosen';
-            if (byId('editRemoveAvatar')) byId('editRemoveAvatar').value = '0';
-
-            fetch('/users/' + userId + '/data')
-                .then(function (response) { return response.json(); })
-                .then(function (user) {
-                    byId('editModalSub').textContent = 'Update details for ' + user.name;
-                    byId('editForm').action = '/users/' + user.id;
-                    byId('editName').value = user.name || '';
-                    byId('editEmail').value = user.email || '';
-                    byId('editMobile').value = user.mobile || '';
-                    byId('editDepartment').value = user.department || '';
-                    byId('editDesignation').value = user.designation || '';
-
-                    var circle = byId('editAvatarCircle');
-                    var removeButton = byId('editRemoveBtn');
-
-                    if (user.avatar) {
-                        circle.innerHTML = '<img src="' + user.avatar + '" alt="' + user.name + '">';
-                        removeButton.style.display = 'inline-flex';
-                    } else {
-                        circle.innerHTML = '<span style="font-weight:500;font-size:20px;">' + String(user.name || 'U').substring(0, 2).toUpperCase() + '</span>';
-                        removeButton.style.display = 'none';
-                    }
-
-                    openModal('editModal');
-                })
-                .catch(function () {
-                    if (window.Swal) {
-                        Swal.fire({ icon: 'error', title: 'Error', text: 'Could not load user data. Please try again.' });
-                    } else {
-                        alert('Could not load user data. Please try again.');
-                    }
-                });
-        }
-
-        function removeEditAvatar() {
-            resetAvatar('editAvatarCircle', 'editAvName');
-            byId('editAvName').textContent = 'Avatar will be removed';
-            byId('editRemoveAvatar').value = '1';
-            byId('editRemoveBtn').style.display = 'none';
-        }
-
-        function openDeleteModal(id, name) {
-            byId('deleteDesc').textContent = 'Are you sure you want to delete "' + name + '"? This action cannot be undone.';
-            byId('deleteForm').action = '/users/' + id;
-            openModal('deleteModal');
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            var addButton = document.querySelector('[data-open-add-modal]');
-            if (addButton) addButton.addEventListener('click', openAddModal);
-
-            document.querySelectorAll('[data-close-modal]').forEach(function (button) {
-                button.addEventListener('click', function () {
-                    closeModal(button.getAttribute('data-close-modal'));
-                });
-            });
-
-            document.querySelectorAll('.master-modal-overlay').forEach(function (overlay) {
-                overlay.addEventListener('click', function (event) {
-                    if (event.target === overlay) closeModal(overlay.id);
-                });
-            });
-
-            document.querySelectorAll('[data-toggle-password]').forEach(function (button) {
-                button.addEventListener('click', function () {
-                    togglePassword(button.getAttribute('data-toggle-password'), button);
-                });
-            });
-
-            document.querySelectorAll('[data-edit-user]').forEach(function (button) {
-                button.addEventListener('click', function () {
-                    openEditModal(button.getAttribute('data-edit-user'));
-                });
-            });
-
-            document.querySelectorAll('[data-delete-user]').forEach(function (button) {
-                button.addEventListener('click', function () {
-                    openDeleteModal(button.getAttribute('data-delete-user'), button.getAttribute('data-delete-name'));
-                });
-            });
-
-            var addAvatar = byId('addAvatarFile');
-            if (addAvatar) addAvatar.addEventListener('change', function () { previewAvatar(addAvatar, 'addAvatarCircle', 'addAvName'); });
-
-            var editAvatar = byId('editAvatarFile');
-            if (editAvatar) editAvatar.addEventListener('change', function () { previewAvatar(editAvatar, 'editAvatarCircle', 'editAvName'); });
-
-            var removeButton = byId('editRemoveBtn');
-            if (removeButton) removeButton.addEventListener('click', removeEditAvatar);
-
-            document.addEventListener('keydown', function (event) {
-                if (event.key === 'Escape') {
-                    document.querySelectorAll('.master-modal-overlay.open').forEach(function (modal) {
-                        closeModal(modal.id);
-                    });
-                }
-            });
-
-            @if($errors->any())
-                openAddModal();
-            @endif
-        });
-    })();
-</script>
+    <script src="{{ $assetVer('assets/js/users.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/employees.js') }}"></script>
 @endpush

@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'client.portal' => \App\Http\Middleware\ClientPortalAuthenticate::class,
+            /* The office's half of the application. An employee account reaches
+               its own workspace and nothing else — see the middleware. */
+            'office' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

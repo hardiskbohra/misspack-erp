@@ -1,0 +1,276 @@
+/* ==========================================================================
+   USERS.CSS — the user module's own cells
+   --------------------------------------------------------------------------
+   The list (resources/views/users/index.blade.php) and the record
+   (resources/views/users/show.blade.php).
+
+   This sheet is deliberately small. Everything the two screens wear — the
+   tile strip, the chips, the filter row, the applied strip, the toolbar, the
+   table, the density switch, the empty state, the pinned grid, the mobile
+   cards and the dialogs — is the shared list surface (master-list.css) and
+   the shared card vocabulary (master-index / master-detail / master-form),
+   so all this file carries is the two cells that are genuinely ours:
+
+     - the person cell (an avatar, a name and a second line);
+     - the record's tab strip and its headline row.
+
+   It also used to carry a private copy of the modal system: .master-modal-
+   overlay, .master-modal-box and three breakpoint blocks that restated the
+   shared dialog. That copy is why the Add-user dialog did not scroll — a
+   private implementation of a shared component inherits none of its fixes
+   (task 42 gave the shared body the scroll). The dialogs are now the shared
+   .master-modal / .master-modal-card / .master-modal-body trio and this file
+   styles none of it.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   THE LIST — the person cell
+   -------------------------------------------------------------------------- */
+.user-index .user-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    text-decoration: none;
+}
+
+.user-index .user-avatar-mini {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--emp-avatar-bg, linear-gradient(135deg, #4f83f1, #6366f1));
+    color: var(--emp-avatar-fg, #ffffff);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+}
+
+.user-index .user-cell-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.user-index .user-cell-name {
+    font-weight: 600;
+    color: var(--mc-text);
+    line-height: 1.35;
+}
+
+.user-index .user-cell-text .master-sub {
+    margin-top: 1px;
+}
+
+/* The record column is the widest thing on the page and the designation the
+   narrowest: give each column the room its content actually needs instead of
+   letting the browser equalise them. */
+.user-index .user-row td:nth-child(1) { min-width: 230px; }
+.user-index .user-row td:nth-child(3) { min-width: 190px; }
+
+/* --------------------------------------------------------------------------
+   THE PAYSLIP FORM — the two columns of line items, and the total that
+   follows them. In a dialog, because the same fields on the page were a
+   fourteen-field column nobody scrolled to the end of.
+   -------------------------------------------------------------------------- */
+.user-line-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 132px;
+    gap: 8px;
+    align-items: center;
+}
+
+.user-line-row + .user-line-row {
+    margin-top: 8px;
+}
+
+.user-line-row .master-input {
+    height: 40px;
+}
+
+/* The figures the slip will print, as they are typed: the server's own
+   arithmetic, and the browser's own rupee format. */
+.pay-totals {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--master-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mc-text-2);
+}
+
+.pay-totals strong {
+    color: var(--mc-text);
+    font-weight: 700;
+}
+
+.pay-totals em {
+    font-style: normal;
+    font-weight: 500;
+    color: var(--master-muted);
+}
+
+.user-share {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* A dialog hint that follows the actions in a modal body. */
+.user-modal-foot {
+    margin-top: 10px;
+}
+
+.user-modal-foot a {
+    color: var(--emp-info-fg, #2f5fd0);
+    font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   THE ACCOUNT PAGE — your own record, from the user menu
+   The head is the page's identity row: the same avatar the shell shows, the
+   name, the role and the one line that says which half of the record is yours.
+   -------------------------------------------------------------------------- */
+.user-account .account-head {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 20px
+}
+
+.user-account .account-head-avatar {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--emp-avatar-bg, linear-gradient(135deg, #4f83f1, #6366f1));
+    color: var(--emp-avatar-fg, #ffffff);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase
+}
+
+.user-account .account-head-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover
+}
+
+.user-account .account-head-text {
+    flex: 1 1 auto;
+    min-width: 0
+}
+
+.user-account .account-head-name {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--mc-text)
+}
+
+.user-account .account-head-meta {
+    margin: 2px 0 4px;
+    color: var(--mc-text-3);
+    font-size: 12.5px;
+    font-weight: 600
+}
+
+.user-account .account-head .master-sub {
+    margin: 0
+}
+
+.user-account .account-note {
+    margin: -6px 0 10px
+}
+
+/* The theme switch is one button with one sentence. Stacked, the sentence sat
+   above the button and the button under a card's worth of white; side by side,
+   the card is as tall as its own control and the sentence stays next to what it
+   explains. It wraps rather than squeezing the sentence: on a phone the two
+   parts are two rows, which is the layout it had before. */
+.user-account .account-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap
+}
+
+.user-account .account-switch .master-section-title {
+    margin: 0
+}
+
+.user-account .account-switch .account-note {
+    margin: 3px 0 0;
+    max-width: 60ch
+}
+
+/* Doors out of this page, each with the one line that says why it is there. */
+.user-account .account-links {
+    margin: 0;
+    padding: 0;
+    list-style: none
+}
+
+.user-account .account-links li + li {
+    margin-top: 8px
+}
+
+.user-account .account-links a {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 11px 13px;
+    border: 1px solid var(--master-border);
+    border-radius: 12px;
+    background: var(--mc-card);
+    color: var(--mc-text);
+    text-decoration: none
+}
+
+.user-account .account-links a:hover {
+    border-color: var(--master-primary, #4f83f1)
+}
+
+.user-account .account-links i {
+    flex: 0 0 18px;
+    margin-top: 2px;
+    text-align: center;
+    color: var(--master-primary, #4f83f1)
+}
+
+.user-account .account-links strong {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 600
+}
+
+.user-account .account-links em {
+    display: block;
+    margin-top: 1px;
+    color: var(--mc-text-3);
+    font-size: 12.5px;
+    font-style: normal
+}
+
+@media (max-width: 640px) {
+    .user-account .account-head {
+        align-items: flex-start;
+        flex-wrap: wrap
+    }
+}

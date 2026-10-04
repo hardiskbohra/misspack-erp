@@ -1,193 +1,105 @@
 @extends('client_portal.layouts.app')
 
 @section('title', 'Dashboard')
-@section('page-title', 'Dashboard')
+@section('page-title', 'Workspace overview')
 
 @section('content')
-
-<style>
-    .projects-progress-wrap{
-        width:360px;
-        flex-shrink:0;
-        align-self:center;
-    }
-    
-    .projects-progress-text{
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        margin-bottom:10px;
-    }
-    
-    .projects-progress{
-        height:12px;
-        background:#e5e7eb;
-        border-radius:999px;
-        overflow:hidden;
-    }
-    
-    .projects-progress span{
-        display:block;
-        height:100%;
-        border-radius:999px;
-        background:linear-gradient(90deg,#4f7cff,#18b66b);
-    }
-
-    .projects-number {
-        font-size: 12px;
-        color: #4f83f1;
-        font-weight: 600
-    }
-</style>
-
-<div class="cp-page-head" style="margin-bottom:25px;">
-    <div>
-        <p class="cp-eyebrow">Welcome, {{ $portalUser->displayName() }}</p>
-        <h1>{{ $client->company_name }}</h1>
-        
-    </div>
-    <!--<a href="{{ route('client-portal.attachments.index') }}" class="cp-btn cp-btn-primary">Upload Document</a>-->
-</div>
-
-<div class="master-stats">
-    <div class="master-stat blue"><span class="icon"><i class="fa-solid fa-briefcase"></i></span>
-        <div>
-            <p class="master-stat-title">Projects</p>
-            <p class="master-stat-value">{{ $stats['projects'] }}</p>
+<div class="cp-dashboard-hero">
+    <div class="cp-dashboard-hero-copy">
+        <span class="cp-hero-kicker"><i class="fa-solid fa-sparkles"></i> Your MissPack workspace</span>
+        <h1>Welcome back, {{ $portalUser->displayName() }}.</h1>
+        <p>{{ $client->company_name }} · Your projects, deliveries and billing updates, all together.</p>
+        <div class="cp-hero-actions">
+            <a class="cp-hero-primary" href="{{ route('client-portal.projects.index') }}">Explore projects <i class="fa-solid fa-arrow-right"></i></a>
+            <a class="cp-hero-secondary" href="{{ route('client-portal.support.index') }}"><i class="fa-regular fa-message"></i> Contact support</a>
         </div>
     </div>
-    <div class="master-stat purple"><span class="icon"><i class="fas fa-truck"></i></span>
-        <div>
-            <p class="master-stat-title">Shipments</p>
-            <p class="master-stat-value">{{ $stats['shipments'] }}</p>
-        </div>
-    </div>
-    <div class="master-stat teal"><span class="icon"><i class="fa-solid fa-file-invoice-dollar"></i></span>
-        <div>
-            <p class="master-stat-title">Invoices</p>
-            <p class="master-stat-value">{{ $stats['invoices'] }}</p>
-        </div>
-    </div>
-    <div class="master-stat blue"><span class="icon"><i class="fas fa-bell"></i></span>
-        <div>
-            <p class="master-stat-title">Unread Notifications</p>
-            <p class="master-stat-value">{{ $stats['unread_notifications'] }}</p>
-        </div>
-    </div>
-    <div class="master-stat orange"><span class="icon"><i class="fas fa-user-gear"></i></span>
-        <div>
-            <p class="master-stat-title">KYC Status</p>
-            <p class="master-stat-value">{{ method_exists($client, 'statusLabel') ? $client->statusLabel() : ucfirst($client->status) }}</p>
-        </div>
+    <div class="cp-dashboard-hero-art" aria-hidden="true">
+        <div class="cp-hero-orbit cp-orbit-one"></div><div class="cp-hero-orbit cp-orbit-two"></div>
+        <div class="cp-hero-art-core"><i class="fa-solid fa-cubes-stacked"></i></div>
+        <span class="cp-hero-float cp-float-a"><i class="fa-solid fa-box"></i></span>
+        <span class="cp-hero-float cp-float-b"><i class="fa-solid fa-truck-fast"></i></span>
+        <span class="cp-hero-float cp-float-c"><i class="fa-solid fa-file-invoice-dollar"></i></span>
     </div>
 </div>
 
-<div class="cp-grid-2">
-    <div class="cp-card" style="padding:20px;">
-        <div class="cp-page-head" style="margin-bottom:10px;">
-            <div>
-                <p class="cp-eyebrow">Latest</p>
-                <h1 style="font-size:20px;">Projects</h1>
-            </div>
-            <a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ route('client-portal.projects.index') }}">View All</a>
-        </div>
-        @forelse($projects as $project)
-            <div class="cp-file" style="margin-bottom:10px;">
-                <div class="cp-file-icon">▣</div>
-                <div>
-                    <a href="{{ route('client-portal.projects.show', $project->id) }}" style="margin-top:8px;text-decoration:none;">
-                        <div class="cp-muted">{{ $project->project_number }}</div>
-                        <h3>{{ $project->name }}</h3>
-                        <div class="projects-progress-wrap" style="margin-top:10px;">
-                            <div class="projects-progress-text">
-                                <span>{{ $project->stageLabel() }}</span>
-                                <strong>{{ $project->progress_percent }}%</strong>
-                            </div>
-                    
-                            <div class="projects-progress">
-                                <span style="width: {{ $project->progress_percent }}%"></span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        @empty
-            <div class="cp-empty">No public projects yet.</div>
-        @endforelse
-    </div>
-    
-    <div class="cp-card" style="padding:20px;">
-        <div class="cp-page-head" style="margin-bottom:10px;">
-            <div>
-                <p class="cp-eyebrow">Latest</p>
-                <h1 style="font-size:20px;">Shipments</h1>
-            </div>
-            <a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ route('client-portal.shipments.index') }}">View All</a>
-        </div>
-        @forelse($shipments as $shipment)
-        
-            <div class="cp-comment">
-                <a href="{{ route('client-portal.shipments.show', $shipment->id) }}" style="margin-top:8px;text-decoration:none;">
-                    <div class="cp-comment-head">
-                        <strong>{{ $shipment->shipment_number }} · {{ $shipment->logistic_partner ?: '-' }} · {{ $shipment->tracking_number ?: 'No tracking' }}</strong>
-                        <span>{{ $shipment->statusLabel() }}</span>
-                    </div>
-                    <h4>{{ $shipment->identity_name }}</h4>
+<div class="cp-dashboard-stat-grid">
+    <a class="cp-dashboard-stat stat-blue" href="{{ route('client-portal.projects.index') }}"><span class="cp-dashboard-stat-icon"><i class="fa-solid fa-briefcase"></i></span><span class="cp-dashboard-stat-copy"><small>Published projects</small><strong>{{ $stats['projects'] }}</strong></span><i class="fa-solid fa-arrow-up-right-from-square cp-stat-arrow"></i></a>
+    <a class="cp-dashboard-stat stat-violet" href="{{ route('client-portal.shipments.index') }}"><span class="cp-dashboard-stat-icon"><i class="fa-solid fa-truck-fast"></i></span><span class="cp-dashboard-stat-copy"><small>Published shipments</small><strong>{{ $stats['shipments'] }}</strong></span><i class="fa-solid fa-arrow-up-right-from-square cp-stat-arrow"></i></a>
+    <a class="cp-dashboard-stat stat-teal" href="{{ route('client-portal.invoices.index') }}"><span class="cp-dashboard-stat-icon"><i class="fa-solid fa-file-invoice-dollar"></i></span><span class="cp-dashboard-stat-copy"><small>Available invoices</small><strong>{{ $stats['invoices'] }}</strong></span><i class="fa-solid fa-arrow-up-right-from-square cp-stat-arrow"></i></a>
+    <a class="cp-dashboard-stat stat-orange" href="{{ route('client-portal.payments.index') }}"><span class="cp-dashboard-stat-icon"><i class="fa-solid fa-indian-rupee-sign"></i></span><span class="cp-dashboard-stat-copy"><small>Shared receipts</small><strong>{{ $stats['payments'] }}</strong></span><i class="fa-solid fa-arrow-up-right-from-square cp-stat-arrow"></i></a>
+    <a class="cp-dashboard-stat stat-pink" href="{{ route('client-portal.notifications.index') }}"><span class="cp-dashboard-stat-icon"><i class="fa-solid fa-bell"></i></span><span class="cp-dashboard-stat-copy"><small>Unread updates</small><strong>{{ $stats['unread_notifications'] }}</strong></span><i class="fa-solid fa-arrow-up-right-from-square cp-stat-arrow"></i></a>
+</div>
+
+<div class="cp-dashboard-columns">
+    <section class="cp-card cp-dashboard-panel cp-dashboard-projects">
+        <div class="cp-section-heading"><div><p class="cp-eyebrow">Delivery</p><h2>Active projects</h2></div><a class="cp-text-link" href="{{ route('client-portal.projects.index') }}">View all <i class="fa-solid fa-arrow-right"></i></a></div>
+        <div class="cp-dashboard-record-list">
+            @forelse($projects as $project)
+                <a class="cp-dashboard-record" href="{{ route('client-portal.projects.show', $project) }}">
+                    <span class="cp-record-symbol"><i class="fa-solid fa-cubes-stacked"></i></span>
+                    <span class="cp-dashboard-record-copy"><strong>{{ $project->name }}</strong><small>{{ $project->project_number }} · {{ $project->stageLabel() }}</small><span class="cp-progress-track"><span style="width:{{ (int) $project->progress_percent }}%"></span></span></span>
+                    <span class="cp-record-percent">{{ (int) $project->progress_percent }}%</span>
                 </a>
-                <strong style="font-size:11px;padding-top:5px;">{{ $shipment->pickup_date ? $shipment->pickup_date->format('d M') : '-' }}</strong>
-            </div>
-        @empty
-            <div class="cp-empty">No public shipments yet.</div>
-        @endforelse
-    </div>
-</div>
-
-<div class="cp-grid-2" style="margin-top:18px;">
-
-    <div class="cp-card" style="padding:20px;">
-        <div class="cp-page-head" style="margin-bottom:10px;">
-            <div>
-                <p class="cp-eyebrow">Latest</p>
-                <h1 style="font-size:20px;">Notifications</h1>
-            </div>
-            <a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ route('client-portal.notifications.index') }}">View All</a>
+            @empty
+                <div class="cp-empty cp-empty-spacious">No projects have been published to your workspace yet.</div>
+            @endforelse
         </div>
-        @forelse($notifications as $notification)
-            <div class="cp-comment" style="background:{{ $notification->is_read ? '#fff' : '#f8fbff' }};">
-                <div class="cp-comment-head">
-                    <strong>{{ $notification->title }}</strong>
-                    <span>{{ $notification->created_at->format('d M Y') }}</span>
-                </div>
-                <p>{{ $notification->message }}</p>
-                @if($notification->action_url)
-                    <a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ $notification->action_url }}" style="margin-top:8px;">Open</a>
-                @endif
-            </div>
-        @empty
-            <div class="cp-empty">No notifications yet.</div>
-        @endforelse
-    </div>
+    </section>
 
-    <!--<div class="cp-card" style="padding:20px;">-->
-    <!--    <div class="cp-page-head" style="margin-bottom:10px;">-->
-    <!--        <div>-->
-    <!--            <p class="cp-eyebrow">Latest</p>-->
-    <!--            <h1 style="font-size:20px;">Invoices</h1>-->
-    <!--        </div>-->
-    <!--        <a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ route('client-portal.invoices.index') }}">View All</a>-->
-    <!--    </div>-->
-    <!--    @forelse($invoices as $invoice)-->
-    <!--        <div class="cp-file" style="margin-bottom:10px;">-->
-    <!--            <div class="cp-file-icon">▤</div>-->
-    <!--            <div>-->
-    <!--                <strong>{{ $invoice->invoice_number }}</strong>-->
-    <!--                <div class="cp-muted">{{ $invoice->currency }} {{ number_format((float) $invoice->total_amount, 2) }} · {{ $invoice->statusLabel() }}</div>-->
-    <!--                <a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ route('client-portal.invoices.show', $invoice) }}" style="margin-top:8px;">Open</a>-->
-    <!--            </div>-->
-    <!--        </div>-->
-    <!--    @empty-->
-    <!--        <div class="cp-empty">No public invoices yet.</div>-->
-    <!--    @endforelse-->
-    <!--</div>-->
+    <section class="cp-card cp-dashboard-panel">
+        <div class="cp-section-heading"><div><p class="cp-eyebrow">Logistics</p><h2>Recent shipments</h2></div><a class="cp-text-link" href="{{ route('client-portal.shipments.index') }}">View all <i class="fa-solid fa-arrow-right"></i></a></div>
+        <div class="cp-dashboard-record-list">
+            @forelse($shipments as $shipment)
+                <a class="cp-dashboard-record" href="{{ route('client-portal.shipments.show', $shipment) }}">
+                    <span class="cp-record-symbol record-coral"><i class="fa-solid fa-box"></i></span>
+                    <span class="cp-dashboard-record-copy"><strong>{{ $shipment->shipment_number }}</strong><small>{{ $shipment->from_city ?: 'Origin' }} <i class="fa-solid fa-arrow-right-long"></i> {{ $shipment->to_city ?: 'Destination' }}</small></span>
+                    <span class="cp-record-status">{{ $shipment->statusLabel() }}</span>
+                </a>
+            @empty
+                <div class="cp-empty cp-empty-spacious">No shipments have been shared yet.</div>
+            @endforelse
+        </div>
+    </section>
+
+    <section class="cp-card cp-dashboard-panel cp-dashboard-invoices">
+        <div class="cp-section-heading"><div><p class="cp-eyebrow">Billing</p><h2>Latest invoices</h2></div><a class="cp-text-link" href="{{ route('client-portal.invoices.index') }}">Billing centre <i class="fa-solid fa-arrow-right"></i></a></div>
+        <div class="cp-dashboard-record-list">
+            @forelse($salesInvoices as $invoice)
+                <a class="cp-dashboard-record" href="{{ route('client-portal.invoices.sales.show', $invoice) }}">
+                    <span class="cp-record-symbol record-mint"><i class="fa-solid fa-file-invoice"></i></span>
+                    <span class="cp-dashboard-record-copy"><strong>{{ $invoice->invoice_number }}</strong><small>{{ optional($invoice->invoice_date)->format('d M Y') ?: 'Date not set' }} · {{ $invoice->clientPortalStateLabel() }}</small></span>
+                    <strong class="cp-record-amount">{{ \App\Helpers\CommonHelper::amount($invoice->clientPortalBalanceDue(), $invoice->currency) }}</strong>
+                </a>
+            @empty
+                <div class="cp-empty cp-empty-spacious">No sales invoices have been published yet.</div>
+            @endforelse
+        </div>
+    </section>
+
+    <section class="cp-card cp-dashboard-panel cp-dashboard-support">
+        <div class="cp-section-heading"><div><p class="cp-eyebrow">We're here to help</p><h2>Support inbox</h2></div><a class="cp-text-link" href="{{ route('client-portal.support.index') }}">Open inbox <i class="fa-solid fa-arrow-right"></i></a></div>
+        <div class="cp-support-summary">
+            <div><strong>{{ $stats['support_open'] }}</strong><span>requests in progress</span></div>
+            <div><strong>{{ $stats['support_unread'] }}</strong><span>new replies</span></div>
+            <a class="master-btn master-btn-primary" href="{{ route('client-portal.support.index') }}"><i class="fa-regular fa-paper-plane"></i> Start a request</a>
+        </div>
+        @forelse($supportConversations as $conversation)
+            <a class="cp-mini-support-thread" href="{{ route('client-portal.support.show', $conversation->id) }}"><span><strong>{{ $conversation->subject }}</strong><small>{{ optional($conversation->last_message_at)->diffForHumans() ?: 'Recently opened' }}</small></span><span class="cp-status-pill cp-status-{{ $conversation->status }}">{{ $conversation->statusLabel() }}</span></a>
+        @empty
+            <div class="cp-dashboard-hint">Start a private conversation with the MissPack team whenever you need help.</div>
+        @endforelse
+    </section>
+
+    <section class="cp-card cp-dashboard-panel cp-dashboard-notifications">
+        <div class="cp-section-heading"><div><p class="cp-eyebrow">What's new</p><h2>Recent updates</h2></div><a class="cp-text-link" href="{{ route('client-portal.notifications.index') }}">All updates <i class="fa-solid fa-arrow-right"></i></a></div>
+        <div class="cp-notification-list">
+            @forelse($notifications as $notification)
+                <div class="cp-dashboard-notification {{ $notification->is_read ? '' : 'is-unread' }}"><span class="cp-notification-mark"><i class="fa-solid fa-bell"></i></span><div><strong>{{ $notification->title }}</strong><p>{{ \Illuminate\Support\Str::limit($notification->message ?: 'There is a new update in your workspace.', 120) }}</p><time>{{ $notification->created_at->diffForHumans() }}</time></div>@if($notification->action_url)<a class="cp-notification-open" href="{{ $notification->action_url }}" aria-label="Open update"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>@endif</div>
+            @empty
+                <div class="cp-empty cp-empty-spacious">You are all caught up. New updates will appear here.</div>
+            @endforelse
+        </div>
+    </section>
 </div>
 @endsection

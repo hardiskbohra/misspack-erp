@@ -2,456 +2,347 @@
 
 @section('page-title', 'Cashflow Reports')
 
+{{-- A report is read to be acted on: exported, printed, or opened in the ledger
+     it was built from. The page's primary action is the export, because that is
+     what leaves the app. --}}
+@section('page-actions')
+    <a class="master-btn master-btn-ghost" href="{{ route('cashflows.index') }}">Ledger</a>
+    <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.documents') }}">Documents</a>
+    <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.statements') }}">Statements</a>
+    <a class="master-btn master-btn-soft" href="{{ route('cashflows.reports.pdf', $reportQuery) }}">Print / PDF</a>
+    <a class="master-btn master-btn-primary" href="{{ route('cashflows.reports.export', $reportQuery) }}">Export CSV</a>
+@endsection
+
 @section('content')
-    <style>
-        :root {
-            --cf-primary: #4f83f1;
-            --cf-primary-2: #6366f1;
-            --cf-info: #159ff7;
-            --cf-teal: #12cbb7;
-            --cf-purple: #8b5cf6;
-            --cf-orange: #f59e0b;
-            --cf-red: #ef4770;
-            --cf-green: #10b981;
-            --cf-dark: #17233b;
-            --cf-muted: #687386;
-            --cf-border: #dfe7f3;
-            --cf-bg: #eef3ff;
-            --cf-soft: #edf5ff;
-            --cf-shadow: 0 14px 35px rgba(25, 42, 70, .08);
-        }
+@push('styles')
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/cashflows.css') }}">
+@endpush
 
-        .cf-page,
-        .cf-page * {
-            box-sizing: border-box
-        }
+@php
+    /* What the page is showing, in one line — the sentence an accountant would
+       say out loud to describe the sheet in front of them. */
+    $scope = ($dimensions[$dimension]['label'] ?? '') . ' × ' . strtolower($units[$unit] ?? '')
+        . ' · ' . $measures[$measure];
 
-        .cf-page {
-            background: var(--cf-bg);
-            min-height: calc(100vh - 70px);
-            padding: 28px;
-            color: var(--cf-dark);
-            font-size: 14px
-        }
+    /* Chips keep every choice on the page except the one they own: picking a
+       period must not silently drop the grouping, and picking a grouping must
+       not reset the dates. */
+    $baseQuery = collect($reportQuery)->except(['date_from', 'date_to'])->all();
 
-        .cf-card {
-            background: #fff;
-            border: 1px solid var(--cf-border);
-            border-radius: 18px;
-            box-shadow: var(--cf-shadow)
-        }
+    $with = fn (array $overrides) => route('cashflows.reports', array_merge($baseQuery, $overrides));
 
-        .cf-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            padding: 22px 28px;
-            margin-bottom: 24px
-        }
+    $filterCount = collect($appliedFilters)
+        ->reject(fn ($chip) => in_array($chip['query'], ['date_from', 'date_to'], true))
+        ->count();
 
-        .cf-header h1 {
-            margin: 0;
-            font-size: 22px;
-            font-weight: 900
-        }
+    $multiCurrency = count($report['currencies']) > 1;
 
-        .cf-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap
-        }
+    /* One money formatter for the whole sheet, so the headline card and the
+       bars below it agree with the matrix (and with each other). */
+    $moneyCurrency = (string) ($report['money_currency'] ?? '');
+    $money = fn ($value) => $moneyCurrency === ''
+        ? \App\Helpers\CommonHelper::indianCurrency($value, '')
+        : \App\Helpers\CommonHelper::amount($value, $moneyCurrency);
+@endphp
 
-        .cf-btn {
-            min-height: 42px;
-            border: 0;
-            border-radius: 12px;
-            padding: 11px 18px;
-            font-size: 14px;
-            font-weight: 900;
-            text-decoration: none;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            white-space: nowrap
-        }
+<div class="cf cashflow-reports master-list">
 
-        .cf-btn-primary {
-            background: linear-gradient(135deg, var(--cf-primary), var(--cf-primary-2));
-            color: #fff
-        }
-
-        .cf-btn-soft {
-            background: var(--cf-soft);
-            color: var(--cf-primary)
-        }
-
-        .cf-btn-light {
-            background: #f3f6fb;
-            color: var(--cf-dark)
-        }
-
-        .cf-filter {
-            padding: 22px 24px;
-            margin-bottom: 24px
-        }
-
-        .cf-filter-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 12px
-        }
-
-        .cf-input,
-        .cf-select {
-            width: 100%;
-            height: 44px;
-            border: 1px solid #d8e2ef;
-            border-radius: 12px;
-            padding: 10px 14px;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--cf-dark);
-            outline: none
-        }
-
-        .cf-label {
-            display: block;
-            margin-bottom: 7px;
-            color: #536079;
-            font-size: 12px;
-            font-weight: 700
-        }
-
-        .cf-summary {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 18px;
-            margin-bottom: 24px
-        }
-
-        .cf-stat {
-            padding: 22px;
-            border-radius: 18px
-        }
-
-        .cf-stat.blue {
-            background: #dff1ff
-        }
-
-        .cf-stat.purple {
-            background: #ece7ff
-        }
-
-        .cf-stat.teal {
-            background: #dcf8f3
-        }
-
-        .cf-stat.orange {
-            background: #fff2dc
-        }
-
-        .cf-stat p {
-            margin: 0 0 6px;
-            color: #536079;
-            font-weight: 900
-        }
-
-        .cf-stat strong {
-            font-size: 24px
-        }
-
-        .cf-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 22px;
-            margin-bottom: 24px
-        }
-
-        .cf-section {
-            padding: 22px
-        }
-
-        .cf-section h3 {
-            margin: 0 0 16px;
-            font-size: 16px;
-            font-weight: 900
-        }
-
-        .cf-table-wrap {
-            overflow-x: auto
-        }
-
-        .cf-table {
-            width: 100%;
-            min-width: 780px;
-            border-collapse: collapse
-        }
-
-        .cf-table th,
-        .cf-table td {
-            padding: 14px;
-            border-bottom: 1px solid var(--cf-border);
-            text-align: left
-        }
-
-        .cf-table th {
-            font-size: 11px;
-            color: #7d8aa0;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: .06em
-        }
-
-        .credit {
-            color: #059669;
-            font-weight: 900
-        }
-
-        .debit {
-            color: #e11d48;
-            font-weight: 900
-        }
-
-        .cf-sub {
-            display: block;
-            color: var(--cf-muted);
-            font-size: 12px;
-            margin-top: 3px;
-            font-weight: 700
-        }
-
-        .cf-badge {
-            display: inline-flex;
-            border-radius: 999px;
-            padding: 6px 10px;
-            font-size: 11px;
-            font-weight: 900;
-            text-transform: uppercase
-        }
-
-        .status-reconciled {
-            background: #e8fff7;
-            color: #0e9f6e
-        }
-
-        .status-booked {
-            background: #eaf1ff;
-            color: #3f7cf4
-        }
-
-        .status-pending {
-            background: #fff4e5;
-            color: #d97706
-        }
-
-        .status-disputed {
-            background: #ffeaf0;
-            color: #e11d48
-        }
-
-        .status-ignored {
-            background: #f3f6fb;
-            color: #536079
-        }
-
-        @media(max-width:1100px) {
-            .cf-filter-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr))
-            }
-
-            .cf-summary {
-                grid-template-columns: repeat(2, minmax(0, 1fr))
-            }
-
-            .cf-grid {
-                grid-template-columns: 1fr
-            }
-        }
-
-        @media(max-width:700px) {
-            .cf-page {
-                padding: 14px
-            }
-
-            .cf-header {
-                align-items: flex-start;
-                flex-direction: column;
-                padding: 18px
-            }
-
-            .cf-actions,
-            .cf-actions .cf-btn {
-                width: 100%
-            }
-
-            .cf-filter-grid,
-            .cf-summary {
-                grid-template-columns: 1fr
-            }
-
-            .cf-section {
-                padding: 18px
-            }
-        }
-    </style>
-    <div class="cf">
-        <div class="cf-card cf-header">
-            <div>
-                <h1>Cashflow Reports</h1>
-                <p style="margin:5px 0 0;color:#687386;font-weight:500;">{{ $dateFrom->format('d M Y') }} to
-                    {{ $dateTo->format('d M Y') }}</p>
+    {{-- ── the surface's controls: period chips, saved views, the builder ── --}}
+    <div class="master-card master-card--flat">
+        <div class="master-list-bar">
+            <div class="master-list-chips">
+                @foreach ($dateRanges as $rangeKey => $range)
+                    <a class="master-list-chip {{ $activeRange === $rangeKey ? 'is-active' : '' }}"
+                        href="{{ $with(['date_from' => $range['from'], 'date_to' => $range['to']]) }}">
+                        {{ $dateRangeLabels[$rangeKey] }}
+                    </a>
+                @endforeach
             </div>
-            <div class="cf-actions">
-                <a href="{{ route('cashflows.index') }}" class="cf-btn cf-btn-light">Back</a>
-                <a href="{{ route('cashflows.settings.index') }}" class="cf-btn cf-btn-soft">Settings</a>
-                <a href="{{ route('cashflows.reports.pdf', request()->query()) }}" class="cf-btn cf-btn-primary">Download PDF</a></div>
+
+            <div class="master-list-saved">
+                @foreach ($savedViews as $view)
+                    <span class="master-list-saved-chip">
+                        <a href="{{ route('cashflows.reports', ['saved_view' => $view->id]) }}"
+                            title="{{ $view->is_shared ? 'Shared view' : 'Your view' }}">{{ $view->name }}</a>
+                        @if ((int) $view->user_id === (int) auth()->id())
+                            <form method="POST" action="{{ route('cashflows.saved-views.destroy', $view) }}">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" title="Remove saved view" aria-label="Remove the saved view {{ $view->name }}">&times;</button>
+                            </form>
+                        @endif
+                    </span>
+                @endforeach
+                <button type="button" class="master-btn master-btn-soft master-btn-sm" id="toggleSaveView">☆ Save this report</button>
+                <form method="POST" action="{{ route('cashflows.saved-views.store', $reportQuery) }}" class="master-list-save-view" id="saveViewForm" hidden>
+                    @csrf
+                    <input type="hidden" name="module" value="cashflow-reports">
+                    <input class="master-input" name="name" placeholder="Report name" maxlength="60"
+                        aria-label="Saved report name" required>
+                    <label class="master-check"><input type="checkbox" name="is_shared" value="1"> Share</label>
+                    <button class="master-btn master-btn-primary master-btn-sm">Save</button>
+                </form>
+            </div>
         </div>
-        <form method="GET" action="{{ route('cashflows.reports') }}" class="cf-card cf-filter">
-            <div class="cf-filter-grid">
-                <div><label class="cf-label">Report Type</label><select class="cf-select" name="report_type">
-                        <option value="overall" @selected($reportType === 'overall')>Overall Cashflow</option>
-                        <option value="client" @selected($reportType === 'client')>Client Statement</option>
-                        <option value="vendor" @selected($reportType === 'vendor')>Vendor Statement</option>
-                        <option value="cash_expense" @selected($reportType === 'cash_expense')>Cash Expenses</option>
-                    </select></div>
-                <div><label class="cf-label">Period</label><select class="cf-select" name="period">
-                        <option value="day" @selected($period === 'day')>Day Wise</option>
-                        <option value="week" @selected($period === 'week')>Week Wise</option>
-                        <option value="month" @selected($period === 'month')>Month Wise</option>
-                        <option value="quarter" @selected($period === 'quarter')>Quarter Wise</option>
-                        <option value="year" @selected($period === 'year')>Year Wise</option>
-                    </select></div>
-                <div><label class="cf-label">Base Date</label><input class="cf-input" type="date" name="date"
-                        value="{{ request('date', now()->toDateString()) }}"></div>
-                <div><label class="cf-label">Account</label><select class="cf-select" name="account_id">
-                        <option value="all">All Accounts</option>@foreach($accounts as $account)<option
-                            value="{{ $account->id }}" @selected((string) $accountId === (string) $account->id)>
-                        {{ $account->account_name }}</option>@endforeach
-                    </select></div>
-                <div><label class="cf-label">From Date</label><input class="cf-input" type="date" name="date_from"
-                        value="{{ $dateFrom->toDateString() }}"></div>
-                <div><label class="cf-label">To Date</label><input class="cf-input" type="date" name="date_to"
-                        value="{{ $dateTo->toDateString() }}"></div>
-                <div><label class="cf-label">Client</label><select class="cf-select" name="client_id">
-                        <option value="all">All Clients</option>@foreach($clients as $client)<option
-                            value="{{ $client->id }}" @selected((string) $clientId === (string) $client->id)>
-                        {{ $client->company_name }}</option>@endforeach
-                    </select></div>
-                <div><label class="cf-label">Vendor</label><select class="cf-select" name="vendor_id">
-                        <option value="all">All Vendors</option>@foreach($vendors as $vendor)<option
-                            value="{{ $vendor->id }}" @selected((string) $vendorId === (string) $vendor->id)>
-                        {{ $vendor->vendor_name }}</option>@endforeach
-                    </select></div>
-                <div style="display:flex;gap:10px;align-items:end;"><button class="cf-btn cf-btn-primary"
-                        type="submit">Generate</button><a class="cf-btn cf-btn-light"
-                        href="{{ route('cashflows.reports') }}">Reset</a></div>
+
+        <form method="GET" action="{{ route('cashflows.reports') }}">
+            <div class="master-filter-row core-filter-toolbar">
+                <div class="master-search">
+                    <span aria-hidden="true">⌕</span>
+                    <input class="master-input" type="search" name="search"
+                        value="{{ request()->query('search') }}" placeholder="Particular, invoice, reference"
+                        aria-label="Search report entries">
+                </div>
+                <x-filter-trigger drawer="cashflowReportFiltersDrawer" label="Report options"
+                    :count="$filterCount" />
             </div>
+
+            <x-drawer id="cashflowReportFiltersDrawer" title="Configure cashflow report" eyebrow="Report filters"
+                subtitle="Choose how to group the ledger, set its period, and narrow the matching entries." size="wide">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Report shape and period</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="reportDimension">Group by</label>
+                            <select class="master-select" id="reportDimension" name="dimension">
+                                @foreach ($dimensions as $key => $definition)
+                                    <option value="{{ $key }}" @selected($dimension === $key)>{{ $definition['label'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="reportUnit">Period</label>
+                            <select class="master-select" id="reportUnit" name="period_unit">
+                                @foreach ($units as $key => $label)
+                                    <option value="{{ $key }}" @selected($unit === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="reportMeasure">Figure</label>
+                            <select class="master-select" id="reportMeasure" name="measure">
+                                @foreach ($measures as $key => $label)
+                                    <option value="{{ $key }}" @selected($measure === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="reportComparison">Compare with</label>
+                            <select class="master-select" id="reportComparison" name="comparison">
+                                @foreach ($comparisons as $key => $label)
+                                    <option value="{{ $key }}" @selected($comparison === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="reportFrom">From</label>
+                            <input class="master-input" id="reportFrom" type="date" name="date_from" value="{{ $report['from'] }}">
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="reportTo">To</label>
+                            <input class="master-input" id="reportTo" type="date" name="date_to" value="{{ $report['to'] }}">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Narrow the entries</h3>
+                    <div class="core-drawer-fields">
+                        @foreach ([
+                            'account_id' => ['Account', $accounts->pluck('account_name', 'id')->all()],
+                            'account_type' => ['Account type', $accountTypeOptions],
+                            'category_id' => ['Category', $categories->pluck('name', 'id')->all()],
+                            'accounting_status' => ['Accounting status', $accountingStatusOptions],
+                            'transaction_type' => ['Money in / out', $transactionTypeOptions],
+                            'payment_mode' => ['Payment mode', $paymentModeOptions],
+                            'currency' => ['Currency', $currencyOptions],
+                            'documents' => ['Documents', ['missing' => 'Missing only', 'attached' => 'Filed only']],
+                        ] as $name => [$label, $options])
+                            @php($selected = (string) request()->query($name, 'all'))
+                            <div class="master-field">
+                                <label class="master-label" for="reportFilter-{{ str_replace('_', '-', $name) }}">{{ $label }}</label>
+                                <select class="master-select" id="reportFilter-{{ str_replace('_', '-', $name) }}" name="{{ $name }}">
+                                    <option value="all">All {{ strtolower($label) }}</option>
+                                    @foreach ($options as $key => $optionLabel)
+                                        <option value="{{ $key }}" @selected($selected === (string) $key)>{{ $optionLabel }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endforeach
+
+                        @if ($clients->isNotEmpty())
+                            <div class="master-field">
+                                <label class="master-label" for="reportFilter-client">Client</label>
+                                <select class="master-select" id="reportFilter-client" name="client_id">
+                                    <option value="all">All clients</option>
+                                    @foreach ($clients as $client)
+                                        <option value="{{ $client->id }}" @selected((string) request()->query('client_id') === (string) $client->id)>{{ $client->company_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
+
+                        @if ($vendors->isNotEmpty())
+                            <div class="master-field">
+                                <label class="master-label" for="reportFilter-vendor">Vendor</label>
+                                <select class="master-select" id="reportFilter-vendor" name="vendor_id">
+                                    <option value="all">All vendors</option>
+                                    @foreach ($vendors as $vendor)
+                                        <option value="{{ $vendor->id }}" @selected((string) request()->query('vendor_id') === (string) $vendor->id)>{{ $vendor->vendor_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
+
+                        @if ($employees->isNotEmpty())
+                            <div class="master-field">
+                                <label class="master-label" for="reportFilter-employee">Employee</label>
+                                <select class="master-select" id="reportFilter-employee" name="employee_id">
+                                    <option value="all">All employees</option>
+                                    @foreach ($employees as $employee)
+                                        <option value="{{ $employee->id }}" @selected((string) request()->query('employee_id') === (string) $employee->id)>{{ $employee->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
+
+                        <div class="master-field">
+                            <label class="master-label" for="reportFilter-expense">Expense head</label>
+                            <input class="master-input" id="reportFilter-expense" name="expense_head"
+                                value="{{ request()->query('expense_head') }}" placeholder="Any expense head">
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
+                    <a class="master-btn master-btn-soft" href="{{ route('cashflows.reports') }}">Reset</a>
+                    <button class="master-btn master-btn-primary" type="submit">Run report</button>
+                </x-slot:footer>
+            </x-drawer>
+
+            {{-- What is filtering the report, one removable chip each: a filter
+                 that arrives by link (or by saved view) is visible here even
+                 when its control is closed. --}}
+            @if ($filterCount > 0)
+                <div class="master-list-applied">
+                    <span class="master-list-applied-title">Filtered by</span>
+                    @foreach ($appliedFilters as $chip)
+                        @continue(in_array($chip['query'], ['date_from', 'date_to'], true))
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">{{ $chip['label'] }}</span>
+                            <span class="master-list-applied-value">{{ $appliedFilterLabels[$chip['key']] ?? $chip['value'] }}</span>
+                            <a class="master-list-applied-x"
+                                href="{{ route('cashflows.reports', array_merge($reportQuery, [$chip['query'] => 'all', 'dimension' => $dimension])) }}"
+                                aria-label="Remove the {{ strtolower($chip['label']) }} filter"
+                                title="Remove the {{ strtolower($chip['label']) }} filter">&times;</a>
+                        </span>
+                    @endforeach
+                    <a class="master-list-applied-clear" href="{{ route('cashflows.reports') }}">Clear all filters</a>
+                </div>
+            @endif
         </form>
+    </div>
 
-        <div class="cf-summary">
-            <div class="cf-stat blue">
-                <p>Total Credit</p><strong>{{ number_format($summary['credit'], 2) }}</strong>
-            </div>
-            <div class="cf-stat purple">
-                <p>Total Debit</p><strong>{{ number_format($summary['debit'], 2) }}</strong>
-            </div>
-            <div class="cf-stat teal">
-                <p>Net Cashflow</p><strong>{{ number_format($summary['net'], 2) }}</strong>
-            </div>
-            <div class="cf-stat orange">
-                <p>Total Entries</p><strong>{{ $summary['count'] }}</strong>
+    {{-- ── the window, in figures ── --}}
+    <div class="master-stats">
+        <div class="master-stat master-stat--flat green">
+            <span class="icon">↓</span>
+            <div>
+                <p class="master-stat-title">Money in</p>
+                <p class="master-stat-value">{{ $money($report['totals']['credit']) }}</p>
+                <p class="master-sub">{{ $scope }} · {{ $dateFrom->format('d M Y') }} → {{ $dateTo->format('d M Y') }}</p>
             </div>
         </div>
-
-        <div class="cf-grid">
-            <div class="cf-card cf-section">
-                <h3>Account Summary</h3>
-                <div class="cf-table-wrap">
-                    <table class="cf-table">
-                        <thead>
-                            <tr>
-                                <th>Account</th>
-                                <th>Credit</th>
-                                <th>Debit</th>
-                                <th>Net</th>
-                            </tr>
-                        </thead>
-                        <tbody>@forelse($accountSummary as $row)<tr>
-                            <td>{{ $row['name'] }}<span class="cf-sub">{{ $row['type'] }}</span></td>
-                            <td class="credit">{{ number_format($row['credit'], 2) }}</td>
-                            <td class="debit">{{ number_format($row['debit'], 2) }}</td>
-                            <td>{{ number_format($row['credit'] - $row['debit'], 2) }}</td>
-                        </tr>@empty<tr>
-                                <td colspan="4">No data.</td>
-                            </tr>@endforelse</tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="cf-card cf-section">
-                <h3>Category Summary</h3>
-                <div class="cf-table-wrap">
-                    <table class="cf-table">
-                        <thead>
-                            <tr>
-                                <th>Category</th>
-                                <th>Credit</th>
-                                <th>Debit</th>
-                                <th>Net</th>
-                            </tr>
-                        </thead>
-                        <tbody>@forelse($categorySummary as $row)<tr>
-                            <td>{{ $row['name'] }}<span class="cf-sub">{{ $row['type'] }}</span></td>
-                            <td class="credit">{{ number_format($row['credit'], 2) }}</td>
-                            <td class="debit">{{ number_format($row['debit'], 2) }}</td>
-                            <td>{{ number_format($row['credit'] - $row['debit'], 2) }}</td>
-                        </tr>@empty<tr>
-                                <td colspan="4">No data.</td>
-                            </tr>@endforelse</tbody>
-                    </table>
-                </div>
+        <div class="master-stat master-stat--flat orange">
+            <span class="icon">↑</span>
+            <div>
+                <p class="master-stat-title">Money out</p>
+                <p class="master-stat-value">{{ $money($report['totals']['debit']) }}</p>
+                <p class="master-sub">{{ \Illuminate\Support\Str::plural('entry', $report['totals']['count']) }}, {{ $report['totals']['count'] }} in this range</p>
             </div>
         </div>
-
-        <div class="cf-card cf-section">
-            <h3>Statement Entries</h3>
-            <div class="cf-table-wrap">
-                <table class="cf-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Particular</th>
-                            <th>Invoice/Bill</th>
-                            <th>Ref.</th>
-                            <th>Account</th>
-                            <th>Credit</th>
-                            <th>Debit</th>
-                            <th>Balance</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>@forelse($entries as $entry)<tr>
-                        <td>{{ $entry->entry_date?->format('d M Y') }}</td>
-                        <td>{{ $entry->particular }}<span
-                                class="cf-sub">{{ $entry->related_party_name ?: $entry->expense_head }}</span></td>
-                        <td>{{ $entry->invoice_bill_number ?: '-' }}</td>
-                        <td>{{ $entry->bank_reference_number ?: '-' }}</td>
-                        <td>{{ $entry->account?->account_name }}</td>
-                        <td class="credit">
-                            {{ $entry->credit_amount > 0 ? number_format((float) $entry->credit_amount, 2) : '-' }}</td>
-                        <td class="debit">
-                            {{ $entry->debit_amount > 0 ? number_format((float) $entry->debit_amount, 2) : '-' }}</td>
-                        <td>{{ $entry->balance !== null ? number_format((float) $entry->balance, 2) : '-' }}</td>
-                        <td><span
-                                class="cf-badge status-{{ str_replace('_', '-', $entry->accounting_status) }}">{{ $entry->statusLabel() }}</span>
-                        </td>
-                    </tr>@empty<tr>
-                            <td colspan="9">No entries found for this report.</td>
-                        </tr>@endforelse</tbody>
-                </table>
+        <div class="master-stat master-stat--flat {{ $report['totals']['direction'] === 'out' ? 'purple' : 'blue' }}">
+            <span class="icon">=</span>
+            <div>
+                <p class="master-stat-title">Net {{ $report['totals']['direction'] === 'out' ? 'out' : 'in' }}</p>
+                <p class="master-stat-value">{{ $money($report['totals']['net']) }}</p>
+                <p class="master-sub">
+                    @if ($comparison !== 'none' && $report['totals']['delta'] !== null)
+                        {{ $report['totals']['delta'] > 0 ? '+' : '' }}{{ number_format($report['totals']['delta'], 1) }}% against
+                        {{ strtolower($comparisons[$comparison]) }}
+                    @else
+                        {{ $measures[$measure] }} per {{ strtolower($units[$unit]) }}
+                    @endif
+                </p>
             </div>
         </div>
     </div>
+
+    @if ($report['truncated'])
+        <p class="cf-report-note">
+            <strong>Long range.</strong> Only the first {{ count($report['periods']) }} {{ strtolower($units[$unit]) }}
+            columns are drawn — narrow the dates to see the rest, or switch the period to a longer one.
+        </p>
+    @endif
+
+    @if ($multiCurrency)
+        {{-- A total that adds rupees to dollars is a number, not an answer. --}}
+        <p class="cf-report-note">
+            <strong>Mixed currencies.</strong> This range holds
+            {{ implode(' and ', $report['currencies']) }}, so the figures carry no currency sign —
+            add a currency filter to compare like with like.
+        </p>
+    @endif
+
+    @if ($report['empty'])
+        <div class="master-card master-card--flat master-list-empty">
+            <span class="master-list-empty-icon" aria-hidden="true">∑</span>
+            <p class="master-list-empty-title">Nothing to group in this range</p>
+            <p class="master-list-empty-text">
+                No entry between {{ $dateFrom->format('d M Y') }} and {{ $dateTo->format('d M Y') }}
+                matches these filters. Widen the dates, or clear a filter.
+            </p>
+            <div class="master-list-empty-actions">
+                <a class="master-btn master-btn-soft" href="{{ route('cashflows.reports') }}">Start over</a>
+                <a class="master-btn master-btn-ghost" href="{{ route('cashflows.index', array_merge($report['filters'], ['date_from' => $report['from'], 'date_to' => $report['to']])) }}">
+                    Open the ledger for these dates
+                </a>
+            </div>
+        </div>
+    @else
+        <div class="master-card master-table-card master-card--flat">
+            <div class="master-list-toolbar">
+                <p class="master-list-hint"
+                    title="Every figure opens the entries behind it in the ledger, filtered to the same rows this report counted.">
+                    {{ $scope }} <strong>{{ $dateFrom->format('d M Y') }} → {{ $dateTo->format('d M Y') }}</strong>
+                    @if ($comparison !== 'none')
+                        · compared with {{ strtolower($comparisons[$comparison]) }}
+                    @endif
+                </p>
+            </div>
+
+            @include('cashflows.partials.report-matrix', ['printMode' => false, 'footClass' => 'master-list-total'])
+        </div>
+
+        {{-- The same figures down the periods, so the shape of the range is
+             visible before the numbers are read. --}}
+        <div class="master-card master-card--flat cf-report-trend">
+            @php($peak = max(1, ...array_map(fn ($cell) => max((float) $cell['credit'], (float) $cell['debit']), $report['totals']['cells'])))
+            @foreach ($report['periods'] as $index => $period)
+                @php($cell = $report['totals']['cells'][$index])
+                <a class="cf-report-bar" href="{{ $cell['url'] }}"
+                    title="{{ $period['label'] }}: in {{ $money($cell['credit']) }}, out {{ $money($cell['debit']) }}">
+                    <span class="cf-report-bar-bars">
+                        <i class="cf-report-bar-in" style="height: {{ max(2, round($cell['credit'] / $peak * 100)) }}%"></i>
+                        <i class="cf-report-bar-out" style="height: {{ max(2, round($cell['debit'] / $peak * 100)) }}%"></i>
+                    </span>
+                    <span class="cf-report-bar-label">{{ $period['short'] }}</span>
+                </a>
+            @endforeach
+        </div>
+    @endif
+</div>
 @endsection
+
+@push('scripts')
+    <script src="{{ $assetVer('assets/js/cashflows.js') }}"></script>
+@endpush

@@ -4,1029 +4,438 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <title>{{ $invoice->invoice_number }} - {{ $invoice->typeLabel() }}</title>
-    <style>
-        /* =========================================================
-           MISSPACK INVOICE
-           PRINT-FIRST A4 DESIGN
-           ========================================================= */
-    
-        :root {
-            --pink: #2f3a4c;
-            --pink-dark: #d93660;
-            --pink-soft: #fff1f5;
-    
-            --purple: #2f3a4c;
-            --purple-dark: #6043c4;
-            --purple-soft: #f4f1ff;
-    
-            --teal: #19a995;
-            --teal-soft: #edfaf8;
-    
-            --blue-soft: #f1f7ff;
-    
-            --dark: #202033;
-            --text: #414252;
-            --muted: #74768a;
-    
-            --border: #dedde7;
-            --border-light: #eceaf1;
-    
-            --background: #f3f1f6;
-            --white: #ffffff;
-    
-            --font: Arial, Helvetica, sans-serif;
-        }
-    
-        /* =========================================================
-           RESET
-           ========================================================= */
-    
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-        }
-    
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-        }
-    
-        body {
-            background: var(--background);
-            color: var(--text);
-            font-family: var(--font);
-            font-size: 11px;
-            line-height: 1.4;
-    
-            /*
-             * CRITICAL:
-             * Preserve colors when Chrome prints/PDFs.
-             */
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
-        }
-    
-        /* =========================================================
-           TOOLBAR
-           ========================================================= */
-    
-        .toolbar {
-            width: 210mm;
-            margin: 15px auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-        }
-    
-        .btn {
-            appearance: none;
-            border: 0;
-            border-radius: 7px;
-    
-            background: var(--purple);
-            color: #fff;
-    
-            padding: 9px 15px;
-    
-            font-family: var(--font);
-            font-size: 11px;
-            font-weight: 700;
-    
-            text-decoration: none;
-            cursor: pointer;
-    
-            box-shadow: 0 3px 10px rgba(118, 87, 217, .18);
-        }
-    
-        .btn:hover {
-            background: var(--purple-dark);
-        }
-    
-        /* =========================================================
-           A4 PAGE
-           ========================================================= */
-    
-        .page {
-            width: 210mm;
-            min-height: 297mm;
-    
-            margin: 0 auto 20px;
-            padding: 9mm;
-    
-            background: #fff;
-    
-            border: 1px solid var(--border);
-            border-radius: 8px;
-    
-            box-shadow: 0 12px 35px rgba(30, 25, 50, .12);
-    
-            position: relative;
-    
-            overflow: hidden;
-    
-            /*
-             * Prevent browser from creating strange layout
-             * differences between screen and print.
-             */
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-    
-        /* Top brand strip */
-        .page::before {
-            content: "";
-            display: block;
-    
-            position: absolute;
-    
-            top: 0;
-            left: 0;
-            right: 0;
-    
-            height: 5px;
-    
-            background: var(--pink);
-        }
-    
-        /* =========================================================
-           HEADER
-           ========================================================= */
-    
-        .top {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 155px;
-    
-            gap: 18px;
-    
-            padding: 3px 0 11px;
-    
-            border-bottom: 1px solid var(--border);
-        }
-    
-        .brand {
-            min-width: 0;
-        }
-    
-        .brand-logo {
-            display: block;
-            height: 48px;
-            width: auto;
-    
-            object-fit: contain;
-            object-position: left center;
-        }
-    
-        .brand h1 {
-            margin: 0;
-    
-            color: var(--dark);
-    
-            font-size: 25px;
-            line-height: 1.1;
-            font-weight: 800;
-        }
-    
-        .brand p {
-            margin: 4px 0;
-    
-            color: #2f3a4c;
-    
-            font-size: 10px;
-            line-height: 1.45;
-        }
-    
-        .brand p:first-of-type {
-            margin-top: 6px;
-    
-            color: #2f3a4c;
-    
-            font-size: 14px;
-            font-weight: 700;
-        }
-    
-        /* =========================================================
-           INVOICE TITLE
-           ========================================================= */
-    
-        .title {
-            text-align: right;
-            align-self: start;
-        }
-    
-        .title h2 {
-            margin: 0;
-    
-            color: #2f3a4c;
-    
-            font-size: 19px !important;
-            line-height: 1.15;
-    
-            font-weight: 800;
-    
-            text-transform: uppercase;
-            letter-spacing: .5px;
-        }
-    
-        .title strong {
-            display: inline-block;
-    
-            margin-top: 7px;
-            padding: 5px 9px;
-    
-            background: var(--pink-soft);
-            color: var(--pink-dark);
-    
-            border: 1px solid #f8d5df;
-            border-radius: 6px;
-    
-            font-size: 12px;
-            font-weight: 800;
-        }
-    
-        .title p {
-            display: inline-block;
-    
-            margin: 7px 0 0;
-            padding: 4px 9px;
-    
-            background: var(--teal-soft);
-            color: #087f72;
-    
-            border-radius: 12px;
-    
-            font-size: 9px;
-            font-weight: 700;
-    
-            text-transform: uppercase;
-            letter-spacing: .3px;
-        }
-    
-        /* =========================================================
-           INVOICE META
-           ========================================================= */
-    
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-    
-            margin-top: 10px;
-    
-            border: 1px solid var(--border);
-            border-radius: 7px;
-    
-            overflow: hidden;
-        }
-    
-        .info-grid div {
-            min-width: 0;
-    
-            padding: 7px 8px;
-    
-            border-right: 1px solid var(--border);
-        }
-    
-        .info-grid div:last-child {
-            border-right: 0;
-        }
-    
-        .info-grid div:nth-child(1) {
-            background: var(--pink-soft);
-        }
-    
-        .info-grid div:nth-child(2) {
-            background: var(--purple-soft);
-        }
-    
-        .info-grid div:nth-child(3) {
-            background: var(--blue-soft);
-        }
-    
-        .info-grid div:nth-child(4) {
-            background: var(--teal-soft);
-        }
-    
-        .info-grid span {
-            display: block;
-    
-            margin-bottom: 2px;
-    
-            color: var(--muted);
-    
-            font-size: 8px;
-            font-weight: 700;
-    
-            text-transform: uppercase;
-            letter-spacing: .5px;
-        }
-    
-        .info-grid strong {
-            display: block;
-    
-            color: var(--dark);
-    
-            font-size: 10px;
-            font-weight: 700;
-        }
-    
-        /* =========================================================
-           BILL TO / SHIP TO
-           ========================================================= */
-    
-        .meta {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-    
-            gap: 10px;
-    
-            margin-top: 10px;
-        }
-    
-        .box {
-            min-width: 0;
-    
-            padding: 9px;
-    
-            background: #fff;
-    
-            border: 1px solid var(--border);
-            border-radius: 7px;
-    
-            box-shadow: none;
-        }
-    
-        .box h3 {
-            margin: -9px -9px 8px;
-    
-            padding: 6px 9px;
-    
-            background: var(--purple);
-    
-            color: #fff;
-    
-            border-radius: 6px 6px 0 0;
-    
-            font-size: 9px;
-            font-weight: 700;
-    
-            text-transform: uppercase;
-            letter-spacing: .6px;
-        }
-    
-        .box strong {
-            color: var(--dark);
-            font-weight: 700;
-        }
-    
-        /* =========================================================
-           ITEMS TABLE
-           ========================================================= */
-    
-        .items {
-            width: 100%;
-    
-            margin-top: 11px;
-    
-            border-collapse: separate;
-            border-spacing: 0;
-    
-            border: 1px solid var(--border);
-            border-radius: 7px;
-    
-            overflow: hidden;
-    
-            table-layout: fixed;
-        }
-    
-        .items th,
-        .items td {
-            padding: 6px 7px;
-    
-            border: 0;
-            border-bottom: 1px solid var(--border-light);
-    
-            vertical-align: top;
-    
-            word-wrap: break-word;
-            overflow-wrap: anywhere;
-        }
-    
-        .items th {
-            background: #f4f1f8;
-    
-            color: var(--dark);
-    
-            border-bottom: 2px solid #ded7e8;
-    
-            font-size: 8px;
-            font-weight: 800;
-    
-            text-transform: uppercase;
-            letter-spacing: .4px;
-    
-            text-align: left;
-        }
-    
-        .items th:first-child {
-            border-radius: 6px 0 0 0;
-        }
-    
-        .items th:last-child {
-            border-radius: 0 6px 0 0;
-        }
-    
-        .items tbody tr:nth-child(even) td {
-            background: #fcfbfd;
-        }
-    
-        .items tbody tr:last-child td {
-            border-bottom: 0;
-        }
-    
-        .items td {
-            font-size: 10px;
-            color: var(--text);
-        }
-    
-        .items td strong {
-            color: var(--dark);
-            font-size: 10px;
-        }
-    
-        .items td em {
-            color: var(--muted);
-            font-size: 9px;
-        }
-    
-        .right {
-            text-align: right !important;
-        }
-    
-        .center {
-            text-align: center !important;
-        }
-    
-        /* =========================================================
-           TOTALS SECTION
-           ========================================================= */
-    
-        .totals {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    
-            gap: 10px;
-    
-            margin-top: 10px;
-        }
-    
-        /* =========================================================
-           AMOUNT IN WORDS
-           ========================================================= */
-    
-        .amount-words {
-            min-height: 52px;
-    
-            padding: 9px;
-    
-            background: #faf8fc;
-    
-            border: 1px solid var(--border);
-            border-left: 4px solid var(--pink);
-    
-            border-radius: 6px;
-    
-            color: var(--dark);
-    
-            font-size: 10px;
-            font-weight: 700;
-    
-            line-height: 1.5;
-        }
-    
-        .amount-words span {
-            color: var(--muted) !important;
-            font-weight: 500;
-        }
-    
-        /* =========================================================
-           SUMMARY TABLE
-           ========================================================= */
-    
-        .summary {
-            border: 1px solid var(--border);
-            border-radius: 7px;
-    
-            overflow: hidden;
-        }
-    
-        .summary table {
-            width: 100%;
-    
-            border-collapse: collapse;
-        }
-    
-        .summary td {
-            padding: 5px 8px;
-    
-            border-bottom: 1px solid var(--border-light);
-    
-            font-size: 9px;
-        }
-    
-        .summary tr:last-child td {
-            border-bottom: 0;
-        }
-    
-        .summary td:first-child {
-            color: var(--text);
-        }
-    
-        .summary td:last-child {
-            text-align: right;
-    
-            color: var(--dark);
-    
-            font-weight: 600;
-            white-space: nowrap;
-        }
-    
-        .summary tr:last-child td {
-            padding: 8px;
-    
-            background: var(--purple);
-    
-            color: #fff;
-    
-            font-size: 11px;
-            font-weight: 800;
-        }
-    
-        .summary tr:last-child td:first-child {
-            color: #fff;
-        }
-    
-        /* =========================================================
-           BANK + SIGNATURE
-           ========================================================= */
-    
-        .bank-sign {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-    
-            gap: 10px;
-    
-            margin-top: 10px;
-        }
-    
-        .bank-sign .box {
-            background: #faf9fd;
-        }
-    
-        .sign {
-            min-height: 105px;
-    
-            padding: 9px;
-    
-            background: #fff8fa;
-    
-            border: 1px solid #efdce3;
-            border-radius: 7px;
-    
-            text-align: right;
-    
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: stretch;
-        }
-    
-        .sign strong {
-            color: var(--purple);
-    
-            font-size: 10px;
-        }
-    
-        .sign .brand-logo {
-            height: 55px;
-            width: auto;
-    
-            margin-left: auto;
-            margin-right: 0;
-    
-            object-position: right center;
-        }
-    
-        .sign span {
-            color: var(--muted);
-    
-            font-size: 9px;
-            font-weight: 700;
-        }
-    
-        /* =========================================================
-           FOOTER
-           ========================================================= */
-    
-        .footer-note {
-            margin-top: 9px;
-            padding-top: 7px;
-    
-            border-top: 1px dashed var(--border);
-    
-            text-align: center;
-    
-            color: var(--muted);
-    
-            font-size: 8.5px;
-        }
-    
-        /* =========================================================
-           PRINT
-           ========================================================= */
-    
-        @media print {
-    
-            html,
-            body {
-                width: 210mm;
-                min-height: 297mm;
-    
-                margin: 0;
-                padding: 0;
-    
-                background: #fff !important;
-    
-                /*
-                 * Force browser to print backgrounds.
-                 */
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
-            }
-    
-            .toolbar {
-                display: none !important;
-            }
-    
-            .page {
-                width: 210mm !important;
-                min-height: 297mm !important;
-    
-                margin: 0 !important;
-    
-                padding: 8mm !important;
-    
-                border: 0 !important;
-                border-radius: 0 !important;
-    
-                box-shadow: none !important;
-    
-                background: #fff !important;
-    
-                overflow: visible !important;
-    
-                /*
-                 * Preserve print colors.
-                 */
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
-            }
-    
-            .page::before {
-                display: block !important;
-    
-                background: #2f3a4c !important;
-    
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-    
-            /*
-             * Explicit print backgrounds.
-             * Avoid relying on gradients.
-             */
-    
-            .info-grid div:nth-child(1) {
-                background: #fff1f5 !important;
-            }
-    
-            .info-grid div:nth-child(2) {
-                background: #f4f1ff !important;
-            }
-    
-            .info-grid div:nth-child(3) {
-                background: #f1f7ff !important;
-            }
-    
-            .info-grid div:nth-child(4) {
-                background: #edfaf8 !important;
-            }
-    
-            .box h3 {
-                background: #2f3a4c !important;
-                color: #fff !important;
-            }
-    
-            .items th {
-                background: #f4f1f8 !important;
-                color: #202033 !important;
-            }
-    
-            .items tbody tr:nth-child(even) td {
-                background: #fcfbfd !important;
-            }
-    
-            .summary tr:last-child td {
-                background: #2f3a4c !important;
-                color: #fff !important;
-            }
-    
-            .amount-words {
-                background: #faf8fc !important;
-            }
-    
-            .sign {
-                background: #fff8fa !important;
-            }
-    
-            .bank-sign .box {
-                background: #faf9fd !important;
-            }
-    
-            .title strong {
-                background: #fff1f5 !important;
-                color: #d93660 !important;
-            }
-    
-            .title p {
-                background: #edfaf8 !important;
-                color: #087f72 !important;
-            }
-    
-            /*
-             * Keep important blocks together.
-             */
-    
-            .top,
-            .info-grid,
-            .meta,
-            .totals,
-            .bank-sign,
-            .amount-words,
-            .summary {
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-            }
-    
-            /*
-             * Never split an individual invoice item.
-             */
-    
-            .items tr {
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-            }
-    
-            /*
-             * Avoid awkward page breaks.
-             */
-    
-            .items {
-                page-break-before: auto;
-                page-break-after: auto;
-            }
-    
-            /*
-             * Keep table headers with the table.
-             */
-    
-            .items thead {
-                display: table-header-group;
-            }
-    
-            /*
-             * Don't show hover effects in print.
-             */
-    
-            .items tbody tr:hover td {
-                background: inherit !important;
-            }
-    
-            /*
-             * Links should look like normal invoice text.
-             */
-    
-            a {
-                color: inherit !important;
-                text-decoration: none !important;
-            }
-    
-            /*
-             * Ensure borders remain visible.
-             */
-    
-            .box,
-            .items,
-            .summary,
-            .info-grid,
-            .amount-words,
-            .sign {
-                border-color: #dedde7 !important;
-            }
-    
-            @page {
-                size: A4 portrait;
-                margin: 0;
-            }
-        }
-    
-        /* =========================================================
-           SMALL SCREEN
-           ========================================================= */
-    
-        @media screen and (max-width: 900px) {
-    
-            body {
-                background: #fff;
-            }
-    
-            .toolbar {
-                width: auto;
-                margin: 10px;
-            }
-    
-            .page {
-                width: 100%;
-                min-height: auto;
-    
-                margin: 0;
-                padding: 20px 15px;
-    
-                border-radius: 0;
-                box-shadow: none;
-            }
-    
-            .top {
-                grid-template-columns: 1fr;
-            }
-    
-            .title {
-                text-align: left;
-            }
-    
-            .info-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-    
-            .info-grid div:nth-child(2) {
-                border-right: 0;
-            }
-    
-            .meta,
-            .totals,
-            .bank-sign {
-                grid-template-columns: 1fr;
-            }
-    
-            .items {
-                font-size: 10px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ asset('assets/css/sales-invoices-print.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/document-print.css') }}">
 </head>
 
-<body>
-    <div class="toolbar">
+@php
+    $currency = (string) ($invoice->currency ?: 'INR');
+    $money = fn ($amount) => \App\Helpers\CommonHelper::amount((float) $amount, $currency);
+    $invoiceItems = $invoice->items->values();
+    $lineDiscountTotal = round((float) $invoiceItems->sum('discount_amount'), 2);
+
+    /* Item tax values are saved before the invoice-wide discount. Use a
+       largest-remainder allocation of the final header amounts in cents, so
+       printed taxable/tax rows reconcile; the row discount includes its
+       allocated share of the invoice-wide discount as well. */
+    $allocateCents = static function (float $target, array $weights): array {
+        $weights = array_map(static fn ($weight) => max((float) $weight, 0), array_values($weights));
+        $count = count($weights);
+
+        if ($count === 0) {
+            return [];
+        }
+
+        $targetCents = max(0, (int) round($target * 100));
+        if ($targetCents === 0) {
+            return array_fill(0, $count, 0.0);
+        }
+
+        $weightTotal = array_sum($weights);
+        if ($weightTotal <= 0) {
+            return array_fill(0, $count, 0.0);
+        }
+
+        $rawCents = array_map(static fn ($weight) => $targetCents * $weight / $weightTotal, $weights);
+        $allocatedCents = array_map(static fn ($cents) => (int) floor($cents), $rawCents);
+        $remainingCents = $targetCents - array_sum($allocatedCents);
+        $order = array_keys($rawCents);
+
+        usort($order, static function ($left, $right) use ($rawCents) {
+            $leftRemainder = $rawCents[$left] - floor($rawCents[$left]);
+            $rightRemainder = $rawCents[$right] - floor($rawCents[$right]);
+
+            return $rightRemainder <=> $leftRemainder;
+        });
+
+        for ($cent = 0; $cent < $remainingCents; $cent++) {
+            $allocatedCents[$order[$cent % $count]]++;
+        }
+
+        return array_map(static fn ($cents) => $cents / 100, $allocatedCents);
+    };
+
+    $taxableWeights = $invoiceItems->map(fn ($item) => max((float) $item->taxable_amount, 0))->all();
+    $lineTaxableAmountsAvailable = (float) $invoice->taxable_amount <= 0 || array_sum($taxableWeights) > 0;
+    $lineTaxableAmounts = $allocateCents((float) $invoice->taxable_amount, $taxableWeights);
+
+    $cgstWeights = $invoiceItems->map(fn ($item) => max((float) $item->cgst_amount, 0))->all();
+    $sgstWeights = $invoiceItems->map(fn ($item) => max((float) $item->sgst_amount, 0))->all();
+    $igstWeights = $invoiceItems->map(fn ($item) => max((float) $item->igst_amount, 0))->all();
+    $lineTaxesAvailable =
+        ((float) $invoice->cgst_amount <= 0 || array_sum($cgstWeights) > 0)
+        && ((float) $invoice->sgst_amount <= 0 || array_sum($sgstWeights) > 0)
+        && ((float) $invoice->igst_amount <= 0 || array_sum($igstWeights) > 0);
+    $lineCgstAmounts = $allocateCents((float) $invoice->cgst_amount, $cgstWeights);
+    $lineSgstAmounts = $allocateCents((float) $invoice->sgst_amount, $sgstWeights);
+    $lineIgstAmounts = $allocateCents((float) $invoice->igst_amount, $igstWeights);
+    $invoiceTaxTotal = (float) $invoice->cgst_amount + (float) $invoice->sgst_amount + (float) $invoice->igst_amount;
+    $lineFiguresUnavailable =
+        ((float) $invoice->taxable_amount > 0 && !$lineTaxableAmountsAvailable)
+        || ($invoiceTaxTotal > 0 && !$lineTaxesAvailable);
+
+    $printLines = $invoiceItems->map(function ($item, $index) use (
+        $lineTaxableAmounts,
+        $lineTaxableAmountsAvailable,
+        $lineCgstAmounts,
+        $lineSgstAmounts,
+        $lineIgstAmounts,
+        $lineTaxesAvailable
+    ) {
+        return [
+            'item' => $item,
+            'taxable_amount' => $lineTaxableAmountsAvailable ? ($lineTaxableAmounts[$index] ?? 0.0) : null,
+            'tax_amount' => $lineTaxesAvailable
+                ? ($lineCgstAmounts[$index] ?? 0.0) + ($lineSgstAmounts[$index] ?? 0.0) + ($lineIgstAmounts[$index] ?? 0.0)
+                : null,
+        ];
+    });
+
+    $received = $invoice->receivedAmount();
+    $receivedDisplay = $received > 0 ? '-'.$money($received) : $money($received);
+    $balanceDue = $invoice->balanceDue();
+    $secondaryDate = $invoice->invoice_type === 'tax'
+        ? ($invoice->due_date ?: $invoice->valid_until)
+        : $invoice->valid_until;
+    $secondaryDateLabel = $invoice->invoice_type === 'tax' && $invoice->due_date
+        ? 'Due date'
+        : 'Valid until';
+    $billingLocation = collect([$invoice->billing_city, $invoice->billing_state, $invoice->billing_country])
+        ->filter()->implode(', ');
+    $shippingDetails = collect([
+        $invoice->shipping_address,
+        $invoice->shipping_city,
+        $invoice->shipping_state,
+        $invoice->shipping_country,
+        $invoice->shipping_pincode,
+    ])->filter();
+    $hasShippingDetails = $shippingDetails->isNotEmpty();
+    $shippingAddress = $hasShippingDetails ? $invoice->shipping_address : $invoice->billing_address;
+    $shippingLocation = collect($hasShippingDetails
+        ? [$invoice->shipping_city, $invoice->shipping_state, $invoice->shipping_country]
+        : [$invoice->billing_city, $invoice->billing_state, $invoice->billing_country])
+        ->filter()->implode(', ');
+    $shippingPincode = $hasShippingDetails ? $invoice->shipping_pincode : $invoice->billing_pincode;
+    $sellerLocation = collect([$invoice->seller_city, $invoice->seller_state, $invoice->seller_country])
+        ->filter()->implode(', ');
+@endphp
+
+<body class="pdf-preview invoice-standalone">
+    <div class="pdf-toolbar pdf-toolbar--spread">
         @if (!$publicMode)
-        <a class="btn" href="{{ route('sales-invoices.show', $invoice) }}">Back</a>@else<span></span>
+            <a class="pdf-action pdf-action--secondary" href="{{ route('sales-invoices.show', $invoice) }}">Back</a>
+        @else
+            <span></span>
         @endif
-        <button class="btn" onclick="window.print()">
-            Print Invoice</button>
+        <button class="pdf-action pdf-action--primary" type="button" onclick="window.print()">
+            Print Invoice
+        </button>
     </div>
-    <div class="page">
-        <div class="top">
-            <div class="brand">
-                <img class="brand-logo" src="{{ asset('images/logo-dark.png') }}" height="50"
-                    alt="MissPack - Packed Perfect">
-                <p style="font-size:16px;font-weight:600;">{{ 'MissPack India Pvt Ltd' }}</p>
-                <p>{{ $invoice->seller_address }}<br>{{ $invoice->seller_city }}, {{ $invoice->seller_state }},
-                    {{ $invoice->seller_country }} - {{ $invoice->seller_pincode }}</p>
-                <p>GSTIN: {{ $invoice->seller_gstin ?: '-' }} | PAN: {{ $invoice->seller_pan ?: '-' }}<br>Email:
-                    {{ $invoice->seller_email ?: '-' }} | Mobile: {{ $invoice->seller_mobile ?: '-' }}</p>
+
+    <main class="page pdf-sheet">
+        <header class="invoice-top">
+            <div class="seller-block">
+                <img class="brand-logo" src="{{ asset('images/logo-dark.png') }}"
+                    alt="MissPack — Packed Perfect">
+                <div class="seller-details">
+                    <p class="brand-company">{{ $invoice->seller_company_name ?: 'MissPack India Pvt Ltd' }}</p>
+                    @if ($invoice->seller_address)
+                        <p class="brand-detail">{{ $invoice->seller_address }}</p>
+                    @endif
+                    @if ($sellerLocation || $invoice->seller_pincode)
+                        <p class="brand-detail">
+                            {{ collect([$sellerLocation, $invoice->seller_pincode])->filter()->implode(' · ') }}
+                        </p>
+                    @endif
+                    @if ($invoice->seller_gstin || $invoice->seller_pan)
+                        <p class="brand-detail">
+                            @if ($invoice->seller_gstin) GSTIN {{ $invoice->seller_gstin }} @endif
+                            @if ($invoice->seller_pan) · PAN {{ $invoice->seller_pan }} @endif
+                        </p>
+                    @endif
+                    @if ($invoice->seller_email || $invoice->seller_mobile || $invoice->seller_website)
+                        <p class="brand-detail">
+                            {{ collect([$invoice->seller_email, $invoice->seller_mobile, $invoice->seller_website])->filter()->implode(' · ') }}
+                        </p>
+                    @endif
+                </div>
             </div>
-            <div class="title">
-                <h2 style="font-size:19px">{{ $invoice->typeLabel() }}</h2><strong>{{ $invoice->invoice_number }}</strong>
-                <p>Status: {{ $invoice->statusLabel() }}</p>
+
+            <div class="invoice-identity">
+                <span class="invoice-eyebrow">Sales document</span>
+                <h1>{{ $invoice->typeLabel() }}</h1>
+                <p class="invoice-number">
+                    <span>Invoice no.</span>
+                    <strong>{{ $invoice->invoice_number }}</strong>
+                </p>
+                <span class="invoice-status">{{ $invoice->statusLabel() }}</span>
             </div>
+        </header>
+
+        <section class="invoice-facts" aria-label="Invoice details">
+            <div class="invoice-fact">
+                <span>Invoice date</span>
+                <strong>{{ optional($invoice->invoice_date)->format('d M Y') ?: '—' }}</strong>
+            </div>
+            <div class="invoice-fact">
+                <span>Payment terms</span>
+                <strong>{{ $invoice->payment_terms ?: '—' }}</strong>
+            </div>
+            <div class="invoice-fact">
+                <span>{{ $secondaryDateLabel }}</span>
+                <strong>{{ optional($secondaryDate)->format('d M Y') ?: '—' }}</strong>
+            </div>
+            <div class="invoice-fact">
+                <span>Place of supply</span>
+                <strong>{{ $invoice->place_of_supply ?: '—' }}</strong>
+            </div>
+            <div class="invoice-fact">
+                <span>Purchase order</span>
+                <strong>{{ $invoice->po_number ?: '—' }}</strong>
+                @if ($invoice->po_date)
+                    <small>PO dated {{ $invoice->po_date->format('d M Y') }}</small>
+                @endif
+            </div>
+        </section>
+
+        <section class="parties" aria-label="Billing and shipping addresses">
+            <article class="party-card">
+                <h2>Bill to</h2>
+                <div class="party-body">
+                    <p class="party-name">{{ $invoice->client_company_name ?: '—' }}</p>
+                    @if ($invoice->client_brand_name)
+                        <p class="party-brand">{{ $invoice->client_brand_name }}</p>
+                    @endif
+                    @if ($invoice->billing_address)
+                        <p class="party-detail">{{ $invoice->billing_address }}</p>
+                    @endif
+                    @if ($billingLocation || $invoice->billing_pincode)
+                        <p class="party-detail">
+                            {{ collect([$billingLocation, $invoice->billing_pincode])->filter()->implode(' · ') }}
+                        </p>
+                    @endif
+                    @if ($invoice->client_gstin || $invoice->client_pan)
+                        <p class="party-detail">
+                            @if ($invoice->client_gstin) GSTIN {{ $invoice->client_gstin }} @endif
+                            @if ($invoice->client_pan) · PAN {{ $invoice->client_pan }} @endif
+                        </p>
+                    @endif
+                    @if ($invoice->client_contact_name || $invoice->client_mobile || $invoice->client_email)
+                        <p class="party-contact">
+                            {{ collect([$invoice->client_contact_name, $invoice->client_mobile, $invoice->client_email])->filter()->implode(' · ') }}
+                        </p>
+                    @endif
+                </div>
+            </article>
+
+            <article class="party-card">
+                <h2>Ship to</h2>
+                <div class="party-body">
+                    <p class="party-name">{{ $invoice->client_company_name ?: '—' }}</p>
+                    @if ($invoice->client_brand_name)
+                        <p class="party-brand">{{ $invoice->client_brand_name }}</p>
+                    @endif
+                    @if (!$hasShippingDetails)
+                        <p class="party-hint">Same as billing address</p>
+                    @endif
+                    @if ($shippingAddress)
+                        <p class="party-detail">{{ $shippingAddress }}</p>
+                    @endif
+                    @if ($shippingLocation || $shippingPincode)
+                        <p class="party-detail">
+                            {{ collect([$shippingLocation, $shippingPincode])->filter()->implode(' · ') }}
+                        </p>
+                    @endif
+                    @if ($invoice->client_contact_name || $invoice->client_mobile || $invoice->client_email)
+                        <p class="party-contact">
+                            {{ collect([$invoice->client_contact_name, $invoice->client_mobile, $invoice->client_email])->filter()->implode(' · ') }}
+                        </p>
+                    @endif
+                </div>
+            </article>
+        </section>
+
+        <div class="items-wrap">
+            <table class="items">
+                <colgroup>
+                    <col style="width: 36%">
+                    <col style="width: 9%">
+                    <col style="width: 14%">
+                    <col style="width: 19%">
+                    <col style="width: 8%">
+                    <col style="width: 14%">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Item description / HSN-SAC</th>
+                        <th class="right">Qty</th>
+                        <th class="right">Rate</th>
+                        <th class="right">Taxable value</th>
+                        <th class="right">GST rate</th>
+                        <th class="right">Tax amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($printLines as $line)
+                        @php
+                            $item = $line['item'];
+                            $quantity = rtrim(rtrim(number_format((float) $item->quantity, 3, '.', ','), '0'), '.');
+                            $effectiveGst = $invoice->gst_type === 'export' ? 0 : (float) $item->gst_percent;
+                            $gstPercent = rtrim(rtrim(number_format($effectiveGst, 2, '.', ''), '0'), '.');
+                        @endphp
+                        <tr>
+                            <td class="item-description">
+                                <strong class="item-name">{{ $item->product_name }}</strong>
+                                @if ($item->description)
+                                    <span class="item-detail">{!! nl2br(e($item->description)) !!}</span>
+                                @endif
+                                @if ($item->remarks)
+                                    <span class="item-detail item-remark">{!! nl2br(e($item->remarks)) !!}</span>
+                                @endif
+                                <span class="item-meta">HSN/SAC: {{ $item->hsn_sac ?: '—' }}</span>
+                            </td>
+                            <td class="right quantity-cell">
+                                {{ $quantity }}@if ($item->unit) <span class="unit-label">{{ $item->unit }}</span>@endif
+                            </td>
+                            <td class="right">{{ $money($item->unit_price) }}</td>
+                            <td class="right item-taxable">
+                                {{ $line['taxable_amount'] !== null ? $money($line['taxable_amount']) : '—' }}
+                            </td>
+                            <td class="right">{{ $gstPercent }}%</td>
+                            <td class="right item-tax">
+                                {{ $invoiceTaxTotal > 0 && $line['tax_amount'] !== null ? $money($line['tax_amount']) : '—' }}
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
-        <div class="info-grid">
-            <div><span>Invoice
-                    Date</span><strong>{{ optional($invoice->invoice_date)->format('d M Y') ?: '-' }}</strong></div>
-            <div><span>Valid</span><strong>{{ optional($invoice->valid_until)->format('d M Y') ?: '-' }}</strong></div>
-            <div><span>PO Number</span><strong>{{ $invoice->po_number ?: '-' }}</strong></div>
-            <div><span>Place of Supply</span><strong>{{ $invoice->place_of_supply ?: '-' }}</strong></div>
-        </div>
-        <div class="meta">
-            <div class="box">
-                <h3>Bill To</h3>
-                <strong>{{ $invoice->client_company_name }}</strong><br>{{ $invoice->billing_address }}<br>{{ $invoice->billing_city }},
-                {{ $invoice->billing_state }}, {{ $invoice->billing_country }} -
-                {{ $invoice->billing_pincode }}<br>GSTIN: {{ $invoice->client_gstin ?: '-' }} | PAN:
-                {{ $invoice->client_pan ?: '-' }}<br>Contact: {{ $invoice->client_contact_name ?: '-' }}
-                {{ $invoice->client_mobile ?: '' }}
+
+        @if ($lineFiguresUnavailable)
+            <p class="line-tax-note">Some line-level figures could not be allocated for this record. The invoice totals below remain authoritative.</p>
+        @endif
+
+        <section class="invoice-bottom" aria-label="Totals and payment details">
+            <div class="invoice-left">
+                <div class="amount-words">
+                    <span class="section-label">Amount in words</span>
+                    <strong>{{ $invoice->amount_in_words ?: '—' }}</strong>
+                </div>
+
+                @if ($invoice->notes)
+                    <div class="invoice-note">
+                        <span class="section-label">Notes</span>
+                        <p>{{ $invoice->notes }}</p>
+                    </div>
+                @endif
+
+                @if ($invoice->seller_bank_name || $invoice->seller_account_holder || $invoice->seller_account_number || $invoice->seller_ifsc || $invoice->seller_branch || $invoice->seller_swift)
+                    <section class="bank-panel">
+                        <h2>Bank details</h2>
+                        <dl class="bank-details">
+                            @foreach ([
+                                'Bank' => $invoice->seller_bank_name,
+                                'Account holder' => $invoice->seller_account_holder,
+                                'Account number' => $invoice->seller_account_number,
+                                'IFSC' => $invoice->seller_ifsc,
+                                'Branch' => $invoice->seller_branch,
+                                'SWIFT' => $invoice->seller_swift,
+                            ] as $label => $value)
+                                @if ($value)
+                                    <div><dt>{{ $label }}</dt><dd>{{ $value }}</dd></div>
+                                @endif
+                            @endforeach
+                        </dl>
+                    </section>
+                @endif
             </div>
-            <div class="box">
-                <h3>Ship To</h3>
-                <strong>{{ $invoice->client_company_name }}</strong><br>
-                {{ $invoice->shipping_address }}<br>{{ $invoice->shipping_city }},
-                {{ $invoice->shipping_state }}, {{ $invoice->shipping_country }} -
-                {{ $invoice->shipping_pincode }}<br>Email: {{ $invoice->client_email ?: '-' }}
+
+            <div class="invoice-right">
+                <section class="summary">
+                    <div class="summary-heading">
+                        <h2>Invoice summary</h2>
+                        <span>{{ \App\Helpers\CommonHelper::currencyLabel($currency) }}</span>
+                    </div>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td>Subtotal</td>
+                                <td>{{ $money($invoice->subtotal) }}</td>
+                            </tr>
+                            @if ($lineDiscountTotal > 0)
+                                <tr>
+                                    <td>Item discounts</td>
+                                    <td>-{{ $money($lineDiscountTotal) }}</td>
+                                </tr>
+                            @endif
+                            @if ((float) $invoice->discount_amount > 0)
+                                <tr>
+                                    <td>Invoice discount</td>
+                                    <td>-{{ $money($invoice->discount_amount) }}</td>
+                                </tr>
+                            @endif
+                            <tr class="taxable-row">
+                                <td>Taxable value</td>
+                                <td>{{ $money($invoice->taxable_amount) }}</td>
+                            </tr>
+                            @if ((float) $invoice->cgst_amount > 0)
+                                <tr><td>CGST</td><td>{{ $money($invoice->cgst_amount) }}</td></tr>
+                            @endif
+                            @if ((float) $invoice->sgst_amount > 0)
+                                <tr><td>SGST</td><td>{{ $money($invoice->sgst_amount) }}</td></tr>
+                            @endif
+                            @if ((float) $invoice->igst_amount > 0)
+                                <tr><td>IGST</td><td>{{ $money($invoice->igst_amount) }}</td></tr>
+                            @endif
+                            @if ((float) $invoice->freight_amount !== 0.0)
+                                <tr><td>Freight</td><td>{{ $money($invoice->freight_amount) }}</td></tr>
+                            @endif
+                            @if ((float) $invoice->packing_amount !== 0.0)
+                                <tr><td>Packing</td><td>{{ $money($invoice->packing_amount) }}</td></tr>
+                            @endif
+                            @if ((float) $invoice->other_charges !== 0.0)
+                                <tr><td>Other charges</td><td>{{ $money($invoice->other_charges) }}</td></tr>
+                            @endif
+                            @if (abs((float) $invoice->round_off) >= 0.01)
+                                <tr><td>Round off</td><td>{{ $money($invoice->round_off) }}</td></tr>
+                            @endif
+                            <tr class="grand-total">
+                                <td>Grand total</td>
+                                <td>{{ $money($invoice->total_amount) }}</td>
+                            </tr>
+                            <tr class="settlement-row">
+                                <td>Received to date</td>
+                                <td>{{ $receivedDisplay }}</td>
+                            </tr>
+                            <tr class="balance-due">
+                                <td>Balance due</td>
+                                <td>{{ $money($balanceDue) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <div class="signature">
+                    <strong>For {{ $invoice->seller_company_name ?: 'MissPack India Pvt Ltd' }}</strong>
+                    <span class="signature-space" aria-hidden="true"></span>
+                    <span class="signature-label">Authorised Signatory</span>
+                </div>
             </div>
-        </div>
-        <table class="items">
-            <thead>
-                <tr>
-                    <th width="3%">#</th>
-                    <th width="47%">Description</th>
-                    <th width="16%">Qty</th>
-                    <th width="16%">Rate</th>
-                    <th width="16%">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($invoice->items as $item)
-                    <tr>
-                        <td class="center">{{ $loop->iteration }}</td>
-                        <td><strong>{{ $item->product_name }}</strong><br>{!! nl2br(e($item->description)) !!}@if ($item->remarks)
-                                <br><em>{!! nl2br(e($item->remarks)) !!}</em>
-                            @endif<br>
-                            <em>HS Code: {{ $item->hsn_sac ?: '-' }}</em>
-                        </td>
-                        <td class="center">{{ number_format($item->quantity, 0) }} {{ $item->unit }}</td>
-                        <td class="center">{{ \App\Helpers\CommonHelper::indianCurrency($item->unit_price) }}</td>
-                        <td class="right">{{ \App\Helpers\CommonHelper::indianCurrency($item->taxable_amount) }}</td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-        <div class="totals">
-            <div>
-                <!--<div class="terms"><strong>Terms & Conditions</strong><br>{{ $invoice->terms_conditions }}</div>-->
-                <div class="amount-words">Amount in Words: <span style="color:grey">{{ $invoice->amount_in_words }}</span></div>
-            </div>
-            <div class="summary">
-                <table>
-                    <tr>
-                        <td>Subtotal</td>
-                        <td>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->subtotal) }}</td>
-                    </tr>
-                    <tr>
-                        <td>Discount</td>
-                        <td>- {{ \App\Helpers\CommonHelper::indianCurrency((float) $invoice->discount_amount) }}</td>
-                    </tr>
-                    <tr>
-                        <td>Taxable</td>
-                        <td>{{ \App\Helpers\CommonHelper::indianCurrency((float) $invoice->taxable_amount) }}</td>
-                    </tr>
-                    <tr>
-                        <td>Tax</td>
-                        <td>{{ \App\Helpers\CommonHelper::indianCurrency((float) $invoice->cgst_amount + $invoice->sgst_amount + $invoice->igst_amount) }}</td>
-                    </tr>
-                    <tr>
-                        <td>Freight/Packing/Other</td>
-                        <td>{{ \App\Helpers\CommonHelper::indianCurrency((float) $invoice->freight_amount + (float) $invoice->packing_amount + (float) $invoice->other_charges) }}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Round Off</td>
-                        <td>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->round_off) }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Grand Total</strong></td>
-                        <td><strong>{{ \App\Helpers\CommonHelper::indianCurrency( $invoice->total_amount) }}</strong></td>
-                    </tr>
-                </table>
-            </div>
-        </div>
-        <div class="bank-sign">
-            <div class="box">
-                <h3>Bank Details</h3>Bank: {{ $invoice->seller_bank_name ?: '-' }}<br>A/C Holder:
-                {{ $invoice->seller_account_holder ?: '-' }}<br>A/C No.:
-                {{ $invoice->seller_account_number ?: '-' }}<br>IFSC: {{ $invoice->seller_ifsc ?: '-' }}
-                <br>Branch: {{ $invoice->seller_branch ?: '-' }}
-            </div>
-            <div class="sign">
-                <strong>For {{ $invoice->seller_company_name ?: 'MissPack India Pvt Ltd' }}</strong>
-                <span>Authorised Signatory</span>
-            </div>
-        </div>
-        <div class="footer-note">This is a computer-generated invoice. Please verify all details before payment.</div>
-    </div>
+        </section>
+
+        @if ($invoice->terms_conditions)
+            <section class="terms-panel">
+                <h2>Terms &amp; conditions</h2>
+                <div class="terms-copy">{{ $invoice->terms_conditions }}</div>
+            </section>
+        @endif
+
+        <footer class="footer-note">This is a computer-generated invoice. Please verify all details before payment.</footer>
+    </main>
 </body>
 
 </html>

@@ -3,15 +3,15 @@
 @section('page-title', 'Customer Quote Management')
 
 @section('content')
-<style>
-    :root{--cq-primary:#4f83f1;--cq-primary-2:#6366f1;--cq-dark:#17233b;--cq-muted:#687386;--cq-border:#dfe7f3;--cq-bg:#eef3ff;--cq-soft:#edf5ff;--cq-red:#ef4770;--cq-green:#10b981;--cq-orange:#f59e0b;--cq-shadow:0 14px 35px rgba(25,42,70,.08)}.cq-page,.cq-page *{box-sizing:border-box}.cq-page{background:var(--cq-bg);min-height:calc(100vh - 70px);padding:28px;color:var(--cq-dark);font-size:14px}.cq-card{background:#fff;border:1px solid var(--cq-border);border-radius:18px;box-shadow:var(--cq-shadow)}.cq-header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px 28px;margin-bottom:24px}.cq-header h1{margin:0;font-size:22px;font-weight:900}.cq-toolbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:22px 24px;margin-bottom:24px}.cq-search{position:relative;flex:1 1 320px;max-width:520px}.cq-search span{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#8792a5}.cq-input,.cq-select{height:44px;padding:10px 14px;border:1px solid #d8e2ef;border-radius:12px;background:#fff;color:var(--cq-dark);font-size:14px;font-weight:600;outline:none;width:100%}.cq-search .cq-input{padding-left:44px}.cq-actions{display:flex;gap:12px;flex-wrap:wrap}.cq-btn{min-height:42px;border:0;border-radius:12px;padding:11px 18px;font-size:14px;font-weight:900;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}.cq-btn-primary{background:linear-gradient(135deg,var(--cq-primary),var(--cq-primary-2));color:#fff}.cq-btn-light{background:#f3f6fb;color:var(--cq-dark)}.cq-filter-row{display:flex;gap:12px;flex-wrap:wrap;padding:0 24px 22px;margin-top:-8px}.cq-filter-row .cq-select{flex:1 1 180px}.cq-alert{padding:14px 16px;margin-bottom:18px;border-radius:14px;font-weight:800}.cq-alert-success{color:#047857;background:#e8fff7;border:1px solid #a7f3d0}.cq-table-wrap{overflow-x:auto}.cq-table{width:100%;min-width:1080px;border-collapse:collapse}.cq-table th,.cq-table td{padding:18px 20px;border-bottom:1px solid var(--cq-border);text-align:left;vertical-align:middle}.cq-table th{font-size:12px;color:#7d8aa0;text-transform:uppercase;letter-spacing:.07em;background:#fbfdff}.cq-id{font-weight:900;color:var(--cq-primary)}.cq-sub{display:block;color:var(--cq-muted);font-size:12px;margin-top:3px;font-weight:600}.cq-badge{display:inline-flex;border-radius:999px;padding:6px 11px;font-size:11px;font-weight:900;text-transform:uppercase}.status-draft{background:#f3f6fb;color:#536079}.status-sent{background:#eaf1ff;color:#3f7cf4}.status-accepted{background:#e8fff7;color:#0e9f6e}.status-rejected{background:#ffeaf0;color:#e11d48}.status-revised{background:#ece7ff;color:#7c3aed}.status-expired{background:#fff4e5;color:#d97706}.cq-row-actions{display:flex;gap:8px}.cq-icon{width:36px;height:36px;border:0;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#eef5ff;color:var(--cq-primary);text-decoration:none;cursor:pointer}.cq-icon.green{background:#e8fff7;color:#0e9f6e}.cq-icon.danger{background:#fff0f4;color:var(--cq-red)}.cq-pagination{padding:18px 20px}@media(max-width:767px){.cq-page{padding:14px}.cq-header{align-items:flex-start;flex-direction:column}.cq-search,.cq-actions,.cq-actions .cq-btn{width:100%;max-width:100%}.cq-filter-row .cq-select,.cq-filter-row .cq-btn{flex:1 1 100%;width:100%}}
-</style>
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/lead-quotes-index.css') }}">
+@endpush
 <div class="cq-page">
     <div class="cq-card cq-header">
         <h1>Customer Quote Management</h1>
         <div class="cq-actions">
-            <a href="{{ route('leads.index') }}" class="cq-btn cq-btn-light">Leads</a>
-            <a href="{{ route('lead-quotes.create') }}" class="cq-btn cq-btn-primary">+ Create Quote</a>
+            <a href="{{ route('leads.index') }}" class="master-btn master-btn-light">Leads</a>
+            <a href="{{ route('lead-quotes.create') }}" class="master-btn master-btn-primary">+ Create Quote</a>
             @if($quote->status === 'accepted')
                 <a href="{{ route('projects.create', ['customer_quote_id' => $quote->id]) }}" class="master-btn master-btn-primary">
                     <i class="fa-solid fa-briefcase"></i> Create Project
@@ -20,7 +20,59 @@
         </div>
     </div>
     @if(session('success'))<div class="cq-alert cq-alert-success">{{ session('success') }}</div>@endif
-    <div class="cq-card"><form method="GET" action="{{ route('lead-quotes.index') }}"><div class="cq-toolbar"><div class="cq-search"><span>⌕</span><input class="cq-input" name="search" value="{{ $search }}" placeholder="Search quote, customer, lead..."></div></div><div class="cq-filter-row"><select class="cq-select" name="status"><option value="all">All Status</option>@foreach($statusOptions as $key=>$label)<option value="{{ $key }}" {{ $status===$key ? 'selected' : '' }}>{{ $label }}</option>@endforeach</select><select class="cq-select" name="lead_id"><option value="all">All Leads</option>@foreach($leads as $lead)<option value="{{ $lead->id }}" {{ (string)$leadId===(string)$lead->id ? 'selected' : '' }}>{{ $lead->lead_number }} - {{ $lead->title }}</option>@endforeach</select><select class="cq-select" name="currency"><option value="all">All Currency</option>@foreach($currencyOptions as $key=>$label)<option value="{{ $key }}" {{ $currency===$key ? 'selected' : '' }}>{{ $label }}</option>@endforeach</select><button class="cq-btn cq-btn-primary" type="submit">Filter</button><a class="cq-btn cq-btn-light" href="{{ route('lead-quotes.index') }}">Reset</a></div></form></div>
-    <div class="cq-card"><div class="cq-table-wrap"><table class="cq-table"><thead><tr><th>Quote</th><th>Lead</th><th>Customer</th><th>Date</th><th>Valid Until</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody>@forelse($quotes as $quote)<tr><td><span class="cq-id">{{ $quote->quote_number }}</span><span class="cq-sub">{{ $quote->title }}</span></td><td>{{ $quote->lead?->lead_number ?: 'Standalone' }}<span class="cq-sub">{{ $quote->lead?->title }}</span></td><td>{{ $quote->client?->company_name ?? $quote->customer_company_name ?? '-' }}<span class="cq-sub">{{ $quote->customer_contact_name ?: '-' }}</span></td><td>{{ $quote->quote_date ? $quote->quote_date->format('d M Y') : '-' }}</td><td>{{ $quote->valid_until ? $quote->valid_until->format('d M Y') : '-' }}</td><td>{{ $quote->currency }} {{ number_format((float)$quote->total_amount,2) }}<span class="cq-sub">Sub: {{ number_format((float)$quote->subtotal,2) }}</span></td><td><span class="cq-badge status-{{ $quote->status }}">{{ $quote->statusLabel() }}</span></td><td><div class="cq-row-actions"><a class="cq-icon green" href="{{ route('lead-quotes.show',$quote) }}">👁</a><a class="cq-icon" href="{{ route('lead-quotes.edit',$quote) }}">✎</a><form method="POST" action="{{ route('lead-quotes.destroy',$quote) }}" onsubmit="return confirm('Delete this quote?')">@csrf @method('DELETE')<button class="cq-icon danger">🗑</button></form></div></td></tr>@empty<tr><td colspan="8" style="padding:70px;text-align:center;color:#687386;font-weight:900">No customer quotes found.</td></tr>@endforelse</tbody></table></div><div class="cq-pagination">{{ $quotes->links() }}</div></div>
+    <div class="cq-card">
+        <form method="GET" action="{{ route('lead-quotes.index') }}">
+            <div class="cq-toolbar core-filter-toolbar">
+                <div class="master-search">
+                    <span aria-hidden="true">⌕</span>
+                    <input class="master-input" name="search" value="{{ $search }}"
+                        placeholder="Search quote, customer, lead..." aria-label="Search customer quotes">
+                </div>
+                <x-filter-trigger drawer="leadQuoteFiltersDrawer"
+                    :count="(filled($search) ? 1 : 0) + ($status !== 'all' ? 1 : 0) + ($leadId !== 'all' ? 1 : 0) + ($currency !== 'all' ? 1 : 0)" />
+            </div>
+            <x-drawer id="leadQuoteFiltersDrawer" title="Filter customer quotes" eyebrow="Quote filters"
+                subtitle="Narrow customer quotes by status, lead, or currency." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Quote details</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="leadQuoteFilterStatus">Status</label>
+                            <select class="master-select" id="leadQuoteFilterStatus" name="status">
+                                <option value="all">All statuses</option>
+                                @foreach($statusOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="leadQuoteFilterLead">Lead</label>
+                            <select class="master-select" id="leadQuoteFilterLead" name="lead_id">
+                                <option value="all">All leads</option>
+                                @foreach($leads as $lead)
+                                    <option value="{{ $lead->id }}" @selected((string) $leadId === (string) $lead->id)>
+                                        {{ $lead->lead_number }} - {{ $lead->title }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="leadQuoteFilterCurrency">Currency</label>
+                            <select class="master-select" id="leadQuoteFilterCurrency" name="currency">
+                                <option value="all">All currencies</option>
+                                @foreach($currencyOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($currency === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
+                    <a class="master-btn master-btn-soft" href="{{ route('lead-quotes.index') }}">Reset</a>
+                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                </x-slot:footer>
+            </x-drawer>
+        </form>
+    </div>
+    <div class="cq-card"><div class="cq-table-wrap ui-mobile-cards"><table class="cq-table" data-table-settings data-table-key="lead-quotes"><thead><tr><th>Quote</th><th class="ui-mobile-secondary">Lead</th><th>Customer</th><th class="ui-mobile-secondary">Date</th><th>Valid Until</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody>@forelse($quotes as $quote)<tr><td data-label="Quote"><span class="cq-id">{{ $quote->quote_number }}</span><span class="cq-sub">{{ $quote->title }}</span></td><td class="ui-mobile-secondary">{{ $quote->lead?->lead_number ?: 'Standalone' }}<span class="cq-sub">{{ $quote->lead?->title }}</span></td><td data-label="Customer">{{ $quote->client?->company_name ?? $quote->customer_company_name ?? '-' }}<span class="cq-sub">{{ $quote->customer_contact_name ?: '-' }}</span></td><td data-label="Date" class="ui-mobile-secondary">{{ $quote->quote_date ? $quote->quote_date->format('d M Y') : '-' }}</td><td data-label="Valid until">{{ $quote->valid_until ? $quote->valid_until->format('d M Y') : '-' }}</td><td data-label="Amount">{{ \App\Helpers\CommonHelper::amount($quote->total_amount, $quote->currency) }}<span class="cq-sub">Sub: {{ \App\Helpers\CommonHelper::amount($quote->subtotal, $quote->currency) }}</span></td><td data-label="Status"><span class="cq-badge status-{{ $quote->status }}">{{ $quote->statusLabel() }}</span></td><td data-label="Action"><div class="cq-row-actions"><a class="master-icon-btn green" href="{{ route('lead-quotes.show',$quote) }}">👁</a><a class="master-icon-btn" href="{{ route('lead-quotes.edit',$quote) }}">✎</a><form method="POST" action="{{ route('lead-quotes.destroy',$quote) }}" data-confirm="Delete this quote?">@csrf @method('DELETE')<button class="master-icon-btn danger">🗑</button></form></div></td></tr>@empty<tr><td colspan="8" style="padding:70px;text-align:center;color:#687386;font-weight:700">No customer quotes found.</td></tr>@endforelse</tbody></table></div><div class="cq-pagination">{{ $quotes->links() }}</div></div>
 </div>
 @endsection

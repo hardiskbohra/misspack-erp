@@ -1,0 +1,231 @@
+/* ==========================================================================
+   RESPONSIVE.CSS — MissPack ERP central mobile/tablet layer
+   --------------------------------------------------------------------------
+   Legacy responsive helpers are loaded after @stack('styles') in the admin
+   and client-portal layouts. The final, project-wide breakpoint overrides now
+   live in resources/css/layout/responsive.css and load after this sheet.
+
+   Project breakpoints (aligned with the shared design-system layer):
+     ≥ 1440px   full layout and full sidebar
+     1200–1439px full sidebar with the standard desktop layout
+     992–1199px compact icon sidebar
+     768–991px  reduced-column tablet layout with drawer navigation
+     < 768px    mobile essentials, stacked forms/cards, and touch targets
+     ≤ 480px    tiny phones — full-bleed modal sheets
+
+   UX rules implemented here:
+     1. No horizontal PAGE scroll — wide content scrolls inside its own
+        region (tables, kanban board, tab strips) with a visible affordance.
+     2. Touch targets ≥ 40px on mobile (≥ 44px on primary controls).
+     3. Forms: single column on mobile, labels always above inputs.
+     4. Dialogs: bottom sheet on mobile, full-bleed on ≤ 480px; body scroll
+        locked while open (master-modal-open / sidebar-open-body).
+     5. Tab strips scroll horizontally instead of wrapping.
+     6. Sticky topbar with safe-area (notch / home-indicator) padding.
+     7. Text never auto-scales (-webkit-text-size-adjust: 100%).
+     8. Images never overflow their container.
+   ========================================================================== */
+
+/* ---------- Global guards (all widths) ---------- */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+img {
+    max-width: 100%;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+/* Pagination: allow wrapping on narrow screens (harmless on desktop) */
+.custom-pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+/* ---------- Tablet & below (≤ 1199px) ---------- */
+@media (max-width: 1199px) {
+    html,
+    body {
+        overflow-x: hidden;
+    }
+
+    .master-toolbar-right {
+        flex-wrap: wrap;
+        row-gap: 10px;
+    }
+
+    /* 1 — Tables: the table keeps its own box and its container does the
+          scrolling. `display:block` on a <table> is not a scroll trick: it
+          makes the browser wrap thead and tbody in two anonymous tables, the
+          header and the rows stop sharing a column grid, and every cell lands
+          in the wrong column — the misplaced-card render. The wrapper scrolls
+          (master-index.css) and a table without one gets a .master-table-wrap
+          from its view. */
+    .master-table-wrap {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Select2 dropdowns must never bleed past the viewport */
+    .select2-dropdown {
+        max-width: calc(100vw - 24px);
+    }
+}
+
+/* ---------- Mobile (≤ 767px) ---------- */
+@media (max-width: 767px) {
+    .master-table th,
+    .master-table td {
+        padding: 12px 14px;
+    }
+
+    /* 4 — Kanban board: column-snap horizontal scroll */
+    .master-board {
+        scroll-snap-type: x proximity;
+        padding-bottom: 12px;
+    }
+
+    .master-column {
+        scroll-snap-align: start;
+    }
+
+    /* 5 — Tab strips: horizontal scroll, never wrap */
+    .pd-tabs-nav,
+    .vendor-tabs,
+    .master-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .pd-tabs-nav::-webkit-scrollbar,
+    .vendor-tabs::-webkit-scrollbar,
+    .master-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .pd-tab-btn,
+    .vendor-tab {
+        white-space: nowrap;
+        flex: 0 0 auto;
+    }
+
+    /* 6 — Safe areas (notch, home indicator) */
+    .topbar {
+        padding-left: max(14px, env(safe-area-inset-left));
+        padding-right: max(14px, env(safe-area-inset-right));
+    }
+
+    .page-content {
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    /* 2 — Touch targets ≥ 40px */
+    .topbar-btn {
+        min-width: 40px;
+        height: 40px;
+    }
+
+    .master-menu-btn {
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    .master-modal-close {
+        min-width: 42px;
+        min-height: 42px;
+    }
+
+    .master-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .master-toggle {
+        min-height: 40px;
+    }
+
+    .sidebar-logout-btn {
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    .pd-tab-btn,
+    .vendor-tab {
+        min-height: 42px;
+    }
+
+    .master-pagination a,
+    .cp-pagination a,
+    .cq-pagination a,
+    .custom-pagination a,
+    .custom-pagination span {
+        min-width: 40px;
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Select2: full-width controls, 44px touch height */
+    .select2-container {
+        width: 100% !important;
+    }
+
+    .select2-container--default .select2-selection--single {
+        min-height: 44px;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 44px;
+    }
+}
+
+/* ---------- Tiny phones (≤ 480px) ---------- */
+@media (max-width: 480px) {
+    /* 4 — Full-bleed modal sheet */
+    .master-modal {
+        padding: 0;
+    }
+
+    .master-modal-card {
+        width: 100%;
+        max-width: none;
+        border-radius: 0;
+        min-height: 100%;
+        /* full-bleed sheet, but still exactly one screen tall: the body keeps
+           the scroll and the action row stays on screen */
+        max-height: 100vh;
+        max-height: 100dvh;
+        box-shadow: none;
+    }
+
+    .master-modal-body {
+        padding: 16px;
+    }
+
+    .master-modal-footer {
+        padding-bottom: calc(14px + env(safe-area-inset-bottom));
+    }
+
+    /* Phone behaviour belongs to the shared modal, not to one module: a
+       two-column field grid stacks and the action row becomes full-width
+       buttons with the primary action on top. */
+    .master-modal-grid,
+    .master-modal-three-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .master-modal-footer {
+        flex-direction: column-reverse;
+    }
+
+    .master-modal-footer .master-btn {
+        width: 100%;
+    }
+}

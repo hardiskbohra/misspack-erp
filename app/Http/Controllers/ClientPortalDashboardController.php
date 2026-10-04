@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ClientPortalConversation;
 use App\Models\ClientPortalDocument;
-use App\Models\ClientPortalInvoice;
 use App\Models\ClientPortalNotification;
+use App\Models\Project;
+use App\Models\ProjectPayment;
+use App\Models\SalesInvoice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
@@ -16,28 +19,28 @@ class ClientPortalDashboardController extends ClientPortalBaseController
         $client = $this->client($request);
         $portalUser = $this->portalUser($request);
 
-        $projectTotal = 0;
         $projects = collect();
-        if ($this->projectsAvailable()) {
-            $projectQuery = \App\Models\Project::query()
-                ->where('client_id', $client->id)
-                ->where('show_client_portal', true);
-            $projectTotal = (clone $projectQuery)->count();
-            $projects = $projectQuery->latest('id')->limit(3)->get();
-        }
+        $projectTotal = 0;
+        $projectQuery = Project::query()
+            ->where('client_id', $client->id)
+            ->where('show_client_portal', true);
+        $projectTotal = (clone $projectQuery)->count();
+        $projects = $projectQuery->latest('id')->limit(4)->get();
 
-        $shipmentTotal = 0;
         $shipments = collect();
-        if ($this->shipmentsAvailable() && Schema::hasColumn('shipments', 'client_id') && Schema::hasColumn('shipments', 'show_client_portal')) {
+        $shipmentTotal = 0;
+        if ($this->shipmentsAvailable()
+            && Schema::hasColumn('shipments', 'client_id')
+            && Schema::hasColumn('shipments', 'show_client_portal')) {
             $shipmentQuery = \App\Models\Shipment::query()
                 ->where('client_id', $client->id)
                 ->where('show_client_portal', true);
             $shipmentTotal = (clone $shipmentQuery)->count();
-            $shipments = $shipmentQuery->latest('id')->limit(3)->get();
+            $shipments = $shipmentQuery->latest('id')->limit(4)->get();
         }
 
-        $quoteTotal = 0;
         $quotes = collect();
+        $quoteTotal = 0;
         if ($this->quotesAvailable()) {
             $quoteQuery = \App\Models\CustomerQuote::query()
                 ->where('client_id', $client->id)
@@ -49,44 +52,84 @@ class ClientPortalDashboardController extends ClientPortalBaseController
             $quotes = $quoteQuery->latest('id')->limit(3)->get();
         }
 
-        $invoices = ClientPortalInvoice::where('client_id', $client->id)
-            ->where('is_public_to_client', true)
+        $salesInvoices = collect();
+        $salesInvoiceQuery = SalesInvoice::query()
+            ->where('client_id', $client->id)
+            ->where('show_client_portal', true)
+            ->where('status', '!=', 'draft');
+        $salesInvoiceTotal = (clone $salesInvoiceQuery)->count();
+        $salesInvoices = $salesInvoiceQuery
+            ->withClientPortalReceived()
+            ->latest('invoice_date')
             ->latest('id')
-            ->limit(5)
+            ->limit(4)
             ->get();
 
-        $paymentsTotal = 0;
-        if ($this->projectsAvailable() && class_exists(\App\Models\ProjectPayment::class) && Schema::hasTable('project_payments')) {
-            $projectIds = \App\Models\Project::where('client_id', $client->id)->where('show_client_portal', true)->pluck('id');
-            $paymentsTotal = (float) \App\Models\ProjectPayment::whereIn('project_id', $projectIds)
-                ->where('is_public', true)
-                ->where('transaction_type', 'inward')
-                ->sum('amount');
+        $paymentTotal = 0;
+        if (class_exists(ProjectPayment::class) && Schema::hasTable('project_payments')) {
+            $publishedProjectIds = Project::query()
+                ->where('client_id', $client->id)
+                ->where('show_client_portal', true)
+                ->pluck('id');
+            $paymentTotal = ProjectPayment::query()
+                ->whereIn('project_id', $publishedProjectIds)
+                ->visibleToClient()
+                ->count();
         }
+
+        $notificationScope = fn ($query) => $query
+            ->where('client_id', $client->id)
+            ->where(fn ($userScope) => $userScope
+                ->whereNull('client_portal_user_id')
+                ->orWhere('client_portal_user_id', $portalUser->id));
+
+        $notifications = ClientPortalNotification::query()
+            ->where($notificationScope)
+            ->latest('id')
+            ->limit(6)
+            ->get();
+
+        $supportQuery = ClientPortalConversation::query()->where('client_id', $client->id);
+        $supportConversations = (clone $supportQuery)
+            ->withCount('messages')
+            ->latest('last_message_at')
+            ->limit(3)
+            ->get();
+        $openSupportCount = (clone $supportQuery)->whereIn('status', ['open', 'waiting'])->count();
+        $unreadSupportCount = (clone $supportQuery)
+            ->whereHas('messages', fn ($messages) => $messages
+                ->where('sender_type', 'staff')
+                ->whereNull('read_at'))
+            ->count();
 
         $stats = [
             'projects' => $projectTotal,
             'shipments' => $shipmentTotal,
             'quotes' => $quoteTotal,
-            'invoices' => ClientPortalInvoice::where('client_id', $client->id)->where('is_public_to_client', true)->count(),
-            'documents' => ClientPortalDocument::where('client_id', $client->id)->count(),
-            'unread_notifications' => ClientPortalNotification::where('client_id', $client->id)
-                ->where(function ($query) use ($portalUser) {
-                    $query->whereNull('client_portal_user_id')->orWhere('client_portal_user_id', $portalUser->id);
-                })
+            'invoices' => $salesInvoiceTotal,
+            'payments' => $paymentTotal,
+            'documents' => ClientPortalDocument::query()
+                ->where('client_id', $client->id)
+                ->where('is_public_to_client', true)
+                ->count(),
+            'unread_notifications' => ClientPortalNotification::query()
+                ->where($notificationScope)
                 ->where('is_read', false)
                 ->count(),
-            'payments_total' => $paymentsTotal,
+            'support_open' => $openSupportCount,
+            'support_unread' => $unreadSupportCount,
         ];
 
-        $notifications = ClientPortalNotification::where('client_id', $client->id)
-            ->where(function ($query) use ($portalUser) {
-                $query->whereNull('client_portal_user_id')->orWhere('client_portal_user_id', $portalUser->id);
-            })
-            ->latest('id')
-            ->limit(8)
-            ->get();
-
-        return view('client_portal.dashboard.index', compact('client', 'portalUser', 'stats', 'projects', 'shipments', 'quotes', 'invoices', 'notifications'));
+        return view('client_portal.dashboard.index', compact(
+            'client',
+            'portalUser',
+            'stats',
+            'projects',
+            'shipments',
+            'quotes',
+            'salesInvoices',
+            'notifications',
+            'supportConversations'
+        ));
     }
 }

@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project — Cotton Tote Program — MissPack ERP (preview)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/core.css?v=6abf109f">
+    <link rel="stylesheet" href="/assets/css/app-layout.css?v=6abf6a51">
+    <link rel="stylesheet" href="/assets/css/master-index.css?v=6abf04ad">
+    <link rel="stylesheet" href="/assets/css/master-show.css?v=6abf13a6">
+    <link rel="stylesheet" href="/assets/css/master-form.css?v=6abf0f9a">
+    <link rel="stylesheet" href="/assets/css/master-flat.css?v=6abf2c03">
+    <link rel="stylesheet" href="/assets/vendor/select2/css/select2.min.css?v=6abf7b0c">
+    <link rel="stylesheet" href="/assets/css/select2-theme.css?v=6abf2522">
+    <link rel="stylesheet" href="/assets/css/master-alert.css?v=6abf21b9">
+    <link rel="stylesheet" href="/assets/css/projects.css?v=6abfe363">
+    <link rel="stylesheet" href="/assets/css/responsive.css?v=6abf2e74">
+    <style>
+        a[href^="/theme"], form.theme-form { pointer-events: none; }
+        #previewThemeBtn { display: inline-flex; align-items: center; gap: 8px; }
+    </style>
+<body>
+    <aside class="sidebar" id="sidebar" aria-label="Main sidebar">
+        <div class="sidebar-logo">
+            <div>
+                <div class="sidebar-logo-text sidebar-text">MissPack</div>
+                <div class="sidebar-logo-sub sidebar-text">Packed Perfect</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">Dashboards</div>
+            <a href="#" class="sidebar-item"><i class="fas fa-th-large"></i><span class="sidebar-text">Dashboard</span></a>
+            <div class="sidebar-section">Management</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-layer-group"></i><span class="sidebar-text">Tasks</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-box-open"></i><span class="sidebar-text">Products</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-truck"></i><span class="sidebar-text">Shipments</span></a>
+            <div class="sidebar-section">Sales</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-users"></i><span class="sidebar-text">Clients</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-briefcase"></i><span class="sidebar-text">Projects</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-file-invoice-dollar"></i><span class="sidebar-text">Invoices</span></a>
+            <div class="sidebar-section">Purchase</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-user-gear"></i><span class="sidebar-text">Vendors</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-money-bill"></i><span class="sidebar-text">Vendor Quotes</span></a>
+            <div class="sidebar-section">Accounts</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-scale-balanced"></i><span class="sidebar-text">Cashflow</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-users-cog"></i><span class="sidebar-text">Users</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="user-avatar-sm">H</div>
+                <div class="sidebar-user-info sidebar-text">
+                    <div class="user-name">Hardik Bohra</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+                <button type="button" class="sidebar-logout-btn" title="Logout" aria-label="Logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="main-wrap" id="mainWrap">
+        <header class="topbar">
+            <button type="button" class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="topbar-title">Project — Cotton Tote Program</span>
+            <div class="topbar-spacer"></div>
+            <div class="topbar-actions">
+                <button type="button" class="topbar-btn desktop-only" aria-label="Search"><i class="fas fa-search"></i></button>
+                <button type="button" id="previewThemeBtn" class="theme-toggle desktop-only">
+                    <i class="fas fa-moon"></i> <span>Dark</span>
+                </button>
+                <button type="button" class="topbar-btn desktop-only" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="topbar-badge">3</span>
+                </button>
+                <div class="topbar-user-btn">
+                    <div class="user-avatar-sm topbar-avatar">H</div>
+                    <span class="topbar-user-name desktop-only">Hardik Bohra</span>
+                </div>
+            </div>
+        </header>
+
+                <main class="page-content">
+            <div class="pd-page pd-tabs-page">
+                <div class="pd-hero">
+                    <div>
+                        <p class="pd-eyebrow">PRJ-1042</p>
+                        <h1>Cotton Tote Program</h1>
+                        <div class="pd-hero-meta">
+                            <span><i class="fa-solid fa-building"></i> Ahmedabad Apparel Co.</span>
+                            <span><i class="fa-solid fa-user-check"></i> Aarav Shah</span>
+                            <span><i class="fa-solid fa-calendar-days"></i> Start: 01 Sep 2026</span>
+                            <span><i class="fa-solid fa-calendar-days"></i> Target: 20 Nov 2026</span>
+                        </div>
+                    </div>
+                    <div class="pd-hero-actions">
+                        <a href="#" class="master-btn master-btn-light"><i class="fa-solid fa-arrow-left"></i> Back</a>
+                        <a href="#" class="master-btn master-btn-light"><i class="fa-solid fa-pen"></i> Edit</a>
+                        <a href="#" target="_blank" class="master-btn master-btn-primary"><i class="fa-solid fa-eye"></i> Client Portal</a>
+                    </div>
+                </div>
+
+                <div class="pd-status-card">
+                    <div class="pd-status-left">
+                        <div class="pd-progress-ring">
+                            <strong>45%</strong>
+                            <span>Progress</span>
+                        </div>
+                        <div>
+                            <div class="pd-chip-row">
+                                <span class="pd-chip pd-status-active">Active</span>
+                                <span class="pd-chip pd-health-on_track">On Track</span>
+                                <span class="pd-chip">Production</span>
+                                <span class="pd-chip">High</span>
+                            </div>
+                            <div class="pd-progress"><span style="width: 45%"></span></div>
+                            <div class="pd-copy-row">
+                                <input class="master-input" type="text" value="https://erp.misspack.in/portal/x7f3k9-PRJ-1042" readonly id="portalLinkInput">
+                                <button type="button" class="master-btn master-btn-soft master-btn-sm" id="copyPortalLink"><i class="fa-solid fa-copy"></i> Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                    <form method="POST" action="#" class="master-status-form" onsubmit="return false;">
+                        <div class="master-field"><select class="master-select" name="status"><option selected>Active</option><option>On Hold</option><option>Completed</option><option>Cancelled</option></select></div>
+                        <div class="master-field"><select class="master-select" name="stage"><option>Kickoff</option><option selected>Production</option><option>Dispatch</option><option>Completed</option></select></div>
+                        <div class="master-field"><select class="master-select" name="health"><option selected>On Track</option><option>At Risk</option><option>Off Track</option></select></div>
+                        <div class="master-field"><input class="master-input" type="number" name="progress_percent" min="0" max="100" value="45"></div>
+                        <div class="pd-actions"><button class="master-btn master-btn-primary" type="submit">Update</button></div>
+                    </form>
+                </div>
+
+                <div class="pd-metrics">
+                    <div class="pd-metric"><span>Estimated Value</span><strong>₹ 4,82,500.00</strong></div>
+                    <div class="pd-metric"><span>Payment Inward</span><strong class="pd-green">₹ 1,82,500.00</strong></div>
+                    <div class="pd-metric"><span>Expenses / Outward</span><strong class="pd-red">₹96,400</strong></div>
+                    <div class="pd-metric"><span>Outstanding</span><strong>₹ 3,00,000.00</strong></div>
+                    <div class="pd-metric"><span>Profit/Loss</span><strong class="pd-green">₹ 86,100.00</strong></div>
+                </div>
+
+                <div class="pd-tabs-shell" data-project-id="42">
+                    <div class="pd-tabs-nav" role="tablist" aria-label="Project sections">
+                        <button type="button" class="pd-tab-btn" data-tab="overview" role="tab" aria-selected="false">Overview</button>
+                        <button type="button" class="pd-tab-btn" data-tab="products" role="tab" aria-selected="false">Products <span>2</span></button>
+                        <button type="button" class="pd-tab-btn active" data-tab="milestones" role="tab" aria-selected="true">Milestones <span>6</span></button>
+                        <button type="button" class="pd-tab-btn" data-tab="comments" role="tab" aria-selected="false">Comments <span>3</span></button>
+                        <button type="button" class="pd-tab-btn" data-tab="attachments" role="tab" aria-selected="false">Attachments <span>5</span></button>
+                        <button type="button" class="pd-tab-btn" data-tab="payments" role="tab" aria-selected="false">Payments <span>8</span></button>
+                        <button type="button" class="pd-tab-btn" data-tab="shipments" role="tab" aria-selected="false">Shiments <span>2</span></button>
+                        <button type="button" class="pd-tab-btn" data-tab="tracking" role="tab" aria-selected="false">Activities <span>12</span></button>
+                        <button type="button" class="pd-tab-btn" data-tab="logs" role="tab" aria-selected="false">Logs <span>40</span></button>
+                    </div>
+
+                    <div class="pd-tabs-content">
+                        <section class="pd-tab-panel" id="pd-tab-overview" data-tab-panel="overview" role="tabpanel">
+                            <div class="pd-empty" style="margin:20px 0;">Review deck only mocks the <strong>Milestones</strong> tab - switch back to it. The full Overview tab is unchanged by this PR.</div>
+                        </section>
+
+                        <section class="pd-tab-panel active" id="pd-tab-milestones" data-tab-panel="milestones" role="tabpanel">
+                            <div class="pmile-page">
+                                <div class="pmile-stats">
+                                    <div><span>Total Milestones</span><strong>6</strong></div>
+                                    <div><span>Completed</span><strong class="green">2</strong></div>
+                                    <div><span>Public To Client</span><strong class="blue">4</strong></div>
+                                    <div><span>Overdue / Attention</span><strong class="red">1</strong></div>
+                                    <div><span>Average Progress</span><strong>46%</strong></div>
+                                </div>
+
+                                <div class="pmile-actions-card">
+                                    <div class="pd-section-head">
+                                        <div>
+                                            <p class="pd-eyebrow">Product Timeline</p>
+                                            <h2>Project Milestone Timelines</h2>
+                                        </div>
+                                        <div class="pmile-head-actions">
+                                            <form method="POST" action="#" onsubmit="return false;"
+                                                data-confirm="Generate default milestones for all project products? Existing milestones will not be duplicated."
+                                                data-confirm-text="Generate" data-confirm-danger="false">
+                                                <button type="submit" class="master-btn master-btn-soft"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Default Timeline</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pmile-product-list">
+
+            <div class="pmile-product-block">
+                <div class="pmile-product-head">
+                    <div>
+                        <h3>Premium Cotton Tote 300gsm</h3>
+                        <small>4 milestones · 2 completed</small>
+                    </div>
+                    <div class="pmile-product-progress">
+                        <div class="pd-progress-text"><span>Overall Progress</span><strong>69%</strong></div>
+                        <div class="pd-progress"><span style="width: 69%"></span></div>
+                    </div>
+                </div>
+                <div class="pmile-step-wrapper">
+                    <div class="pmile-step-scroll">
+                        <div class="pmile-stepper">
+
+                    <div class="pmile-step status-completed">
+                        <div class="pmile-step-connector done"></div>
+                        <div class="pmile-step-node"><i class="fas fa-check"></i></div>
+                        <div class="pmile-step-card">
+                            <div class="pmile-step-card-head">
+                                <div class="pmile-step-title-wrap">
+                                    <h4>Design Approval</h4>
+                                    <span class="pmile-step-subtitle">Final artwork and spec sign-off from client</span>
+                                </div>
+                                <button type="button" class="master-icon-btn master-btn-sm editMilestoneBtn" title="Edit milestone"
+                                    data-milestone='{"id": 501, "project_product_id": 12, "milestone_key": "design_approval", "title": "Design Approval", "description": "Final artwork and spec sign-off from client", "status": "completed", "progress_percent": 100, "planned_start_date": "2026-09-01", "planned_end_date": "2026-09-07", "actual_start_date": "2026-09-01", "actual_end_date": "2026-09-06", "owner_id": 1, "is_public": true, "is_required": true, "sort_order": 0, "notes": "", "internal_notes": "", "client_note": "", "blocked_reason": ""}' data-update-url="#" data-delete-url="#">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </div>
+                            <div class="pmile-step-badges"><span class="pmile-status">Completed</span><span class="pmile-public">Public</span><span class="pmile-required">Required</span></div>
+                            <div class="pmile-step-progress-row">
+                                <div class="pmile-progress"><span style="width: 100%"></span></div>
+                                <strong>100%</strong>
+                            </div>
+                            <div class="pmile-step-dates">
+                                <div><span>Planned</span><strong>01 Sep 2026 → 07 Sep 2026</strong></div>
+                                <div><span>Actual</span><strong>01 Sep 2026 → 06 Sep 2026</strong></div>
+                            </div>
+                            <div class="pmile-step-owner"><i class="fas fa-user"></i> Aarav Shah</div>
+                            
+                        </div>
+                    </div>
+
+
+                    <div class="pmile-step status-completed">
+                        <div class="pmile-step-connector done"></div>
+                        <div class="pmile-step-node"><i class="fas fa-check"></i></div>
+                        <div class="pmile-step-card">
+                            <div class="pmile-step-card-head">
+                                <div class="pmile-step-title-wrap">
+                                    <h4>Sampling & Lab Test</h4>
+                                    <span class="pmile-step-subtitle">Dip-dye colourfastness, wash test, size check</span>
+                                </div>
+                                <button type="button" class="master-icon-btn master-btn-sm editMilestoneBtn" title="Edit milestone"
+                                    data-milestone='{"id": 502, "project_product_id": 12, "milestone_key": "sample_development", "title": "Sampling & Lab Test", "description": "Dip-dye colourfastness, wash test, size check", "status": "completed", "progress_percent": 100, "planned_start_date": "2026-09-08", "planned_end_date": "2026-09-15", "actual_start_date": "2026-09-08", "actual_end_date": "2026-09-16", "owner_id": 2, "is_public": true, "is_required": true, "sort_order": 1, "notes": "", "internal_notes": "", "client_note": "Sample approved on 2nd revision \u2014 colour tone matched to Pantone 7529 C.", "blocked_reason": ""}' data-update-url="#" data-delete-url="#">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </div>
+                            <div class="pmile-step-badges"><span class="pmile-status">Completed</span><span class="pmile-public">Public</span><span class="pmile-required">Required</span></div>
+                            <div class="pmile-step-progress-row">
+                                <div class="pmile-progress"><span style="width: 100%"></span></div>
+                                <strong>100%</strong>
+                            </div>
+                            <div class="pmile-step-dates">
+                                <div><span>Planned</span><strong>08 Sep 2026 → 15 Sep 2026</strong></div>
+                                <div><span>Actual</span><strong>08 Sep 2026 → 16 Sep 2026</strong></div>
+                            </div>
+                            <div class="pmile-step-owner"><i class="fas fa-user"></i> Meera Patel</div>
+                            <p class="pmile-notes">Sample approved on 2nd revision — colour tone matched to Pantone 7529 C.</p>
+                        </div>
+                    </div>
+
+
+                    <div class="pmile-step status-in-progress overdue">
+                        <div class="pmile-step-connector active"></div>
+                        <div class="pmile-step-node"><span>3</span></div>
+                        <div class="pmile-step-card">
+                            <div class="pmile-step-card-head">
+                                <div class="pmile-step-title-wrap">
+                                    <h4>Bulk Production</h4>
+                                    <span class="pmile-step-subtitle">Cut, stitch, screen print of 5,000 pcs</span>
+                                </div>
+                                <button type="button" class="master-icon-btn master-btn-sm editMilestoneBtn" title="Edit milestone"
+                                    data-milestone='{"id": 503, "project_product_id": 12, "milestone_key": "production", "title": "Bulk Production", "description": "Cut, stitch, screen print of 5,000 pcs", "status": "in_progress", "progress_percent": 65, "planned_start_date": "2026-09-16", "planned_end_date": "2026-09-30", "actual_start_date": "2026-09-16", "actual_end_date": null, "owner_id": 3, "is_public": true, "is_required": true, "sort_order": 2, "notes": "", "internal_notes": "", "client_note": "", "blocked_reason": ""}' data-update-url="#" data-delete-url="#">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </div>
+                            <div class="pmile-step-badges"><span class="pmile-status">In Progress</span><span class="pmile-overdue">Overdue</span><span class="pmile-public">Public</span><span class="pmile-required">Required</span></div>
+                            <div class="pmile-step-progress-row">
+                                <div class="pmile-progress"><span style="width: 65%"></span></div>
+                                <strong>65%</strong>
+                            </div>
+                            <div class="pmile-step-dates">
+                                <div><span>Planned</span><strong>16 Sep 2026 → 30 Sep 2026</strong></div>
+                                <div><span>Actual</span><strong>16 Sep 2026</strong></div>
+                            </div>
+                            <div class="pmile-step-owner"><i class="fas fa-user"></i> Kunal Mehta</div>
+                            
+                        </div>
+                    </div>
+
+
+                    <div class="pmile-step status-blocked">
+                        <div class="pmile-step-connector "></div>
+                        <div class="pmile-step-node"><span>4</span></div>
+                        <div class="pmile-step-card">
+                            <div class="pmile-step-card-head">
+                                <div class="pmile-step-title-wrap">
+                                    <h4>QC & Packing</h4>
+                                    <span class="pmile-step-subtitle">AQL 2.5 inspection, cartonising, labels</span>
+                                </div>
+                                <button type="button" class="master-icon-btn master-btn-sm editMilestoneBtn" title="Edit milestone"
+                                    data-milestone='{"id": 504, "project_product_id": 12, "milestone_key": "quality_inspection", "title": "QC & Packing", "description": "AQL 2.5 inspection, cartonising, labels", "status": "blocked", "progress_percent": 10, "planned_start_date": "2026-10-01", "planned_end_date": "2026-10-08", "actual_start_date": "2026-10-01", "actual_end_date": null, "owner_id": 4, "is_public": false, "is_required": false, "sort_order": 3, "notes": "", "internal_notes": "", "client_note": "", "blocked_reason": "Awaiting revised stitching instruction sheet from factory."}' data-update-url="#" data-delete-url="#">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </div>
+                            <div class="pmile-step-badges"><span class="pmile-status">Blocked</span><span class="pmile-private">Internal</span></div>
+                            <div class="pmile-step-progress-row">
+                                <div class="pmile-progress"><span style="width: 10%"></span></div>
+                                <strong>10%</strong>
+                            </div>
+                            <div class="pmile-step-dates">
+                                <div><span>Planned</span><strong>01 Oct 2026 → 08 Oct 2026</strong></div>
+                                <div><span>Actual</span><strong>01 Oct 2026</strong></div>
+                            </div>
+                            <div class="pmile-step-owner"><i class="fas fa-user"></i> Sana Qureshi</div>
+                            <p class="pmile-notes danger">Awaiting revised stitching instruction sheet from factory.</p>
+                        </div>
+                    </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="pmile-product-block">
+                <div class="pmile-product-head">
+                    <div>
+                        <h3>Logo Embroidery Patch</h3>
+                        <small>2 milestones · 0 completed</small>
+                    </div>
+                    <div class="pmile-product-progress">
+                        <div class="pd-progress-text"><span>Overall Progress</span><strong>0%</strong></div>
+                        <div class="pd-progress"><span style="width: 0%"></span></div>
+                    </div>
+                </div>
+                <div class="pmile-step-wrapper">
+                    <div class="pmile-step-scroll">
+                        <div class="pmile-stepper">
+
+                    <div class="pmile-step status-not-started">
+                        <div class="pmile-step-connector "></div>
+                        <div class="pmile-step-node"><span>1</span></div>
+                        <div class="pmile-step-card">
+                            <div class="pmile-step-card-head">
+                                <div class="pmile-step-title-wrap">
+                                    <h4>Artwork Setup</h4>
+                                    <span class="pmile-step-subtitle">Vector artwork prep for embroidery digitising</span>
+                                </div>
+                                <button type="button" class="master-icon-btn master-btn-sm editMilestoneBtn" title="Edit milestone"
+                                    data-milestone='{"id": 505, "project_product_id": 13, "milestone_key": "artwork_design", "title": "Artwork Setup", "description": "Vector artwork prep for embroidery digitising", "status": "not_started", "progress_percent": 0, "planned_start_date": "2026-10-05", "planned_end_date": "2026-10-10", "actual_start_date": null, "actual_end_date": null, "owner_id": 2, "is_public": false, "is_required": false, "sort_order": 0, "notes": "", "internal_notes": "", "client_note": "", "blocked_reason": ""}' data-update-url="#" data-delete-url="#">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </div>
+                            <div class="pmile-step-badges"><span class="pmile-status">Not Started</span><span class="pmile-private">Internal</span></div>
+                            <div class="pmile-step-progress-row">
+                                <div class="pmile-progress"><span style="width: 0%"></span></div>
+                                <strong>0%</strong>
+                            </div>
+                            <div class="pmile-step-dates">
+                                <div><span>Planned</span><strong>05 Oct 2026 → 10 Oct 2026</strong></div>
+                                <div><span>Actual</span><strong>—</strong></div>
+                            </div>
+                            <div class="pmile-step-owner"><i class="fas fa-user"></i> Meera Patel</div>
+                            
+                        </div>
+                    </div>
+
+
+                    <div class="pmile-step status-waiting">
+                        <div class="pmile-step-connector "></div>
+                        <div class="pmile-step-node"><span>2</span></div>
+                        <div class="pmile-step-card">
+                            <div class="pmile-step-card-head">
+                                <div class="pmile-step-title-wrap">
+                                    <h4>Supplier Quotation</h4>
+                                    <span class="pmile-step-subtitle">Costing and lead time from embroidery partner</span>
+                                </div>
+                                <button type="button" class="master-icon-btn master-btn-sm editMilestoneBtn" title="Edit milestone"
+                                    data-milestone='{"id": 506, "project_product_id": 13, "milestone_key": "production_planning", "title": "Supplier Quotation", "description": "Costing and lead time from embroidery partner", "status": "waiting", "progress_percent": 0, "planned_start_date": "2026-10-02", "planned_end_date": "2026-10-05", "actual_start_date": null, "actual_end_date": null, "owner_id": 1, "is_public": true, "is_required": false, "sort_order": 1, "notes": "", "internal_notes": "", "client_note": "Client to confirm thread colours by 05 Oct 2026.", "blocked_reason": ""}' data-update-url="#" data-delete-url="#">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </div>
+                            <div class="pmile-step-badges"><span class="pmile-status">Waiting</span><span class="pmile-public">Public</span></div>
+                            <div class="pmile-step-progress-row">
+                                <div class="pmile-progress"><span style="width: 0%"></span></div>
+                                <strong>0%</strong>
+                            </div>
+                            <div class="pmile-step-dates">
+                                <div><span>Planned</span><strong>02 Oct 2026 → 05 Oct 2026</strong></div>
+                                <div><span>Actual</span><strong>—</strong></div>
+                            </div>
+                            <div class="pmile-step-owner"><i class="fas fa-user"></i> Aarav Shah</div>
+                            <p class="pmile-notes">Client to confirm thread colours by 05 Oct 2026.</p>
+                        </div>
+                    </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                                </div>
+                            </div>
+
+                            <div class="master-modal" id="editMilestoneModal" aria-hidden="true">
+                                <div class="master-modal-card" role="dialog" aria-modal="true"
+                                    aria-labelledby="editMilestoneModalTitle">
+                                    <form method="POST" action="#" id="editMilestoneForm" onsubmit="return false;">
+                                        <input type="hidden" name="milestone_key" id="edit_milestone_key">
+                                        <input type="hidden" name="project_product_id" id="edit_project_product_id">
+
+                                        <div class="master-modal-header">
+                                            <div class="master-modal-heading">
+                                                <span class="master-modal-icon"><i class="fa-solid fa-diagram-project"></i></span>
+                                                <div>
+                                                    <h3 class="master-modal-title" id="editMilestoneModalTitle">Edit Milestone</h3>
+                                                    <p class="master-modal-subtitle">Timeline step</p>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="master-modal-close" data-close-modal>×</button>
+                                        </div>
+
+                                        <div class="master-modal-body">
+                                            <div class="master-modal-grid">
+                                                <div class="master-field full">
+                                                    <label class="master-label">Title</label>
+                                                    <input class="master-input" type="text" name="title" id="edit_title" required>
+                                                </div>
+                                                <div class="master-field">
+                                                    <label class="master-label">Status</label>
+                                                    <select class="master-select" name="status" id="edit_status"><option value="not_started">Not Started</option><option value="in_progress" selected>In Progress</option><option value="waiting">Waiting</option><option value="completed">Completed</option><option value="blocked">Blocked</option><option value="skipped">Skipped</option></select>
+                                                </div>
+                                                <div class="master-field">
+                                                    <label class="master-label">Progress %</label>
+                                                    <input class="master-input" type="number" name="progress_percent" id="edit_progress_percent" min="0" max="100">
+                                                </div>
+                                                <div class="master-field">
+                                                    <label class="master-label">Planned Start</label>
+                                                    <input class="master-input" type="date" name="planned_start_date" id="edit_planned_start_date">
+                                                </div>
+                                                <div class="master-field">
+                                                    <label class="master-label">Planned End</label>
+                                                    <input class="master-input" type="date" name="planned_end_date" id="edit_planned_end_date">
+                                                </div>
+                                                <div class="master-field">
+                                                    <label class="master-label">Actual Start</label>
+                                                    <input class="master-input" type="date" name="actual_start_date" id="edit_actual_start_date">
+                                                </div>
+                                                <div class="master-field">
+                                                    <label class="master-label">Actual End</label>
+                                                    <input class="master-input" type="date" name="actual_end_date" id="edit_actual_end_date">
+                                                </div>
+                                                <div class="master-field">
+                                                    <label class="master-label">Owner</label>
+                                                    <select class="master-select" name="owner_id" id="edit_owner_id">
+                                                        <option value="">No owner</option><option value="1">Aarav Shah</option><option value="2">Meera Patel</option><option value="3">Kunal Mehta</option><option value="4">Sana Qureshi</option>
+                                                    </select>
+                                                </div>
+                                                <div class="master-field">
+                                                    <label class="master-label">Sort Order</label>
+                                                    <input class="master-input" type="number" name="sort_order" id="edit_sort_order" min="0">
+                                                </div>
+                                                <label class="master-check"><input type="checkbox" name="is_public" id="edit_is_public" value="1"> Public for client</label>
+                                                <label class="master-check"><input type="checkbox" name="is_required" id="edit_is_required" value="1"> Required for progress</label>
+                                                <div class="master-field">
+                                                    <label class="master-label">Client Note</label>
+                                                    <textarea class="master-textarea" name="client_note" id="edit_client_note" rows="2"></textarea>
+                                                </div>
+                                                <div class="master-field">
+                                                    <label class="master-label">Internal Notes</label>
+                                                    <textarea class="master-textarea" name="internal_notes" id="edit_internal_notes" rows="2"></textarea>
+                                                </div>
+                                                <div class="master-field">
+                                                    <label class="master-label">General Notes</label>
+                                                    <textarea class="master-textarea" name="notes" id="edit_notes" rows="2"></textarea>
+                                                </div>
+                                                <div class="master-field">
+                                                    <label class="master-label">Blocked Reason</label>
+                                                    <textarea class="master-textarea" name="blocked_reason" id="edit_blocked_reason" rows="2"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="master-modal-footer">
+                                            <button type="button" class="master-btn master-btn-soft pmile-delete-action"
+                                                id="openDeleteMilestoneModal"><i class="fa-solid fa-trash"></i> Delete</button>
+                                            <button type="button" class="master-btn master-btn-light" data-close-modal>Cancel</button>
+                                            <button type="submit" class="master-btn master-btn-primary">Save Milestone</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="master-modal" id="deleteMilestoneModal" aria-hidden="true">
+                                <div class="master-modal-card" style="max-width:440px;" role="dialog" aria-modal="true"
+                                    aria-labelledby="deleteMilestoneTitle">
+                                    <div class="master-modal-header">
+                                        <div class="master-modal-heading">
+                                            <span class="master-modal-icon"
+                                                style="background:#fff0f4;color:var(--master-red);">🗑</span>
+                                            <div>
+                                                <h3 class="master-modal-title" id="deleteMilestoneTitle">Delete Milestone</h3>
+                                                <p class="master-modal-subtitle">This action cannot be undone</p>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="master-modal-close" data-close-modal>×</button>
+                                    </div>
+                                    <div class="master-modal-body">
+                                        <p id="deleteMilestoneDesc" style="margin:0;font-weight:700;color:#536079;">Are you sure
+                                            you want to delete this milestone?</p>
+                                    </div>
+                                    <form method="POST" action="#" id="deleteMilestoneForm" onsubmit="return false;">
+                                        <div class="master-modal-footer">
+                                            <button type="button" class="master-btn master-btn-light" data-close-modal>Cancel</button>
+                                            <button type="submit" class="master-btn master-btn-danger">Delete Milestone</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+</main>
+    </div>
+
+    <script src="/assets/vendor/jquery/jquery.min.js?v=6abe6ebd"></script>
+    <script src="/assets/vendor/select2/js/select2.min.js?v=6abe1966"></script>
+    <script src="/assets/js/master-alert.js?v=6abf15d1"></script>
+    <script src="/assets/js/master-selects.js?v=6abf2a90"></script>
+    <script src="/assets/js/app-layout.js?v=6abf23b1"></script>
+    <script src="/assets/js/projects.js?v=6abf6939"></script>
+    <script>
+        // Review deck: this mock only renders the Milestones tab, so start there.
+        if (!window.location.hash) { window.location.hash = "#milestones"; }
+    </script>
+    <script>
+        // Static preview: client-side theme toggle (Laravel's /theme/toggle is not available here)
+        (function () {
+            var html = document.documentElement;
+            try {
+                var t = new URLSearchParams(location.search).get('theme');
+                if (t === 'dark' || t === 'light') { html.setAttribute('data-theme', t); }
+            } catch (e) {}
+            function syncBtn() {
+                var dark = html.getAttribute('data-theme') === 'dark';
+                var btn = document.getElementById('previewThemeBtn');
+                btn.innerHTML = dark ? '<i class="fas fa-sun"></i> <span>Light</span>' : '<i class="fas fa-moon"></i> <span>Dark</span>';
+            }
+            syncBtn();
+            document.getElementById('previewThemeBtn').addEventListener('click', function () {
+                var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', next);
+                try { localStorage.setItem('preview-theme', next); } catch (e) {}
+                syncBtn();
+            });
+        })();
+    </script>
+</body>
+</html>

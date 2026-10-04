@@ -2,10 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\DateRanges;
 use App\Models\CashflowAccount;
 use App\Models\CashflowCategory;
+use App\Models\CashflowAttachment;
 use App\Models\CashflowEntry;
 use App\Models\CashflowMasterOption;
+use App\Models\SavedView;
+use App\Models\User;
+use App\Services\CashflowAnalysis;
+use App\Services\CashflowFilters;
+use App\Services\CashflowLedger;
+use App\Services\SavedViews;
+use App\Services\VendorPaymentCashflowSync;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,11 +28,20 @@ class CashflowController extends Controller
 {
     public function index(Request $request): View
     {
+        // Jumping back into a saved view simply re-runs its filters.
+        if ($savedQuery = $this->resolveSavedView($request)) {
+            return redirect()->route('cashflows.index', $savedQuery);
+        }
+
         $filters = $this->filters($request);
 
+        /* A report opens its rows in the order it read them — oldest first — so
+           a drill-down lands on the same rows the figure was summed over. Every
+           other way into the ledger keeps its own newest-first order. */
+        $oldestFirst = $request->query('sort') === 'oldest';
+
         $entries = $this->baseEntryQuery($filters)
-            ->latest('entry_date')
-            ->latest('id')
+            ->when($oldestFirst, fn ($query) => $query->oldest('entry_date')->oldest('id'), fn ($query) => $query->latest('entry_date')->latest('id'))
             ->paginate(100)
             ->withQueryString();
 
@@ -39,9 +57,47 @@ class CashflowController extends Controller
         ];
         $stats['net'] = $stats['credit'] - $stats['debit'];
 
-        return view('cashflows.index', array_merge($this->sharedData(), [
+        // Which rows on this page are mirrors of a vendor payment / shipment
+        // cost (one query each, never one per row).
+        $mirroredPayments = app(VendorPaymentCashflowSync::class)->linkedMapFor($entries->pluck('id'));
+        $mirroredShipmentCosts = app(\App\Services\ShipmentCostCashflowSync::class)->linkedShipmentMapFor($entries->pluck('id'));
+
+        // The totals row: what the rows on this page add up to, next to the
+        // same figures for the whole filtered set.
+        $pageTotals = [
+            'credit' => round((float) $entries->sum('credit_amount'), 2),
+            'debit' => round((float) $entries->sum('debit_amount'), 2),
+        ];
+        $pageTotals['net'] = round($pageTotals['credit'] - $pageTotals['debit'], 2);
+        $stats['net'] = round((float) $stats['credit'] - (float) $stats['debit'], 2);
+
+        $shared = $this->sharedData();
+
+        return view('cashflows.index', array_merge($shared, [
             'entries' => $entries,
             'stats' => $stats,
+            'pageTotals' => $pageTotals,
+            'chipCounts' => $this->chipCounts($filters),
+            /* The applied strip is drawn from the same list of dimensions that
+               filtered the query, so a filter that arrives by link — a report
+               cell, a saved view — is always visible and always removable. */
+            'appliedFilters' => app(CashflowFilters::class)->applied($filters),
+            'appliedFilterLabels' => app(CashflowFilters::class)->labels($filters),
+            'dateRanges' => DateRanges::presets(),
+            'dateRangeLabels' => DateRanges::LABELS,
+            'activeRange' => DateRanges::keyOf($filters['dateFrom'] ?? null, $filters['dateTo'] ?? null),
+            'savedViews' => app(SavedViews::class)->forUser(Auth::id(), 'cashflows'),
+            'mirroredPayments' => $mirroredPayments,
+            'mirroredShipmentCosts' => $mirroredShipmentCosts,
+            /* Which party field the quick dialog opens on. Page state, so the
+               controller builds it: the view used to compute it in a `@php`
+               block a hundred lines above its first use, and the page 500'd with
+               `Undefined variable $quickPartyType` when that block was not in
+               the copy being served (a stale compiled view is enough). */
+            'quickPartyType' => CashflowEntry::partyTypeFor(
+                old('related_party_type'),
+                $shared['relatedPartyOptions'] ?? []
+            ),
             ...$filters,
         ]));
     }
@@ -62,7 +118,7 @@ class CashflowController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $this->validatedData($request);
+        $data = CashflowEntry::alignPartyType($this->validatedData($request));
         $data = $this->normalizeAmounts($data);
         $data['created_by'] = Auth::id();
 
@@ -92,8 +148,12 @@ class CashflowController extends Controller
             'accounting_status' => ['nullable', Rule::in($this->masterKeys('accounting_status', array_keys(CashflowEntry::accountingStatusOptions())))],
             'payment_mode' => ['nullable', Rule::in($this->masterKeys('payment_mode', array_keys(CashflowEntry::paymentModeOptions())))],
             'related_party_type' => ['required', Rule::in($this->masterKeys('related_party_type', array_keys(CashflowEntry::relatedPartyOptions())))],
+            /* A party is a linked client, a linked vendor, a linked employee, or
+               a name typed in by hand. Quick Entry takes the link as well: the
+               person being paid is exactly what a cash line often is. */
             'client_id' => ['nullable', 'integer'],
             'vendor_id' => ['nullable', 'integer'],
+            'employee_id' => ['nullable', 'integer', 'exists:users,id'],
             'expense_head' => ['nullable', 'string', 'max:255'],
             'related_party_name' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
@@ -102,6 +162,9 @@ class CashflowController extends Controller
         $data['credit_amount'] = $data['transaction_type'] === 'credit' ? $data['amount'] : 0;
         $data['debit_amount'] = $data['transaction_type'] === 'debit' ? $data['amount'] : 0;
         unset($data['amount']);
+        /* The link decides the label — a client picked in Quick Entry is a
+           client entry, whatever the selector was left on. */
+        $data = CashflowEntry::alignPartyType($data);
         $data['created_by'] = Auth::id();
 
         $entry = DB::transaction(function () use ($data) {
@@ -115,22 +178,37 @@ class CashflowController extends Controller
 
     public function show(CashflowEntry $cashflow): View
     {
-        $with = ['account', 'category', 'creator'];
+        $with = ['account', 'category', 'creator', 'attachments.uploader'];
         if ($this->clientModelAvailable()) $with[] = 'client';
         if ($this->vendorModelAvailable()) $with[] = 'vendor';
         $cashflow->load($with);
 
-        return view('cashflows.show', array_merge($this->sharedData(), ['entry' => $cashflow]));
+        return view('cashflows.show', array_merge($this->sharedData(), [
+            'entry' => $cashflow,
+            'documentTypeOptions' => CashflowAttachment::documentTypeOptions(),
+            /* the newest documents filed without an entry, so this page can
+               claim one: a bill that arrived before its payment did */
+            'unlinkedDocuments' => CashflowAttachment::query()
+                ->unlinked()
+                ->orderByDesc('created_at')
+                ->limit(50)
+                ->get(),
+            'linkedVendorPayment' => app(VendorPaymentCashflowSync::class)->linkedPaymentFor($cashflow),
+            'linkedShipmentCost' => app(\App\Services\ShipmentCostCashflowSync::class)->linkedCostFor($cashflow),
+        ]));
     }
 
     public function edit(CashflowEntry $cashflow): View
     {
-        return view('cashflows.form', array_merge($this->sharedData(), ['entry' => $cashflow]));
+        return view('cashflows.form', array_merge($this->sharedData(), [
+            'entry' => $cashflow,
+            'linkedVendorPayment' => app(VendorPaymentCashflowSync::class)->linkedPaymentFor($cashflow),
+        ]));
     }
 
     public function update(Request $request, CashflowEntry $cashflow): RedirectResponse
     {
-        $data = $this->validatedData($request);
+        $data = CashflowEntry::alignPartyType($this->validatedData($request));
         $data = $this->normalizeAmounts($data);
         $oldAccountId = $cashflow->account_id;
 
@@ -146,12 +224,22 @@ class CashflowController extends Controller
     public function destroy(CashflowEntry $cashflow): RedirectResponse
     {
         $accountId = $cashflow->account_id;
-        DB::transaction(function () use ($cashflow, $accountId) {
+        $detached = DB::transaction(function () use ($cashflow, $accountId) {
+            // Never leave a vendor payment or shipment cost pointing at a deleted entry.
+            $detached = app(VendorPaymentCashflowSync::class)->detach($cashflow);
+            $detached += app(\App\Services\ShipmentCostCashflowSync::class)->detach($cashflow);
             $cashflow->delete();
             $this->recalculateAccountLedger($accountId);
+
+            return $detached;
         });
 
-        return redirect()->route('cashflows.index')->with('success', 'Cashflow entry deleted successfully.');
+        return redirect()->route('cashflows.index')->with(
+            'success',
+            $detached
+                ? 'Cashflow entry deleted. The linked vendor payment / shipment cost was unlinked — set its paid account again if the payment still stands.'
+                : 'Cashflow entry deleted successfully.'
+        );
     }
 
     public function storeAccount(Request $request): RedirectResponse
@@ -199,7 +287,7 @@ class CashflowController extends Controller
     {
         $reportData = $this->reportData($request);
         $viewData = array_merge($this->sharedData(), $reportData, ['printMode' => true]);
-        $fileName = 'cashflow-report-'.$reportData['dateFrom']->format('Ymd').'-'.$reportData['dateTo']->format('Ymd').'.pdf';
+        $fileName = 'cashflow-report-'.$reportData['from'].'-'.$reportData['to'].'.pdf';
 
         if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
             return \Barryvdh\DomPDF\Facade\Pdf::loadView('cashflows.pdf', $viewData)
@@ -208,7 +296,7 @@ class CashflowController extends Controller
         }
 
         return response()->view('cashflows.pdf', $viewData + [
-            'pdfFallbackMessage' => 'Install barryvdh/laravel-dompdf for direct PDF download. Use browser Print > Save as PDF for now.',
+            'pdfFallbackMessage' => 'Use the print dialog and choose Save as PDF to download this report.',
         ]);
     }
 
@@ -230,8 +318,12 @@ class CashflowController extends Controller
             'category_id' => ['nullable', 'exists:cashflow_categories,id'],
             'accounting_status' => ['required', Rule::in($this->masterKeys('accounting_status', array_keys(CashflowEntry::accountingStatusOptions())))],
             'payment_mode' => ['nullable', Rule::in($this->masterKeys('payment_mode', array_keys(CashflowEntry::paymentModeOptions())))],
+            /* A party is a linked client, a linked vendor, a linked employee, or
+               a name typed in by hand: an entry needs one of them, and the row's
+               label reads whichever is present. */
             'client_id' => ['nullable', 'integer'],
             'vendor_id' => ['nullable', 'integer'],
+            'employee_id' => ['nullable', 'integer', 'exists:users,id'],
             'expense_head' => ['nullable', 'string', 'max:255'],
             'related_party_type' => ['required', Rule::in($this->masterKeys('related_party_type', array_keys(CashflowEntry::relatedPartyOptions())))],
             'related_party_name' => ['nullable', 'string', 'max:255'],
@@ -256,21 +348,201 @@ class CashflowController extends Controller
         return $data;
     }
 
+    /**
+     * What each quick-view chip would show: the current filters plus that
+     * chip's own dimension, so the number on a chip is the number of rows you
+     * would actually get by clicking it.
+     *
+     * @return array<string, int>
+     */
+    private function chipCounts(array $filters): array
+    {
+        $base = array_merge($filters, [
+            'transactionType' => 'all',
+            'accountingStatus' => 'all',
+            'dateFrom' => null,
+            'dateTo' => null,
+            'documents' => 'all',
+        ]);
+
+        $count = function (array $overrides) use ($base) {
+            return $this->baseEntryQuery(array_merge($base, $overrides), false)->count();
+        };
+
+        $counts = [
+            'all' => $count([]),
+            'credit' => $count(['transactionType' => 'credit']),
+            'debit' => $count(['transactionType' => 'debit']),
+            'pending' => $count(['accountingStatus' => 'pending']),
+            // the month-end to-do list: entries with no bill on file
+            'missing_documents' => $count(['documents' => 'missing']),
+        ];
+
+        /* The period chips. The ranges come from the shared helper, so the
+           number on "Last month" is the number of rows that chip would show —
+           in the same month the chip is labelled with. */
+        foreach (DateRanges::presets() as $key => $range) {
+            $counts[$key] = $count([
+                'dateFrom' => $range['from'],
+                'dateTo' => $range['to'],
+            ]);
+        }
+
+        return $counts;
+    }
+
+    /**
+     * When the request carries ?saved_view=ID, the saved query is what should
+     * be rendered — this turns it back into the URL the list already speaks.
+     *
+     * @return array<string, string>
+     */
+    private function resolveSavedView(Request $request): array
+    {
+        $id = (int) $request->query('saved_view', 0);
+
+        if (! $id) {
+            return [];
+        }
+
+        $view = SavedView::query()
+            ->where('module', 'cashflows')
+            ->where(function ($query) {
+                $query->where('user_id', Auth::id())->orWhere('is_shared', true);
+            })
+            ->find($id);
+
+        return $view ? app(SavedViews::class)->queryFor($view) : [];
+    }
+
+    /**
+     * The report as a spreadsheet.
+     *
+     * A CSV is data, so the numbers are raw (two decimals, no symbols and no
+     * grouping) and the header says what was asked for — which dimension, which
+     * bucket, which figure, against what. A file that leaves the app has to
+     * explain itself a year later, and the columns are the periods on screen in
+     * the same order, so the sheet and the page can be read against each other.
+     */
+    public function exportReport(Request $request)
+    {
+        $data = $this->reportData($request);
+        $report = $data['report'];
+        $fileName = 'cashflow-report-'.$report['from'].'-'.$report['to'].'.csv';
+
+        return response()->streamDownload(function () use ($data, $report) {
+            $out = fopen('php://output', 'w');
+
+            /* Excel reads a UTF-8 CSV only when it starts with a byte-order
+               mark; without it a currency sign in a group name arrives as
+               mojibake. */
+            fwrite($out, "\xEF\xBB\xBF");
+
+            $row = function (array $cells) use ($out) {
+                fputcsv($out, $cells);
+            };
+
+            $row(['Cashflow report']);
+            $row(['Grouped by', $data['dimensions'][$report['dimension']]['label'] ?? $report['dimension']]);
+            $row(['Period', $data['units'][$report['unit']] ?? $report['unit']]);
+            $row(['Figure', $data['measures'][$report['measure']] ?? $report['measure']]);
+            $row(['Compared with', $data['comparisons'][$report['comparison']] ?? $report['comparison']]);
+            $row(['Range', $report['from'], $report['to']]);
+            $row(['Currency', $report['currencies'] === [] ? '-' : implode(' / ', $report['currencies'])]);
+
+            $header = ['Group', 'Value'];
+            foreach ($report['periods'] as $period) {
+                $header[] = $period['label'];
+
+                if ($report['comparison'] !== 'none') {
+                    $header[] = $period['label'].' ('.($period['compare_label'] ?: 'compared').')';
+                }
+            }
+            $header[] = 'Money in';
+            $header[] = 'Money out';
+            $header[] = 'Net';
+            $row($header);
+
+            $money = fn ($value) => number_format((float) $value, 2, '.', '');
+
+            foreach ($report['rows'] as $reportRow) {
+                $cells = [$data['dimensions'][$report['dimension']]['label'] ?? '', $reportRow['label']];
+
+                foreach ($report['periods'] as $index => $period) {
+                    $cell = $reportRow['cells'][$index] ?? null;
+                    $cells[] = $cell ? $money($cell['measure_value']) : '';
+
+                    if ($report['comparison'] !== 'none') {
+                        $cells[] = $cell ? $money($cell['compare_value']) : '';
+                    }
+                }
+
+                $cells[] = $money($reportRow['credit']);
+                $cells[] = $money($reportRow['debit']);
+                $cells[] = $money($reportRow['net']);
+                $row($cells);
+            }
+
+            $totals = ['Total', ''];
+            foreach ($report['periods'] as $index => $period) {
+                $cell = $report['totals']['cells'][$index] ?? null;
+                $totals[] = $cell ? $money($cell['measure_value']) : '';
+
+                if ($report['comparison'] !== 'none') {
+                    $totals[] = $cell ? $money($cell['compare_value']) : '';
+                }
+            }
+            $totals[] = $money($report['totals']['credit']);
+            $totals[] = $money($report['totals']['debit']);
+            $totals[] = $money($report['totals']['net']);
+            $row($totals);
+
+            fclose($out);
+        }, $fileName, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    public function storeSavedView(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:60'],
+            'is_shared' => ['nullable', 'boolean'],
+            /* A view belongs to the screen that saved it: the ledger's views
+               filter rows, the report's views describe a grouping, and mixing
+               the two would apply one screen's vocabulary to the other. */
+            'module' => ['nullable', Rule::in(['cashflows', self::REPORT_VIEW_MODULE])],
+        ]);
+
+        app(SavedViews::class)->save(
+            Auth::id(),
+            $data['module'] ?? 'cashflows',
+            $data['name'],
+            $request->query(),
+            $request->boolean('is_shared')
+        );
+
+        return back()->with('success', 'View "'.$data['name'].'" saved.');
+    }
+
+    public function destroySavedView(SavedView $savedView): RedirectResponse
+    {
+        abort_unless((int) $savedView->user_id === (int) Auth::id(), 403);
+
+        app(SavedViews::class)->delete((int) Auth::id(), (int) $savedView->id);
+
+        return back()->with('success', 'Saved view removed.');
+    }
+
+    /**
+     * The request's filters, in the one vocabulary the module speaks.
+     *
+     * The parsing lives in `CashflowFilters` because the analysis builder links
+     * back into this list: a report cell opens the ledger filtered by the
+     * dimension and the period it was built from, and a filter that meant one
+     * thing on the report and another here would make the drill-down a lie.
+     */
     private function filters(Request $request): array
     {
-        return [
-            'search' => $request->query('search'),
-            'accountId' => $request->query('account_id', 'all'),
-            'accountType' => $request->query('account_type', 'all'),
-            'categoryId' => $request->query('category_id', 'all'),
-            'transactionType' => $request->query('transaction_type', 'all'),
-            'accountingStatus' => $request->query('accounting_status', 'all'),
-            'relatedPartyType' => $request->query('related_party_type', 'all'),
-            'clientId' => $request->query('client_id', 'all'),
-            'vendorId' => $request->query('vendor_id', 'all'),
-            'dateFrom' => $request->query('date_from'),
-            'dateTo' => $request->query('date_to'),
-        ];
+        return app(CashflowFilters::class)->fromRequest($request);
     }
 
     private function baseEntryQuery(array $filters, bool $withRelations = true)
@@ -280,128 +552,234 @@ class CashflowController extends Controller
             $with[] = 'creator';
             if ($this->clientModelAvailable()) $with[] = 'client';
             if ($this->vendorModelAvailable()) $with[] = 'vendor';
+            /* the employee the entry was filed against: one relation, loaded
+               with the page rather than looked up per row */
+            $with[] = 'employee';
         }
 
-        return CashflowEntry::query()
+        $query = CashflowEntry::query()
             ->when($withRelations, fn ($q) => $q->with($with), fn ($q) => $q->with(['account', 'category']))
-            ->search($filters['search'] ?? null)
-            ->when(($filters['accountId'] ?? 'all') !== 'all', fn ($q) => $q->where('account_id', $filters['accountId']))
-            ->when(($filters['accountType'] ?? 'all') !== 'all', fn ($q) => $q->whereHas('account', fn ($a) => $a->where('account_type', $filters['accountType'])))
-            ->when(($filters['categoryId'] ?? 'all') !== 'all', fn ($q) => $q->where('category_id', $filters['categoryId']))
-            ->when(($filters['transactionType'] ?? 'all') !== 'all', fn ($q) => $q->where('transaction_type', $filters['transactionType']))
-            ->when(($filters['accountingStatus'] ?? 'all') !== 'all', fn ($q) => $q->where('accounting_status', $filters['accountingStatus']))
-            ->when(($filters['relatedPartyType'] ?? 'all') !== 'all', fn ($q) => $q->where('related_party_type', $filters['relatedPartyType']))
-            ->when(($filters['clientId'] ?? 'all') !== 'all', fn ($q) => $q->where('client_id', $filters['clientId']))
-            ->when(($filters['vendorId'] ?? 'all') !== 'all', fn ($q) => $q->where('vendor_id', $filters['vendorId']))
-            ->when($filters['dateFrom'] ?? null, fn ($q) => $q->whereDate('entry_date', '>=', $filters['dateFrom']))
-            ->when($filters['dateTo'] ?? null, fn ($q) => $q->whereDate('entry_date', '<=', $filters['dateTo']));
+            /* The paperclip on a row is this count, fetched with the page
+               instead of one query per row. Only the list asks for relations,
+               so the reports and the chip counts never pay for it. */
+            ->when($withRelations, fn ($q) => $q->withCount('attachments'));
+
+        return app(CashflowFilters::class)->apply($query, $filters);
     }
 
+    /**
+     * The analysis builder's payload.
+     *
+     * Everything the report page draws — the matrix, the chips, the drill links,
+     * the CSV — comes out of this one method, so a figure on the screen and the
+     * rows behind it cannot be built from two different queries.
+     */
     private function reportData(Request $request): array
     {
-        [$dateFrom, $dateTo] = $this->reportDateRange($request);
+        $analysis = app(CashflowAnalysis::class);
         $filters = $this->filters($request);
-        $filters['dateFrom'] = $dateFrom->toDateString();
-        $filters['dateTo'] = $dateTo->toDateString();
-        $filters['relatedPartyType'] = $request->query('report_type', $filters['relatedPartyType'] ?? 'all') === 'cash_expense'
-            ? 'expense'
-            : ($filters['relatedPartyType'] ?? 'all');
 
-        if ($request->query('report_type') === 'client') {
-            $filters['relatedPartyType'] = 'client';
-        }
-        if ($request->query('report_type') === 'vendor') {
-            $filters['relatedPartyType'] = 'vendor';
-        }
+        $dimension = $this->reportDimension($request);
+        $unit = $this->reportUnit($request);
+        $measure = $analysis->measure((string) $request->query('measure', 'net'));
+        $comparison = $analysis->comparison((string) $request->query('comparison', 'none'));
 
-        $entries = $this->baseEntryQuery($filters)
-            ->oldest('entry_date')
-            ->oldest('id')
-            ->get();
+        [$from, $to] = $this->reportWindow($request, $unit);
 
-        $summary = [
-            'credit' => $entries->sum(fn ($entry) => (float) $entry->credit_amount),
-            'debit' => $entries->sum(fn ($entry) => (float) $entry->debit_amount),
-            'count' => $entries->count(),
-        ];
-        $summary['net'] = $summary['credit'] - $summary['debit'];
+        /* The window is a filter like any other: the report's rows, its counts,
+           its drill links and the ledger it opens all read these two dates, so a
+           cell can never mean a different set of rows than it counted. */
+        $filters['dateFrom'] = $from;
+        $filters['dateTo'] = $to;
 
-        $accountSummary = $entries->groupBy('account_id')->map(function ($rows) {
-            $account = $rows->first()->account;
-            return [
-                'name' => $account?->account_name ?? 'Unknown',
-                'type' => $account?->typeLabel() ?? '-',
-                'credit' => $rows->sum(fn ($entry) => (float) $entry->credit_amount),
-                'debit' => $rows->sum(fn ($entry) => (float) $entry->debit_amount),
-            ];
-        });
+        $report = $analysis->build($filters, $dimension, $unit, $measure, $comparison, $from, $to);
+        $report = $this->decorateReport($report, $filters);
 
-        $categorySummary = $entries->groupBy('category_id')->map(function ($rows) {
-            $category = $rows->first()->category;
-            return [
-                'name' => $category?->name ?? 'Uncategorized',
-                'type' => $category?->typeLabel() ?? '-',
-                'credit' => $rows->sum(fn ($entry) => (float) $entry->credit_amount),
-                'debit' => $rows->sum(fn ($entry) => (float) $entry->debit_amount),
-            ];
-        });
+        $query = $request->query();
+        $query['dimension'] = $dimension;
+        $query['period_unit'] = $unit;
+        $query['measure'] = $measure;
+        $query['comparison'] = $comparison;
+        $query['date_from'] = $report['from'];
+        $query['date_to'] = $report['to'];
+        unset($query['page'], $query['saved_view'], $query['period'], $query['date'], $query['report_type']);
 
         return [
             ...$filters,
-            'entries' => $entries,
-            'summary' => $summary,
-            'accountSummary' => $accountSummary,
-            'categorySummary' => $categorySummary,
-            'dateFrom' => $dateFrom,
-            'dateTo' => $dateTo,
-            'period' => $request->query('period', 'month'),
-            'reportType' => $request->query('report_type', 'overall'),
+            'filterState' => $filters,
+            'report' => $report,
+            'reportQuery' => $query,
+            'dimensions' => CashflowAnalysis::DIMENSIONS,
+            'units' => CashflowAnalysis::UNITS,
+            'measures' => CashflowAnalysis::MEASURES,
+            'comparisons' => CashflowAnalysis::COMPARISONS,
+            'dimension' => $dimension,
+            'unit' => $unit,
+            'measure' => $measure,
+            'comparison' => $comparison,
+            'dateFrom' => Carbon::parse($report['from']),
+            'dateTo' => Carbon::parse($report['to']),
+            'appliedFilters' => app(CashflowFilters::class)->applied($filters),
+            'appliedFilterLabels' => app(CashflowFilters::class)->labels($filters),
+            'dateRanges' => DateRanges::presets(),
+            'dateRangeLabels' => DateRanges::LABELS,
+            'activeRange' => DateRanges::keyOf($report['from'], $report['to']),
+            'savedViews' => app(SavedViews::class)->forUser(Auth::id(), self::REPORT_VIEW_MODULE),
         ];
     }
 
-    private function reportDateRange(Request $request): array
-    {
-        $period = $request->query('period', 'month');
-        $date = Carbon::parse($request->query('date', now()->toDateString()));
+    /** The module name saved report views are stored under. */
+    public const REPORT_VIEW_MODULE = 'cashflow-reports';
 
-        if ($request->query('date_from') && $request->query('date_to')) {
-            return [Carbon::parse($request->query('date_from'))->startOfDay(), Carbon::parse($request->query('date_to'))->endOfDay()];
+    /**
+     * Which column the rows are grouped by.
+     *
+     * The page used to offer four hard-coded report types; a link from that
+     * version still names one of them, so the old words keep working while the
+     * picker offers everything the module can group by.
+     */
+    private function reportDimension(Request $request): string
+    {
+        $dimension = (string) $request->query('dimension', '');
+
+        if (array_key_exists($dimension, CashflowAnalysis::DIMENSIONS)) {
+            return $dimension;
         }
 
-        return match ($period) {
-            'day' => [$date->copy()->startOfDay(), $date->copy()->endOfDay()],
-            'week' => [$date->copy()->startOfWeek(), $date->copy()->endOfWeek()],
-            'quarter' => [$date->copy()->startOfQuarter(), $date->copy()->endOfQuarter()],
-            'year' => [$date->copy()->startOfYear(), $date->copy()->endOfYear()],
-            default => [$date->copy()->startOfMonth(), $date->copy()->endOfMonth()],
+        return match ((string) $request->query('report_type', '')) {
+            'client' => 'client',
+            'vendor' => 'vendor',
+            'cash_expense' => 'expense_head',
+            default => 'none',
         };
+    }
+
+    /**
+     * How the range is cut up. The old page's "period" meant both the bucket and
+     * the window around a base date; when a link keeps only that, it is read as
+     * the bucket and the window is derived the way that page derived it.
+     */
+    private function reportUnit(Request $request): string
+    {
+        $unit = (string) $request->query('period_unit', '');
+
+        if (array_key_exists($unit, CashflowAnalysis::UNITS)) {
+            return $unit;
+        }
+
+        return match ((string) $request->query('period', '')) {
+            'quarter' => 'quarter',
+            'year' => 'year',
+            default => 'month',
+        };
+    }
+
+    /**
+     * The range the report covers.
+     *
+     * Explicit dates win. Otherwise a link carrying the old page's period and
+     * base date is honoured exactly as that page honoured it, and failing both,
+     * the report opens on the year to date — a year of months is what an
+     * accountant reads, and a single month answers almost nothing.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function reportWindow(Request $request, string $unit): array
+    {
+        /* Through DateRanges, never straight into Carbon: a link or a saved view
+           can carry "all" where a day belongs, and a filter must not be able to
+           take the page down. A value that is not a date is no date, so the
+           window falls back to its own default instead of throwing. */
+        $from = DateRanges::normalise($request->query('date_from'));
+        $to = DateRanges::normalise($request->query('date_to'));
+
+        if ($from || $to) {
+            $today = DateRanges::today();
+
+            return [
+                $from ?: $today->copy()->startOfYear()->toDateString(),
+                $to ?: $today->toDateString(),
+            ];
+        }
+
+        $legacy = (string) $request->query('period', '');
+        $base = $request->query('date');
+
+        $base = DateRanges::normalise($base);
+
+        if ($base || in_array($legacy, ['day', 'week', 'month', 'quarter', 'year'], true)) {
+            $date = $base ? Carbon::parse($base) : DateRanges::today();
+
+            [$start, $end] = match ($legacy) {
+                'day' => [$date->copy()->startOfDay(), $date->copy()->endOfDay()],
+                'week' => [$date->copy()->startOfWeek(), $date->copy()->endOfWeek()],
+                'quarter' => [$date->copy()->startOfQuarter(), $date->copy()->endOfQuarter()],
+                'year' => [$date->copy()->startOfYear(), $date->copy()->endOfYear()],
+                default => [$date->copy()->startOfMonth(), $date->copy()->endOfMonth()],
+            };
+
+            return [$start->toDateString(), $end->toDateString()];
+        }
+
+        $today = DateRanges::today();
+
+        return [
+            $unit === 'year'
+                ? $today->copy()->subYears(4)->startOfYear()->toDateString()
+                : $today->copy()->startOfYear()->toDateString(),
+            $today->toDateString(),
+        ];
+    }
+
+    /**
+     * Give every cell the link that opens the rows behind it.
+     *
+     * This is the difference between a report and a print-out: the accountant
+     * does not have to believe the total, they can open it — filtered to the
+     * same dimension value and the same dates the figure was summed over.
+     *
+     * @param  array<string, mixed>  $report
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    private function decorateReport(array $report, array $filters): array
+    {
+        $analysis = app(CashflowAnalysis::class);
+        $dimension = $report['dimension'];
+        $ledger = fn (array $query) => route('cashflows.index', $query);
+
+        foreach ($report['rows'] as $rowIndex => $row) {
+            $report['rows'][$rowIndex]['url'] = $ledger(
+                $analysis->ledgerQuery($filters, $dimension, null, $row['value'])
+            );
+
+            foreach ($row['cells'] as $cellIndex => $cell) {
+                $report['rows'][$rowIndex]['cells'][$cellIndex]['url'] = $ledger(
+                    $analysis->ledgerQuery($filters, $dimension, $cell['period'], $row['value'])
+                );
+            }
+        }
+
+        foreach ($report['totals']['cells'] as $cellIndex => $cell) {
+            $report['totals']['cells'][$cellIndex]['url'] = $ledger(
+                $analysis->ledgerQuery($filters, $dimension, $cell['period'], null, false)
+            );
+        }
+
+        $report['url'] = $ledger($analysis->ledgerQuery($filters, $dimension, null, null, false));
+        $report['filters'] = app(CashflowFilters::class)->toQuery($filters);
+
+        /* Which currency the figures on this sheet are in — '' when the window
+           holds more than one, because a range that adds rupees to dollars has
+           no single unit to sign, and the page says so instead. */
+        $report['money_currency'] = count($report['currencies']) === 1 ? $report['currencies'][0] : '';
+
+        return $report;
     }
 
     private function recalculateAccountLedger(int $accountId): void
     {
-        $account = CashflowAccount::find($accountId);
-        if (! $account) {
-            return;
-        }
-
-        $runningBalance = (float) $account->opening_balance;
-
-        CashflowEntry::query()
-            ->where('account_id', $accountId)
-            ->orderBy('entry_date')
-            ->orderBy('id')
-            ->get(['id', 'credit_amount', 'debit_amount'])
-            ->each(function (CashflowEntry $entry) use (&$runningBalance) {
-                $runningBalance += (float) $entry->credit_amount - (float) $entry->debit_amount;
-
-                CashflowEntry::whereKey($entry->id)->update([
-                    'balance' => round($runningBalance, 2),
-                ]);
-            });
-
-        $account->update([
-            'current_balance' => round($runningBalance, 2),
-        ]);
+        CashflowLedger::recalculateAccount($accountId);
     }
 
     private function sharedData(): array
@@ -411,6 +789,7 @@ class CashflowController extends Controller
             'categories' => CashflowCategory::where('is_active', true)->orderBy('type')->orderBy('name')->get(),
             'clients' => $this->clients(),
             'vendors' => $this->vendors(),
+            'employees' => $this->employees(),
             'accountTypeOptions' => $this->masterOptions('account_type', CashflowAccount::typeOptions()),
             'categoryTypeOptions' => $this->masterOptions('category_type', CashflowCategory::typeOptions()),
             'transactionTypeOptions' => CashflowEntry::transactionTypeOptions(),
@@ -453,6 +832,23 @@ class CashflowController extends Controller
     {
         if (! $this->vendorModelAvailable()) return collect();
         return \App\Models\Vendor::query()->orderBy('vendor_name')->get();
+    }
+
+    /**
+     * The people an entry can be filed against. The app keeps one user table, so
+     * this is the user list; department and designation come along for the
+     * report's grouping and for the label on the row.
+     */
+    private function employees()
+    {
+        if (! class_exists(User::class) || ! Schema::hasTable('users')) {
+            return collect();
+        }
+
+        /* Employees first, the office underneath — the ledger's Employee field
+           is about somebody being paid, and the order is the model's answer
+           (`User::employeePicker`), not this page's. */
+        return User::employeePicker();
     }
 
     private function clientModelAvailable(): bool

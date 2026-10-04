@@ -4,162 +4,10 @@
 @section('page-title', 'Shipment Detail')
 
 @section('content')
-<style>
-    .photo-grid{
-        display:grid;
-        grid-template-columns:repeat(2, minmax(0,1fr));
-        gap:20px;
-    }
-    
-    .photo-card{
-        display:flex;
-        flex-direction:column;
-        background:#fff;
-        border:1px solid var(--master-border);
-        border-radius:16px;
-        overflow:hidden;
-        text-decoration:none;
-        transition:.2s;
-    }
-    
-    /* Default */
-    .label-0 { background:#fff4e5; color:#000; }
-    .label-1 { background:red; color:#FFF; }
-    .label-2 { background:green; color:#FFF; }
-    .label-3 { background:orange; color:black; }
-    .label-4 { background:yellow; color:red; }
-    .label-5 { background:pink; color:blue; }
-    
-    .photo-card:hover{
-        transform:translateY(-3px);
-        box-shadow:0 8px 24px rgba(0,0,0,.08);
-    }
-    
-    .photo-card img{
-        width:100%;
-        height:180px;
-        object-fit:cover;
-        display:block;
-    }
-    
-    .photo-card-body{
-        padding:12px;
-        text-align:center;
-    }
-    
-    .photo-meta{
-        font-size:13px;
-        font-weight:600;
-        color:var(--master-muted);
-    }
-    
-    /* Tablet */
-    @media (max-width:768px){
-        .photo-grid{
-            grid-template-columns:repeat(2,1fr);
-        }
-    
-        .photo-card img{
-            height:140px;
-        }
-    }
-    
-    /* Mobile */
-    @media (max-width:480px){
-        .photo-grid{
-            grid-template-columns:1fr;
-        }
-    
-        .photo-card img{
-            height:200px;
-        }
-    }
-    
-    .desktop-products{
-        display:block;
-    }
-    
-    .mobile-products{
-        display:none;
-    }
-    
-    .product-card{
-        background:#fff;
-        border:1px solid var(--master-border);
-        border-radius:16px;
-        padding:16px;
-        margin-bottom:16px;
-    }
-    
-    .product-title{
-        font-size:16px;
-        font-weight:700;
-        margin-bottom:4px;
-    }
-    
-    .product-desc{
-        color:#6b7280;
-        font-size:13px;
-        margin-bottom:15px;
-    }
-    
-    .product-grid{
-        display:grid;
-        grid-template-columns:repeat(2,1fr);
-        gap:14px;
-    }
-    
-    .product-grid span{
-        display:block;
-        color:#94a3b8;
-        font-size:12px;
-        margin-bottom:4px;
-    }
-    
-    .product-grid strong{
-        display:block;
-        font-size:14px;
-        font-weight:500;
-        color:#1f2937;
-    }
-    
-    .file-card{
-        height:260px;
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        justify-content:center;
-        padding:20px;
-        background:#f8fafc;
-    }
-    
-    .file-icon{
-        font-size:70px;
-        color:#64748b;
-        margin-bottom:15px;
-    }
-    
-    .file-name{
-        text-align:center;
-        font-size:14px;
-        font-weight:600;
-        color:#374151;
-        word-break:break-word;
-        line-height:1.4;
-    }
-    
-    @media (max-width:768px){
-    
-        .desktop-products{
-            display:none;
-        }
-    
-        .mobile-products{
-            display:block;
-        }
-    
-    }
-</style>
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/master-media.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/shipments.css') }}">
+@endpush
 <div class="master-card master-header" style="margin-bottom:15px;line-height:1.4;">
     <div>
         <p style="font-size:16px;font-weight:500;">{{ $shipment->shipment_number }}</p>
@@ -176,18 +24,30 @@
                 <div class="master-info-grid">
                     <div class="master-info"><span>Status</span><strong class="master-badge status-{{ $statusClass }}">{{ $shipment->statusLabel() }}</strong></div>
                     <div class="master-info"><span>Pickup Date</span><strong>{{ $shipment->pickup_date ? $shipment->pickup_date->format('d M Y') : '-' }}</strong></div>
+                    <div class="master-info">
+                        <span>Expected Delivery</span>
+                        <strong class="ship-eta ship-eta-{{ $shipment->etaState() }}">{{ $shipment->eta_date ? $shipment->eta_date->format('d M Y') : 'Not set' }}</strong>
+                        @if ($shipment->eta_date)
+                            <span>{{ $shipment->etaLabel() }}</span>
+                        @endif
+                    </div>
                     <div class="master-info"><span>Logistic Partner</span><strong>{{ $shipment->logistic_partner ?: '-' }}</strong></div>
                     <div class="master-info"><span>Tracking Number</span><strong>{{ $shipment->tracking_number ?: '-' }}</strong></div>
                     <div class="master-info"><span>Project</span><strong>{{ $shipment->project->name ?? '-' }}</strong>
                         <span>{{ $shipment->project->project_number ?? '-' }}</span></div>
-                    <div class="master-info"><span>Cost Borne By</span><strong>{{ $costBorneByOptions[$shipment->cost_borne_by] ?? '-' }}</strong></div>
+
                 </div>
+            </div>
+
+            <div class="master-card master-section">
+                <h3 class="master-section-title">Tracking Progress</h3>
+                @include('shipments.partials.tracker', ['shipment' => $shipment, 'showDelayReason' => false])
             </div>
 
             <div class="master-card master-section">
                 <h3 class="master-section-title">Route Details</h3>
                 <div class="master-info-grid">
-                    
+
                     <div class="master-info">
                         <span>From</span>
                         <strong>{{ $shipment->from_name ?: '-' }}</strong><br>
@@ -197,12 +57,8 @@
                             {{ $shipment->from_country ? $shipment->from_country . " - " : "" }}
                             {{ $shipment->from_pincode ?? "" }}
                         </p>
-                        <p class="master-address-sub">
-                            <b>Email:</b>{{ $shipment->from_email ?? " -" }}<br>
-                            <b>Mobile:</b>{{ $shipment->from_mobile ?? " -" }}
-                        </p>
                     </div>
-                    
+
                     <div class="master-info">
                         <span>To</span>
                         <strong>{{ $shipment->to_name ?: '-' }}</strong><br>
@@ -211,10 +67,6 @@
                             {{ $shipment->to_state ? $shipment->to_state . "," : "" }}
                             {{ $shipment->to_country ? $shipment->to_country . " - " : "" }}
                             {{ $shipment->to_pincode ?? "" }}
-                        </p>
-                        <p class="master-address-sub">
-                            <b>Email:</b>{{ $shipment->to_email ?? " -" }}<br>
-                            <b>Mobile:</b>{{ $shipment->to_mobile ?? " -" }}
                         </p>
                     </div>
                 </div>
@@ -296,26 +148,26 @@
             </div>
 
         @endforelse
-                
+
                     </div>
-                
+
                 </div>
             </div>
         </div>
 
         <div>
-            
+
             <div class="master-card master-section">
                 <h3 class="master-section-title">Shipment Photos</h3>
                 <div class="photo-grid">
-                    
-                    @forelse($shipment->attachments as $attachment)
+
+                    @forelse($shipment->publicAttachments as $attachment)
                         <a class="photo-card"
-                           href="{{ asset('storage/'.$attachment->file_path) }}"
-                           target="_blank">
-                            @if (str_starts_with($attachment->mime_type, 'image/'))
+                           href="{{ route('client-portal.shipments.attachments.file', [$shipment->id, $attachment->id]) }}"
+                           target="_blank" rel="noopener">
+                            @if (in_array(strtolower(pathinfo($attachment->file_path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp', 'gif'], true) && str_starts_with(strtolower((string) $attachment->mime_type), 'image/'))
                                 <img
-                                    src="{{ asset('storage/'.$attachment->file_path) }}"
+                                    src="{{ route('client-portal.shipments.attachments.file', [$shipment->id, $attachment->id]) }}"
                                     alt="{{ $attachment->title ?: $attachment->original_name }}">
                             @else
                                 <div class="file-card">
@@ -334,10 +186,29 @@
                 </div>
             </div>
 
+            @if($documents->isNotEmpty())
+                <div class="master-card master-section">
+                    <h3 class="master-section-title">Files shared in this portal</h3>
+                    <div class="cp-document-grid">
+                        @foreach($documents as $document)
+                            <article class="cp-document-card">
+                                @if($document->isImage())
+                                    <a class="cp-document-preview" href="{{ route('client-portal.attachments.file', $document) }}" target="_blank" rel="noopener"><img src="{{ route('client-portal.attachments.file', $document) }}" alt="{{ $document->title ?: $document->original_name }}"></a>
+                                @else
+                                    <span class="cp-file-icon"><i class="fa-solid fa-file-lines"></i></span>
+                                @endif
+                                <div class="cp-document-copy"><strong>{{ $document->title ?: $document->original_name }}</strong><small>{{ $document->created_at->format('d M Y') }}</small></div>
+                                <div class="cp-document-actions"><a class="master-btn master-btn-soft master-btn-sm" href="{{ route('client-portal.attachments.file', $document) }}?download=1">Download</a></div>
+                            </article>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             <div class="master-card master-section">
                 <h3 class="master-section-title">Tracking History</h3>
                 <div class="timeline">
-                    @forelse($shipment->histories as $history)
+                    @forelse($publicHistories as $history)
                         @php($historyStatusClass = str_replace('_', '-', $history->status))
                         <div class="timeline-item">
                             <div class="timeline-title"><span class="master-badge status-{{ $historyStatusClass }}">{{ $statusOptions[$history->status] ?? $history->status }}</span></div>
@@ -352,7 +223,7 @@
         </div>
     </div>
     <div class="cp-grid-2" style="margin-top:18px;">
-        <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Comments</p><h2 style="margin-top:0;">Shipment Discussion</h2><form method="POST" action="{{ route('client-portal.shipments.comments.store', $shipment->id) }}" style="margin-bottom:15px;">@csrf<div class="cp-field"><label>Comment</label><textarea name="body" required></textarea></div><button class="cp-btn cp-btn-primary" style="margin-top:10px;">Submit Comment</button></form>@forelse($comments as $comment)<div class="cp-comment"><div class="cp-comment-head"><strong>{{ $comment->authorName() }}</strong><span>{{ $comment->created_at->format('d M Y, h:i A') }}</span></div><p>{{ $comment->body }}</p></div>@empty<div class="cp-empty">No comments yet.</div>@endforelse</div>
-        <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Upload</p><h2 style="margin-top:0;">Upload Shipment Document</h2><form method="POST" action="{{ route('client-portal.shipments.documents.store', $shipment->id) }}" enctype="multipart/form-data" class="cp-form-grid">@csrf<div class="cp-field"><label>Category</label><select name="category"><option value="shipment">Shipment Document</option><option value="payment_proof">Payment Proof</option><option value="other">Other</option></select></div><div class="cp-field"><label>Title</label><input name="title"></div><div class="cp-field" style="grid-column:1/-1;"><label>Files</label><input type="file" name="attachments[]" multiple required></div><div class="cp-field" style="grid-column:1/-1;"><label>Notes</label><textarea name="notes"></textarea></div><button class="cp-btn cp-btn-primary" style="grid-column:1/-1;">Upload</button></form></div>
+        <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Comments</p><h2 style="margin-top:0;">Shipment Discussion</h2><form method="POST" action="{{ route('client-portal.shipments.comments.store', $shipment->id) }}" style="margin-bottom:15px;">@csrf<div class="master-field"><label class="master-label">Comment</label><textarea class="master-textarea" name="body" maxlength="4000" required></textarea></div><button class="master-btn master-btn-primary" style="margin-top:10px;">Submit Comment</button></form>@forelse($comments as $comment)<div class="cp-comment"><div class="cp-comment-head"><strong>{{ $comment->authorName() }}</strong><span>{{ $comment->created_at->format('d M Y, h:i A') }}</span></div><p>{{ $comment->body }}</p></div>@empty<div class="cp-empty">No comments yet.</div>@endforelse</div>
+        <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Upload</p><h2 style="margin-top:0;">Upload Shipment Document</h2><form method="POST" action="{{ route('client-portal.shipments.documents.store', $shipment->id) }}" enctype="multipart/form-data" class="cp-form-grid">@csrf<div class="master-field"><label class="master-label">Category</label><select class="master-select" name="category"><option value="shipment">Shipment Document</option><option value="payment_proof">Payment Proof</option><option value="other">Other</option></select></div><div class="master-field"><label class="master-label">Title</label><input class="master-input" name="title"></div><div class="master-field" style="grid-column:1/-1;"><label class="master-label">Files</label><input class="master-input" type="file" name="attachments[]" multiple required></div><div class="master-field" style="grid-column:1/-1;"><label class="master-label">Notes</label><textarea class="master-textarea" name="notes"></textarea></div><button class="master-btn master-btn-primary" style="grid-column:1/-1;">Upload</button></form></div>
     </div>
 @endsection

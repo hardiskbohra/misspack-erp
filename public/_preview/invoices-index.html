@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PI / Tax Invoices — MissPack ERP (preview)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/core.css?v=6abf109f">
+    <link rel="stylesheet" href="/assets/css/app-layout.css?v=6abf6a51">
+    <link rel="stylesheet" href="/assets/css/master-index.css?v=6abf04ad">
+    <link rel="stylesheet" href="/assets/css/master-show.css?v=6abf13a6">
+    <link rel="stylesheet" href="/assets/css/master-form.css?v=6abf0f9a">
+    <link rel="stylesheet" href="/assets/css/master-flat.css?v=6abf2c03">
+    <link rel="stylesheet" href="/assets/vendor/select2/css/select2.min.css?v=6abf7b0c">
+    <link rel="stylesheet" href="/assets/css/select2-theme.css?v=6abf2522">
+    <link rel="stylesheet" href="/assets/css/master-alert.css?v=6abf21b9">
+    <link rel="stylesheet" href="/assets/css/sales-invoices.css?v=6abf07cc">
+    <link rel="stylesheet" href="/assets/css/responsive.css?v=6abf2e74">
+    <style>
+        a[href^="/theme"], form.theme-form { pointer-events: none; }
+        #previewThemeBtn { display: inline-flex; align-items: center; gap: 8px; }
+    </style>
+<body>
+    <aside class="sidebar" id="sidebar" aria-label="Main sidebar">
+        <div class="sidebar-logo">
+            <div>
+                <div class="sidebar-logo-text sidebar-text">MissPack</div>
+                <div class="sidebar-logo-sub sidebar-text">Packed Perfect</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">Dashboards</div>
+            <a href="#" class="sidebar-item"><i class="fas fa-th-large"></i><span class="sidebar-text">Dashboard</span></a>
+            <div class="sidebar-section">Management</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-layer-group"></i><span class="sidebar-text">Tasks</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-box-open"></i><span class="sidebar-text">Products</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-truck"></i><span class="sidebar-text">Shipments</span></a>
+            <div class="sidebar-section">Sales</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-users"></i><span class="sidebar-text">Clients</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-briefcase"></i><span class="sidebar-text">Projects</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-file-invoice-dollar"></i><span class="sidebar-text">Invoices</span></a>
+            <div class="sidebar-section">Purchase</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-user-gear"></i><span class="sidebar-text">Vendors</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-money-bill"></i><span class="sidebar-text">Vendor Quotes</span></a>
+            <div class="sidebar-section">Accounts</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-scale-balanced"></i><span class="sidebar-text">Cashflow</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-users-cog"></i><span class="sidebar-text">Users</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="user-avatar-sm">H</div>
+                <div class="sidebar-user-info sidebar-text">
+                    <div class="user-name">Hardik Bohra</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+                <button type="button" class="sidebar-logout-btn" title="Logout" aria-label="Logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="main-wrap" id="mainWrap">
+        <header class="topbar">
+            <button type="button" class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="topbar-title">PI / Tax Invoices</span>
+            <div class="topbar-spacer"></div>
+            <div class="topbar-actions">
+                <button type="button" class="topbar-btn desktop-only" aria-label="Search"><i class="fas fa-search"></i></button>
+                <button type="button" id="previewThemeBtn" class="theme-toggle desktop-only">
+                    <i class="fas fa-moon"></i> <span>Dark</span>
+                </button>
+                <button type="button" class="topbar-btn desktop-only" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="topbar-badge">3</span>
+                </button>
+                <div class="topbar-user-btn">
+                    <div class="user-avatar-sm topbar-avatar">H</div>
+                    <span class="topbar-user-name desktop-only">Hardik Bohra</span>
+                </div>
+            </div>
+        </header>
+
+                <main class="page-content">
+            <div class="si-page" style="padding:0;">
+                <div class="si-hero">
+                    <div>
+                        <p class="si-eyebrow">Sales Billing</p>
+                        <h1>Invoice Management</h1>
+                        <p>Create invoices with multiple linked products, clients, projects and client portal visibility.</p>
+                    </div>
+                    <div class="si-actions">
+                        <a href="invoices-form.html" class="master-btn master-btn-primary">New PI</a>
+                        <a href="invoices-form.html" class="master-btn master-btn-light">New Tax Invoice</a>
+                    </div>
+                </div>
+
+                <div class="si-stats">
+                    <div class="si-stat"><span>Proforma</span><strong>34</strong></div>
+                    <div class="si-stat blue"><span>Tax</span><strong>118</strong></div>
+                    <div class="si-stat purple"><span>Total</span><strong>₹ 1.84 Cr</strong></div>
+                    <div class="si-stat green"><span>Paid</span><strong>₹ 1.21 Cr</strong></div>
+                    <div class="si-stat orange"><span>Outstanding</span><strong>₹ 63,40,250.00</strong></div>
+                </div>
+
+                <div class="si-card si-filter-card">
+                    <form method="GET" class="si-filter-form" onsubmit="return false;">
+                        <div class="master-field search"><label class="master-label">Search</label><input class="master-input" name="search" placeholder="Search invoice, client, GSTIN, PO..."></div>
+                        <div class="master-field"><label class="master-label">Type</label><select class="master-select" name="type"><option value="all" selected>All Types</option><option value="proforma">Proforma</option><option value="tax">Tax</option></select></div>
+                        <div class="master-field"><label class="master-label">Status</label><select class="master-select" name="status"><option value="all" selected>All Status</option><option value="draft">Draft</option><option value="sent">Sent</option><option value="partial">Partially Paid</option><option value="paid">Paid</option><option value="overdue">Overdue</option></select></div>
+                        <div class="master-field"><label class="master-label">Client</label><select class="master-select" name="client_id"><option value="all" selected>All Clients</option><option>Ahmedabad Apparel Co.</option><option>Mumbai Textiles Pvt.</option><option>Delhi Footwear Ltd.</option><option>Surat Garments Exports</option><option>Pune Sports Co.</option></select></div>
+                        <div class="master-field"><label class="master-label">Project</label><select class="master-select" name="project_id"><option value="all" selected>All Projects</option><option>PRJ-1042 - Cotton Tote Program</option><option>PRJ-1039 - Denim Jacket Line</option><option>PRJ-1028 - Winter Collection</option></select></div>
+                        <div class="si-filter-actions"><button class="master-btn master-btn-primary" type="submit">Filter</button><a class="master-btn master-btn-soft" href="#">Reset</a></div>
+                    </form>
+                </div>
+
+                <div class="si-card">
+                    <div class="master-table-wrap">
+                        <table class="master-table">
+                            <thead><tr><th>Invoice</th><th>Client</th><th>Project</th><th>Items</th><th>Total</th><th>Balance</th><th>Portal</th><th>Status</th><th>Action</th></tr></thead>
+                            <tbody>
+                        <tr>
+                            <td>
+                                <a href="#" title="Open" style="text-decoration:none;">
+                                    <strong class="master-id">SI-2026-0148</strong>
+                                    <span>Tax Invoice</span>
+                                    <span>01 Oct 2026</span>
+                                </a>
+                            </td>
+                            <td><strong>Ahmedabad Apparel Co.</strong><br><span>24AA PCA 1234F1Z5C</span></td>
+                            <td>PRJ-1042<br><span>Cotton Tote Program</span></td>
+                            <td>12</td>
+                            <td>₹ 4,82,500.00</td>
+                            <td>₹ 1,82,500.00</td>
+                            <td><span class="si-badge public">Visible</span></td>
+                            <td><span class="si-badge status-partial">Partially Paid</span></td>
+                            <td><div class="si-row-actions"><a class="master-icon-btn" href="#" title="Open">👁</a><a class="master-icon-btn" href="#" title="Print">🖨</a><a class="master-icon-btn" href="#" title="Edit">✎</a><button class="master-icon-btn danger" type="button" title="Delete">🗑</button></div></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a href="#" title="Open" style="text-decoration:none;">
+                                    <strong class="master-id">SI-2026-0147</strong>
+                                    <span>Tax Invoice</span>
+                                    <span>28 Sep 2026</span>
+                                </a>
+                            </td>
+                            <td><strong>Mumbai Textiles Pvt.</strong><br><span>27AABC M7890K1Z2A</span></td>
+                            <td>PRJ-1039<br><span>Denim Jacket Line</span></td>
+                            <td>8</td>
+                            <td>₹ 2,16,000.00</td>
+                            <td>₹ 2,16,000.00</td>
+                            <td><span class="si-badge private">Hidden</span></td>
+                            <td><span class="si-badge status-sent">Sent</span></td>
+                            <td><div class="si-row-actions"><a class="master-icon-btn" href="#" title="Open">👁</a><a class="master-icon-btn" href="#" title="Print">🖨</a><a class="master-icon-btn" href="#" title="Edit">✎</a><button class="master-icon-btn danger" type="button" title="Delete">🗑</button></div></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a href="#" title="Open" style="text-decoration:none;">
+                                    <strong class="master-id">PI-2026-0092</strong>
+                                    <span>Proforma</span>
+                                    <span>25 Sep 2026</span>
+                                </a>
+                            </td>
+                            <td><strong>Delhi Footwear Ltd.</strong><br><span>07AA PCD3456L1Z8P</span></td>
+                            <td>-<br><span></span></td>
+                            <td>5</td>
+                            <td>₹ 74,500.00</td>
+                            <td>₹ 74,500.00</td>
+                            <td><span class="si-badge public">Visible</span></td>
+                            <td><span class="si-badge status-draft">Draft</span></td>
+                            <td><div class="si-row-actions"><a class="master-icon-btn" href="#" title="Open">👁</a><a class="master-icon-btn" href="#" title="Print">🖨</a><a class="master-icon-btn" href="#" title="Edit">✎</a><button class="master-icon-btn danger" type="button" title="Delete">🗑</button></div></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a href="#" title="Open" style="text-decoration:none;">
+                                    <strong class="master-id">SI-2026-0144</strong>
+                                    <span>Tax Invoice</span>
+                                    <span>18 Sep 2026</span>
+                                </a>
+                            </td>
+                            <td><strong>Surat Garments Exports</strong><br><span>24AAC S5678M1Z4Q</span></td>
+                            <td>PRJ-1028<br><span>Winter Collection</span></td>
+                            <td>20</td>
+                            <td>₹ 11,30,750.00</td>
+                            <td>₹ 11,30,750.00</td>
+                            <td><span class="si-badge public">Visible</span></td>
+                            <td><span class="si-badge status-overdue">Overdue</span></td>
+                            <td><div class="si-row-actions"><a class="master-icon-btn" href="#" title="Open">👁</a><a class="master-icon-btn" href="#" title="Print">🖨</a><a class="master-icon-btn" href="#" title="Edit">✎</a><button class="master-icon-btn danger" type="button" title="Delete">🗑</button></div></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a href="#" title="Open" style="text-decoration:none;">
+                                    <strong class="master-id">SI-2026-0141</strong>
+                                    <span>Tax Invoice</span>
+                                    <span>10 Sep 2026</span>
+                                </a>
+                            </td>
+                            <td><strong>Pune Sports Co.</strong><br><span>27AAB P9012N1Z7B</span></td>
+                            <td>PRJ-1021<br><span>Sportswear Basics</span></td>
+                            <td>6</td>
+                            <td>₹ 96,250.00</td>
+                            <td>₹ 0.00</td>
+                            <td><span class="si-badge public">Visible</span></td>
+                            <td><span class="si-badge status-paid">Paid</span></td>
+                            <td><div class="si-row-actions"><a class="master-icon-btn" href="#" title="Open">👁</a><a class="master-icon-btn" href="#" title="Print">🖨</a><a class="master-icon-btn" href="#" title="Edit">✎</a><button class="master-icon-btn danger" type="button" title="Delete">🗑</button></div></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a href="#" title="Open" style="text-decoration:none;">
+                                    <strong class="master-id">PI-2026-0088</strong>
+                                    <span>Proforma</span>
+                                    <span>02 Sep 2026</span>
+                                </a>
+                            </td>
+                            <td><strong>Jaipur Handicrafts</strong><br><span>08AAD J2345P1Z1R</span></td>
+                            <td>-<br><span></span></td>
+                            <td>3</td>
+                            <td>₹ 42,000.00</td>
+                            <td>₹ 42,000.00</td>
+                            <td><span class="si-badge private">Hidden</span></td>
+                            <td><span class="si-badge status-sent">Sent</span></td>
+                            <td><div class="si-row-actions"><a class="master-icon-btn" href="#" title="Open">👁</a><a class="master-icon-btn" href="#" title="Print">🖨</a><a class="master-icon-btn" href="#" title="Edit">✎</a><button class="master-icon-btn danger" type="button" title="Delete">🗑</button></div></td>
+                        </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="si-pagination"><nav class="custom-pagination-wrapper"><ul class="custom-pagination"><li><a href="#"><i class="fas fa-chevron-left"></i></a></li><li class="active"><a href="#">1</a></li><li><a href="#">2</a></li><li><a href="#">3</a></li><li><a href="#"><i class="fas fa-chevron-right"></i></a></li></ul></nav></div>
+                </div>
+            </div>
+</main>
+    </div>
+
+    <script src="/assets/vendor/jquery/jquery.min.js?v=6abe6ebd"></script>
+    <script src="/assets/vendor/select2/js/select2.min.js?v=6abe1966"></script>
+    <script src="/assets/js/master-alert.js?v=6abf15d1"></script>
+    <script src="/assets/js/master-selects.js?v=6abf2a90"></script>
+    <script src="/assets/js/app-layout.js?v=6abf23b1"></script>
+    <script>
+        // Static preview: client-side theme toggle (Laravel's /theme/toggle is not available here)
+        (function () {
+            var html = document.documentElement;
+            try {
+                var t = new URLSearchParams(location.search).get('theme');
+                if (t === 'dark' || t === 'light') { html.setAttribute('data-theme', t); }
+            } catch (e) {}
+            function syncBtn() {
+                var dark = html.getAttribute('data-theme') === 'dark';
+                var btn = document.getElementById('previewThemeBtn');
+                btn.innerHTML = dark ? '<i class="fas fa-sun"></i> <span>Light</span>' : '<i class="fas fa-moon"></i> <span>Dark</span>';
+            }
+            syncBtn();
+            document.getElementById('previewThemeBtn').addEventListener('click', function () {
+                var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', next);
+                try { localStorage.setItem('preview-theme', next); } catch (e) {}
+                syncBtn();
+            });
+        })();
+    </script>
+</body>
+</html>

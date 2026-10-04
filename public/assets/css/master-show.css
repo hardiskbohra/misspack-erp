@@ -4,12 +4,12 @@
 :root {
     --master-primary:#4f83f1;
     --master-primary-2:#6366f1;
-    --master-dark:#17233b;
+    --master-dark: var(--mc-text);
     --master-muted:#687386;
-    --master-border:#dfe7f3;
-    --master-bg:#eef3ff;
-    --master-soft:#edf5ff;
-    --master-white:#fff;
+    --master-border: var(--mc-border);
+    --master-bg: var(--mc-soft);
+    --master-soft: var(--mc-soft);
+    --master-white: var(--mc-card);
     --master-red:#ef4770;
     --master-green:#10b981;
     --master-orange:#f59e0b;
@@ -34,7 +34,7 @@
 }
 
 .master-card {
-    background: #fff;
+    background: var(--mc-card);
     border: 1px solid var(--master-border);
     border-radius: 18px;
     box-shadow: var(--master-shadow);
@@ -89,7 +89,7 @@
     align-items: center;
     justify-content: center;
     font-size: 30px;
-    font-weight: 900;
+    font-weight: 700;
     flex: 0 0 78px
 }
 
@@ -142,13 +142,13 @@
 }
 
 .master-btn-light {
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: #4f83f1;
     border: 1px solid rgba(255, 255, 255, .35)
 }
 
 .master-btn-soft {
-    background: #eef3ff;
+    background: var(--mc-soft);
     color: #4f83f1
 }
 
@@ -203,12 +203,12 @@
     padding: 14px;
     border: 1px solid var(--master-border);
     border-radius: 14px;
-    background: #fbfdff;
+    background: var(--mc-card-soft);
 }
 
 .master-info span {
     display: block;
-    color: #7d8aa0;
+    color: var(--mc-text-3);
     font-size: 12px;
     font-weight: 400;
     text-transform: uppercase;
@@ -266,13 +266,13 @@
 }
 
 /* Shipment Status */
-.status-planning { background:#f3f6fb;color:#536079; }
+.status-planning { background: var(--mc-card-soft);color: var(--mc-text-2); }
 .status-picked-up { background:#eaf1ff;color:#3f7cf4; }
 .status-in-transit { background:#ece7ff;color:#7c3aed; }
 .status-custom-hold { background:#fff4e5;color:#d97706; }
 .status-delayed { background:#ffeaf0;color:#e11d48; }
 .status-delivered { background:#e8fff7;color:#0e9f6e; }
-.status-cancelled { background:#f3f4f6;color:#4b5563; }
+.status-cancelled { background:#f3f4f6;color: var(--mc-text-2); }
 
 /* Shipment Type */
 .type-domestic { background:#eaf1ff;color:#3f7cf4; }
@@ -301,7 +301,7 @@
 }
 
 .master-table th {
-    color: #7d8aa0;
+    color: var(--mc-text-3);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: .06em;
@@ -383,9 +383,9 @@
 .master-select,
 .master-textarea {
     width: 100%;
-    border: 1px solid #d8e2ef;
+    border: 1px solid var(--mc-border);
     border-radius: 12px;
-    background: #fff;
+    background: var(--mc-card);
     color: var(--master-dark);
     font-size: 14px;
     font-weight: 500;
@@ -471,79 +471,6 @@
     align-items: center;
     justify-content: center;
     font-size: 30px
-}
-
-.master-dropdown{
-    position:relative;
-    display:inline-block;
-}
-
-.master-dropdown-toggle{
-    width:40px;
-    height:40px;
-    border:none;
-    border-radius:12px;
-    background:#f4f7ff;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:16px;
-    color:#55627a;
-    transition:.2s;
-}
-
-.master-dropdown-toggle:hover{
-    background:#e9efff;
-}
-
-.master-dropdown-menu{
-    position:absolute;
-    right:0;
-    top:calc(100% + 8px);
-    z-index:9999;
-    top:48px;
-    width:220px;
-    background:#fff;
-    border:1px solid #e8edf7;
-    border-radius:14px;
-    box-shadow:0 15px 40px rgba(0,0,0,.12);
-    display:none;
-    overflow:hidden;
-}
-
-.master-dropdown.open .master-dropdown-menu{
-    display:block;
-}
-
-.master-dropdown-menu a,
-.master-dropdown-menu button{
-    width:100%;
-    border:none;
-    background:none;
-    padding:13px 18px;
-    display:flex;
-    align-items:center;
-    gap:12px;
-    text-decoration:none;
-    color:#2b3445;
-    font-size:14px;
-    font-weight: 400;
-    cursor:pointer;
-    text-align:left;
-}
-
-.master-dropdown-menu a:hover,
-.master-dropdown-menu button:hover{
-    background:#f7f9fc;
-}
-
-.master-dropdown-menu .danger{
-    color:#dc2626;
-}
-
-.master-dropdown-menu form{
-    margin:0;
 }
 
 .master-link {

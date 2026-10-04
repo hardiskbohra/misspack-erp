@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipment Summary — SHP-000031 (preview)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/shipment-print.css?v=6abf2d3a">
+</head>
+<body>
+    <div class="print-toolbar no-print">
+        <a class="print-btn" href="shipment-detail.html">&larr; Back to shipment</a>
+        <span class="print-toolbar-links">
+            <a class="print-btn" href="shipment-print.html">Packing list</a>
+            <a class="print-btn" href="shipment-challan.html">Challan</a>
+            <a class="print-btn is-active" href="shipment-summary.html">Summary</a>
+        </span>
+        <button class="print-btn print-btn-primary" type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+    </div>
+
+    <p class="print-note no-print">
+        No PDF engine is installed in this sandbox, so the toolbar falls back to the browser print dialog &mdash;
+        "Save as PDF" produces the same document. Installing barryvdh/laravel-dompdf switches these buttons to a
+        direct download automatically.
+    </p>
+    <div class="print-sheet">
+        <header class="print-head">
+            <div>
+                <span class="print-brand">MissPack</span>
+                <h1>Shipment Summary</h1>
+            </div>
+            <div class="print-head-meta">
+                <strong>SHP-000031</strong>
+                <span>01 Oct 2026</span>
+            </div>
+        </header>
+
+        <section class="print-meta">
+            <div><span>Shipment</span><strong>Green pigment samples from China</strong></div>
+            <div><span>Type / Mode</span><strong>Export &middot; Air freight</strong></div>
+            <div><span>Pickup</span><strong>28 Sep 2026</strong></div>
+            <div><span>ETA</span><strong>02 Oct 2026</strong></div>
+            <div><span>Logistic</span><strong>DHL Express</strong></div>
+            <div><span>Tracking</span><strong>DHL-8841220</strong></div>
+            <div><span>Route</span><strong>Ahmedabad &rarr; New York</strong></div>
+            <div><span>Packages</span><strong>4</strong></div>
+        </section>
+
+        <div class="print-parties">
+            <div class="print-party">
+                <span class="print-label">From (Shipper)</span>
+                <strong>MissPack Industries</strong>
+                <p>14 Ring Road, Nikol<br>Ahmedabad, Gujarat<br>India 380049</p>
+                <p class="print-contact">Ph: +91 98250 44771 &middot; Email: ops@misspack.in</p>
+            </div>
+            <div class="print-party">
+                <span class="print-label">To (Consignee)</span>
+                <strong>ACME Corp</strong>
+                <p>280 Park Avenue South, Suite 1201<br>New York, NY<br>USA 10010</p>
+                <p class="print-contact">Ph: +1 212 555 0147 &middot; Email: imports@acmecorp.com</p>
+            </div>
+        </div>
+
+        <div class="print-columns">
+            <section>
+                <h2>Products</h2>
+                <table class="print-table print-table-compact">
+                    <thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Value</th></tr></thead>
+                    <tbody>
+                        <tr><td>Pigment dispersion &mdash; green 7</td><td class="num">48 Drum</td><td class="num">USD 12,400.00</td></tr>
+                        <tr><td>Pigment dispersion &mdash; blue 15</td><td class="num">24 Drum</td><td class="num">USD 6,180.00</td></tr>
+                        <tr><td>Sample pouches &mdash; assorted</td><td class="num">12 Box</td><td class="num">USD 820.00</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section>
+                <h2>Freight Cost</h2>
+                <table class="print-table print-table-compact">
+                    <thead><tr><th>Head</th><th class="num">Amount</th></tr></thead>
+                    <tbody>
+                    <tr><td>Freight</td><td class="num">USD 1,850.00</td></tr>
+                    <tr><td>Insurance</td><td class="num">&#8377; 4,200.00</td></tr>
+                    <tr><td>Customs duty</td><td class="num">&#8377; 38,600.00</td></tr>
+                    <tr><td>CHA</td><td class="num">&#8377; 12,500.00</td></tr>
+                    <tr><td>Last-mile</td><td class="num">&#8377; 3,400.00</td></tr>
+                    </tbody>
+                    <tfoot>
+                        <tr><td><strong>Total (INR)</strong></td><td class="num"><strong>&#8377; 2,13,175.00</strong></td></tr>
+                    </tfoot>
+                </table>
+
+                <p class="print-fine">
+                    Linked invoice INV-2026-0148 (&#8377; 3,84,000.00) &middot; margin after freight &#8377; 1,70,825.00 (44.5%)
+                </p>
+            </section>
+        </div>
+
+        <section class="print-block">
+            <h2>Paperwork</h2>
+            <ul class="print-checklist">
+                    <li class="is-done">✓ BL / AWB</li>
+                    <li class="is-done">✓ Commercial invoice</li>
+                    <li class="is-done">✓ Packing list</li>
+                    <li class="is-missing">✗ Shipping bill <em>(required — missing)</em></li>
+                    <li class="is-missing">✗ Bill of entry <em>(required — missing)</em></li>
+                    <li class="is-done">✓ Insurance certificate</li>
+            </ul>
+        </section>
+
+        <section class="print-block">
+            <h2>Latest tracking</h2>
+            <table class="print-table print-table-compact">
+                <tbody>
+                    <tr><td>01 Oct 2026, 09:30</td><td><strong>In transit</strong> &middot; Mundra Port<span class="print-sub">Cleared after HS code clarification</span></td></tr>
+                    <tr><td>29 Sep 2026, 14:10</td><td><strong>Custom hold</strong> &middot; Mundra Port<span class="print-sub">Query raised on HS code 3204.17</span></td></tr>
+                    <tr><td>28 Sep 2026, 18:05</td><td><strong>Picked up</strong> &middot; Ahmedabad</td></tr>
+                    <tr><td>27 Sep 2026, 12:40</td><td><strong>Booked</strong> &middot; Ahmedabad</td></tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+</body>
+</html>

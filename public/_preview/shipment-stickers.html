@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sticker Sheet — open shipments (preview)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/shipping-mark.css?v=6abf23db">
+</head>
+<body>
+<main class="page-content" style="background:#eef2f9;">
+    <div class="mark-toolbar no-print">
+        <a class="mark-btn" href="shipments-index.html">&larr; Back to shipments</a>
+
+        <form class="mark-copies" onsubmit="return false;">
+            <label for="copies">Stickers each</label>
+            <input id="copies" type="number" min="1" max="8" value="2">
+            <label for="status">Status</label>
+            <select id="status">
+                <option>All open</option>
+                <option>In transit</option>
+                <option>Out for delivery</option>
+            </select>
+            <button class="mark-btn" type="button" id="applyCopies">Apply</button>
+        </form>
+
+        <span class="mark-hint">
+            <span id="copyHint">3 open shipments &middot; 2 stickers each &middot; 6 stickers total</span>
+        </span>
+
+        <button class="mark-btn mark-btn-primary" type="button" onclick="window.print()">🖨 Print stickers</button>
+    </div>
+
+    <div class="mark-sheet" id="markSheet"></div>
+</main>
+
+<script>
+    (function () {
+        var SHIPMENTS = [
+            {
+                number: 'SHP-000031', mode: 'Air freight', type: 'Export',
+                from: { name: 'MissPack Industries', address: '14 Ring Road, Nikol', contact: 'Ph: +91 98250 44771 · Email: ops@misspack.in' },
+                to: { name: 'ACME Corp', address: '280 Park Avenue South, Suite 1201', contact: 'Ph: +1 212 555 0147 · Email: imports@acmecorp.com' },
+                grossWeight: '142.500 kg', tracking: 'DHL-8841220', logistic: 'DHL Express',
+                destination: 'NEW YORK, USA', label: 'Urgent', ref: 'Green pigment samples from China',
+                package: '3 of 4', url: 'http://localhost:8090/track-shipment/8f3Kq2Lm7Vt0ZpXsR4YbN6HdQw1Ce9AuJ5TgMvWcPbErDnS2'
+            },
+            {
+                number: 'SHP-000030', mode: 'Sea freight', type: 'Export',
+                from: { name: 'MissPack Industries', address: '14 Ring Road, Nikol', contact: 'Ph: +91 98250 44771 · Email: ops@misspack.in' },
+                to: { name: 'Kunshan Packaging', address: 'Building 7, Kunshan Industrial Park', contact: 'Ph: +86 512 5555 8899 · Email: imports@kunshanpack.cn' },
+                grossWeight: '486.000 kg', tracking: 'MAEU-4471902', logistic: 'Maersk',
+                destination: 'SHANGHAI, CHINA', label: '', ref: 'Cotton tote cartons - lot 2',
+                package: '1 of 6', url: 'http://localhost:8090/track-shipment/Qt7Vb3Nx9JmL2RwS5YdH8KaC1PeU4ZiG6TnB0XvMfDsAqWoE3'
+            },
+            {
+                number: 'SHP-000029', mode: 'Courier', type: 'Import',
+                from: { name: 'Rajkamal Plastics', address: 'Plot 44, MIDC Andheri East', contact: 'Ph: +91 90045 88210 · Email: dispatch@rajkamal.co.in' },
+                to: { name: 'Dafina Chemicals', address: 'Enterprise Road, Industrial Area', contact: 'Ph: +254 720 114 552 · Email: logistics@dafina.co.ke' },
+                grossWeight: '38.200 kg', tracking: 'FDX-2210045', logistic: 'FedEx',
+                destination: 'NAIROBI, KENYA', label: 'Hold', ref: 'Flexible pouches - sample set',
+                package: '2 of 2', url: 'http://localhost:8090/track-shipment/Zx2Cv8Bn4Mk7LsQ1WdF5YhJ3RgT9PaU6EbN0VmXcDsAoKiW4'
+            }
+        ];
+        var copies = 2;
+
+        function party(role, p) {
+            return '<div class="mark-party">'
+                + '<span class="mark-label">' + role + '</span>'
+                + '<strong>' + p.name + '</strong>'
+                + '<p>' + p.address + '</p>'
+                + '<p class="mark-contact">' + p.contact + '</p>'
+                + '</div>';
+        }
+
+        function mark(s, copy, total) {
+            return '<div class="mark">'
+                + '<div class="mark-head"><div>'
+                + '<span class="mark-title">Shipping Mark</span>'
+                + '<span class="mark-sub">' + s.mode + ' &middot; ' + s.type + '</span>'
+                + '</div><div class="mark-number">' + s.number + '</div></div>'
+                + '<div class="mark-parties">'
+                + party('From (Shipper)', s.from)
+                + '<div class="mark-arrow">&rarr;</div>'
+                + party('To (Receiver)', s.to)
+                + '</div>'
+                + '<div class="mark-meta">'
+                + '<div><span>Package</span><strong>' + (total > 1 ? copy + ' of ' + total : s.package) + '</strong></div>'
+                + '<div><span>Gross wt.</span><strong>' + s.grossWeight + '</strong></div>'
+                + '<div><span>Tracking</span><strong>' + s.tracking + '</strong></div>'
+                + '<div><span>Logistic</span><strong>' + s.logistic + '</strong></div>'
+                + '</div>'
+                + '<div class="mark-foot">'
+                + '<div class="mark-destination"><span class="mark-label">Destination</span><strong>' + s.destination + '</strong></div>'
+                + (s.label ? '<div class="mark-label-chip">' + s.label + '</div>' : '')
+                + '<div class="mark-ref"><span class="mark-label">Ref</span><strong>' + s.ref + '</strong></div>'
+                + '<div class="mark-qr">'
+                + '<div class="mark-qr-code" data-ship-qr="' + s.url + '" data-ship-qr-caption="Track ' + s.number + '"></div>'
+                + '<span class="mark-qr-hint">Scan to track</span>'
+                + '</div>'
+                + '</div>'
+                + '<div class="mark-cut">✂ - - - - - - - - - - - - - - - - - -</div>'
+                + '</div>';
+        }
+
+        function render() {
+            var html = '';
+            SHIPMENTS.forEach(function (s) {
+                for (var i = 1; i <= copies; i++) { html += mark(s, i, copies); }
+            });
+            document.getElementById('markSheet').innerHTML = html;
+
+            /* QR codes are generated locally by assets/js/qr.js */
+            if (window.ShipQR) { window.ShipQR.render(document.getElementById('markSheet')); }
+
+            var sheet = document.querySelector('.mark-sheet');
+            if (sheet) { sheet.setAttribute('data-stickers', sheet.querySelectorAll('.mark').length); }
+            document.getElementById('copyHint').textContent =
+                SHIPMENTS.length + ' open shipments · ' + copies + ' stickers each · '
+                + (SHIPMENTS.length * copies) + ' stickers total';
+        }
+
+        document.getElementById('applyCopies').addEventListener('click', function () {
+            copies = Math.min(8, Math.max(1, parseInt(document.getElementById('copies').value, 10) || 1));
+            render();
+        });
+        render();
+    })();
+</script>
+<script src="/assets/js/qr.js?v=6abf6987"></script>
+</body>
+</html>

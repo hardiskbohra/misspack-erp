@@ -1,0 +1,275 @@
+/* ==========================================================================
+   MASTER ALERT — shared custom alerts (toasts + dialogs)
+   Self-contained: works on admin, client portal and public pages.
+   Replaces native browser alert()/confirm() dialogs.
+   ========================================================================== */
+
+:root {
+    --ma-primary: #4f83f1;
+    --ma-primary-2: #6366f1;
+    --ma-green: #10b981;
+    --ma-red: #ef4770;
+    --ma-orange: #f59e0b;
+    --ma-ink: #17233b;
+    --ma-muted: #536079;
+    --ma-border: #dfe5f2;
+    --ma-card: #ffffff;
+    --ma-bg-soft: #eef3ff;
+}
+
+:root[data-theme="dark"] {
+    --ma-ink: var(--text-primary, #e2e8f0);
+    --ma-muted: var(--text-secondary, #8892a4);
+    --ma-border: var(--border, #253047);
+    --ma-card: var(--bg-card, #1a2540);
+    --ma-bg-soft: rgba(79, 131, 241, .12);
+}
+
+/* ---------- Toast stack ---------- */
+
+.ma-stack {
+    position: fixed;
+    top: 78px;
+    right: 20px;
+    z-index: 4000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 340px;
+    max-width: calc(100vw - 40px);
+    pointer-events: none;
+}
+
+.ma-toast {
+    pointer-events: auto;
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 38px 14px 14px;
+    background: var(--ma-card);
+    border: 1px solid var(--ma-border);
+    border-left: 4px solid var(--ma-primary);
+    border-radius: 14px;
+    box-shadow: 0 14px 40px rgba(23, 35, 59, .16);
+    overflow: hidden;
+    animation: maSlideIn .25s ease;
+}
+
+.ma-toast.ma-leaving {
+    animation: maSlideOut .2s ease forwards;
+}
+
+.ma-toast.ma-success { border-left-color: var(--ma-green); }
+.ma-toast.ma-error   { border-left-color: var(--ma-red); }
+.ma-toast.ma-warning { border-left-color: var(--ma-orange); }
+.ma-toast.ma-info    { border-left-color: var(--ma-primary); }
+
+.ma-toast-icon {
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    margin-top: 1px;
+}
+
+.ma-toast-icon svg { width: 15px; height: 15px; }
+
+.ma-success .ma-toast-icon { background: var(--ma-green); }
+.ma-error   .ma-toast-icon { background: var(--ma-red); }
+.ma-warning .ma-toast-icon { background: var(--ma-orange); }
+.ma-info    .ma-toast-icon { background: var(--ma-primary); }
+
+.ma-toast-body { flex: 1; min-width: 0; }
+
+.ma-toast-title {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ma-ink);
+    margin-bottom: 2px;
+}
+
+.ma-toast-msg {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--ma-muted);
+    font-weight: 500;
+    word-break: break-word;
+}
+
+.ma-toast-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    border: 0;
+    background: transparent;
+    color: var(--ma-muted);
+    cursor: pointer;
+    padding: 4px;
+    line-height: 0;
+    border-radius: 8px;
+}
+
+.ma-toast-close:hover { color: var(--ma-ink); }
+.ma-toast-close svg { width: 13px; height: 13px; }
+
+.ma-toast-progress {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 3px;
+    width: 100%;
+    transform-origin: left;
+    animation: maProgress linear forwards;
+    opacity: .55;
+}
+
+.ma-success .ma-toast-progress { background: var(--ma-green); }
+.ma-error   .ma-toast-progress { background: var(--ma-red); }
+.ma-warning .ma-toast-progress { background: var(--ma-orange); }
+.ma-info    .ma-toast-progress { background: var(--ma-primary); }
+
+@keyframes maProgress { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+@keyframes maSlideIn {
+    from { transform: translateX(24px); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes maSlideOut {
+    to { transform: translateX(24px); opacity: 0; }
+}
+
+/* ---------- Dialog (confirm / alert) ---------- */
+
+.ma-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(10, 16, 30, .55);
+    backdrop-filter: blur(5px);
+    animation: maFadeIn .18s ease;
+}
+
+.ma-overlay.ma-leaving { animation: maFadeOut .16s ease forwards; }
+
+.ma-dialog {
+    width: 100%;
+    max-width: 430px;
+    background: var(--ma-card);
+    border: 1px solid var(--ma-border);
+    border-radius: 20px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .45);
+    padding: 30px 28px 26px;
+    text-align: center;
+    animation: maPop .22s ease;
+}
+
+@keyframes maFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes maFadeOut { to { opacity: 0; } }
+
+@keyframes maPop {
+    from { transform: scale(.94) translateY(12px); opacity: 0; }
+    to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.ma-dialog-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    margin: 0 auto 16px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: var(--ma-primary);
+}
+
+.ma-dialog-icon svg { width: 26px; height: 26px; }
+
+.ma-dialog-icon.ma-success { background: var(--ma-green); }
+.ma-dialog-icon.ma-error   { background: var(--ma-red); }
+.ma-dialog-icon.ma-warning { background: var(--ma-orange); }
+.ma-dialog-icon.ma-info    { background: var(--ma-primary); }
+
+.ma-dialog-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--ma-ink);
+    margin-bottom: 8px;
+}
+
+.ma-dialog-msg {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ma-muted);
+    font-weight: 500;
+    word-break: break-word;
+}
+
+.ma-dialog-msg ul {
+    text-align: left;
+    margin: 10px 0 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 5px;
+}
+
+.ma-dialog-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.ma-btn {
+    min-height: 40px;
+    padding: 10px 22px;
+    border: 0;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+
+.ma-btn:focus-visible { outline: 3px solid rgba(79, 131, 241, .35); outline-offset: 1px; }
+
+.ma-btn-primary {
+    background: linear-gradient(135deg, var(--ma-primary), var(--ma-primary-2));
+    color: #fff;
+    box-shadow: 0 10px 22px rgba(79, 131, 241, .28);
+}
+
+.ma-btn-primary:hover { transform: translateY(-1px); filter: brightness(1.03); }
+
+.ma-btn-danger {
+    background: var(--ma-red);
+    color: #fff;
+    box-shadow: 0 10px 22px rgba(239, 71, 112, .28);
+}
+
+.ma-btn-danger:hover { transform: translateY(-1px); filter: brightness(1.05); }
+
+.ma-btn-ghost {
+    background: transparent;
+    color: var(--ma-muted);
+    border: 1px solid var(--ma-border);
+}
+
+.ma-btn-ghost:hover { color: var(--ma-ink); border-color: var(--ma-muted); }
+
+@media (max-width: 640px) {
+    .ma-stack { top: 16px; right: 16px; left: 16px; width: auto; }
+    .ma-dialog { padding: 24px 20px 22px; }
+    .ma-dialog-actions { flex-direction: column-reverse; }
+    .ma-btn { width: 100%; }
+}

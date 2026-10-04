@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Task — MissPack ERP (preview)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/core.css?v=6abf109f">
+    <link rel="stylesheet" href="/assets/css/app-layout.css?v=6abf6a51">
+    <link rel="stylesheet" href="/assets/css/master-index.css?v=6abf04ad">
+    <link rel="stylesheet" href="/assets/css/master-show.css?v=6abf13a6">
+    <link rel="stylesheet" href="/assets/css/master-form.css?v=6abf0f9a">
+    <link rel="stylesheet" href="/assets/css/master-flat.css?v=6abf2c03">
+    <link rel="stylesheet" href="/assets/vendor/select2/css/select2.min.css?v=6abf7b0c">
+    <link rel="stylesheet" href="/assets/css/select2-theme.css?v=6abf2522">
+    <link rel="stylesheet" href="/assets/css/master-alert.css?v=6abf21b9">
+    <link rel="stylesheet" href="/assets/css/tasks.css?v=6abf7c9c">
+    <link rel="stylesheet" href="/assets/css/responsive.css?v=6abf2e74">
+    <style>
+        a[href^="/theme"], form.theme-form { pointer-events: none; }
+        #previewThemeBtn { display: inline-flex; align-items: center; gap: 8px; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar" aria-label="Main sidebar">
+        <div class="sidebar-logo">
+            <div>
+                <div class="sidebar-logo-text sidebar-text">MissPack</div>
+                <div class="sidebar-logo-sub sidebar-text">Packed Perfect</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">Dashboards</div>
+            <a href="#" class="sidebar-item"><i class="fas fa-th-large"></i><span class="sidebar-text">Dashboard</span></a>
+            <div class="sidebar-section">Management</div>
+            <a href="index.html" class="sidebar-item active"><i class="fa-solid fa-layer-group"></i><span class="sidebar-text">Tasks</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-box-open"></i><span class="sidebar-text">Products</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-truck"></i><span class="sidebar-text">Shipments</span></a>
+            <div class="sidebar-section">Sales</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-users"></i><span class="sidebar-text">Clients</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-briefcase"></i><span class="sidebar-text">Projects</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-file-invoice-dollar"></i><span class="sidebar-text">Invoices</span></a>
+            <div class="sidebar-section">Purchase</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-user-gear"></i><span class="sidebar-text">Vendors</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-money-bill"></i><span class="sidebar-text">Vendor Quotes</span></a>
+            <div class="sidebar-section">Accounts</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-scale-balanced"></i><span class="sidebar-text">Cashflow</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-users-cog"></i><span class="sidebar-text">Users</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="user-avatar-sm">H</div>
+                <div class="sidebar-user-info sidebar-text">
+                    <div class="user-name">Hardik Bohra</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+                <button type="button" class="sidebar-logout-btn" title="Logout" aria-label="Logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="main-wrap" id="mainWrap">
+        <header class="topbar">
+            <button type="button" class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="topbar-title">Add Task</span>
+            <div class="topbar-spacer"></div>
+            <div class="topbar-actions">
+                <button type="button" class="topbar-btn desktop-only" aria-label="Search"><i class="fas fa-search"></i></button>
+                <button type="button" id="previewThemeBtn" class="theme-toggle desktop-only">
+                    <i class="fas fa-moon"></i> <span>Dark</span>
+                </button>
+                <button type="button" class="topbar-btn desktop-only" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="topbar-badge">3</span>
+                </button>
+                <div class="topbar-user-btn">
+                    <div class="user-avatar-sm topbar-avatar">H</div>
+                    <span class="topbar-user-name desktop-only">Hardik Bohra</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="page-content">
+            <div class="task-form-page">
+                <div class="task-hero">
+                    <div>
+                        <h1>Add Task</h1>
+                        <p>Create rich kanban tasks with category, image, priority, assignee and board status.</p>
+                    </div>
+                    <a href="index.html" class="master-btn master-btn-ghost">Back to Kanban</a>
+                </div>
+
+                <div class="task-card">
+                    <form method="POST" onsubmit="return false;">
+                        <div class="task-grid">
+                            <div class="master-field full">
+                                <label class="master-label">Task Title <span>*</span></label>
+                                <input class="master-input" type="text" name="title" value="Add GST breakdown to invoice PDF" required placeholder="Enter task title">
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label">Property / Category</label>
+                                <select class="master-select" name="category">
+                                    <option value="Sampling">Sampling</option>
+                                    <option value="ERP" selected>ERP</option>
+                                    <option value="Sales">Sales</option>
+                                    <option value="Purchase">Purchase</option>
+                                    <option value="Shipment">Shipment</option>
+                                    <option value="Finance">Finance</option>
+                                    <option value="Internal">Internal</option>
+                                    <option value="General">General</option>
+                                </select>
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label">Board Status</label>
+                                <select class="master-select" name="status">
+                                    <option value="backlog">Backlog</option>
+                                    <option value="new_request">New Request</option>
+                                    <option value="in_progress" selected>In Progress</option>
+                                    <option value="completed">Complete</option>
+                                </select>
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label">Priority <span>*</span></label>
+                                <select class="master-select" name="priority" required>
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high" selected>High</option>
+                                    <option value="urgent">Urgent</option>
+                                </select>
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label">Assignee</label>
+                                <select class="master-select" name="assignee_id">
+                                    <option value="">Unassigned</option>
+                                    <option value="1" selected>Hardik Bohra</option>
+                                    <option value="2">Priya Shah</option>
+                                    <option value="3">Amit Patel</option>
+                                </select>
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label">Due Date</label>
+                                <input class="master-input" type="date" name="due_date" value="2026-10-20">
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label">Image URL</label>
+                                <input class="master-input" type="text" name="image_url" id="taskImageUrl" placeholder="https://... or /storage/...">
+                            </div>
+                            <div class="task-preview" id="taskImagePreview"><img src="" alt="Task image preview"></div>
+                            <div class="master-field full">
+                                <label class="master-label">Description</label>
+                                <textarea class="master-textarea" name="description" placeholder="Write task details">Show CGST / SGST / IGST columns on the printable invoice for registered clients. Update the PDF template and the portal download route.</textarea>
+                            </div>
+                        </div>
+                        <div class="task-actions">
+                            <a href="index.html" class="master-btn master-btn-light">Cancel</a>
+                            <button type="submit" class="master-btn master-btn-primary">Add Task</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/assets/vendor/jquery/jquery.min.js?v=6abe6ebd"></script>
+    <script src="/assets/vendor/select2/js/select2.min.js?v=6abe1966"></script>
+    <script src="/assets/js/master-alert.js?v=6abf15d1"></script>
+    <script src="/assets/js/master-selects.js?v=6abf2a90"></script>
+    <script src="/assets/js/app-layout.js?v=6abf23b1"></script>
+    <script>
+        // Static preview: client-side theme toggle (Laravel's /theme/toggle is not available here)
+        (function () {
+            var html = document.documentElement;
+            try {
+                var t = new URLSearchParams(location.search).get('theme');
+                if (t === 'dark' || t === 'light') { html.setAttribute('data-theme', t); }
+            } catch (e) {}
+            function syncBtn() {
+                var dark = html.getAttribute('data-theme') === 'dark';
+                var btn = document.getElementById('previewThemeBtn');
+                btn.innerHTML = dark ? '<i class="fas fa-sun"></i> <span>Light</span>' : '<i class="fas fa-moon"></i> <span>Dark</span>';
+            }
+            syncBtn();
+            document.getElementById('previewThemeBtn').addEventListener('click', function () {
+                var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', next);
+                try { localStorage.setItem('preview-theme', next); } catch (e) {}
+                syncBtn();
+            });
+        })();
+    </script>
+</body>
+</html>

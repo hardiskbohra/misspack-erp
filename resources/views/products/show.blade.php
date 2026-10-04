@@ -3,69 +3,9 @@
 @section('page-title', 'Product Detail')
 
 @section('content')
-    <style>
-        .photo-grid{
-            display:grid;
-            grid-template-columns:repeat(2, minmax(0,1fr));
-            gap:20px;
-        }
-        
-        .photo-card{
-            display:flex;
-            flex-direction:column;
-            background:#fff;
-            border:1px solid var(--master-border);
-            border-radius:16px;
-            overflow:hidden;
-            text-decoration:none;
-            transition:.2s;
-        }
-        
-        .photo-card:hover{
-            transform:translateY(-3px);
-            box-shadow:0 8px 24px rgba(0,0,0,.08);
-        }
-        
-        .photo-card img{
-            width:100%;
-            height:180px;
-            object-fit:cover;
-            display:block;
-        }
-        
-        .photo-card-body{
-            padding:12px;
-            text-align:center;
-        }
-        
-        .photo-meta{
-            font-size:13px;
-            font-weight:600;
-            color:var(--master-muted);
-        }
-        
-        /* Tablet */
-        @media (max-width:768px){
-            .photo-grid{
-                grid-template-columns:repeat(2,1fr);
-            }
-        
-            .photo-card img{
-                height:140px;
-            }
-        }
-        
-        /* Mobile */
-        @media (max-width:480px){
-            .photo-grid{
-                grid-template-columns:1fr;
-            }
-        
-            .photo-card img{
-                height:200px;
-            }
-        }
-    </style>
+    @push('styles')
+        <link rel="stylesheet" href="{{ asset('assets/css/master-media.css') }}">
+    @endpush
     @php($primary = $product->primaryMedia())
     <div class="master">
         <div class="master-card master-header">
@@ -128,9 +68,9 @@
                                         <td>{{ $row->capacity ? $row->capacity . 'ml' : '-' }}</td>
                                         <td>{{ $row->finish_type ?: '-' }}</td>
                                         <td>{{ $row->printing_type ?: '-' }}</td>
-                                        <td>{{ $row->landing_cost_inr ? '₹ ' . number_format((float) $row->landing_cost_inr, 2) : '-' }}
+                                        <td>{{ $row->landing_cost_inr ? \App\Helpers\CommonHelper::indianCurrency($row->landing_cost_inr) : '-' }}
                                         </td>
-                                        <td>{{ $row->selling_cost_inr ? '₹ ' . number_format((float) $row->selling_cost_inr, 2) : '-' }}
+                                        <td>{{ $row->selling_cost_inr ? \App\Helpers\CommonHelper::indianCurrency($row->selling_cost_inr) : '-' }}
                                         </td>
                                 </tr>@empty<tr>
                                         <td colspan="6">No ladder added.</td>
@@ -141,42 +81,7 @@
                     </div>
                 </div>
                 
-                <div class="master-card master-section">
-                    <h3 class="master-section-title">Vendor Quotes</h3>
-                    <div class="master-table-wrap">
-                        <table class="master-table">
-                            <thead>
-                                <tr>
-                                    <th>Vendor</th>
-                                    <th>Qty</th>
-                                    <th>Price</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($product->vendorQuotes as $quote)
-                                    <tr style="line-height:1.5;">
-                                        <td>{{ $quote->vendor?->vendor_contact_name ?? ($quote->vendor_contact_name ?? '-') }}</td>
-                                        <td>{!! $quote->items->isNotEmpty()
-                                            ? $quote->items->map(fn($item) => number_format($item->quantity) . ' ' . $item->unit)->implode('<br>')
-                                            : ($quote->quantity ? number_format($quote->quantity) . ' ' . $quote->unit : '-')
-                                        !!}</td>
-                                        <td>{!! $quote->items->isNotEmpty()
-                                            ? $quote->items->map(fn($item) => $quote->currency . ' ' . number_format($item->vendor_unit_price, 2) . ($quote->incoterm ? ' ' . $quote->incoterm : ''))->implode('<br>')
-                                            : ($quote->vendor_unit_price
-                                                ? $quote->currency . ' ' . number_format((float) $quote->vendor_unit_price, 2) . ($quote->incoterm ? ' ' . $quote->incoterm : '')
-                                                : '-')
-                                        !!}</td>
-                                        <td><a href="{{ route('vendor-quotes.show',$quote) }}">View</a></td>
-                                    </tr>@empty<tr>
-                                        <td colspan="6">No ladder added.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+                            </div>
             <div>
                 <div class="master-card master-section">
                     <h3 class="master-section-title">Specifications</h3>
@@ -204,7 +109,7 @@
                                 @endif
                             </a>
                         @empty
-                            <p style="color:var(--master-muted);font-weight:800;">
+                            <p style="color:var(--master-muted);font-weight:700;">
                                 No shipment photos uploaded yet.
                             </p>
                         @endforelse

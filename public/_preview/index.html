@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management — MissPack ERP (preview)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/core.css?v=6abf109f">
+    <link rel="stylesheet" href="/assets/css/app-layout.css?v=6abf6a51">
+    <link rel="stylesheet" href="/assets/css/master-index.css?v=6abf04ad">
+    <link rel="stylesheet" href="/assets/css/master-show.css?v=6abf13a6">
+    <link rel="stylesheet" href="/assets/css/master-form.css?v=6abf0f9a">
+    <link rel="stylesheet" href="/assets/css/master-flat.css?v=6abf2c03">
+    <link rel="stylesheet" href="/assets/vendor/select2/css/select2.min.css?v=6abf7b0c">
+    <link rel="stylesheet" href="/assets/css/select2-theme.css?v=6abf2522">
+    <link rel="stylesheet" href="/assets/css/master-alert.css?v=6abf21b9">
+    <link rel="stylesheet" href="/assets/css/tasks.css?v=6abf7c9c">
+    <link rel="stylesheet" href="/assets/css/responsive.css?v=6abf2e74">
+    <style>
+        a[href^="/theme"], form.theme-form { pointer-events: none; }
+        #previewThemeBtn { display: inline-flex; align-items: center; gap: 8px; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar" aria-label="Main sidebar">
+        <div class="sidebar-logo">
+            <div>
+                <div class="sidebar-logo-text sidebar-text">MissPack</div>
+                <div class="sidebar-logo-sub sidebar-text">Packed Perfect</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">Dashboards</div>
+            <a href="#" class="sidebar-item"><i class="fas fa-th-large"></i><span class="sidebar-text">Dashboard</span></a>
+            <div class="sidebar-section">Management</div>
+            <a href="#" class="sidebar-item active"><i class="fa-solid fa-layer-group"></i><span class="sidebar-text">Tasks</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-box-open"></i><span class="sidebar-text">Products</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-truck"></i><span class="sidebar-text">Shipments</span></a>
+            <div class="sidebar-section">Sales</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-users"></i><span class="sidebar-text">Clients</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-briefcase"></i><span class="sidebar-text">Projects</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-file-invoice-dollar"></i><span class="sidebar-text">Invoices</span></a>
+            <div class="sidebar-section">Purchase</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-user-gear"></i><span class="sidebar-text">Vendors</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-money-bill"></i><span class="sidebar-text">Vendor Quotes</span></a>
+            <div class="sidebar-section">Accounts</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-scale-balanced"></i><span class="sidebar-text">Cashflow</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-users-cog"></i><span class="sidebar-text">Users</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="user-avatar-sm">H</div>
+                <div class="sidebar-user-info sidebar-text">
+                    <div class="user-name">Hardik Bohra</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+                <button type="button" class="sidebar-logout-btn" title="Logout" aria-label="Logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="main-wrap" id="mainWrap">
+        <header class="topbar">
+            <button type="button" class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="topbar-title">Task Management</span>
+            <div class="topbar-spacer"></div>
+            <div class="topbar-actions">
+                <button type="button" class="topbar-btn desktop-only" aria-label="Search"><i class="fas fa-search"></i></button>
+                <button type="button" id="previewThemeBtn" class="theme-toggle desktop-only">
+                    <i class="fas fa-moon"></i> <span>Dark</span>
+                </button>
+                <button type="button" class="topbar-btn desktop-only" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="topbar-badge">3</span>
+                </button>
+                <div class="topbar-user-btn">
+                    <div class="user-avatar-sm topbar-avatar">H</div>
+                    <span class="topbar-user-name desktop-only">Hardik Bohra</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="page-content">
+            <div class="master">
+                <div class="master-card" style="margin-bottom:15px;">
+                    <div class="master-toolbar" style="padding-bottom:0;">
+                        <div class="master-toolbar-left desktop-only">
+                            <span class="master-help"><i class="fa-solid fa-hand-pointer"></i> Drag cards between columns to update status</span>
+                        </div>
+                        <div class="master-toolbar-right">
+                            <button class="master-btn master-btn-green" type="button" data-confirm="Mark all open tasks as completed?">
+                                <i class="fa-solid fa-check-double"></i> Mark All Complete
+                            </button>
+                            <a class="master-toggle" href="#"><span><i></i></span> Show Completed</a>
+                            <a href="form.html" class="master-btn master-btn-primary"><i class="fa-solid fa-plus"></i> Add Task</a>
+                        </div>
+                    </div>
+                    <div class="master-filter-card">
+                        <form method="GET" class="master-filter-form" onsubmit="return false;">
+                            <div class="master-field search">
+                                <label class="master-label">Search</label>
+                                <input class="master-input" type="text" name="search" placeholder="Search task, category, description...">
+                            </div>
+                            <div class="master-field desktop-only">
+                                <label class="master-label">Scope</label>
+                                <select class="master-select" name="category">
+                                    <option value="all" selected>All Category</option>
+                                    <option value="Sampling">Sampling</option>
+                                    <option value="ERP">ERP</option>
+                                    <option value="Sales">Sales</option>
+                                    <option value="Purchase">Purchase</option>
+                                    <option value="Shipment">Shipment</option>
+                                    <option value="Finance">Finance</option>
+                                    <option value="Internal">Internal</option>
+                                    <option value="General">General</option>
+                                </select>
+                            </div>
+                            <div class="master-field desktop-only">
+                                <label class="master-label">Status</label>
+                                <select class="master-select" name="status">
+                                    <option value="all" selected>All Status</option>
+                                    <option value="backlog">Backlog</option>
+                                    <option value="new_request">New Request</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Complete</option>
+                                </select>
+                            </div>
+                            <div class="master-field desktop-only">
+                                <label class="master-label">Priority</label>
+                                <select class="master-select" name="priority">
+                                    <option value="all" selected>All Priority</option>
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="urgent">Urgent</option>
+                                </select>
+                            </div>
+                            <div class="master-field desktop-only">
+                                <label class="master-label">Assignee</label>
+                                <select class="master-select" name="assignee_id">
+                                    <option value="">All Assignees</option>
+                                    <option value="1">Hardik Bohra</option>
+                                    <option value="2">Priya Shah</option>
+                                    <option value="3">Amit Patel</option>
+                                </select>
+                            </div>
+                            <div class="master-filter-actions">
+                                <button type="submit" class="master-btn master-btn-primary"><i class="fa-solid fa-filter"></i> Filter</button>
+                                <a href="#" class="master-btn master-btn-light">Reset</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="master-card" style="padding:15px;">
+                    <div class="master-board" id="kanbanBoard" data-status-options='{"backlog":"Backlog","new_request":"New Request","in_progress":"In Progress","completed":"Complete"}'>
+                        <section class="master-column column-backlog" data-status="backlog">
+                            <div class="master-column-head">
+                                <div><span class="master-dot"></span><h2 style="font-size:16px;font-weight:500;">Backlog</h2></div>
+                                <span class="master-count" data-count-for="backlog">2</span>
+                            </div>
+                            <div class="master-dropzone" data-dropzone="backlog">
+                                <article class="master-task-card" draggable="true" data-task-id="21" data-status="backlog">
+                                    <div class="master-task-top">
+                                        <div>
+                                            <span class="master-category category-purchase">Purchase</span>
+                                            <span class="master-priority priority-medium">Medium</span>
+                                        </div>
+                                    </div>
+                                    <h3 style="font-size:14px;font-weight:550;">Update packing material rates</h3>
+                                    <p style="font-size:13px;">Refresh carton, bubble wrap and tape rates from the new vendor sheet before month close.</p>
+                                    <div class="master-task-meta">
+                                        <span><i class="fa-regular fa-calendar"></i> 15 Oct 2026 &nbsp;&nbsp;<i class="fa-regular fa-user"></i> Priya Shah</span>
+                                    </div>
+                                </article>
+                                <article class="master-task-card" draggable="true" data-task-id="22" data-status="backlog">
+                                    <div class="master-task-top">
+                                        <div>
+                                            <span class="master-category">Internal</span>
+                                            <span class="master-priority priority-low">Low</span>
+                                        </div>
+                                    </div>
+                                    <h3 style="font-size:14px;font-weight:550;">Prepare export documentation template</h3>
+                                    <p style="font-size:13px;">Draft the standard COO / invoice / packing list bundle for export shipments.</p>
+                                    <div class="master-task-meta">
+                                        <span><i class="fa-regular fa-calendar"></i> No due date &nbsp;&nbsp;<i class="fa-regular fa-user"></i> Unassigned</span>
+                                    </div>
+                                </article>
+                            </div>
+                        </section>
+
+                        <section class="master-column column-new-request" data-status="new_request">
+                            <div class="master-column-head">
+                                <div><span class="master-dot"></span><h2 style="font-size:16px;font-weight:500;">New Request</h2></div>
+                                <span class="master-count" data-count-for="new_request">3</span>
+                            </div>
+                            <div class="master-dropzone" data-dropzone="new_request">
+                                <article class="master-task-card" draggable="true" data-task-id="11" data-status="new_request">
+                                    <div class="master-task-top">
+                                        <div>
+                                            <span class="master-category">ERP</span>
+                                            <span class="master-priority priority-high">High</span>
+                                        </div>
+                                    </div>
+                                    <h3 style="font-size:14px;font-weight:550;">Add GST breakdown to invoice PDF</h3>
+                                    <p style="font-size:13px;">Show CGST / SGST / IGST columns on the printable invoice for registered clients.</p>
+                                    <div class="master-task-meta">
+                                        <span><i class="fa-regular fa-calendar"></i> 05 Oct 2026 &nbsp;&nbsp;<i class="fa-regular fa-user"></i> Hardik Bohra</span>
+                                    </div>
+                                </article>
+                                <article class="master-task-card" draggable="true" data-task-id="12" data-status="new_request">
+                                    <div class="master-task-top">
+                                        <div>
+                                            <span class="master-category category-sampling">Sampling</span>
+                                            <span class="master-priority priority-medium">Medium</span>
+                                        </div>
+                                    </div>
+                                    <h3 style="font-size:14px;font-weight:550;">Sample tracking in client portal</h3>
+                                    <p style="font-size:13px;">Let clients see sample request status and lab feedback from their portal timeline.</p>
+                                    <div class="master-task-meta">
+                                        <span><i class="fa-regular fa-calendar"></i> 08 Oct 2026 &nbsp;&nbsp;<i class="fa-regular fa-user"></i> Amit Patel</span>
+                                    </div>
+                                </article>
+                                <article class="master-task-card" draggable="true" data-task-id="13" data-status="new_request">
+                                    <div class="master-task-top">
+                                        <div>
+                                            <span class="master-category category-shipment">Shipment</span>
+                                            <span class="master-priority priority-urgent">Urgent</span>
+                                        </div>
+                                    </div>
+                                    <h3 style="font-size:14px;font-weight:550;">Fix shipment status webhook</h3>
+                                    <p style="font-size:13px;">Courier webhook retries are duplicating status entries; deduplicate on tracking number.</p>
+                                    <div class="master-task-meta">
+                                        <span><i class="fa-regular fa-calendar"></i> 03 Oct 2026 &nbsp;&nbsp;<i class="fa-regular fa-user"></i> Hardik Bohra</span>
+                                    </div>
+                                </article>
+                            </div>
+                        </section>
+
+                        <section class="master-column column-in-progress" data-status="in_progress">
+                            <div class="master-column-head">
+                                <div><span class="master-dot"></span><h2 style="font-size:16px;font-weight:500;">In Progress</h2></div>
+                                <span class="master-count" data-count-for="in_progress">3</span>
+                            </div>
+                            <div class="master-dropzone" data-dropzone="in_progress">
+                                <article class="master-task-card" draggable="true" data-task-id="31" data-status="in_progress">
+                                    <div class="master-task-top">
+                                        <div>
+                                            <span class="master-category category-finance">Finance</span>
+                                            <span class="master-priority priority-high">High</span>
+                                        </div>
+                                    </div>
+                                    <h3 style="font-size:14px;font-weight:550;">Refactor cashflow month close</h3>
+                                    <p style="font-size:13px;">Split pending/received reconciliation into a scheduled job with a summary report.</p>
+                                    <div class="master-task-meta">
+                                        <span><i class="fa-regular fa-calendar"></i> 10 Oct 2026 &nbsp;&nbsp;<i class="fa-regular fa-user"></i> Priya Shah</span>
+                                    </div>
+                                </article>
+                                <article class="master-task-card" draggable="true" data-task-id="32" data-status="in_progress">
+                                    <div class="master-task-top">
+                                        <div>
+                                            <span class="master-category category-sales">Sales</span>
+                                            <span class="master-priority priority-medium">Medium</span>
+                                        </div>
+                                    </div>
+                                    <h3 style="font-size:14px;font-weight:550;">Lead quote auto-numbering</h3>
+                                    <p style="font-size:13px;">Sequential Q-2026-0001 numbering per fiscal year with printable quote header.</p>
+                                    <div class="master-task-meta">
+                                        <span><i class="fa-regular fa-calendar"></i> 12 Oct 2026 &nbsp;&nbsp;<i class="fa-regular fa-user"></i> Amit Patel</span>
+                                    </div>
+                                </article>
+                                <article class="master-task-card" draggable="true" data-task-id="33" data-status="in_progress">
+                                    <div class="master-task-top">
+                                        <div>
+                                            <span class="master-category">ERP</span>
+                                            <span class="master-priority priority-urgent">Urgent</span>
+                                        </div>
+                                    </div>
+                                    <h3 style="font-size:14px;font-weight:550;">Product media upload optimisation</h3>
+                                    <p style="font-size:13px;">Compress client-side before upload and serve webp variants for the product gallery.</p>
+                                    <div class="master-task-meta">
+                                        <span><i class="fa-regular fa-calendar"></i> 02 Oct 2026 &nbsp;&nbsp;<i class="fa-regular fa-user"></i> Hardik Bohra</span>
+                                    </div>
+                                </article>
+                            </div>
+                        </section>
+
+                        <section class="master-column column-completed" data-status="completed">
+                            <div class="master-column-head">
+                                <div><span class="master-dot"></span><h2 style="font-size:16px;font-weight:500;">Complete</h2></div>
+                                <span class="master-count" data-count-for="completed">2</span>
+                            </div>
+                            <div class="master-dropzone" data-dropzone="completed">
+                                <article class="master-task-card" draggable="true" data-task-id="41" data-status="completed">
+                                    <div class="master-task-top">
+                                        <div>
+                                            <span class="master-category">ERP</span>
+                                            <span class="master-priority priority-medium">Medium</span>
+                                        </div>
+                                    </div>
+                                    <h3 style="font-size:14px;font-weight:550;">Deploy milestone timeline v2</h3>
+                                    <p style="font-size:13px;">Card stepper timeline with shared admin/portal partial — shipped with Part 6 audit fixes.</p>
+                                    <div class="master-task-meta">
+                                        <span><i class="fa-regular fa-calendar"></i> 28 Sep 2026 &nbsp;&nbsp;<i class="fa-regular fa-user"></i> Hardik Bohra</span>
+                                    </div>
+                                </article>
+                                <article class="master-task-card" draggable="true" data-task-id="42" data-status="completed">
+                                    <div class="master-task-top">
+                                        <div>
+                                            <span class="master-category category-sales">Sales</span>
+                                            <span class="master-priority priority-low">Low</span>
+                                        </div>
+                                    </div>
+                                    <h3 style="font-size:14px;font-weight:550;">Client portal invoice access</h3>
+                                    <p style="font-size:13px;">Clients can now view and download their own invoices from the portal dashboard.</p>
+                                    <div class="master-task-meta">
+                                        <span><i class="fa-regular fa-calendar"></i> 25 Sep 2026 &nbsp;&nbsp;<i class="fa-regular fa-user"></i> Priya Shah</span>
+                                    </div>
+                                </article>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/assets/vendor/jquery/jquery.min.js?v=6abe6ebd"></script>
+    <script src="/assets/vendor/select2/js/select2.min.js?v=6abe1966"></script>
+    <script src="/assets/js/master-alert.js?v=6abf15d1"></script>
+    <script src="/assets/js/master-selects.js?v=6abf2a90"></script>
+    <script src="/assets/js/app-layout.js?v=6abf23b1"></script>
+    <script>
+        // Static preview: client-side theme toggle (Laravel's /theme/toggle is not available here)
+        (function () {
+            var html = document.documentElement;
+            try {
+                var t = new URLSearchParams(location.search).get('theme');
+                if (t === 'dark' || t === 'light') { html.setAttribute('data-theme', t); }
+            } catch (e) {}
+            function syncBtn() {
+                var dark = html.getAttribute('data-theme') === 'dark';
+                var btn = document.getElementById('previewThemeBtn');
+                btn.innerHTML = dark ? '<i class="fas fa-sun"></i> <span>Light</span>' : '<i class="fas fa-moon"></i> <span>Dark</span>';
+            }
+            syncBtn();
+            document.getElementById('previewThemeBtn').addEventListener('click', function () {
+                var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', next);
+                try { localStorage.setItem('preview-theme', next); } catch (e) {}
+                syncBtn();
+            });
+        })();
+    </script>
+</body>
+</html>

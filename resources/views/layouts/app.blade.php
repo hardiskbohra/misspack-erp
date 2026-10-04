@@ -15,16 +15,18 @@
     {{-- Fonts / Icons --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     {{-- Apply saved desktop sidebar state before CSS paints --}}
     <script>
         (function () {
             try {
-                var isMobileOrTablet = window.matchMedia('(max-width: 1199px)').matches;
+                var isTabletOrMobile = window.matchMedia('(max-width: 991px)').matches;
+                var isCompactDesktop = window.matchMedia('(min-width: 992px) and (max-width: 1199px)').matches;
+                var savedCollapsed = localStorage.getItem('sidebarCollapsed') === '1';
 
-                if (!isMobileOrTablet && localStorage.getItem('sidebarCollapsed') === '1') {
+                if (!isTabletOrMobile && (isCompactDesktop || savedCollapsed)) {
                     document.documentElement.classList.add('sidebar-collapsed');
                 }
             } catch (e) {}
@@ -32,16 +34,59 @@
     </script>
 
     {{-- App CSS --}}
-    <link rel="stylesheet" href="{{ asset('assets/css/app-layout.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/master-index.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/master-show.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/core.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/app-layout.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-index.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-show.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-form.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-detail.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-flat.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/select2/css/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/select2-theme.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-alert.css') }}">
 
     @stack('styles')
+
+    {{-- The shared list chrome — chips, applied strip, density, pinned grid,
+         mobile cards, totals row, empty state, the modal sheet, and the rhythm
+         between two stacked cards. Loaded by the shell, after the module's own
+         sheet so the chrome keeps its own properties: a page cannot forget it,
+         and the statement page did — it wore .master-list without ever loading
+         the sheet that spaces and insets it. --}}
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/master-list.css') }}">
+
+    {{-- Compatibility layer for the existing four-module markup; the shared
+         core design system follows and remains the canonical component owner. --}}
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/app-guidelines.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/responsive.css') }}">
+    @include('layouts.partials.design-system-styles')
 </head>
-<body>
+@php
+    $uiModule = match (true) {
+        request()->routeIs('shipments.*') => 'shipments',
+        request()->routeIs('clients.*') => 'clients',
+        request()->routeIs('cashflows.*') => 'cashflows',
+        request()->routeIs('users.*') => 'users',
+        request()->routeIs('vendors.*') => 'vendors',
+        default => null,
+    };
+@endphp
+<body data-ui-shell="app" @if($uiModule) data-ui-module="{{ $uiModule }}" @endif>
     @php
-        $sidebarItems = [
+        /* An employee's menu is their own record, and this is the only menu the
+           application shows them: the office's screens are behind a middleware
+           they cannot pass, so listing them here would be offering doors that
+           do not open. The workspace pages are the same four questions in the
+           same order a payroll clerk would ask them. */
+        $employeeItems = [
+            ['section' => 'My Workspace'],
+            ['label' => 'Dashboard', 'route' => 'my.dashboard', 'active' => 'my.dashboard', 'icon' => 'fas fa-th-large'],
+            ['label' => 'My Salary', 'route' => 'my.salary', 'active' => 'my.salary', 'icon' => 'fa-solid fa-indian-rupee-sign'],
+            ['label' => 'My Documents', 'route' => 'my.documents', 'active' => 'my.documents*', 'icon' => 'fa-regular fa-folder-open'],
+            ['label' => 'My Profile', 'route' => 'my.profile', 'active' => 'my.profile*', 'icon' => 'fa-regular fa-id-card'],
+        ];
+
+        $sidebarItems = Auth::user() && Auth::user()->isEmployee() ? $employeeItems : [
             ['section' => 'Dashboards'],
             ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'fas fa-th-large'],
             ['section' => 'Management'],
@@ -54,9 +99,20 @@
             ['label' => 'Invoices', 'route' => 'sales-invoices.index', 'active' => 'sales-invoices.*', 'icon' => 'fa-solid fa-file-invoice-dollar'],
             ['section' => 'Purchase'],
             ['label' => 'Vendors', 'route' => 'vendors.index', 'active' => 'vendors.*', 'icon' => 'fa-solid fa-user-gear'],
-            ['label' => 'Vendor Quotes', 'route' => 'vendor-quotes.index', 'active' => 'vendor-quotes.*', 'icon' => 'fa-solid fa-money-bill'],
+            /* What the office buys: the order sent, and the bill that arrived.
+               Two items because they are read as two lists, one controller
+               behind both. */
+            ['label' => 'Purchase Orders', 'route' => 'purchase-orders.index', 'active' => 'purchase-orders.*', 'icon' => 'fas fa-file-signature'],
+            ['label' => 'Purchase Bills', 'route' => 'purchase-bills.index', 'active' => 'purchase-bills.*', 'icon' => 'fas fa-file-invoice'],
             ['section' => 'Accounts'],
-            ['label' => 'Cashflow', 'route' => 'cashflows.index', 'active' => 'cashflows.*', 'icon' => 'fa-solid fa-scale-balanced'],
+            ['label' => 'Cashflow', 'route' => 'cashflows.index', 'active' => 'cashflows.*', 'except' => ['cashflows.documents', 'cashflows.statements', 'cashflows.statements.*'], 'icon' => 'fa-solid fa-scale-balanced'],
+            /* The archive is a page of the module, not a second module: it sits
+               here so a month's paperwork is one click from anywhere, and the
+               Cashflow item above stays dark while it is open. */
+            ['label' => 'Document Archive', 'route' => 'cashflows.documents', 'active' => 'cashflows.documents', 'icon' => 'fa-regular fa-folder-open'],
+            /* And the other half of what leaves the building: the party's own
+               account, in the currency their statement is kept in. */
+            ['label' => 'Statements', 'route' => 'cashflows.statements', 'active' => 'cashflows.statements*', 'icon' => 'fa-solid fa-file-invoice'],
             ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'icon' => 'fas fa-users-cog'],
         ];
     @endphp
@@ -80,8 +136,15 @@
                 @if(isset($item['section']))
                     <div class="sidebar-section">{{ $item['section'] }}</div>
                 @else
+                    @php
+                        /* One item lights up at a time: an item may exclude the
+                           routes a sibling item owns. */
+                        $itemActive = request()->routeIs($item['active'])
+                            && ! (isset($item['except']) && request()->routeIs($item['except']));
+                    @endphp
                     <a href="{{ route($item['route']) }}"
-                       class="sidebar-item {{ request()->routeIs($item['active']) ? 'active' : '' }}">
+                       class="sidebar-item {{ $itemActive ? 'active' : '' }}"
+                       aria-label="{{ $item['label'] }}" title="{{ $item['label'] }}">
                         <i class="{{ $item['icon'] }}"></i>
                         <span class="sidebar-text">{{ $item['label'] }}</span>
                     </a>
@@ -89,22 +152,13 @@
             @endforeach
         </nav>
 
+        {{-- The card at the foot of the sidebar is the second half of the user
+             menu, not a label with a logout icon: everything a person can do
+             about their own account is in the one panel both surfaces open. The
+             separate logout button went with it — the panel has Sign out, and two
+             controls for one action is how they drift. --}}
         <div class="sidebar-footer">
-            <div class="sidebar-user">
-                <div class="user-avatar-sm">{{ substr(Auth::user()->name ?? 'A', 0, 1) }}</div>
-
-                <div class="sidebar-user-info sidebar-text">
-                    <div class="user-name">{{ Auth::user()->name ?? 'Admin' }}</div>
-                    <div class="user-role">Administrator</div>
-                </div>
-
-                <form method="POST" action="{{ route('logout') }}" class="sidebar-logout-form">
-                    @csrf
-                    <button type="submit" class="sidebar-logout-btn" title="Logout" aria-label="Logout">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </button>
-                </form>
-            </div>
+            @include('layouts.partials.user-menu', ['surface' => 'sidebar'])
         </div>
     </aside>
 
@@ -118,6 +172,13 @@
             </button>
 
             <span class="topbar-title">@yield('page-title', 'Dashboard')</span>
+
+            {{-- A page's primary action belongs beside its title, not buried in
+                 a toolbar: it stays reachable however far the list scrolls. --}}
+            @hasSection('page-actions')
+                <div class="topbar-page-actions">@yield('page-actions')</div>
+            @endif
+
             <div class="topbar-spacer"></div>
 
             <div class="topbar-actions">
@@ -141,12 +202,11 @@
                     <span class="topbar-badge">3</span>
                 </button>
 
-                <div class="topbar-user-btn">
-                    <div class="user-avatar-sm topbar-avatar">
-                        {{ substr(Auth::user()->name ?? 'A', 0, 1) }}
-                    </div>
-                    <span class="topbar-user-name desktop-only">{{ Auth::user()->name ?? 'Admin' }}</span>
-                </div>
+                {{-- The avatar opens your own account — for both roles. It used
+                     to be a link only for an employee and a dead <div> for the
+                     office, which is a menu that does nothing for the person most
+                     likely to want it. --}}
+                @include('layouts.partials.user-menu', ['surface' => 'topbar'])
             </div>
         </header>
 
@@ -156,48 +216,37 @@
     </div>
 
     {{-- Vendor Scripts --}}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
 
     {{-- App Scripts --}}
-    <script src="{{ asset('assets/js/app-layout.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/master-alert.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/master-selects.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/money.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/app-layout.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/master-list.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/master-drawer.js') }}"></script>
 
-    {{-- Flash Messages --}}
+    {{-- Flash Messages (custom alerts) --}}
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             @if(session('success'))
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: @json(session('success')),
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true
-                });
+                MasterAlert.toast(@json(session('success')), 'success', { title: 'Success' });
+            @endif
+
+            @if(session('warning'))
+                MasterAlert.toast(@json(session('warning')), 'warning', { title: 'Check paperwork' });
             @endif
 
             @if(session('error'))
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: @json(session('error')),
-                    confirmButtonColor: '#ef4770'
-                });
+                MasterAlert.alert(@json(session('error')), { title: 'Error', type: 'error', danger: true });
             @endif
 
             @if($errors->any())
                 var validationErrors = @json($errors->all());
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Validation Error',
-                    html: '<ul style="text-align:left;margin:0;padding-left:18px;">' +
-                        validationErrors.map(function (error) {
-                            return '<li>' + escapeHtml(error) + '</li>';
-                        }).join('') +
-                        '</ul>',
-                    confirmButtonColor: '#ef4770'
-                });
+                MasterAlert.alert('<ul>' + validationErrors.map(function (error) {
+                    return '<li>' + escapeHtml(error) + '</li>';
+                }).join('') + '</ul>', { title: 'Validation Error', type: 'error', html: true, danger: true });
             @endif
         });
 

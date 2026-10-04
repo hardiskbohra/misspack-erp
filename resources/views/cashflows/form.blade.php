@@ -14,6 +14,21 @@
                 class="active">{{ $isEdit ? 'Edit' : 'Add' }}</span></div>
     </div>
     
+    @if ($isEdit && ! empty($linkedVendorPayment))
+        <div class="master-card master-section cf-sync-note">
+            <p style="margin:0;font-weight:700;">
+                Auto-synced from vendor payment #{{ $linkedVendorPayment->id }}
+                ({{ $linkedVendorPayment->relationLoaded('vendor') && $linkedVendorPayment->vendor ? $linkedVendorPayment->vendor->vendor_name : 'Vendor' }}).
+                Amount, date, reference and account come from the vendor ledger —
+                @if (\Illuminate\Support\Facades\Route::has('vendors.show'))
+                    <a href="{{ route('vendors.show', $linkedVendorPayment->vendor_id) }}#payments">edit the vendor payment</a> to change them here as well.
+                @else
+                    edit the vendor payment to change them here as well.
+                @endif
+            </p>
+        </div>
+    @endif
+
     <form method="POST" action="{{ $isEdit ? route('cashflows.update', $entry) : route('cashflows.store') }}"
         class="master-card master-form-card">
         @csrf
@@ -32,11 +47,10 @@
                         Transaction Type <span class="master-required">*</span>
                     </label>
                 
-                    <div class="master-chip-group">
+                    <div class="master-choice-group">
                         @foreach($transactionTypeOptions as $key => $label)
-                            <label class="master-chip {{ $key === 'credit' ? 'credit-chip' : 'debit-chip' }}">
-                                <input
-                                    type="radio"
+                            <label class="master-choice-chip {{ $key === 'credit' ? 'credit-chip' : 'debit-chip' }}">
+                                <input type="radio"
                                     name="transaction_type"
                                     value="{{ $key }}"
                                     {{ old('transaction_type', $entry->transaction_type ?? 'debit') === $key ? 'checked' : '' }}
@@ -163,6 +177,13 @@
                 <div class="master-field"><label class="master-label">Vendor</label><select class="master-select" name="vendor_id">
                         <option value="">No vendor</option>@foreach($vendors as $vendor)<option
                         value="{{ $vendor->id }}" @selected((string) old('vendor_id', $entry->vendor_id) === (string) $vendor->id)>{{ $vendor->vendor_name }}</option>@endforeach
+                    </select></div>
+                {{-- The link the free-text name never had: "paid to Ramesh" becomes
+                     a row against Ramesh, so the report can group by him and the
+                     entry can be found by searching his name. --}}
+                <div class="master-field"><label class="master-label">Employee</label><select class="master-select" name="employee_id">
+                        <option value="">No employee</option>@foreach($employees as $employee)<option
+                        value="{{ $employee->id }}" @selected((string) old('employee_id', $entry->employee_id) === (string) $employee->id)>{{ $employee->name }}@if($employee->designation) — {{ $employee->designation }}@endif</option>@endforeach
                     </select></div>
                 <div class="master-field"><label class="master-label">Expense Head</label><input class="master-input"
                         name="expense_head" value="{{ old('expense_head', $entry->expense_head) }}"

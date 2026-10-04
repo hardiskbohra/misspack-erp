@@ -39,4 +39,49 @@ class SalesInvoiceAttachment extends Model
     {
         return Str::startsWith((string) $this->mime_type, 'image/');
     }
+
+    /**
+     * The icon a file row wears, decided by the file itself: the same
+     * vocabulary the ledger's attachments use. It lives on the model so that
+     * no view has to guess an icon from a file name.
+     */
+    public function icon(): string
+    {
+        if ($this->isImage()) {
+            return 'fa-file-image';
+        }
+
+        return match (strtolower((string) $this->extension)) {
+            'pdf' => 'fa-file-pdf',
+            'doc', 'docx' => 'fa-file-word',
+            'xls', 'xlsx', 'csv' => 'fa-file-excel',
+            'ppt', 'pptx' => 'fa-file-powerpoint',
+            'zip' => 'fa-file-zipper',
+            'txt' => 'fa-file-lines',
+            default => 'fa-file',
+        };
+    }
+
+    /**
+     * Bytes as somebody would say them out loud. Kept here rather than in a
+     * helper because it is only ever the size of a file on this model.
+     */
+    public function sizeLabel(): string
+    {
+        $bytes = (int) $this->file_size;
+
+        if ($bytes <= 0) {
+            return '—';
+        }
+
+        if ($bytes < 1024) {
+            return $bytes.' B';
+        }
+
+        if ($bytes < 1024 * 1024) {
+            return rtrim(rtrim(number_format($bytes / 1024, 1), '0'), '.').' KB';
+        }
+
+        return rtrim(rtrim(number_format($bytes / (1024 * 1024), 1), '0'), '.').' MB';
+    }
 }

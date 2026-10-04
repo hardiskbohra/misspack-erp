@@ -1,13 +1,77 @@
 @extends('client_portal.layouts.app')
 
-@section('title', 'Attachments')
-@section('page-title', 'Attachments')
+@section('title', 'Documents')
+@section('page-title', 'Documents')
 
 @section('content')
-<div class="cp-page-head"><div><p class="cp-eyebrow">Documents</p><h1>Attachments</h1><p>Upload and view documents shared through the client portal.</p></div></div>
-<div class="cp-grid-2">
-    <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Upload</p><h2 style="margin-top:0;">Upload Documents</h2><form method="POST" action="{{ route('client-portal.attachments.store') }}" enctype="multipart/form-data" class="cp-form-grid">@csrf<div class="cp-field"><label>Category</label><select name="category" required>@foreach($categories as $key=>$label)<option value="{{ $key }}">{{ $label }}</option>@endforeach</select></div><div class="cp-field"><label>Related To</label><select name="related_type"><option value="general">General</option><option value="project">Project</option><option value="shipment">Shipment</option><option value="quote">Quotation</option><option value="invoice">Invoice</option><option value="kyc">KYC</option></select></div><div class="cp-field"><label>Related ID</label><input type="number" name="related_id" placeholder="Optional"></div><div class="cp-field"><label>Title</label><input name="title"></div><div class="cp-field" style="grid-column:1/-1;"><label>Files</label><input type="file" name="attachments[]" multiple required></div><div class="cp-field" style="grid-column:1/-1;"><label>Notes</label><textarea name="notes"></textarea></div><button class="cp-btn cp-btn-primary" style="grid-column:1/-1;">Upload</button></form></div>
-    <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Filter</p><h2 style="margin-top:0;">Document Filter</h2><form method="GET" class="cp-form-grid"><div class="cp-field"><label>Category</label><select name="category"><option value="all">All Categories</option>@foreach($categories as $key=>$label)<option value="{{ $key }}" {{ $category===$key?'selected':'' }}>{{ $label }}</option>@endforeach</select></div><div style="display:flex;align-items:end;gap:10px;"><button class="cp-btn cp-btn-primary">Filter</button><a class="cp-btn cp-btn-light" href="{{ route('client-portal.attachments.index') }}">Reset</a></div></form></div>
+<div class="cp-page-head">
+    <div><p class="cp-eyebrow">Secure document room</p><h1>Documents</h1><p>Upload files for your MissPack team. Downloads are private and checked against your client account.</p></div>
+    <span class="cp-status-pill cp-status-resolved"><i class="fa-solid fa-lock"></i>&nbsp; Private storage</span>
 </div>
-<div class="cp-card" style="padding:20px;margin-top:18px;"><p class="cp-eyebrow">Files</p><h2 style="margin-top:0;">Uploaded Documents</h2><div class="cp-grid-2">@forelse($documents as $document)<div class="cp-file">@if($document->isImage())<img src="{{ $document->fileUrl() }}">@else<div class="cp-file-icon">▤</div>@endif<div><strong>{{ $document->title ?: $document->original_name }}</strong><div class="cp-muted">{{ $document->categoryLabel() }} · {{ strtoupper($document->extension) }} · {{ $document->created_at->format('d M Y') }}</div><div style="display:flex;gap:8px;margin-top:8px;"><a class="cp-btn cp-btn-soft cp-btn-sm" href="{{ $document->fileUrl() }}" target="_blank">Open</a><form method="POST" action="{{ route('client-portal.attachments.destroy', $document) }}" onsubmit="return confirm('Delete this document?')">@csrf @method('DELETE')<button class="cp-btn cp-btn-light cp-btn-sm" type="submit">Delete</button></form></div></div></div>@empty<div class="cp-empty" style="grid-column:1/-1;">No documents uploaded yet.</div>@endforelse</div><div class="cp-pagination">{{ $documents->links() }}</div></div>
+
+<div class="cp-support-grid cp-document-upload-grid">
+    <section class="cp-card cp-support-compose">
+        <div class="cp-section-heading"><div><p class="cp-eyebrow">Share a file</p><h2>Upload documents</h2></div><span class="cp-support-icon"><i class="fa-solid fa-cloud-arrow-up"></i></span></div>
+        <form method="POST" action="{{ route('client-portal.attachments.store') }}" enctype="multipart/form-data" class="cp-form-grid">
+            @csrf
+            <div class="master-field"><label class="master-label" for="document-category">Category</label><select class="master-select" id="document-category" name="category" required>@foreach($categories as $key => $label)<option value="{{ $key }}" @selected(old('category') === $key)>{{ $label }}</option>@endforeach</select></div>
+            <div class="master-field"><label class="master-label" for="document-title">Title <span class="cp-muted">(optional)</span></label><input class="master-input" id="document-title" name="title" value="{{ old('title') }}" maxlength="255" placeholder="Name these files"></div>
+            <div class="master-field"><label class="master-label" for="document-files">Files</label><input class="master-input" id="document-files" type="file" name="attachments[]" multiple required accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.zip"><small class="cp-field-help">Up to 10 files, 20 MB each. Images, PDF, Office, CSV, TXT and ZIP.</small></div>
+            <div class="master-field"><label class="master-label" for="document-notes">Note for MissPack <span class="cp-muted">(optional)</span></label><textarea class="master-textarea" id="document-notes" name="notes" rows="3" maxlength="4000" placeholder="Add context about these files.">{{ old('notes') }}</textarea></div>
+            <div class="cp-support-form-foot"><span class="cp-muted"><i class="fa-solid fa-shield-halved"></i> Files are not exposed as public links.</span><button class="master-btn master-btn-primary" type="submit">Upload securely</button></div>
+        </form>
+    </section>
+
+    <section class="cp-card cp-support-list">
+        <div class="cp-section-heading"><div><p class="cp-eyebrow">Your shared files</p><h2>Document library</h2></div><span class="cp-support-count">{{ $documents->total() }}</span></div>
+        <form method="GET" action="{{ route('client-portal.attachments.index') }}" class="core-filter-toolbar cp-list-filter-toolbar">
+            <x-filter-trigger drawer="portalDocumentFiltersDrawer" :count="($category !== 'all' ? 1 : 0)" />
+            <x-drawer id="portalDocumentFiltersDrawer" title="Filter documents" eyebrow="Document filters"
+                subtitle="Narrow the shared file library by category." size="medium">
+                <section class="core-drawer-section">
+                    <h3 class="core-drawer-section-title">Document category</h3>
+                    <div class="core-drawer-fields">
+                        <div class="master-field">
+                            <label class="master-label" for="portalDocumentFilterCategory">Category</label>
+                            <select class="master-select" id="portalDocumentFilterCategory" name="category" aria-label="Filter documents by category">
+                                <option value="all">All categories</option>
+                                @foreach($categories as $key => $label)
+                                    <option value="{{ $key }}" @selected($category === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </section>
+                <x-slot:footer>
+                    <a class="master-btn master-btn-soft" href="{{ route('client-portal.attachments.index') }}">Reset</a>
+                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+                </x-slot:footer>
+            </x-drawer>
+        </form>
+        <div class="cp-document-grid">
+            @forelse($documents as $document)
+                <article class="cp-document-card">
+                    @if($document->isImage())
+                        <a class="cp-document-preview" href="{{ route('client-portal.attachments.file', $document) }}" target="_blank" rel="noopener"><img src="{{ route('client-portal.attachments.file', $document) }}" alt="{{ $document->title ?: $document->original_name }}"></a>
+                    @else
+                        <span class="cp-file-icon"><i class="fa-solid fa-file-lines"></i></span>
+                    @endif
+                    <div class="cp-document-copy">
+                        <strong>{{ $document->title ?: $document->original_name }}</strong>
+                        <small>{{ $document->categoryLabel() }} · {{ strtoupper($document->extension) }} · {{ $document->created_at->format('d M Y') }}</small>
+                    </div>
+                    <div class="cp-document-actions">
+                        <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('client-portal.attachments.file', $document) }}?download=1"><i class="fa-solid fa-download"></i> Download</a>
+                        @if((int) $document->client_portal_user_id === (int) $clientPortalUser->id)
+                            <form method="POST" action="{{ route('client-portal.attachments.destroy', $document) }}" data-confirm="Delete this document from the portal?">@csrf @method('DELETE')<button class="master-btn master-btn-light master-btn-sm" type="submit">Delete</button></form>
+                        @endif
+                    </div>
+                </article>
+            @empty
+                <div class="cp-empty cp-empty-spacious"><i class="fa-regular fa-folder-open"></i><strong>No documents found</strong><span>Uploaded files and documents shared by MissPack will appear here.</span></div>
+            @endforelse
+        </div>
+        <div class="cp-pagination">{{ $documents->links() }}</div>
+    </section>
+</div>
 @endsection

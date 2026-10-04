@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ClientPortalInvoice extends Model
@@ -14,7 +13,7 @@ class ClientPortalInvoice extends Model
     protected $fillable = [
         'client_id', 'project_id', 'invoice_number', 'title', 'invoice_date', 'due_date',
         'currency', 'subtotal', 'tax_amount', 'total_amount', 'paid_amount', 'status',
-        'is_public_to_client', 'file_path', 'original_name', 'notes', 'created_by',
+        'is_public_to_client', 'file_path', 'storage_disk', 'original_name', 'notes', 'created_by',
     ];
 
     protected $casts = [
@@ -40,11 +39,6 @@ class ClientPortalInvoice extends Model
     public function creator()
     {
         return $this->belongsTo(\App\Models\User::class, 'created_by');
-    }
-
-    public function fileUrl(): ?string
-    {
-        return $this->file_path ? Storage::disk('public')->url($this->file_path) : null;
     }
 
     public function outstandingAmount(): float

@@ -1,0 +1,197 @@
+/* ==========================================================================
+   LEAD-QUOTES-INDEX — Lead Quotes module
+   --------------------------------------------------------------------------
+   LEAD QUOTES LIST — resources/views/lead_quotes/index.blade.php
+   Quote list (cq-*). Kept separate from the form/detail files: shared .cq-*
+   class names carry view-specific values, so each page loads only its own
+   stylesheet.
+   ========================================================================== */
+
+:root {
+    --cq-primary:#4f83f1;
+    --cq-dark: var(--mc-text);
+    --cq-muted:#687386;
+    --cq-border: var(--mc-border);
+    --cq-bg: var(--mc-soft);
+    --cq-red:#ef4770;
+    --cq-shadow:0 14px 35px rgba(25,42,70,.08);
+}
+
+.cq-page,
+.cq-page * {
+    box-sizing:border-box;
+}
+
+.cq-page {
+    background:var(--cq-bg);
+    min-height:calc(100vh - 70px);
+    padding:28px;
+    color:var(--cq-dark);
+    font-size:14px;
+}
+
+.cq-card {
+    background: var(--mc-card);
+    border:1px solid var(--cq-border);
+    border-radius:18px;
+    box-shadow:var(--cq-shadow);
+}
+
+.cq-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    padding:22px 28px;
+    margin-bottom:24px;
+}
+
+.cq-header h1 {
+    margin:0;
+    font-size:22px;
+    font-weight:700;
+}
+
+.cq-toolbar {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+    padding:14px 18px;
+}
+
+.cq-actions {
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+}
+
+.cq-filter-row {
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    padding:0 24px 22px;
+    margin-top:-8px;
+}
+
+.cq-filter-row .master-select {
+    flex:1 1 180px;
+}
+
+.cq-alert {
+    padding:14px 16px;
+    margin-bottom:18px;
+    border-radius:14px;
+    font-weight:700;
+}
+
+.cq-alert-success {
+    color:#047857;
+    background:#e8fff7;
+    border:1px solid #a7f3d0;
+}
+
+.cq-table-wrap {
+    overflow-x:auto;
+}
+
+.cq-table {
+    width:100%;
+    min-width:1080px;
+    border-collapse:collapse;
+}
+
+.cq-table th,
+.cq-table td {
+    padding:18px 20px;
+    border-bottom:1px solid var(--cq-border);
+    text-align:left;
+    vertical-align:middle;
+}
+
+.cq-table th {
+    font-size:12px;
+    color: var(--mc-text-3);
+    text-transform:uppercase;
+    letter-spacing:.07em;
+    background: var(--mc-card-soft);
+}
+
+.cq-id {
+    font-weight:700;
+    color:var(--cq-primary);
+}
+
+.cq-sub {
+    display:block;
+    color:var(--cq-muted);
+    font-size:12px;
+    margin-top:3px;
+    font-weight:600;
+}
+
+.cq-badge {
+    display:inline-flex;
+    border-radius:999px;
+    padding:6px 11px;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+}
+
+.status-draft {
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+}
+
+.status-sent {
+    background:#eaf1ff;
+    color:#3f7cf4;
+}
+
+.status-accepted {
+    background:#e8fff7;
+    color:#0e9f6e;
+}
+
+.status-rejected {
+    background:#ffeaf0;
+    color:#e11d48;
+}
+
+.status-revised {
+    background:#ece7ff;
+    color:#7c3aed;
+}
+
+.status-expired {
+    background:#fff4e5;
+    color:#d97706;
+}
+
+.cq-row-actions {
+    display:flex;
+    gap:8px;
+}
+
+.cq-pagination {
+    padding:18px 20px;
+}
+
+@media(max-width:767px) {
+    .cq-page {
+        padding:14px;
+    }
+
+    .cq-header {
+        align-items:flex-start;
+        flex-direction:column;
+    }
+
+    .cq-toolbar > .master-search,
+    .cq-actions,
+    .cq-actions .master-btn {
+        width:100%;
+        max-width:100%;
+    }
+}

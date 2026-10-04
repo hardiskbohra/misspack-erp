@@ -1,0 +1,210 @@
+/* ==========================================================================
+   LEAD-QUOTES-SHOW — Lead Quotes module
+   --------------------------------------------------------------------------
+   LEAD QUOTES DETAIL — resources/views/lead_quotes/show.blade.php
+   Quote detail (cq-*). Kept separate from the form/list files: shared .cq-*
+   class names carry view-specific values, so each page loads only its own
+   stylesheet.
+   ========================================================================== */
+
+:root {
+    --cq-dark: var(--mc-text);
+    --cq-muted:#687386;
+    --cq-border: var(--mc-border);
+    --cq-bg: var(--mc-soft);
+    --cq-shadow:0 14px 35px rgba(25,42,70,.08);
+}
+
+.cq-show,
+.cq-show * {
+    box-sizing:border-box;
+}
+
+.cq-show {
+    background:var(--cq-bg);
+    min-height:calc(100vh - 70px);
+    padding:28px;
+    color:var(--cq-dark);
+    font-size:14px;
+}
+
+.cq-card {
+    background: var(--mc-card);
+    border:1px solid var(--cq-border);
+    border-radius:18px;
+    box-shadow:var(--cq-shadow);
+}
+
+.cq-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    padding:22px 28px;
+    margin-bottom:24px;
+}
+
+.cq-header h1 {
+    margin:0;
+    font-size:22px;
+    font-weight:700;
+}
+
+.cq-header p {
+    margin:5px 0 0;
+    color:var(--cq-muted);
+    font-weight:700;
+}
+
+.cq-actions {
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.cq-grid {
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:22px;
+}
+
+.cq-section {
+    padding:24px;
+    margin-bottom:22px;
+}
+
+.cq-section h3 {
+    margin:0 0 18px;
+    font-size:16px;
+    font-weight:700;
+}
+
+.cq-info-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px;
+}
+
+.cq-info {
+    padding:14px;
+    border:1px solid var(--cq-border);
+    border-radius:14px;
+    background: var(--mc-card-soft);
+}
+
+.cq-info span {
+    display:block;
+    color: var(--mc-text-3);
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-bottom:5px;
+}
+
+.cq-info strong {
+    font-size:14px;
+    overflow-wrap:anywhere;
+}
+
+.cq-alert {
+    padding:14px 16px;
+    margin-bottom:18px;
+    border-radius:14px;
+    font-weight:700;
+    color:#047857;
+    background:#e8fff7;
+    border:1px solid #a7f3d0;
+}
+
+.cq-table {
+    width:100%;
+    min-width:850px;
+    border-collapse:collapse;
+}
+
+.cq-table th,
+.cq-table td {
+    padding:12px;
+    border-bottom:1px solid var(--cq-border);
+    text-align:left;
+}
+
+.cq-table th {
+    font-size:11px;
+    color: var(--mc-text-3);
+    text-transform:uppercase;
+}
+
+.cq-wrap {
+    overflow-x:auto;
+}
+
+.total {
+    font-size:32px;
+    font-weight:700;
+    color:#059669;
+}
+
+.cq-badge {
+    display:inline-flex;
+    border-radius:999px;
+    padding:7px 12px;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+}
+
+.status-draft {
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+}
+
+.status-sent {
+    background:#eaf1ff;
+    color:#3f7cf4;
+}
+
+.status-accepted {
+    background:#e8fff7;
+    color:#0e9f6e;
+}
+
+.status-rejected {
+    background:#ffeaf0;
+    color:#e11d48;
+}
+
+.status-revised {
+    background:#ece7ff;
+    color:#7c3aed;
+}
+
+.status-expired {
+    background:#fff4e5;
+    color:#d97706;
+}
+
+@media(max-width:1000px) {
+
+}
+
+@media(max-width:700px) {
+    .cq-show {
+        padding:14px;
+    }
+
+    .cq-header {
+        align-items:flex-start;
+        flex-direction:column;
+    }
+
+    .cq-actions,
+    .cq-actions .master-btn {
+        width:100%;
+    }
+
+    .cq-info-grid {
+        grid-template-columns:1fr;
+    }
+}

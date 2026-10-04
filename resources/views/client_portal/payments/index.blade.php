@@ -4,99 +4,95 @@
 @section('page-title', 'Payments')
 
 @section('content')
-<style>
-    .pd-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        border-radius: 12px;
-        padding: 7px 15px;
-        background: #f1f4f9;
-        color: #5f6b7a;
-        font-size: 12px;
-        font-weight: 600
-    }
-
-    .pd-status-in_progress,
-    .pd-mode-cash,
-    .pd-status-pending {
-        background: #fff7e6;
-        color: #b54708
-    }
-
-    .pd-status-completed,
-    .pd-status-booked,
-    .pd-health-green,
-    .pd-mode-neft,
-    .pd-mode-upi,
-    .pd-mode-rtgs,
-    .pd-public {
-        background: #c1f2bb !important;
-        color: green !important
-    }
-</style>
-<div class="master-header" style="padding:5px;margin-bottom:15px;">
+<div class="cp-page-head">
     <div>
+        <p class="cp-eyebrow">Finance · published receipts</p>
         <h1>Payments</h1>
-        <p style="font-size:16px;font-weight:500;">Public payment entries linked with your projects.</p>
+        <p>Confirmed receipts shared by MissPack. Only explicitly published client payments appear here.</p>
     </div>
+    <a class="master-btn master-btn-soft" href="{{ route('client-portal.statement.index') }}"><i class="fa-solid fa-file-invoice"></i> View statement</a>
 </div>
-<div class="cp-grid-4" style="margin-bottom:15px;">
-    <div class="cp-card cp-stat">
-        <span>Paid</span>
-        <strong>₹{{ number_format($totals['inward'], 2) }}</strong>
+
+@if($currencyTotals->isNotEmpty())
+    <div class="cp-grid-4 cp-payment-totals">
+        @foreach($currencyTotals as $total)
+            <div class="cp-card cp-stat">
+                <span>{{ $total->currency }} · {{ $total->payment_count }} {{ \Illuminate\Support\Str::plural('receipt', (int) $total->payment_count) }}</span>
+                <strong>{{ \App\Helpers\CommonHelper::amount($total->total_amount, $total->currency) }}</strong>
+            </div>
+        @endforeach
     </div>
-    <div class="cp-card cp-stat">
-        <span>Invoiced</span>
-        <strong>₹{{ number_format($totals['invoiced'], 2) }}</strong>
-    </div>
-    <div class="cp-card cp-stat">
-        <span>Pending Invoiced Amount</span>
-        <strong>₹{{ number_format($totals['inward']-$totals['invoiced'], 2) }}</strong>
-    </div>
+@endif
+
+<div class="cp-card cp-filter-card">
+    <form method="GET" action="{{ route('client-portal.payments.index') }}">
+        <div class="core-filter-toolbar">
+            <div class="master-field">
+                <label class="master-label" for="payment-search">Search</label>
+                <input class="master-input" id="payment-search" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Project or reference">
+            </div>
+            <x-filter-trigger drawer="portalPaymentFiltersDrawer" label="Payment filters"
+                :count="(filled($filters['search'] ?? null) ? 1 : 0) + (filled($filters['currency'] ?? null) ? 1 : 0) + (filled($filters['date_from'] ?? null) || filled($filters['date_to'] ?? null) ? 1 : 0)" />
+        </div>
+        <x-drawer id="portalPaymentFiltersDrawer" title="Filter receipts" eyebrow="Payment filters"
+            subtitle="Narrow published receipts by currency or payment date." size="medium">
+            <section class="core-drawer-section">
+                <h3 class="core-drawer-section-title">Receipt details</h3>
+                <div class="core-drawer-fields">
+                    <div class="master-field">
+                        <label class="master-label" for="payment-currency">Currency</label>
+                        <input class="master-input" id="payment-currency" name="currency" value="{{ $filters['currency'] ?? '' }}" maxlength="10" placeholder="All currencies">
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label" for="payment-from">From</label>
+                        <input class="master-input" id="payment-from" type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}">
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label" for="payment-to">To</label>
+                        <input class="master-input" id="payment-to" type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}">
+                    </div>
+                </div>
+            </section>
+            <x-slot:footer>
+                <a class="master-btn master-btn-soft" href="{{ route('client-portal.payments.index') }}">Reset</a>
+                <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
+            </x-slot:footer>
+        </x-drawer>
+    </form>
 </div>
-<div class="cp-card">
-    <div class="cp-table-wrap">
-        <table class="cp-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Particular</th>
-                    <th>Project</th>
-                    <th>Mode</th>
-                    <th>Amount</th>
-                    <th>Accounting Status</th>
-                </tr>
-            </thead>
+
+<div class="cp-card cp-payment-table-card">
+    <div class="cp-section-heading">
+        <div>
+            <p class="cp-eyebrow">Receipt history</p>
+            <h2>Shared with your team</h2>
+        </div>
+        <span class="cp-muted">{{ $payments->total() }} receipts</span>
+    </div>
+    <div class="cp-table-wrap ui-mobile-cards">
+        <table class="cp-table" data-table-settings data-table-key="portal-payments">
+            <thead><tr><th>Date</th><th class="ui-mobile-secondary">Project</th><th>Reference</th><th class="ui-mobile-secondary">Method</th><th class="cp-number">Amount</th></tr></thead>
             <tbody>
                 @forelse($payments as $payment)
                     <tr>
-                        <td>{{ optional($payment->entry_date)->format('d M y') ?: '-' }}</td>
-                        <td>
-                            <span>{{ $payment->particular ?: '-' }}</span><br>
-                            <strong style="font-size:11px;color:grey;">{{ $payment->bank_reference_number ?? '-' }}</strong>
+                        <td data-label="Date">{{ optional($payment->payment_date)->format('d M Y') ?: '—' }}</td>
+                        <td data-label="Project" class="ui-mobile-secondary">
+                            @if($payment->project)
+                                <a class="cp-record-link" href="{{ route('client-portal.projects.show', $payment->project) }}">{{ $payment->project->name }}</a>
+                            @else
+                                —
+                            @endif
                         </td>
-                        <td>
-                            <span>{{ $payment->project ? $payment->project->name : '-' }}</span><br>
-                            <strong style="font-size:11px;color:grey;">Invoice: {{ $payment->invoice_bill_number ?? '-' }}</strong>
-                        </td>
-                        <td>
-                            <span class="pd-chip pd-mode-{{ $payment->payment_mode }}" style="font-size:11px;">{{ $payment->payment_mode ? strtoupper($payment->payment_mode) : '-' }}</span></td>
-                        <td>{{ $payment->currency }} {{ number_format((float)$payment->credit_amount, 2) }}</td>
-                        <td>
-                            <span class="pd-chip pd-status-{{ $payment->accounting_status }}">{{ $payment->statusLabel() }}</span>
-                        </td>
+                        <td data-label="Reference">{{ $payment->reference_number ?: 'Client receipt' }}</td>
+                        <td data-label="Method" class="ui-mobile-secondary">{{ $payment->payment_mode ? strtoupper($payment->payment_mode) : '—' }}</td>
+                        <td data-label="Amount" class="cp-number"><strong>{{ \App\Helpers\CommonHelper::amount($payment->amount, $payment->currency) }}</strong></td>
                     </tr>
                 @empty
-                    <tr>
-                        <td colspan="7">
-                            <div class="cp-empty">No public payment entries.</div>
-                        </td>
-                    </tr>
+                    <tr><td colspan="5"><div class="cp-empty">No confirmed receipts match these filters yet.</div></td></tr>
                 @endforelse
             </tbody>
         </table>
     </div>
-    <x-pagination :items="$payments" />
+    <div class="cp-pagination">{{ $payments->links() }}</div>
 </div>
 @endsection

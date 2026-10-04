@@ -1,0 +1,183 @@
+/* ========================================================================
+   CASHFLOW REPORT — content rules for the shared A4 landscape document shell
+   ======================================================================== */
+
+@page {
+    size: A4 landscape;
+    margin: 12mm;
+}
+
+body {
+    color: var(--pdf-body, #344054);
+    font-family: var(--pdf-font-family, "Inter", "Segoe UI", Roboto, Arial, sans-serif);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+    border-bottom: 2px solid var(--pdf-border, #dfe5ef);
+}
+
+.brand {
+    color: var(--pdf-ink, #1b2a41);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.subtitle {
+    margin: 4px 0 10px;
+    color: var(--pdf-muted, #667085);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border: 1px solid var(--pdf-border, #dfe5ef);
+    border-radius: 999px;
+    background: var(--pdf-surface-soft, #f7f9fc);
+    color: var(--pdf-ink, #1b2a41);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.stat {
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--pdf-border, #dfe5ef);
+    border-radius: 9px;
+    background: var(--pdf-surface-soft, #f7f9fc);
+}
+
+.stat span {
+    display: block;
+    color: var(--pdf-muted, #667085);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-transform: uppercase;
+}
+
+.stat strong {
+    display: block;
+    margin-top: 5px;
+    color: var(--pdf-ink, #1b2a41);
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.section {
+    margin-top: 18px;
+}
+
+.section h3 {
+    margin: 0 0 10px;
+    color: var(--pdf-ink, #1b2a41);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+    padding: 8px;
+    border-bottom: 1px solid var(--pdf-border-soft, #e9edf4);
+    color: var(--pdf-body, #344054);
+    text-align: left;
+    vertical-align: top;
+}
+
+th {
+    background: var(--pdf-surface-soft, #f7f9fc);
+    color: var(--pdf-muted, #667085);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+td {
+    font-size: 12.5px;
+    line-height: 1.4;
+}
+
+.credit {
+    color: #047857;
+    font-weight: 600;
+}
+
+.debit {
+    color: #b42318;
+    font-weight: 600;
+}
+
+.small {
+    color: var(--pdf-muted, #667085);
+    font-size: 11px;
+}
+
+.notice {
+    padding: 10px 12px;
+    margin: 12px 0;
+    border: 1px solid #f3d29a;
+    border-radius: 9px;
+    background: #fff9eb;
+    color: #80510a;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+@media print {
+    .section,
+    .grid,
+    .stat {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    table tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    td {
+        font-size: 9pt;
+    }
+}
+
+@media screen and (max-width: 900px) {
+    .pdf-sheet--landscape .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pdf-sheet--landscape {
+        overflow-x: auto;
+    }
+}

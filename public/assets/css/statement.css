@@ -1,0 +1,849 @@
+/* ==========================================================================
+   STATEMENT.CSS — the statement of account, on screen and on paper
+   --------------------------------------------------------------------------
+   One document, four readers: the app's preview, the printer/PDF, the public
+   link and the client portal. It therefore owns *only* the document's own
+   classes (`.stmt-*`) and reads the app's tokens with a fallback, so the
+   standalone page — which has no layout stylesheet — still renders correctly.
+
+   Two rules this file exists to keep:
+
+     1. The document looks like a document, not a card of the app. Fixed column
+        widths for money, tabular figures, ruled rows, everything a printed
+        statement is expected to have.
+     2. Money is right-aligned and monospaced in figures, so two amounts of
+        different lengths can be compared down the page. `font-variant-numeric:
+        tabular-nums` is what makes that work in Inter.
+
+   Theme: the app sets `data-theme` on <html>, so the dark rules key off that.
+   A standalone statement reader follows its system preference. The centered
+   unavailable-link notice stays light so its status and account details remain
+   clear regardless of the reader's device theme.
+   ========================================================================== */
+
+.stmt {
+    --stmt-bg: var(--pdf-paper, var(--mc-card, #ffffff));
+    --stmt-text: var(--pdf-ink, var(--mc-text, #1a2540));
+    --stmt-text-2: var(--pdf-body, var(--mc-text-2, #536079));
+    --stmt-text-3: var(--pdf-muted, var(--mc-text-3, #667085));
+    --stmt-border: var(--pdf-border, var(--mc-border, #dfe5ef));
+    --stmt-soft: var(--pdf-surface-soft, #f7f9fc);
+    --stmt-accent: var(--accent, #4f8ef7);
+    --stmt-rule: rgba(26, 37, 64, 0.08);
+    --stmt-positive: #047857;
+    --stmt-warn: #b45309;
+
+    color: var(--stmt-text);
+    font-size: 13.5px;
+    line-height: 1.55;
+}
+
+/* --------------------------------------------------------------- letterhead */
+
+.stmt-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px 32px;
+    justify-content: space-between;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--stmt-border);
+}
+
+.stmt-brand-name {
+    margin: 0 0 4px;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.stmt-brand-line,
+.stmt-block-line {
+    margin: 0;
+    color: var(--stmt-text-2);
+    font-size: 12.5px;
+}
+
+.stmt-heading {
+    text-align: right;
+    margin-left: auto;
+}
+
+.stmt-eyebrow {
+    margin: 0;
+    color: var(--stmt-text-3);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.stmt-party-name {
+    margin: 2px 0 2px;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.stmt-period {
+    margin: 0 0 8px;
+    color: var(--stmt-text-2);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.stmt-stamp {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+    align-items: center;
+    margin: 0;
+}
+
+.stmt-stamp-time {
+    color: var(--stmt-text-3);
+    font-size: 11.5px;
+}
+
+.stmt-chip {
+    display: inline-block;
+    padding: 2px 9px;
+    border: 1px solid var(--stmt-border);
+    border-radius: 999px;
+    background: var(--stmt-soft);
+    color: var(--stmt-text-2);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+/* On a list row the chip is a currency label, not a badge: quieter, tighter. */
+.stmt-chip--row {
+    padding: 1px 8px;
+    font-size: 11px;
+}
+
+/* ------------------------------------------------------- party + summary */
+
+.stmt-meta {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 18px 28px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--stmt-rule);
+}
+
+.stmt-block-title {
+    margin: 0 0 6px;
+    color: var(--stmt-text-3);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.stmt-block-strong {
+    margin: 0 0 2px;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.stmt-block-contact {
+    margin-top: 4px;
+}
+
+.stmt-block--summary {
+    justify-self: end;
+    width: 100%;
+}
+
+.stmt-figures {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid var(--stmt-border);
+    border-radius: 10px;
+    background: var(--stmt-border);
+}
+
+.stmt-figure {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 12px;
+    background: var(--stmt-bg);
+}
+
+.stmt-figure span {
+    color: var(--stmt-text-3);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.stmt-figure span em {
+    font-style: normal;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.stmt-figure strong {
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.stmt-figure--closing {
+    background: var(--stmt-soft);
+}
+
+.stmt-figure--closing strong {
+    color: var(--stmt-positive);
+}
+
+/* ------------------------------------------------------------- the table */
+
+.stmt-table {
+    width: 100%;
+    margin: 16px 0 0;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+
+.stmt-table th {
+    padding: 8px 10px;
+    border-bottom: 1.5px solid var(--stmt-text);
+    color: var(--stmt-text-3);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.stmt-table th em {
+    font-style: normal;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.stmt-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--stmt-rule);
+    vertical-align: top;
+}
+
+.stmt-table tbody tr:hover td {
+    background: var(--mc-hover, rgba(79, 142, 247, 0.04));
+}
+
+.stmt-num {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.stmt-num-strong {
+    font-weight: 700;
+}
+
+.stmt-cell-note {
+    display: block;
+    color: var(--stmt-text-3);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.stmt-opening-label,
+.stmt-total-label {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.stmt-row-opening td {
+    background: var(--stmt-soft);
+}
+
+.stmt-table tfoot td {
+    padding: 9px 10px;
+    border-top: 1.5px solid var(--stmt-text);
+    border-bottom: 0;
+    font-weight: 700;
+}
+
+.stmt-empty {
+    padding: 22px 10px;
+    color: var(--stmt-text-3);
+    text-align: center;
+}
+
+.stmt-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border: 1px solid var(--stmt-border);
+    border-radius: 999px;
+    background: var(--stmt-soft);
+    color: var(--stmt-text-2);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- ageing */
+
+.stmt-ageing {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--stmt-rule);
+}
+
+.stmt-section-title {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.stmt-buckets {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.stmt-bucket {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 12px;
+    border: 1px solid var(--stmt-border);
+    border-radius: 10px;
+    background: var(--stmt-bg);
+}
+
+.stmt-bucket.is-live {
+    border-color: rgba(180, 83, 9, 0.35);
+    background: rgba(245, 158, 11, 0.07);
+}
+
+.stmt-bucket-label {
+    color: var(--stmt-text-3);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.stmt-bucket-value {
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.stmt-bucket.is-live .stmt-bucket-value {
+    color: var(--stmt-warn);
+}
+
+.stmt-bucket-count {
+    color: var(--stmt-text-3);
+    font-size: 11.5px;
+}
+
+.stmt-table--compact {
+    margin-top: 12px;
+    font-size: 12.5px;
+}
+
+.stmt-note {
+    margin: 10px 0 0;
+    color: var(--stmt-text-3);
+    font-size: 11.5px;
+}
+
+.stmt-message {
+    margin-top: 18px;
+    padding: 12px 14px;
+    border: 1px solid var(--stmt-border);
+    border-left: 3px solid var(--stmt-accent);
+    border-radius: 8px;
+    background: var(--stmt-soft);
+}
+
+.stmt-message p:last-child {
+    margin: 0;
+}
+
+/* ----------------------------------------------------------------- foot */
+
+.stmt-foot {
+    margin-top: 18px;
+    padding-top: 12px;
+    border-top: 1px solid var(--stmt-rule);
+}
+
+.stmt-foot .stmt-note:first-child {
+    margin-top: 0;
+}
+
+.stmt-note--wide {
+    color: var(--stmt-text-2);
+}
+
+/* ------------------------------------------------- the app's own toolbar */
+
+.cashflow-statement .stmt-sheet {
+    padding: 22px 24px;
+}
+
+.stmt-toolbar {
+    /* no margin of its own: the shell owns the rhythm between two cards */
+    padding: 0 0 14px;
+}
+
+.stmt-toolbar .master-filter-row {
+    padding: 16px 16px 4px;
+}
+
+.stmt-toolbar-note {
+    margin: 8px 16px 12px;
+    color: var(--mc-text-3, #7d8aa0);
+    font-size: 12px;
+}
+
+.stmt-toggle {
+    display: inline-flex;
+    gap: 7px;
+    align-items: center;
+    padding: 9px 12px;
+    border: 1px solid var(--mc-border, #e2e8f0);
+    border-radius: 9px;
+    color: var(--mc-text-2, #5a6478);
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.stmt-toggle input {
+    accent-color: var(--accent, #4f8ef7);
+}
+
+.stmt-ready {
+    padding: 16px 18px;
+    margin-bottom: 16px;
+}
+
+.stmt-ready-title {
+    margin: 0 0 2px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.stmt-ready-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: 12px;
+}
+
+.stmt-ready-row .master-input {
+    flex: 1 1 320px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+}
+
+.stmt-ready-hint {
+    color: var(--mc-text-3, #7d8aa0);
+    font-size: 12px;
+}
+
+.stmt-log-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    align-items: baseline;
+}
+
+.stmt-log-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.stmt-log-note {
+    margin: 0;
+}
+
+.stmt-log-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.stmt-modal-note {
+    margin: 14px 0 0;
+    color: var(--mc-text-3, #7d8aa0);
+    font-size: 12px;
+}
+
+/* --------------------------------------------- the standalone readers */
+
+body.stmt-standalone {
+    margin: 0;
+    padding: 24px 16px 48px;
+    background: #f1f5fb;
+    font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+}
+
+body.stmt-standalone .stmt {
+    max-width: 1000px;
+    padding: 32px 36px;
+    margin: 0 auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 18px 50px rgba(26, 37, 64, 0.09);
+}
+
+.stmt-public-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1000px;
+    margin: 0 auto 14px;
+}
+
+.stmt-public-brand {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a2540;
+}
+
+.stmt-public-sub {
+    margin: 0;
+    color: #5a6478;
+    font-size: 12.5px;
+}
+
+.stmt-public-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.stmt-public-btn {
+    padding: 9px 16px;
+    border: 0;
+    border-radius: 9px;
+    background: #4f8ef7;
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.stmt-public-btn:hover {
+    background: #3b7de8;
+}
+
+.stmt-public-expiry {
+    color: #5a6478;
+    font-size: 12px;
+}
+
+.stmt-public-foot {
+    max-width: var(--pdf-sheet-width, 210mm);
+    margin: 14px auto 0;
+    color: #5a6478;
+    font-size: 12px;
+    text-align: center;
+}
+
+.stmt-notice {
+    max-width: var(--pdf-sheet-width, 210mm);
+    padding: 12px 16px;
+    margin: 0 auto 14px;
+    border-radius: 10px;
+    background: #fff7e6;
+    color: #b45309;
+    font-size: 13px;
+}
+
+.stmt-print-foot {
+    max-width: var(--pdf-sheet-width, 210mm);
+    margin: 14px auto 0;
+    color: #7d8aa0;
+    font-size: 11.5px;
+    text-align: center;
+}
+
+/* the portal shows the same document inside a portal card */
+.stmt-portal-shell {
+    padding: 20px 22px;
+}
+
+/* ------------------------------------------------------- expired links */
+
+body.stmt-centered {
+    display: flex;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    color-scheme: light;
+    color: var(--pdf-body, var(--mc-text-2, #344054));
+    background: var(--pdf-page-bg, var(--mc-soft, #eef2f8));
+}
+
+.stmt-expired {
+    max-width: 560px;
+    padding: 34px 36px;
+    border: 1px solid var(--pdf-border, var(--mc-border, #dfe5ef));
+    border-radius: 18px;
+    background: var(--pdf-paper, var(--mc-card, #fff));
+    box-shadow: var(--pdf-shadow, var(--mc-shadow, 0 16px 40px rgba(25, 42, 70, .10)));
+    text-align: center;
+}
+
+.stmt-expired-mark {
+    margin: 0 0 8px;
+    font-size: 30px;
+}
+
+.stmt-expired-title {
+    margin: 0 0 8px;
+    color: var(--pdf-ink, var(--mc-text, #1b2a41));
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.stmt-expired-text {
+    margin: 0;
+    color: var(--pdf-body, var(--mc-text-2, #344054));
+    font-size: 13.5px;
+}
+
+.stmt-expired-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 14px;
+    margin: 18px 0 0;
+    border: 1px solid var(--pdf-border, var(--mc-border, #dfe5ef));
+    border-radius: 10px;
+    background: var(--pdf-surface-soft, var(--mc-card-soft, #f7f9fc));
+    text-align: left;
+}
+
+.stmt-expired-facts dt {
+    color: var(--pdf-muted, var(--mc-text-3, #667085));
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.stmt-expired-facts dd {
+    margin: 2px 0 0;
+    color: var(--pdf-ink, var(--mc-text, #1b2a41));
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.stmt-expired-contact {
+    margin: 18px 0 0;
+    color: var(--pdf-muted, var(--mc-text-3, #667085));
+    font-size: 12px;
+}
+
+/* --------------------------------------------------------- dark theme */
+
+:root[data-theme="dark"] .stmt {
+    --stmt-text: #e8edf6;
+    --stmt-text-2: #aab6c9;
+    --stmt-text-3: #7f8ba1;
+    --stmt-border: #2a3854;
+    --stmt-soft: #1d2c4d;
+    --stmt-bg: #1a2540;
+    --stmt-rule: rgba(255, 255, 255, 0.06);
+    --mc-hover: rgba(255, 255, 255, 0.05);
+    --stmt-positive: #6ee7b7;
+    --stmt-warn: #fcd34d;
+}
+
+/* A standalone statement reader has no theme attribute: their system decides.
+   Keep this preference off the centered unavailable-link page, which remains a
+   light status card regardless of the reader's device theme. */
+@media (prefers-color-scheme: dark) {
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) {
+        background: #0f1628;
+    }
+
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt {
+        border-color: #2a3854;
+        background: #1a2540;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+        --stmt-text: #e8edf6;
+        --stmt-text-2: #aab6c9;
+        --stmt-text-3: #7f8ba1;
+        --stmt-border: #2a3854;
+        --stmt-soft: #1d2c4d;
+        --stmt-bg: #1a2540;
+        --stmt-rule: rgba(255, 255, 255, 0.06);
+        --mc-hover: rgba(255, 255, 255, 0.05);
+        --stmt-positive: #6ee7b7;
+        --stmt-warn: #fcd34d;
+    }
+
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt-public-brand {
+        color: #e8edf6;
+    }
+
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt-public-sub,
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt-public-expiry,
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt-public-foot {
+        color: #aab6c9;
+    }
+}
+
+/* A PDF fallback is a paper document, never a dark-theme screen. Keep the
+   standalone preview light too, even when the device itself prefers dark. */
+body.stmt-standalone.stmt-print {
+    color-scheme: light;
+    color: #1a2540;
+    background: #f1f5fb;
+}
+
+body.stmt-standalone.stmt-print .stmt {
+    --stmt-bg: var(--pdf-paper, #fff);
+    --stmt-text: var(--pdf-ink, #1b2a41);
+    --stmt-text-2: var(--pdf-body, #344054);
+    --stmt-text-3: var(--pdf-muted, #667085);
+    --stmt-border: var(--pdf-border, #dfe5ef);
+    --stmt-soft: var(--pdf-surface-soft, #f7f9fc);
+    --stmt-rule: var(--pdf-border-soft, #e9edf4);
+    --stmt-positive: #047857;
+    --stmt-warn: #a15c00;
+    background: #fff;
+    color: #1a2540;
+}
+
+/* ---------------------------------------------------------- responsive */
+
+@media screen and (max-width: 900px) {
+
+    .stmt-meta,
+    .stmt-figures,
+    .stmt-buckets {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .stmt-heading {
+        text-align: left;
+    }
+
+    .stmt-stamp {
+        justify-content: flex-start;
+    }
+}
+
+@media screen and (max-width: 640px) {
+    body.stmt-standalone {
+        padding: 12px 10px 32px;
+    }
+
+    body.stmt-standalone .stmt {
+        padding: 20px 16px;
+    }
+
+    .stmt-figures,
+    .stmt-buckets {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cashflow-statement .stmt-sheet {
+        padding: 16px 14px;
+    }
+}
+
+/* --------------------------------------------------------------- print */
+
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 12mm;
+    }
+
+    body.stmt-standalone {
+        padding: 0;
+        color-scheme: light;
+        color: #1a2540;
+        background: #fff;
+        font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    body.stmt-standalone .stmt {
+        --stmt-bg: var(--pdf-paper, #fff);
+        --stmt-text: var(--pdf-ink, #1b2a41);
+        --stmt-text-2: var(--pdf-body, #344054);
+        --stmt-text-3: var(--pdf-muted, #667085);
+        --stmt-border: var(--pdf-border, #dfe5ef);
+        --stmt-soft: var(--pdf-surface-soft, #f7f9fc);
+        --stmt-rule: var(--pdf-border-soft, #e9edf4);
+        --stmt-positive: #047857;
+        --stmt-warn: #a15c00;
+        max-width: none;
+        padding: 0;
+        border: 0;
+        background: #fff;
+        box-shadow: none;
+        color: #1a2540;
+    }
+
+    .no-print,
+    .stmt-toolbar,
+    .stmt-ready,
+    .stmt-public-bar,
+    .stmt-public-foot,
+    .stmt-print-foot {
+        display: none !important;
+    }
+
+    .stmt {
+        font-size: 10pt;
+        line-height: 1.4;
+    }
+
+    .stmt-head {
+        padding-bottom: 10px;
+    }
+
+    .stmt-ageing,
+    .stmt-message {
+        break-inside: avoid;
+    }
+
+    .stmt-table tr {
+        break-inside: avoid;
+    }
+
+    .stmt-table thead {
+        display: table-header-group;
+    }
+
+    /* A statement split across two sheets should still say whose it is. */
+    .stmt-party-name {
+        font-size: 17px;
+    }
+}

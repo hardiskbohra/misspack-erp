@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipment Detail — Wave 1 & 2 — MissPack ERP (preview)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/core.css?v=6abf109f">
+    <link rel="stylesheet" href="/assets/css/app-layout.css?v=6abf6a51">
+    <link rel="stylesheet" href="/assets/css/master-index.css?v=6abf04ad">
+    <link rel="stylesheet" href="/assets/css/master-show.css?v=6abf13a6">
+    <link rel="stylesheet" href="/assets/css/master-form.css?v=6abf0f9a">
+    <link rel="stylesheet" href="/assets/css/master-flat.css?v=6abf2c03">
+    <link rel="stylesheet" href="/assets/vendor/select2/css/select2.min.css?v=6abf7b0c">
+    <link rel="stylesheet" href="/assets/css/select2-theme.css?v=6abf2522">
+    <link rel="stylesheet" href="/assets/css/master-alert.css?v=6abf21b9">
+    <link rel="stylesheet" href="/assets/css/shipments.css?v=6abf53ed">
+    <link rel="stylesheet" href="/assets/css/responsive.css?v=6abf2e74">
+    <style>
+        a[href^="/theme"], form.theme-form { pointer-events: none; }
+        #previewThemeBtn { display: inline-flex; align-items: center; gap: 8px; }
+    </style>
+<body>
+    <aside class="sidebar" id="sidebar" aria-label="Main sidebar">
+        <div class="sidebar-logo">
+            <div>
+                <div class="sidebar-logo-text sidebar-text">MissPack</div>
+                <div class="sidebar-logo-sub sidebar-text">Packed Perfect</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">Dashboards</div>
+            <a href="#" class="sidebar-item"><i class="fas fa-th-large"></i><span class="sidebar-text">Dashboard</span></a>
+            <div class="sidebar-section">Management</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-layer-group"></i><span class="sidebar-text">Tasks</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-box-open"></i><span class="sidebar-text">Products</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-truck"></i><span class="sidebar-text">Shipments</span></a>
+            <div class="sidebar-section">Sales</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-users"></i><span class="sidebar-text">Clients</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-briefcase"></i><span class="sidebar-text">Projects</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-file-invoice-dollar"></i><span class="sidebar-text">Invoices</span></a>
+            <div class="sidebar-section">Purchase</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-user-gear"></i><span class="sidebar-text">Vendors</span></a>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-money-bill"></i><span class="sidebar-text">Vendor Quotes</span></a>
+            <div class="sidebar-section">Accounts</div>
+            <a href="#" class="sidebar-item"><i class="fa-solid fa-scale-balanced"></i><span class="sidebar-text">Cashflow</span></a>
+            <a href="#" class="sidebar-item"><i class="fas fa-users-cog"></i><span class="sidebar-text">Users</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="user-avatar-sm">H</div>
+                <div class="sidebar-user-info sidebar-text">
+                    <div class="user-name">Hardik Bohra</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+                <button type="button" class="sidebar-logout-btn" title="Logout" aria-label="Logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="main-wrap" id="mainWrap">
+        <header class="topbar">
+            <button type="button" class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="topbar-title">Shipment Detail — Wave 1 & 2</span>
+            <div class="topbar-spacer"></div>
+            <div class="topbar-actions">
+                <button type="button" class="topbar-btn desktop-only" aria-label="Search"><i class="fas fa-search"></i></button>
+                <button type="button" id="previewThemeBtn" class="theme-toggle desktop-only">
+                    <i class="fas fa-moon"></i> <span>Dark</span>
+                </button>
+                <button type="button" class="topbar-btn desktop-only" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="topbar-badge">3</span>
+                </button>
+                <div class="topbar-user-btn">
+                    <div class="user-avatar-sm topbar-avatar">H</div>
+                    <span class="topbar-user-name desktop-only">Hardik Bohra</span>
+                </div>
+            </div>
+        </header>
+
+                <main class="page-content">
+    <div class="ship">
+        <div class="master-card master-card--flat" style="margin-bottom:14px;">
+            <div class="master-section-head">
+                <div>
+                    <p class="master-eyebrow">SHP-000031 &middot; Export &middot; Air freight</p>
+                    <h1 style="font-size:19px;margin:0;">Green pigment samples from China</h1>
+                    <p class="master-sub" style="max-width:840px;line-height:1.7;">
+                        Wave 1 + Wave 2 on one screen: ETA &amp; delay reason, tracking stepper, document vault with the
+                        required-document checklist, freight cost breakdown with INR conversion, payment mirror into the
+                        cashflow ledger, linked sales invoice margin &mdash; and the notify-client tick-box.
+                    </p>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+                <a class="master-btn master-btn-soft master-btn-sm" href="shipment-print.html" style="text-decoration:none;">🖨 Packing list</a>
+                <a class="master-btn master-btn-soft master-btn-sm" href="shipment-challan.html" style="text-decoration:none;">🖨 Delivery challan</a>
+                <a class="master-btn master-btn-soft master-btn-sm" href="shipment-summary.html" style="text-decoration:none;">🖨 Shipment summary</a>
+                <a class="master-btn master-btn-soft master-btn-sm" href="shipping-mark.html" style="text-decoration:none;">🏷 Shipping mark + QR</a>
+                <a class="master-btn master-btn-soft master-btn-sm" href="shipment-stickers.html" style="text-decoration:none;">🏷 Whole open board</a>
+                <a class="master-btn master-btn-primary master-btn-sm" href="shipment-track.html" style="text-decoration:none;">🔗 Public tracking page</a>
+            </div>
+        </div>
+
+        <div class="master-grid">
+            <div>
+                <div class="master-card master-card--flat master-section">
+                    <h3 class="master-section-title">Shipment Overview</h3>
+                    <div class="master-info-grid">
+                        <div class="master-info"><span>Status</span><strong class="master-badge status-in-transit">In Transit</strong></div>
+                        <div class="master-info"><span>Label</span><strong class="master-badge label-2">Urgent</strong></div>
+                        <div class="master-info"><span>Pickup Date</span><strong>28 Sep 2026</strong></div>
+                        <div class="master-info"><span>Drop Date</span><strong>02 Oct 2026</strong></div>
+                        <div class="master-info">
+                            <span>Expected Delivery</span>
+                            <strong class="ship-eta ship-eta-due_soon">02 Oct 2026</strong>
+                            <span>Due in 1 day</span>
+                        </div>
+                        <div class="master-info">
+                            <span>Paperwork</span>
+                            <strong><span class="master-badge status-delayed">4/6</span></strong>
+                            <span>Missing: Shipping bill, Bill of entry</span>
+                        </div>
+                        <div class="master-info">
+                            <span>Delay Reason</span>
+                            <strong>Customs query on HS code</strong>
+                        </div>
+                        <div class="master-info"><span>Logistic Partner</span><strong>DHL Express</strong></div>
+                        <div class="master-info"><span>Bill of Entry</span><strong>—</strong></div>
+                        <div class="master-info">
+                            <span>E-way Bill</span>
+                            <strong><span class="master-badge status-delivered">EWB-4417-2298-0031</span></strong>
+                            <span class="ship-eway ship-eway-expiring">04 Oct 2026 · Valid 3 more days</span>
+                        </div>
+                        <div class="master-info"><span>Client Name</span><strong>ACME Corp</strong></div>
+                        <div class="master-info"><span>Project</span><strong>Cotton Tote Program</strong><span>PRJ-1042</span></div>
+                        <div class="master-info"><span>Cost</span><strong>USD 1,850.00</strong><span>4 package(s) · print 4 sticker(s)</span></div>
+                        <div class="master-info"><span>Cost Borne By</span><strong>Client</strong></div>
+                    </div>
+                </div>
+
+                <div class="master-card master-card--flat master-section">
+                    <h3 class="master-section-title">Tracking Progress</h3>
+                    <ol class="ship-track">
+                        <li class="is-done">Booked</li>
+                        <li class="is-done">Picked up</li>
+                        <li class="is-current">In transit</li>
+                        <li>Customs clearance</li>
+                        <li>Out for delivery</li>
+                        <li>Delivered</li>
+                    </ol>
+                    <p class="master-sub" style="margin-top:8px;">The same six steps are shown to the client on the portal and on the public tracking page.</p>
+                </div>
+
+                <div class="master-card master-card--flat master-section">
+                    <div class="master-section-head">
+                        <div>
+                            <h3 class="master-section-title" style="margin:0;">Freight Cost Breakdown</h3>
+                            <p class="master-sub">Each head converts to INR at its own rate — that total is the landed freight for this consignment.</p>
+                        </div>
+                        <button type="button" class="master-btn master-btn-primary master-btn-sm" id="openCostModal">+ Add Cost Head</button>
+                    </div>
+
+                    <div class="ship-cost-totals">
+                        <div><span>As billed (USD)</span><strong>USD 1,850.00</strong></div>
+                        <div><span>Total (INR)</span><strong>₹ 2,13,175.00</strong></div>
+                        <div><span>Paid so far</span><strong>₹ 1,99,775.00</strong></div>
+                        <div><span>Cost per kg</span><strong>₹ 1,496.32 / kg</strong></div>
+                    </div>
+
+                    <div class="master-table-wrap">
+                        <table class="master-table ship-cost-table">
+                            <thead>
+                                <tr>
+                                    <th>Cost head</th>
+                                    <th style="text-align:right;">Amount</th>
+                                    <th style="text-align:right;">In INR</th>
+                                    <th>Payment</th>
+                                    <th>Cashflow</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <strong>Freight</strong>
+                                        <span class="master-sub">DHL Express</span>
+                                    </td>
+                                    <td class="num" style="text-align:right;font-weight:600;">USD 1,850.00</td>
+                                    <td class="num" style="text-align:right;">≈ ₹ 1,54,475.00</td>
+                                    <td>Rate 83.50 · Paid via HDFC Current<br><span class="master-badge status-delivered">Paid</span></td>
+                                    <td><a class="ship-chip" href="#" style="padding:2px 8px;font-size:10px;">↔ IN-000482</a></td>
+                                    <td>
+                                        <div class="master-row-actions">
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm edit-cost" data-cost="{&quot;id&quot;: 7, &quot;cost_head&quot;: &quot;freight&quot;, &quot;label&quot;: &quot;Freight&quot;, &quot;amount&quot;: &quot;1850.00&quot;, &quot;currency&quot;: &quot;USD&quot;, &quot;vendor_id&quot;: 3, &quot;payment_mode&quot;: &quot;neft&quot;}">
+                                                <i class="fas fa-pen"></i>
+                                            </button>
+                                            <button type="button" class="master-btn master-btn-danger master-btn-sm"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>Insurance</strong>
+                                        <span class="master-sub">New India Assurance</span>
+                                    </td>
+                                    <td class="num" style="text-align:right;font-weight:600;">INR 4,200.00</td>
+                                    <td class="num" style="text-align:right;">₹ 4,200.00</td>
+                                    <td>Paid via Petty Cash<br><span class="master-badge status-delivered">Paid</span></td>
+                                    <td><a class="ship-chip" href="#" style="padding:2px 8px;font-size:10px;">↔ IN-000482</a></td>
+                                    <td>
+                                        <div class="master-row-actions">
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm edit-cost" data-cost="{&quot;id&quot;: 7, &quot;cost_head&quot;: &quot;insurance&quot;, &quot;label&quot;: &quot;Insurance&quot;, &quot;amount&quot;: &quot;4200.00&quot;, &quot;currency&quot;: &quot;INR&quot;, &quot;vendor_id&quot;: 3, &quot;payment_mode&quot;: &quot;other&quot;}">
+                                                <i class="fas fa-pen"></i>
+                                            </button>
+                                            <button type="button" class="master-btn master-btn-danger master-btn-sm"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>Customs duty</strong>
+                                        <span class="master-sub">Customs (Mundra)</span>
+                                    </td>
+                                    <td class="num" style="text-align:right;font-weight:600;">INR 38,600.00</td>
+                                    <td class="num" style="text-align:right;">₹ 38,600.00</td>
+                                    <td>Paid via HDFC Current<br><span class="master-badge status-delivered">Paid</span></td>
+                                    <td><a class="ship-chip" href="#" style="padding:2px 8px;font-size:10px;">↔ IN-000482</a></td>
+                                    <td>
+                                        <div class="master-row-actions">
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm edit-cost" data-cost="{&quot;id&quot;: 7, &quot;cost_head&quot;: &quot;customs_duty&quot;, &quot;label&quot;: &quot;Customs duty&quot;, &quot;amount&quot;: &quot;38600.00&quot;, &quot;currency&quot;: &quot;INR&quot;, &quot;vendor_id&quot;: 3, &quot;payment_mode&quot;: &quot;neft&quot;}">
+                                                <i class="fas fa-pen"></i>
+                                            </button>
+                                            <button type="button" class="master-btn master-btn-danger master-btn-sm"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>CHA</strong>
+                                        <span class="master-sub">Shah Clearing Agency</span>
+                                    </td>
+                                    <td class="num" style="text-align:right;font-weight:600;">INR 12,500.00</td>
+                                    <td class="num" style="text-align:right;">₹12,500</td>
+                                    <td>Unpaid<br><span class="master-badge status-pending">Unpaid</span></td>
+                                    <td></td>
+                                    <td>
+                                        <div class="master-row-actions">
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm edit-cost" data-cost="{&quot;id&quot;: 7, &quot;cost_head&quot;: &quot;cha&quot;, &quot;label&quot;: &quot;CHA&quot;, &quot;amount&quot;: &quot;12500.00&quot;, &quot;currency&quot;: &quot;INR&quot;, &quot;vendor_id&quot;: 3, &quot;payment_mode&quot;: &quot;other&quot;}">
+                                                <i class="fas fa-pen"></i>
+                                            </button>
+                                            <button type="button" class="master-btn master-btn-danger master-btn-sm"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>Last-mile</strong>
+                                        <span class="master-sub">BlueDart</span>
+                                    </td>
+                                    <td class="num" style="text-align:right;font-weight:600;">INR 3,400.00</td>
+                                    <td class="num" style="text-align:right;">₹ 3,400.00</td>
+                                    <td>Paid via HDFC Current<br><span class="master-badge status-delivered">Paid</span></td>
+                                    <td><a class="ship-chip" href="#" style="padding:2px 8px;font-size:10px;">↔ IN-000482</a></td>
+                                    <td>
+                                        <div class="master-row-actions">
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm edit-cost" data-cost="{&quot;id&quot;: 7, &quot;cost_head&quot;: &quot;last-mile&quot;, &quot;label&quot;: &quot;Last-mile&quot;, &quot;amount&quot;: &quot;3400.00&quot;, &quot;currency&quot;: &quot;INR&quot;, &quot;vendor_id&quot;: 3, &quot;payment_mode&quot;: &quot;neft&quot;}">
+                                                <i class="fas fa-pen"></i>
+                                            </button>
+                                            <button type="button" class="master-btn master-btn-danger master-btn-sm"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="ship-margin">
+                        <div><span>Linked invoice</span><strong>INV-2026-0148 · ACME Corp</strong></div>
+                        <div><span>Invoice value</span><strong>₹ 3,84,000.00</strong></div>
+                        <div><span>Margin after freight</span><strong class="is-positive">₹ 1,70,825.00 (44.5%)</strong></div>
+                    </div>
+                </div>
+
+                <div class="master-card master-card--flat master-section">
+                    <div class="master-section-head">
+                        <div>
+                            <h3 class="master-section-title" style="margin:0;">Document Vault</h3>
+                            <p class="master-sub">Export consignments require packing list, commercial invoice and shipping bill. A delivered shipment with missing paperwork raises a warning toast.</p>
+                        </div>
+                    </div>
+
+                    <div class="ship-doc-list">
+                        <div class="ship-doc is-done">
+                            <span class="ship-doc-mark">✓</span>
+                            <div class="ship-doc-body">
+                                <strong>BL / AWB</strong>
+                                <span class="master-sub">DHL-8841220.pdf</span>
+                            </div>
+                            <a class="master-btn master-btn-soft master-btn-sm" href="#">Open</a>
+                        </div>
+                        <div class="ship-doc is-done">
+                            <span class="ship-doc-mark">✓</span>
+                            <div class="ship-doc-body">
+                                <strong>Commercial invoice</strong>
+                                <span class="master-sub">INV-2026-0148.pdf</span>
+                            </div>
+                            <a class="master-btn master-btn-soft master-btn-sm" href="#">Open</a>
+                        </div>
+                        <div class="ship-doc is-done">
+                            <span class="ship-doc-mark">✓</span>
+                            <div class="ship-doc-body">
+                                <strong>Packing list</strong>
+                                <span class="master-sub">PL-0031.pdf</span>
+                            </div>
+                            <a class="master-btn master-btn-soft master-btn-sm" href="#">Open</a>
+                        </div>
+                        <div class="ship-doc is-missing">
+                            <span class="ship-doc-mark">✗</span>
+                            <div class="ship-doc-body">
+                                <strong>Shipping bill</strong>
+                                <span class="master-sub">Required — not uploaded yet</span>
+                            </div>
+                            
+                        </div>
+                        <div class="ship-doc is-missing">
+                            <span class="ship-doc-mark">✗</span>
+                            <div class="ship-doc-body">
+                                <strong>Bill of entry</strong>
+                                <span class="master-sub">Required — not uploaded yet</span>
+                            </div>
+                            
+                        </div>
+                        <div class="ship-doc is-done">
+                            <span class="ship-doc-mark">✓</span>
+                            <div class="ship-doc-body">
+                                <strong>Insurance certificate</strong>
+                                <span class="master-sub">Marine-cover.pdf</span>
+                            </div>
+                            <a class="master-btn master-btn-soft master-btn-sm" href="#">Open</a>
+                        </div>
+                    </div>
+
+                    <form class="ship-doc-upload" onsubmit="return false;">
+                        <select class="master-select" name="document_type">
+                            <option>Packing list</option>
+                            <option>Commercial invoice</option>
+                            <option>Shipping bill</option>
+                            <option>Bill of entry</option>
+                            <option>Certificate of origin</option>
+                            <option>Insurance certificate</option>
+                            <option>E-way bill</option>
+                        </select>
+                        <input type="file">
+                        <label class="master-check"><input type="checkbox" checked> Visible to client</label>
+                        <button class="master-btn master-btn-primary master-btn-sm">Upload document</button>
+                    </form>
+                </div>
+            </div>
+
+            <div>
+                <div class="master-card master-card--flat master-section">
+                    <h3 class="master-section-title">Add Tracking Update</h3>
+                    <div class="master-detail-grid">
+                        <div class="master-field"><label class="master-label">Status</label>
+                            <select class="master-select"><option>In transit</option><option>Customs clearance</option><option>Out for delivery</option><option>Delivered</option></select>
+                        </div>
+                        <div class="master-field"><label class="master-label">Event Time</label><input class="master-input" type="datetime-local" value="2026-10-01T09:30"></div>
+                        <div class="master-field"><label class="master-label">Location</label><input class="master-input" value="Mundra Port"></div>
+                        <div class="master-field"><label class="master-label">Remarks</label><input class="master-input" value="Cleared after HS code clarification"></div>
+                        <div class="master-field"><label class="master-label">Notify Client</label>
+                            <label class="master-check"><input type="checkbox" checked> Send a portal notification for this update</label>
+                        </div>
+                    </div>
+                    <div class="master-form-footer">
+                        <button type="button" class="master-btn master-btn-primary master-btn-sm">Save update</button>
+                    </div>
+                    <p class="master-sub" style="margin-top:10px;">Blocked by rule: a shipment cannot be marked <em>Delivered</em> without a drop date, and cannot leave <em>Custom hold</em> without a remark.</p>
+                </div>
+
+                <div class="master-card master-card--flat master-section">
+                    <h3 class="master-section-title">Public Readonly Link</h3>
+                    <div class="ship-doc-upload" style="display:block;">
+                        <input class="master-input" readonly value="http://localhost:8090/track-shipment/8f3Kq2Lm7Vt…" style="width:100%;">
+                        <div style="display:flex;gap:8px;margin-top:10px;">
+                            <a class="master-btn master-btn-soft master-btn-sm" href="shipment-track.html" style="text-decoration:none;">Open public page</a>
+                            <button type="button" class="master-btn master-btn-soft master-btn-sm">Copy</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="master-card master-card--flat master-section">
+                    <h3 class="master-section-title">Latest Updates</h3>
+                    <div class="master-list">
+                        <div class="master-list-item"><strong>In transit</strong><span class="master-sub">01 Oct 2026, 09:30 · Mundra Port</span></div>
+                        <div class="master-list-item"><strong>Picked up</strong><span class="master-sub">28 Sep 2026, 18:05 · Ahmedabad</span></div>
+                        <div class="master-list-item"><strong>Booked</strong><span class="master-sub">27 Sep 2026, 12:40 · Ahmedabad</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    /* Static preview: nothing posts anywhere, but the real shipments.js modal
+       wiring (open / edit / head & currency field toggles) runs unchanged. */
+    document.addEventListener('DOMContentLoaded', function () {
+        /* Static preview: keep the form from navigating away, but leave the real
+           action / _method values in place so the wiring can be verified. */
+        var form = document.getElementById('costForm');
+        if (form) { form.addEventListener('submit', function (e) { e.preventDefault(); }); }
+    });
+</script>
+
+<div class="master-modal" id="costModal" aria-hidden="true" data-update-url="/shipments/costs/COST_ID">
+    <div class="master-modal-card" style="max-width:640px;">
+        <div class="master-modal-head">
+            <div>
+                <h3 id="costModalTitle">Add Cost Head</h3>
+                <p class="master-sub">Freight, insurance, duty, CHA, last-mile or demurrage — each head keeps its own currency and converts to INR.</p>
+            </div>
+            <button type="button" class="master-modal-close" data-close-modal="costModal">&times;</button>
+        </div>
+
+        <form id="costForm" method="POST" action="/shipments/31/costs">
+            <input type="hidden" name="_method" id="costMethod" value="POST">
+
+            <div class="master-detail-grid">
+                <div class="master-field">
+                    <label class="master-label">Cost Head</label>
+                    <select class="master-select" name="cost_head" id="costHead">
+                        <option value="freight">Freight</option>
+                        <option value="insurance">Insurance</option>
+                        <option value="customs_duty">Customs duty</option>
+                        <option value="cha">CHA / clearing</option>
+                        <option value="last_mile">Last-mile</option>
+                        <option value="demurrage">Demurrage</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="master-field" id="costLabelField" hidden>
+                    <label class="master-label">Label</label>
+                    <input class="master-input" name="label" maxlength="255" placeholder="What was this for?">
+                </div>
+
+                <div class="master-field"><label class="master-label">Amount</label><input class="master-input" name="amount" value="4200.00"></div>
+
+                <div class="master-field">
+                    <label class="master-label">Currency</label>
+                    <select class="master-select" name="currency" id="costCurrency">
+                        <option value="INR">INR</option>
+                        <option value="USD">USD</option>
+                        <option value="RMB">RMB</option>
+                    </select>
+                </div>
+
+                <div class="master-field" id="costRateField" hidden>
+                    <label class="master-label">Exchange Rate (to INR)</label>
+                    <input class="master-input" name="exchange_rate" id="costRate" value="83.50">
+                </div>
+
+                <div class="master-field"><label class="master-label">Vendor</label>
+                    <select class="master-select" name="vendor_id"><option value="">Not linked</option><option value="3">DHL Express</option><option value="6">Shah Clearing Agency</option></select>
+                </div>
+
+                <div class="master-field"><label class="master-label">Incurred On</label><input class="master-input" type="date" name="incurred_on" value="2026-10-01"></div>
+                <div class="master-field"><label class="master-label">Document No.</label><input class="master-input" name="document_number" placeholder="Invoice / bill reference"></div>
+
+                <div class="master-field">
+                    <label class="master-label">Paid From Account</label>
+                    <select class="master-select" name="paid_account_id">
+                        <option value="">Not paid yet</option>
+                        <option value="1">HDFC Current</option>
+                        <option value="2">Petty Cash</option>
+                    </select>
+                    <span class="master-sub">Choosing an account creates the matching INR cashflow row automatically.</span>
+                </div>
+
+                <div class="master-field"><label class="master-label">Payment Mode</label>
+                    <select class="master-select" name="payment_mode"><option value="">—</option><option value="neft">NEFT</option><option value="rtgs">RTGS</option><option value="cash">Cash</option><option value="cheque">Cheque</option><option value="other">Other</option></select>
+                </div>
+
+                <div class="master-field"><label class="master-label">Paid On</label><input class="master-input" type="date" name="paid_on" value="2026-10-01"></div>
+                <div class="master-field" style="grid-column:1/-1;"><label class="master-label">Notes</label><input class="master-input" name="notes"></div>
+            </div>
+
+            <div class="master-form-footer">
+                <button type="button" class="master-btn master-btn-light" data-close-modal="costModal">Cancel</button>
+                <button type="submit" class="master-btn master-btn-primary" id="costSubmit">Add Cost</button>
+            </div>
+        </form>
+    </div>
+</div>
+</main>
+    </div>
+
+    <script src="/assets/vendor/jquery/jquery.min.js?v=6abe6ebd"></script>
+    <script src="/assets/vendor/select2/js/select2.min.js?v=6abe1966"></script>
+    <script src="/assets/js/master-alert.js?v=6abf15d1"></script>
+    <script src="/assets/js/master-selects.js?v=6abf2a90"></script>
+    <script src="/assets/js/app-layout.js?v=6abf23b1"></script>
+    <script src="/assets/js/shipments.js?v=6abf0688"></script>
+    <script>
+        // Static preview: client-side theme toggle (Laravel's /theme/toggle is not available here)
+        (function () {
+            var html = document.documentElement;
+            try {
+                var t = new URLSearchParams(location.search).get('theme');
+                if (t === 'dark' || t === 'light') { html.setAttribute('data-theme', t); }
+            } catch (e) {}
+            function syncBtn() {
+                var dark = html.getAttribute('data-theme') === 'dark';
+                var btn = document.getElementById('previewThemeBtn');
+                btn.innerHTML = dark ? '<i class="fas fa-sun"></i> <span>Light</span>' : '<i class="fas fa-moon"></i> <span>Dark</span>';
+            }
+            syncBtn();
+            document.getElementById('previewThemeBtn').addEventListener('click', function () {
+                var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', next);
+                try { localStorage.setItem('preview-theme', next); } catch (e) {}
+                syncBtn();
+            });
+        })();
+    </script>
+</body>
+</html>

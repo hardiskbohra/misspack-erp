@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class CashflowEntry extends Model
@@ -14,7 +15,7 @@ class CashflowEntry extends Model
     protected $fillable = [
         'entry_date', 'particular', 'invoice_bill_number', 'bank_reference_number', 'transaction_type','project_id','sales_invoice_id',
         'credit_amount', 'debit_amount', 'balance', 'currency', 'account_id', 'category_id',
-        'accounting_status', 'payment_mode', 'client_id', 'vendor_id', 'expense_head',
+        'accounting_status', 'payment_mode', 'client_id', 'vendor_id', 'employee_id', 'expense_head',
         'related_party_type', 'related_party_name', 'notes', 'created_by',
     ];
 
@@ -35,6 +36,15 @@ class CashflowEntry extends Model
         return $this->belongsTo(CashflowCategory::class, 'category_id');
     }
 
+    /**
+     * The bills and slips filed against this entry. An entry with none is
+     * what the ledger's "Missing documents" chip counts.
+     */
+    public function attachments()
+    {
+        return $this->hasMany(CashflowAttachment::class, 'cashflow_entry_id');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -43,6 +53,31 @@ class CashflowEntry extends Model
     public function client()
     {
         return $this->belongsTo(\App\Models\Client::class, 'client_id');
+    }
+
+    /**
+     * The employee this entry is about — a real link, not the name typed into
+     * the box (see the 2026_10_03_020000 migration: the old text is kept, so an
+     * entry that named somebody the users table does not know still reads).
+     */
+    public function employee()
+    {
+        return $this->belongsTo(User::class, 'employee_id');
+    }
+
+    /**
+     * Whose money this is, decided once: the linked party if there is one, else
+     * the name written on the entry, else the expense head. Every screen that
+     * prints a party prints this.
+     */
+    public function partyLabel(): string
+    {
+        return (string) ($this->client?->company_name
+            ?? $this->vendor?->vendor_name
+            ?? $this->employee?->name
+            ?? $this->related_party_name
+            ?? $this->expense_head
+            ?? '');
     }
 
     public function vendor()
@@ -60,6 +95,13 @@ class CashflowEntry extends Model
                     ->orWhere('related_party_name', 'like', "%{$search}%")
                     ->orWhere('expense_head', 'like', "%{$search}%")
                     ->orWhere('notes', 'like', "%{$search}%");
+
+                /* and the employee the entry is linked to, whose name is not on
+                   the row: searching "Ramesh" has to find the payment that was
+                   filed against him by id */
+                if (class_exists(User::class) && Schema::hasColumn('cashflow_entries', 'employee_id')) {
+                    $nested->orWhereHas('employee', fn (Builder $employee) => $employee->where('name', 'like', "%{$search}%"));
+                }
             });
         });
     }
@@ -84,6 +126,62 @@ class CashflowEntry extends Model
         return self::accountingStatusOptions()[$this->accounting_status] ?? Str::headline($this->accounting_status);
     }
 
+    /**
+     * Which way the money went, decided once.
+     *
+     * The ledger is the company's own cash book: `transaction_type` picks the
+     * column that holds the money (the form writes `credit_amount` for a credit
+     * and `debit_amount` for a debit), so a credit is money *in* and a debit is
+     * money *out*. Everything that asks "what did this entry do" asks here.
+     */
+    public function isMoneyOut(): bool
+    {
+        return $this->transaction_type !== 'credit';
+    }
+
+    /** The entries where money left the company. */
+    public function scopeMoneyOut(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q) {
+            $q->whereNull('transaction_type')->orWhere('transaction_type', 'debit');
+        });
+    }
+
+    /** The entries where money came in. */
+    public function scopeMoneyIn(Builder $query): Builder
+    {
+        return $query->where('transaction_type', 'credit');
+    }
+
+    /** How much money this entry moved, whichever column holds it. */
+    public function amountMoved(): float
+    {
+        return round((float) ($this->isMoneyOut()
+            ? $this->debit_amount
+            : $this->credit_amount), 2);
+    }
+
+    /**
+     * What this entry did for the person named on it: positive when the company
+     * paid money out to them, negative when money came back from them.
+     */
+    public function signedAmount(): float
+    {
+        return $this->isMoneyOut() ? $this->amountMoved() : -$this->amountMoved();
+    }
+
+    /**
+     * The signed amount as it reads on a page, in the entry's own currency.
+     * One place decides how the minus is drawn, so the office's record and the
+     * employee's own pages cannot print the same movement two different ways.
+     */
+    public function signedAmountLabel(): string
+    {
+        $amount = \App\Helpers\CommonHelper::amount(abs($this->signedAmount()), $this->currency ?: 'INR');
+
+        return $this->signedAmount() < 0 ? '−'.$amount : $amount;
+    }
+
     public static function transactionTypeOptions(): array
     {
         return ['credit' => 'Credit', 'debit' => 'Debit'];
@@ -98,6 +196,36 @@ class CashflowEntry extends Model
             'disputed' => 'Disputed',
             'ignored' => 'Ignored',
         ];
+    }
+
+    /**
+     * Map any module's payment-mode key onto this module's vocabulary.
+     *
+     * Every writer of cashflow entries (vendor payments, shipment costs, and
+     * whatever comes next) funnels through here, so a payment always shows how
+     * it moved instead of silently losing the mode.
+     */
+    public static function normalisePaymentMode(?string $mode): ?string
+    {
+        $mode = $mode !== null ? strtolower(trim($mode)) : '';
+
+        if ($mode === '') {
+            return null;
+        }
+
+        $aliases = [
+            'bank_transfer' => 'neft',
+            'bank' => 'neft',
+            'wire' => 'rtgs',
+            'tt' => 'rtgs',
+            'adjustment' => null, // book entry, not a bank movement
+        ];
+
+        if (array_key_exists($mode, $aliases)) {
+            return $aliases[$mode];
+        }
+
+        return array_key_exists($mode, self::paymentModeOptions()) ? $mode : 'other';
     }
 
     public static function paymentModeOptions(): array
@@ -124,6 +252,85 @@ class CashflowEntry extends Model
             'employee' => 'Employee',
             'other' => 'Other',
         ];
+    }
+
+    /**
+     * Which column holds the link for each party type.
+     *
+     * The type is a label; the link is the fact. A client's statement is built
+     * from `client_id` (`PartyStatement` reads the column, never the label), so
+     * an entry linked to a client but labelled "Other" is on the client's
+     * statement while the ledger filter for "Client" does not find it. The two
+     * have to agree, and this is where that is decided.
+     */
+    public static function partyLinkColumns(): array
+    {
+        return [
+            'client' => 'client_id',
+            'vendor' => 'vendor_id',
+            'employee' => 'employee_id',
+        ];
+    }
+
+    /**
+     * Make the label agree with the link.
+     *
+     *   - nothing linked: the chosen type stands (a cash expense, an owner
+     *     drawing, a name typed in by hand);
+     *   - the chosen type is one of the links that is set: fine, leave it;
+     *   - otherwise the link wins, first match in `partyLinkColumns()` order —
+     *     a payment to a client is a client entry even if the selector was left
+     *     on its first option.
+     */
+    public static function alignPartyType(array $data): array
+    {
+        $linked = [];
+
+        foreach (static::partyLinkColumns() as $party => $column) {
+            if (! empty($data[$column])) {
+                $linked[$party] = $column;
+            }
+        }
+
+        if ($linked === []) {
+            return $data;
+        }
+
+        $chosen = $data['related_party_type'] ?? null;
+
+        if (is_string($chosen) && array_key_exists($chosen, $linked)) {
+            return $data;
+        }
+
+        $data['related_party_type'] = array_key_first($linked);
+
+        return $data;
+    }
+
+    /**
+     * Which party type the Quick Entry dialog opens on.
+     *
+     * The selector is drawn from the office's own master list, and a `<select>`
+     * with nothing marked `selected` shows its **first** option — so the default
+     * has to be that list's first key. A name hard-coded here would put a picker
+     * on screen that the selector above it disagrees with, which is the whole
+     * failure this change is about. A type the form came back with is kept when
+     * the list still offers it: the office may have retired one between the two
+     * requests.
+     *
+     * `mixed`, because `old()` reads whatever the last request posted — an
+     * array included — and a hand-made request must not be able to name the
+     * field that is on screen.
+     */
+    public static function partyTypeFor(mixed $chosen, array $options): string
+    {
+        $keys = array_keys($options);
+
+        if (is_string($chosen) && in_array($chosen, $keys, true)) {
+            return $chosen;
+        }
+
+        return (string) ($keys[0] ?? '');
     }
 
     public static function currencyOptions(): array
