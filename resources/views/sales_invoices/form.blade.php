@@ -86,8 +86,11 @@
         @endif
 
         <form method="POST" action="{{ $isEdit ? route('sales-invoices.update', $invoice) : route('sales-invoices.store') }}"
-            enctype="multipart/form-data" class="master-form" @if (! $isEdit) data-invoice-portal-confirm @endif>
+            enctype="multipart/form-data" class="master-form" @if (! $isEdit) data-invoice-portal-confirm data-invoice-auto-gst="{{ old('_invoice_auto_gst', 'true') }}" @endif>
             @csrf
+            @unless ($isEdit)
+                <input type="hidden" name="_invoice_auto_gst" value="{{ old('_invoice_auto_gst', 'true') }}">
+            @endunless
             @if ($isEdit)
                 @method('PUT')
             @endif
@@ -280,57 +283,62 @@
                             value="{{ old('client_pan', $invoice->client_pan) }}"></div>
                 </div>
 
-                {{-- The address block is kept in its parts, not as one sentence: the
-                     printed invoice lays the parts out, and the office can correct a
-                     pincode without retyping the street. --}}
-                <div class="si-address-head">
-                    <p class="master-section-label">Billing address</p>
-                </div>
-                <div class="master-form-grid">
-                    <div class="master-field full"><label class="master-label" for="billing_address">Address
-                            line</label>
-                        <textarea class="master-textarea" rows="2" name="billing_address"
-                            id="billing_address">{{ old('billing_address', $invoice->billing_address) }}</textarea>
+                {{-- The address block is kept in its parts, with billing and shipping
+                     together in a side-by-side layout on wider screens. --}}
+                <div class="si-address-pair">
+                    <div class="si-address-block" role="group" aria-labelledby="billingAddressLabel">
+                        <div class="si-address-head">
+                            <p class="master-section-label" id="billingAddressLabel">Billing address</p>
+                        </div>
+                        <div class="master-form-grid">
+                            <div class="master-field full"><label class="master-label" for="billing_address">Address
+                                    line</label>
+                                <textarea class="master-textarea" rows="2" name="billing_address"
+                                    id="billing_address">{{ old('billing_address', $invoice->billing_address) }}</textarea>
+                            </div>
+                            <div class="master-field"><label class="master-label" for="billing_city">City</label><input
+                                    class="master-input" name="billing_city" id="billing_city"
+                                    value="{{ old('billing_city', $invoice->billing_city) }}"></div>
+                            <div class="master-field"><label class="master-label" for="billing_state">State</label><input
+                                    class="master-input" name="billing_state" id="billing_state"
+                                    value="{{ old('billing_state', $invoice->billing_state) }}"></div>
+                            <div class="master-field"><label class="master-label" for="billing_country">Country</label><input
+                                    class="master-input" name="billing_country" id="billing_country"
+                                    value="{{ old('billing_country', $invoice->billing_country) }}"></div>
+                            <div class="master-field"><label class="master-label" for="billing_pincode">Pincode</label><input
+                                    class="master-input" name="billing_pincode" id="billing_pincode"
+                                    value="{{ old('billing_pincode', $invoice->billing_pincode) }}"></div>
+                        </div>
                     </div>
-                    <div class="master-field"><label class="master-label" for="billing_city">City</label><input
-                            class="master-input" name="billing_city" id="billing_city"
-                            value="{{ old('billing_city', $invoice->billing_city) }}"></div>
-                    <div class="master-field"><label class="master-label" for="billing_state">State</label><input
-                            class="master-input" name="billing_state" id="billing_state"
-                            value="{{ old('billing_state', $invoice->billing_state) }}"></div>
-                    <div class="master-field"><label class="master-label" for="billing_country">Country</label><input
-                            class="master-input" name="billing_country" id="billing_country"
-                            value="{{ old('billing_country', $invoice->billing_country) }}"></div>
-                    <div class="master-field"><label class="master-label" for="billing_pincode">Pincode</label><input
-                            class="master-input" name="billing_pincode" id="billing_pincode"
-                            value="{{ old('billing_pincode', $invoice->billing_pincode) }}"></div>
-                </div>
 
-                <div class="si-address-head">
-                    <p class="master-section-label">Shipping address</p>
-                    <button type="button" class="master-btn master-btn-soft" data-copy-billing="1"><i
-                            class="fas fa-copy" aria-hidden="true"></i> Same as billing</button>
-                </div>
-                <div class="master-form-grid">
-                    <div class="master-field full"><label class="master-label" for="shipping_address">Address
-                            line</label>
-                        <textarea class="master-textarea" rows="2" name="shipping_address"
-                            id="shipping_address">{{ old('shipping_address', $invoice->shipping_address) }}</textarea>
-                    </div>
-                    <div class="master-field"><label class="master-label" for="shipping_city">City</label><input
-                            class="master-input" name="shipping_city" id="shipping_city"
-                            value="{{ old('shipping_city', $invoice->shipping_city) }}"></div>
-                    <div class="master-field"><label class="master-label" for="shipping_state">State</label><input
-                            class="master-input" name="shipping_state" id="shipping_state"
-                            value="{{ old('shipping_state', $invoice->shipping_state) }}"></div>
-                    <div class="master-field"><label class="master-label" for="shipping_country">Country</label><input
-                            class="master-input" name="shipping_country" id="shipping_country"
-                            value="{{ old('shipping_country', $invoice->shipping_country) }}"></div>
-                    <div class="master-field"><label class="master-label" for="shipping_pincode">Pincode</label><input
-                            class="master-input" name="shipping_pincode" id="shipping_pincode"
-                            value="{{ old('shipping_pincode', $invoice->shipping_pincode) }}"></div>
-                    <div class="master-field full">
-                        <p class="master-help">Left empty, the invoice is dispatched to the billing address.</p>
+                    <div class="si-address-block" role="group" aria-labelledby="shippingAddressLabel">
+                        <div class="si-address-head">
+                            <p class="master-section-label" id="shippingAddressLabel">Shipping address</p>
+                            <button type="button" class="master-btn master-btn-soft" data-copy-billing="1"><i
+                                    class="fas fa-copy" aria-hidden="true"></i> Same as billing</button>
+                        </div>
+                        <div class="master-form-grid">
+                            <div class="master-field full"><label class="master-label" for="shipping_address">Address
+                                    line</label>
+                                <textarea class="master-textarea" rows="2" name="shipping_address"
+                                    id="shipping_address">{{ old('shipping_address', $invoice->shipping_address) }}</textarea>
+                            </div>
+                            <div class="master-field"><label class="master-label" for="shipping_city">City</label><input
+                                    class="master-input" name="shipping_city" id="shipping_city"
+                                    value="{{ old('shipping_city', $invoice->shipping_city) }}"></div>
+                            <div class="master-field"><label class="master-label" for="shipping_state">State</label><input
+                                    class="master-input" name="shipping_state" id="shipping_state"
+                                    value="{{ old('shipping_state', $invoice->shipping_state) }}"></div>
+                            <div class="master-field"><label class="master-label" for="shipping_country">Country</label><input
+                                    class="master-input" name="shipping_country" id="shipping_country"
+                                    value="{{ old('shipping_country', $invoice->shipping_country) }}"></div>
+                            <div class="master-field"><label class="master-label" for="shipping_pincode">Pincode</label><input
+                                    class="master-input" name="shipping_pincode" id="shipping_pincode"
+                                    value="{{ old('shipping_pincode', $invoice->shipping_pincode) }}"></div>
+                            <div class="master-field full">
+                                <p class="master-help">Left empty, the invoice is dispatched to the billing address.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

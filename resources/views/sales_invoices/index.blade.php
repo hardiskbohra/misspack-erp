@@ -87,14 +87,6 @@
                 <span class="tooltip-text">The Balance column, added up: what each standing document still owes, drafts included — the tax invoice a conversion creates starts as a draft with the advance already on it. Only a cancelled document is left out.</span>
             </div>
         </div>
-        <div class="master-stat master-stat--flat {{ $stats['overdue'] > 0 ? 'red' : 'purple' }} tooltip-container">
-            <span class="icon">!</span>
-            <div>
-                <p class="master-stat-title">Overdue (filtered)</p>
-                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['overdue']) }}</p>
-                <span class="tooltip-text">The part of that balance whose due date has passed, on documents that stand — a proforma that became a tax invoice is not late, and is not in this figure. This is the money to chase.</span>
-            </div>
-        </div>
         <div class="master-stat master-stat--flat purple tooltip-container">
             <span class="icon">✎</span>
             <div>

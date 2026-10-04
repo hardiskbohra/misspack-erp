@@ -389,6 +389,100 @@
             }
 
             var snapshotFields = readJson(clientSelect.dataset.snapshotFields) || [];
+            var gstStateCodes = {
+                jammukashmir: '01', jammuandkashmir: '01', jandk: '01', jk: '01',
+                himachalpradesh: '02', hp: '02', punjab: '03', pb: '03', chandigarh: '04', ch: '04',
+                uttarakhand: '05', uttaranchal: '05', uk: '05', haryana: '06', hr: '06',
+                delhi: '07', nctofdelhi: '07', dl: '07', rajasthan: '08', rj: '08',
+                uttarpradesh: '09', up: '09', bihar: '10', br: '10', sikkim: '11', sk: '11',
+                arunachalpradesh: '12', ar: '12', nagaland: '13', nl: '13',
+                manipur: '14', mn: '14', mizoram: '15', mz: '15', tripura: '16', tr: '16',
+                meghalaya: '17', ml: '17', assam: '18', as: '18',
+                westbengal: '19', wb: '19', jharkhand: '20', jh: '20',
+                odisha: '21', orissa: '21', od: '21', or: '21',
+                chhattisgarh: '22', cg: '22', madhyapradesh: '23', mp: '23',
+                gujarat: '24', gujrat: '24', gj: '24', guj: '24',
+                damananddiu: '25', dd: '25', dadraandnagarhaveli: '26', dn: '26',
+                dadraandnagarhavelianddamananddiu: '26', maharashtra: '27', mh: '27',
+                andhrapradesh: '37', ap: '37', karnataka: '29', ka: '29', goa: '30', ga: '30',
+                lakshadweep: '31', ld: '31', kerala: '32', kl: '32',
+                tamilnadu: '33', tn: '33', puducherry: '34', pondicherry: '34', py: '34',
+                andamanandnicobarislands: '35', andamanandnicobar: '35', an: '35',
+                telangana: '36', ts: '36', ladakh: '38', la: '38'
+            };
+            var gstStateNames = Object.keys(gstStateCodes).sort(function (a, b) {
+                return b.length - a.length;
+            });
+
+            function stateCodeFromName(value) {
+                var state = String(value || '').trim().toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]/g, '');
+                var numeric = state.match(/^(\d{2})/);
+                if (numeric) return numeric[1];
+
+                for (var i = 0; i < gstStateNames.length; i++) {
+                    if (state === gstStateNames[i] || state.indexOf(gstStateNames[i]) === 0) {
+                        return gstStateCodes[gstStateNames[i]];
+                    }
+                }
+                return '';
+            }
+
+            function stateCodeFromGstin(value) {
+                var match = String(value || '').replace(/\s+/g, '').match(/^(\d{2})/);
+                return match ? match[1] : '';
+            }
+
+            var gstTypeSelect = clientForm.querySelector('[name="gst_type"]');
+            var gstAutoState = portalPromptForm && portalPromptForm.querySelector('[name="_invoice_auto_gst"]');
+            var gstTypeManuallyChanged = Boolean(
+                portalPromptForm && portalPromptForm.getAttribute('data-invoice-auto-gst') === 'false'
+            );
+            var settingGstType = false;
+
+            function autoSelectGstType() {
+                if (!gstTypeSelect || gstTypeManuallyChanged) return;
+
+                var billingState = clientForm.querySelector('[name="billing_state"]');
+                var clientGstin = clientForm.querySelector('[name="client_gstin"]');
+                var sellerState = clientForm.querySelector('[name="seller_state"]');
+                var sellerGstin = clientForm.querySelector('[name="seller_gstin"]');
+                var clientStateCode = stateCodeFromName(billingState && billingState.value)
+                    || stateCodeFromGstin(clientGstin && clientGstin.value);
+                var sellerStateCode = stateCodeFromName(sellerState && sellerState.value)
+                    || stateCodeFromGstin(sellerGstin && sellerGstin.value)
+                    || '24';
+                if (!clientStateCode) return;
+
+                var nextType = clientStateCode !== sellerStateCode
+                    ? 'inter_state'
+                    : 'intra_state';
+                if (gstTypeSelect.value === nextType) return;
+
+                settingGstType = true;
+                if (window.jQuery && window.jQuery.fn) {
+                    window.jQuery(gstTypeSelect).val(nextType).trigger('change');
+                } else {
+                    gstTypeSelect.value = nextType;
+                    gstTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                settingGstType = false;
+                calculateTotals();
+            }
+
+            if (gstTypeSelect) {
+                onChange(gstTypeSelect, function () {
+                    if (!settingGstType) {
+                        gstTypeManuallyChanged = true;
+                        if (gstAutoState) gstAutoState.value = 'false';
+                    }
+                    calculateTotals();
+                });
+            }
+
+            ['billing_state', 'client_gstin'].forEach(function (name) {
+                var field = clientForm.querySelector('[name="' + name + '"]');
+                if (field) field.addEventListener('input', autoSelectGstType);
+            });
 
             /* `onlyEmpty` is the difference between showing and choosing. An
                invoice already holds the office's copy of the client — sometimes
@@ -412,7 +506,10 @@
                 /* The placeholder is not a client: picking it leaves what the
                    office has typed where it is. */
                 if (!clientSelect.value) return;
+                gstTypeManuallyChanged = false;
+                if (gstAutoState) gstAutoState.value = 'true';
                 applySnapshot(clientSelect.options[clientSelect.selectedIndex], false);
+                autoSelectGstType();
             }
 
             /* Through `onChange`, so a pick made in the select2 list is heard:
@@ -420,6 +517,9 @@
             onChange(clientSelect, clientChosen);
 
             applySnapshot(clientSelect.options[clientSelect.selectedIndex], true);
+            if (portalPromptForm && portalPromptForm.getAttribute('data-invoice-auto-gst') === 'true') {
+                autoSelectGstType();
+            }
 
             /* Shipping is usually the billing address: one click, five fields. */
             var copyBilling = clientForm.querySelector('[data-copy-billing]');

@@ -988,7 +988,8 @@ check('a pick made in a select2 list reaches the handler that fills the form',
     + 'picks a client and the form sits there empty until the invoice is saved');
 
 check('creating an invoice asks about portal visibility without interrupting private creation',
-    /class="master-form" @if \(! \$isEdit\) data-invoice-portal-confirm @endif/.test(form)
+    /class="master-form" @if \(! \$isEdit\) data-invoice-portal-confirm data-invoice-auto-gst="\{\{ old\('_invoice_auto_gst', 'true'\) \}\}" @endif/.test(form)
+    && /name="_invoice_auto_gst" value="\{\{ old\('_invoice_auto_gst', 'true'\) \}\}"/.test(form)
     && /@else\s*<input type="hidden" name="show_client_portal" value="0" data-invoice-portal-choice>/.test(form)
     && /@if \(\$isEdit\)\s*<label class="master-check full"><input type="checkbox" name="show_client_portal"/.test(form)
     && /portalPromptForm\.addEventListener\('submit', function \(event\)/.test(js)
@@ -999,6 +1000,32 @@ check('creating an invoice asks about portal visibility without interrupting pri
     && /portalPromptForm\.requestSubmit/.test(js)
     && ! /window\.confirm/.test(js),
     'Yes makes it visible, No creates it privately, and editing keeps its visibility toggle');
+
+check('billing and shipping addresses share a responsive two-column group',
+    /class="si-address-pair"/.test(form)
+    && /aria-labelledby="billingAddressLabel"/.test(form)
+    && /aria-labelledby="shippingAddressLabel"/.test(form)
+    && /\.si-address-pair\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/.test(sheet)
+    && /@media \(max-width: 991px\)[\s\S]*?\.si-address-pair\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(sheet),
+    'the address groups sit side by side on wide screens and stack when narrow');
+
+check('GST type follows the billing state or GSTIN against MissPack Gujarat',
+    /function stateCodeFromName\(value\)/.test(js)
+    && /function stateCodeFromGstin\(value\)/.test(js)
+    && /gujarat: '24'/.test(js)
+    && /var clientStateCode = stateCodeFromName\(billingState && billingState\.value\)\s*\|\| stateCodeFromGstin\(clientGstin && clientGstin\.value\)/.test(js)
+    && /var sellerStateCode = stateCodeFromName\(sellerState && sellerState\.value\)[\s\S]*?\|\| '24'/.test(js)
+    && /if \(!clientStateCode\) return;[\s\S]*?clientStateCode !== sellerStateCode[\s\S]*?'inter_state'[\s\S]*?'intra_state'/.test(js)
+    && /field\.addEventListener\('input', autoSelectGstType\)/.test(js)
+    && /gstTypeManuallyChanged/.test(js)
+    && /gstAutoState\.value = 'false'/.test(js)
+    && /gstAutoState\.value = 'true'/.test(js),
+    'intra-state is CGST plus SGST; a different GST state code selects IGST');
+
+check('overdue remains filterable but is not a listing stat',
+    ! /Overdue \(filtered\)/.test(view)
+    && /name="ageing"/.test(view),
+    'the late-invoice filter stays available without taking a statistics tile');
 
 check('invoice form cards keep one consistent gap between sections',
     /\.si-form\s*\{[^}]*display: flex;[^}]*flex-direction: column;[^}]*gap: 20px/.test(sheet)
