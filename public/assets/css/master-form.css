@@ -667,8 +667,8 @@
 
 /* Table row add/remove controls */
 .master-add-row { margin-top: 12px }
-.master-remove-row { width: 34px; height: 34px; border: 0; border-radius: 9px; background: #fff0f4; color: #e11d48; cursor: pointer; font-weight: 900 }
-.master-remove { width: 30px; height: 30px; border: 0; border-radius: 9px; background: #fff0f4; color: #e11d48; font-weight: 900; cursor: pointer; transition: all .2s }
+.master-remove-row { width: 34px; height: 34px; border: 0; border-radius: 9px; background: #fff0f4; color: #e11d48; cursor: pointer; font-weight: 700 }
+.master-remove { width: 30px; height: 30px; border: 0; border-radius: 9px; background: #fff0f4; color: #e11d48; font-weight: 700; cursor: pointer; transition: all .2s }
 .master-remove:hover { background: #ef4770; color: #fff }
 
 /* Password field toggle (eye icon).

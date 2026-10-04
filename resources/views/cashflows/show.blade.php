@@ -102,7 +102,7 @@
                 <h3 class="master-section-title">Amount</h3>
                 <div class="{{ $entry->transaction_type === 'credit' ? 'amount-credit' : 'amount-debit' }}">
                     {{ \App\Helpers\CommonHelper::amount($entry->amount(), $entry->currency) }}</div>
-                <p style="font-weight:800;color:#687386;">Balance:
+                <p style="font-weight:700;color:#687386;">Balance:
                     {{ $entry->balance !== null ? \App\Helpers\CommonHelper::amount($entry->balance, $entry->currency) : '-' }}
                 </p>
             </div>

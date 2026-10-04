@@ -125,7 +125,7 @@
                     @if($history->remarks)<div class="timeline-remarks">{{ $history->remarks }}</div>@endif
                 </div>
             @empty
-                <p style="color:var(--muted);font-weight:800;">Tracking details will be available soon.</p>
+                <p style="color:var(--muted);font-weight:700;">Tracking details will be available soon.</p>
             @endforelse
         </div>
     </div>

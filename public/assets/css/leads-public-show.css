@@ -67,7 +67,7 @@ body {
 .brand {
     color: var(--primary);
     font-size: 12px;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
 }
@@ -76,7 +76,7 @@ body {
     margin: 8px 0 6px;
     font-size: 28px;
     line-height: 1.18;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: -.03em;
 }
 
@@ -95,7 +95,7 @@ body {
     padding: 10px 14px;
     background: var(--soft);
     color: var(--primary);
-    font-weight: 900;
+    font-weight: 700;
     white-space: nowrap;
 }
 
@@ -137,7 +137,7 @@ body {
 .placeholder {
     text-align: center;
     color: var(--muted);
-    font-weight: 800;
+    font-weight: 700;
     padding: 50px 20px;
 }
 
@@ -196,7 +196,7 @@ body {
     align-items: center;
     justify-content: center;
     color: var(--primary);
-    font-weight: 900;
+    font-weight: 700;
 }
 
 .thumb.active {
@@ -211,7 +211,7 @@ body {
 .section h2 {
     margin: 0 0 16px;
     font-size: 18px;
-    font-weight: 900;
+    font-weight: 700;
 }
 
 .info-grid {
@@ -231,7 +231,7 @@ body {
     display: block;
     color: #7d8aa0;
     font-size: 11px;
-    font-weight: 900;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .06em;
     margin-bottom: 5px;
@@ -265,7 +265,7 @@ body {
     border-radius: 12px;
     background: #fbfdff;
     color: var(--primary);
-    font-weight: 800;
+    font-weight: 700;
     text-decoration: none;
     overflow-wrap: anywhere;
 }
@@ -285,7 +285,7 @@ body {
 .footer h4 {
     margin: 0 0 10px;
     font-size: 14px;
-    font-weight: 900;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .04em;
 }
@@ -312,7 +312,7 @@ body {
     background: #fbfdff;
     color: var(--muted);
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
 }
 
 @media(max-width: 1000px) {

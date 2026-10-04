@@ -155,7 +155,7 @@ i,
 
 .fa-solid,
 .fas {
-    font-weight: 900 !important;
+    font-weight: 700 !important;
 }
 
 .fa-regular,
@@ -236,7 +236,7 @@ input[type="week"],
 
 .sidebar-logo-text {
     font-size: 20px;
-    font-weight: 800;
+    font-weight: 700;
     color: #fff;
     letter-spacing: 0.4px;
 }
@@ -391,7 +391,7 @@ html.sidebar-collapsed .sidebar-logo-text {
 html.sidebar-collapsed .sidebar-logo-text::after {
     content: "M";
     font-size: 22px;
-    font-weight: 900;
+    font-weight: 700;
     color: #fff;
 }
 

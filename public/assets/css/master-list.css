@@ -111,7 +111,7 @@
     border-bottom: 1px solid var(--mc-border);
     color: var(--mc-text-3);
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
 }
@@ -120,7 +120,7 @@
     padding: 12px 14px;
     background: var(--mc-card);
     border-top: 2px solid var(--mc-border);
-    font-weight: 800;
+    font-weight: 700;
     vertical-align: top;
 }
 
@@ -202,7 +202,7 @@
     border: 1px solid var(--mc-border);
     color: var(--mc-text-3);
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 700;
     text-align: center;
 }
 
@@ -241,7 +241,7 @@
     padding: 0 2px;
     color: var(--mc-text-3);
     font-size: 14px;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1;
     cursor: pointer;
 }
@@ -305,7 +305,7 @@
     background: var(--accent-light);
     border-color: var(--master-primary);
     color: var(--master-primary);
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .master-list-chip.is-active .master-list-chip-count {
@@ -326,7 +326,7 @@
 .master-list .master-list-applied-title {
     color: var(--mc-text-3);
     font-size: 10.5px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
 }
@@ -347,7 +347,7 @@
 .master-list .master-list-applied-key {
     color: var(--mc-text-3);
     font-size: 10.5px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .04em;
     text-transform: uppercase;
 }
@@ -524,7 +524,7 @@
 
 .master-list .master-list-group-count {
     color: var(--mc-text-3);
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .master-list .master-list-total td {
@@ -712,7 +712,7 @@
         margin-bottom:5px;
         color: var(--mc-text-3);
         font-size:10.5px;
-        font-weight:800;
+        font-weight:700;
         letter-spacing:.08em;
         text-transform:uppercase;
     }

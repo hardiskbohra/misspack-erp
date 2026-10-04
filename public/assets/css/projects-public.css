@@ -71,7 +71,7 @@ body {
     border:1px solid #abefc6;
     border-radius:999px;
     padding:9px 12px;
-    font-weight:900;
+    font-weight:700;
     font-size:12px;
 }
 
@@ -91,7 +91,7 @@ body {
     text-transform:uppercase;
     letter-spacing:.12em;
     font-size:11px;
-    font-weight:900;
+    font-weight:700;
     opacity:.82;
 }
 
@@ -138,7 +138,7 @@ body {
     border-radius:16px;
     padding:12px 14px;
     margin:14px 0;
-    font-weight:800;
+    font-weight:700;
 }
 
 .portal-alert.success {
@@ -172,7 +172,7 @@ body {
     display:block;
     color:var(--muted);
     font-size:12px;
-    font-weight:900;
+    font-weight:700;
     text-transform:uppercase;
 }
 
@@ -218,7 +218,7 @@ body {
     color:var(--primary);
     padding:7px 10px;
     font-size:12px;
-    font-weight:900;
+    font-weight:700;
 }
 
 .chip.green {
@@ -248,7 +248,7 @@ body {
     display:block;
     color:var(--muted);
     font-size:12px;
-    font-weight:900;
+    font-weight:700;
 }
 
 .info strong {
@@ -265,7 +265,7 @@ body {
 .text-block span {
     color:var(--muted);
     font-size:12px;
-    font-weight:900;
+    font-weight:700;
     text-transform:uppercase;
 }
 
@@ -402,7 +402,7 @@ body {
 
 .file a {
     color:var(--primary);
-    font-weight:900;
+    font-weight:700;
     text-decoration:none;
     margin-top:5px;
     display:inline-flex;

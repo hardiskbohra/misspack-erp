@@ -105,7 +105,7 @@ body {
 .print-brand {
     display: block;
     font-size: 10px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .16em;
     text-transform: uppercase;
     color: #667085;
@@ -141,7 +141,7 @@ body {
 .print-meta span {
     display: block;
     font-size: 9px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
     color: #667085;
@@ -173,7 +173,7 @@ body {
 
 .print-label {
     font-size: 9px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
     color: #667085;
@@ -202,7 +202,7 @@ body {
 .print-table thead th {
     background: #f2f4f7;
     font-size: 9.5px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .06em;
     text-transform: uppercase;
     color: #475467;

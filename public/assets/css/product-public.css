@@ -64,14 +64,14 @@
         }
 
         .brand {
-            font-weight: 900;
+            font-weight: 700;
             color: var(--primary);
             letter-spacing: .03em
         }
 
         .brand-title {
             font-size: 24px;
-            font-weight: 900;
+            font-weight: 700;
             color: #4f83f1;
         }
 

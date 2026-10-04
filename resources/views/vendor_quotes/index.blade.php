@@ -159,7 +159,7 @@
                                     </div>
                                 </td>
                         </tr>@empty<tr>
-                                <td colspan="8" style="padding:70px;text-align:center;color:#687386;font-weight:900">No
+                                <td colspan="8" style="padding:70px;text-align:center;color:#687386;font-weight:700">No
                                     vendor quotes found.</td>
                             </tr>
                         @endforelse

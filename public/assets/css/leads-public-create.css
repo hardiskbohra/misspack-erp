@@ -78,7 +78,7 @@ body {
 .brand-label {
     color: var(--primary);
     font-size: 12px;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
 }
@@ -87,7 +87,7 @@ body {
     margin: 8px 0 6px;
     font-size: 28px;
     line-height: 1.18;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: -.03em;
 }
 
@@ -107,7 +107,7 @@ body {
     padding: 10px 14px;
     background: var(--soft);
     color: var(--primary);
-    font-weight: 900;
+    font-weight: 700;
     white-space: nowrap;
 }
 
@@ -126,7 +126,7 @@ body {
     margin: 0 0 16px;
     color: #7d8aa0;
     font-size: 12px;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
 }
@@ -187,7 +187,7 @@ body {
     padding: 14px 16px;
     margin-bottom: 18px;
     border-radius: 14px;
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .alert.success {
@@ -235,7 +235,7 @@ body {
 .footer-col h4 {
     margin: 0 0 12px;
     font-size: 14px;
-    font-weight: 900;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .04em;
 }
@@ -249,7 +249,7 @@ body {
 .footer-list span {
     color: #536079;
     text-decoration: none;
-    font-weight: 800;
+    font-weight: 700;
     overflow-wrap: anywhere;
 }
 
@@ -268,7 +268,7 @@ body {
     background: #fbfdff;
     color: var(--muted);
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
 }
 
 @media (max-width: 1024px) {

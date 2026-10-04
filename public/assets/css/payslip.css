@@ -65,7 +65,7 @@
 .ps-brand-name {
     margin: 0;
     font-size: 15px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .01em;
 }
 
@@ -85,7 +85,7 @@
     margin: 0;
     color: var(--ps-text-3);
     font-size: 10.5px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .14em;
     text-transform: uppercase;
 }
@@ -93,7 +93,7 @@
 .ps-period {
     margin: 2px 0 0;
     font-size: 20px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: -.01em;
 }
 
@@ -162,7 +162,7 @@
     display: block;
     color: var(--ps-text-3);
     font-size: 10.5px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .09em;
     text-transform: uppercase;
 }
@@ -198,7 +198,7 @@
 .ps-table thead th {
     color: var(--ps-text-3);
     font-size: 10.5px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .09em;
     text-transform: uppercase;
 }
@@ -212,7 +212,7 @@
 .ps-table tfoot td {
     border-bottom: 0;
     border-top: 2px solid var(--ps-line);
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .ps-table tfoot th {
@@ -236,7 +236,7 @@
 .ps-net-label {
     color: var(--ps-text-2);
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: .09em;
     text-transform: uppercase;
 }
@@ -246,7 +246,7 @@
     margin-top: 2px;
     color: var(--ps-net-fg);
     font-size: 26px;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: -.02em;
 }
 
