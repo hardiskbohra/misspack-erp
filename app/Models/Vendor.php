@@ -51,6 +51,12 @@ class Vendor extends Model
         return $this->hasMany(VendorPaymentEntry::class)->latest('transaction_date')->latest('id');
     }
 
+    /** The other people at this supplier — the desk behind the primary contact. */
+    public function contacts()
+    {
+        return $this->hasMany(VendorContact::class)->orderBy('name');
+    }
+
     public function scopeSearch(Builder $query, ?string $search): Builder
     {
         return $query->when($search, function (Builder $q) use ($search) {

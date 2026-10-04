@@ -303,7 +303,8 @@
                     <label class="master-label" for="vendor_payment_terms">Payment terms</label>
                     <input class="master-input @error('payment_terms') is-invalid @enderror" id="vendor_payment_terms" name="payment_terms"
                         value="{{ old('payment_terms', $vendor->payment_terms) }}" maxlength="255"
-                        placeholder="e.g. 30% advance, balance against BL copy">
+                        placeholder="e.g. 30 days, 30% advance, balance against BL copy">
+                    <div class="master-help">A number of days here sets a bill's due date automatically when the ledger form leaves it blank.</div>
                 </div>
                 <div class="master-field full">
                     <label class="master-label" for="vendor_notes">Internal notes</label>

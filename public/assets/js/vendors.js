@@ -8,7 +8,6 @@
      - resources/views/vendors/show.blade.php    the record: ledger dialogs,
                                                  INR auto-calc, edit prefill
      - resources/views/vendors/form.blade.php    the form: image preview
-     - resources/views/vendor_quotes/*           quick quote + price rows
 
    The dialogs are the shared ones: `.master-modal` from master-index.css and
    the lifecycle in app-layout.js (`window.MasterModal`) — which moves focus
@@ -59,6 +58,58 @@
 
         /* ------------------------------------------------ the list ---- */
 
+        /* Bulk selection. The checkboxes carry form="vendorBulkForm", so the
+           bar can sit above the table and the table stays a table; the bar
+           itself is only shown once something is picked. One status change
+           across every ticked row is the difference between fixing a supplier
+           file and fixing twenty of them. */
+        var bulkForm = byId('vendorBulkForm');
+
+        if (bulkForm) {
+            var picks = Array.prototype.slice.call(document.querySelectorAll('[data-bulk-pick]'));
+            var pickAll = document.querySelector('[data-bulk-all]');
+            var countLabel = bulkForm.querySelector('[data-bulk-count]');
+            var clearButton = bulkForm.querySelector('[data-bulk-clear]');
+
+            var syncBulk = function () {
+                var chosen = picks.filter(function (pick) { return pick.checked; });
+
+                bulkForm.hidden = chosen.length === 0;
+                if (countLabel) {
+                    countLabel.textContent = chosen.length + (chosen.length === 1 ? ' vendor selected' : ' vendors selected');
+                }
+                picks.forEach(function (pick) {
+                    pick.closest('tr')?.classList.toggle('is-picked', pick.checked);
+                });
+                if (pickAll) {
+                    pickAll.checked = chosen.length > 0 && chosen.length === picks.length;
+                    pickAll.indeterminate = chosen.length > 0 && chosen.length < picks.length;
+                }
+            };
+
+            picks.forEach(function (pick) { pick.addEventListener('change', syncBulk); });
+
+            pickAll?.addEventListener('change', function () {
+                picks.forEach(function (pick) { pick.checked = pickAll.checked; });
+                syncBulk();
+            });
+
+            clearButton?.addEventListener('click', function () {
+                picks.forEach(function (pick) { pick.checked = false; });
+                syncBulk();
+            });
+
+            bulkForm.addEventListener('submit', function (event) {
+                if (!picks.some(function (pick) { return pick.checked; })) {
+                    event.preventDefault();
+                    return;
+                }
+            });
+
+            syncBulk();
+        }
+
+
         if (window.MasterList) {
             window.MasterList.rowNavigation({ root: '.vendor-index' });
             window.MasterList.gridShadow({ root: '.vendor-index' });
@@ -94,12 +145,20 @@
         });
 
         /* A failed save re-opens the dialog it came from, so the reader does
-           not have to find their way back to it. */
+           not have to find their way back to it. The server states which one
+           with the `_dialog` field the form posted, echoed into the marker. */
         var reopenMarker = document.querySelector('[data-open-dialog]');
-        var reopen = reopenMarker ? reopenMarker.getAttribute('data-open-dialog') : '';
+        var reopen = reopenMarker ? (reopenMarker.getAttribute('data-open-dialog') || '') : '';
+        var reopenTargets = {
+            'quick-vendor': 'quickVendorModal',
+            'payment': 'addPaymentModal',
+            'attachment': 'addAttachmentModal',
+            'comment': 'addCommentModal',
+            'contact': 'contactModal',
+        };
 
-        if (reopen === 'quick-vendor') {
-            openModal(quickModal);
+        if (reopen && reopenTargets[reopen]) {
+            openModal(byId(reopenTargets[reopen]));
         }
 
         /* ---------------------------------------------- the record ---- */
@@ -271,6 +330,99 @@
                 openModal(editPaymentModal);
             });
         });
+
+        /* A bill's "Record payment" button opens the ledger dialog already
+           pointed at that bill: a payment (debit) in the bill's own currency
+           for what is still open, so the common case is two keystrokes. */
+        var addPaymentModal = byId('addPaymentModal');
+        var addPaymentForm = addPaymentModal ? addPaymentModal.querySelector('form') : null;
+
+        document.querySelectorAll('.payBillBtn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                if (!addPaymentForm) return;
+
+                var bill = {};
+                try {
+                    bill = JSON.parse(button.dataset.bill || '{}');
+                } catch (error) {
+                    return;
+                }
+
+                var today = new Date().toISOString().slice(0, 10);
+
+                setField(addPaymentForm, 'transaction_date', today);
+                setField(addPaymentForm, 'invoice_number', bill.invoice || '');
+                setField(addPaymentForm, 'particular', bill.particular ? 'Payment against '.concat(bill.particular) : 'Payment against an open bill');
+                setField(addPaymentForm, 'foreign_currency', bill.currency || 'INR');
+                setField(addPaymentForm, 'foreign_amount', bill.amount ?? '');
+                setField(addPaymentForm, 'transaction_type', 'debit');
+                setField(addPaymentForm, 'entry_category', 'payment');
+                setField(addPaymentForm, 'amount_in_inr', '');
+                setField(addPaymentForm, 'due_date', '');
+
+                addPaymentForm.elements.foreign_currency?.dispatchEvent(new Event('change'));
+                addPaymentForm.elements.transaction_type?.dispatchEvent(new Event('change'));
+
+                openModal(addPaymentModal);
+                addPaymentForm.elements.foreign_amount?.focus();
+            });
+        });
+
+        /* One dialog for a new contact and for editing one: the row's edit
+           button hands over the contact and the update URL. */
+        var contactModal = byId('contactModal');
+        var contactForm = byId('contactForm');
+
+        var setContactMode = function (contact) {
+            if (!contactForm) return;
+
+            setField(contactForm, 'name', contact.name || '');
+            setField(contactForm, 'designation', contact.designation || '');
+            setField(contactForm, 'email', contact.email || '');
+            setField(contactForm, 'mobile', contact.mobile || '');
+            setField(contactForm, 'whatsapp', contact.whatsapp || '');
+            setField(contactForm, 'notes', contact.notes || '');
+
+            var title = byId('contactModalTitle');
+            var subtitle = byId('contactModalSubtitle');
+            var submit = byId('contactSubmit');
+            var method = contactForm.querySelector('input[name="_method"]');
+
+            if (contact.id) {
+                contactForm.action = contact.url || contactForm.action;
+                if (method) method.value = 'PUT';
+                if (title) title.textContent = 'Edit contact';
+                if (subtitle) subtitle.textContent = contact.name || 'Update this contact';
+                if (submit) submit.textContent = 'Save contact';
+            } else {
+                contactForm.action = contactForm.dataset.storeUrl || contactForm.action;
+                if (method) method.value = 'POST';
+                if (title) title.textContent = 'Add contact';
+                if (subtitle) subtitle.textContent = contactForm.dataset.storeLabel || 'Somebody else at this vendor';
+                if (submit) submit.textContent = 'Add contact';
+            }
+        };
+
+        byId('openAddContactModal')?.addEventListener('click', function () {
+            setContactMode({});
+            openModal(contactModal);
+            byId('contact_name')?.focus();
+        });
+
+        document.querySelectorAll('.editContactBtn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var contact = {};
+                try {
+                    contact = JSON.parse(button.dataset.contact || '{}');
+                } catch (error) {
+                    return;
+                }
+                setContactMode(contact);
+                openModal(contactModal);
+                byId('contact_name')?.focus();
+            });
+        });
+
 
         /* ------------------------------------------------ the form ---- */
 

@@ -180,6 +180,17 @@ Route::middleware('auth')->group(function () {
         Route::post('/vendors/saved-views', [VendorController::class, 'storeSavedView'])->name('vendors.saved-views.store');
         Route::delete('/vendors/saved-views/{savedView}', [VendorController::class, 'destroySavedView'])->name('vendors.saved-views.destroy');
 
+        /* Acting on the list as a whole: one status change across ticked rows,
+           and the payable book as a spreadsheet for the accountant. Both are
+           literals, so they are registered before the resource route that
+           would otherwise read them as a vendor id. */
+        Route::patch('/vendors/bulk-status', [VendorController::class, 'bulkStatus'])->name('vendors.bulk-status');
+        Route::get('/vendors/payables/export', [VendorController::class, 'exportPayables'])->name('vendors.payables.export');
+
+        Route::post('/vendors/{vendor}/contacts', [VendorController::class, 'storeContact'])->name('vendors.contacts.store');
+        Route::put('/vendors/{vendor}/contacts/{contact}', [VendorController::class, 'updateContact'])->name('vendors.contacts.update');
+        Route::delete('/vendors/{vendor}/contacts/{contact}', [VendorController::class, 'destroyContact'])->name('vendors.contacts.destroy');
+
         Route::post('/vendors/{vendor}/attachments', [VendorController::class, 'storeAttachment'])->name('vendors.attachments.store');
         Route::delete('/vendor-attachments/{attachment}', [VendorController::class, 'destroyAttachment'])->name('vendors.attachments.destroy');
 

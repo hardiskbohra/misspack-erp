@@ -1,4 +1,4 @@
-<section class="master-tab-panel" id="vendor-panel-payments" role="tabpanel" aria-labelledby="vendor-tab-payments">
+<section class="vendor-block" aria-labelledby="vendor-block-payments">
     <div class="vendor-panel-head">
         <div>
             <h2 class="vendor-detail-title">Vendor-currency ledger</h2>
@@ -32,7 +32,22 @@
                 <tbody>
                     @forelse($vendorPaymentEntries->sortByDesc('transaction_date') as $entry)
                         <tr>
-                            <td data-label="Date">{{ $entry->transaction_date?->format('d M Y') ?: '—' }}</td>
+                            <td data-label="Date">
+                                {{ $entry->transaction_date?->format('d M Y') ?: '—' }}
+                                @if ($entry->transaction_type === 'credit' && $entry->due_date)
+                                    @php($daysLate = $entry->days_to_due)
+                                    <span class="master-sub {{ $daysLate !== null && $daysLate < 0 ? 'vendor-amount-debit' : '' }}">
+                                        Due {{ $entry->due_date->format('d M y') }}
+                                        @if ($daysLate !== null && $daysLate < 0)
+                                            · {{ abs($daysLate) }} {{ \Illuminate\Support\Str::plural('day', abs($daysLate)) }} late
+                                        @elseif ($daysLate !== null && $daysLate <= 7)
+                                            · due soon
+                                        @endif
+                                    </span>
+                                @elseif ($entry->transaction_type === 'credit')
+                                    <span class="master-sub">No due date</span>
+                                @endif
+                            </td>
                             <td data-label="Invoice">
                                 {{ $entry->invoice_number ?: '—' }}
                                 <span class="master-sub">{{ $entry->categoryLabel() }}</span>

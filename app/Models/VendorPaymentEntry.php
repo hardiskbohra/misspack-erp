@@ -11,7 +11,7 @@ class VendorPaymentEntry extends Model
     use HasFactory;
 
     protected $fillable = [
-        'vendor_id', 'project_id', 'cashflow_entry_id', 'transaction_date', 'invoice_number',
+        'vendor_id', 'project_id', 'cashflow_entry_id', 'transaction_date', 'due_date', 'invoice_number',
         'foreign_currency', 'foreign_amount', 'exchange_rate', 'transaction_type', 'entry_category',
         'particular', 'status', 'paid_account_id', 'payment_mode', 'bank_reference_number',
         'amount_in_inr', 'remarks', 'created_by',
@@ -19,6 +19,7 @@ class VendorPaymentEntry extends Model
 
     protected $casts = [
         'transaction_date' => 'date',
+        'due_date' => 'date',
         'foreign_amount' => 'decimal:4',
         'exchange_rate' => 'decimal:6',
         'amount_in_inr' => 'decimal:2',

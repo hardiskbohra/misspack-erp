@@ -867,6 +867,376 @@
     cursor: pointer;
 }
 
+/* ---- payables, ageing and spend ---- */
+
+.vendor-ageing {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.vendor-ageing-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 18px;
+}
+
+.vendor-ageing-card.is-alert {
+    border-color: rgba(239, 71, 112, .42);
+}
+
+.vendor-ageing-card.is-empty {
+    opacity: .65;
+}
+
+.vendor-ageing-label {
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.vendor-ageing-amount {
+    color: var(--mc-text);
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.vendor-ageing-count {
+    color: var(--mc-text-3);
+    font-size: 11px;
+}
+
+.vendor-jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.vendor-jump a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 999px;
+    background: var(--mc-card);
+    color: var(--mc-text-2);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.vendor-jump a:hover,
+.vendor-jump a:focus-visible {
+    border-color: var(--master-primary, #4f83f1);
+    color: var(--master-primary, #4f83f1);
+}
+
+.vendor-jump-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.vendor-block + .vendor-block {
+    margin-top: 30px;
+    padding-top: 26px;
+    border-top: 1px solid var(--mc-border);
+}
+
+.vendor-pill.is-alert {
+    border-color: rgba(239, 71, 112, .42);
+    color: var(--master-red, #ef4770);
+}
+
+.vendor-payable {
+    color: var(--mc-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.vendor-pick-cell {
+    width: 44px;
+}
+
+.vendor-index .vendor-table th.vendor-pick-cell,
+.vendor-index .vendor-table td.vendor-pick-cell {
+    width: 44px;
+    text-align: center;
+}
+
+/* A selected row keeps its tick visible beside the hover wash. */
+.vendor-index .vendor-row.is-picked td {
+    background: var(--mc-hover, var(--mc-card-soft));
+}
+
+/* ---- the attention strip on the overview ---- */
+
+.vendor-attention {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(239, 71, 112, .38);
+    border-radius: 16px;
+    background: rgba(239, 71, 112, .07);
+}
+
+.vendor-attention-icon {
+    display: inline-flex;
+    flex: 0 0 36px;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: rgba(239, 71, 112, .14);
+    color: var(--master-red, #ef4770);
+}
+
+.vendor-attention-copy {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.vendor-attention-copy strong {
+    color: var(--mc-text);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.vendor-attention-copy span {
+    color: var(--mc-text-2);
+    font-size: 12px;
+}
+
+.vendor-detail-card--wide {
+    grid-column: 1 / -1;
+}
+
+.vendor-mini-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.vendor-mini-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--mc-border);
+}
+
+.vendor-mini-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.vendor-mini-row:first-child {
+    padding-top: 0;
+}
+
+.vendor-mini-row > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.vendor-mini-row strong {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.vendor-mini-row small {
+    color: var(--mc-text-3);
+    font-size: 11px;
+}
+
+.vendor-mini-row > b {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* The bill table's action column is a button, not a number: it takes the
+   width it needs and never wraps the label onto two lines. */
+.vendor-bill-table td:last-child,
+.vendor-bill-table th:last-child {
+    width: 190px;
+    white-space: nowrap;
+}
+
+/* ---- the six-month spend bars ---- */
+
+.vendor-spend {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    height: 120px;
+    padding: 8px 0 4px;
+}
+
+.vendor-spend-bar {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    height: 100%;
+    min-width: 0;
+}
+
+.vendor-spend-fill {
+    width: 100%;
+    max-width: 46px;
+    border-radius: 8px 8px 3px 3px;
+    background: linear-gradient(180deg, rgba(79, 131, 241, .85), rgba(79, 131, 241, .35));
+}
+
+.vendor-spend-label {
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* ---- the activity trail ---- */
+
+.vendor-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.vendor-timeline-row {
+    margin: 0;
+}
+
+.vendor-timeline-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 6px 8px;
+    margin: 0 -8px;
+    border-radius: 12px;
+    color: inherit;
+    text-decoration: none;
+}
+
+a.vendor-timeline-item:hover,
+a.vendor-timeline-item:focus-visible {
+    background: var(--mc-card-soft);
+}
+
+.vendor-timeline-icon {
+    display: inline-flex;
+    flex: 0 0 32px;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-2);
+}
+
+.vendor-timeline-copy {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.vendor-timeline-copy strong {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.vendor-timeline-time {
+    flex: 0 0 auto;
+    color: var(--mc-text-3);
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+/* ---- the other-people list on the contacts tab ---- */
+
+.vendor-contact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.vendor-contact-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-card-soft);
+}
+
+.vendor-contact-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.vendor-contact-copy {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.vendor-contact-copy strong {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.vendor-contact-lines {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+}
+
+.vendor-contact-lines .vendor-contact-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
 /* ==========================================================================
    4. THE FORM — resources/views/vendors/form.blade.php
    The same composition as the client form page: heading, error summary,

@@ -1,4 +1,4 @@
-<section class="master-tab-panel" id="vendor-panel-statement" role="tabpanel" aria-labelledby="vendor-tab-statement">
+<section class="vendor-block" aria-labelledby="vendor-block-statement">
     <div class="vendor-panel-head">
         <div>
             <h2 class="vendor-detail-title">Statement of account</h2>

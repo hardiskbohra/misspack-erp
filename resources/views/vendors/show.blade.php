@@ -104,7 +104,13 @@
             <div>
                 <p class="master-stat-title">Need to pay</p>
                 <p class="master-stat-value">{{ $money($summary['need_to_pay']) }}</p>
-                <p class="master-sub">{{ $money($summary['vendor_balance_foreign'], $summary['vendor_currency']) }} ledger balance</p>
+                <p class="master-sub">
+                    @if ($payables['overdue'] > 0)
+                        {{ $money($payables['overdue']) }} past its due date
+                    @else
+                        {{ $money($payables['outstanding']) }} open, nothing late
+                    @endif
+                </p>
             </div>
         </div>
     </div>
@@ -129,28 +135,50 @@
         </nav>
 
         <div class="master-tabs-panels">
+            {{-- One panel per tab, each partial named after the tab it answers.
+                 The wider tabs — procurement, money, documents — compose their
+                 block partials, so the tab strip stays eight links wide while
+                 the panel behind each one is a page of its own. --}}
             @if ($tab === 'overview')
                 @include('vendors.partials.overview')
             @elseif ($tab === 'profile')
                 @include('vendors.partials.profile')
             @elseif ($tab === 'contacts')
                 @include('vendors.partials.contacts')
-            @elseif ($tab === 'addresses')
-                @include('vendors.partials.addresses')
             @elseif ($tab === 'commercial')
                 @include('vendors.partials.commercial')
-            @elseif ($tab === 'projects')
-                @include('vendors.partials.projects')
-            @elseif ($tab === 'products')
-                @include('vendors.partials.products')
-            @elseif ($tab === 'payments')
-                @include('vendors.partials.payments')
-            @elseif ($tab === 'statement')
-                @include('vendors.partials.statement')
-            @elseif ($tab === 'shipments')
-                @include('vendors.partials.shipments')
-            @elseif ($tab === 'attachments')
-                @include('vendors.partials.attachments')
+            @elseif ($tab === 'procurement')
+                {{-- One question — "where is my order?" — so the three lists that
+                     answer it share a panel: what is being made, what is
+                     supplied, what is in transit. --}}
+                <section class="master-tab-panel" id="vendor-panel-procurement" role="tabpanel" aria-labelledby="vendor-tab-procurement">
+                    <nav class="vendor-jump" aria-label="Procurement sections">
+                        <a href="#vendor-block-projects">Project products <span class="vendor-jump-count">{{ $projectProducts->count() }}</span></a>
+                        <a href="#vendor-block-products">Products <span class="vendor-jump-count">{{ $products->count() }}</span></a>
+                        <a href="#vendor-block-shipments">Shipments <span class="vendor-jump-count">{{ $shipments->count() }}</span></a>
+                    </nav>
+                    @include('vendors.partials.projects')
+                    @include('vendors.partials.products')
+                    @include('vendors.partials.shipments')
+                </section>
+            @elseif ($tab === 'money')
+                {{-- The order the office asks the money questions in: what do I
+                     owe and is any of it late, what has moved on the ledger,
+                     and what does the account look like to the vendor. --}}
+                <section class="master-tab-panel" id="vendor-panel-money" role="tabpanel" aria-labelledby="vendor-tab-money">
+                    <nav class="vendor-jump" aria-label="Money sections">
+                        <a href="#vendor-block-payables">Payables <span class="vendor-jump-count">{{ count($payables['rows']) }}</span></a>
+                        <a href="#vendor-block-ledger">Ledger <span class="vendor-jump-count">{{ $vendorPaymentEntries->count() }}</span></a>
+                        <a href="#vendor-block-statement">Statement <span class="vendor-jump-count">{{ $statementEntries->count() }}</span></a>
+                    </nav>
+                    @include('vendors.partials.payables')
+                    @include('vendors.partials.payments')
+                    @include('vendors.partials.statement')
+                </section>
+            @elseif ($tab === 'documents')
+                <section class="master-tab-panel" id="vendor-panel-documents" role="tabpanel" aria-labelledby="vendor-tab-documents">
+                    @include('vendors.partials.attachments')
+                </section>
             @elseif ($tab === 'comments')
                 @include('vendors.partials.comments')
             @endif
@@ -165,6 +193,7 @@
         <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="addPaymentTitle">
             <form method="POST" action="{{ route('vendors.payments.store', $vendor) }}" enctype="multipart/form-data" class="vendor-payment-form">
                 @csrf
+                <input type="hidden" name="_dialog" value="payment">
                 <div class="master-modal-header">
                     <div class="master-modal-heading">
                         <span class="master-modal-icon" aria-hidden="true"><i class="fa-solid fa-scale-balanced"></i></span>
@@ -197,6 +226,7 @@
             <form method="POST" action="" id="editPaymentForm" enctype="multipart/form-data" class="vendor-payment-form"
                 data-payment-url="{{ route('vendors.payments.update', ['vendor' => $vendor, 'entry' => '__ENTRY__']) }}">
                 @csrf
+                <input type="hidden" name="_dialog" value="payment">
                 @method('PUT')
                 <div class="master-modal-header">
                     <div class="master-modal-heading">
@@ -226,6 +256,7 @@
         <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="addAttachmentTitle">
             <form method="POST" enctype="multipart/form-data" action="{{ route('vendors.attachments.store', $vendor) }}">
                 @csrf
+                <input type="hidden" name="_dialog" value="attachment">
                 <div class="master-modal-header">
                     <div class="master-modal-heading">
                         <span class="master-modal-icon" aria-hidden="true"><i class="fa-regular fa-folder-open"></i></span>
@@ -278,6 +309,7 @@
         <div class="master-modal-card is-narrow" role="dialog" aria-modal="true" aria-labelledby="addCommentTitle">
             <form method="POST" action="{{ route('vendors.comments.store', $vendor) }}">
                 @csrf
+                <input type="hidden" name="_dialog" value="comment">
                 <div class="master-modal-header">
                     <div class="master-modal-heading">
                         <span class="master-modal-icon" aria-hidden="true"><i class="fa-regular fa-comment"></i></span>
@@ -311,6 +343,73 @@
             </form>
         </div>
     </div>
+
+    {{-- ================= Add / edit contact =================
+         One dialog for both: "Add contact" opens it empty and posts to the
+         create route; a row's edit button hands it the contact and the update
+         URL through data attributes, so the form never needs a second copy. --}}
+    @if ($contactsAvailable)
+        <div class="master-modal" id="contactModal" aria-hidden="true">
+            <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="contactModalTitle">
+                <form method="POST" action="{{ route('vendors.contacts.store', $vendor) }}" id="contactForm"
+                    data-store-url="{{ route('vendors.contacts.store', $vendor) }}"
+                    data-store-label="Somebody else at {{ $vendor->vendor_name }}">
+                    @csrf
+                    <input type="hidden" name="_method" value="POST" id="contactMethod">
+                    <input type="hidden" name="_dialog" value="contact">
+                    <div class="master-modal-header">
+                        <div class="master-modal-heading">
+                            <span class="master-modal-icon" aria-hidden="true"><i class="fa-regular fa-address-book"></i></span>
+                            <div>
+                                <h2 class="master-modal-title" id="contactModalTitle">Add contact</h2>
+                                <p class="master-modal-subtitle" id="contactModalSubtitle">Somebody else at {{ $vendor->vendor_name }}</p>
+                            </div>
+                        </div>
+                        <button type="button" class="master-modal-close" data-close-modal="contactModal" aria-label="Close">&times;</button>
+                    </div>
+                    <div class="master-modal-body">
+                        <div class="master-modal-grid">
+                            <div class="master-field">
+                                <label class="master-label" for="contact_name">Name <span class="master-required" aria-hidden="true">*</span></label>
+                                <input class="master-input" id="contact_name" name="name" required maxlength="255" autocomplete="name">
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label" for="contact_designation">Designation</label>
+                                <input class="master-input" id="contact_designation" name="designation" maxlength="255"
+                                    placeholder="Accounts / Dispatch / Quality">
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label" for="contact_email">Email</label>
+                                <input class="master-input" id="contact_email" type="email" name="email" maxlength="255" autocomplete="email">
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label" for="contact_mobile">Mobile</label>
+                                <input class="master-input" id="contact_mobile" type="tel" name="mobile" maxlength="40" autocomplete="tel">
+                            </div>
+                            <div class="master-field">
+                                <label class="master-label" for="contact_whatsapp">WhatsApp</label>
+                                <input class="master-input" id="contact_whatsapp" type="tel" name="whatsapp" maxlength="40">
+                            </div>
+                            <div class="master-field full">
+                                <label class="master-label" for="contact_notes">Notes</label>
+                                <textarea class="master-textarea" id="contact_notes" name="notes" rows="2"
+                                    placeholder="What this person handles"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="master-modal-footer">
+                        <button type="button" class="master-btn master-btn-light" data-close-modal="contactModal">Cancel</button>
+                        <button class="master-btn master-btn-primary" type="submit" id="contactSubmit">
+                            <i class="fa-solid fa-plus" aria-hidden="true"></i> Add contact
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
+    {{-- A validation failure re-opens the dialog the form came from. --}}
+    <span hidden data-open-dialog="{{ $errors->any() ? old('_dialog') : '' }}"></span>
 </div>
 @endsection
 

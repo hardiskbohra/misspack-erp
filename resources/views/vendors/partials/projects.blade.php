@@ -1,5 +1,5 @@
 @php($running = $projectProducts->reject(fn ($row) => in_array($row->status, ['delivered', 'cancelled'], true))->count())
-<section class="master-tab-panel" id="vendor-panel-projects" role="tabpanel" aria-labelledby="vendor-tab-projects">
+<section class="vendor-block" aria-labelledby="vendor-block-projects">
     <div class="vendor-panel-head">
         <div>
             <h2 class="vendor-detail-title">Projects running with this vendor</h2>

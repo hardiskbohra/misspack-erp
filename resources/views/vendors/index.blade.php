@@ -71,20 +71,22 @@
                 <p class="master-sub">{{ $stats['on_hold'] }} on hold · {{ $stats['blacklisted'] }} blacklisted</p>
             </div>
         </div>
-        <div class="master-stat master-stat--flat purple">
-            <span class="icon" aria-hidden="true"><i class="fa-solid fa-earth-asia"></i></span>
+        <div class="master-stat master-stat--flat {{ $stats['payable'] > 0 ? 'purple' : 'teal' }}">
+            <span class="icon" aria-hidden="true"><i class="fa-solid fa-file-invoice-dollar"></i></span>
             <div>
-                <p class="master-stat-title">International</p>
-                <p class="master-stat-value">{{ number_format($stats['international']) }}</p>
-                <p class="master-sub">sourcing outside India</p>
+                <p class="master-stat-title">Payable</p>
+                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['payable']) }}</p>
+                <p class="master-sub">across every vendor ledger</p>
             </div>
         </div>
-        <div class="master-stat master-stat--flat {{ $stats['with_contact'] === $stats['total'] ? 'teal' : 'orange' }}">
-            <span class="icon" aria-hidden="true"><i class="fa-solid fa-address-book"></i></span>
+        <div class="master-stat master-stat--flat {{ $stats['overdue_vendors'] ? 'red' : 'teal' }}">
+            <span class="icon" aria-hidden="true"><i class="fa-solid fa-clock-rotate-left"></i></span>
             <div>
-                <p class="master-stat-title">Contacts on file</p>
-                <p class="master-stat-value">{{ number_format($stats['with_contact']) }}</p>
-                <p class="master-sub">of {{ number_format($stats['total']) }} vendors</p>
+                <p class="master-stat-title">Overdue</p>
+                <p class="master-stat-value">{{ number_format($stats['overdue_vendors']) }}</p>
+                <p class="master-sub">
+                    {{ $stats['overdue_vendors'] ? 'vendors with a late bill' : 'nothing past its due date' }}
+                </p>
             </div>
         </div>
     </div>
@@ -106,6 +108,11 @@
                 </a>
                 <a class="master-list-chip {{ $status === 'blacklisted' ? 'is-active' : '' }}" href="{{ $statusUrl('blacklisted') }}">
                     Blacklisted <span class="master-list-chip-count">{{ $stats['blacklisted'] }}</span>
+                </a>
+                <a class="master-list-chip {{ $overdue === '1' ? 'is-active' : '' }}"
+                    href="{{ route('vendors.index', $baseFilters->except(['overdue', 'page'])->all() + ($overdue === '1' ? [] : ['overdue' => '1'])) }}"
+                    @if ($overdue === '1') aria-current="true" @endif>
+                    Owing &amp; overdue <span class="master-list-chip-count">{{ $stats['overdue_vendors'] }}</span>
                 </a>
             </nav>
 
@@ -135,6 +142,11 @@
         </div>
 
         <form method="GET" action="{{ route('vendors.index') }}">
+            {{-- The chip and the drawer drive the same filter; carrying it in
+                 the form keeps a search or a filter change from dropping it. --}}
+            @if ($overdue === '1')
+                <input type="hidden" name="overdue" value="1">
+            @endif
             <div class="master-filter-row core-filter-toolbar">
                 <label class="master-search">
                     <span aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></span>
@@ -142,7 +154,7 @@
                         placeholder="Search vendor, brand, category, GSTIN, contact or country" aria-label="Search vendors">
                 </label>
                 <x-filter-trigger drawer="vendorFiltersDrawer"
-                    :count="(filled($search) ? 1 : 0) + ($status !== 'all' ? 1 : 0) + ($type !== 'all' ? 1 : 0) + ($country !== 'all' ? 1 : 0)" />
+                    :count="(filled($search) ? 1 : 0) + ($status !== 'all' ? 1 : 0) + ($type !== 'all' ? 1 : 0) + ($country !== 'all' ? 1 : 0) + ($overdue === '1' ? 1 : 0)" />
             </div>
 
             <x-drawer id="vendorFiltersDrawer" title="Filter vendors" eyebrow="Vendor filters"
@@ -167,6 +179,13 @@
                                     <option value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>
                                 @endforeach
                             </select>
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label" for="vendorFilterOverdue">Money owed</label>
+                            <label class="master-check" for="vendorFilterOverdue">
+                                <input type="checkbox" id="vendorFilterOverdue" name="overdue" value="1" @checked($overdue === '1')>
+                                Only vendors with a bill past its due date
+                            </label>
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="vendorFilterCountry">Country</label>
@@ -216,6 +235,14 @@
                                 aria-label="Remove the vendor type filter" title="Remove the vendor type filter">&times;</a>
                         </span>
                     @endif
+                    @if($overdue === '1')
+                        <span class="master-list-applied-chip">
+                            <span class="master-list-applied-key">Showing</span>
+                            <span class="master-list-applied-value">Vendors with an overdue bill</span>
+                            <a class="master-list-applied-x" href="{{ $chipUrl('overdue') }}"
+                                aria-label="Remove the overdue filter" title="Remove the overdue filter">&times;</a>
+                        </span>
+                    @endif
                     @if($country !== 'all')
                         <span class="master-list-applied-chip">
                             <span class="master-list-applied-key">Country</span>
@@ -236,6 +263,11 @@
                 {{ $vendorCount === 0 ? 'No matching vendors' : 'Newest first · Showing '.$firstVendor.'–'.$lastVendor.' of '.$vendorCount }}
             </p>
             <div class="master-list-toolbar-actions">
+                <a class="master-btn master-btn-light master-btn-sm"
+                    href="{{ route('vendors.payables.export', $baseFilters->all()) }}"
+                    title="Every bill with a due date these filters match, as a spreadsheet">
+                    <i class="fa-solid fa-file-csv" aria-hidden="true"></i> Payables
+                </a>
                 <div class="master-list-density desktop-only" role="group" aria-label="Table density">
                     <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
                     <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
@@ -244,15 +276,38 @@
             </div>
         </div>
 
+        {{-- The bulk bar appears only when a row is ticked: one status change
+             across the vendors the office selected, without opening them one
+             by one. The table's checkboxes belong to this form through the
+             form attribute, so the table stays a table. --}}
+        <form method="POST" action="{{ route('vendors.bulk-status') }}" id="vendorBulkForm"
+            class="master-list-bulk" data-bulk-bar hidden>
+            @csrf
+            @method('PATCH')
+            <span class="master-list-bulk-count" data-bulk-count>0 vendors selected</span>
+            <select class="master-select" name="action" aria-label="Bulk action" required>
+                <option value="">Choose an action…</option>
+                @foreach ($statusActions as $key => $label)
+                    <option value="{{ $key }}">{{ $label }}</option>
+                @endforeach
+            </select>
+            <button type="submit" class="master-btn master-btn-primary master-btn-sm">Apply to selected</button>
+            <button type="button" class="master-btn master-btn-light master-btn-sm" data-bulk-clear>Clear</button>
+        </form>
+
         <div class="master-table-wrap ui-mobile-cards">
             <table class="master-table vendor-table" data-table-settings data-table-key="vendors">
                 <thead>
                     <tr>
+                        <th scope="col" class="master-list-pick vendor-pick-cell">
+                            <input type="checkbox" data-bulk-all aria-label="Select every vendor on this page">
+                        </th>
                         <th scope="col">Vendor</th>
                         <th scope="col">Type</th>
                         <th scope="col">Contact</th>
                         <th scope="col" class="ui-mobile-secondary">Location</th>
                         <th scope="col" class="ui-mobile-secondary">Terms</th>
+                        <th scope="col" class="is-num">Payable</th>
                         <th scope="col">Status</th>
                         <th scope="col">Action</th>
                     </tr>
@@ -269,7 +324,16 @@
                                 ->implode('');
                             $avatarTone = abs(crc32($vendor->vendor_name)) % 6;
                         @endphp
+                        @php
+                            $billed = (float) ($vendor->billed_inr ?? 0);
+                            $paid = (float) ($vendor->paid_inr ?? 0);
+                            $payable = max($billed - $paid, 0);
+                        @endphp
                         <tr class="vendor-row is-clickable" data-href="{{ route('vendors.show', $vendor) }}">
+                            <td class="master-list-pick vendor-pick-cell" data-label="Select">
+                                <input type="checkbox" name="ids[]" value="{{ $vendor->id }}" form="vendorBulkForm"
+                                    data-bulk-pick aria-label="Select {{ $vendor->vendor_name }}">
+                            </td>
                             <td data-label="Vendor">
                                 <div class="vendor-table-identity">
                                     @if($vendor->image_path)
@@ -314,6 +378,14 @@
                                 {{ $vendor->preferred_currency ?: 'INR' }}
                                 <span class="master-sub">{{ $vendor->payment_terms ?: 'No terms on file' }}</span>
                             </td>
+                            <td data-label="Payable" class="is-num">
+                                @if ($payable > 0)
+                                    <strong class="vendor-payable">{{ \App\Helpers\CommonHelper::indianCurrency($payable) }}</strong>
+                                    <span class="master-sub">{{ $billed > 0 ? 'of '.\App\Helpers\CommonHelper::indianCurrency($billed).' billed' : '' }}</span>
+                                @else
+                                    <span class="master-empty-value">Settled</span>
+                                @endif
+                            </td>
                             <td data-label="Status">
                                 <span class="master-badge status-{{ $statusClass }}">{{ $vendor->statusLabel() }}</span>
                             </td>
@@ -355,8 +427,8 @@
                                             <a href="{{ route('vendors.edit', $vendor) }}">
                                                 <i class="fas fa-pen" aria-hidden="true"></i> Edit vendor
                                             </a>
-                                            <a href="{{ route('vendors.show', [$vendor, 'tab' => 'payments']) }}">
-                                                <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Payments
+                                            <a href="{{ route('vendors.show', [$vendor, 'tab' => 'money']) }}">
+                                                <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Ledger &amp; payables
                                             </a>
                                             @if($vendor->contact_person_email)
                                                 <a href="mailto:{{ $vendor->contact_person_email }}">
@@ -375,7 +447,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7">
+                            <td colspan="9">
                                 <div class="master-list-empty">
                                     <span class="master-list-empty-icon" aria-hidden="true"><i class="fa-solid fa-industry"></i></span>
                                     <h2 class="master-list-empty-title">{{ $filtersActive ? 'No vendors match these filters' : 'Your vendor list is empty' }}</h2>

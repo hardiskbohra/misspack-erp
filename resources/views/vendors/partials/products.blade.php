@@ -1,4 +1,4 @@
-<section class="master-tab-panel" id="vendor-panel-products" role="tabpanel" aria-labelledby="vendor-tab-products">
+<section class="vendor-block" aria-labelledby="vendor-block-products">
     <div class="vendor-panel-head">
         <div>
             <h2 class="vendor-detail-title">Products supplied</h2>

@@ -6,6 +6,11 @@
             value="{{ now()->toDateString() }}" required>
     </div>
     <div class="master-field">
+        <label class="master-label" for="{{ $fieldId('due_date') }}">Due date</label>
+        <input class="master-input" id="{{ $fieldId('due_date') }}" type="date" name="due_date">
+        <div class="master-help">Leave blank on a bill and the vendor's payment terms decide it.</div>
+    </div>
+    <div class="master-field">
         <label class="master-label" for="{{ $fieldId('invoice_number') }}">Invoice / bill no.</label>
         <input class="master-input" id="{{ $fieldId('invoice_number') }}" type="text" name="invoice_number"
             placeholder="Vendor invoice number">

@@ -57,7 +57,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Summary card | Partial | `.master-info`, statement summaries, report totals; semantics vary by module |
 | Product card | Partial | Product grid and client-portal catalogue card styles |
 | Project card | Partial | Project list/show and client portal project cards |
-| Vendor card | Partial | Vendor pages use master card and vendor-specific summary patterns |
+| Vendor card | Partial | Vendor pages use master card and vendor-specific summary patterns; the record adds payables/ageing, six-month spend bars and an activity trail built from the same shared cards |
 | Activity card | Gap | Timeline entries exist; no shared activity card/feed component |
 | Alert card | Partial | Semantic alerts exist; informational callout and alert-card hierarchy are not fully standardized |
 
@@ -113,6 +113,8 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | --- | --- | --- |
 | Price ladder | Shared, domain-specific | Product price ladders and price-calculator grid (`products.css`, `price-calculator.css`) |
 | Quote comparison | Gap | Lead quotes are listed per lead; the vendor-quote module was removed, so no comparison matrix exists |
+| Payables ageing | Partial | Vendor module only: `.vendor-ageing` cards over the ledger's settled open bills; there is no shared ageing component for other modules to reuse yet |
+| Bulk row actions | Partial | The shared `.master-list-bulk` bar and the `form` attribute carry vendor status changes; sales invoices uses its own script for the same pattern |
 | Payment summary | Partial | Invoice, portal, and Cashflow payment summaries use separate markup |
 | Invoice summary | Partial | Sales invoice show/list and portal invoice detail cards |
 | Shipment tracker | Shared, domain-specific | Shipment detail tracker plus public tracking/stepper (`shipments.css`, `shipment-public.css`) |
