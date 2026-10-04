@@ -1885,3 +1885,29 @@
     color: var(--mc-text-3);
     font-size: 11px;
 }
+
+/* Keep every information card in the client tabs crisp white against the
+   softly tinted tab canvas. Dark mode continues to use its theme card token. */
+.client-show .client-detail-card,
+.client-show .client-detail-tools .cpa-card,
+.client-show .portal-credential-box,
+.client-show .client-review-note,
+.client-show .cpa-secondary-form,
+.client-show .cpa-support-shortcut,
+.client-show .cpa-password-box,
+.client-show .client-statement-metric,
+.client-show .client-statement-other-currencies {
+    background-color: #fff;
+}
+
+:root[data-theme="dark"] .client-show .client-detail-card,
+:root[data-theme="dark"] .client-show .client-detail-tools .cpa-card,
+:root[data-theme="dark"] .client-show .portal-credential-box,
+:root[data-theme="dark"] .client-show .client-review-note,
+:root[data-theme="dark"] .client-show .cpa-secondary-form,
+:root[data-theme="dark"] .client-show .cpa-support-shortcut,
+:root[data-theme="dark"] .client-show .cpa-password-box,
+:root[data-theme="dark"] .client-show .client-statement-metric,
+:root[data-theme="dark"] .client-show .client-statement-other-currencies {
+    background-color: var(--mc-card);
+}
