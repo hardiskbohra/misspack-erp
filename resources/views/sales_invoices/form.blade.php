@@ -86,7 +86,7 @@
         @endif
 
         <form method="POST" action="{{ $isEdit ? route('sales-invoices.update', $invoice) : route('sales-invoices.store') }}"
-            enctype="multipart/form-data" class="master-form">
+            enctype="multipart/form-data" class="master-form" @if (! $isEdit) data-invoice-portal-confirm @endif>
             @csrf
             @if ($isEdit)
                 @method('PUT')
@@ -191,11 +191,17 @@
 
                 <div class="master-form-grid">
                     <div class="master-field full">
-                        <label class="master-check full"><input type="checkbox" name="show_client_portal" value="1"
-                                {{ old('show_client_portal', $invoice->show_client_portal) ? 'checked' : '' }}> Visible
-                            in the client portal</label>
-                        <p class="master-help">While this is on, the client can open the invoice at its public link and
-                            download the files marked client-visible.</p>
+                        @if ($isEdit)
+                            <label class="master-check full"><input type="checkbox" name="show_client_portal" value="1"
+                                    {{ old('show_client_portal', $invoice->show_client_portal) ? 'checked' : '' }}> Visible
+                                in the client portal</label>
+                            <p class="master-help">While this is on, the client can open the invoice at its public link and
+                                download the files marked client-visible.</p>
+                        @else
+                            <input type="hidden" name="show_client_portal" value="0" data-invoice-portal-choice>
+                            <p class="master-help">You’ll be asked whether to show this invoice in the client portal when
+                                you create it.</p>
+                        @endif
                     </div>
                 </div>
             </div>

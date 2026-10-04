@@ -987,6 +987,14 @@ check('a pick made in a select2 list reaches the handler that fills the form',
     'a DOM `change` listener is the one binding select2 never fires — the office '
     + 'picks a client and the form sits there empty until the invoice is saved');
 
+check('creating an invoice asks about portal visibility without interrupting private creation',
+    /class="master-form" @if \(! \$isEdit\) data-invoice-portal-confirm @endif/.test(form)
+    && /@else\s*<input type="hidden" name="show_client_portal" value="0" data-invoice-portal-choice>/.test(form)
+    && /@if \(\$isEdit\)\s*<label class="master-check full"><input type="checkbox" name="show_client_portal"/.test(form)
+    && /portalPromptForm\.addEventListener\('submit'/.test(js)
+    && /portalChoice\.value = window\.confirm\([\s\S]*?\? '1' : '0';/.test(js),
+    'OK shows the invoice, Cancel saves it privately, and editing keeps its visibility toggle');
+
 /* ---------------------------------------------------------------- report */
 
 const failed = out.filter(([, ok]) => !ok);

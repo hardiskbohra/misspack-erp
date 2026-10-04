@@ -30,6 +30,18 @@
     }
 
     onReady(function () {
+        var portalPromptForm = document.querySelector('[data-invoice-portal-confirm]');
+        if (portalPromptForm) {
+            portalPromptForm.addEventListener('submit', function () {
+                var portalChoice = portalPromptForm.querySelector('[data-invoice-portal-choice]');
+                if (!portalChoice) return;
+
+                portalChoice.value = window.confirm(
+                    'Show this invoice in the client portal?\n\nPress OK to make it visible to the client, or Cancel to create it privately.'
+                ) ? '1' : '0';
+            });
+        }
+
         var body = document.getElementById('invoiceItemsBody');
         if (!body) return;
 
