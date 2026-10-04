@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\DateRanges;
+use App\Models\CashflowAccount;
+use App\Models\CashflowEntry;
 use App\Models\Product;
 use App\Models\Project;
 use App\Models\PurchaseInvoice;
@@ -88,6 +91,10 @@ class PurchaseInvoiceController extends Controller
             'pageTotals' => $totals,
             'chipCounts' => $this->chipCounts($filters, $type, $invoices->total()),
             'appliedChips' => $this->appliedChips($filters),
+            'dateRanges' => DateRanges::presets(),
+            'dateRangeLabels' => DateRanges::LABELS,
+            'activeRange' => DateRanges::keyOf($filters['dateFrom'] ?? null, $filters['dateTo'] ?? null),
+            'paymentLabels' => self::PAYMENT_LABELS,
             ...$filters,
         ]));
     }
@@ -166,25 +173,25 @@ class PurchaseInvoiceController extends Controller
         $chips = [];
 
         if ($filters['search'] !== '') {
-            $chips['search'] = ['label' => 'Search', 'value' => $filters['search']];
+            $chips['search'] = ['label' => 'Search', 'value' => $filters['search'], 'query' => ['search']];
         }
         if ($filters['status'] !== 'all') {
-            $chips['status'] = ['label' => 'Status', 'value' => $statuses[$filters['status']] ?? $filters['status']];
+            $chips['status'] = ['label' => 'Status', 'value' => $statuses[$filters['status']] ?? $filters['status'], 'query' => ['status']];
         }
         if ($filters['payment'] !== 'all') {
-            $chips['payment'] = ['label' => 'Payment', 'value' => self::PAYMENT_LABELS[$filters['payment']] ?? $filters['payment']];
+            $chips['payment'] = ['label' => 'Payment', 'value' => self::PAYMENT_LABELS[$filters['payment']] ?? $filters['payment'], 'query' => ['payment']];
         }
         if ($filters['currency'] !== 'all') {
-            $chips['currency'] = ['label' => 'Currency', 'value' => $filters['currency']];
+            $chips['currency'] = ['label' => 'Currency', 'value' => $filters['currency'], 'query' => ['currency']];
         }
         if ($filters['vendor'] > 0) {
-            $chips['vendor'] = ['label' => 'Vendor', 'value' => Vendor::query()->whereKey($filters['vendor'])->value('vendor_name') ?: '#'.$filters['vendor']];
+            $chips['vendor'] = ['label' => 'Vendor', 'value' => Vendor::query()->whereKey($filters['vendor'])->value('vendor_name') ?: '#'.$filters['vendor'], 'query' => ['vendor']];
         }
         if ($filters['project'] > 0) {
-            $chips['project'] = ['label' => 'Project', 'value' => Project::query()->whereKey($filters['project'])->value('name') ?: '#'.$filters['project']];
+            $chips['project'] = ['label' => 'Project', 'value' => Project::query()->whereKey($filters['project'])->value('name') ?: '#'.$filters['project'], 'query' => ['project']];
         }
         if ($filters['dateFrom'] || $filters['dateTo']) {
-            $chips['dates'] = ['label' => 'Document date', 'value' => trim(($filters['dateFrom'] ?: '…').' → '.($filters['dateTo'] ?: '…'))];
+            $chips['dates'] = ['label' => 'Document date', 'value' => trim(($filters['dateFrom'] ?: '…').' → '.($filters['dateTo'] ?: '…')), 'query' => ['date_from', 'date_to']];
         }
 
         return $chips;
@@ -882,7 +889,9 @@ class PurchaseInvoiceController extends Controller
     {
         $id = (int) $request->query('from_order', 0);
 
-        return $id > 0 ? PurchaseInvoice::query()->whereKey($id)->where('invoice_type', 'order')->first() : null;
+        return $id > 0
+            ? PurchaseInvoice::query()->whereKey($id)->where('invoice_type', 'order')->with('items')->first()
+            : null;
     }
 
     private function productName($productId): ?string
@@ -993,11 +1002,16 @@ class PurchaseInvoiceController extends Controller
     {
         $vendors = $this->vendors();
 
+        $snapshot = $vendors->isNotEmpty() ? array_keys($this->vendorSnapshot($vendors->first())) : [];
+
         return [
             'vendors' => $vendors,
             'vendorSnapshots' => $vendors->mapWithKeys(fn ($vendor) => [$vendor->id => $this->vendorSnapshot($vendor)])->all(),
+            'vendorSnapshotFields' => $snapshot,
             'projects' => $this->projects(),
             'products' => $this->products(),
+            'accounts' => $this->cashflowAccounts(),
+            'paymentModeOptions' => class_exists(CashflowEntry::class) ? CashflowEntry::paymentModeOptions() : [],
             'statusOptions' => PurchaseInvoice::statusOptionsFor($type),
             'allStatusOptions' => PurchaseInvoice::statusOptions(),
             'currencyOptions' => PurchaseInvoice::currencyOptions(),
@@ -1047,6 +1061,15 @@ class PurchaseInvoiceController extends Controller
     private function ledgerAvailable(): bool
     {
         return (new PurchaseBillLedger())->available();
+    }
+
+    private function cashflowAccounts()
+    {
+        if (! class_exists(CashflowAccount::class) || ! Schema::hasTable('cashflow_accounts')) {
+            return collect();
+        }
+
+        return CashflowAccount::query()->orderBy('account_name')->get();
     }
 
     /**
