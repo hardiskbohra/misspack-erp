@@ -32,13 +32,55 @@
     onReady(function () {
         var portalPromptForm = document.querySelector('[data-invoice-portal-confirm]');
         if (portalPromptForm) {
-            portalPromptForm.addEventListener('submit', function () {
+            var portalPromptOpen = false;
+            var continueAfterPortalChoice = false;
+
+            portalPromptForm.addEventListener('submit', function (event) {
+                if (continueAfterPortalChoice) {
+                    continueAfterPortalChoice = false;
+                    return;
+                }
+
                 var portalChoice = portalPromptForm.querySelector('[data-invoice-portal-choice]');
                 if (!portalChoice) return;
 
-                portalChoice.value = window.confirm(
-                    'Show this invoice in the client portal?\n\nPress OK to make it visible to the client, or Cancel to create it privately.'
-                ) ? '1' : '0';
+                event.preventDefault();
+                if (portalPromptOpen) return;
+                portalPromptOpen = true;
+
+                var submitter = event.submitter || null;
+                function submitWithVisibility(showInPortal) {
+                    portalChoice.value = showInPortal ? '1' : '0';
+                    portalPromptOpen = false;
+                    continueAfterPortalChoice = true;
+
+                    if (typeof portalPromptForm.requestSubmit === 'function') {
+                        if (submitter && portalPromptForm.contains(submitter)) {
+                            portalPromptForm.requestSubmit(submitter);
+                        } else {
+                            portalPromptForm.requestSubmit();
+                        }
+                    } else {
+                        portalPromptForm.submit();
+                    }
+                }
+
+                if (!window.MasterAlert || typeof window.MasterAlert.confirm !== 'function') {
+                    submitWithVisibility(false);
+                    return;
+                }
+
+                window.MasterAlert.confirm(
+                    'Choose Yes to make the invoice visible to the client, or No to create it privately.',
+                    {
+                        title: 'Show this invoice in the client portal?',
+                        confirmText: 'Yes',
+                        cancelText: 'No',
+                        danger: false
+                    }
+                ).then(submitWithVisibility).catch(function () {
+                    submitWithVisibility(false);
+                });
             });
         }
 

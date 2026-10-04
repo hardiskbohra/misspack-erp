@@ -991,9 +991,20 @@ check('creating an invoice asks about portal visibility without interrupting pri
     /class="master-form" @if \(! \$isEdit\) data-invoice-portal-confirm @endif/.test(form)
     && /@else\s*<input type="hidden" name="show_client_portal" value="0" data-invoice-portal-choice>/.test(form)
     && /@if \(\$isEdit\)\s*<label class="master-check full"><input type="checkbox" name="show_client_portal"/.test(form)
-    && /portalPromptForm\.addEventListener\('submit'/.test(js)
-    && /portalChoice\.value = window\.confirm\([\s\S]*?\? '1' : '0';/.test(js),
-    'OK shows the invoice, Cancel saves it privately, and editing keeps its visibility toggle');
+    && /portalPromptForm\.addEventListener\('submit', function \(event\)/.test(js)
+    && /window\.MasterAlert\.confirm\(/.test(js)
+    && /confirmText: 'Yes'/.test(js)
+    && /cancelText: 'No'/.test(js)
+    && /portalChoice\.value = showInPortal \? '1' : '0';/.test(js)
+    && /portalPromptForm\.requestSubmit/.test(js)
+    && ! /window\.confirm/.test(js),
+    'Yes makes it visible, No creates it privately, and editing keeps its visibility toggle');
+
+check('invoice form cards keep one consistent gap between sections',
+    /\.si-form\s*\{[^}]*display: flex;[^}]*flex-direction: column;[^}]*gap: 20px/.test(sheet)
+    && /\.si-form \.master-section\s*\{\s*margin-bottom: 0\s*\}/.test(sheet)
+    && /\.si-form > \.master-header,\s*\.si-form > \.master-actions\s*\{\s*margin: 0\s*\}/.test(sheet),
+    'the form container owns a 20px card rhythm without doubled legacy margins');
 
 /* ---------------------------------------------------------------- report */
 

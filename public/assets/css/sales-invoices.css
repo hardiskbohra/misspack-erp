@@ -41,15 +41,22 @@
    re-timing the ledger's tables and money rows on the page next door.
    ========================================================================== */
 
-/* The form page is a stack of cards, and the gap is the shell's own rhythm —
-   the 16px `.master-section` puts between two cards on every other form in the
-   office. It has to be said out loud here because the page is a flex column,
-   where the cards' margins do not collapse: without it the last field of one
-   card sits against the first field of the next. */
+/* The form page is a stack of cards. Let the container own one consistent
+   20px rhythm; reset legacy card/header/action margins so they cannot collapse
+   or add a second gap at the grid-to-attachments boundary. */
 .si-form {
     display: flex;
     flex-direction: column;
-    gap: 16px
+    gap: 20px
+}
+
+.si-form .master-section {
+    margin-bottom: 0
+}
+
+.si-form > .master-header,
+.si-form > .master-actions {
+    margin: 0
 }
 
 .si-items {
