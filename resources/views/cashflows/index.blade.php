@@ -241,17 +241,15 @@
                     <div class="core-drawer-fields">
                         <div class="master-field">
                             <label class="master-label" for="cashflowFilterAccount">Account</label>
-                            <div class="cf-account-filter">
-                                <select class="master-select" id="cashflowFilterAccount" name="account_id" aria-label="Filter by account">
-                                    <option value="all">All accounts</option>
-                                    @foreach($accounts as $account)
-                                        <option value="{{ $account->id }}" @selected((string) $accountId === (string) $account->id)>
-                                            {{ $account->account_name }}</option>
-                                    @endforeach
-                                </select>
-                                <button type="button" class="master-btn master-btn-ghost" id="openAccountModal"
-                                    title="Add an account" aria-label="Add an account">+ New</button>
-                            </div>
+                            <select class="master-select" id="cashflowFilterAccount" name="account_id" aria-label="Filter by account">
+                                <option value="all">All accounts</option>
+                                @foreach($accounts as $account)
+                                    <option value="{{ $account->id }}" @selected((string) $accountId === (string) $account->id)>
+                                        {{ $account->account_name }}</option>
+                                @endforeach
+                            </select>
+                            <button type="button" class="master-btn master-btn-ghost cf-account-add" id="openAccountModal"
+                                title="Add an account" aria-label="Add an account">+ New</button>
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="cashflowFilterAccountingStatus">Accounting status</label>

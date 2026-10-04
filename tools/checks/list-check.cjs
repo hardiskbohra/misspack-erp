@@ -845,18 +845,22 @@ check('both lists open with the same strip of tiles',
    Both ways to record an entry, and the account an entry lands in, stay one
    click from the list: the quick dialog, the detailed form, and the add-account
    button sitting with its account selector inside the shared filter drawer. */
-const accountFilterAt = cashView.indexOf('class="cf-account-filter"');
+const accountLabelAt = cashView.indexOf('for="cashflowFilterAccount"');
+const accountSelectAt = cashView.indexOf('name="account_id"', accountLabelAt);
 const accountButtonAt = cashView.indexOf('id="openAccountModal"');
+const statusLabelAt = cashView.indexOf('for="cashflowFilterAccountingStatus"');
 const cashDrawerStart = cashView.indexOf('<x-drawer id="cashflowFiltersDrawer"');
 const cashDrawerEnd = cashView.indexOf('</x-drawer>', cashDrawerStart);
 const cashFooterAt = cashView.indexOf('<x-slot:footer>', accountButtonAt);
 check('the ledger keeps every door open',
     cashView.includes("route('cashflows.create')")
     && cashView.includes("route('cashflows.quickStore')")
-    && accountFilterAt !== -1 && accountButtonAt > accountFilterAt
-    && accountButtonAt > cashDrawerStart && accountButtonAt < cashFooterAt
-    && cashFooterAt < cashDrawerEnd,
-    'the add-account action remains beside its selector inside the filter drawer');
+    && accountLabelAt > cashDrawerStart && accountSelectAt > accountLabelAt
+    && accountButtonAt > accountSelectAt && statusLabelAt > accountButtonAt
+    && /class="master-btn master-btn-ghost cf-account-add" id="openAccountModal"/.test(cashView)
+    && accountButtonAt < cashFooterAt && cashFooterAt < cashDrawerEnd
+    && /\.cashflow-index \.core-drawer-fields \.cf-account-add \{[^}]*align-self:\s*flex-start/.test(cashCss),
+    'the account and status selectors share a grid row, with add-account directly below its selector');
 
 /* ---- same composition, same order ----
    The two lists are the same screen with different data, so they render the

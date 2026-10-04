@@ -662,29 +662,10 @@
    same geometry as the shipment list, so the two screens read as one product.
    ========================================================================== */
 
-/* The account select and the button that adds one stay together when the
-   filter row wraps. */
-.cashflow-index .cf-account-filter {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1 1 190px;
-    min-width: 0;
-}
-
-.cashflow-index .cf-account-filter .master-select {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.cashflow-index .cf-account-filter .master-btn {
-    min-width: 0;
-}
-
-.cashflow-index .core-drawer-fields .cf-account-filter .select2-container {
-    flex: 1 1 auto;
-    width: auto !important;
-    min-width: 0;
+/* Keep the add-account action under its full-width selector in the drawer. */
+.cashflow-index .core-drawer-fields .cf-account-add {
+    align-self: flex-start;
+    min-height: 40px;
 }
 
 /* ---------------- table ---------------- */
