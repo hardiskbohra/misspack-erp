@@ -296,6 +296,12 @@ check('the document has a dark theme of its own',
 check('a public reader follows their own theme, and only there',
     /@media \(prefers-color-scheme: dark\) \{[\s\S]{0,200}body\.stmt-standalone/.test(statementCss)
     && ! /prefers-color-scheme[\s\S]{0,80}\.cashflow-statement/.test(statementCss));
+check('the unavailable-link notice stays light with guideline surfaces',
+    /body\.stmt-centered\s*\{[^}]*color-scheme:\s*light[^}]*background:\s*var\(--pdf-page-bg/.test(statementCss)
+    && /\.stmt-expired\s*\{[^}]*background:\s*var\(--pdf-paper/.test(statementCss)
+    && /\.stmt-expired-facts\s*\{[^}]*background:\s*var\(--pdf-surface-soft/.test(statementCss)
+    && /body\.stmt-standalone:not\(\.stmt-print\):not\(\.stmt-centered\)/.test(statementCss)
+    && ! /body\.stmt-standalone:not\(\.stmt-print\) \.stmt-expired/.test(statementCss));
 check('the document prints without the app around it',
     /@media print \{/.test(statementCss) && /@page \{/.test(statementCss)
     && /\.no-print,[\s\S]{0,200}display: none !important;/.test(statementCss));

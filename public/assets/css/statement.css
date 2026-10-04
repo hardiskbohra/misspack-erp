@@ -16,8 +16,9 @@
         tabular-nums` is what makes that work in Inter.
 
    Theme: the app sets `data-theme` on <html>, so the dark rules key off that.
-   A standalone reader (the public link) has no attribute — there the reader's
-   own system preference decides, and only there (`body.stmt-standalone`).
+   A standalone statement reader follows its system preference. The centered
+   unavailable-link notice stays light so its status and account details remain
+   clear regardless of the reader's device theme.
    ========================================================================== */
 
 .stmt {
@@ -600,15 +601,18 @@ body.stmt-centered {
     min-height: 100vh;
     align-items: center;
     justify-content: center;
+    color-scheme: light;
+    color: var(--pdf-body, var(--mc-text-2, #344054));
+    background: var(--pdf-page-bg, var(--mc-soft, #eef2f8));
 }
 
 .stmt-expired {
     max-width: 560px;
     padding: 34px 36px;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    background: #fff;
-    box-shadow: 0 18px 50px rgba(26, 37, 64, 0.09);
+    border: 1px solid var(--pdf-border, var(--mc-border, #dfe5ef));
+    border-radius: 18px;
+    background: var(--pdf-paper, var(--mc-card, #fff));
+    box-shadow: var(--pdf-shadow, var(--mc-shadow, 0 16px 40px rgba(25, 42, 70, .10)));
     text-align: center;
 }
 
@@ -619,14 +623,14 @@ body.stmt-centered {
 
 .stmt-expired-title {
     margin: 0 0 8px;
+    color: var(--pdf-ink, var(--mc-text, #1b2a41));
     font-size: 20px;
     font-weight: 700;
-    color: #1a2540;
 }
 
 .stmt-expired-text {
     margin: 0;
-    color: #5a6478;
+    color: var(--pdf-body, var(--mc-text-2, #344054));
     font-size: 13.5px;
 }
 
@@ -636,14 +640,14 @@ body.stmt-centered {
     gap: 10px;
     padding: 14px;
     margin: 18px 0 0;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--pdf-border, var(--mc-border, #dfe5ef));
     border-radius: 10px;
-    background: #f7f9ff;
+    background: var(--pdf-surface-soft, var(--mc-card-soft, #f7f9fc));
     text-align: left;
 }
 
 .stmt-expired-facts dt {
-    color: #7d8aa0;
+    color: var(--pdf-muted, var(--mc-text-3, #667085));
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -652,14 +656,14 @@ body.stmt-centered {
 
 .stmt-expired-facts dd {
     margin: 2px 0 0;
-    color: #1a2540;
+    color: var(--pdf-ink, var(--mc-text, #1b2a41));
     font-size: 13px;
     font-weight: 600;
 }
 
 .stmt-expired-contact {
     margin: 18px 0 0;
-    color: #7d8aa0;
+    color: var(--pdf-muted, var(--mc-text-3, #667085));
     font-size: 12px;
 }
 
@@ -678,16 +682,15 @@ body.stmt-centered {
     --stmt-warn: #fcd34d;
 }
 
-/* A standalone reader has no theme attribute: their system decides. Kept to
-   `body.stmt-standalone` so a light-mode app on a dark-mode machine never
-   flips the document inside the app. */
+/* A standalone statement reader has no theme attribute: their system decides.
+   Keep this preference off the centered unavailable-link page, which remains a
+   light status card regardless of the reader's device theme. */
 @media (prefers-color-scheme: dark) {
-    body.stmt-standalone:not(.stmt-print) {
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) {
         background: #0f1628;
     }
 
-    body.stmt-standalone:not(.stmt-print) .stmt,
-    body.stmt-standalone:not(.stmt-print) .stmt-expired {
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt {
         border-color: #2a3854;
         background: #1a2540;
         box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
@@ -703,23 +706,14 @@ body.stmt-centered {
         --stmt-warn: #fcd34d;
     }
 
-    body.stmt-standalone:not(.stmt-print) .stmt-public-brand,
-    body.stmt-standalone:not(.stmt-print) .stmt-expired-title,
-    body.stmt-standalone:not(.stmt-print) .stmt-expired-facts dd {
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt-public-brand {
         color: #e8edf6;
     }
 
-    body.stmt-standalone:not(.stmt-print) .stmt-public-sub,
-    body.stmt-standalone:not(.stmt-print) .stmt-public-expiry,
-    body.stmt-standalone:not(.stmt-print) .stmt-public-foot,
-    body.stmt-standalone:not(.stmt-print) .stmt-expired-text,
-    body.stmt-standalone:not(.stmt-print) .stmt-expired-contact {
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt-public-sub,
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt-public-expiry,
+    body.stmt-standalone:not(.stmt-print):not(.stmt-centered) .stmt-public-foot {
         color: #aab6c9;
-    }
-
-    body.stmt-standalone:not(.stmt-print) .stmt-expired-facts {
-        border-color: #2a3854;
-        background: #17223e;
     }
 }
 
