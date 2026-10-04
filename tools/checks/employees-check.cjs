@@ -82,6 +82,7 @@ const payslipCss = read('public/assets/css/payslip.css');
 const payslipRules = payslipCss.replace(/\/\*[\s\S]*?\*\//g, '');
 const helper = read('app/Helpers/CommonHelper.php');
 const userJs = read('public/assets/js/users.js');
+const appLayoutJs = read('public/assets/js/app-layout.js');
 
 /* ------------------------------------------------------------- 1. the door */
 
@@ -612,7 +613,7 @@ const declaredColumns = (() => {
 })();
 
 /** A result column is not a table column (`select(... as total)`). */
-const SELECT_ALIASES = new Set(['bucket', 'total', 'total_value', 'entry', 'done', 'required']);
+const SELECT_ALIASES = new Set(['bucket', 'total', 'total_value', 'entry', 'done', 'required', 'aggregate']);
 
 const walk = dir => fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap(entry =>
     entry.isDirectory()
@@ -752,11 +753,16 @@ check('the payslip dialogs are the shared sheet, and they scroll',
     && /class="master-modal-footer"/.test(payslipForm)
     && /class="master-modal-close" data-close-modal/.test(payslipForm));
 
+check('URL-opened payslip dialogs lock the page and unlock it when closed',
+    /document\.querySelectorAll\('\.master-modal\.open'\)\.forEach\(openMasterModal\)/.test(appLayoutJs)
+    && /document\.body\.classList\.add\('master-modal-open'\)/.test(appLayoutJs)
+    && /if \(!document\.querySelector\('\.master-modal\.open'\)\)[\s\S]*?classList\.remove\('master-modal-open'\)/.test(appLayoutJs));
+
 check('the two dialogs are the two halves of one form',
     /'mode' => 'create'/.test(userShow)
     && /'mode' => 'edit'/.test(userShow)
     && /@method\('PUT'\)/.test(userShow)
-    && /route\('users\.payslips\.store', \$user\)/.test(userShow)
+    && /route\('users\.payslips\.store', (?:\$user|\['user' => \$user)/.test(userShow)
     && /route\('users\.payslips\.update'/.test(userShow)
     && /route\('users\.payslips\.destroy'/.test(userShow)
     && (payslipForm.match(/\$edit \?/g) || []).length >= 4);
@@ -765,8 +771,17 @@ check('the two dialogs are the two halves of one form',
    outside the card — through the button's own form attribute. */
 check('the remove button submits a form outside the dialog card',
     /<form method="POST" id="payslipEditDelete"/.test(userShow)
+    && /@method\('DELETE'\)/.test(userShow)
     && /form="\{\{ \$dialog \}\}Delete"/.test(payslipForm)
     && !/payslipForm[\s\S]{0,4000}<form method="POST"[\s\S]{0,200}<form method="POST"/.test(userShow));
+
+check('payslip deletion is ownership-checked, removes its file, and flashes success',
+    /Route::delete\('\/users\/\{user\}\/payslips\/\{payslip\}'/.test(routes)
+    && /public function destroy\(Request \$request, User \$user, EmployeePayslip \$payslip\): RedirectResponse/.test(payslipController)
+    && /public function destroy[\s\S]*?assertOwned\(\$user, \$payslip\)/.test(payslipController)
+    && /Storage::disk\('public'\)->delete\(\$payslip->file_path\)/.test(payslipController)
+    && /\$payslip->delete\(\)/.test(payslipController)
+    && /The payslip for '\.\$label\.' was removed\./.test(payslipController));
 
 check('a ledger row can generate its month\'s payslip, prefilled from the row',
     /'month' => \$row\['period'\]/.test(payTable)
@@ -775,6 +790,8 @@ check('a ledger row can generate its month\'s payslip, prefilled from the row',
     && /\$row->entry_date\?->format\('Y-m'\) === \$month && \$row->isMoneyOut\(\)/.test(userController)
     && /'earning_amount' => \$entry \? \(string\) \$entry->amountMoved\(\)/.test(userController)
     && /filled\(\$prefill\['earning_amount'\] \?\? null\)/.test(payslipForm)
+    && /'#payslipForm'/.test(payTable)
+    && /'#payslipEdit'/.test(payTable)
     && /@method\(\\'GET\\'\)/.test('') === false);
 
 /* The dialog reopens on a validation failure — a form that loses what was
@@ -785,6 +802,16 @@ check('a failed save reopens the dialog it came from',
     && /Str::startsWith\(\$key, \$fields\)/.test(userController)
     && /'openPayslipDialog' => \$this->payslipDialog\(\$editingPayslip\)/.test(userController)
     && /\$openPayslipDialog === 'create' \? 'open' : ''/.test(userShow));
+
+check('successful payslip actions return to salary with a visible success flash',
+    /private function returnToSalary\(Request \$request, User \$user, string \$message\): RedirectResponse/.test(payslipController)
+    && /\$parameters = \['user' => \$user, 'tab' => 'salary'\]/.test(payslipController)
+    && /\$request->query\('year', ''\)/.test(payslipController)
+    && (payslipController.match(/return \$this->returnToSalary\(\$request, \$user/g) || []).length === 3
+    && /route\('users\.payslips\.store', \['user' => \$user, 'tab' => 'salary', 'year' => \$year\]\)/.test(userShow)
+    && /route\('users\.payslips\.update', \['user' => \$user, 'payslip' => \$editingPayslip, 'tab' => 'salary', 'year' => \$year\]\)/.test(userShow)
+    && /route\('users\.payslips\.destroy', \['user' => \$user, 'payslip' => \$editingPayslip, 'tab' => 'salary', 'year' => \$year\]\)/.test(userShow)
+    && /@if\(session\('success'\)\)[\s\S]*?MasterAlert\.toast\(@json\(session\('success'\)\), 'success'/.test(layout));
 
 /* The totals as they are typed, in the browser's own rupee format, which is
    the same contract as the helper the printed slip uses. */

@@ -36,9 +36,10 @@ body {
     align-items: center;
     gap: 14px;
     flex-wrap: wrap;
-    /* matches the label width, so the preview and the toolbar line up */
-    max-width: 85mm;
-    margin: 0 auto 14px;
+    /* The controls are a screen header, not part of the label's print width. */
+    width: 100%;
+    max-width: none;
+    margin: 0 0 14px;
     padding: 12px 14px;
     background: #fff;
     border: 1px solid #dfe7f3;

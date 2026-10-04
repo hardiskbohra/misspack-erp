@@ -88,6 +88,10 @@ check('page size is the label, 85 × 130 mm',
     !!pageSize && Math.abs(parseFloat(pageSize[1]) - 85) < 0.01
     && Math.abs(parseFloat(pageSize[2]) - 130) < 0.01,
     page.trim().replace(/\s+/g, ' '));
+check('screen controls span the viewport while the label stays print-sized',
+    /\.mark-toolbar\s*\{[^}]*width:\s*100%[^}]*max-width:\s*none/.test(css)
+    && /\.mark-sheet\s*\{[^}]*width:\s*85mm/.test(css)
+    && /\.no-print\s*\{[^}]*display:\s*none !important/.test(css));
 
 const paperW = parseFloat(pageSize[1]);
 const paperH = parseFloat(pageSize[2]);

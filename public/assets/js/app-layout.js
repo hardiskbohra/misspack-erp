@@ -135,7 +135,7 @@
            Module JS only needs to OPEN its modals (per-page ids/behaviour).
            ================================================================== */
         function openMasterModal(modal) {
-            if (!modal || modal.classList.contains('open')) return;
+            if (!modal) return;
             modal.classList.add('open');
             modal.setAttribute('aria-hidden', 'false');
             document.body.classList.add('master-modal-open');
@@ -166,6 +166,11 @@
                 if (e.target === modal) closeMasterModal(modal);
             });
         });
+
+        /* Some pages render a requested dialog open from its URL (for example,
+           a salary row's Generate payslip link). Bring the page scroll lock into
+           the same state as a dialog opened through `MasterModal.open()`. */
+        document.querySelectorAll('.master-modal.open').forEach(openMasterModal);
 
         document.addEventListener('keydown', function (e) {
             if (e.key !== 'Escape') return;
