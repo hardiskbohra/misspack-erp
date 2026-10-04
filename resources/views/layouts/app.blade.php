@@ -55,7 +55,9 @@
          the sheet that spaces and insets it. --}}
     <link rel="stylesheet" href="{{ $assetVer('assets/css/master-list.css') }}">
 
-    {{-- Central responsive layer (must load before the final design-system pass) --}}
+    {{-- Compatibility layer for the existing four-module markup; the shared
+         core design system follows and remains the canonical component owner. --}}
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/app-guidelines.css') }}">
     <link rel="stylesheet" href="{{ $assetVer('assets/css/responsive.css') }}">
     @include('layouts.partials.design-system-styles')
 </head>

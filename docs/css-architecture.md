@@ -59,7 +59,7 @@ Page CSS may own domain composition (grid columns, ordering, widths) and states 
 ## Runtime and build
 
 - `vite.config.js` registers both `resources/css/app.css` and `resources/css/master.css` as inputs.
-- Admin, client-workspace, and standalone public/form views include `layouts.partials.design-system-styles` after their current compatibility assets so shared component rules are authoritative.
+- Admin, client-workspace, and standalone public/form views include `layouts.partials.design-system-styles` after their current compatibility assets so shared component rules are authoritative. `public/assets/css/app-guidelines.css` remains a legacy bridge for the four normalized modules; the admin layout loads it before the canonical responsive/design-system pass.
 - The partial uses Vite when `public/hot` or `public/build/manifest.json` exists; otherwise it loads the checked-in fallback at `public/assets/css/design-system.css`. This keeps the UI styled in deployments and test environments that do not run the Vite build.
 - `public/assets/js/master-list.js` owns the opted-in table chooser and density controls. Give each listing a stable, unique `data-table-key`; saved visibility and density are scoped by view in localStorage.
 - `public/assets/js/master-drawer.js` is loaded by both admin and client-portal layouts and pairs with `<x-drawer>` for shared, keyboard-accessible quick details.

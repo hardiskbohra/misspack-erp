@@ -56,7 +56,7 @@ On phones, keep the module's primary identifier, current state, key amount/date,
 
 ## Implementation rules
 
-- Shared component styles belong in `resources/css/components/` and tokens belong in `resources/css/tokens/`; new screens should use the `core-*` API. Do not add another module-local copy of a generic card, table, tab, field, or typography rule.
+- Shared component styles belong in `resources/css/components/` and tokens belong in `resources/css/tokens/`; new screens should use the `core-*` API. Do not add another module-local copy of a generic card, table, tab, field, or typography rule. `public/assets/css/app-guidelines.css` remains a compatibility bridge for the four legacy modules and loads before the canonical design-system pass.
 - Module styles may define grid columns, widths, responsive composition, and semantic states. They must use the shared tokens for surfaces and text.
 - Preserve domain colors for statuses and credits/debits, but keep those colors local to the status element, icon, or border.
 - `resources/css/master.css` is the canonical entry point: shared components, `pages/module-adapters.css`, then `layout/responsive.css` as the final pass. Admin/client-workspace shells and standalone shared-UI views load it through `layouts.partials.design-system-styles`; the partial uses Vite when available and a generated static fallback otherwise. Existing static page CSS remains a compatibility layer while screens are migrated; see `docs/css-architecture.md` and `docs/ui-component-inventory.md`.

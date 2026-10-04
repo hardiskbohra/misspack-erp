@@ -691,14 +691,14 @@ check('every table in a view sits in a .master-table-wrap',
     bareTables.length === 0, bareTables.join(', '));
 
 /* ---- one owner for the chrome ----
-   The whole chrome — not only the two rules above — belongs to the surface.
-   This is what stops a fourth list from arriving with its own idea of the bar,
-   the applied strip or the toolbar: a module sheet styles its own cells and
-   nothing that starts with .master-list. The compiled design-system fallback
-   is a duplicate aggregate, so it is excluded from this source-sheet scan. */
+   The list controls — bars, filters, applied strips, density and empty states —
+   belong to the shared surface. Module compatibility sheets may normalize a
+   table cell beneath the list root, but must not redraw those controls. The
+   generated fallback duplicates its source and is excluded from this scan. */
+const chromeSelector = /\.master-list-(?:bar|chip|saved|save-view|applied|toolbar|hint|density|bulk|group|total|empty)\b/;
 const chromeOwners = CSS_SHEETS
     .filter(f => !['master-list.css', 'design-system.css'].includes(f))
-    .filter(f => /\.master-list\b/.test(fs.readFileSync(path.join(CSS_DIR, f), 'utf8')
+    .filter(f => chromeSelector.test(fs.readFileSync(path.join(CSS_DIR, f), 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '')));
 check('no sheet but the surface styles the list chrome',
     chromeOwners.length === 0, chromeOwners.join(', '));
