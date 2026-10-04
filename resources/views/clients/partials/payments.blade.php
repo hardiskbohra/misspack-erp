@@ -1,67 +1,5 @@
 @if($paymentEntriesAvailable)
     <div class="client-detail-tools client-financial-entries">
-        <section class="master-card master-card--flat client-detail-card client-detail-card--wide client-entry-filters" aria-labelledby="client-payment-filters-heading">
-            <div class="client-entry-toolbar-head">
-                <div><p class="cpa-eyebrow">Cashflow ledger</p><h2 class="client-detail-title" id="client-payment-filters-heading">Payment entries</h2></div>
-                <span class="cpa-badge">{{ number_format($paymentEntries->total()) }} entries</span>
-            </div>
-            <form method="GET" action="{{ route('clients.show', $client) }}" class="client-entry-filter-form">
-                <input type="hidden" name="tab" value="payments">
-                <div class="master-field client-entry-search-field">
-                    <label class="master-label" for="clientPaymentSearch">Search</label>
-                    <input class="master-input" id="clientPaymentSearch" name="payment_search" value="{{ $paymentSearch }}" placeholder="Particulars or reference">
-                </div>
-                <div class="master-field">
-                    <label class="master-label" for="clientPaymentDirection">Entry type</label>
-                    <select class="master-select" id="clientPaymentDirection" name="payment_direction">
-                        <option value="all">All types</option>
-                        @foreach($paymentDirectionOptions as $key => $label)
-                            <option value="{{ $key }}" @selected($paymentDirection === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="master-field">
-                    <label class="master-label" for="clientPaymentStatus">Status</label>
-                    <select class="master-select" id="clientPaymentStatus" name="payment_status">
-                        <option value="all">All statuses</option>
-                        @foreach($paymentStatusOptions as $key => $label)
-                            <option value="{{ $key }}" @selected($paymentStatus === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="master-field">
-                    <label class="master-label" for="clientPaymentMode">Payment mode</label>
-                    <select class="master-select" id="clientPaymentMode" name="payment_mode">
-                        <option value="all">All modes</option>
-                        @foreach($paymentModeOptions as $key => $label)
-                            <option value="{{ $key }}" @selected($paymentMode === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="master-field">
-                    <label class="master-label" for="clientPaymentCurrency">Currency</label>
-                    <select class="master-select" id="clientPaymentCurrency" name="payment_currency">
-                        <option value="all">All currencies</option>
-                        @foreach($paymentCurrencyOptions as $code)
-                            <option value="{{ $code }}" @selected($paymentCurrency === $code)>{{ \App\Helpers\CommonHelper::currencyLabel($code) }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="master-field">
-                    <label class="master-label" for="clientPaymentFrom">From</label>
-                    <input class="master-input" id="clientPaymentFrom" type="date" name="payment_date_from" value="{{ $paymentDateFrom }}">
-                </div>
-                <div class="master-field">
-                    <label class="master-label" for="clientPaymentTo">To</label>
-                    <input class="master-input" id="clientPaymentTo" type="date" name="payment_date_to" value="{{ $paymentDateTo }}">
-                </div>
-                <div class="client-entry-filter-actions">
-                    <a class="master-btn master-btn-soft" href="{{ route('clients.show', ['client' => $client, 'tab' => 'payments']) }}">Reset</a>
-                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
-                </div>
-            </form>
-        </section>
-
         @if($paymentTotalsByCurrency->isNotEmpty())
             <section class="client-payment-summaries" aria-label="Payment totals by currency">
                 @foreach($paymentTotalsByCurrency as $summary)
@@ -81,7 +19,8 @@
 
         <section class="cpa-card client-entry-table-card" aria-labelledby="client-payment-entries-heading">
             <div class="cpa-section-head">
-                <div><p class="cpa-eyebrow">Receipts and adjustments</p><h2 id="client-payment-entries-heading">Payments</h2></div>
+                <div><p class="cpa-eyebrow">Cashflow ledger</p><h2 id="client-payment-entries-heading">Payment entries</h2></div>
+                <span class="cpa-badge">{{ number_format($paymentEntries->total()) }} {{ \Illuminate\Support\Str::plural('entry', $paymentEntries->total()) }}</span>
             </div>
             <div class="master-table-wrap client-entry-table-wrap">
                 <table class="master-table client-payment-table">
@@ -100,7 +39,7 @@
                                 <td><a class="master-btn master-btn-soft master-btn-sm" href="{{ route('cashflows.show', $entry) }}">Manage</a></td>
                             </tr>
                         @empty
-                            <tr><td colspan="9"><div class="cpa-empty">No payment entries match these filters.</div></td></tr>
+                            <tr><td colspan="9"><div class="cpa-empty">No payment entries found for this client.</div></td></tr>
                         @endforelse
                     </tbody>
                 </table>

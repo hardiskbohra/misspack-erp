@@ -1,62 +1,12 @@
 @if($invoiceEntriesAvailable)
     <div class="client-detail-tools client-financial-entries">
-        <section class="master-card master-card--flat client-detail-card client-detail-card--wide client-entry-filters" aria-labelledby="client-invoice-filters-heading">
-            <div class="client-entry-toolbar-head">
-                <div><p class="cpa-eyebrow">ERP billing</p><h2 class="client-detail-title" id="client-invoice-filters-heading">Invoice entries</h2></div>
-                <a class="master-btn master-btn-primary" href="{{ route('sales-invoices.create', ['client_id' => $client->id]) }}"><i class="fa-solid fa-plus" aria-hidden="true"></i> Create invoice</a>
-            </div>
-            <form method="GET" action="{{ route('clients.show', $client) }}" class="client-entry-filter-form">
-                <input type="hidden" name="tab" value="invoices">
-                <div class="master-field client-entry-search-field">
-                    <label class="master-label" for="clientInvoiceSearch">Search</label>
-                    <input class="master-input" id="clientInvoiceSearch" name="invoice_search" value="{{ $invoiceSearch }}" placeholder="Invoice number, PO or notes">
-                </div>
-                <div class="master-field">
-                    <label class="master-label" for="clientInvoiceType">Type</label>
-                    <select class="master-select" id="clientInvoiceType" name="invoice_type">
-                        <option value="all">All types</option>
-                        @foreach($invoiceTypeOptions as $key => $label)
-                            <option value="{{ $key }}" @selected($invoiceType === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="master-field">
-                    <label class="master-label" for="clientInvoiceStatus">Status</label>
-                    <select class="master-select" id="clientInvoiceStatus" name="invoice_status">
-                        <option value="all">All statuses</option>
-                        @foreach($invoiceStatusOptions as $key => $label)
-                            <option value="{{ $key }}" @selected($invoiceStatus === $key)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="master-field">
-                    <label class="master-label" for="clientInvoiceCurrency">Currency</label>
-                    <select class="master-select" id="clientInvoiceCurrency" name="invoice_currency">
-                        <option value="all">All currencies</option>
-                        @foreach($invoiceCurrencyOptions as $code)
-                            <option value="{{ $code }}" @selected($invoiceCurrency === $code)>{{ \App\Helpers\CommonHelper::currencyLabel($code) }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="master-field">
-                    <label class="master-label" for="clientInvoiceFrom">From</label>
-                    <input class="master-input" id="clientInvoiceFrom" type="date" name="invoice_date_from" value="{{ $invoiceDateFrom }}">
-                </div>
-                <div class="master-field">
-                    <label class="master-label" for="clientInvoiceTo">To</label>
-                    <input class="master-input" id="clientInvoiceTo" type="date" name="invoice_date_to" value="{{ $invoiceDateTo }}">
-                </div>
-                <div class="client-entry-filter-actions">
-                    <a class="master-btn master-btn-soft" href="{{ route('clients.show', ['client' => $client, 'tab' => 'invoices']) }}">Reset</a>
-                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
-                </div>
-            </form>
-        </section>
-
         <section class="cpa-card client-entry-table-card" aria-labelledby="client-invoice-entries-heading">
             <div class="cpa-section-head">
-                <div><p class="cpa-eyebrow">Sales ledger</p><h2 id="client-invoice-entries-heading">Invoices</h2></div>
-                <span class="cpa-badge">{{ number_format($invoiceEntries->total()) }}</span>
+                <div><p class="cpa-eyebrow">ERP billing</p><h2 id="client-invoice-entries-heading">Invoice entries</h2></div>
+                <div class="client-entry-head-actions">
+                    <span class="cpa-badge">{{ number_format($invoiceEntries->total()) }} {{ \Illuminate\Support\Str::plural('invoice', $invoiceEntries->total()) }}</span>
+                    <a class="master-btn master-btn-primary" href="{{ route('sales-invoices.create', ['client_id' => $client->id]) }}"><i class="fa-solid fa-plus" aria-hidden="true"></i> Create invoice</a>
+                </div>
             </div>
             <div class="master-table-wrap client-entry-table-wrap">
                 <table class="master-table client-invoice-table">
@@ -77,7 +27,7 @@
                                 <td><a class="master-btn master-btn-soft master-btn-sm" href="{{ route('sales-invoices.show', $invoice) }}">Manage</a></td>
                             </tr>
                         @empty
-                            <tr><td colspan="10"><div class="cpa-empty">No invoice entries match these filters.</div></td></tr>
+                            <tr><td colspan="10"><div class="cpa-empty">No invoice entries found for this client.</div></td></tr>
                         @endforelse
                     </tbody>
                 </table>

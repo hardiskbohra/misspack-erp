@@ -471,6 +471,7 @@
 
 .client-show .master-badge {
     padding: 5px 9px;
+    border: 1px solid var(--mc-border);
     border-radius: 999px;
     font-size: 10.5px;
     letter-spacing: .02em;
@@ -483,32 +484,110 @@
 
 .client-show .status-under-review {
     background: #fff4e5;
+    border-color: rgba(245, 158, 11, .32);
     color: #b45309;
 }
 
-.client-show .status-approved {
+.client-show .status-approved,
+.client-show .portal-enabled {
     background: #e8fff7;
+    border-color: rgba(16, 185, 129, .3);
     color: #047857;
 }
 
 .client-show .status-rejected {
     background: #ffeaf0;
+    border-color: rgba(225, 29, 72, .28);
     color: #be123c;
 }
 
 .client-show .status-revision {
     background: #ece7ff;
+    border-color: rgba(139, 92, 246, .3);
     color: #6d28d9;
-}
-
-.client-show .portal-enabled {
-    background: #e8fff7;
-    color: #047857;
 }
 
 .client-show .portal-disabled {
     background: var(--mc-card-soft);
     color: var(--mc-text-3);
+}
+
+:root[data-theme="dark"] .client-show .status-under-review {
+    background: rgba(245, 158, 11, .18);
+    border-color: rgba(245, 158, 11, .32);
+    color: #fcd34d;
+}
+
+:root[data-theme="dark"] .client-show .status-approved,
+:root[data-theme="dark"] .client-show .portal-enabled,
+:root[data-theme="dark"] .client-show .cpa-badge.active {
+    background: rgba(16, 185, 129, .18);
+    border-color: rgba(16, 185, 129, .32);
+    color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .client-show .status-rejected {
+    background: rgba(225, 29, 72, .16);
+    border-color: rgba(225, 29, 72, .3);
+    color: #fda4af;
+}
+
+:root[data-theme="dark"] .client-show .status-revision {
+    background: rgba(139, 92, 246, .18);
+    border-color: rgba(139, 92, 246, .32);
+    color: #c4b5fd;
+}
+
+:root[data-theme="dark"] .client-show .status-paid,
+:root[data-theme="dark"] .client-show .status-reconciled,
+:root[data-theme="dark"] .client-show .status-delivered {
+    background: rgba(16, 185, 129, .18);
+    border-color: rgba(16, 185, 129, .32);
+    color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .client-show .status-pending,
+:root[data-theme="dark"] .client-show .status-received,
+:root[data-theme="dark"] .client-show .status-requested,
+:root[data-theme="dark"] .client-show .status-sent,
+:root[data-theme="dark"] .client-show .status-accepted,
+:root[data-theme="dark"] .client-show .status-partial,
+:root[data-theme="dark"] .client-show .status-overdue,
+:root[data-theme="dark"] .client-show .status-booked {
+    background: rgba(245, 158, 11, .18);
+    border-color: rgba(245, 158, 11, .32);
+    color: #fcd34d;
+}
+
+:root[data-theme="dark"] .client-show .status-disputed,
+:root[data-theme="dark"] .client-show .status-delayed {
+    background: rgba(225, 29, 72, .16);
+    border-color: rgba(225, 29, 72, .3);
+    color: #fda4af;
+}
+
+:root[data-theme="dark"] .client-show .status-cancelled,
+:root[data-theme="dark"] .client-show .status-ignored,
+:root[data-theme="dark"] .client-show .status-converted,
+:root[data-theme="dark"] .client-show .status-planning {
+    background: var(--mc-card-soft);
+    border-color: var(--mc-border);
+    color: var(--mc-text-2);
+}
+
+:root[data-theme="dark"] .client-show .status-in-transit {
+    background: rgba(139, 92, 246, .18);
+    border-color: rgba(139, 92, 246, .32);
+    color: #c4b5fd;
+}
+
+:root[data-theme="dark"] .client-show .cpa-password-box {
+    border-color: rgba(245, 158, 11, .32);
+    background: rgba(245, 158, 11, .12);
+}
+
+:root[data-theme="dark"] .client-show .cpa-password-box span {
+    color: #fcd34d;
 }
 
 .client-show .portal-credential-box {
@@ -886,21 +965,25 @@
 }
 
 .client-show .client-detail-panels {
-    padding: 22px;
+    padding: 20px;
+    background: var(--mc-card-soft);
 }
 
 .client-show .client-detail-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
-    gap: 18px;
+    gap: 16px;
 }
 
 .client-show .client-detail-card {
     min-width: 0;
     margin: 0;
-    padding: 24px 26px;
-    border-radius: 22px;
+    padding: 22px 24px;
+    border: 1px solid var(--mc-border);
+    border-radius: 18px;
+    background: var(--mc-card);
+    box-shadow: var(--mc-shadow);
 }
 
 .client-show .client-detail-card--wide {
@@ -1043,8 +1126,8 @@
     }
 
     .client-show .client-detail-card {
-        padding: 18px;
-        border-radius: 18px;
+        padding: 16px;
+        border-radius: 16px;
     }
 
     .client-show .client-detail-title {
@@ -1081,7 +1164,7 @@
 .client-show .client-detail-tools {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 16px;
     min-width: 0;
 }
 
@@ -1091,9 +1174,11 @@
 
 .client-show .client-detail-tools .cpa-card {
     min-width: 0;
-    padding: 22px;
+    padding: 20px;
+    border: 1px solid var(--mc-border);
     border-radius: 18px;
-    box-shadow: 0 10px 26px rgba(25, 42, 70, .055);
+    background: var(--mc-card);
+    box-shadow: var(--mc-shadow);
 }
 
 .client-show .client-detail-tools .cpa-section-head h2 {
@@ -1108,6 +1193,14 @@
     color: var(--mc-text-3);
     font-size: 10px;
     letter-spacing: .1em;
+}
+
+.client-show .cpa-badge {
+    border: 1px solid var(--mc-border);
+}
+
+.client-show .cpa-badge.active {
+    border-color: rgba(16, 185, 129, .3);
 }
 
 .client-show .client-detail-tools .cpa-table th {
@@ -1351,45 +1444,16 @@
     padding-top: 4px;
 }
 
-/* Invoice and payment tabs */
-.client-show .client-entry-filters {
-    padding: 20px 22px;
-}
-
-.client-show .client-entry-toolbar-head {
+/* Invoice and payment tabs: a compact heading, not a separate filter panel. */
+.client-show .client-entry-head-actions {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 16px;
-}
-
-.client-show .client-entry-toolbar-head .cpa-eyebrow {
-    margin-bottom: 4px;
-}
-
-.client-show .client-entry-toolbar-head .client-detail-title {
-    margin: 0;
-}
-
-.client-show .client-entry-filter-form {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
-    align-items: end;
-    gap: 12px;
-}
-
-.client-show .client-entry-filter-form .master-field {
-    min-width: 0;
-    margin: 0;
-}
-
-.client-show .client-entry-filter-actions {
-    display: flex;
-    grid-column: 1 / -1;
+    align-items: center;
     flex-wrap: wrap;
-    justify-content: flex-end;
     gap: 8px;
+}
+
+.client-show .client-entry-head-actions .cpa-badge {
+    white-space: nowrap;
 }
 
 .client-show .client-entry-table-card {
@@ -1399,6 +1463,10 @@
 
 .client-show .client-entry-table-card .cpa-section-head {
     align-items: center;
+}
+
+.client-show .client-entry-table-card .cpa-section-head .cpa-eyebrow {
+    margin-bottom: 4px;
 }
 
 .client-show .client-entry-table-card .cpa-section-head h2 {
@@ -1448,6 +1516,7 @@
 .client-show .client-entry-table-wrap .status-paid,
 .client-show .client-entry-table-wrap .status-approved,
 .client-show .client-entry-table-wrap .status-reconciled {
+    border-color: rgba(16, 185, 129, .3);
     color: #047857;
     background: #e8fff7;
 }
@@ -1459,6 +1528,7 @@
 .client-show .client-entry-table-wrap .status-pending,
 .client-show .client-entry-table-wrap .status-booked,
 .client-show .client-entry-table-wrap .status-under-review {
+    border-color: rgba(245, 158, 11, .32);
     color: #9a5b07;
     background: #fff5df;
 }
@@ -1473,6 +1543,7 @@
 
 .client-show .client-entry-table-wrap .status-disputed,
 .client-show .client-entry-table-wrap .status-rejected {
+    border-color: rgba(225, 29, 72, .28);
     color: #be123c;
     background: #ffeaf0;
 }
@@ -1482,6 +1553,7 @@
 :root[data-theme="dark"] .client-show .client-entry-table-wrap .status-approved,
 :root[data-theme="dark"] .client-show .client-entry-table-wrap .status-reconciled {
     color: #6ee7b7 !important;
+    border-color: rgba(16, 185, 129, .32);
     background: rgba(16, 185, 129, .18);
 }
 
@@ -1494,12 +1566,14 @@
 :root[data-theme="dark"] .client-show .client-entry-table-wrap .status-booked,
 :root[data-theme="dark"] .client-show .client-entry-table-wrap .status-under-review {
     color: #fcd34d !important;
+    border-color: rgba(245, 158, 11, .34);
     background: rgba(245, 158, 11, .18);
 }
 
 :root[data-theme="dark"] .client-show .client-entry-table-wrap .status-disputed,
 :root[data-theme="dark"] .client-show .client-entry-table-wrap .status-rejected {
     color: #fda4af !important;
+    border-color: rgba(225, 29, 72, .32);
     background: rgba(225, 29, 72, .16);
 }
 
@@ -1591,7 +1665,7 @@
     border: 1px solid var(--mc-border);
     border-radius: 14px;
     background: var(--mc-card);
-    box-shadow: 0 6px 16px rgba(25, 42, 70, .04);
+    box-shadow: var(--mc-shadow);
 }
 
 .client-show .client-statement-metric > span {
@@ -1695,7 +1769,7 @@
     gap: 12px;
 }
 
-.client-show .client-payment-summary {
+.client-show .client-detail-tools .client-payment-summary {
     padding: 16px 18px;
 }
 
@@ -1759,7 +1833,6 @@
 
     .client-show .client-detail-tools .cpa-card,
     .client-show .client-statement-filters,
-    .client-show .client-entry-filters,
     .client-show .client-entry-table-card {
         padding: 16px;
         border-radius: 16px;
@@ -1775,16 +1848,23 @@
         flex-direction: column;
     }
 
-    .client-show .client-entry-toolbar-head {
+    .client-show .client-entry-table-card .cpa-section-head {
+        align-items: flex-start;
         flex-direction: column;
+    }
+
+    .client-show .client-entry-head-actions {
+        width: 100%;
+    }
+
+    .client-show .client-entry-head-actions .master-btn {
+        flex: 1 1 auto;
     }
 
     .client-show .client-statement-toolbar-head {
         flex-direction: row;
     }
 
-    .client-show .client-entry-filter-actions,
-    .client-show .client-entry-filter-actions .master-btn,
     .client-show .client-statement-filter-submit,
     .client-show .client-statement-filter-submit .master-btn,
     .client-show .client-document-modal-actions,
@@ -1792,7 +1872,6 @@
         width: 100%;
     }
 
-    .client-show .client-entry-filter-actions,
     .client-show .client-document-modal-actions {
         flex-direction: column-reverse;
     }
@@ -1841,15 +1920,6 @@
 
     .client-show .client-statement-metric > strong {
         font-size: 13px;
-    }
-
-    .client-show .client-entry-filter-form {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .client-show .client-entry-search-field,
-    .client-show .client-entry-filter-actions {
-        grid-column: 1 / -1;
     }
 
     .client-show .client-payment-summary-grid {
