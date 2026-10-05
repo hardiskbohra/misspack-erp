@@ -55,7 +55,7 @@ class PurchaseInvoice extends Model
     ];
 
     /** The paid figure is upstream of every balance: one SQL, read everywhere. */
-    public const PAID_SQL = '(coalesce(purchase_invoices.amount_paid, 0) + (select coalesce(sum(amount_in_inr), 0) from vendor_payment_entries where vendor_payment_entries.purchase_invoice_id = purchase_invoices.id and vendor_payment_entries.transaction_type = \'debit\'))';
+    public const PAID_SQL = '(coalesce(purchase_invoices.amount_paid, 0) + (select coalesce(sum(foreign_amount), 0) from vendor_payment_entries where vendor_payment_entries.purchase_invoice_id = purchase_invoices.id and vendor_payment_entries.transaction_type = \'debit\'))';
 
     /** The supplier's own bill number, falling back to our document number. */
     public function referenceNumber(): string
@@ -296,14 +296,14 @@ class PurchaseInvoice extends Model
        The money
        ------------------------------------------------------------------ */
 
-    /** The payments filed against this bill, in the ledger, in rupees. */
+    /** Payments against this document, in the document's own currency. */
     public function ledgerPaid(): float
     {
         if ($this->relationLoaded('payments')) {
-            return round((float) $this->payments->sum('amount_in_inr'), 2);
+            return round((float) $this->payments->sum('foreign_amount'), 2);
         }
 
-        return round((float) $this->payments()->sum('amount_in_inr'), 2);
+        return round((float) $this->payments()->sum('foreign_amount'), 2);
     }
 
     public function paidAmount(): float

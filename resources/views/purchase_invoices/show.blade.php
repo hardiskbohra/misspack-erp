@@ -5,7 +5,8 @@
 @section('content')
 @php
     $paidAmount = $invoice->paidAmount();
-    $balanceAmount = $invoice->balanceDue();
+    $openAmount = $invoice->openAmount();
+    $balanceAmount = $invoice->isBill() ? $invoice->balanceDue() : $openAmount;
     $isImport = $invoice->gst_type === 'export';
     $taxAmount = (float) $invoice->cgst_amount + (float) $invoice->sgst_amount + (float) $invoice->igst_amount;
     $chargesAmount = (float) $invoice->freight_amount + (float) $invoice->packing_amount + (float) $invoice->other_charges;
@@ -159,9 +160,9 @@
         <div class="master-stat master-stat--flat orange">
             <span class="icon"><i class="fas fa-scale-balanced"></i></span>
             <div>
-                <p class="master-stat-title">Balance due</p>
+                <p class="master-stat-title">{{ $invoice->isBill() ? 'Balance due' : 'Still open' }}</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}</p>
-                <p class="master-sub">{{ $invoice->isOverdue() ? $daysLate.' days late' : ($invoice->isBill() ? 'On this bill' : 'Orders are not owed') }}</p>
+                <p class="master-sub">{{ $invoice->isOverdue() ? $daysLate.' days late' : ($invoice->isBill() ? 'On this bill' : 'In '.$invoice->currency) }}</p>
             </div>
         </div>
     </div>
@@ -341,14 +342,14 @@
                                     @if (filled($payment->particular)) · {{ $payment->particular }} @endif
                                 </span>
                             </div>
-                            <strong class="si-payment-amount si-clear">{{ \App\Helpers\CommonHelper::indianCurrency($payment->amount_in_inr) }}</strong>
+                            <strong class="si-payment-amount si-clear">{{ \App\Helpers\CommonHelper::amount($payment->foreign_amount, $payment->foreign_currency ?: $invoice->currency) }}</strong>
                         </div>
                     @endforeach
                 </div>
             @endif
             <div class="si-pay-foot">
                 <div><span>Paid</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($paidAmount, $invoice->currency) }}</strong></div>
-                <div><span>Still open</span><strong class="{{ $balanceAmount > 0 ? 'si-due' : 'si-clear' }}">{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}</strong></div>
+                <div><span>Still open</span><strong class="{{ $openAmount > 0 ? 'si-due' : 'si-clear' }}">{{ \App\Helpers\CommonHelper::amount($openAmount, $invoice->currency) }}</strong></div>
             </div>
         </div>
     @endif
