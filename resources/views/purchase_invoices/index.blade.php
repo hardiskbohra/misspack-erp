@@ -229,9 +229,6 @@
                                 @if ($invoice->invoice_date)
                                     <span class="master-sub si-date">{{ $invoice->invoice_date->format('d M Y') }}</span>
                                 @endif
-                                @if ($invoice->needsChecker())
-                                    <x-step-flag :label="$invoice->checkerLabel()" />
-                                @endif
                             </td>
                             <td data-label="Vendor">
                                 <span class="si-client">{{ $invoice->vendor_company_name ?: 'No vendor' }}</span>
@@ -251,10 +248,12 @@
                             <td data-label="Paid" class="is-num ui-mobile-secondary">
                                 @if ($invoice->isSuperseded())
                                     <span class="master-empty-value">On the bill</span>
+                                @elseif ($invoice->needsChecker())
+                                    <x-step-flag :label="$invoice->checkerLabel()" />
                                 @elseif ($invoice->canReceiveMoney() || $paidAmt > 0)
                                     <strong>{{ \App\Helpers\CommonHelper::amount($paidAmt, $invoice->currency) }}</strong>
                                 @else
-                                    <span class="master-empty-value">{{ $invoice->checkerLabel() }}</span>
+                                    <span class="master-empty-value">—</span>
                                 @endif
                             </td>
                             <td data-label="Balance" class="is-num">
@@ -265,7 +264,7 @@
                                         {{ \App\Helpers\CommonHelper::amount($openAmt, $invoice->currency) }}
                                     </strong>
                                 @elseif ($invoice->needsChecker())
-                                    <span class="master-empty-value">{{ $invoice->checkerLabel() }}</span>
+                                    <span class="master-empty-value">—</span>
                                 @else
                                     <strong class="si-balance {{ $balance > 0 ? ($invoice->isOverdue() ? 'is-due' : '') : 'is-clear' }}">
                                         {{ \App\Helpers\CommonHelper::amount($balance, $invoice->currency) }}

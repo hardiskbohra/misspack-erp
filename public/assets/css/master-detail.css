@@ -753,7 +753,6 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    margin-top: 6px;
     padding: 3px 9px 3px 7px;
     border-radius: 999px;
     font-size: 11px;
@@ -795,6 +794,10 @@
     background: rgba(234, 88, 12, .22);
     color: #fdba74;
     border-color: rgba(251, 146, 60, .4);
+}
+
+.master-table td.is-num .step-flag {
+    justify-content: center;
 }
 
 .master-table tr.is-attention td:first-child {
