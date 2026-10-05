@@ -225,7 +225,6 @@
                         <th scope="col" class="is-num">Total</th>
                         <th scope="col" class="is-num ui-mobile-secondary">Paid</th>
                         <th scope="col" class="is-num">Balance</th>
-                        <th scope="col">Due</th>
                         <th scope="col">State</th>
                         <th scope="col">Action</th>
                     </tr>
@@ -237,7 +236,6 @@
                             $balance = $invoice->balanceDue();
                             $openAmt = $invoice->openAmount();
                             $stateKey = $invoice->stateKey();
-                            $daysLate = $invoice->daysOverdue();
                         @endphp
                         <tr class="{{ $invoice->needsChecker() ? 'is-attention' : '' }}" data-href="{{ route('purchase-invoices.show', $invoice) }}">
                             <td class="master-list-pick" data-label="Select">
@@ -297,18 +295,6 @@
                                     </strong>
                                 @endif
                             </td>
-                            <td data-label="Due">
-                                @if ($invoice->due_date)
-                                    <span class="si-date">{{ $invoice->due_date->format('d M Y') }}</span>
-                                @elseif ($invoice->expected_date)
-                                    <span class="si-date">Exp {{ $invoice->expected_date->format('d M Y') }}</span>
-                                @else
-                                    <span class="master-empty-value">No due date</span>
-                                @endif
-                                @if ($daysLate > 0)
-                                    <span class="master-sub">{{ $daysLate }} {{ \Illuminate\Support\Str::plural('day', $daysLate) }} late</span>
-                                @endif
-                            </td>
                             <td data-label="State">
                                 <span class="si-status status-{{ $stateKey }}">{{ $invoice->stateLabel() }}</span>
                                 @if ($invoice->isSuperseded())
@@ -363,7 +349,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10">
+                            <td colspan="9">
                                 <div class="master-list-empty">
                                     <span class="master-list-empty-icon">₹</span>
                                     <p class="master-list-empty-title">{{ $filtersActive ? 'No documents match these filters' : 'No purchase documents yet' }}</p>
@@ -422,7 +408,7 @@
                                     <span class="master-sub">Outstanding · all pages</span>
                                 @endforelse
                             </td>
-                            <td colspan="3"></td>
+                            <td colspan="2"></td>
                         </tr>
                     </tfoot>
                 @endif
