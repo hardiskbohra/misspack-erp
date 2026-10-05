@@ -171,12 +171,10 @@
                     <nav class="vendor-jump" aria-label="Money sections">
                         <a href="#vendor-block-payables">Payables <span class="vendor-jump-count">{{ count($payables['rows']) }}</span></a>
                         <a href="#vendor-block-ledger">Ledger <span class="vendor-jump-count">{{ $vendorPaymentEntries->count() }}</span></a>
-                        <a href="#vendor-block-statement">Statement <span class="vendor-jump-count">{{ $statementEntries->count() }}</span></a>
                     </nav>
                     <div class="vendor-blocks">
                         @include('vendors.partials.payables')
                         @include('vendors.partials.payments')
-                        @include('vendors.partials.statement')
                     </div>
                 </section>
             @elseif ($tab === 'documents')
