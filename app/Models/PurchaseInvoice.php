@@ -185,6 +185,17 @@ class PurchaseInvoice extends Model
         return $this->isOrder() && (int) $this->converted_invoice_id > 0;
     }
 
+    /** Draft or sent: the checker has not signed this order off yet. */
+    public function needsChecker(): bool
+    {
+        return $this->isOrder() && in_array($this->status, ['draft', 'sent'], true);
+    }
+
+    public function checkerLabel(): string
+    {
+        return $this->status === 'draft' ? 'Send, then approve' : 'Needs approval';
+    }
+
     /** An approved order that can still become a bill. */
     public function canConvert(): bool
     {

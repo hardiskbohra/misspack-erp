@@ -217,7 +217,7 @@
                             $stateKey = $invoice->stateKey();
                             $daysLate = $invoice->daysOverdue();
                         @endphp
-                        <tr data-href="{{ route('purchase-invoices.show', $invoice) }}">
+                        <tr class="{{ $invoice->needsChecker() ? 'is-attention' : '' }}" data-href="{{ route('purchase-invoices.show', $invoice) }}">
                             <td data-label="Document">
                                 <a class="si-number" href="{{ route('purchase-invoices.show', $invoice) }}">{{ $invoice->invoice_number }}</a>
                                 <span class="si-invoice-chips">
@@ -228,6 +228,9 @@
                                 </span>
                                 @if ($invoice->invoice_date)
                                     <span class="master-sub si-date">{{ $invoice->invoice_date->format('d M Y') }}</span>
+                                @endif
+                                @if ($invoice->needsChecker())
+                                    <x-step-flag :label="$invoice->checkerLabel()" />
                                 @endif
                             </td>
                             <td data-label="Vendor">
@@ -251,7 +254,7 @@
                                 @elseif ($invoice->canReceiveMoney() || $paidAmt > 0)
                                     <strong>{{ \App\Helpers\CommonHelper::amount($paidAmt, $invoice->currency) }}</strong>
                                 @else
-                                    <span class="master-empty-value">Approve to pay</span>
+                                    <span class="master-empty-value">{{ $invoice->checkerLabel() }}</span>
                                 @endif
                             </td>
                             <td data-label="Balance" class="is-num">
@@ -261,8 +264,8 @@
                                     <strong class="si-balance {{ $openAmt > 0 ? ($invoice->isOverdue() ? 'is-due' : '') : 'is-clear' }}">
                                         {{ \App\Helpers\CommonHelper::amount($openAmt, $invoice->currency) }}
                                     </strong>
-                                @elseif ($invoice->isOrder())
-                                    <span class="master-empty-value">{{ $invoice->status === 'sent' ? 'Approve to pay' : 'Raise a bill' }}</span>
+                                @elseif ($invoice->needsChecker())
+                                    <span class="master-empty-value">{{ $invoice->checkerLabel() }}</span>
                                 @else
                                     <strong class="si-balance {{ $balance > 0 ? ($invoice->isOverdue() ? 'is-due' : '') : 'is-clear' }}">
                                         {{ \App\Helpers\CommonHelper::amount($balance, $invoice->currency) }}
