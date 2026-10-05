@@ -171,18 +171,19 @@
     </div>
 
     @if ($invoice->isOrder() && ! $invoice->canReceiveMoney() && ! $invoice->isSuperseded() && $invoice->status !== 'cancelled')
-        <div class="master-card master-section">
-            <div class="master-section-head">
-                <div>
-                    <h2 class="master-section-title">Pending checker</h2>
-                    <p class="master-sub">{{ $invoice->moneyGateMessage() }}</p>
-                </div>
+        <x-step-banner
+            tone="warning"
+            eyebrow="Pending checker"
+            title="{{ $invoice->status === 'draft' ? 'Send and approve this purchase order' : 'Approve this purchase order' }}"
+            :body="$invoice->moneyGateMessage()"
+        >
+            <x-slot:actions>
                 @if (in_array('sent', $nextStatuses, true))
                     <form method="POST" action="{{ route($routePrefix.'.status', $invoice) }}">
                         @csrf
                         @method('PATCH')
                         <input type="hidden" name="status" value="sent">
-                        <button type="submit" class="master-btn master-btn-soft">Mark sent</button>
+                        <button type="submit" class="master-btn master-btn-light">Mark sent</button>
                     </form>
                 @endif
                 @if (in_array('approved', $nextStatuses, true))
@@ -193,8 +194,8 @@
                         <button type="submit" class="master-btn master-btn-primary">Approve purchase order</button>
                     </form>
                 @endif
-            </div>
-        </div>
+            </x-slot:actions>
+        </x-step-banner>
     @endif
 
     <div class="master-card master-section">

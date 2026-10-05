@@ -1,24 +1,23 @@
 <section class="master-card master-card--flat vendor-detail-card vendor-block-card" id="vendor-block-ledger" aria-labelledby="vendor-block-ledger-title">
     @if (($pendingApprovals ?? collect())->isNotEmpty())
-        <div class="vendor-panel-head">
-            <div>
-                <h2 class="vendor-detail-title">Waiting on checker</h2>
-                <p class="vendor-detail-help">Money cannot go to this vendor until the purchase order is approved, or a bill is raised.</p>
-            </div>
-        </div>
-        <ul class="vendor-detail-help" style="padding: 0 1.25rem 1rem 2.25rem;">
-            @foreach ($pendingApprovals as $pending)
-                <li>
-                    <a href="{{ route('purchase-invoices.show', $pending) }}">{{ $pending->invoice_number }}</a>
-                    is {{ strtolower($pending->statusLabel()) }}.
-                    @if ($pending->status === 'draft')
-                        Send it, then approve it, before recording an advance.
-                    @else
-                        Approve it before recording an advance.
-                    @endif
-                </li>
-            @endforeach
-        </ul>
+        <x-step-banner
+            tone="warning"
+            eyebrow="Pending checker"
+            title="Approve the purchase order before paying this vendor"
+            body="Money cannot go out until a checker approves the PO, or a bill is raised."
+        >
+            <ul>
+                @foreach ($pendingApprovals as $pending)
+                    <li>
+                        <a href="{{ route('purchase-invoices.show', $pending) }}">{{ $pending->invoice_number }}</a>
+                        is {{ strtolower($pending->statusLabel()) }}.
+                    </li>
+                @endforeach
+            </ul>
+            <x-slot:actions>
+                <a class="master-btn master-btn-primary" href="{{ route('purchase-invoices.show', $pendingApprovals->first()) }}">Open purchase order</a>
+            </x-slot:actions>
+        </x-step-banner>
     @endif
     <div class="vendor-panel-head">
         <div>
