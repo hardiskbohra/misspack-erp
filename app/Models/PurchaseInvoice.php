@@ -194,6 +194,60 @@ class PurchaseInvoice extends Model
     }
 
     /**
+     * Maker-checker for money out: a debit is allowed only against an
+     * approved purchase order, or a bill that has actually been raised
+     * (not a draft). Sent and draft orders wait for approval.
+     */
+    public function canReceiveMoney(): bool
+    {
+        if ($this->status === 'cancelled') {
+            return false;
+        }
+
+        if ($this->isBill()) {
+            return $this->status !== 'draft';
+        }
+
+        return $this->isOrder()
+            && $this->status === 'approved'
+            && ! $this->isSuperseded();
+    }
+
+    /** What the office must do before this document can take an advance or payment. */
+    public function moneyGateMessage(): ?string
+    {
+        if ($this->canReceiveMoney()) {
+            return null;
+        }
+
+        if ($this->isOrder() && $this->isSuperseded()) {
+            return 'This order has already become a bill. Record the payment on the bill.';
+        }
+
+        if ($this->isOrder() && $this->status === 'draft') {
+            return 'Send this purchase order, then approve it, before recording an advance.';
+        }
+
+        if ($this->isOrder() && $this->status === 'sent') {
+            return 'Approve this purchase order before recording an advance. It has been sent; the checker has not approved it yet.';
+        }
+
+        if ($this->isOrder() && $this->status === 'cancelled') {
+            return $this->invoice_number.' is cancelled, so money cannot be filed against it.';
+        }
+
+        if ($this->isBill() && $this->status === 'draft') {
+            return 'Mark this purchase bill as received before recording a payment.';
+        }
+
+        if ($this->status === 'cancelled') {
+            return $this->invoice_number.' is cancelled, so a payment cannot be filed against it.';
+        }
+
+        return 'An approved purchase order or a raised bill is required before money can go to this vendor.';
+    }
+
+    /**
      * The documents that stand for money.
      *
      * Everything that counts payable reads this scope. An order is what was

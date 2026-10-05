@@ -451,6 +451,7 @@ class VendorController extends Controller
             'transaction_date' => ['required', 'date'],
             'due_date' => ['nullable', 'date', 'after_or_equal:transaction_date'],
             'invoice_number' => ['nullable', 'string', 'max:255'],
+            'purchase_invoice_id' => ['nullable', 'integer'],
             'foreign_amount' => ['required', 'numeric', 'min:0'],
             'foreign_currency' => ['required', 'in:RMB,USD,INR'],
             'exchange_rate' => ['nullable', 'numeric', 'min:0'],
@@ -487,6 +488,7 @@ class VendorController extends Controller
         $entry = DB::transaction(function () use ($request, $data, $vendor, $syncCashflow) {
             $entry = VendorPaymentEntry::create($data);
             $this->attachPurchaseDocument($entry);
+            $this->assertVendorMoneyAllowed($entry);
 
             $this->cashflowSync()->sync($entry, $syncCashflow);
 
@@ -507,6 +509,7 @@ class VendorController extends Controller
             'transaction_date' => ['required', 'date'],
             'due_date' => ['nullable','date','after_or_equal:transaction_date'],
             'invoice_number' => ['nullable','string','max:255'],
+            'purchase_invoice_id' => ['nullable', 'integer'],
             'foreign_amount' => ['required','numeric','min:0'],
             'foreign_currency' => ['required','in:RMB,USD,INR'],
             'exchange_rate' => ['nullable','numeric','min:0'],
@@ -542,6 +545,7 @@ class VendorController extends Controller
         DB::transaction(function () use ($request,$data,$vendor,$entry,$syncCashflow) {
             $entry->update($data);
             $this->attachPurchaseDocument($entry);
+            $this->assertVendorMoneyAllowed($entry);
             $this->cashflowSync()->sync($entry, $syncCashflow);
             $this->storeVendorPaymentAttachments($request,$entry);
         });
@@ -677,6 +681,36 @@ class VendorController extends Controller
         $entry->save();
     }
 
+    /**
+     * Money out needs an approved PO or a raised bill. Credits (a bill
+     * received) are the document; they do not wait on this gate.
+     */
+    private function assertVendorMoneyAllowed(VendorPaymentEntry $entry): void
+    {
+        if ($entry->transaction_type !== 'debit' || $entry->status === 'cancelled') {
+            return;
+        }
+
+        if (! class_exists(PurchaseInvoice::class) || ! Schema::hasTable('purchase_invoices')) {
+            return;
+        }
+
+        $document = $entry->purchase_invoice_id
+            ? PurchaseInvoice::query()->find($entry->purchase_invoice_id)
+            : null;
+
+        if ($document && $document->canReceiveMoney()) {
+            return;
+        }
+
+        $message = $document?->moneyGateMessage()
+            ?: 'Pick an approved purchase order or a raised bill before paying this vendor. A sent PO still needs the checker to approve it.';
+
+        throw ValidationException::withMessages([
+            'purchase_invoice_id' => $message,
+        ]);
+    }
+
     private function paymentSavedMessage(VendorPaymentEntry $entry, string $verb): string
     {
         if ($entry->cashflow_entry_id) {
@@ -773,6 +807,7 @@ class VendorController extends Controller
         $products = $this->vendorProducts($projectProducts);
         $cashflowAccounts = $this->cashflowAccounts();
         $projectsForPayment = $this->projectsForVendorPayment($vendor);
+        [$payableDocuments, $pendingApprovals] = $this->vendorPurchaseDocuments($vendor);
         $attachmentOptions = class_exists(VendorAttachment::class) ? VendorAttachment::categoryOptions() : [];
         $commentsAvailable = Schema::hasTable('vendor_comments');
         $attachmentsAvailable = Schema::hasTable('vendor_attachments');
@@ -861,6 +896,8 @@ class VendorController extends Controller
             'products',
             'cashflowAccounts',
             'projectsForPayment',
+            'payableDocuments',
+            'pendingApprovals',
             'paymentOptions',
             'attachmentOptions',
             'summary',
@@ -1480,6 +1517,30 @@ class VendorController extends Controller
         }
 
         return \App\Models\CashflowAccount::query()->orderBy('account_name')->get();
+    }
+
+    /** Approved POs and raised bills that may take money, plus POs still waiting on the checker. */
+    private function vendorPurchaseDocuments(Vendor $vendor): array
+    {
+        if (! class_exists(PurchaseInvoice::class) || ! Schema::hasTable('purchase_invoices')) {
+            return [collect(), collect()];
+        }
+
+        $documents = PurchaseInvoice::query()
+            ->where('vendor_id', $vendor->id)
+            ->where('status', '!=', 'cancelled')
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get();
+
+        $payable = $documents->filter(fn (PurchaseInvoice $document) => $document->canReceiveMoney())->values();
+        $pending = $documents->filter(function (PurchaseInvoice $document) {
+            return $document->isOrder()
+                && ! $document->isSuperseded()
+                && in_array($document->status, ['draft', 'sent'], true);
+        })->values();
+
+        return [$payable, $pending];
     }
 
     private function projectsForVendorPayment(Vendor $vendor)

@@ -464,16 +464,9 @@ class PurchaseInvoiceController extends Controller
     {
         $this->assertDocType($request, $purchaseInvoice);
 
-        if ($purchaseInvoice->isOrder() && $purchaseInvoice->isSuperseded()) {
-            return back()->with('error', 'This order has already become a bill. Record the payment on '.$purchaseInvoice->convertedInvoice?->invoice_number.'.');
-        }
-
-        if (! $purchaseInvoice->isBill() && ! $purchaseInvoice->isOrder()) {
-            return back()->with('error', 'Only a purchase order or purchase bill can be paid.');
-        }
-
-        if ($purchaseInvoice->status === 'cancelled') {
-            return back()->with('error', $purchaseInvoice->invoice_number.' is cancelled, so a payment cannot be filed against it.');
+        if (! $purchaseInvoice->canReceiveMoney()) {
+            return back()->with('error', $purchaseInvoice->moneyGateMessage()
+                ?: 'An approved purchase order or a raised bill is required before money can go to this vendor.');
         }
 
         $data = $request->validate([

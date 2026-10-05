@@ -10,6 +10,28 @@
         <input class="master-input" id="{{ $fieldId('due_date') }}" type="date" name="due_date">
         <div class="master-help">Leave blank on a bill and the vendor's payment terms decide it.</div>
     </div>
+    <div class="master-field full">
+        <label class="master-label" for="{{ $fieldId('purchase_invoice_id') }}">PO / bill for money out</label>
+        <select class="master-select" id="{{ $fieldId('purchase_invoice_id') }}" name="purchase_invoice_id">
+            <option value="">Not a payment — bill or expense only</option>
+            @foreach (($payableDocuments ?? collect()) as $document)
+                <option value="{{ $document->id }}">
+                    {{ $document->invoice_number }} · {{ $document->typeLabel() }} · {{ $document->statusLabel() }}
+                </option>
+            @endforeach
+        </select>
+        <div class="master-help">A debit / payment must sit on an approved purchase order or a raised bill. Sent POs wait for the checker.</div>
+        @if (($pendingApprovals ?? collect())->isNotEmpty())
+            <div class="master-help">
+                Waiting on approval:
+                @foreach ($pendingApprovals as $pending)
+                    <a href="{{ route('purchase-invoices.show', $pending) }}">{{ $pending->invoice_number }}</a>
+                    ({{ $pending->statusLabel() }})@if (! $loop->last), @endif
+                @endforeach
+                — approve the PO before recording an advance.
+            </div>
+        @endif
+    </div>
     <div class="master-field">
         <label class="master-label" for="{{ $fieldId('invoice_number') }}">Invoice / bill no.</label>
         <input class="master-input" id="{{ $fieldId('invoice_number') }}" type="text" name="invoice_number"

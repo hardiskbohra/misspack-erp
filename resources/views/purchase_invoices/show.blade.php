@@ -56,11 +56,11 @@
             <a href="{{ route($routePrefix.'.index') }}" class="master-btn master-btn-light">Back</a>
             <a href="{{ route($routePrefix.'.edit', $invoice) }}" class="master-btn master-btn-light">Edit</a>
             @php
-                $advanceOpen = $invoice->isOrder() && $invoice->canConvert()
+                $advanceOpen = $invoice->isOrder() && $invoice->canReceiveMoney()
                     ? max((float) $invoice->total_amount - $paidAmount, 0)
                     : 0;
             @endphp
-            @if ($invoice->isBill() && $balanceAmount > 0)
+            @if ($invoice->isBill() && $invoice->canReceiveMoney() && $balanceAmount > 0)
                 <button type="button" class="master-btn master-btn-soft" data-open-payment
                     data-invoice-id="{{ $invoice->id }}"
                     data-invoice-number="{{ $invoice->invoice_number }}"
@@ -76,6 +76,15 @@
                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($advanceOpen, $invoice->currency) }}">
                     Record advance
                 </button>
+            @elseif ($invoice->isOrder() && ! $invoice->canReceiveMoney() && $invoice->status !== 'cancelled' && ! $invoice->isSuperseded())
+                @if (in_array('approved', $nextStatuses, true))
+                    <form method="POST" action="{{ route($routePrefix.'.status', $invoice) }}">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="status" value="approved">
+                        <button type="submit" class="master-btn master-btn-soft">Approve PO to allow advance</button>
+                    </form>
+                @endif
             @endif
             <a href="{{ route($routePrefix.'.print', $invoice) }}" target="_blank" class="master-btn master-btn-primary">Print</a>
             <div class="master-dropdown">
@@ -148,6 +157,33 @@
             </div>
         </div>
     </div>
+
+    @if ($invoice->isOrder() && ! $invoice->canReceiveMoney() && ! $invoice->isSuperseded() && $invoice->status !== 'cancelled')
+        <div class="master-card master-section">
+            <div class="master-section-head">
+                <div>
+                    <h2 class="master-section-title">Pending checker</h2>
+                    <p class="master-sub">{{ $invoice->moneyGateMessage() }}</p>
+                </div>
+                @if (in_array('sent', $nextStatuses, true))
+                    <form method="POST" action="{{ route($routePrefix.'.status', $invoice) }}">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="status" value="sent">
+                        <button type="submit" class="master-btn master-btn-soft">Mark sent</button>
+                    </form>
+                @endif
+                @if (in_array('approved', $nextStatuses, true))
+                    <form method="POST" action="{{ route($routePrefix.'.status', $invoice) }}">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="status" value="approved">
+                        <button type="submit" class="master-btn master-btn-primary">Approve purchase order</button>
+                    </form>
+                @endif
+            </div>
+        </div>
+    @endif
 
     <div class="master-card master-section">
         <div class="master-section-head">
@@ -258,15 +294,15 @@
             <div class="master-section-head">
                 <div>
                     <h2 class="master-section-title">{{ $invoice->isOrder() ? 'Advances' : 'Payments' }}</h2>
-                    <p class="master-sub">{{ $invoice->isOrder() ? 'Debits against this order — they move to the bill when you convert' : 'Debits in the vendor ledger against this bill' }}</p>
+                    <p class="master-sub">{{ $invoice->isOrder() ? ($invoice->canReceiveMoney() ? 'Debits against this order — they move to the bill when you convert' : $invoice->moneyGateMessage()) : 'Debits in the vendor ledger against this bill' }}</p>
                 </div>
-                @if ($invoice->isBill() && $balanceAmount > 0)
+                @if ($invoice->isBill() && $invoice->canReceiveMoney() && $balanceAmount > 0)
                     <button type="button" class="master-btn master-btn-soft" data-open-payment
                         data-invoice-id="{{ $invoice->id }}"
                         data-invoice-number="{{ $invoice->invoice_number }}"
                         data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
                         data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}">Record</button>
-                @elseif ($invoice->isOrder() && $invoice->canConvert() && max((float) $invoice->total_amount - $paidAmount, 0) > 0)
+                @elseif ($invoice->isOrder() && $invoice->canReceiveMoney() && max((float) $invoice->total_amount - $paidAmount, 0) > 0)
                     <button type="button" class="master-btn master-btn-soft" data-open-payment
                         data-invoice-id="{{ $invoice->id }}"
                         data-invoice-number="{{ $invoice->invoice_number }}"
