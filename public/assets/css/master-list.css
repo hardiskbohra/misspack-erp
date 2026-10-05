@@ -585,6 +585,12 @@
     white-space: nowrap;
 }
 
+/* A purchase list can carry INR, USD and RMB on the same totals band.
+   Each currency is its own strong + sub; nowrap still applies per line. */
+.master-list .master-list-total .is-num strong + .master-sub + strong {
+    margin-top: 8px;
+}
+
 .master-list .master-list-empty {
     display: flex;
     flex-direction: column;

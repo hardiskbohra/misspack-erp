@@ -342,19 +342,43 @@
                     @endforelse
                 </tbody>
                 @if ($invoices->isNotEmpty())
+                    @php
+                        $currencyRows = collect($pageTotals['byCurrency'] ?? [])->filter(fn ($row) =>
+                            ((float) $row['billed'] + (float) $row['open'] + (float) $row['paid'] + (float) $row['outstanding']) > 0.01
+                        );
+                    @endphp
                     <tfoot class="ui-mobile-secondary">
                         <tr class="master-list-total">
                             <td colspan="3">
-                                <strong>Total — {{ $invoices->count() }} shown</strong>
-                                <span class="master-sub">Filtered totals cover every page · a converted order counts once</span>
+                                <strong>Total — {{ $invoices->count() }} {{ \Illuminate\Support\Str::plural('document', $invoices->count()) }} shown</strong>
+                                <span class="master-sub">Filtered totals cover every page · a converted order counts once · each currency on its own line</span>
                             </td>
-                            <td class="is-num" colspan="3">
-                                @foreach (($pageTotals['byCurrency'] ?? []) as $code => $row)
-                                    @if (($row['billed'] + $row['open'] + $row['paid'] + $row['outstanding']) > 0)
-                                        <span class="master-sub">{{ $code }} billed {{ \App\Helpers\CommonHelper::amount($row['billed'], $code) }}
-                                            · open {{ \App\Helpers\CommonHelper::amount($row['open'], $code) }}</span>
-                                    @endif
-                                @endforeach
+                            <td class="is-num">
+                                @forelse ($currencyRows as $code => $row)
+                                    <strong>{{ \App\Helpers\CommonHelper::amount($row['billed'] + $row['open'], $code) }}</strong>
+                                    <span class="master-sub">{{ $code }} billed + open</span>
+                                @empty
+                                    <strong>{{ \App\Helpers\CommonHelper::amount(0, 'INR') }}</strong>
+                                    <span class="master-sub">Billed + open</span>
+                                @endforelse
+                            </td>
+                            <td class="is-num ui-mobile-secondary">
+                                @forelse ($currencyRows as $code => $row)
+                                    <strong>{{ \App\Helpers\CommonHelper::amount($row['paid'], $code) }}</strong>
+                                    <span class="master-sub">{{ $code }} paid · all pages</span>
+                                @empty
+                                    <strong>{{ \App\Helpers\CommonHelper::amount(0, 'INR') }}</strong>
+                                    <span class="master-sub">Paid · all pages</span>
+                                @endforelse
+                            </td>
+                            <td class="is-num">
+                                @forelse ($currencyRows as $code => $row)
+                                    <strong>{{ \App\Helpers\CommonHelper::amount($row['outstanding'], $code) }}</strong>
+                                    <span class="master-sub">{{ $code }} outstanding</span>
+                                @empty
+                                    <strong>{{ \App\Helpers\CommonHelper::amount(0, 'INR') }}</strong>
+                                    <span class="master-sub">Outstanding · all pages</span>
+                                @endforelse
                             </td>
                             <td colspan="3"></td>
                         </tr>
