@@ -2,12 +2,18 @@
     <div class="gs-backdrop" data-gs-close></div>
     <div class="gs-panel" role="dialog" aria-modal="true" aria-labelledby="globalSearchTitle">
         <div class="gs-bar">
-            <i class="fas fa-search" aria-hidden="true"></i>
-            <input type="search" id="globalSearchInput" class="gs-input" autocomplete="off" spellcheck="false"
-                placeholder="Search clients, vendors, invoices, cashflow…" aria-labelledby="globalSearchTitle">
-            <kbd class="gs-kbd">esc</kbd>
+            <i class="fas fa-search gs-icon" aria-hidden="true"></i>
+            <input type="text" id="globalSearchInput" class="gs-input" autocomplete="off" spellcheck="false"
+                placeholder="Search the office…" aria-labelledby="globalSearchTitle">
+            <button type="button" class="gs-esc" data-gs-close>Esc</button>
         </div>
-        <p class="gs-hint" id="globalSearchTitle">Type at least two characters. Results come from every office module.</p>
-        <div class="gs-body" data-gs-results></div>
+        <div class="gs-body" data-gs-results>
+            <p class="gs-empty" id="globalSearchTitle">Clients, vendors, products, projects, leads, invoices, cashflow, shipments, tasks and people.</p>
+        </div>
+        <div class="gs-foot">
+            <span><kbd>↑</kbd><kbd>↓</kbd> move</span>
+            <span><kbd>↵</kbd> open</span>
+            <span><kbd>esc</kbd> close</span>
+        </div>
     </div>
 </div>

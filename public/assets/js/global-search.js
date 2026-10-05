@@ -57,12 +57,12 @@
             if (!results) return;
 
             if (!data.q || data.q.length < 2) {
-                results.innerHTML = '<p class="gs-empty">Start typing a name, number, GSTIN, or particular.</p>';
+                results.innerHTML = '<p class="gs-empty">Clients, vendors, products, projects, leads, invoices, cashflow, shipments, tasks and people.</p>';
                 return;
             }
 
             if (!data.total) {
-                results.innerHTML = '<p class="gs-empty">Nothing matched “' + escapeHtml(data.q) + '”.</p>';
+                results.innerHTML = '<p class="gs-empty">No matches for “' + escapeHtml(data.q) + '”. Try a number, company name, or GSTIN.</p>';
                 return;
             }
 
