@@ -1194,29 +1194,30 @@ html.sidebar-collapsed .user-menu.is-sidebar .user-menu-caret {
     display: flex;
     align-items: center;
     gap: 12px;
-    min-height: 56px;
-    padding: 0 16px;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--mc-border, #dfe7f3);
 }
 
 .gs-icon {
+    flex: none;
     color: var(--master-primary, #4f83f1);
     font-size: 15px;
 }
 
-.gs-input,
-.gs-input:focus,
-.gs-input:focus-visible {
+body[data-ui-shell] .gs-input,
+body[data-ui-shell] .gs-input:focus,
+body[data-ui-shell] .gs-input:focus-visible,
+.gs-input {
     flex: 1;
     min-width: 0;
-    height: 44px;
+    height: 40px;
     margin: 0;
-    padding: 0;
-    border: 0;
+    padding: 0 4px;
+    border: 0 !important;
     border-radius: 0;
     background: transparent;
-    box-shadow: none;
-    outline: none;
+    box-shadow: none !important;
+    outline: none !important;
     appearance: none;
     -webkit-appearance: none;
     font-family: inherit;
