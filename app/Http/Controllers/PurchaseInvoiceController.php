@@ -53,6 +53,11 @@ class PurchaseInvoiceController extends Controller
            `only_full_group_by`. A query with no columns of its own takes one
            aggregate select cleanly — the same rule the invoices listing keeps. */
         $paid = $this->paidSql();
+        /* Bills, and unconverted orders: a PO with an advance is money too.
+           Converted orders are dropped so one purchase is not billed twice. */
+        $live = "purchase_invoices.status <> 'cancelled' and ("
+            ."purchase_invoices.invoice_type = 'bill'"
+            ." or (purchase_invoices.invoice_type = 'order' and purchase_invoices.converted_invoice_id is null))";
         $currencyBits = [];
         foreach (['INR', 'USD', 'RMB'] as $code) {
             $c = "purchase_invoices.currency = '".$code."'";
@@ -61,10 +66,9 @@ class PurchaseInvoiceController extends Controller
             $currencyBits[] = "coalesce(sum(case when $c and purchase_invoices.invoice_type = 'order'"
                 ." and purchase_invoices.converted_invoice_id is null and purchase_invoices.status <> 'cancelled'"
                 ." then purchase_invoices.total_amount else 0 end), 0) as open_".$code;
-            $currencyBits[] = "coalesce(sum(case when $c and purchase_invoices.invoice_type = 'bill'"
-                ." and purchase_invoices.status <> 'cancelled' then ".$paid." else 0 end), 0) as paid_".$code;
-            $currencyBits[] = "coalesce(sum(case when $c and purchase_invoices.invoice_type = 'bill'"
-                ." and purchase_invoices.status <> 'cancelled' and ".$paid." < purchase_invoices.total_amount - 0.01"
+            $currencyBits[] = "coalesce(sum(case when $c and $live then ".$paid." else 0 end), 0) as paid_".$code;
+            $currencyBits[] = "coalesce(sum(case when $c and $live and purchase_invoices.status <> 'draft'"
+                ." and ".$paid." < purchase_invoices.total_amount - 0.01"
                 ." then purchase_invoices.total_amount - ".$paid." else 0 end), 0) as outstanding_".$code;
         }
         $figures = $this->filteredQuery($filters)->reorder()->selectRaw(implode(', ', $currencyBits))->first();
@@ -242,7 +246,7 @@ class PurchaseInvoiceController extends Controller
             $row = $totals['byCurrency'][$code] ?? ['billed' => 0, 'open' => 0, 'paid' => 0, 'outstanding' => 0];
             $cards[] = [
                 'label' => $code.' (filtered)',
-                'value' => $row['billed'],
+                'value' => $row['billed'] + $row['open'],
                 'open' => $row['open'],
                 'paid' => $row['paid'],
                 'outstanding' => $row['outstanding'],
