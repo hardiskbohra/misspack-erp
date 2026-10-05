@@ -306,7 +306,6 @@
                         <th scope="col">Type</th>
                         <th scope="col">Contact</th>
                         <th scope="col" class="ui-mobile-secondary">Location</th>
-                        <th scope="col" class="ui-mobile-secondary">Terms</th>
                         <th scope="col" class="is-num">Payable</th>
                         <th scope="col">Status</th>
                         <th scope="col">Action</th>
@@ -351,12 +350,14 @@
                                 </div>
                             </td>
                             <td data-label="Type">
-                                <span class="vendor-type-chip type-{{ $typeClass }}">{{ $vendor->typeLabel() }}</span>
-                                @if($vendor->rating)
-                                    <span class="vendor-table-meta ui-mobile-secondary" aria-label="Rated {{ $vendor->rating }} of 5">
-                                        {{ str_repeat('★', $vendor->rating) }}
-                                    </span>
-                                @endif
+                                <div class="vendor-type-stack">
+                                    <span class="vendor-type-chip type-{{ $typeClass }}">{{ $vendor->typeLabel() }}</span>
+                                    @if($vendor->rating)
+                                        <span class="vendor-table-meta" aria-label="Rated {{ $vendor->rating }} of 5">
+                                            {{ str_repeat('★', $vendor->rating) }}
+                                        </span>
+                                    @endif
+                                </div>
                             </td>
                             <td data-label="Contact">
                                 @if($vendor->contact_person_name)
@@ -374,10 +375,6 @@
                             <td data-label="Location" class="ui-mobile-secondary">
                                 {{ $vendor->city ?: '—' }}
                                 <span class="master-sub">{{ $vendor->country ?: 'Country not set' }}</span>
-                            </td>
-                            <td data-label="Terms" class="ui-mobile-secondary">
-                                {{ $vendorListCurrency }}
-                                <span class="master-sub">{{ $vendor->payment_terms ?: 'No terms on file' }}</span>
                             </td>
                             <td data-label="Payable" class="is-num">
                                 @if ($payable > 0)
