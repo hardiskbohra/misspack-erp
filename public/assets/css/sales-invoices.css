@@ -74,7 +74,7 @@
 
 .si-show .si-lines th.is-num,
 .si-show .si-lines td.is-num {
-    text-align: right;
+    text-align: center;
     white-space: nowrap;
     width: 1%
 }
@@ -675,7 +675,7 @@
    them. */
 .si-index td.is-num,
 .si-index th.is-num {
-    text-align: right
+    text-align: center
 }
 
 .si-index .master-dropdown-toggle {

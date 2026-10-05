@@ -581,6 +581,12 @@
     font-size: 13px;
 }
 
+.master-list table th.is-num,
+.master-list table td.is-num,
+.master-list .master-list-total .is-num {
+    text-align: center;
+}
+
 .master-list .master-list-total .is-num {
     white-space: nowrap;
 }

@@ -1375,7 +1375,7 @@
 .cashflow-reports .cf-report-table .cf-report-period,
 .cashflow-reports .cf-report-table .cf-report-total-col {
     min-width: 104px;
-    text-align: right;
+    text-align: center;
 }
 
 .cashflow-reports .cf-report-table .cf-report-total-col {
@@ -1585,7 +1585,7 @@ a.cf-report-value:hover {
         padding: 10px 12px;
         border-bottom: 1px solid var(--mc-border);
         margin: 0;
-        text-align: right;
+        text-align: center;
     }
 
     .cf.cashflow-reports .cf-report-table .cf-report-name-col {

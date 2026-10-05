@@ -288,13 +288,13 @@
 
 /* --------------------------------------------------------------------------
    Numbers in tables
-   Money and quantities are right-aligned and use tabular figures so digits
-   line up column to column.
+   Money and quantities are centre-aligned and use tabular figures so digits
+   still sit on a shared grid.
    -------------------------------------------------------------------------- */
 
 .master-table th.is-num,
 .master-table td.is-num {
-    text-align: right;
+    text-align: center;
     font-variant-numeric: tabular-nums
 }
 
