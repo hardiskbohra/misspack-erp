@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SavedView;
+use App\Models\PurchaseInvoice;
 use App\Models\Vendor;
 use App\Models\VendorAttachment;
 use App\Models\VendorComment;
@@ -485,6 +486,7 @@ class VendorController extends Controller
 
         $entry = DB::transaction(function () use ($request, $data, $vendor, $syncCashflow) {
             $entry = VendorPaymentEntry::create($data);
+            $this->attachPurchaseDocument($entry);
 
             $this->cashflowSync()->sync($entry, $syncCashflow);
 
@@ -539,6 +541,7 @@ class VendorController extends Controller
 
         DB::transaction(function () use ($request,$data,$vendor,$entry,$syncCashflow) {
             $entry->update($data);
+            $this->attachPurchaseDocument($entry);
             $this->cashflowSync()->sync($entry, $syncCashflow);
             $this->storeVendorPaymentAttachments($request,$entry);
         });
@@ -642,6 +645,36 @@ class VendorController extends Controller
         if ($errors) {
             throw ValidationException::withMessages($errors);
         }
+    }
+
+    /**
+     * When a Money-tab payment names a purchase order or bill number, hang it
+     * on that document so converting the order can take the advance with it.
+     */
+    private function attachPurchaseDocument(VendorPaymentEntry $entry): void
+    {
+        if (! Schema::hasTable('purchase_invoices')
+            || ! Schema::hasColumn('vendor_payment_entries', 'purchase_invoice_id')
+            || $entry->purchase_invoice_id
+            || ! filled($entry->invoice_number)) {
+            return;
+        }
+
+        $document = PurchaseInvoice::query()
+            ->where('vendor_id', $entry->vendor_id)
+            ->where(function ($query) use ($entry) {
+                $query->where('invoice_number', $entry->invoice_number)
+                    ->orWhere('vendor_bill_number', $entry->invoice_number);
+            })
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $document) {
+            return;
+        }
+
+        $entry->purchase_invoice_id = $document->id;
+        $entry->save();
     }
 
     private function paymentSavedMessage(VendorPaymentEntry $entry, string $verb): string

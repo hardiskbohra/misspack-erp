@@ -145,10 +145,9 @@ class PurchaseBillLedger
     /**
      * The advance follows the document.
      *
-     * An order is not owed, but money can be paid against one before the bill
-     * arrives. When the order becomes a bill, those debits move with it — one
-     * purchase, one payable, the way a proforma's receipts move to its tax
-     * invoice.
+     * Money paid against the order — a debit on the order id, a debit whose
+     * invoice number is the PO number, or an amount typed on the order itself —
+     * becomes money paid against the bill. One purchase, one payable.
      */
     public function movePayments(PurchaseInvoice $order, PurchaseInvoice $bill): void
     {
@@ -156,10 +155,45 @@ class PurchaseBillLedger
             return;
         }
 
-        VendorPaymentEntry::query()
-            ->where('purchase_invoice_id', $order->id)
+        $numbers = array_values(array_unique(array_filter([
+            (string) $order->invoice_number,
+            (string) ($order->vendor_bill_number ?? ''),
+        ])));
+
+        $entries = VendorPaymentEntry::query()
             ->where('transaction_type', 'debit')
-            ->update(['purchase_invoice_id' => $bill->id]);
+            ->where(function ($query) use ($order, $numbers) {
+                $query->where('purchase_invoice_id', $order->id);
+                if ($numbers !== []) {
+                    $query->orWhere(function ($match) use ($order, $numbers) {
+                        $match->where('vendor_id', $order->vendor_id)
+                            ->where(function ($id) {
+                                $id->whereNull('purchase_invoice_id')
+                                    ->orWhere('purchase_invoice_id', 0);
+                            })
+                            ->whereIn('invoice_number', $numbers);
+                    });
+                }
+            })
+            ->get();
+
+        $billNumber = $bill->referenceNumber();
+
+        foreach ($entries as $entry) {
+            $entry->purchase_invoice_id = $bill->id;
+            $entry->invoice_number = $billNumber;
+            $entry->particular = 'Advance against purchase bill '.$bill->invoice_number
+                .' (from '.$order->invoice_number.')';
+            $entry->save();
+        }
+
+        $carried = (float) $order->amount_paid;
+        if ($carried > 0.009) {
+            $bill->amount_paid = round((float) $bill->amount_paid + $carried, 2);
+            $bill->save();
+            $order->amount_paid = 0;
+            $order->save();
+        }
     }
 
     /** The row this service owns for the bill: the auto-posted credit. */

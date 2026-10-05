@@ -55,6 +55,11 @@
         <div class="record-head-actions">
             <a href="{{ route($routePrefix.'.index') }}" class="master-btn master-btn-light">Back</a>
             <a href="{{ route($routePrefix.'.edit', $invoice) }}" class="master-btn master-btn-light">Edit</a>
+            @php
+                $advanceOpen = $invoice->isOrder() && $invoice->canConvert()
+                    ? max((float) $invoice->total_amount - $paidAmount, 0)
+                    : 0;
+            @endphp
             @if ($invoice->isBill() && $balanceAmount > 0)
                 <button type="button" class="master-btn master-btn-soft" data-open-payment
                     data-invoice-id="{{ $invoice->id }}"
@@ -62,6 +67,14 @@
                     data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}">
                     Record payment
+                </button>
+            @elseif ($advanceOpen > 0)
+                <button type="button" class="master-btn master-btn-soft" data-open-payment
+                    data-invoice-id="{{ $invoice->id }}"
+                    data-invoice-number="{{ $invoice->invoice_number }}"
+                    data-invoice-amount="{{ number_format($advanceOpen, 2, '.', '') }}"
+                    data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($advanceOpen, $invoice->currency) }}">
+                    Record advance
                 </button>
             @endif
             <a href="{{ route($routePrefix.'.print', $invoice) }}" target="_blank" class="master-btn master-btn-primary">Print</a>
@@ -111,9 +124,9 @@
         <div class="master-stat master-stat--flat teal">
             <span class="icon"><i class="fas fa-indian-rupee-sign"></i></span>
             <div>
-                <p class="master-stat-title">{{ $invoice->isBill() ? 'Paid' : 'Not payable' }}</p>
-                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($invoice->isBill() ? $paidAmount : 0, $invoice->currency) }}</p>
-                <p class="master-sub">{{ $invoice->isOrder() ? 'Raise a bill to pay this order' : ($payments->count().' payments') }}</p>
+                <p class="master-stat-title">{{ $invoice->isBill() ? 'Paid' : 'Advance paid' }}</p>
+                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($paidAmount, $invoice->currency) }}</p>
+                <p class="master-sub">{{ $invoice->isOrder() ? ($paidAmount > 0 ? 'Moves to the bill on conversion' : 'Optional before the bill') : ($payments->count().' payments') }}</p>
             </div>
         </div>
         @unless ($isImport)
@@ -240,24 +253,30 @@
         </div>
     </div>
 
-    @if ($invoice->isBill())
+    @if ($invoice->isBill() || ($invoice->isOrder() && ! $invoice->isSuperseded()))
         <div class="master-card master-section">
             <div class="master-section-head">
                 <div>
-                    <h2 class="master-section-title">Payments</h2>
-                    <p class="master-sub">Debits in the vendor ledger against this bill</p>
+                    <h2 class="master-section-title">{{ $invoice->isOrder() ? 'Advances' : 'Payments' }}</h2>
+                    <p class="master-sub">{{ $invoice->isOrder() ? 'Debits against this order — they move to the bill when you convert' : 'Debits in the vendor ledger against this bill' }}</p>
                 </div>
-                @if ($balanceAmount > 0)
+                @if ($invoice->isBill() && $balanceAmount > 0)
                     <button type="button" class="master-btn master-btn-soft" data-open-payment
                         data-invoice-id="{{ $invoice->id }}"
                         data-invoice-number="{{ $invoice->invoice_number }}"
                         data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
                         data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}">Record</button>
+                @elseif ($invoice->isOrder() && $invoice->canConvert() && max((float) $invoice->total_amount - $paidAmount, 0) > 0)
+                    <button type="button" class="master-btn master-btn-soft" data-open-payment
+                        data-invoice-id="{{ $invoice->id }}"
+                        data-invoice-number="{{ $invoice->invoice_number }}"
+                        data-invoice-amount="{{ number_format(max((float) $invoice->total_amount - $paidAmount, 0), 2, '.', '') }}"
+                        data-invoice-balance="{{ \App\Helpers\CommonHelper::amount(max((float) $invoice->total_amount - $paidAmount, 0), $invoice->currency) }}">Record advance</button>
                 @endif
             </div>
             @if ($payments->isEmpty())
                 <div class="master-empty-state">
-                    <p>Nothing paid against this bill yet.</p>
+                    <p>{{ $invoice->isOrder() ? 'No advance against this order yet.' : 'Nothing paid against this bill yet.' }}</p>
                 </div>
             @else
                 <div class="si-payment-list">

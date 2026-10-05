@@ -464,8 +464,16 @@ class PurchaseInvoiceController extends Controller
     {
         $this->assertDocType($request, $purchaseInvoice);
 
-        if (! $purchaseInvoice->isBill()) {
-            return back()->with('error', 'Only a purchase bill can be paid. Raise the bill from this order first.');
+        if ($purchaseInvoice->isOrder() && $purchaseInvoice->isSuperseded()) {
+            return back()->with('error', 'This order has already become a bill. Record the payment on '.$purchaseInvoice->convertedInvoice?->invoice_number.'.');
+        }
+
+        if (! $purchaseInvoice->isBill() && ! $purchaseInvoice->isOrder()) {
+            return back()->with('error', 'Only a purchase order or purchase bill can be paid.');
+        }
+
+        if ($purchaseInvoice->status === 'cancelled') {
+            return back()->with('error', $purchaseInvoice->invoice_number.' is cancelled, so a payment cannot be filed against it.');
         }
 
         $data = $request->validate([
@@ -496,7 +504,9 @@ class PurchaseInvoiceController extends Controller
             'exchange_rate' => $rate,
             'transaction_type' => 'debit',
             'entry_category' => 'payment',
-            'particular' => 'Payment against purchase bill '.$purchaseInvoice->invoice_number,
+            'particular' => $purchaseInvoice->isOrder()
+                ? 'Advance against purchase order '.$purchaseInvoice->invoice_number
+                : 'Payment against purchase bill '.$purchaseInvoice->invoice_number,
             'status' => 'booked',
             'paid_account_id' => $data['paid_account_id'] ?? null,
             'payment_mode' => $data['payment_mode'] ?? null,

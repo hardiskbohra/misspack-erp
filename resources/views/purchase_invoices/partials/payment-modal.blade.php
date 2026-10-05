@@ -9,7 +9,7 @@
                     <div class="master-modal-heading"><span class="master-modal-icon">₹</span>
                         <div>
                             <h3 class="master-modal-title" id="purchasePaymentTitle">Record a payment</h3>
-                            <p class="master-modal-subtitle" data-payment-subtitle>Filed against the bill in the vendor ledger</p>
+                            <p class="master-modal-subtitle" data-payment-subtitle>Filed against this document in the vendor ledger. An advance on a PO moves to the bill when you convert.</p>
                         </div>
                     </div>
                 </div>
