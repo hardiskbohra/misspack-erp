@@ -171,7 +171,12 @@
          ['openAddCommentModalEmpty', 'addCommentModal']
         ].forEach(function (pair) {
             byId(pair[0])?.addEventListener('click', function () {
-                openModal(byId(pair[1]));
+                var modal = byId(pair[1]);
+                if (pair[1] === 'addPaymentModal') {
+                    var form = modal ? modal.querySelector('form') : null;
+                    applyOperatingCurrency(form, form && form.getAttribute('data-vendor-currency'));
+                }
+                openModal(modal);
             });
         });
 
@@ -276,6 +281,28 @@
             }
         };
 
+        var applyOperatingCurrency = function (form, code) {
+            var select = form && form.elements.foreign_currency;
+            if (!select) return;
+
+            var want = String(code || form.getAttribute('data-vendor-currency') || 'RMB').toUpperCase();
+            var match = Array.prototype.find.call(select.options, function (option) {
+                return String(option.value).toUpperCase() === want;
+            });
+
+            if (match) {
+                select.value = match.value;
+            } else {
+                var option = document.createElement('option');
+                option.value = want;
+                option.textContent = want;
+                select.appendChild(option);
+                select.value = want;
+            }
+
+            select.dispatchEvent(new Event('change'));
+        };
+
         document.querySelectorAll('.editPaymentBtn').forEach(function (button) {
             button.addEventListener('click', function () {
                 if (!editPaymentForm) return;
@@ -337,6 +364,26 @@
         var addPaymentModal = byId('addPaymentModal');
         var addPaymentForm = addPaymentModal ? addPaymentModal.querySelector('form') : null;
 
+        document.querySelectorAll('.vendor-payment-form').forEach(function (form) {
+            var documentField = form.elements.purchase_invoice_id;
+            documentField?.addEventListener('change', function () {
+                var option = documentField.selectedOptions && documentField.selectedOptions[0];
+                var currency = option && option.getAttribute('data-currency');
+                var rate = option && option.getAttribute('data-rate');
+
+                if (currency) {
+                    applyOperatingCurrency(form, currency);
+                } else if (!documentField.value) {
+                    applyOperatingCurrency(form, form.getAttribute('data-vendor-currency'));
+                }
+
+                if (rate && Number(rate) > 0 && form.elements.exchange_rate) {
+                    form.elements.exchange_rate.value = rate;
+                    form.elements.exchange_rate.dispatchEvent(new Event('input'));
+                }
+            });
+        });
+
         document.querySelectorAll('.payBillBtn').forEach(function (button) {
             button.addEventListener('click', function () {
                 if (!addPaymentForm) return;
@@ -353,14 +400,14 @@
                 setField(addPaymentForm, 'transaction_date', today);
                 setField(addPaymentForm, 'invoice_number', bill.invoice || '');
                 setField(addPaymentForm, 'particular', bill.particular ? 'Payment against '.concat(bill.particular) : 'Payment against an open bill');
-                setField(addPaymentForm, 'foreign_currency', bill.currency || 'INR');
                 setField(addPaymentForm, 'foreign_amount', bill.amount ?? '');
                 setField(addPaymentForm, 'transaction_type', 'debit');
                 setField(addPaymentForm, 'entry_category', 'payment');
                 setField(addPaymentForm, 'amount_in_inr', '');
                 setField(addPaymentForm, 'due_date', '');
+                setField(addPaymentForm, 'purchase_invoice_id', bill.purchase_invoice_id || '');
 
-                addPaymentForm.elements.foreign_currency?.dispatchEvent(new Event('change'));
+                applyOperatingCurrency(addPaymentForm, bill.currency || addPaymentForm.getAttribute('data-vendor-currency'));
                 addPaymentForm.elements.transaction_type?.dispatchEvent(new Event('change'));
 
                 openModal(addPaymentModal);

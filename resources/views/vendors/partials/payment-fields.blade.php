@@ -15,7 +15,9 @@
         <select class="master-select" id="{{ $fieldId('purchase_invoice_id') }}" name="purchase_invoice_id">
             <option value="">Not a payment — bill or expense only</option>
             @foreach (($payableDocuments ?? collect()) as $document)
-                <option value="{{ $document->id }}">
+                <option value="{{ $document->id }}"
+                    data-currency="{{ $document->currency ?: ($vendor->preferred_currency ?: 'RMB') }}"
+                    data-rate="{{ $document->exchange_rate }}">
                     {{ $document->invoice_number }} · {{ $document->typeLabel() }} · {{ $document->statusLabel() }}
                 </option>
             @endforeach

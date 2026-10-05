@@ -184,7 +184,8 @@
          wires each form on its own. --}}
     <div class="master-modal" id="addPaymentModal" aria-hidden="true">
         <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="addPaymentTitle">
-            <form method="POST" action="{{ route('vendors.payments.store', $vendor) }}" enctype="multipart/form-data" class="vendor-payment-form">
+            <form method="POST" action="{{ route('vendors.payments.store', $vendor) }}" enctype="multipart/form-data" class="vendor-payment-form"
+                data-vendor-currency="{{ $vendor->preferred_currency ?: 'RMB' }}">
                 @csrf
                 <input type="hidden" name="_dialog" value="payment">
                 <div class="master-modal-header">

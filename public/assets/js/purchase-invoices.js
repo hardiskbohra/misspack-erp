@@ -637,6 +637,29 @@
         var particular = modal.querySelector('[name="particular"]');
         var project = modal.querySelector('[name="project_id"]');
 
+        function applyOperatingCurrency(code) {
+            if (!currency) return;
+
+            var want = String(code || '').toUpperCase();
+            if (!want) return;
+
+            var match = Array.prototype.find.call(currency.options, function (option) {
+                return String(option.value).toUpperCase() === want;
+            });
+
+            if (match) {
+                currency.value = match.value;
+            } else {
+                var option = document.createElement('option');
+                option.value = want;
+                option.textContent = want;
+                currency.appendChild(option);
+                currency.value = want;
+            }
+
+            currency.dispatchEvent(new Event('change'));
+        }
+
         function calculateInrAmount() {
             if (!inr) return;
 
@@ -686,9 +709,7 @@
                     amount.value = trigger.getAttribute('data-invoice-amount') || balance.replace(/[^0-9.]/g, '');
                 }
 
-                if (currency && code) {
-                    currency.value = code;
-                }
+                applyOperatingCurrency(code);
 
                 if (rate) {
                     rate.value = exchange && Number(exchange) > 0 ? exchange : '';

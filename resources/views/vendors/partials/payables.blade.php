@@ -91,8 +91,9 @@
                                 'id' => $bill['id'],
                                 'particular' => $bill['particular'],
                                 'invoice' => $bill['invoice'],
-                                'currency' => $bill['currency'],
+                                'currency' => $bill['currency'] ?: ($vendorCurrency ?? 'RMB'),
                                 'amount' => $bill['foreign_left'],
+                                'purchase_invoice_id' => $bill['purchase_invoice_id'] ?? '',
                             ];
                         @endphp
                         <tr>
