@@ -946,6 +946,8 @@ class VendorController extends Controller
             if ($isBill) {
                 $open[] = [
                     'id' => $entry->id,
+                    'purchase_invoice_id' => $entry->purchase_invoice_id ? (int) $entry->purchase_invoice_id : null,
+                    'kind' => $entry->entry_category === 'order' ? 'order' : 'bill',
                     'particular' => (string) $entry->particular,
                     'invoice' => (string) ($entry->invoice_number ?: ''),
                     'date' => $entry->transaction_date,

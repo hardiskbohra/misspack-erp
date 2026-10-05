@@ -72,24 +72,39 @@
                     <tr>
                         <th scope="col">Bill</th>
                         <th scope="col">Due</th>
-                        <th scope="col" class="is-num">Open</th>
+                        <th scope="col" class="is-num">Billed</th>
+                        <th scope="col" class="is-num">Paid</th>
+                        <th scope="col" class="is-num">Balance</th>
                         <th scope="col" class="vendor-table-actions-cell">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($visibleRows as $bill)
-                        @php($billPayload = [
-                            'id' => $bill['id'],
-                            'particular' => $bill['particular'],
-                            'invoice' => $bill['invoice'],
-                            'currency' => $bill['currency'],
-                            'amount' => $bill['foreign_left'],
-                        ])
+                        @php
+                            $billedAmt = (float) $bill['foreign_total'];
+                            $openAmt = (float) $bill['foreign_left'];
+                            $paidAmt = max($billedAmt - $openAmt, 0);
+                            $documentUrl = ! empty($bill['purchase_invoice_id']) && \Illuminate\Support\Facades\Route::has('purchase-invoices.show')
+                                ? route('purchase-invoices.show', $bill['purchase_invoice_id'])
+                                : null;
+                            $billPayload = [
+                                'id' => $bill['id'],
+                                'particular' => $bill['particular'],
+                                'invoice' => $bill['invoice'],
+                                'currency' => $bill['currency'],
+                                'amount' => $bill['foreign_left'],
+                            ];
+                        @endphp
                         <tr>
                             <td data-label="Bill">
-                                <strong>{{ $bill['particular'] ?: 'Ledger entry' }}</strong>
+                                @if ($documentUrl)
+                                    <a class="vendor-table-name" href="{{ $documentUrl }}">{{ $bill['invoice'] ?: ($bill['particular'] ?: 'Open document') }}</a>
+                                @else
+                                    <strong>{{ $bill['invoice'] ?: ($bill['particular'] ?: 'Ledger entry') }}</strong>
+                                @endif
                                 <span class="master-sub">
-                                    {{ $bill['invoice'] ?: 'No invoice number' }} · {{ $bill['date']?->format('d M Y') ?: '—' }}@if ($bill['is_expense']) · Expense @endif
+                                    {{ $bill['particular'] ?: 'Ledger entry' }}
+                                    · {{ $bill['date']?->format('d M Y') ?: '—' }}@if ($bill['is_expense']) · Expense @endif
                                 </span>
                             </td>
                             <td data-label="Due">
@@ -107,8 +122,14 @@
                                     <span class="master-sub">Set payment terms to fill this in</span>
                                 @endif
                             </td>
-                            <td data-label="Open" class="is-num">
-                                <strong>{{ \App\Helpers\CommonHelper::amount($bill['foreign_left'], $bill['currency']) }}</strong>
+                            <td data-label="Billed" class="is-num">
+                                {{ \App\Helpers\CommonHelper::amount($billedAmt, $bill['currency']) }}
+                            </td>
+                            <td data-label="Paid" class="is-num">
+                                {{ \App\Helpers\CommonHelper::amount($paidAmt, $bill['currency']) }}
+                            </td>
+                            <td data-label="Balance" class="is-num">
+                                <strong>{{ \App\Helpers\CommonHelper::amount($openAmt, $bill['currency']) }}</strong>
                             </td>
                             <td data-label="Action" class="vendor-table-actions-cell">
                                 <button type="button" class="master-btn master-btn-soft master-btn-sm payBillBtn"
