@@ -514,7 +514,12 @@
                         </tr>
                     @endforelse
                 </tbody>
-                <tfoot>
+            </table>
+        </div>
+
+        @if ($entries->isNotEmpty())
+            <div class="master-list-foot">
+                <table class="master-table">
                     <tr class="master-list-total">
                         <td colspan="4">
                             <strong>Total — {{ $entries->count() }} {{ \Illuminate\Support\Str::plural('entry', $entries->count()) }} shown</strong>
@@ -534,9 +539,9 @@
                         </td>
                         <td colspan="2"></td>
                     </tr>
-                </tfoot>
-            </table>
-        </div>
+                </table>
+            </div>
+        @endif
 
         <x-pagination :items="$entries" />
     </div>
