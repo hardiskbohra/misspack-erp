@@ -9,7 +9,7 @@
             {{-- The manual ledger is the vendor-currency view; this is the same
                  account as a statement the vendor can be sent. --}}
             <a class="master-btn master-btn-soft master-btn-sm"
-                href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id]) }}">
+                href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id, 'currency' => $vendor->preferred_currency ?: ($summary['vendor_currency'] ?? 'RMB'), 'period' => 'all']) }}">
                 <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Full statement of account
             </a>
         </div>

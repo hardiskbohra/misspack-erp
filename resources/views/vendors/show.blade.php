@@ -60,7 +60,7 @@
             </a>
             {{-- The manual ledger is the vendor-currency view; this is the same
                  account as a statement the vendor can be sent. --}}
-            <a href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id]) }}"
+            <a href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id, 'currency' => $vendorCurrency, 'period' => 'all']) }}"
                 class="master-btn master-btn-soft">
                 <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Full statement of account
             </a>

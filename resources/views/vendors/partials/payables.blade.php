@@ -128,13 +128,13 @@
     @if ($hiddenRows > 0)
         <p class="vendor-panel-note">
             {{ $hiddenRows }} more {{ \Illuminate\Support\Str::plural('bill', $hiddenRows) }} beyond the 25 that need attention first —
-            <a href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id]) }}">the statement lists them all</a>.
+            <a href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id, 'currency' => $vendorCurrency, 'period' => 'all']) }}">the statement lists them all</a>.
         </p>
     @endif
 
     <div class="vendor-detail-actions">
         <a class="master-btn master-btn-soft master-btn-sm"
-            href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id]) }}">
+            href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id, 'currency' => $vendorCurrency, 'period' => 'all']) }}">
             <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Vendor statement
         </a>
         <a class="master-btn master-btn-light master-btn-sm"
