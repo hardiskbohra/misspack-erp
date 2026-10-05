@@ -249,7 +249,7 @@
                                 @if ($invoice->isSuperseded())
                                     <span class="master-empty-value">On the bill</span>
                                 @elseif ($invoice->needsChecker())
-                                    <x-step-flag :label="$invoice->checkerLabel()" />
+                                    <x-step-flag compact :label="$invoice->checkerLabel()" />
                                 @elseif ($invoice->canReceiveMoney() || $paidAmt > 0)
                                     <strong>{{ \App\Helpers\CommonHelper::amount($paidAmt, $invoice->currency) }}</strong>
                                 @else

@@ -750,6 +750,7 @@
 }
 
 .step-flag {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -794,6 +795,56 @@
     background: rgba(234, 88, 12, .22);
     color: #fdba74;
     border-color: rgba(251, 146, 60, .4);
+}
+
+.step-flag.is-compact {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: help;
+}
+
+.step-flag-tip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    z-index: 20;
+    width: max-content;
+    max-width: 220px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: #1f2937;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: 0;
+    line-height: 1.35;
+    white-space: normal;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, .2);
+    transform: translateX(-50%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .15s ease, visibility .15s ease;
+}
+
+.step-flag-tip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border: 5px solid transparent;
+    border-top-color: #1f2937;
+}
+
+.step-flag.is-compact:hover .step-flag-tip,
+.step-flag.is-compact:focus-visible .step-flag-tip {
+    opacity: 1;
+    visibility: visible;
 }
 
 .master-table td.is-num .step-flag {
