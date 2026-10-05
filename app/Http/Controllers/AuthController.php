@@ -43,7 +43,7 @@ class AuthController extends Controller
     /** The landing page for whoever has just signed in. */
     private function homeFor(?\App\Models\User $user): string
     {
-        return $user && $user->isEmployee() ? route('my.dashboard') : route('dashboard');
+        return $user && $user->isEmployee() ? route('my.dashboard') : route('clients.index');
     }
 
     public function logout(Request $request)

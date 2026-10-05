@@ -46,7 +46,6 @@ use App\Http\Controllers\ClientPortalProductController;
 use App\Http\Controllers\ClientPortalProjectController;
 use App\Http\Controllers\ClientPortalQuoteController;
 use App\Http\Controllers\ClientPortalShipmentController;
-use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
@@ -113,8 +112,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/clients/{client}/portal/support/{conversation}/status', [ClientPortalSupportManagementController::class, 'updateStatus'])->name('clients.portal.support.status');
         Route::get('/clients/{client}/portal/documents/{document}/file', [ClientPortalManagementController::class, 'downloadDocument'])->name('clients.portal.documents.file');
 
-        // Dashboard
-        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::redirect('/dashboard', '/clients');
         Route::get('/search', GlobalSearchController::class)->name('search');
 
         // User Management (CRUD — all handled via modal on index page)

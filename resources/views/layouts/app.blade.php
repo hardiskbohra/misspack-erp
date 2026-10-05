@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>MissPack ERP - @yield('title', 'Dashboard')</title>
+    <title>MissPack ERP - @yield('title', 'Office')</title>
 
     {{-- Favicon --}}
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
@@ -87,8 +87,6 @@
         ];
 
         $sidebarItems = Auth::user() && Auth::user()->isEmployee() ? $employeeItems : [
-            ['section' => 'Dashboards'],
-            ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'fas fa-th-large'],
             ['section' => 'Management'],
             ['label' => 'Tasks', 'route' => 'tasks.index', 'active' => 'tasks.*', 'icon' => 'fa-solid fa-layer-group'],
             ['label' => 'Products', 'route' => 'products.index', 'active' => 'products.*', 'icon' => 'fas fa-box-open'],
@@ -169,7 +167,7 @@
                 <i class="fas fa-bars"></i>
             </button>
 
-            <span class="topbar-title">@yield('page-title', 'Dashboard')</span>
+            <span class="topbar-title">@yield('page-title', 'Office')</span>
 
             {{-- A page's primary action belongs beside its title, not buried in
                  a toolbar: it stays reachable however far the list scrolls. --}}
