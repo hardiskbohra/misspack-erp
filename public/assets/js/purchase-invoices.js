@@ -633,8 +633,34 @@
         var amount = modal.querySelector('input[name="foreign_amount"], input[name="amount"]');
         var currency = modal.querySelector('[name="foreign_currency"]');
         var rate = modal.querySelector('[name="exchange_rate"]');
+        var inr = modal.querySelector('input[name="amount_in_inr"]');
         var particular = modal.querySelector('[name="particular"]');
         var project = modal.querySelector('[name="project_id"]');
+
+        function calculateInrAmount() {
+            if (!inr) return;
+
+            var foreign = parseFloat((amount && amount.value) || '0');
+            var exchange = parseFloat((rate && rate.value) || '0');
+            var code = currency ? currency.value : '';
+
+            if (code === 'INR' && foreign > 0) {
+                inr.value = foreign.toFixed(2);
+                return;
+            }
+
+            if (foreign > 0 && exchange > 0) {
+                inr.value = (foreign * exchange).toFixed(2);
+                return;
+            }
+
+            inr.value = '';
+        }
+
+        [amount, rate].forEach(function (field) {
+            field && field.addEventListener('input', calculateInrAmount);
+        });
+        currency && currency.addEventListener('change', calculateInrAmount);
 
         triggers.forEach(function (trigger) {
             trigger.addEventListener('click', function () {
@@ -677,6 +703,8 @@
                 if (project && projectId) {
                     project.value = projectId;
                 }
+
+                calculateInrAmount();
 
                 if (window.MasterModal) {
                     window.MasterModal.open(modal);
