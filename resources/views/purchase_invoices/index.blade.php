@@ -213,7 +213,18 @@
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table si-table">
+            <table class="master-table si-table pi-table">
+                <colgroup>
+                    <col class="pi-col-pick">
+                    <col class="pi-col-doc">
+                    <col class="pi-col-vendor">
+                    <col class="pi-col-project">
+                    <col class="pi-col-total">
+                    <col class="pi-col-paid">
+                    <col class="pi-col-balance">
+                    <col class="pi-col-state">
+                    <col class="pi-col-action">
+                </colgroup>
                 <thead>
                     <tr>
                         <th scope="col" class="master-list-pick">
