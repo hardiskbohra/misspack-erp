@@ -538,27 +538,38 @@ class ClientController extends Controller
         $client = Client::where('public_token', $token)->firstOrFail();
 
         if (! $client->isPublicKycEditable()) {
-            return back()->with('error', 'This KYC form is not editable at the moment.');
+            return back()->with('error', 'This KYC form is locked. Wait for MissPack to send it back if anything still needs changing.');
         }
 
-        $data = $this->validatedData($request, $client, true);
+        $draft = $request->input('intent') === 'draft';
+        $data = $this->validatedData($request, $client, true, $draft);
+        $data['shipping_same_as_billing'] = $request->boolean('shipping_same_as_billing');
+        $this->copyBillingToShippingIfNeeded($data);
+
+        if ($draft) {
+            $client->update($data);
+
+            return redirect()
+                ->route('clients.publicKyc', $client->public_token)
+                ->with('success', 'Progress saved. You can come back to this link and finish later.');
+        }
+
         $data['status'] = Client::STATUS_UNDER_REVIEW;
         $data['kyc_submitted_at'] = now();
         $data['revision_note'] = null;
         $data['rejection_reason'] = null;
-        $data['shipping_same_as_billing'] = $request->boolean('shipping_same_as_billing');
-        $this->copyBillingToShippingIfNeeded($data);
 
         $client->update($data);
 
         return redirect()
             ->route('clients.publicKyc', $client->public_token)
-            ->with('success', 'KYC form submitted successfully. It is now under review.');
+            ->with('success', 'KYC submitted. MissPack has it for review — this link stays open to read, not to edit, until we ask for changes.');
     }
 
-    private function validatedData(Request $request, ?Client $client = null, bool $public = false): array
+    private function validatedData(Request $request, ?Client $client = null, bool $public = false, bool $draft = false): array
     {
         $clientId = $client?->id ?? 'NULL';
+        $need = $public && ! $draft;
 
         return $request->validate([
             'client_number' => ['nullable', 'string', 'max:255', 'unique:clients,client_number,'.$clientId],
@@ -569,9 +580,9 @@ class ClientController extends Controller
             'website' => ['nullable', 'string', 'max:255'],
             'status' => [$public ? 'nullable' : 'required', 'in:draft,under_review,approved,rejected,revision'],
 
-            'ceo_name' => [$public ? 'required' : 'nullable', 'string', 'max:255'],
-            'ceo_email' => [$public ? 'required' : 'nullable', 'email', 'max:255'],
-            'ceo_contact' => [$public ? 'required' : 'nullable', 'string', 'max:40'],
+            'ceo_name' => [$need ? 'required' : 'nullable', 'string', 'max:255'],
+            'ceo_email' => [$need ? 'required' : 'nullable', 'email', 'max:255'],
+            'ceo_contact' => [$need ? 'required' : 'nullable', 'string', 'max:40'],
 
             'account_person_name' => ['nullable', 'string', 'max:255'],
             'account_person_email' => ['nullable', 'email', 'max:255'],
@@ -598,8 +609,8 @@ class ClientController extends Controller
             'shipping_pincode' => ['nullable', 'string', 'max:30'],
             'shipping_same_as_billing' => ['nullable', 'boolean'],
 
-            'gstin' => ['nullable', 'string', 'max:30'],
-            'pan' => ['nullable', 'string', 'max:20'],
+            'gstin' => array_merge(['nullable', 'string', 'max:30'], $public ? ['regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/i'] : []),
+            'pan' => array_merge(['nullable', 'string', 'max:20'], $public ? ['regex:/^[A-Z]{5}[0-9]{4}[A-Z]$/i'] : []),
             'tan' => ['nullable', 'string', 'max:20'],
             'cin' => ['nullable', 'string', 'max:255'],
             'msme_number' => ['nullable', 'string', 'max:255'],
@@ -607,7 +618,7 @@ class ClientController extends Controller
             'bank_name' => ['nullable', 'string', 'max:255'],
             'account_holder_name' => ['nullable', 'string', 'max:255'],
             'account_number' => ['nullable', 'string', 'max:255'],
-            'ifsc_code' => ['nullable', 'string', 'max:30'],
+            'ifsc_code' => array_merge(['nullable', 'string', 'max:30'], $public ? ['regex:/^[A-Z]{4}0[A-Z0-9]{6}$/i'] : []),
             'bank_branch' => ['nullable', 'string', 'max:255'],
             'swift_code' => ['nullable', 'string', 'max:255'],
 
@@ -616,6 +627,20 @@ class ClientController extends Controller
             'payment_terms' => ['nullable', 'string', 'max:255'],
             'preferred_currency' => ['nullable', 'in:INR,USD,RMB'],
             'notes' => ['nullable', 'string'],
+        ], [
+            'company_name.required' => 'Tell us the company name.',
+            'ceo_name.required' => 'The CEO / director name is required.',
+            'ceo_email.required' => 'The CEO / director email is required.',
+            'ceo_email.email' => 'That CEO / director email does not look valid.',
+            'ceo_contact.required' => 'The CEO / director phone is required.',
+            'billing_address.required' => 'Billing address is required.',
+            'billing_city.required' => 'Billing city is required.',
+            'billing_state.required' => 'Billing state is required.',
+            'billing_country.required' => 'Billing country is required.',
+            'billing_pincode.required' => 'Billing pincode is required.',
+            'gstin.regex' => 'GSTIN should look like 24AAAAA0000A1Z5.',
+            'pan.regex' => 'PAN should look like ABCDE1234F.',
+            'ifsc_code.regex' => 'IFSC should look like HDFC0001234.',
         ]);
     }
 
