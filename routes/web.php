@@ -237,6 +237,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/purchase-invoices/{purchaseInvoice}/status', [PurchaseInvoiceController::class, 'updateStatus'])->name('purchase-invoices.status');
         Route::get('/purchase-invoices/{purchaseInvoice}/print', [PurchaseInvoiceController::class, 'print'])->name('purchase-invoices.print');
         Route::post('/purchase-invoices/{purchaseInvoice}/convert', [PurchaseInvoiceController::class, 'convert'])->name('purchase-invoices.convert');
+        Route::post('/purchase-invoices/bulk', [PurchaseInvoiceController::class, 'bulk'])->name('purchase-invoices.bulk');
         Route::resource('purchase-invoices', PurchaseInvoiceController::class);
 
         /* Old split URLs keep working as a hop onto the one list. */

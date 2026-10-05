@@ -834,6 +834,7 @@
         var exportLink = form.querySelector('[data-bulk-export]');
         var gstLink = form.querySelector('[data-bulk-gst]');
         var clear = form.querySelector('[data-bulk-clear]');
+        var action = form.querySelector('[name="action"]');
 
         var selected = function () {
             return Array.prototype.filter.call(picks, function (pick) { return pick.checked; });
@@ -856,6 +857,10 @@
             if (count) {
                 count.textContent = ids.length === 1 ? '1 selected' : ids.length + ' selected';
             }
+
+            picks.forEach(function (pick) {
+                pick.closest('tr')?.classList.toggle('is-picked', pick.checked);
+            });
 
             /* "export the selected rows" is the screen's own exporter, narrowed */
             withIds(exportLink, ids);
@@ -885,6 +890,20 @@
                 sync();
             });
         }
+
+        form.addEventListener('submit', function (event) {
+            if (!selected().length) {
+                event.preventDefault();
+                return;
+            }
+
+            if (action && (action.value === 'delete_drafts' || action.value === 'cancel')) {
+                var ok = window.confirm(action.value === 'cancel'
+                    ? 'Cancel the selected purchase documents that are allowed to cancel?'
+                    : 'Delete selected drafts only? Documents past draft are left alone.');
+                if (!ok) event.preventDefault();
+            }
+        });
 
         sync();
     });

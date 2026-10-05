@@ -42,7 +42,14 @@ use Illuminate\View\View;
  */
 class PurchaseInvoiceController extends Controller
 {
-    /** The orders a document can be in at each stage, from the model's own flow. */
+    private const BULK_ACTIONS = [
+        'mark_sent' => 'Mark sent',
+        'mark_approved' => 'Mark approved',
+        'mark_received' => 'Mark received',
+        'cancel' => 'Cancel',
+        'delete_drafts' => 'Delete drafts only',
+    ];
+
     public function index(Request $request): View
     {
         $filters = $this->filtersFromRequest($request);
@@ -107,6 +114,7 @@ class PurchaseInvoiceController extends Controller
             'dateRangeLabels' => DateRanges::LABELS,
             'activeRange' => DateRanges::keyOf($filters['dateFrom'] ?? null, $filters['dateTo'] ?? null),
             'paymentLabels' => self::PAYMENT_LABELS,
+            'bulkActions' => self::BULK_ACTIONS,
             ...$filters,
         ]));
     }
@@ -594,6 +602,101 @@ class PurchaseInvoiceController extends Controller
         $this->afterSave($purchaseInvoice->fresh(['items']));
 
         return back()->with('success', $purchaseInvoice->invoice_number.' marked '.$purchaseInvoice->statusLabel().'.');
+    }
+
+    /**
+     * One action across the ticked purchase rows: send, approve, receive,
+     * cancel, or delete drafts. Ineligible documents are skipped so a mixed
+     * selection still does the work it can.
+     */
+    public function bulk(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'action' => ['required', Rule::in(array_keys(self::BULK_ACTIONS))],
+            'ids' => ['required', 'array', 'min:1', 'max:500'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $invoices = PurchaseInvoice::query()->whereIn('id', $data['ids'])->get();
+        $done = 0;
+        $skipped = 0;
+        $statusMap = [
+            'mark_sent' => 'sent',
+            'mark_approved' => 'approved',
+            'mark_received' => 'received',
+            'cancel' => 'cancelled',
+        ];
+
+        DB::transaction(function () use ($data, $invoices, $statusMap, &$done, &$skipped) {
+            foreach ($invoices as $invoice) {
+                if ($data['action'] === 'delete_drafts') {
+                    if ($invoice->status !== 'draft') {
+                        $skipped++;
+                        continue;
+                    }
+
+                    if ($invoice->isBill() && (float) $invoice->ledgerPaid() > 0.01) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    if ($invoice->isSuperseded()) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    $order = PurchaseInvoice::query()->where('converted_invoice_id', $invoice->id)->first();
+                    (new PurchaseBillLedger())->remove($invoice);
+                    $invoice->items()->delete();
+                    $invoice->delete();
+
+                    if ($order) {
+                        $order->converted_invoice_id = null;
+                        $order->status = 'approved';
+                        $order->save();
+                    }
+
+                    $done++;
+                    continue;
+                }
+
+                $target = $statusMap[$data['action']] ?? null;
+                if (! $target) {
+                    $skipped++;
+                    continue;
+                }
+
+                $allowed = PurchaseInvoice::STATUS_FLOW[$invoice->invoice_type][$invoice->status] ?? [];
+                if (! in_array($target, $allowed, true)) {
+                    $skipped++;
+                    continue;
+                }
+
+                $invoice->status = $target;
+                foreach ([
+                    'sent' => 'sent_at',
+                    'approved' => 'approved_at',
+                    'received' => 'received_at',
+                    'cancelled' => 'cancelled_at',
+                ] as $status => $column) {
+                    if ($target === $status && ! $invoice->{$column}) {
+                        $invoice->{$column} = now();
+                    }
+                }
+                $invoice->save();
+                $this->afterSave($invoice->fresh(['items']));
+                $done++;
+            }
+        });
+
+        $message = $done.' '.Str::plural('document', $done).' — '
+            .mb_strtolower(self::BULK_ACTIONS[$data['action']]).' done.';
+
+        if ($skipped) {
+            $message .= ' '.$skipped.' '.Str::plural('document', $skipped).' left alone.';
+        }
+
+        return back()->with('success', $message);
     }
 
     public function print(PurchaseInvoice $purchaseInvoice): View

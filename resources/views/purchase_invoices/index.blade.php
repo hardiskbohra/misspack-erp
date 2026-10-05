@@ -193,10 +193,32 @@
     </div>
 
     <div class="master-card master-table-card master-card--flat">
+        <div class="master-list-toolbar">
+            <p class="master-list-hint" title="Newest document date on top.">
+                Newest first &middot; a converted order is history, the bill is what is owed
+            </p>
+
+            <form id="bulkForm" method="POST" action="{{ route('purchase-invoices.bulk') }}"
+                class="master-list-bulk" data-bulk-bar hidden>
+                @csrf
+                <span class="master-list-bulk-count" data-bulk-count>0 selected</span>
+                <select class="master-select" name="action" aria-label="Action for the selected documents">
+                    @foreach ($bulkActions as $actionKey => $actionLabel)
+                        <option value="{{ $actionKey }}">{{ $actionLabel }}</option>
+                    @endforeach
+                </select>
+                <button class="master-btn master-btn-primary master-btn-sm" type="submit">Apply</button>
+                <button class="master-btn master-btn-light master-btn-sm" type="button" data-bulk-clear>Clear</button>
+            </form>
+        </div>
+
         <div class="master-table-wrap">
             <table class="master-table si-table">
                 <thead>
                     <tr>
+                        <th scope="col" class="master-list-pick">
+                            <input type="checkbox" data-bulk-all aria-label="Select every document on this page">
+                        </th>
                         <th scope="col">Document</th>
                         <th scope="col">Vendor</th>
                         <th scope="col" class="ui-mobile-secondary">Project</th>
@@ -218,6 +240,10 @@
                             $daysLate = $invoice->daysOverdue();
                         @endphp
                         <tr class="{{ $invoice->needsChecker() ? 'is-attention' : '' }}" data-href="{{ route('purchase-invoices.show', $invoice) }}">
+                            <td class="master-list-pick" data-label="Select">
+                                <input type="checkbox" name="ids[]" value="{{ $invoice->id }}" form="bulkForm"
+                                    data-bulk-pick aria-label="Select {{ $invoice->invoice_number }}">
+                            </td>
                             <td data-label="Document">
                                 <a class="si-number" href="{{ route('purchase-invoices.show', $invoice) }}">{{ $invoice->invoice_number }}</a>
                                 <span class="si-invoice-chips">
@@ -337,7 +363,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9">
+                            <td colspan="10">
                                 <div class="master-list-empty">
                                     <span class="master-list-empty-icon">₹</span>
                                     <p class="master-list-empty-title">{{ $filtersActive ? 'No documents match these filters' : 'No purchase documents yet' }}</p>
@@ -365,7 +391,7 @@
                     @endphp
                     <tfoot class="ui-mobile-secondary">
                         <tr class="master-list-total">
-                            <td colspan="3">
+                            <td colspan="4">
                                 <strong>Total — {{ $invoices->count() }} {{ \Illuminate\Support\Str::plural('document', $invoices->count()) }} shown</strong>
                                 <span class="master-sub">Filtered totals cover every page · a converted order counts once · each currency on its own line</span>
                             </td>
