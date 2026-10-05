@@ -13,7 +13,7 @@
         <div class="vendor-attention">
             <span class="vendor-attention-icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></span>
             <div class="vendor-attention-copy">
-                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($overdue) }} is past its due date</strong>
+                <strong>{{ $money($overdue) }} is past its due date</strong>
                 <span>{{ $payables['overdue_count'] }} {{ \Illuminate\Support\Str::plural('bill', $payables['overdue_count']) }} on this vendor — oldest first, with the statement ready to send.</span>
             </div>
             <a class="master-btn master-btn-soft master-btn-sm" href="{{ $recordUrl('money') }}">
@@ -104,7 +104,7 @@
                 <div class="master-info"><span>Open bills</span><strong>{{ number_format(count($payables['rows'])) }}</strong></div>
                 <div class="master-info"><span>Billed, all time</span><strong>{{ $money($performance['billed']) }}</strong></div>
                 <div class="master-info"><span>Settled</span><strong>{{ $performance['settled_percent'] }}%</strong></div>
-                <div class="master-info"><span>Vendor-currency balance</span><strong @class(['vendor-amount-negative' => $summary['vendor_balance_foreign'] > 0])>{{ $money($summary['vendor_balance_foreign'], $summary['vendor_currency']) }}</strong></div>
+                <div class="master-info"><span>Balance</span><strong @class(['vendor-amount-negative' => $summary['vendor_balance_foreign'] > 0])>{{ $money($summary['vendor_balance_foreign']) }}</strong></div>
                 <div class="master-info"><span>Ledger entries</span><strong>{{ number_format($summary['statement_count']) }}</strong></div>
             </div>
         </section>

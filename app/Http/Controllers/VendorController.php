@@ -751,7 +751,7 @@ class VendorController extends Controller
 
         /* The payables settle the ledger first; spend and the ledger totals
            then read from that settlement, so no two cards can disagree. */
-        $payables = $this->vendorPayables($vendorPaymentEntries);
+        $payables = $this->vendorPayables($vendorPaymentEntries, $vendor->preferred_currency ?: 'RMB');
         $performance = $this->vendorPerformance($vendor, $vendorPaymentEntries, $payables);
         $currencySummary = $this->vendorCurrencySummary($vendorPaymentEntries);
         $preferredCurrency = $vendor->preferred_currency ?: 'RMB';
@@ -849,12 +849,10 @@ class VendorController extends Controller
      * is actually applied — so a partly-paid bill shows one still-open row
      * rather than a settled one and an unrelated credit.
      *
-     * Everything here is in the row's own currency *and* in rupees: the
-     * foreign amounts are what the supplier invoices in, the rupee amounts
-     * are what the office pays with, and adding the two together is the one
-     * arithmetic this module must never do.
+     * Totals on this page are in the vendor's own currency. Rupees belong on
+     * the cashflow, not here.
      */
-    private function vendorPayables($entries): array
+    private function vendorPayables($entries, string $preferredCurrency = 'RMB'): array
     {
         $today = Carbon::today();
         $open = [];
@@ -927,15 +925,12 @@ class VendorController extends Controller
         $dueSoon = 0.0;
 
         foreach ($open as $bill) {
-            /* A bill is open while anything is left of it — in rupees when the
-               rupee figure is known, and otherwise in its own currency, so a
-               missing exchange rate cannot make a debt disappear. */
-            if ((float) $bill['rupee_left'] <= 0.009 && (float) $bill['foreign_left'] <= 0.0001) {
+            if ((float) $bill['foreign_left'] <= 0.0001 && (float) $bill['rupee_left'] <= 0.009) {
                 continue;
             }
 
-            $left = (float) $bill['rupee_left'];
-            $outstanding += $left;
+            $inPreferred = ($bill['currency'] ?: $preferredCurrency) === $preferredCurrency;
+            $left = (float) $bill['foreign_left'];
 
             $daysLeft = $this->daysUntil($bill['due'], $today);
 
@@ -943,7 +938,9 @@ class VendorController extends Controller
                 $bucket = 'not_due';
             } elseif ($daysLeft >= 0) {
                 $bucket = 'due_soon';
-                $dueSoon += $left;
+                if ($inPreferred) {
+                    $dueSoon += $left;
+                }
             } elseif ($daysLeft >= -30) {
                 $bucket = 'overdue_1_30';
             } elseif ($daysLeft >= -60) {
@@ -952,11 +949,14 @@ class VendorController extends Controller
                 $bucket = 'overdue_60_plus';
             }
 
-            $buckets[$bucket]['amount'] += $left;
-            $buckets[$bucket]['count']++;
+            if ($inPreferred) {
+                $outstanding += $left;
+                $buckets[$bucket]['amount'] += $left;
+                $buckets[$bucket]['count']++;
+            }
 
             $isOverdue = $daysLeft !== null && $daysLeft < 0;
-            if ($isOverdue) {
+            if ($isOverdue && $inPreferred) {
                 $overdue += $left;
             }
 
@@ -1013,8 +1013,8 @@ class VendorController extends Controller
             return $entry->transaction_type === 'debit' && $entry->status !== 'cancelled';
         });
 
-        $billed = (float) $bills->sum('amount_in_inr');
-        $paid = (float) $payments->sum('amount_in_inr');
+        $billed = (float) $bills->sum('foreign_amount');
+        $paid = (float) $payments->sum('foreign_amount');
 
         /* Six bars, oldest first; a month with no bill is a zero-height bar
            rather than a missing column, so the shape of the run is readable. */
@@ -1026,13 +1026,13 @@ class VendorController extends Controller
             $amount = (float) $bills
                 ->filter(fn ($entry) => $entry->transaction_date
                     && $entry->transaction_date->format('Y-m') === $month->format('Y-m'))
-                ->sum('amount_in_inr');
+                ->sum('foreign_amount');
 
             $peak = max($peak, $amount);
             $series[] = ['label' => $month->format('M'), 'amount' => round($amount, 2)];
         }
 
-        $billAmounts = $bills->pluck('amount_in_inr')->map(fn ($value) => (float) $value)->filter();
+        $billAmounts = $bills->pluck('foreign_amount')->map(fn ($value) => (float) $value)->filter();
         $dates = $entries->pluck('transaction_date')->filter();
 
         return [

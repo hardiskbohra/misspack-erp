@@ -8,7 +8,8 @@
 @php
     $statusClass = str_replace('_', '-', $vendor->status);
     $typeClass = str_replace('_', '-', $vendor->vendor_type);
-    $money = fn ($amount, $currency = 'INR') => \App\Helpers\CommonHelper::amount($amount, $currency);
+    $vendorCurrency = $summary['vendor_currency'] ?? ($vendor->preferred_currency ?: 'INR');
+    $money = fn ($amount, $currency = null) => \App\Helpers\CommonHelper::amount($amount, $currency ?: $vendorCurrency);
     $initials = collect(explode(' ', trim($vendor->vendor_name)))
         ->filter()
         ->map(fn ($word) => mb_strtoupper(mb_substr($word, 0, 1)))
@@ -79,31 +80,31 @@
             <span class="icon" aria-hidden="true"><i class="fa-solid fa-file-invoice-dollar"></i></span>
             <div>
                 <p class="master-stat-title">Bill generated</p>
-                <p class="master-stat-value">{{ $money($summary['vendor_bill_foreign'], $summary['vendor_currency']) }}</p>
-                <p class="master-sub">payable in {{ $summary['vendor_currency'] }}</p>
+                <p class="master-stat-value">{{ $money($summary['vendor_bill_foreign']) }}</p>
+                <p class="master-sub">in {{ $summary['vendor_currency'] }}</p>
             </div>
         </div>
         <div class="master-stat master-stat--flat orange">
             <span class="icon" aria-hidden="true"><i class="fa-solid fa-basket-shopping"></i></span>
             <div>
                 <p class="master-stat-title">Vendor expenses</p>
-                <p class="master-stat-value">{{ $money($summary['vendor_expense_foreign'], $summary['vendor_currency']) }}</p>
-                <p class="master-sub">Rupee equivalent {{ $money($summary['expenses_on_behalf']) }}</p>
+                <p class="master-stat-value">{{ $money($summary['vendor_expense_foreign']) }}</p>
+                <p class="master-sub">in {{ $summary['vendor_currency'] }}</p>
             </div>
         </div>
         <div class="master-stat master-stat--flat green">
             <span class="icon" aria-hidden="true"><i class="fa-solid fa-arrow-up-right-dots"></i></span>
             <div>
                 <p class="master-stat-title">Paid to vendor</p>
-                <p class="master-stat-value">{{ $money($summary['vendor_paid_foreign'], $summary['vendor_currency']) }}</p>
-                <p class="master-sub">Paid in rupees {{ $money($summary['paid_to_vendor']) }}</p>
+                <p class="master-stat-value">{{ $money($summary['vendor_paid_foreign']) }}</p>
+                <p class="master-sub">in {{ $summary['vendor_currency'] }}</p>
             </div>
         </div>
-        <div class="master-stat master-stat--flat {{ $summary['need_to_pay'] > 0 ? 'red' : 'teal' }}">
+        <div class="master-stat master-stat--flat {{ $summary['vendor_balance_foreign'] > 0 ? 'red' : 'teal' }}">
             <span class="icon" aria-hidden="true"><i class="fa-solid fa-scale-balanced"></i></span>
             <div>
                 <p class="master-stat-title">Need to pay</p>
-                <p class="master-stat-value">{{ $money($summary['need_to_pay']) }}</p>
+                <p class="master-stat-value">{{ $money($summary['vendor_balance_foreign']) }}</p>
                 <p class="master-sub">
                     @if ($payables['overdue'] > 0)
                         {{ $money($payables['overdue']) }} past its due date

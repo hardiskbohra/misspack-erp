@@ -3,9 +3,8 @@
      * What is owed on this vendor, aged.
      *
      * The ledger says what was billed and what was paid; this says what is
-     * still open, when it falls due and how late it already is. Rupees
-     * throughout, because a payment is made in rupees whatever the bill was
-     * written in — the foreign figure stays on the bill row beside it.
+     * still open, when it falls due and how late it already is — in the
+     * vendor's own currency. Rupees live on the cashflow, not here.
      *
      * One card, three bands: the head, the five ages as one strip, and the open
      * bills. The card the chase list used to occupy is gone — the table below
@@ -29,7 +28,7 @@
         </div>
         <div class="vendor-panel-meta">
             @if ($hasOverdue)
-                <span class="vendor-pill is-alert">{{ \App\Helpers\CommonHelper::indianCurrency($payables['overdue']) }} overdue</span>
+                <span class="vendor-pill is-alert">{{ $money($payables['overdue']) }} overdue</span>
             @else
                 <span class="vendor-pill">Nothing late</span>
             @endif
@@ -46,7 +45,7 @@
         @foreach ($buckets as $key => $bucket)
             <div class="vendor-ageing-cell {{ $bucket['count'] === 0 ? 'is-zero' : '' }}" role="listitem">
                 <span class="vendor-ageing-label">{{ $bucket['label'] }}</span>
-                <strong class="vendor-ageing-amount is-num">{{ \App\Helpers\CommonHelper::indianCurrency($bucket['amount']) }}</strong>
+                <strong class="vendor-ageing-amount is-num">{{ $money($bucket['amount']) }}</strong>
                 @if (in_array($key, $lateBuckets, true) && $bucket['count'] > 0)
                     <span class="vendor-pill is-alert">{{ $bucket['count'] }} {{ \Illuminate\Support\Str::plural('bill', $bucket['count']) }}</span>
                 @else
@@ -59,7 +58,7 @@
     <div class="vendor-subhead">
         <h3 class="vendor-subhead-title">Open bills</h3>
         <span class="vendor-subhead-note">
-            {{ \App\Helpers\CommonHelper::indianCurrency($payables['outstanding']) }} outstanding
+            {{ $money($payables['outstanding']) }} outstanding
             @if (count($openRows))
                 · {{ count($openRows) }} {{ \Illuminate\Support\Str::plural('bill', count($openRows)) }}
             @endif
@@ -73,8 +72,7 @@
                     <tr>
                         <th scope="col">Bill</th>
                         <th scope="col">Due</th>
-                        <th scope="col" class="is-num">Open in currency</th>
-                        <th scope="col" class="is-num">Open in rupees</th>
+                        <th scope="col" class="is-num">Open</th>
                         <th scope="col" class="vendor-table-actions-cell">Action</th>
                     </tr>
                 </thead>
@@ -109,11 +107,8 @@
                                     <span class="master-sub">Set payment terms to fill this in</span>
                                 @endif
                             </td>
-                            <td data-label="Open in currency" class="is-num">
-                                {{ \App\Helpers\CommonHelper::amount($bill['foreign_left'], $bill['currency']) }}
-                            </td>
-                            <td data-label="Open in rupees" class="is-num">
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($bill['rupee_left']) }}</strong>
+                            <td data-label="Open" class="is-num">
+                                <strong>{{ \App\Helpers\CommonHelper::amount($bill['foreign_left'], $bill['currency']) }}</strong>
                             </td>
                             <td data-label="Action" class="vendor-table-actions-cell">
                                 <button type="button" class="master-btn master-btn-soft master-btn-sm payBillBtn"

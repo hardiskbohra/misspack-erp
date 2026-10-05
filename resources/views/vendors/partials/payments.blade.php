@@ -60,10 +60,8 @@
                                  the entry's own currency, with the rupee value under
                                  it — that is the pair the office reads together. --}}
                             <td data-label="Amount" class="is-num {{ $entry->transaction_type === 'credit' ? 'vendor-amount-debit' : 'vendor-amount-credit' }}">
-                                {{ $money($entry->foreign_amount, $entry->foreign_currency ?: 'RMB') }}
-                                <span class="master-sub">
-                                    {{ $entry->transaction_type === 'credit' ? 'Billed' : 'Paid' }} · {{ $money($entry->amount_in_inr) }}@if ($entry->exchange_rate) @ {{ number_format((float) $entry->exchange_rate, 2) }}@endif
-                                </span>
+                                {{ $money($entry->foreign_amount, $entry->foreign_currency ?: $vendorCurrency) }}
+                                <span class="master-sub">{{ $entry->transaction_type === 'credit' ? 'Billed' : 'Paid' }}</span>
                             </td>
                             <td data-label="Account" class="ui-mobile-secondary">
                                 {{ $entry->paidAccount?->account_name ?: '—' }}
