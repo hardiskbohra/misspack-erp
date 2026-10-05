@@ -106,7 +106,10 @@
                     </button>
                     @if ($invoice->canConvert())
                         <form method="POST" action="{{ route('purchase-invoices.convert', $invoice) }}"
-                            data-confirm="Raise a purchase bill from {{ $invoice->invoice_number }}?">
+                            data-confirm="Raise a purchase bill from {{ $invoice->invoice_number }}?"
+                            data-confirm-title="Convert to bill"
+                            data-confirm-text="Convert to bill"
+                            data-confirm-danger="false">
                             @csrf
                             <button type="submit">Convert to bill</button>
                         </form>

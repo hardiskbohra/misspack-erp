@@ -314,7 +314,10 @@
                                             <a href="{{ route('purchase-invoices.print', $invoice) }}" target="_blank"><i class="fas fa-print"></i> Print</a>
                                             @if ($invoice->canConvert())
                                                 <form method="POST" action="{{ route('purchase-invoices.convert', $invoice) }}"
-                                                    data-confirm="Raise a purchase bill from {{ $invoice->invoice_number }}?">
+                                                    data-confirm="Raise a purchase bill from {{ $invoice->invoice_number }}?"
+                                                    data-confirm-title="Convert to bill"
+                                                    data-confirm-text="Convert to bill"
+                                                    data-confirm-danger="false">
                                                     @csrf
                                                     <button type="submit"><i class="fas fa-file-invoice"></i> Convert to bill</button>
                                                 </form>

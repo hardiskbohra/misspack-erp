@@ -412,6 +412,11 @@ class PurchaseInvoiceController extends Controller
                 .' is cancelled — bring it back to life before raising a bill from it.');
         }
 
+        if ($purchaseInvoice->status !== 'approved') {
+            return back()->with('error', 'Approve '.$purchaseInvoice->invoice_number
+                .' before converting it to a purchase bill.');
+        }
+
         if ($already = $purchaseInvoice->convertedInvoice) {
             return back()->with('error', $purchaseInvoice->invoice_number.' has already become '
                 .$already->invoice_number.'. A purchase order becomes one bill — edit that one, or duplicate '

@@ -185,12 +185,12 @@ class PurchaseInvoice extends Model
         return $this->isOrder() && (int) $this->converted_invoice_id > 0;
     }
 
-    /** An order that can still become a bill. */
+    /** An approved order that can still become a bill. */
     public function canConvert(): bool
     {
         return $this->isOrder()
             && ! $this->isSuperseded()
-            && $this->status !== 'cancelled';
+            && $this->status === 'approved';
     }
 
     /**
