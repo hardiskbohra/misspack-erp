@@ -180,9 +180,11 @@
             <div class="topbar-spacer"></div>
 
             <div class="topbar-actions">
-                <button type="button" class="topbar-btn desktop-only" aria-label="Search">
-                    <i class="fas fa-search"></i>
-                </button>
+                @if (auth()->user()?->isOffice())
+                    <button type="button" class="topbar-btn" data-gs-open aria-label="Search" title="Search (Ctrl+/Cmd+K)">
+                        <i class="fas fa-search"></i>
+                    </button>
+                @endif
 
                 <form method="POST" action="{{ route('theme.toggle') }}" class="theme-form">
                     @csrf
@@ -213,6 +215,10 @@
         </main>
     </div>
 
+    @if (auth()->user()?->isOffice())
+        @include('layouts.partials.global-search')
+    @endif
+
     {{-- Vendor Scripts --}}
     <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
     <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
@@ -222,6 +228,7 @@
     <script src="{{ $assetVer('assets/js/master-selects.js') }}"></script>
     <script src="{{ $assetVer('assets/js/money.js') }}"></script>
     <script src="{{ $assetVer('assets/js/app-layout.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/global-search.js') }}"></script>
     <script src="{{ $assetVer('assets/js/master-list.js') }}"></script>
     <script src="{{ $assetVer('assets/js/master-drawer.js') }}"></script>
 

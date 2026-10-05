@@ -47,6 +47,7 @@ use App\Http\Controllers\ClientPortalProjectController;
 use App\Http\Controllers\ClientPortalQuoteController;
 use App\Http\Controllers\ClientPortalShipmentController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
 
@@ -114,6 +115,7 @@ Route::middleware('auth')->group(function () {
 
         // Dashboard
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/search', GlobalSearchController::class)->name('search');
 
         // User Management (CRUD — all handled via modal on index page)
         Route::get('/users',             [UserController::class, 'index'])->name('users.index');
