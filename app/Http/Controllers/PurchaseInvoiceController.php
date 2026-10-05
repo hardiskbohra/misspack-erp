@@ -33,9 +33,10 @@ use Illuminate\View\View;
  * the document; a conversion happens once and is locked; and the document that
  * is owed is the bill.
  *
- * The purchase side has one thing the sales side does not: a bill posts into
- * the vendor ledger (`PurchaseBillLedger`), because that ledger is where the
- * office already reads payables, ageing and the vendor statement.
+ * The purchase side has one thing the sales side does not: a sent order and
+ * then the bill post into the vendor ledger (`PurchaseBillLedger`), because
+ * that ledger is where the office already reads payables, ageing and the
+ * vendor statement. After conversion only the bill remains.
  */
 class PurchaseInvoiceController extends Controller
 {
@@ -443,6 +444,7 @@ class PurchaseInvoiceController extends Controller
         }
 
         $this->afterSave($bill);
+        (new PurchaseBillLedger())->sync($purchaseInvoice->fresh());
 
         return redirect()->route('purchase-invoices.edit', $bill)
             ->with('success', $bill->invoice_number.' created from '.$purchaseInvoice->invoice_number
@@ -844,9 +846,10 @@ class PurchaseInvoiceController extends Controller
     /**
      * Everything that happens once the document is written.
      *
-     * A bill posts its payable into the vendor ledger here — one place, called
-     * after every write (store, update, conversion, status change, payment), so
-     * there is no path that leaves the ledger behind. An order posts nothing.
+     * A sent order, then the bill, posts into the vendor ledger here — one
+     * place, called after every write (store, update, conversion, status
+     * change, payment), so there is no path that leaves the ledger behind. A
+     * billed order drops its own row so the bill is the only credit.
      */
     private function afterSave(PurchaseInvoice $invoice): void
     {

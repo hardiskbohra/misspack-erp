@@ -769,7 +769,13 @@ class PartyStatement
 
     private function vendorParticular(VendorPaymentEntry $entry): string
     {
-        $kind = $entry->transaction_type === 'debit' ? 'Paid to vendor' : 'Bill received';
+        if (filled($entry->particular)) {
+            return (string) $entry->particular;
+        }
+
+        $kind = $entry->transaction_type === 'debit'
+            ? 'Paid to vendor'
+            : ($entry->entry_category === 'order' ? 'Purchase order' : 'Bill received');
         $category = $entry->entry_category ? ' · '.ucfirst((string) $entry->entry_category) : '';
 
         return $kind.$category;

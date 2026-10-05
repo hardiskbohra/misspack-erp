@@ -2,7 +2,7 @@
     <div class="vendor-panel-head">
         <div>
             <h2 class="vendor-detail-title" id="vendor-block-ledger-title">Vendor-currency ledger</h2>
-            <p class="vendor-detail-help">Bills raised and payments made in the vendor's own currency — the account the statement is built from.</p>
+            <p class="vendor-detail-help">Purchase orders (once sent), bills and payments in the vendor's own currency. After a PO becomes a bill, only the bill stays on this ledger.</p>
         </div>
         <div class="vendor-panel-meta">
             <span class="vendor-pill">{{ $vendorPaymentEntries->count() }} {{ \Illuminate\Support\Str::plural('entry', $vendorPaymentEntries->count()) }}</span>
@@ -61,7 +61,7 @@
                                  it — that is the pair the office reads together. --}}
                             <td data-label="Amount" class="is-num {{ $entry->transaction_type === 'credit' ? 'vendor-amount-debit' : 'vendor-amount-credit' }}">
                                 {{ $money($entry->foreign_amount, $entry->foreign_currency ?: $vendorCurrency) }}
-                                <span class="master-sub">{{ $entry->transaction_type === 'credit' ? 'Billed' : 'Paid' }}</span>
+                                <span class="master-sub">{{ $entry->transaction_type === 'credit' ? ($entry->entry_category === 'order' ? 'Ordered' : 'Billed') : 'Paid' }}</span>
                             </td>
                             <td data-label="Account" class="ui-mobile-secondary">
                                 {{ $entry->paidAccount?->account_name ?: '—' }}

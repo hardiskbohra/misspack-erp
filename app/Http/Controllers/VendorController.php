@@ -1423,7 +1423,7 @@ class VendorController extends Controller
             if ($entry->transaction_type === 'credit') {
                 $summary[$currency]['credit'] += $foreignAmount;
                 $summary[$currency]['inr_credit'] += $inrAmount;
-                if ($entry->entry_category === 'bill') {
+                if (in_array($entry->entry_category, ['bill', 'order'], true)) {
                     $summary[$currency]['bill'] += $foreignAmount;
                 }
                 if ($entry->entry_category === 'expense') {
