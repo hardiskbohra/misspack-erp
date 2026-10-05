@@ -36,9 +36,15 @@
         var wrap = field.closest('.kyc-field');
         if (!wrap) return;
         wrap.classList.remove('has-error');
-        var node = wrap.querySelector('[data-live-error]');
-        if (node) node.remove();
+        wrap.querySelectorAll('.kyc-field-error').forEach(function (node) { node.remove(); });
         field.removeAttribute('aria-invalid');
+    }
+
+    function hideErrorBannerIfClean(form) {
+        var banner = document.querySelector('[data-kyc-error-banner]');
+        if (banner && !form.querySelector('.kyc-field.has-error')) {
+            banner.hidden = true;
+        }
     }
 
     function valueOf(field) {
@@ -111,6 +117,13 @@
             } catch (e) {}
         }
 
+        function clearStepErrors(n) {
+            fieldsIn(n).forEach(clearError);
+            var btn = document.querySelector('[data-kyc-goto="' + n + '"]');
+            if (btn) btn.classList.remove('is-error');
+            hideErrorBannerIfClean(form);
+        }
+
         function show(n) {
             current = Math.min(Math.max(n, 1), total);
             panels.forEach(function (p) {
@@ -174,6 +187,7 @@
                 if (!validateField(field) && !firstBad) firstBad = field;
                 if (field.closest('.kyc-field') && field.closest('.kyc-field').classList.contains('has-error')) ok = false;
             });
+            if (ok) clearStepErrors(n);
             if (firstBad) firstBad.focus();
             return ok;
         }
@@ -223,8 +237,14 @@
         });
 
         fieldsIn(1).concat(fieldsIn(2), fieldsIn(3), fieldsIn(4)).forEach(function (field) {
-            field.addEventListener('blur', function () { validateField(field); persist(); });
-            field.addEventListener('input', function () { persist(); });
+            field.addEventListener('blur', function () { validateField(field); persist(); hideErrorBannerIfClean(form); });
+            field.addEventListener('input', function () {
+                if (field.closest('.kyc-field') && field.closest('.kyc-field').classList.contains('has-error')) {
+                    validateField(field);
+                }
+                persist();
+                hideErrorBannerIfClean(form);
+            });
         });
 
         sameShip && sameShip.addEventListener('change', function () { syncShipping(); persist(); });
@@ -246,6 +266,7 @@
 
         nextBtn && nextBtn.addEventListener('click', function () {
             if (!validateStep(current)) return;
+            clearStepErrors(current);
             show(current + 1);
         });
 

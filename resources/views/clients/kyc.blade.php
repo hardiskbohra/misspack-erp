@@ -6,11 +6,11 @@
     <title>Client KYC — {{ $client->company_name ?: 'MissPack' }}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@450;550;650;750;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/kyc-public.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-alert.css') }}">
     @include('layouts.partials.design-system-styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/kyc-public.css') }}">
 </head>
 <body data-ui-shell="public">
 @php
@@ -48,14 +48,14 @@
 @endphp
 
 <div class="kyc">
-    <header class="kyc-top">
-        <div class="kyc-brand">
-            <img src="{{ asset('images/logo.png') }}" alt="MissPack">
-            <div>
-                <p class="kyc-eyebrow">Know Your Customer</p>
-                <h1>{{ $client->company_name ?: 'Your company KYC' }}</h1>
-                <p class="kyc-lead">Four short steps. Save anytime. Submit when every required field is complete.</p>
-            </div>
+    <header class="kyc-hero">
+        <div class="kyc-hero-brand">
+            <img class="kyc-logo" src="{{ asset('images/logo.png') }}" alt="MissPack — Packed Perfect">
+            <p class="kyc-eyebrow">Client KYC</p>
+        </div>
+        <div class="kyc-hero-copy">
+            <h1>{{ $client->company_name ?: 'Your company KYC' }}</h1>
+            <p>Four short steps. Save anytime. Submit when every required field is complete.</p>
         </div>
         <span class="kyc-badge status-{{ $statusClass }}">{{ $statusLabel }}</span>
     </header>
@@ -83,7 +83,7 @@
     @endif
 
     @if ($errors->any())
-        <div class="kyc-banner is-bad" role="alert">
+        <div class="kyc-banner is-bad" role="alert" data-kyc-error-banner>
             <strong>{{ $errors->count() }} {{ \Illuminate\Support\Str::plural('field', $errors->count()) }} need attention.</strong>
             We opened the step that has the first one.
             <ul class="kyc-error-list">
@@ -317,24 +317,47 @@
         </section>
 
         <div class="kyc-nav">
-            <button type="button" class="kyc-btn kyc-btn-ghost" data-kyc-prev hidden>Back</button>
+            <button type="button" class="master-btn master-btn-light" data-kyc-prev hidden>Back</button>
             <p class="kyc-nav-hint" data-kyc-hint>Step 1 of 4</p>
             @unless ($readonly)
-                <button type="button" class="kyc-btn kyc-btn-soft" data-kyc-draft>Save for later</button>
+                <button type="button" class="master-btn master-btn-soft" data-kyc-draft>Save for later</button>
             @endunless
-            <button type="button" class="kyc-btn kyc-btn-primary" data-kyc-next>Continue</button>
+            <button type="button" class="master-btn master-btn-primary" data-kyc-next>Continue</button>
             @unless ($readonly)
-                <button type="submit" class="kyc-btn kyc-btn-primary" data-kyc-submit hidden>Submit for review</button>
+                <button type="submit" class="master-btn master-btn-primary" data-kyc-submit hidden>Submit for review</button>
             @endunless
         </div>
     </form>
 
     <footer class="kyc-foot">
-        <div>
-            <img src="{{ asset('images/logo-dark.png') }}" alt="MissPack">
-            <p>Questions? <a href="mailto:misspackindia@gmail.com">misspackindia@gmail.com</a> · <a href="tel:+917048110823">+91 70481 10823</a></p>
+        <div class="kyc-foot-main">
+            <div class="kyc-foot-brand">
+                <img src="{{ asset('images/logo-dark.png') }}" alt="MissPack — Packed Perfect">
+                <p>MissPack helps brands source, develop and manage packaging with reliable client coordination.</p>
+                <div class="kyc-social">
+                    <a href="https://www.facebook.com/misspackindia" target="_blank" rel="noopener" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
+                    <a href="https://www.instagram.com/themisspack" target="_blank" rel="noopener" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="https://www.linkedin.com/company/misspackindia/" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+                    <a href="https://wa.me/917048110823" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+                </div>
+            </div>
+            <div>
+                <h4>Contact</h4>
+                <a href="mailto:misspackindia@gmail.com">misspackindia@gmail.com</a>
+                <a href="tel:+917048110823">+91 70481 10823</a>
+                <a href="https://www.themisspack.com" target="_blank" rel="noopener">www.themisspack.com</a>
+                <span>Monday–Saturday, 10:00 AM – 7:00 PM</span>
+            </div>
+            <div>
+                <h4>Address</h4>
+                <p><strong>MissPack India Private Limited</strong><br>Ahmedabad, Gujarat, India</p>
+                <p>For KYC support, write to accounts or your sales coordinator.</p>
+            </div>
         </div>
-        <p>© {{ date('Y') }} MissPack India Private Limited</p>
+        <div class="kyc-foot-bar">
+            <span>© {{ date('Y') }} MissPack. All rights reserved.</span>
+            <span>Packed Perfect</span>
+        </div>
     </footer>
 </div>
 
