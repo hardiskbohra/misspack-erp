@@ -194,4 +194,73 @@
             });
         });
     });
+
+    onReady(function () {
+        var form = document.getElementById('cashflowBulkForm');
+        var bar = document.querySelector('[data-bulk-bar]');
+        var picks = document.querySelectorAll('[data-bulk-pick]');
+
+        if (!form || !bar || !picks.length) return;
+
+        var count = form.querySelector('[data-bulk-count]');
+        var all = document.querySelector('[data-bulk-all]');
+        var clear = form.querySelector('[data-bulk-clear]');
+        var action = form.querySelector('[name="action"]');
+
+        var selected = function () {
+            return Array.prototype.filter.call(picks, function (pick) { return pick.checked; });
+        };
+
+        var sync = function () {
+            var ids = selected();
+
+            bar.hidden = ids.length === 0;
+
+            if (count) {
+                count.textContent = ids.length === 1 ? '1 selected' : ids.length + ' selected';
+            }
+
+            picks.forEach(function (pick) {
+                pick.closest('tr')?.classList.toggle('is-picked', pick.checked);
+            });
+
+            if (all) {
+                all.checked = ids.length > 0 && ids.length === picks.length;
+                all.indeterminate = ids.length > 0 && ids.length < picks.length;
+            }
+        };
+
+        picks.forEach(function (pick) {
+            pick.addEventListener('change', sync);
+        });
+
+        if (all) {
+            all.addEventListener('change', function () {
+                picks.forEach(function (pick) { pick.checked = all.checked; });
+                sync();
+            });
+        }
+
+        if (clear) {
+            clear.addEventListener('click', function () {
+                picks.forEach(function (pick) { pick.checked = false; });
+                if (all) all.checked = false;
+                sync();
+            });
+        }
+
+        form.addEventListener('submit', function (event) {
+            if (!selected().length) {
+                event.preventDefault();
+                return;
+            }
+
+            if (action && action.value === 'delete') {
+                var ok = window.confirm('Delete the selected cashflow entries? Linked vendor payments and shipment costs will be unlinked.');
+                if (!ok) event.preventDefault();
+            }
+        });
+
+        sync();
+    });
 })();

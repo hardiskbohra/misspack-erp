@@ -693,14 +693,15 @@
 
 /* Column hints: the table keeps its natural layout, these only stop the
    columns from reflowing between pages as the content changes. */
-.cashflow-index .master-table th:nth-child(1) { width: 104px; }
-.cashflow-index .master-table th:nth-child(2) { width: 260px; }
-.cashflow-index .master-table th:nth-child(3) { width: 168px; }
-.cashflow-index .master-table th:nth-child(4) { width: 132px; }
+.cashflow-index .master-table th:nth-child(1) { width: 44px; }
+.cashflow-index .master-table th:nth-child(2) { width: 104px; }
+.cashflow-index .master-table th:nth-child(3) { width: 260px; }
+.cashflow-index .master-table th:nth-child(4) { width: 168px; }
 .cashflow-index .master-table th:nth-child(5) { width: 132px; }
-.cashflow-index .master-table th:nth-child(6) { width: 150px; }
-.cashflow-index .master-table th:nth-child(7) { width: 132px; }
-.cashflow-index .master-table th:nth-child(8) { width: 72px; }
+.cashflow-index .master-table th:nth-child(6) { width: 132px; }
+.cashflow-index .master-table th:nth-child(7) { width: 150px; }
+.cashflow-index .master-table th:nth-child(8) { width: 132px; }
+.cashflow-index .master-table th:nth-child(9) { width: 72px; }
 
 .cashflow-index .master-table th:last-child,
 .cashflow-index .master-table td:last-child {

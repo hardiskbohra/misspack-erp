@@ -76,7 +76,7 @@
 
                 bulkForm.hidden = chosen.length === 0;
                 if (countLabel) {
-                    countLabel.textContent = chosen.length + (chosen.length === 1 ? ' vendor selected' : ' vendors selected');
+                    countLabel.textContent = chosen.length === 1 ? '1 selected' : chosen.length + ' selected';
                 }
                 picks.forEach(function (pick) {
                     pick.closest('tr')?.classList.toggle('is-picked', pick.checked);

@@ -26,6 +26,14 @@ use Illuminate\View\View;
 
 class CashflowController extends Controller
 {
+    private const BULK_ACTIONS = [
+        'mark_booked' => 'Mark booked',
+        'mark_pending' => 'Mark pending',
+        'mark_reconciled' => 'Mark reconciled',
+        'mark_disputed' => 'Mark disputed',
+        'delete' => 'Delete selected',
+    ];
+
     public function index(Request $request): View
     {
         // Jumping back into a saved view simply re-runs its filters.
@@ -94,6 +102,7 @@ class CashflowController extends Controller
                block a hundred lines above its first use, and the page 500'd with
                `Undefined variable $quickPartyType` when that block was not in
                the copy being served (a stale compiled view is enough). */
+            'bulkActions' => self::BULK_ACTIONS,
             'quickPartyType' => CashflowEntry::partyTypeFor(
                 old('related_party_type'),
                 $shared['relatedPartyOptions'] ?? []
@@ -239,6 +248,66 @@ class CashflowController extends Controller
             $detached
                 ? 'Cashflow entry deleted. The linked vendor payment / shipment cost was unlinked — set its paid account again if the payment still stands.'
                 : 'Cashflow entry deleted successfully.'
+        );
+    }
+
+    /**
+     * One action across the ledger rows ticked on the list: change accounting
+     * status, or delete. Deletes unlink vendor / shipment mirrors first and
+     * rebuild the affected account ledgers, same as a single-row delete.
+     */
+    public function bulk(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'action' => ['required', Rule::in(array_keys(self::BULK_ACTIONS))],
+            'ids' => ['required', 'array', 'min:1', 'max:500'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $entries = CashflowEntry::query()->whereIn('id', $data['ids'])->get();
+        $done = 0;
+        $statusMap = [
+            'mark_pending' => 'pending',
+            'mark_booked' => 'booked',
+            'mark_reconciled' => 'reconciled',
+            'mark_disputed' => 'disputed',
+        ];
+
+        DB::transaction(function () use ($data, $entries, $statusMap, &$done) {
+            if (isset($statusMap[$data['action']])) {
+                $status = $statusMap[$data['action']];
+                foreach ($entries as $entry) {
+                    $entry->update(['accounting_status' => $status]);
+                    $done++;
+                }
+
+                return;
+            }
+
+            if ($data['action'] !== 'delete') {
+                return;
+            }
+
+            $accountIds = [];
+            foreach ($entries as $entry) {
+                app(VendorPaymentCashflowSync::class)->detach($entry);
+                app(\App\Services\ShipmentCostCashflowSync::class)->detach($entry);
+                if ($entry->account_id) {
+                    $accountIds[$entry->account_id] = true;
+                }
+                $entry->delete();
+                $done++;
+            }
+
+            foreach (array_keys($accountIds) as $accountId) {
+                $this->recalculateAccountLedger((int) $accountId);
+            }
+        });
+
+        return back()->with(
+            'success',
+            $done.' '.\Illuminate\Support\Str::plural('entry', $done).' — '
+                .mb_strtolower(self::BULK_ACTIONS[$data['action']]).' done.'
         );
     }
 

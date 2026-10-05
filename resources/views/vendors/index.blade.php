@@ -274,26 +274,24 @@
                     <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
                 </div>
             </div>
-        </div>
 
-        {{-- The bulk bar appears only when a row is ticked: one status change
-             across the vendors the office selected, without opening them one
-             by one. The table's checkboxes belong to this form through the
-             form attribute, so the table stays a table. --}}
-        <form method="POST" action="{{ route('vendors.bulk-status') }}" id="vendorBulkForm"
-            class="master-list-bulk" data-bulk-bar hidden>
-            @csrf
-            @method('PATCH')
-            <span class="master-list-bulk-count" data-bulk-count>0 vendors selected</span>
-            <select class="master-select" name="action" aria-label="Bulk action" required>
-                <option value="">Choose an action…</option>
-                @foreach ($statusActions as $key => $label)
-                    <option value="{{ $key }}">{{ $label }}</option>
-                @endforeach
-            </select>
-            <button type="submit" class="master-btn master-btn-primary master-btn-sm">Apply to selected</button>
-            <button type="button" class="master-btn master-btn-light master-btn-sm" data-bulk-clear>Clear</button>
-        </form>
+            {{-- Own toolbar row, same as sales invoices: count on the left,
+                 action + Apply + Clear on the right. Checkboxes point here by id. --}}
+            <form method="POST" action="{{ route('vendors.bulk-status') }}" id="vendorBulkForm"
+                class="master-list-bulk" data-bulk-bar hidden>
+                @csrf
+                @method('PATCH')
+                <span class="master-list-bulk-count" data-bulk-count>0 selected</span>
+                <select class="master-select" name="action" aria-label="Action for the selected vendors" required>
+                    <option value="">Choose an action…</option>
+                    @foreach ($statusActions as $key => $label)
+                        <option value="{{ $key }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+                <button type="submit" class="master-btn master-btn-primary master-btn-sm">Apply</button>
+                <button type="button" class="master-btn master-btn-light master-btn-sm" data-bulk-clear>Clear</button>
+            </form>
+        </div>
 
         <div class="master-table-wrap ui-mobile-cards">
             <table class="master-table vendor-table" data-table-settings data-table-key="vendors">

@@ -349,6 +349,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/cashflows/quick', [CashflowController::class, 'quickStore'])->name('cashflows.quickStore');
         Route::post('/cashflows/accounts', [CashflowController::class, 'storeAccount'])->name('cashflows.accounts.store');
         Route::post('/cashflows/categories', [CashflowController::class, 'storeCategory'])->name('cashflows.categories.store');
+        Route::post('/cashflows/bulk', [CashflowController::class, 'bulk'])->name('cashflows.bulk');
         Route::resource('cashflows', CashflowController::class);
     });
 
