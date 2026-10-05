@@ -71,12 +71,12 @@
                 <p class="master-sub">{{ $stats['on_hold'] }} on hold · {{ $stats['blacklisted'] }} blacklisted</p>
             </div>
         </div>
-        <div class="master-stat master-stat--flat {{ $stats['payable'] > 0 ? 'purple' : 'teal' }}">
+        <div class="master-stat master-stat--flat {{ ($stats['owing_vendors'] ?? 0) > 0 ? 'purple' : 'teal' }}">
             <span class="icon" aria-hidden="true"><i class="fa-solid fa-file-invoice-dollar"></i></span>
             <div>
-                <p class="master-stat-title">Payable</p>
-                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['payable']) }}</p>
-                <p class="master-sub">across every vendor ledger</p>
+                <p class="master-stat-title">Owing</p>
+                <p class="master-stat-value">{{ number_format($stats['owing_vendors'] ?? 0) }}</p>
+                <p class="master-sub">vendors with an open balance</p>
             </div>
         </div>
         <div class="master-stat master-stat--flat {{ $stats['overdue_vendors'] ? 'red' : 'teal' }}">
@@ -325,8 +325,9 @@
                             $avatarTone = abs(crc32($vendor->vendor_name)) % 6;
                         @endphp
                         @php
-                            $billed = (float) ($vendor->billed_inr ?? 0);
-                            $paid = (float) ($vendor->paid_inr ?? 0);
+                            $vendorListCurrency = $vendor->preferred_currency ?: 'RMB';
+                            $billed = (float) ($vendor->billed_foreign ?? 0);
+                            $paid = (float) ($vendor->paid_foreign ?? 0);
                             $payable = max($billed - $paid, 0);
                         @endphp
                         <tr class="vendor-row is-clickable" data-href="{{ route('vendors.show', $vendor) }}">
@@ -375,13 +376,13 @@
                                 <span class="master-sub">{{ $vendor->country ?: 'Country not set' }}</span>
                             </td>
                             <td data-label="Terms" class="ui-mobile-secondary">
-                                {{ $vendor->preferred_currency ?: 'INR' }}
+                                {{ $vendorListCurrency }}
                                 <span class="master-sub">{{ $vendor->payment_terms ?: 'No terms on file' }}</span>
                             </td>
                             <td data-label="Payable" class="is-num">
                                 @if ($payable > 0)
-                                    <strong class="vendor-payable">{{ \App\Helpers\CommonHelper::indianCurrency($payable) }}</strong>
-                                    <span class="master-sub">{{ $billed > 0 ? 'of '.\App\Helpers\CommonHelper::indianCurrency($billed).' billed' : '' }}</span>
+                                    <strong class="vendor-payable">{{ \App\Helpers\CommonHelper::amount($payable, $vendorListCurrency) }}</strong>
+                                    <span class="master-sub">{{ $billed > 0 ? 'of '.\App\Helpers\CommonHelper::amount($billed, $vendorListCurrency).' billed' : '' }}</span>
                                 @else
                                     <span class="master-empty-value">Settled</span>
                                 @endif

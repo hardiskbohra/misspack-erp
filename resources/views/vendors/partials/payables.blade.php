@@ -23,8 +23,8 @@
 <section class="master-card master-card--flat vendor-detail-card vendor-block-card" id="vendor-block-payables" aria-labelledby="vendor-block-payables-heading">
     <div class="vendor-panel-head">
         <div>
-            <h2 class="vendor-detail-title" id="vendor-block-payables-heading">Payables</h2>
-            <p class="vendor-detail-help">Bills and expenses raised by this vendor, less what has been paid. Oldest money is settled first.</p>
+            <h2 class="vendor-detail-title" id="vendor-block-payables-heading">Account</h2>
+            <p class="vendor-detail-help">{{ $money(($summary['vendor_bill_foreign'] ?? 0) + ($summary['vendor_expense_foreign'] ?? 0)) }} billed · {{ $money($summary['vendor_paid_foreign'] ?? 0) }} paid · {{ $money($summary['vendor_balance_foreign'] ?? 0) }} balance</p>
         </div>
         <div class="vendor-panel-meta">
             @if ($hasOverdue)

@@ -101,15 +101,14 @@ class VendorController extends Controller
         $vendors = Vendor::query()
             ->with('creator')
             ->when(Schema::hasTable('vendor_payment_entries'), function ($query) {
-                /* Payable per vendor, summed in the database: billed less paid,
-                   both in rupees, so a page of 25 vendors does not load 25
-                   ledgers to draw one column. */
-                $query->withSum(['paymentEntries as billed_inr' => function ($ledger) {
+                /* Payable per vendor in that vendor's ledger currency, so a
+                   page of 25 vendors does not load 25 ledgers for one column. */
+                $query->withSum(['paymentEntries as billed_foreign' => function ($ledger) {
                     $ledger->where('transaction_type', 'credit');
-                }], 'amount_in_inr')
-                    ->withSum(['paymentEntries as paid_inr' => function ($ledger) {
+                }], 'foreign_amount')
+                    ->withSum(['paymentEntries as paid_foreign' => function ($ledger) {
                         $ledger->where('transaction_type', 'debit');
-                    }], 'amount_in_inr');
+                    }], 'foreign_amount');
             })
             ->search($search)
             ->when($status !== 'all', fn ($q) => $q->where('status', $status))
@@ -146,7 +145,7 @@ class VendorController extends Controller
                 ->where('country', '!=', 'India')
                 ->count(),
             'with_contact' => Vendor::query()->whereNotNull('contact_person_name')->where('contact_person_name', '!=', '')->count(),
-            'payable' => $this->modulePayable(),
+            'owing_vendors' => $this->owingVendorCount(),
             'overdue_vendors' => $this->overdueVendorCount(),
         ];
 
@@ -751,10 +750,11 @@ class VendorController extends Controller
 
         /* The payables settle the ledger first; spend and the ledger totals
            then read from that settlement, so no two cards can disagree. */
-        $payables = $this->vendorPayables($vendorPaymentEntries, $vendor->preferred_currency ?: 'RMB');
-        $performance = $this->vendorPerformance($vendor, $vendorPaymentEntries, $payables);
         $currencySummary = $this->vendorCurrencySummary($vendorPaymentEntries);
-        $preferredCurrency = $vendor->preferred_currency ?: 'RMB';
+        $preferredCurrency = $vendor->preferred_currency
+            ?: (array_key_first($currencySummary) ?: 'RMB');
+        $payables = $this->vendorPayables($vendorPaymentEntries, $preferredCurrency);
+        $performance = $this->vendorPerformance($vendor, $vendorPaymentEntries, $payables);
         $preferredCurrencySummary = $currencySummary[$preferredCurrency] ?? [
             'bill' => 0, 'expense' => 0, 'credit' => 0, 'debit' => 0, 'balance' => 0,
             'inr_credit' => 0, 'inr_debit' => 0,
@@ -1067,17 +1067,21 @@ class VendorController extends Controller
         return (int) round(($date->copy()->startOfDay()->timestamp - $from->timestamp) / 86400);
     }
 
-    /** Every vendor's payable, from the ledger, summed in the database. */
-    private function modulePayable(): float
+    /** Vendors with an open ledger balance. Counted, not summed: the
+     *  ledgers are in different currencies and must not be added together. */
+    private function owingVendorCount(): int
     {
         if (! Schema::hasTable('vendor_payment_entries')) {
-            return 0.0;
+            return 0;
         }
 
-        $billed = (float) VendorPaymentEntry::query()->where('transaction_type', 'credit')->sum('amount_in_inr');
-        $paid = (float) VendorPaymentEntry::query()->where('transaction_type', 'debit')->sum('amount_in_inr');
-
-        return round(max($billed - $paid, 0), 2);
+        return (int) Vendor::query()
+            ->whereRaw('(
+                select coalesce(sum(case when transaction_type = \'credit\' then foreign_amount else -foreign_amount end), 0)
+                from vendor_payment_entries
+                where vendor_id = vendors.id
+            ) > 0.009')
+            ->count();
     }
 
     /**

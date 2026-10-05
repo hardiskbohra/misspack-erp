@@ -8,7 +8,7 @@
 @php
     $statusClass = str_replace('_', '-', $vendor->status);
     $typeClass = str_replace('_', '-', $vendor->vendor_type);
-    $vendorCurrency = $summary['vendor_currency'] ?? ($vendor->preferred_currency ?: 'INR');
+    $vendorCurrency = $summary['vendor_currency'] ?? ($vendor->preferred_currency ?: 'RMB');
     $money = fn ($amount, $currency = null) => \App\Helpers\CommonHelper::amount($amount, $currency ?: $vendorCurrency);
     $initials = collect(explode(' ', trim($vendor->vendor_name)))
         ->filter()
@@ -43,7 +43,7 @@
                     @endif
                     <span class="master-badge status-{{ $statusClass }}">{{ $vendor->statusLabel() }}</span>
                     <span class="vendor-type-chip type-{{ $typeClass }}">{{ $vendor->typeLabel() }}</span>
-                    <span class="vendor-meta-chip">{{ $vendor->preferred_currency ?: 'INR' }}</span>
+                    <span class="vendor-meta-chip">{{ $vendorCurrency }}</span>
                     @if ($vendor->rating)
                         <span class="vendor-meta-chip" aria-label="Rated {{ $vendor->rating }} of 5">{{ str_repeat('★', $vendor->rating) }}</span>
                     @endif
@@ -79,25 +79,17 @@
         <div class="master-stat master-stat--flat purple">
             <span class="icon" aria-hidden="true"><i class="fa-solid fa-file-invoice-dollar"></i></span>
             <div>
-                <p class="master-stat-title">Bill generated</p>
-                <p class="master-stat-value">{{ $money($summary['vendor_bill_foreign']) }}</p>
-                <p class="master-sub">in {{ $summary['vendor_currency'] }}</p>
-            </div>
-        </div>
-        <div class="master-stat master-stat--flat orange">
-            <span class="icon" aria-hidden="true"><i class="fa-solid fa-basket-shopping"></i></span>
-            <div>
-                <p class="master-stat-title">Vendor expenses</p>
-                <p class="master-stat-value">{{ $money($summary['vendor_expense_foreign']) }}</p>
-                <p class="master-sub">in {{ $summary['vendor_currency'] }}</p>
+                <p class="master-stat-title">Billed</p>
+                <p class="master-stat-value">{{ $money(($summary['vendor_bill_foreign'] ?? 0) + ($summary['vendor_expense_foreign'] ?? 0)) }}</p>
+                <p class="master-sub">in {{ $vendorCurrency }}</p>
             </div>
         </div>
         <div class="master-stat master-stat--flat green">
             <span class="icon" aria-hidden="true"><i class="fa-solid fa-arrow-up-right-dots"></i></span>
             <div>
-                <p class="master-stat-title">Paid to vendor</p>
+                <p class="master-stat-title">Paid</p>
                 <p class="master-stat-value">{{ $money($summary['vendor_paid_foreign']) }}</p>
-                <p class="master-sub">in {{ $summary['vendor_currency'] }}</p>
+                <p class="master-sub">in {{ $vendorCurrency }}</p>
             </div>
         </div>
         <div class="master-stat master-stat--flat {{ $summary['vendor_balance_foreign'] > 0 ? 'red' : 'teal' }}">
@@ -169,10 +161,6 @@
                      owe and is any of it late, what has moved on the ledger,
                      and what does the account look like to the vendor. --}}
                 <section class="master-tab-panel" id="vendor-panel-money" role="tabpanel" aria-labelledby="vendor-tab-money">
-                    <nav class="vendor-jump" aria-label="Money sections">
-                        <a href="#vendor-block-payables">Payables <span class="vendor-jump-count">{{ count($payables['rows']) }}</span></a>
-                        <a href="#vendor-block-ledger">Ledger <span class="vendor-jump-count">{{ $vendorPaymentEntries->count() }}</span></a>
-                    </nav>
                     <div class="vendor-blocks">
                         @include('vendors.partials.payables')
                         @include('vendors.partials.payments')
