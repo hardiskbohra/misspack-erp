@@ -657,21 +657,30 @@
     width: 6%
 }
 
-/* Purchase list has no Due column. Widths follow what each cell actually holds:
-   document number + chips, vendor name, money, a compact paid/warning cell. */
+/* Purchase list has no Due column and must fit the card: no sideways scroll.
+   Action keeps extra right padding so the menu is not on the card edge. */
 .si-index .pi-table {
-    min-width: 960px
+    width: 100%;
+    min-width: 0;
 }
 
 .si-index .pi-col-pick { width: 44px }
-.si-index .pi-col-doc { width: 18% }
+.si-index .pi-col-doc { width: 17% }
 .si-index .pi-col-vendor { width: 16% }
 .si-index .pi-col-project { width: 13% }
-.si-index .pi-col-total { width: 12% }
+.si-index .pi-col-total { width: 11% }
 .si-index .pi-col-paid { width: 10% }
-.si-index .pi-col-balance { width: 13% }
-.si-index .pi-col-state { width: 11% }
-.si-index .pi-col-action { width: 56px }
+.si-index .pi-col-balance { width: 12% }
+.si-index .pi-col-state { width: 12% }
+.si-index .pi-col-action { width: 72px }
+
+.si-index .pi-table th:last-child,
+.si-index .pi-table td:last-child {
+    padding-right: 20px;
+}
+
+.si-index .master-table-wrap:has(.pi-table) {
+    overflow-x: hidden;
 }
 
 /* A listing's cell rhythm is its own: the shared 18/20 is sized for reading a
