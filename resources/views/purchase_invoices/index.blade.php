@@ -213,6 +213,7 @@
                         @php
                             $paidAmt = $invoice->paidAmount();
                             $balance = $invoice->balanceDue();
+                            $openAmt = $invoice->openAmount();
                             $stateKey = $invoice->stateKey();
                             $daysLate = $invoice->daysOverdue();
                         @endphp
@@ -245,17 +246,23 @@
                                 <strong>{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</strong>
                             </td>
                             <td data-label="Paid" class="is-num ui-mobile-secondary">
-                                @if ($invoice->isBill())
+                                @if ($invoice->isSuperseded())
+                                    <span class="master-empty-value">On the bill</span>
+                                @elseif ($invoice->canReceiveMoney() || $paidAmt > 0)
                                     <strong>{{ \App\Helpers\CommonHelper::amount($paidAmt, $invoice->currency) }}</strong>
                                 @else
-                                    <span class="master-empty-value">Not payable</span>
+                                    <span class="master-empty-value">Approve to pay</span>
                                 @endif
                             </td>
                             <td data-label="Balance" class="is-num">
                                 @if ($invoice->isSuperseded())
                                     <span class="master-sub">Moved to {{ $invoice->convertedInvoice?->invoice_number }}</span>
+                                @elseif ($invoice->canReceiveMoney())
+                                    <strong class="si-balance {{ $openAmt > 0 ? ($invoice->isOverdue() ? 'is-due' : '') : 'is-clear' }}">
+                                        {{ \App\Helpers\CommonHelper::amount($openAmt, $invoice->currency) }}
+                                    </strong>
                                 @elseif ($invoice->isOrder())
-                                    <span class="master-empty-value">Raise a bill</span>
+                                    <span class="master-empty-value">{{ $invoice->status === 'sent' ? 'Approve to pay' : 'Raise a bill' }}</span>
                                 @else
                                     <strong class="si-balance {{ $balance > 0 ? ($invoice->isOverdue() ? 'is-due' : '') : 'is-clear' }}">
                                         {{ \App\Helpers\CommonHelper::amount($balance, $invoice->currency) }}
@@ -291,13 +298,17 @@
                                         <div class="master-dropdown-menu">
                                             <a href="{{ route('purchase-invoices.show', $invoice) }}"><i class="fas fa-eye"></i> View</a>
                                             <a href="{{ route('purchase-invoices.edit', $invoice) }}"><i class="fas fa-pen"></i> Edit</a>
-                                            @if ($invoice->isBill() && $balance > 0)
+                                            @if ($invoice->canReceiveMoney() && $openAmt > 0)
                                                 <button type="button" data-open-payment
                                                     data-invoice-id="{{ $invoice->id }}"
                                                     data-invoice-number="{{ $invoice->invoice_number }}"
-                                                    data-invoice-amount="{{ number_format($balance, 2, '.', '') }}"
-                                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balance, $invoice->currency) }}">
-                                                    <i class="fas fa-indian-rupee-sign"></i> Record payment
+                                                    data-invoice-kind="{{ $invoice->invoice_type }}"
+                                                    data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
+                                                    data-invoice-rate="{{ $invoice->exchange_rate }}"
+                                                    data-project-id="{{ $invoice->project_id }}"
+                                                    data-invoice-amount="{{ number_format($openAmt, 2, '.', '') }}"
+                                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($openAmt, $invoice->currency) }}">
+                                                    <i class="fas fa-indian-rupee-sign"></i> {{ $invoice->isOrder() ? 'Record advance' : 'Record payment' }}
                                                 </button>
                                             @endif
                                             <a href="{{ route('purchase-invoices.print', $invoice) }}" target="_blank"><i class="fas fa-print"></i> Print</a>

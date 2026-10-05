@@ -629,23 +629,53 @@
 
         var template = form.getAttribute('data-action-template') || '';
         var subtitle = modal.querySelector('[data-payment-subtitle]');
-        var amount = modal.querySelector('input[name="amount"]');
+        var title = modal.querySelector('#purchasePaymentTitle');
+        var amount = modal.querySelector('input[name="foreign_amount"], input[name="amount"]');
+        var currency = modal.querySelector('[name="foreign_currency"]');
+        var rate = modal.querySelector('[name="exchange_rate"]');
+        var particular = modal.querySelector('[name="particular"]');
+        var project = modal.querySelector('[name="project_id"]');
 
         triggers.forEach(function (trigger) {
             trigger.addEventListener('click', function () {
                 var id = trigger.getAttribute('data-invoice-id');
                 var number = trigger.getAttribute('data-invoice-number') || 'this invoice';
                 var balance = trigger.getAttribute('data-invoice-balance') || '';
+                var kind = trigger.getAttribute('data-invoice-kind') || 'bill';
+                var code = trigger.getAttribute('data-invoice-currency') || '';
+                var exchange = trigger.getAttribute('data-invoice-rate') || '';
+                var projectId = trigger.getAttribute('data-project-id') || '';
 
                 form.setAttribute('action', template.replace('__INVOICE__', id));
 
-                if (subtitle) {
-                    subtitle.textContent = 'Against ' + number + (balance ? ' · ' + balance + ' still owed' : '');
+                if (title) {
+                    title.textContent = kind === 'order' ? 'Record an advance' : 'Record a payment';
                 }
 
-                /* What is owed is opened ready to be confirmed, not retyped. */
+                if (subtitle) {
+                    subtitle.textContent = 'Against ' + number + (balance ? ' · ' + balance + ' still open' : '');
+                }
+
                 if (amount) {
                     amount.value = trigger.getAttribute('data-invoice-amount') || balance.replace(/[^0-9.]/g, '');
+                }
+
+                if (currency && code) {
+                    currency.value = code;
+                }
+
+                if (rate) {
+                    rate.value = exchange && Number(exchange) > 0 ? exchange : '';
+                }
+
+                if (particular) {
+                    particular.value = kind === 'order'
+                        ? 'Advance against purchase order ' + number
+                        : 'Payment against purchase bill ' + number;
+                }
+
+                if (project && projectId) {
+                    project.value = projectId;
                 }
 
                 if (window.MasterModal) {

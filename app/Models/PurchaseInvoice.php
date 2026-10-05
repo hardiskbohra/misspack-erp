@@ -326,6 +326,16 @@ class PurchaseInvoice extends Model
         return round(max((float) $this->total_amount - $this->paidAmount(), 0), 2);
     }
 
+    /** What is still open to record as an advance or a payment. */
+    public function openAmount(): float
+    {
+        if ($this->status === 'cancelled' || $this->isSuperseded() || ! $this->canReceiveMoney()) {
+            return 0.0;
+        }
+
+        return round(max((float) $this->total_amount - $this->paidAmount(), 0), 2);
+    }
+
     /** unpaid | partial | paid — read from the money, never from a stored word. */
     public function paymentState(): string
     {

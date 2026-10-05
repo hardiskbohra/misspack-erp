@@ -64,6 +64,10 @@
                 <button type="button" class="master-btn master-btn-soft" data-open-payment
                     data-invoice-id="{{ $invoice->id }}"
                     data-invoice-number="{{ $invoice->invoice_number }}"
+                    data-invoice-kind="bill"
+                    data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
+                    data-invoice-rate="{{ $invoice->exchange_rate }}"
+                    data-project-id="{{ $invoice->project_id }}"
                     data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}">
                     Record payment
@@ -72,6 +76,10 @@
                 <button type="button" class="master-btn master-btn-soft" data-open-payment
                     data-invoice-id="{{ $invoice->id }}"
                     data-invoice-number="{{ $invoice->invoice_number }}"
+                    data-invoice-kind="order"
+                    data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
+                    data-invoice-rate="{{ $invoice->exchange_rate }}"
+                    data-project-id="{{ $invoice->project_id }}"
                     data-invoice-amount="{{ number_format($advanceOpen, 2, '.', '') }}"
                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($advanceOpen, $invoice->currency) }}">
                     Record advance
@@ -300,12 +308,20 @@
                     <button type="button" class="master-btn master-btn-soft" data-open-payment
                         data-invoice-id="{{ $invoice->id }}"
                         data-invoice-number="{{ $invoice->invoice_number }}"
+                        data-invoice-kind="bill"
+                        data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
+                        data-invoice-rate="{{ $invoice->exchange_rate }}"
+                        data-project-id="{{ $invoice->project_id }}"
                         data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
                         data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}">Record</button>
                 @elseif ($invoice->isOrder() && $invoice->canReceiveMoney() && max((float) $invoice->total_amount - $paidAmount, 0) > 0)
                     <button type="button" class="master-btn master-btn-soft" data-open-payment
                         data-invoice-id="{{ $invoice->id }}"
                         data-invoice-number="{{ $invoice->invoice_number }}"
+                        data-invoice-kind="order"
+                        data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
+                        data-invoice-rate="{{ $invoice->exchange_rate }}"
+                        data-project-id="{{ $invoice->project_id }}"
                         data-invoice-amount="{{ number_format(max((float) $invoice->total_amount - $paidAmount, 0), 2, '.', '') }}"
                         data-invoice-balance="{{ \App\Helpers\CommonHelper::amount(max((float) $invoice->total_amount - $paidAmount, 0), $invoice->currency) }}">Record advance</button>
                 @endif

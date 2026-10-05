@@ -10,6 +10,7 @@ use App\Models\Project;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchaseInvoiceItem;
 use App\Models\Vendor;
+use App\Models\VendorPaymentAttachment;
 use App\Models\VendorPaymentEntry;
 use App\Services\PurchaseBillLedger;
 use App\Services\VendorPaymentCashflowSync;
@@ -18,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -471,45 +473,77 @@ class PurchaseInvoiceController extends Controller
 
         $data = $request->validate([
             'transaction_date' => ['nullable', 'date'],
-            'amount' => ['required', 'numeric', 'min:0.01'],
+            'amount' => ['nullable', 'numeric', 'min:0.01'],
+            'foreign_amount' => ['nullable', 'numeric', 'min:0.01'],
+            'foreign_currency' => ['nullable', 'string', 'max:10'],
+            'exchange_rate' => ['nullable', 'numeric', 'min:0'],
+            'amount_in_inr' => ['nullable', 'numeric', 'min:0'],
+            'particular' => ['nullable', 'string', 'max:500'],
+            'status' => ['nullable', 'in:pending,booked,paid,reconciled'],
+            'project_id' => ['nullable', 'integer'],
             'payment_mode' => ['nullable', 'string', 'max:40'],
             'paid_account_id' => ['nullable', 'integer'],
             'bank_reference_number' => ['nullable', 'string', 'max:255'],
             'remarks' => ['nullable', 'string', 'max:1000'],
             'record_cashflow' => ['nullable', 'boolean'],
+            'also_create_cashflow' => ['nullable', 'boolean'],
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['nullable', 'file', 'max:20480'],
         ]);
 
         if (! $this->ledgerAvailable()) {
             return back()->with('error', 'The vendor ledger is not available on this install, so a payment cannot be filed.');
         }
 
-        $rate = ($purchaseInvoice->currency ?: 'INR') === 'INR' ? 1.0 : (float) ($purchaseInvoice->exchange_rate ?: 1);
-        $amount = (float) $data['amount'];
+        $amount = (float) ($data['foreign_amount'] ?? $data['amount'] ?? 0);
+        if ($amount <= 0) {
+            return back()->with('error', 'Enter the amount paid in the vendor\'s currency.');
+        }
+
+        $currency = strtoupper((string) ($data['foreign_currency'] ?? $purchaseInvoice->currency ?: 'INR'));
+        $rate = $currency === 'INR'
+            ? 1.0
+            : (float) ($data['exchange_rate'] ?? $purchaseInvoice->exchange_rate ?: 0);
+        $rupees = (float) ($data['amount_in_inr'] ?? 0);
+        if ($rupees <= 0) {
+            $rupees = $rate > 0 ? round($amount * $rate, 2) : 0.0;
+        }
+        if ($rate <= 0 && $rupees > 0 && $amount > 0) {
+            $rate = round($rupees / $amount, 6);
+        }
+
+        $syncCashflow = $request->boolean('record_cashflow') || $request->boolean('also_create_cashflow');
+        if ($syncCashflow && $rupees <= 0) {
+            return back()->with('error', 'Enter the exchange rate (or the INR amount) so the cashflow entry can be created.');
+        }
 
         $entry = VendorPaymentEntry::create([
             'vendor_id' => $purchaseInvoice->vendor_id,
             'purchase_invoice_id' => $purchaseInvoice->id,
-            'project_id' => $purchaseInvoice->project_id,
+            'project_id' => $data['project_id'] ?? $purchaseInvoice->project_id,
             'transaction_date' => $data['transaction_date'] ?? now()->toDateString(),
             'invoice_number' => $purchaseInvoice->referenceNumber(),
-            'foreign_currency' => $purchaseInvoice->currency ?: 'INR',
+            'foreign_currency' => $currency,
             'foreign_amount' => $amount,
-            'exchange_rate' => $rate,
+            'exchange_rate' => $rate ?: null,
             'transaction_type' => 'debit',
             'entry_category' => 'payment',
-            'particular' => $purchaseInvoice->isOrder()
-                ? 'Advance against purchase order '.$purchaseInvoice->invoice_number
-                : 'Payment against purchase bill '.$purchaseInvoice->invoice_number,
-            'status' => 'booked',
+            'particular' => filled($data['particular'] ?? null)
+                ? $data['particular']
+                : ($purchaseInvoice->isOrder()
+                    ? 'Advance against purchase order '.$purchaseInvoice->invoice_number
+                    : 'Payment against purchase bill '.$purchaseInvoice->invoice_number),
+            'status' => $data['status'] ?? 'booked',
             'paid_account_id' => $data['paid_account_id'] ?? null,
             'payment_mode' => $data['payment_mode'] ?? null,
             'bank_reference_number' => $data['bank_reference_number'] ?? null,
-            'amount_in_inr' => round($amount * $rate, 2),
+            'amount_in_inr' => round($rupees, 2),
             'remarks' => $data['remarks'] ?? null,
             'created_by' => Auth::id(),
         ]);
 
-        (new VendorPaymentCashflowSync())->sync($entry, $request->boolean('record_cashflow'));
+        $this->storePaymentAttachments($request, $entry);
+        (new VendorPaymentCashflowSync())->sync($entry, $syncCashflow);
         $entry->refresh();
 
         $this->refreshInvoiceMoney($purchaseInvoice->fresh());
@@ -1047,7 +1081,11 @@ class PurchaseInvoiceController extends Controller
             'projects' => $this->projects(),
             'products' => $this->products(),
             'accounts' => $this->cashflowAccounts(),
-            'paymentModeOptions' => class_exists(CashflowEntry::class) ? CashflowEntry::paymentModeOptions() : [],
+            'paymentModeOptions' => class_exists(VendorPaymentEntry::class)
+                ? VendorPaymentEntry::paymentModeOptions()
+                : (class_exists(CashflowEntry::class) ? CashflowEntry::paymentModeOptions() : []),
+            'ledgerStatusOptions' => class_exists(VendorPaymentEntry::class) ? VendorPaymentEntry::statusOptions() : [],
+            'ledgerCurrencyOptions' => class_exists(VendorPaymentEntry::class) ? VendorPaymentEntry::currencyOptions() : PurchaseInvoice::currencyOptions(),
             'statusOptions' => PurchaseInvoice::statusOptionsFor($type ?: PurchaseInvoice::TYPE_BILL)
                 + PurchaseInvoice::statusOptionsFor(PurchaseInvoice::TYPE_ORDER),
             'allStatusOptions' => PurchaseInvoice::statusOptions(),
@@ -1099,6 +1137,31 @@ class PurchaseInvoiceController extends Controller
     private function ledgerAvailable(): bool
     {
         return (new PurchaseBillLedger())->available();
+    }
+
+    private function storePaymentAttachments(Request $request, VendorPaymentEntry $entry): void
+    {
+        if (! class_exists(VendorPaymentAttachment::class) || ! Schema::hasTable('vendor_payment_attachments')) {
+            return;
+        }
+
+        foreach ((array) $request->file('attachments', []) as $file) {
+            if (! $file) {
+                continue;
+            }
+
+            $path = $file->store('vendor-payments/'.$entry->vendor_id, 'public');
+
+            $entry->attachments()->create([
+                'title' => $file->getClientOriginalName(),
+                'file_path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime_type' => $file->getClientMimeType(),
+                'file_size' => $file->getSize(),
+                'extension' => strtolower((string) $file->getClientOriginalExtension()),
+                'uploaded_by' => Auth::id(),
+            ]);
+        }
     }
 
     private function cashflowAccounts()
