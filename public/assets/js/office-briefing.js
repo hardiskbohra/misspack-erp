@@ -59,7 +59,7 @@
             return '<article class="ob-item is-' + item.severity + '">' +
                 '<div class="ob-item-head">' +
                     '<span class="ob-pill">' + esc(item.severity_label) + '</span>' +
-                    (item.team ? '<span class="ob-team">' + esc(item.team) + '</span>' : '') +
+                    (item.team_label ? '<span class="ob-team">' + esc(item.team_label) + '</span>' : '') +
                     '<span class="ob-when">' + esc(item.when || '') + '</span>' +
                 '</div>' +
                 '<h3>' + esc(item.title) + '</h3>' +
@@ -68,7 +68,7 @@
                     (item.action_url ? '<a class="master-btn master-btn-soft master-btn-sm" href="' + esc(item.action_url) + '">' + esc(item.action_label) + '</a>' : '') +
                     '<button type="button" class="master-btn master-btn-primary master-btn-sm" data-ob-' +
                         (item.requires_ack ? 'ack' : 'seen') + '="' + item.id + '">' +
-                        (item.requires_ack ? 'Mark as read' : 'Got it') +
+                        (item.requires_ack ? 'Mark read for the office' : 'Got it') +
                     '</button>' +
                 '</div>' +
             '</article>';
@@ -97,7 +97,7 @@
         modal.querySelector('[data-ob-modal-title]').textContent = item.title;
         modal.querySelector('[data-ob-modal-body]').textContent = item.body;
         var team = modal.querySelector('[data-ob-modal-team]');
-        team.textContent = (item.severity_label || '') + (item.team ? ' · ' + item.team : '');
+        team.textContent = (item.severity_label || '') + (item.team_label ? ' · ' + item.team_label : '');
         var link = modal.querySelector('[data-ob-modal-link]');
         if (item.action_url) {
             link.hidden = false;
@@ -107,7 +107,7 @@
             link.hidden = true;
         }
         var ack = modal.querySelector('[data-ob-modal-ack]');
-        ack.textContent = item.requires_ack ? 'Mark as read' : 'Got it';
+        ack.textContent = item.requires_ack ? 'Mark read for the office' : 'Got it';
         if (window.MasterModal) window.MasterModal.open(modal);
         else {
             modal.classList.add('open');

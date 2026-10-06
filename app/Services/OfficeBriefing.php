@@ -88,19 +88,21 @@ class OfficeBriefing
             ->keyBy('office_alert_id');
 
         return OfficeAlert::query()
+            ->with('ackedBy')
             ->where('event_key', '!=', 'briefing.ran')
             ->orderByRaw("CASE severity WHEN 'critical' THEN 0 WHEN 'attention' THEN 1 ELSE 2 END")
             ->orderByDesc('id')
-            ->limit(40)
+            ->limit(80)
             ->get()
+            ->filter(fn (OfficeAlert $alert) => $user->watchesTeam($alert->team))
             ->filter(function (OfficeAlert $alert) use ($states) {
-                $state = $states->get($alert->id);
                 if ($alert->requires_ack) {
-                    return ! $state?->acked_at;
+                    return $alert->acked_at === null;
                 }
 
-                return ! $state?->seen_at;
+                return ! $states->get($alert->id)?->seen_at;
             })
+            ->take(40)
             ->map(fn (OfficeAlert $alert) => $this->present($alert))
             ->values();
     }
@@ -124,6 +126,14 @@ class OfficeBriefing
         $state->seen_at = $state->seen_at ?: now();
         $state->acked_at = now();
         $state->save();
+
+        /* Critical work is one queue: the first person who owns it clears it
+           for every desk that was watching. */
+        if ($alert->requires_ack && ! $alert->acked_at) {
+            $alert->acked_at = now();
+            $alert->acked_by = $user->id;
+            $alert->save();
+        }
     }
 
     private function inTransitDigest(): ?OfficeAlert
@@ -236,9 +246,11 @@ class OfficeBriefing
             'severity_label' => $alert->severityLabel(),
             'requires_ack' => $alert->requires_ack,
             'team' => $alert->team,
+            'team_label' => OfficeAlert::teamLabel($alert->team),
             'action_url' => $alert->action_url,
             'action_label' => $alert->action_label ?: 'Open',
             'when' => optional($alert->created_at)->diffForHumans(),
+            'shared_ack' => (bool) $alert->requires_ack,
         ];
     }
 }

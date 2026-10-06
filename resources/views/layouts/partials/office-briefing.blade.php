@@ -14,7 +14,7 @@
             <button type="button" class="ob-close" data-ob-close aria-label="Close">&times;</button>
         </div>
         <div class="ob-body" data-ob-list></div>
-        <p class="ob-foot">Critical items stay until you mark them read. FYI notes disappear after you have seen them once.</p>
+        <p class="ob-foot">You only see desks you sit on. Critical items clear for the whole office when one person marks them read. FYI notes vanish after you have seen them once.</p>
     </div>
 </div>
 

@@ -103,6 +103,37 @@ class User extends Authenticatable
         return $this->role !== self::ROLE_EMPLOYEE;
     }
 
+    /**
+     * Whether this office account sits on a briefing desk.
+     *
+     * An empty department is a director: they see every desk. A named
+     * department only sees that desk plus unscoped office briefings.
+     */
+    public function watchesTeam(?string $team): bool
+    {
+        if (! $this->isAdmin()) {
+            return false;
+        }
+
+        $team = strtolower(trim((string) $team));
+        if ($team === '' || $team === 'office') {
+            return true;
+        }
+
+        $department = strtolower(trim((string) $this->department));
+        if ($department === '') {
+            return true;
+        }
+
+        foreach (OfficeAlert::teamAliases()[$team] ?? [$team] as $alias) {
+            if (str_contains($department, $alias)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** On the payroll: their own workspace, and nothing else. */
     public function isEmployee(): bool
     {
