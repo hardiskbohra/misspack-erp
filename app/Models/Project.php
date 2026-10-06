@@ -220,8 +220,10 @@ class Project extends Model
             ? $this->payments
             : $this->payments()->get();
     
-        $cashflows = $this->relationLoaded('cashflows')
-            ? $this->cashflows
+        /* One name for the ledger relation: it is `cashflowEntries`, here and
+           in every eager load, so the loaded rows are the ones counted. */
+        $cashflows = $this->relationLoaded('cashflowEntries')
+            ? $this->cashflowEntries
             : $this->cashflowEntries()->get();
     
         // Payments

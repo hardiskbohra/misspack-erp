@@ -217,98 +217,12 @@
         }
 
 /* ==========================================================================
-   PROJECT LIST — resources/views/projects/index.blade.php
-   List, filters, stats, cards and the quick-create modal (projects-*).
+   PROJECT CARDS — resources/views/client_portal/projects/index.blade.php
+   The portal's own card list: one card per project, with its number, progress,
+   status chips and mini-grid. The office list next door is the shared
+   master-list; these classes are the portal's, and only the portal renders
+   them.
    ========================================================================== */
-
-.projects-page {
-            display: flex;
-            flex-direction: column;
-            gap: 18px
-        }
-
-        .projects-hero {
-            background: linear-gradient(135deg, #4f83f1, #7b61ff);
-            border-radius: 24px;
-            padding: 24px;
-            color: #fff;
-            display: flex;
-            justify-content: space-between;
-            gap: 18px;
-            box-shadow: 0 18px 45px rgba(79, 131, 241, .22)
-        }
-
-        .projects-eyebrow {
-            margin: 0 0 6px;
-            text-transform: uppercase;
-            letter-spacing: .12em;
-            font-size: 11px;
-            font-weight: 500;
-            opacity: .82
-        }
-
-        .projects-hero h1 {
-            margin: 0;
-            font-size: 30px;
-            font-weight: 600
-        }
-
-        .projects-hero p {
-            margin: 8px 0 0;
-            max-width: 760px;
-            opacity: .9
-        }
-
-        .projects-hero-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap
-        }
-
-        .projects-stats {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 14px
-        }
-
-        .projects-stat-card {
-            background: var(--mc-card);
-            border-radius: 20px;
-            padding: 18px;
-            border: 1px solid var(--mc-border);
-            box-shadow: 0 10px 30px rgba(22, 34, 51, .06)
-        }
-
-        .projects-stat-card span {
-            font-size: 12px;
-            color: #768197;
-            font-weight: 500;
-            text-transform: uppercase
-        }
-
-        .projects-stat-card strong {
-            display: block;
-            font-size: 30px;
-            margin: 8px 0;
-            color: #1e2a3b
-        }
-
-        .projects-stat-card small {
-            color: var(--mc-text-3)
-        }
-
-        .projects-stat-blue strong {
-            color: #4f83f1
-        }
-
-        .projects-stat-amber strong {
-            color: #f59e0b
-        }
-
-        .projects-stat-green strong {
-            color: #12b76a
-        }
 
         .projects-card {
             background: var(--mc-card);
@@ -317,24 +231,8 @@
             box-shadow: 0 12px 32px rgba(22, 34, 51, .06)
         }
 
-        .projects-filter-card {
-            padding: 16px
-        }
-
-        .projects-filter-form {
-            display: grid;
-            grid-template-columns: 1.5fr .8fr 1fr .8fr auto;
-            gap: 12px;
-            align-items: end
-        }
-
         .master-field label span {
             color: #ef4770
-        }
-
-        .projects-filter-actions {
-            display: flex;
-            gap: 8px
         }
 
         .projects-list {
@@ -408,14 +306,6 @@
 
         .projects-meta-row i {
             color: #9aa4b6
-        }
-
-        .projects-card-actions {
-            display: flex;
-            gap: 8px;
-            align-items: flex-start;
-            flex-wrap: wrap;
-            justify-content: flex-end
         }
 
         .projects-chip {
@@ -520,14 +410,6 @@
             color: #1e2a3b
         }
 
-        .projects-money-green {
-            color: #039855 !important
-        }
-
-        .projects-money-red {
-            color: #d92d20 !important
-        }
-
         .projects-project-footer {
             margin-top: 16px;
             padding-top: 14px;
@@ -543,21 +425,6 @@
             display: flex;
             gap: 8px;
             flex-wrap: wrap
-        }
-
-        .projects-tag {
-            background: var(--mc-hover);
-            border: 1px solid var(--mc-border);
-            color: var(--mc-text-2);
-            border-radius: 999px;
-            padding: 7px 10px;
-            font-size: 12px;
-            font-weight: 500
-        }
-
-        .projects-tag-public {
-            background: #eef9ff;
-            color: #0b72b9
         }
 
         .projects-empty {
@@ -580,134 +447,237 @@
             font-size: 28px
         }
 
-        .projects-pagination {
-            display: flex;
-            justify-content: flex-end
-        }
-
-        .projects-modal {
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            display: none
-        }
-
-        .projects-modal.is-open {
-            display: block
-        }
-
-        .projects-modal-backdrop {
-            position: absolute;
-            inset: 0;
-            background: rgba(15, 23, 42, .55);
-            backdrop-filter: blur(5px)
-        }
-
-        .projects-modal-panel {
-            position: relative;
-            background: var(--mc-card);
-            width: min(620px, calc(100% - 24px));
-            margin: 6vh auto;
-            border-radius: 24px;
-            box-shadow: 0 24px 80px rgba(15, 23, 42, .28);
-            overflow: hidden
-        }
-
-        .projects-modal-head {
-            padding: 18px 20px;
-            border-bottom: 1px solid var(--mc-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center
-        }
-
-        .projects-modal-head h3 {
-            margin: 0;
-            color: var(--mc-text)
-        }
-
-        .projects-modal-body {
-            padding: 18px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 14px
-        }
-
-        .projects-two-col {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px
-        }
-
-        .projects-modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            padding-top: 6px
-        }
-
         @media(max-width:1199px) {
-            .projects-filter-form {
-                grid-template-columns: 1fr 1fr
-            }
-
-            .projects-search-field {
-                grid-column: 1/-1
-            }
-
-            .projects-filter-actions {
-                grid-column: 1/-1
-            }
-
             .projects-mini-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr))
             }
 
-            .projects-stats {
-                grid-template-columns: repeat(2, minmax(0, 1fr))
-            }
         }
 
         @media(max-width:767px) {
 
-            .projects-hero,
             .projects-project-top,
             .projects-project-footer {
                 flex-direction: column
             }
 
-            .projects-hero-actions,
             .projects-footer-actions {
                 width: 100%
             }
 
-            .projects-hero-actions .master-btn,
             .projects-footer-actions .master-btn {
                 flex: 1
             }
 
-            .projects-filter-form,
-            .projects-two-col {
-                grid-template-columns: 1fr
-            }
-
-            .projects-stats,
             .projects-mini-grid {
                 grid-template-columns: 1fr
-            }
-
-            .projects-modal-panel {
-                margin: 12px auto
-            }
-
-            .projects-card-actions {
-                justify-content: flex-start
             }
 
             .projects-project-card {
                 padding: 14px
             }
         }
+
+/* ==========================================================================
+   PROJECT LIST — resources/views/projects/index.blade.php
+   The list is the shared master-list: the chips and the filter drawer in the
+   first card, the records in the second, the shell's own rhythm between them,
+   and the shared table (density, column chooser, stacked cards on a phone).
+   Everything here is composition and status colour — surfaces, borders, type
+   and controls come from the shared sheets.
+   ========================================================================== */
+
+/* The whole row is the door: the module that links a row says so with the
+   cursor, and the hover lifts the row off the grid without redrawing it. */
+.project-index .project-row.is-clickable {
+    cursor: pointer
+}
+
+.project-index .project-row.is-clickable:hover {
+    background: var(--mc-hover)
+}
+
+.project-index .project-table-name {
+    display: block;
+    color: var(--mc-text);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none
+}
+
+.project-index .project-table-name:hover,
+.project-index .project-table-name:focus-visible {
+    color: var(--master-primary);
+    text-decoration: underline
+}
+
+.project-index .project-table-meta {
+    display: block;
+    margin-top: 2px;
+    color: var(--mc-text-3);
+    font-size: 12px
+}
+
+/* Priority is meta, not a status: it keeps the shared chip and adds only the
+   tone, so a row's urgency reads at a glance without a second pill design. */
+.project-index .project-priority-chip {
+    margin-top: 6px
+}
+
+.project-index .project-priority-chip.is-high {
+    border-color: #fde3b8;
+    background: #fff7e6;
+    color: #b54708
+}
+
+.project-index .project-priority-chip.is-urgent {
+    border-color: #ffd7de;
+    background: #fff1f3;
+    color: #d92d20
+}
+
+.project-index .project-table-stage {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--mc-text-2);
+    font-size: 12.5px
+}
+
+.project-index .project-table-stage strong {
+    color: var(--mc-text);
+    font-size: 12.5px
+}
+
+.project-index .project-table-progress {
+    display: block;
+    height: 6px;
+    margin-top: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--mc-card-soft)
+}
+
+.project-index .project-table-progress > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--master-primary)
+}
+
+.project-index .project-table-date {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 500
+}
+
+.project-index .project-table-date.is-late {
+    color: var(--master-red)
+}
+
+.project-index .project-col-actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right
+}
+
+/* Status and health, in the domain's own colours: the shared badge keeps the
+   shape, the module keeps the meaning. */
+.project-index .status-draft {
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2)
+}
+
+.project-index .status-planned {
+    background: #ece7ff;
+    color: #6d28d9
+}
+
+.project-index .status-in-progress {
+    background: #eaf2ff;
+    color: #2563eb
+}
+
+.project-index .status-waiting-client,
+.project-index .status-waiting-vendor,
+.project-index .status-on-hold {
+    background: #fff7e6;
+    color: #b54708
+}
+
+.project-index .status-completed {
+    background: #e8fff3;
+    color: #039855
+}
+
+.project-index .status-cancelled {
+    background: #fff1f3;
+    color: #d92d20
+}
+
+.project-index .health-green {
+    background: #e8fff3;
+    color: #039855
+}
+
+.project-index .health-amber {
+    background: #fff7e6;
+    color: #b54708
+}
+
+.project-index .health-red {
+    background: #fff1f3;
+    color: #d92d20
+}
+
+.project-index .project-health-dot {
+    font-size: 7px
+}
+
+.project-index .project-health-dot--green {
+    color: #039855
+}
+
+.project-index .project-health-dot--amber {
+    color: #b54708
+}
+
+.project-index .project-health-dot--red {
+    color: #d92d20
+}
+
+:root[data-theme="dark"] .project-index .status-planned,
+:root[data-theme="dark"] .project-index .status-in-progress {
+    background: rgba(37, 99, 235, .18);
+    color: #93c5fd
+}
+
+:root[data-theme="dark"] .project-index .status-waiting-client,
+:root[data-theme="dark"] .project-index .status-waiting-vendor,
+:root[data-theme="dark"] .project-index .status-on-hold,
+:root[data-theme="dark"] .project-index .health-amber,
+:root[data-theme="dark"] .project-index .project-priority-chip.is-high {
+    background: rgba(217, 119, 6, .2);
+    color: #fcd34d
+}
+
+:root[data-theme="dark"] .project-index .status-completed,
+:root[data-theme="dark"] .project-index .health-green {
+    background: rgba(16, 185, 129, .18);
+    color: #6ee7b7
+}
+
+:root[data-theme="dark"] .project-index .status-cancelled,
+:root[data-theme="dark"] .project-index .health-red,
+:root[data-theme="dark"] .project-index .project-priority-chip.is-urgent {
+    background: rgba(225, 29, 72, .18);
+    color: #fda4af
+}
+
+:root[data-theme="dark"] .project-index .project-table-date.is-late {
+    color: #fda4af
+}
 
 /* ==========================================================================
    PROJECT DETAIL — resources/views/projects/show.blade.php

@@ -37,6 +37,12 @@ node tools/checks/feedback-check.cjs  # the feedback module: the link is the who
                                       # computed rather than stored, a detractor is never a dead
                                       # end, consent is checked where the words are used, a score
                                       # gates nothing, and the screen and the CSV are one query
+node tools/checks/projects-check.cjs  # the projects list is the shared master-list: two flat
+                                      # cards with the shell's own gap, chips and a drawer for
+                                      # the criteria, one grouped query behind the figures and
+                                      # the chip tallies, the row's relations eager-loaded, and
+                                      # the module sheet owning colour and columns — not the
+                                      # shell — while the client portal's classes stay put
 node tools/checks/employees-check.cjs # the employee side of the user module: the office door is
                                       # on the whole admin group, no personal route takes a user id,
                                       # a file is ownership-checked before it is served, a draft
@@ -64,7 +70,7 @@ All of them exit non-zero on failure, so they can be wired into CI or a
 pre-push hook:
 
 ```bash
-for c in design blade php mark list ui-components status cost docs statement pdf-documents report employees invoices; do
+for c in design blade php mark list ui-components status cost docs statement pdf-documents report projects employees invoices; do
   node "tools/checks/$c-check.cjs" || exit 1
 done
 ```

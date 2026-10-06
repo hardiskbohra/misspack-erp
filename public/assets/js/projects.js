@@ -2,8 +2,9 @@
    PROJECTS.JS — Projects module (projects/* views, admin side)
    --------------------------------------------------------------------------
    Page behaviour for the Projects section:
-     - project list: quick-create modal (.projects-modal, module-specific
-       design with .is-open state) + SweetAlert delete confirmation
+     - project list: the shared quick-create dialog (.master-modal), the
+       shared list toolkit (row navigation, density, column chooser) and the
+       delete confirmation
      - project detail: portal link copy, tab navigation (hash +
        localStorage restore) and the add/edit modals
      - milestones tab: timeline editor modal (pmile-*, module-specific
@@ -25,39 +26,28 @@
     }
 
     /* ------------------------------------------------------------------
-       Project list — quick-create modal (.projects-modal / .is-open)
-       Module-specific modal design: keeps its own open/close wiring
-       (the shared layer only manages .master-modal dialogs).
+       Project list — the shared dialog and the shared list toolkit
+
+       The quick-create dialog is a .master-modal, so close, Escape, the
+       backdrop and the scroll lock are the shared layer's job; this only
+       opens it. Row navigation, the density presets and the column chooser
+       come from MasterList, the same toolkit every other list uses.
        ------------------------------------------------------------------ */
-    function initQuickModal() {
-        var modals = document.querySelectorAll('.projects-modal');
-        if (!modals.length) return;
+    function initProjectList() {
+        var dialog = document.getElementById('quickProjectModal');
+        var opener = document.getElementById('openQuickProjectModal');
 
-        document.querySelectorAll('[data-open-modal]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var modal = document.getElementById(btn.getAttribute('data-open-modal'));
-                if (!modal || !modal.classList.contains('projects-modal')) return;
-                modal.classList.add('is-open');
-                modal.setAttribute('aria-hidden', 'false');
+        if (dialog && opener && window.MasterModal) {
+            opener.addEventListener('click', function () {
+                window.MasterModal.open(dialog);
             });
-        });
+        }
 
-        document.querySelectorAll('.projects-modal [data-close-modal]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var modal = btn.closest('.projects-modal');
-                if (!modal) return;
-                modal.classList.remove('is-open');
-                modal.setAttribute('aria-hidden', 'true');
-            });
-        });
+        if (!window.MasterList) return;
 
-        document.addEventListener('keydown', function (event) {
-            if (event.key !== 'Escape') return;
-            document.querySelectorAll('.projects-modal.is-open').forEach(function (modal) {
-                modal.classList.remove('is-open');
-                modal.setAttribute('aria-hidden', 'true');
-            });
-        });
+        window.MasterList.rowNavigation({ root: '.project-index' });
+        window.MasterList.gridShadow({ root: '.project-index' });
+        window.MasterList.density({ root: '.project-index', key: 'misspack.projects.density' });
     }
 
     /* ------------------------------------------------------------------
@@ -439,7 +429,7 @@
     }
 
     onReady(function () {
-        initQuickModal();
+        initProjectList();
         initDeleteConfirm();
         initCopyPortalLink();
         initTabs();

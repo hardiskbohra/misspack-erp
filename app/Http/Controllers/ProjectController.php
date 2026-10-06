@@ -24,7 +24,10 @@ class ProjectController extends Controller
         $clientId = $request->query('client_id', 'all');
         $health = $request->query('health', 'all');
 
-        $with = ['products', 'products.milestones', 'payments', 'assignedUser'];
+        /* The money column reads the project's payments and its ledger entries,
+           and the row's quick view reads the same totals: loaded here, the list
+           costs one query per relation instead of two per project. */
+        $with = ['products', 'products.milestones', 'payments', 'cashflowEntries', 'assignedUser'];
         if ($this->clientModelAvailable()) {
             $with[] = 'client';
         }
@@ -36,17 +39,31 @@ class ProjectController extends Controller
             ->when($clientId !== 'all', function ($q) use ($clientId) { $q->where('client_id', $clientId); })
             ->when($health !== 'all', function ($q) use ($health) { $q->where('health', $health); })
             ->latest('id')
-            ->paginate(10)
+            ->paginate(25)
             ->withQueryString();
 
+        /* One grouped query answers the chips, the figures and the drawer. The
+           four figures used to be four separate COUNT(*) round trips, and a chip
+           with a count beside it needs the same numbers per status anyway. */
+        $statusCounts = Project::query()
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+        $healthCounts = Project::query()
+            ->selectRaw('health, COUNT(*) as aggregate')
+            ->groupBy('health')
+            ->pluck('aggregate', 'health');
+
         $stats = [
-            'total' => Project::count(),
-            'in_progress' => Project::where('status', 'in_progress')->count(),
-            'waiting' => Project::whereIn('status', ['waiting_client', 'waiting_vendor'])->count(),
-            'completed' => Project::where('status', 'completed')->count(),
+            'total' => (int) $statusCounts->sum(),
+            'in_progress' => (int) ($statusCounts['in_progress'] ?? 0),
+            'waiting' => (int) ($statusCounts['waiting_client'] ?? 0) + (int) ($statusCounts['waiting_vendor'] ?? 0),
+            'completed' => (int) ($statusCounts['completed'] ?? 0),
         ];
 
-        return view('projects.index', array_merge($this->sharedData(), compact('projects', 'stats', 'search', 'status', 'clientId', 'health')));
+        return view('projects.index', array_merge($this->sharedData(), compact(
+            'projects', 'stats', 'statusCounts', 'healthCounts', 'search', 'status', 'clientId', 'health'
+        )));
     }
 
     public function create(Request $request): View
