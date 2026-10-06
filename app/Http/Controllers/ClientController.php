@@ -561,7 +561,7 @@ class ClientController extends Controller
 
         $client->update($data);
 
-        app(\App\Services\OfficeBriefing::class)->kycSubmitted($client->fresh());
+        \App\Events\KycWasSubmitted::dispatch($client->fresh());
 
         return redirect()
             ->route('clients.publicKyc', $client->public_token)

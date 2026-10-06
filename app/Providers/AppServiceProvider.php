@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Listeners\OfficeBriefingSubscriber;
 use App\Services\OfficeBriefing;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -34,6 +36,8 @@ class AppServiceProvider extends ServiceProvider
          | Shared with all views so any module can opt in:
          |   <link rel="stylesheet" href="{{ $assetVer('assets/css/x.css') }}">
          */
+        Event::subscribe(OfficeBriefingSubscriber::class);
+
         View::share('assetVer', function (string $path): string {
             $url = asset($path);
             $stamp = @filemtime(public_path($path));

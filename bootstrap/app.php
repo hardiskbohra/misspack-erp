@@ -11,6 +11,9 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withEvents(discover: [
+        __DIR__.'/../app/Listeners',
+    ])
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'client.portal' => \App\Http\Middleware\ClientPortalAuthenticate::class,
