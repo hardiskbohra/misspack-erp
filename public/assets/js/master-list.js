@@ -410,8 +410,10 @@ window.MasterList = (function () {
             if (!host) return;
 
             var listRoot = table.closest('.master-list');
+            var densityOff = table.getAttribute('data-table-density') === 'off'
+                || (listRoot && listRoot.getAttribute('data-table-density') === 'off');
             var hasDensityButtons = listRoot && listRoot.querySelector('.master-list-density-btn');
-            if (!hasDensityButtons && !host.querySelector('.core-table-density')) {
+            if (!densityOff && !hasDensityButtons && !host.querySelector('.core-table-density')) {
                 createDensityControl(host, table);
             }
             createColumnChooser(table, host);

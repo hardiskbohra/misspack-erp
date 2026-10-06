@@ -12,7 +12,6 @@
 @section('content')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/employees.css') }}">
-    <link rel="stylesheet" href="{{ $assetVer('assets/css/users.css') }}">
     <link rel="stylesheet" href="{{ $assetVer('assets/css/office-services.css') }}">
 @endpush
 
@@ -31,7 +30,7 @@
     <div hidden data-open-dialog="add"></div>
 @endif
 
-<div class="office-services user-index master-list">
+<div class="office-services master-list" data-density="comfortable">
 
     <div class="master-stats desktop-only">
         <div class="master-stat master-stat--flat blue">
@@ -148,17 +147,11 @@
     <div class="master-card master-table-card master-card--flat">
         <div class="master-list-toolbar">
             <p class="master-list-hint">Facility retainers — not employees, not purchase vendors</p>
-            <div class="master-list-toolbar-actions">
-                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
-                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
-                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
-                </div>
-            </div>
+            <div class="master-list-toolbar-actions"></div>
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table" data-table-settings data-table-key="office-services">
+            <table class="master-table" data-table-settings data-table-key="office-services" data-table-density="off" data-density="comfortable">
                 <thead>
                     <tr>
                         <th scope="col">Service</th>
