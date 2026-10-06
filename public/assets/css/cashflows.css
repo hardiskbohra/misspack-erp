@@ -1602,3 +1602,42 @@ a.cf-report-value:hover {
         flex: 1 1 0;
     }
 }
+
+/* Record page — identity, stats and tabs follow the team record. */
+.cf-record .emp-record-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.cf-record-avatar {
+    font-size: 11px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.cf-record-avatar.is-cash { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.cf-record-avatar.is-payment { background: linear-gradient(135deg, #4f83f1, #1d4ed8); }
+.cf-record-avatar.is-receipt { background: linear-gradient(135deg, #10b981, #047857); }
+
+.cf-record-nav {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.cf-status-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    max-width: 420px;
+}
+
+.cf-record .emp-card-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}

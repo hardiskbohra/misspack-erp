@@ -167,6 +167,40 @@ class CashflowEntry extends Model
             : $this->credit_amount), 2);
     }
 
+    public function isCashAccount(): bool
+    {
+        return ($this->account?->account_type ?? '') === 'cash';
+    }
+
+    public function voucherKind(): string
+    {
+        if (! $this->isMoneyOut()) {
+            return 'receipt';
+        }
+
+        return $this->isCashAccount() ? 'cash' : 'payment';
+    }
+
+    public function voucherTitle(): string
+    {
+        return match ($this->voucherKind()) {
+            'cash' => 'Cash voucher',
+            'receipt' => 'Receipt voucher',
+            default => 'Payment voucher',
+        };
+    }
+
+    public function voucherNumber(): string
+    {
+        $prefix = match ($this->voucherKind()) {
+            'cash' => 'CV',
+            'receipt' => 'RV',
+            default => 'PV',
+        };
+
+        return $prefix.'-'.str_pad((string) $this->id, 5, '0', STR_PAD_LEFT);
+    }
+
     /**
      * What this entry did for the person named on it: positive when the company
      * paid money out to them, negative when money came back from them.

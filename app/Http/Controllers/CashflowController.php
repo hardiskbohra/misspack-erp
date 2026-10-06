@@ -111,16 +111,34 @@ class CashflowController extends Controller
         ]));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         $entry = new CashflowEntry([
             'entry_date' => now()->toDateString(),
             'transaction_type' => 'debit',
-            'currency' => '₹',
+            'currency' => 'INR',
             'accounting_status' => 'pending',
             'payment_mode' => 'neft',
             'related_party_type' => 'other',
         ]);
+
+        $fromId = (int) $request->query('from');
+        if ($fromId > 0) {
+            $source = CashflowEntry::query()->find($fromId);
+            if ($source) {
+                $entry->fill($source->only([
+                    'particular', 'transaction_type', 'currency', 'account_id', 'category_id',
+                    'payment_mode', 'client_id', 'vendor_id', 'employee_id', 'office_service_id',
+                    'expense_head', 'related_party_type', 'related_party_name', 'project_id',
+                    'sales_invoice_id', 'invoice_bill_number', 'notes',
+                ]));
+                $entry->credit_amount = $source->credit_amount;
+                $entry->debit_amount = $source->debit_amount;
+                $entry->accounting_status = 'pending';
+                $entry->bank_reference_number = null;
+                $entry->entry_date = now()->toDateString();
+            }
+        }
 
         return view('cashflows.form', array_merge($this->sharedData(), compact('entry')));
     }
@@ -186,18 +204,41 @@ class CashflowController extends Controller
         return redirect()->route('cashflows.show', $entry)->with('success', 'Quick cashflow entry created successfully.');
     }
 
-    public function show(CashflowEntry $cashflow): View
+    public function show(Request $request, CashflowEntry $cashflow): View
     {
-        $with = ['account', 'category', 'creator', 'attachments.uploader'];
+        $with = ['account', 'category', 'creator', 'attachments.uploader', 'employee', 'project', 'salesInvoice'];
         if ($this->clientModelAvailable()) $with[] = 'client';
         if ($this->vendorModelAvailable()) $with[] = 'vendor';
+        if (Schema::hasTable('office_services')) $with[] = 'officeService';
         $cashflow->load($with);
+
+        $tabs = [
+            'overview' => 'Overview',
+            'documents' => 'Documents',
+            'related' => 'Related',
+        ];
+        $tab = (string) $request->query('tab', 'overview');
+        if (! array_key_exists($tab, $tabs)) {
+            $tab = 'overview';
+        }
+
+        $related = $this->relatedEntries($cashflow);
+        $missing = $this->recordGaps($cashflow);
 
         return view('cashflows.show', array_merge($this->sharedData(), [
             'entry' => $cashflow,
+            'tab' => $tab,
+            'tabs' => $tabs,
+            'tabCounts' => [
+                'documents' => $cashflow->attachments->count(),
+                'related' => $related->count(),
+            ],
+            'relatedEntries' => $related,
+            'missing' => $missing,
+            'previousEntry' => $this->neighbourEntry($cashflow, 'prev'),
+            'nextEntry' => $this->neighbourEntry($cashflow, 'next'),
+            'typeMonthTotal' => $this->typeMonthTotal($cashflow),
             'documentTypeOptions' => CashflowAttachment::documentTypeOptions(),
-            /* the newest documents filed without an entry, so this page can
-               claim one: a bill that arrived before its payment did */
             'unlinkedDocuments' => CashflowAttachment::query()
                 ->unlinked()
                 ->orderByDesc('created_at')
@@ -206,6 +247,64 @@ class CashflowController extends Controller
             'linkedVendorPayment' => app(VendorPaymentCashflowSync::class)->linkedPaymentFor($cashflow),
             'linkedShipmentCost' => app(\App\Services\ShipmentCostCashflowSync::class)->linkedCostFor($cashflow),
         ]));
+    }
+
+    public function voucher(CashflowEntry $cashflow): View
+    {
+        $with = ['account', 'category', 'creator', 'client', 'vendor', 'employee'];
+        if (Schema::hasTable('office_services')) {
+            $with[] = 'officeService';
+        }
+        $cashflow->load($with);
+
+        return view('cashflows.voucher', [
+            'entry' => $cashflow,
+            'paymentModeOptions' => $this->masterOptions('payment_mode', CashflowEntry::paymentModeOptions()),
+        ]);
+    }
+
+    public function expenseStatement(CashflowEntry $cashflow): View
+    {
+        $cashflow->load(['account', 'category']);
+        $from = now()->month >= 4
+            ? now()->copy()->month(4)->day(1)->startOfDay()
+            : now()->copy()->subYear()->month(4)->day(1)->startOfDay();
+        $to = $from->copy()->addYear()->subDay()->endOfDay();
+
+        $rows = CashflowEntry::query()
+            ->with(['account', 'category'])
+            ->where('transaction_type', 'debit')
+            ->whereBetween('entry_date', [$from->toDateString(), $to->toDateString()])
+            ->when($cashflow->category_id, fn ($q) => $q->where('category_id', $cashflow->category_id))
+            ->when(! $cashflow->category_id && $cashflow->expense_head, fn ($q) => $q->where('expense_head', $cashflow->expense_head))
+            ->when(! $cashflow->category_id && ! $cashflow->expense_head, fn ($q) => $q->where('id', $cashflow->id))
+            ->orderBy('entry_date')
+            ->orderBy('id')
+            ->get();
+
+        return view('cashflows.expense-statement', [
+            'entry' => $cashflow,
+            'rows' => $rows,
+            'from' => $from,
+            'to' => $to,
+            'head' => $cashflow->category?->name ?: ($cashflow->expense_head ?: 'Uncategorized'),
+            'total' => (float) $rows->sum('debit_amount'),
+        ]);
+    }
+
+    public function duplicate(CashflowEntry $cashflow): RedirectResponse
+    {
+        return redirect()->route('cashflows.create', ['from' => $cashflow->id]);
+    }
+
+    public function updateStatus(Request $request, CashflowEntry $cashflow): RedirectResponse
+    {
+        $data = $request->validate([
+            'accounting_status' => ['required', Rule::in($this->masterKeys('accounting_status', array_keys(CashflowEntry::accountingStatusOptions())))],
+        ]);
+        $cashflow->update($data);
+
+        return back()->with('success', 'Status set to '.$cashflow->statusLabel().'.');
     }
 
     public function edit(CashflowEntry $cashflow): View
@@ -601,6 +700,93 @@ class CashflowController extends Controller
         app(SavedViews::class)->delete((int) Auth::id(), (int) $savedView->id);
 
         return back()->with('success', 'Saved view removed.');
+    }
+
+    private function relatedEntries(CashflowEntry $entry)
+    {
+        $query = CashflowEntry::query()
+            ->with(['account', 'category'])
+            ->where('id', '!=', $entry->id)
+            ->orderByDesc('entry_date')
+            ->orderByDesc('id')
+            ->limit(12);
+
+        $matched = false;
+        foreach (CashflowEntry::partyLinkColumns() as $column) {
+            if (! Schema::hasColumn('cashflow_entries', $column)) {
+                continue;
+            }
+            if (! empty($entry->{$column})) {
+                $query->where($column, $entry->{$column});
+                $matched = true;
+                break;
+            }
+        }
+        if (! $matched && $entry->category_id) {
+            $query->where('category_id', $entry->category_id)
+                ->whereMonth('entry_date', optional($entry->entry_date)->month ?? now()->month)
+                ->whereYear('entry_date', optional($entry->entry_date)->year ?? now()->year);
+            $matched = true;
+        }
+        if (! $matched) {
+            return collect();
+        }
+
+        return $query->get();
+    }
+
+    private function recordGaps(CashflowEntry $entry): array
+    {
+        $gaps = [];
+        if ($entry->attachments->isEmpty()) {
+            $gaps[] = 'Supporting document';
+        }
+        if (($entry->accounting_status ?? '') === 'pending') {
+            $gaps[] = 'Accounting status still pending';
+        }
+        if ($entry->partyLabel() === '') {
+            $gaps[] = 'Related party';
+        }
+        if (! $entry->category_id && ! $entry->expense_head) {
+            $gaps[] = 'Category or expense head';
+        }
+
+        return $gaps;
+    }
+
+    private function neighbourEntry(CashflowEntry $entry, string $direction): ?CashflowEntry
+    {
+        $query = CashflowEntry::query()->where('account_id', $entry->account_id);
+        if ($direction === 'prev') {
+            return $query->where(function ($q) use ($entry) {
+                $q->where('entry_date', '<', $entry->entry_date)
+                    ->orWhere(function ($inner) use ($entry) {
+                        $inner->where('entry_date', $entry->entry_date)->where('id', '<', $entry->id);
+                    });
+            })->orderByDesc('entry_date')->orderByDesc('id')->first();
+        }
+
+        return $query->where(function ($q) use ($entry) {
+            $q->where('entry_date', '>', $entry->entry_date)
+                ->orWhere(function ($inner) use ($entry) {
+                    $inner->where('entry_date', $entry->entry_date)->where('id', '>', $entry->id);
+                });
+        })->orderBy('entry_date')->orderBy('id')->first();
+    }
+
+    private function typeMonthTotal(CashflowEntry $entry): float
+    {
+        if (! $entry->entry_date) {
+            return 0;
+        }
+
+        return (float) CashflowEntry::query()
+            ->where('transaction_type', $entry->transaction_type)
+            ->when($entry->category_id, fn ($q) => $q->where('category_id', $entry->category_id))
+            ->when(! $entry->category_id && $entry->expense_head, fn ($q) => $q->where('expense_head', $entry->expense_head))
+            ->whereYear('entry_date', $entry->entry_date->year)
+            ->whereMonth('entry_date', $entry->entry_date->month)
+            ->sum($entry->isMoneyOut() ? 'debit_amount' : 'credit_amount');
     }
 
     /**

@@ -354,6 +354,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/cashflows/accounts', [CashflowController::class, 'storeAccount'])->name('cashflows.accounts.store');
         Route::post('/cashflows/categories', [CashflowController::class, 'storeCategory'])->name('cashflows.categories.store');
         Route::post('/cashflows/bulk', [CashflowController::class, 'bulk'])->name('cashflows.bulk');
+        Route::get('/cashflows/{cashflow}/voucher', [CashflowController::class, 'voucher'])->name('cashflows.voucher');
+        Route::get('/cashflows/{cashflow}/expense-statement', [CashflowController::class, 'expenseStatement'])->name('cashflows.expenseStatement');
+        Route::post('/cashflows/{cashflow}/duplicate', [CashflowController::class, 'duplicate'])->name('cashflows.duplicate');
+        Route::patch('/cashflows/{cashflow}/status', [CashflowController::class, 'updateStatus'])->name('cashflows.status');
         Route::resource('cashflows', CashflowController::class);
     });
 
