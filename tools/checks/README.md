@@ -32,6 +32,11 @@ node tools/checks/pdf-documents-check.cjs # shared PDF paper/actions, A4 typogra
 node tools/checks/report-check.cjs    # the report builder: a cell sums the same rows it opens,
                                       # a bucket is dates and not a dialect, a comparison is the
                                       # axis shifted, and "not set" is a row you can drill
+node tools/checks/feedback-check.cjs  # the feedback module: the link is the whole of the
+                                      # authentication, one ask has one answer, the band is
+                                      # computed rather than stored, a detractor is never a dead
+                                      # end, consent is checked where the words are used, a score
+                                      # gates nothing, and the screen and the CSV are one query
 node tools/checks/employees-check.cjs # the employee side of the user module: the office door is
                                       # on the whole admin group, no personal route takes a user id,
                                       # a file is ownership-checked before it is served, a draft

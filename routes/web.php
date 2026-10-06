@@ -33,6 +33,9 @@ use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectTrackingController;
 use App\Http\Controllers\ProjectMilestoneController;
 use App\Http\Controllers\PublicProjectController;
+use App\Http\Controllers\PublicFeedbackController;
+use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\ClientPortalFeedbackController;
 use App\Http\Controllers\ClientPortalAuthController;
 use App\Http\Controllers\ClientPortalAccountController;
 use App\Http\Controllers\ClientPortalSupportController;
@@ -94,6 +97,22 @@ Route::get('/statement/{token}', [PartyStatementController::class, 'publicShow']
     ->name('statements.public');
 Route::post('/project-portal/{token}/comments', [PublicProjectController::class, 'storeComment'])->name('projects.public.comments.store');
 Route::post('/project-portal/{token}/attachments', [PublicProjectController::class, 'storeAttachment'])->name('projects.public.attachments.store');
+
+/* The feedback link. Outside auth for the same reason a statement link is: the
+   person answering is a client, not a user of this ERP. The token is the whole
+   of the authentication — 48 characters, expiring, revocable, every open
+   counted — and the constraint keeps `/feedback/export` reading as an office
+   page rather than as somebody's token. */
+Route::get('/feedback/{token}', [PublicFeedbackController::class, 'show'])
+    ->where('token', '[A-Za-z0-9]{20,80}')
+    ->name('feedback.public.show');
+Route::post('/feedback/{token}', [PublicFeedbackController::class, 'store'])
+    ->where('token', '[A-Za-z0-9]{20,80}')
+    ->middleware('throttle:10,1')
+    ->name('feedback.public.store');
+Route::get('/feedback/{token}/thanks', [PublicFeedbackController::class, 'thanks'])
+    ->where('token', '[A-Za-z0-9]{20,80}')
+    ->name('feedback.public.thanks');
 
 // ── Protected ────────────────────────────────────────────────
 Route::middleware('auth')->group(function () {
@@ -333,6 +352,29 @@ Route::middleware('auth')->group(function () {
         Route::patch('/project-milestones/{milestone}', [ProjectMilestoneController::class, 'update'])->name('projects.milestones.update');
         Route::delete('/project-milestones/{milestone}', [ProjectMilestoneController::class, 'destroy'])->name('projects.milestones.destroy');
     
+        /* Feedback Management.
+
+           The link and the answer are two rows, so they are two resources: an
+           ask is issued, reminded and revoked; an answer is read, consented and
+           acted on. The vocabulary routes come before the wildcards, and every
+           route name here is `feedback.*` so the sidebar can light one item for
+           the whole module. */
+        Route::get('/feedback/export', [FeedbackController::class, 'export'])->name('feedback.export');
+        Route::get('/feedback/settings', [FeedbackController::class, 'settings'])->name('feedback.settings');
+        Route::post('/feedback/dimensions', [FeedbackController::class, 'storeDimension'])->name('feedback.dimensions.store');
+        Route::patch('/feedback/dimensions/{dimension}', [FeedbackController::class, 'updateDimension'])->name('feedback.dimensions.update');
+        Route::delete('/feedback/dimensions/{dimension}', [FeedbackController::class, 'destroyDimension'])->name('feedback.dimensions.destroy');
+        Route::post('/projects/{project}/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
+        Route::get('/feedback/asks/{feedbackRequest}', [FeedbackController::class, 'show'])->name('feedback.show');
+        Route::patch('/feedback-requests/{feedbackRequest}/revoke', [FeedbackController::class, 'revoke'])->name('feedback.revoke');
+        Route::patch('/feedback-requests/{feedbackRequest}/shared', [FeedbackController::class, 'markShared'])->name('feedback.shared');
+        Route::post('/feedback-requests/{feedbackRequest}/remind', [FeedbackController::class, 'remind'])->name('feedback.remind');
+        Route::delete('/feedback-requests/{feedbackRequest}', [FeedbackController::class, 'destroy'])->name('feedback.destroy');
+        Route::patch('/feedback-responses/{feedbackResponse}/consent', [FeedbackController::class, 'updateConsent'])->name('feedback.consent');
+        Route::post('/feedback-responses/{feedbackResponse}/actions', [FeedbackController::class, 'storeAction'])->name('feedback.actions.store');
+        Route::patch('/feedback-actions/{feedbackAction}', [FeedbackController::class, 'updateAction'])->name('feedback.actions.update');
+        Route::get('/feedback', [FeedbackController::class, 'index'])->name('feedback.index');
+
         Route::resource('projects', ProjectController::class);
 
         // Cashflow Management
@@ -489,6 +531,13 @@ Route::prefix('client-portal')->name('client-portal.')->group(function () {
         /* Their own statement of account, without needing a link: the same
            document the Share button produces, from the same service. */
         Route::get('/statement', [ClientPortalStatementController::class, 'index'])->name('statement.index');
+        /* The same ask, answered from inside their own workspace: the office
+           issues it either way, and both doors write the same row. */
+        Route::get('/feedback', [ClientPortalFeedbackController::class, 'index'])->name('feedback.index');
+        Route::get('/feedback/{feedbackRequest}', [ClientPortalFeedbackController::class, 'show'])->name('feedback.show');
+        Route::post('/feedback/{feedbackRequest}', [ClientPortalFeedbackController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('feedback.store');
         Route::get('/kyc', [ClientPortalKycController::class, 'show'])->name('kyc.show');
 
         Route::get('/notifications', [ClientPortalNotificationController::class, 'index'])->name('notifications.index');

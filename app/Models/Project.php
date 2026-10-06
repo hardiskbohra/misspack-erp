@@ -144,6 +144,24 @@ class Project extends Model
         return $this->hasMany(ProjectLog::class)->latest('id');
     }
 
+    /**
+     * What the client has been asked, and what they said.
+     *
+     * Read-only relations: nothing here creates or deletes a feedback row, and
+     * `destroy()` deliberately does not touch them — an answer is the client's
+     * words about us and outlives the project it was about (the foreign key
+     * nulls `project_id` instead of cascading).
+     */
+    public function feedbackRequests()
+    {
+        return $this->hasMany(FeedbackRequest::class)->latest('id');
+    }
+
+    public function feedbackResponses()
+    {
+        return $this->hasMany(FeedbackResponse::class)->latest('submitted_at');
+    }
+
     public function assignedUser()
     {
         return $this->belongsTo(User::class, 'assigned_to');

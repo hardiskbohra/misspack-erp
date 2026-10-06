@@ -93,6 +93,11 @@
             ['label' => 'Tasks', 'route' => 'tasks.index', 'active' => 'tasks.*', 'icon' => 'fa-solid fa-layer-group'],
             ['label' => 'Products', 'route' => 'products.index', 'active' => 'products.*', 'icon' => 'fas fa-box-open'],
             ['label' => 'Shipments', 'route' => 'shipments.index', 'active' => 'shipments.*', 'icon' => 'fas fa-truck'],
+            /* What clients said when the project closed. Management, not Sales:
+               the queue is a thing to work, and the person who works it is not
+               always the person who sold it. The public form is excluded so a
+               user testing a link does not light the office item. */
+            ['label' => 'Feedback', 'route' => 'feedback.index', 'active' => 'feedback.*', 'except' => ['feedback.public.*'], 'icon' => 'fa-regular fa-comment-dots'],
             ['section' => 'Sales'],
             ['label' => 'Clients', 'route' => 'clients.index', 'active' => 'clients.*', 'icon' => 'fa-solid fa-users'],
             ['label' => 'Projects', 'route' => 'projects.index', 'active' => 'projects.*', 'icon' => 'fa-solid fa-briefcase'],

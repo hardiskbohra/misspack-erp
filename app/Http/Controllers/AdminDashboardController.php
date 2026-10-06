@@ -1082,6 +1082,22 @@ class AdminDashboardController extends Controller
             $alerts[] = ['level' => 'danger', 'title' => 'Overdue tasks', 'message' => $overdue.' task(s) are overdue.', 'url' => Route::has('tasks.index') ? route('tasks.index') : '#'];
         }
 
+        /* The one feedback figure that belongs on a dashboard: not the average,
+           which nobody can act on, but how many clients scored us low and have
+           nobody working on it. */
+        if ($this->hasModelTable(\App\Models\FeedbackResponse::class, 'feedback_responses')) {
+            $unowned = (int) \App\Models\FeedbackResponse::query()->needsAttention()->count();
+
+            if ($unowned > 0) {
+                $alerts[] = [
+                    'level' => 'danger',
+                    'title' => 'Client feedback unanswered',
+                    'message' => $unowned.' low score(s) have no follow-up yet.',
+                    'url' => Route::has('feedback.index') ? route('feedback.index', ['band' => 'attention']) : '#',
+                ];
+            }
+        }
+
         return array_slice($alerts, 0, 10);
     }
 
@@ -1096,6 +1112,7 @@ class AdminDashboardController extends Controller
             ['name' => 'Shipments', 'installed' => $this->hasModelTable(\App\Models\Shipment::class, 'shipments'), 'count' => $this->count(\App\Models\Shipment::class, 'shipments'), 'route' => $this->routeUrl('shipments.index')],
             ['name' => 'Cashflow', 'installed' => $this->hasModelTable(\App\Models\CashflowEntry::class, 'cashflow_entries'), 'count' => $this->count(\App\Models\CashflowEntry::class, 'cashflow_entries'), 'route' => $this->routeUrl('cashflows.index')],
             ['name' => 'Vendors', 'installed' => $this->hasModelTable(\App\Models\Vendor::class, 'vendors'), 'count' => $this->count(\App\Models\Vendor::class, 'vendors'), 'route' => $this->routeUrl('vendors.index')],
+            ['name' => 'Feedback', 'installed' => $this->hasModelTable(\App\Models\FeedbackRequest::class, 'feedback_requests'), 'count' => $this->count(\App\Models\FeedbackRequest::class, 'feedback_requests'), 'route' => $this->routeUrl('feedback.index')],
         ];
     }
 

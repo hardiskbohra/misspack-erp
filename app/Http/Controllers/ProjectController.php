@@ -188,12 +188,23 @@ class ProjectController extends Controller
             $with[] = 'shipments';
         }
 
+        /* The feedback tab: the asks and what came back. Guarded like every other
+           optional module on this page, so a deployment without the migrations
+           renders the project instead of failing on a missing table. */
+        if (class_exists(\App\Models\FeedbackRequest::class) && Schema::hasTable('feedback_requests')) {
+            $with[] = 'feedbackRequests.response.answers';
+            $with[] = 'feedbackRequests.response.actions';
+        }
+
         $project->load($with);
         if (! $project->relationLoaded('milestones')) {
             $project->setRelation('milestones', collect());
         }
         if (! $project->relationLoaded('shipments')) {
             $project->setRelation('shipments', collect());
+        }
+        if (! $project->relationLoaded('feedbackRequests')) {
+            $project->setRelation('feedbackRequests', collect());
         }
 
         return view('projects.show', array_merge($this->sharedData(), ['project' => $project]));
@@ -258,6 +269,16 @@ class ProjectController extends Controller
 
         $project->update($data);
         $this->writeLog($project, 'status_updated', 'Project status updated', 'Status/stage/progress was updated.', $old, $data, true);
+
+        /* Marking a project complete is the moment the feedback ask is worth
+           making, so the message says where it is. An offer, never automatic: a
+           project can be closed before the client has the goods in hand. */
+        if ($data['status'] === 'completed'
+            && class_exists(\App\Models\FeedbackRequest::class)
+            && Schema::hasTable('feedback_requests')
+            && ! \App\Models\FeedbackRequest::query()->forProject($project->id)->live()->exists()) {
+            return back()->with('success', 'Project completed. Ask for feedback while it is fresh — the Feedback tab on this project has the link.');
+        }
 
         return back()->with('success', 'Project status updated successfully.');
     }

@@ -130,6 +130,8 @@
                     <span>{{ $project->shipments->count() }}</span></button>
                 <button type="button" class="pd-tab-btn" data-tab="tracking" role="tab" aria-selected="false">Activities
                     <span>{{ $project->trackingUpdates->count() }}</span></button>
+                <button type="button" class="pd-tab-btn" data-tab="feedback" role="tab" aria-selected="false">Feedback
+                    <span>{{ ($project->feedbackRequests ?? collect())->count() }}</span></button>
                 <button type="button" class="pd-tab-btn" data-tab="logs" role="tab" aria-selected="false">Logs
                     <span>{{ $project->logs->count() }}</span></button>
             </div>
@@ -1294,6 +1296,10 @@
                             </table>
                         </div>
                     </div>
+                </section>
+
+                <section class="pd-tab-panel" id="pd-tab-feedback" data-tab-panel="feedback" role="tabpanel">
+                    @include('projects.partials.feedback-tab', ['project' => $project])
                 </section>
 
                 <section class="pd-tab-panel" id="pd-tab-logs" data-tab-panel="logs" role="tabpanel">

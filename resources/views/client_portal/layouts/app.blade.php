@@ -68,6 +68,7 @@
             <a href="{{ route('client-portal.payments.index') }}" class="cp-nav-link {{ request()->routeIs('client-portal.payments.*') ? 'active' : '' }}"><i class="fa-solid fa-arrow-right-arrow-left"></i><span>Payments</span></a>
             <a href="{{ route('client-portal.statement.index') }}" class="cp-nav-link {{ request()->routeIs('client-portal.statement.*') ? 'active' : '' }}"><i class="fa-solid fa-scale-balanced"></i><span>Statement</span></a>
             <a href="{{ route('client-portal.attachments.index') }}" class="cp-nav-link {{ request()->routeIs('client-portal.attachments.*') ? 'active' : '' }}"><i class="fa-solid fa-folder-open"></i><span>Documents</span></a>
+            <a href="{{ route('client-portal.feedback.index') }}" class="cp-nav-link {{ request()->routeIs('client-portal.feedback.*') ? 'active' : '' }}"><i class="fa-regular fa-comment-dots"></i><span>Feedback</span></a>
 
             <div class="cp-nav-section">Stay in touch</div>
             <a href="{{ route('client-portal.support.index') }}" class="cp-nav-link {{ request()->routeIs('client-portal.support.*') ? 'active' : '' }}"><i class="fa-regular fa-comments"></i><span>Support inbox</span><span class="cp-nav-pulse"></span></a>

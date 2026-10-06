@@ -593,6 +593,7 @@ check('the seed never overwrites an employment record somebody edited',
 const declaredColumns = (() => {
     const columns = new Set();
     const types = 'string|text|longText|mediumText|integer|bigInteger|unsignedBigInteger|unsignedInteger|tinyInteger|smallInteger|'
+        + 'unsignedTinyInteger|unsignedSmallInteger|'
         + 'boolean|date|dateTime|timestamp|decimal|double|float|json|enum|foreignId|foreignUuid|uuid|binary|ipAddress|rememberToken';
 
     fs.readdirSync(path.join(ROOT, 'database/migrations')).forEach(file => {
