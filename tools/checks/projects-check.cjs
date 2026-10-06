@@ -576,6 +576,13 @@ check('the second door into a dialog exists',
    someone happened to make. */
 const webRoutes = read('routes/web.php');
 const declaredRoutes = new Set([...webRoutes.matchAll(/name\('([a-z0-9_.-]+)'\)/g)].map(m => m[1]));
+/* A route written inside a `Route::prefix(…)->name('group.')` group is declared
+   with the short name and referenced with the full one — `client-portal.login`
+   for a `->name('login')` inside that group — so the group's prefix is opened
+   against every name the file declares. Only a name built from a real prefix
+   and a real name is accepted; a typo matches nothing. */
+const routeNamePrefixes = [...webRoutes.matchAll(/->name\('([a-z0-9_.-]+\.)'\)/g)].map(m => m[1]);
+routeNamePrefixes.forEach(prefix => [...declaredRoutes].forEach(name => declaredRoutes.add(prefix + name)));
 const resourceBases = [...webRoutes.matchAll(/Route::resource\('([a-z-]+)'/g)].map(m => m[1]);
 const doorsUsed = [...(recordViews + milestoneViews).matchAll(/route\('([a-z0-9_.-]+)'/g)]
     .map(m => m[1].replace(/['\s)]+$/, ''));
@@ -596,6 +603,28 @@ const deleteForms = [...(recordViews + milestoneViews).matchAll(/<form[\s\S]*?<\
 check('a destructive action asks first',
     deleteForms.length >= 5
     && deleteForms.every(form => /data-confirm=/.test(form) || /master-modal-footer/.test(form)));
+
+/* The public project portal is gone — the client follows a project by signing
+   in, and `projects.show_client_portal` is the door the login portal reads. A
+   token link left anywhere (a route name, a column, a copy button) is a door
+   that 404s, so the removal is checked rather than assumed, and the flag is
+   checked as still read where the portal decides what to show. */
+const portalCorpus = [
+    read('routes/web.php'),
+    read('app/Models/Project.php'),
+    read('app/Http/Controllers/ProjectController.php'),
+    showView,
+    read('resources/views/projects/partials/record-overview.blade.php'),
+    read('public/assets/js/projects.js'),
+].join('\n');
+
+check('the client follows a project in the login portal, not through a token link',
+    ! /project-portal|projects\.public|public_token|publicPayments/.test(portalCorpus)
+    && ! exists('app/Http/Controllers/PublicProjectController.php')
+    && ! exists('resources/views/projects/public.blade.php')
+    && /show_client_portal/.test(portalCorpus + read('resources/views/projects/form.blade.php'))
+    && /route\('client-portal\.login'\)/.test(recordViews)
+    && /where\('show_client_portal', true\)/.test(read('app/Http/Controllers/ClientPortalProjectController.php')));
 
 check('the status form keeps its four facts, in the shared drawer',
     /<x-drawer id="projectStatusDrawer"/.test(showView)

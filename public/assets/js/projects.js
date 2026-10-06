@@ -75,33 +75,6 @@
     }
 
     /* ------------------------------------------------------------------
-       Project detail — copy portal link
-       ------------------------------------------------------------------ */
-    function initCopyPortalLink() {
-        var copyBtn = document.getElementById('copyPortalLink');
-        if (!copyBtn) return;
-        var input = document.getElementById('portalLinkInput');
-        if (!input) return;
-
-        copyBtn.addEventListener('click', function () {
-            input.select();
-            input.setSelectionRange(0, 99999);
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(input.value).catch(function () {
-                    document.execCommand('copy');
-                });
-            } else {
-                document.execCommand('copy');
-            }
-            var original = copyBtn.innerHTML;
-            copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
-            setTimeout(function () {
-                copyBtn.innerHTML = original;
-            }, 1800);
-        });
-    }
-
-    /* ------------------------------------------------------------------
        Project detail — add/edit modals (standard .master-modal dialogs)
        Open triggers + form prefill live here; the shared master-* modal
        layer (app-layout.js) owns open/close state, backdrop, Escape and
@@ -384,7 +357,6 @@
     onReady(function () {
         initProjectList();
         initDeleteConfirm();
-        initCopyPortalLink();
         initDetailModals();
         initMilestoneModal();
     });

@@ -6,7 +6,6 @@
 @section('content')
     @php
         $totals = $project->paymentTotals();
-        $portalUrl = route('projects.public.show', $project->public_token);
         $money = fn ($amount) => \App\Helpers\CommonHelper::amount($amount, $project->currency);
         $statusClass = str_replace('_', '-', (string) $project->status);
         $healthWord = \Illuminate\Support\Str::before($project->healthLabel(), ' /');
@@ -75,11 +74,6 @@
                 <a href="{{ route('projects.index') }}" class="master-btn master-btn-light">
                     <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Projects
                 </a>
-                @if ($project->show_client_portal)
-                    <a href="{{ $portalUrl }}" target="_blank" rel="noopener" class="master-btn master-btn-soft">
-                        <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Client portal
-                    </a>
-                @endif
                 <button type="button" class="master-btn master-btn-soft" data-drawer-open="projectStatusDrawer"
                     aria-haspopup="dialog" aria-controls="projectStatusDrawer" aria-expanded="false">
                     <i class="fa-solid fa-sliders" aria-hidden="true"></i> Update status

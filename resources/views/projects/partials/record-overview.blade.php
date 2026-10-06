@@ -95,11 +95,11 @@
                 </div>
             </section>
 
-            <section class="master-card master-card--flat project-detail-card" aria-labelledby="project-portal-heading">
+            <section class="master-card master-card--flat project-detail-card" aria-labelledby="project-client-portal-heading">
                 <div class="master-section-head">
                     <div>
-                        <h2 class="master-section-title" id="project-portal-heading">Client portal</h2>
-                        <p class="master-sub">The read-only page the client opens with a token link</p>
+                        <h2 class="master-section-title" id="project-client-portal-heading">Client portal</h2>
+                        <p class="master-sub">Where the client follows this project after signing in</p>
                     </div>
                     <div class="master-section-meta">
                         @if ($project->show_client_portal)
@@ -110,24 +110,28 @@
                     </div>
                 </div>
                 @if ($project->show_client_portal)
-                    <label class="master-field">
-                        <span class="master-label">Share link</span>
-                        <input class="master-input" type="text" value="{{ $portalUrl }}" readonly id="portalLinkInput"
-                            aria-label="Client portal link">
-                    </label>
-                    <div class="project-portal-actions">
-                        <button type="button" class="master-btn master-btn-soft master-btn-sm" id="copyPortalLink">
-                            <i class="fa-solid fa-copy" aria-hidden="true"></i> Copy link
-                        </button>
-                        <a class="master-btn master-btn-light master-btn-sm" href="{{ $portalUrl }}" target="_blank" rel="noopener">
-                            <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Open portal
+                    <div class="master-facts">
+                        <div class="master-info"><span>Visible to</span><strong>{{ $project->clientName() }}</strong></div>
+                        <div class="master-info"><span>Client signs in at</span>
+                            <strong>{{ route('client-portal.login') }}</strong></div>
+                    </div>
+                    <div class="project-client-portal-actions">
+                        <a class="master-btn master-btn-light master-btn-sm" href="{{ route('client-portal.login') }}"
+                            target="_blank" rel="noopener">
+                            <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Open sign-in page
                         </a>
+                        @if ($project->client_id && \Illuminate\Support\Facades\Route::has('clients.portal.show'))
+                            <a class="master-btn master-btn-soft master-btn-sm"
+                                href="{{ route('clients.portal.show', $project->client_id) }}">
+                                <i class="fa-solid fa-user-shield" aria-hidden="true"></i> Manage client access
+                            </a>
+                        @endif
                     </div>
                 @else
                     <div class="master-empty-state">
                         <i class="fa-solid fa-eye-slash" aria-hidden="true"></i>
-                        <p>The portal is hidden for this project. Turn it on from the project form and the client can follow
-                        progress with this token link.</p>
+                        <p>Hidden from the client portal. Turn it on from the project form and the client follows this
+                        project's progress after signing in.</p>
                         <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('projects.edit', $project) }}">
                             <i class="fa-solid fa-pen" aria-hidden="true"></i> Edit project
                         </a>

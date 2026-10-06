@@ -10,7 +10,7 @@ It follows the house rule that a module is a *vocabulary plus one writer per
 fact*, and it borrows its link model from [statement shares](cashflow-ux-roadmap.md)
 rather than inventing a second one.
 
-Read this with `app/Models/PartyStatementShare.php`, `PublicProjectController.php` and
+Read this with `app/Models/PartyStatementShare.php`, `app/Http/Controllers/PartyStatementController.php` and
 `tools/checks/statement-check.cjs` open — three quarters of the machinery below is
 those three files in a different suit.
 
@@ -48,7 +48,7 @@ Do not build a second version of anything in this list.
 | --- | --- |
 | A link that *is* the authentication | `PartyStatementShare` — long token, `expires_at`, `revoked_at`, view counting, `state()`/`stateLabel()`, `whatsappUrl()`, `mailUrl()` |
 | A public page with no app chrome | `resources/views/statements/public.blade.php`, `statements/expired.blade.php`, `public/assets/css/statement.css` + `document-print.css` |
-| A client already holding a project link | `projects.public.show` (`/project-portal/{token}`) — the feedback link is the natural footer of that page |
+| A project screen the client already reads | the login portal's project record (`client_portal/projects/show.blade.php`) — the feedback ask is issued from the office's copy of that record, and the portal is where the client meets it |
 | A logged-in client | the `client.portal` middleware, `ClientPortalProjectController`, `ClientPortalNotifier` |
 | An audit trail the client can see | `ProjectLog` (`actor_type = client`, `is_public`) and the `logs` tab on the project |
 | Work with an owner | the `tasks` module, `assigned_to` on `Project` |

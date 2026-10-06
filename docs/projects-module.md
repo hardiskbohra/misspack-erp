@@ -128,6 +128,7 @@ fact the check reads, not a decoration.
 | Fact | Written by | Read by |
 | --- | --- | --- |
 | how many projects are in each status / health | `ProjectController::index()`'s two grouped queries | the left "figures" row, the status/health chips, the filter drawer |
+| whether the client sees this project | `projects.show_client_portal`, written by the project form | the login portal's dashboard, project list and record; the office record's *Client portal* card |
 | what a project is worth and what has been received | `Project::paymentTotals()` (`payments` + `cashflowEntries`) | the Value cell, the quick-details drawer, the project page |
 | what a row's relations are | the list's `with([...])` | the row, the drawer — `paymentTotals()` reuses the eager load instead of querying per project |
 
@@ -178,11 +179,12 @@ the tabbed project page and the milestones tab. It owns:
   colours are scoped to their own pages now, and the checks refuse a rule that
   places a shell class on its own.
 
-Two screens are still outside this file's scope: the form
-(`projects/form.blade.php`, `pf-*`) and the standalone client link
-(`projects/public.blade.php`, which is the client portal's branding, not the
-office's shell). Everything the record page renders is in scope — all ten
-panels are a `master-tab-panel` of shell cards — and the milestones sheet section keeps
+One screen is still outside this file's scope: the form
+(`projects/form.blade.php`, `pf-*`). The client's own view of a project is the
+login portal's screen (`client_portal/projects/show.blade.php`), which loads the
+portal's own sheets — there is no second, public copy of the record any more.
+Everything the record page renders is in scope — all ten panels are a
+`master-tab-panel` of shell cards — and the milestones sheet section keeps
 the stepper's own vocabulary (`pmile-step-*`, `pmile-current-*`,
 `pmile-product-head`, `pmile-head-actions`): a timeline drawn as a strip of
 connected steps is something no shared class describes. Those rules stay: the
@@ -193,7 +195,7 @@ portal's own sheet, and the static preview under `public/_preview/` still render
 
 ## Checks
 
-`tools/checks/projects-check.cjs` (53 checks) pins the composition above: the
+`tools/checks/projects-check.cjs` (54 checks) pins the composition above: the
 root is the master-list, the two cards sit in that order, the gap is not
 declared in the module's sheet, every chip carries its tally, the columns are
 named in the order the table draws them, the figures come from the grouped

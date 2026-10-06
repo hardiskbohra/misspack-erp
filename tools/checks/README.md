@@ -51,7 +51,9 @@ node tools/checks/projects-check.cjs  # the projects list is the shared master-l
                                       # models offer — light and dark, the feedback tab drawn as
                                       # a record panel instead of borrowing another sheet's
                                       # classes, the record mark's initials in the house idiom,
-                                      # and every class a screen names carried by a rule
+                                      # every class a screen names carried by a rule, and the
+                                      # client following a project through the login portal
+                                      # rather than the removed token link
 node tools/checks/employees-check.cjs # the employee side of the user module: the office door is
                                       # on the whole admin group, no personal route takes a user id,
                                       # a file is ownership-checked before it is served, a draft
@@ -174,3 +176,4 @@ guards actually fail when the behaviour they describe is broken.
 | A panel another sheet owns | the feedback tab renders inside the project record, which loads `projects.css` and never `feedback.css`: a class from another module's sheet is a class with no rules at all, so the tab is built from the record's vocabulary, owns its own `master-tab-panel` wrapper, and reads its band tones from the same state table as every other badge on the page |
 | A class a screen names has rules | a class left behind in the markup renders as nothing, and no reviewer reading the Blade can tell: every `project-*`/`pd-*`/`pmile-*`/`fb-*` class a module screen names is defined by a rule in one of the app's sheets or by another screen that names it, with dynamic compositions (`project-health-dot--{{ $key }}`) not counted as names |
 | A panel brings its own padding | the shared `.master-card` is a surface with no inset — a list card can be flush because its bars are padded instead — but a record panel holds facts, stats or a table directly, so every panel the record renders wears `.project-detail-card` and the card writes the guideline's 22/24 (16/18 on phones), the same inset the client and vendor records give their own cards |
+| A door is not left standing | the public project portal (`/project-portal/{token}`) is gone — the client follows a project by signing in — so no route name, column or copy button may survive it, and `projects.show_client_portal` is checked as still read by the login portal, because that flag is the reason the column stayed |

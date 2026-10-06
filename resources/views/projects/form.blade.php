@@ -164,8 +164,8 @@
                     <input type="checkbox" name="show_client_portal" value="1"
                         {{ old('show_client_portal', $project->show_client_portal) ? 'checked' : '' }}>
                     <span>
-                        <strong>Client Portal</strong>
-                        <small>Allow client to view project.</small>
+                        <strong>Client login portal</strong>
+                        <small>The client sees this project after signing in to the portal.</small>
                     </span>
                 </label>
             </div>

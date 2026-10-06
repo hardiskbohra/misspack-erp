@@ -16,8 +16,9 @@
    (`padding: 10px 14px`) on every projects screen, which is how a shared
    control ends up a different size on one module's pages.
 
-   The public client page (projects/public.blade.php) is standalone and has
-   its own projects-public.css — do not mix its element-level rules here.
+   The client's own view of a project is the login portal's screen
+   (client_portal/projects/show.blade.php), which loads the portal's sheets —
+   nothing here is shared with it.
    ========================================================================== */
 
 /* ==========================================================================
@@ -1201,7 +1202,7 @@
     gap: 0 14px
 }
 
-.project-portal-actions {
+.project-client-portal-actions {
     display: flex;
     align-items: center;
     gap: 8px;

@@ -12,7 +12,7 @@ class Project extends Model
     use HasFactory;
 
     protected $fillable = [
-        'project_number', 'public_token', 'client_id', 'name', 'status',
+        'project_number', 'client_id', 'name', 'status',
         'stage', 'priority', 'health', 'start_date', 'target_date', 'completed_at', 'currency',
         'estimated_value', 'budget_amount', 'progress_percent', 'scope_summary', 'deliverables',
         'client_notes', 'internal_notes', 'show_client_portal', 'assigned_to', 'created_by',
@@ -27,15 +27,6 @@ class Project extends Model
         'progress_percent' => 'integer',
         'show_client_portal' => 'boolean',
     ];
-
-    protected static function booted(): void
-    {
-        static::creating(function (Project $project) {
-            if (! $project->public_token) {
-                $project->public_token = Str::random(48);
-            }
-        });
-    }
 
     public function client()
     {
@@ -111,11 +102,6 @@ class Project extends Model
     public function shipments()
     {
         return $this->hasMany(\App\Models\Shipment::class, 'project_id')->latest('id');
-    }
-
-    public function publicPayments()
-    {
-        return $this->hasMany(ProjectPayment::class)->where('is_public', true)->latest('payment_date')->latest('id');
     }
 
     public function clientVisiblePayments()

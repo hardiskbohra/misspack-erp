@@ -30,7 +30,6 @@ use App\Http\Controllers\ProjectPaymentController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectTrackingController;
 use App\Http\Controllers\ProjectMilestoneController;
-use App\Http\Controllers\PublicProjectController;
 use App\Http\Controllers\PublicFeedbackController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ClientPortalFeedbackController;
@@ -83,8 +82,6 @@ Route::get('/lead-enquiry', [PublicLeadController::class, 'create'])->name('lead
 Route::get('/lead-public/{token}', [PublicLeadController::class, 'show'])->name('leads.public.show');
 Route::post('/lead-enquiry', [PublicLeadController::class, 'store'])->name('leads.public.store');
 
-Route::get('/project-portal/{token}', [PublicProjectController::class, 'show'])->name('projects.public.show');
-
 /* A statement of account, sent as a link. Outside auth on purpose: the
    accountant, the vendor's office and the client's finance person are not users
    of this ERP. The token is the whole of the authentication — long, revocable,
@@ -92,8 +89,6 @@ Route::get('/project-portal/{token}', [PublicProjectController::class, 'show'])-
 Route::get('/statement/{token}', [PartyStatementController::class, 'publicShow'])
     ->where('token', '[A-Za-z0-9]{20,80}')
     ->name('statements.public');
-Route::post('/project-portal/{token}/comments', [PublicProjectController::class, 'storeComment'])->name('projects.public.comments.store');
-Route::post('/project-portal/{token}/attachments', [PublicProjectController::class, 'storeAttachment'])->name('projects.public.attachments.store');
 
 /* The feedback link. Outside auth for the same reason a statement link is: the
    person answering is a client, not a user of this ERP. The token is the whole
