@@ -112,6 +112,7 @@
                account, in the currency their statement is kept in. */
             ['label' => 'Statements', 'route' => 'cashflows.statements', 'active' => 'cashflows.statements*', 'icon' => 'fa-solid fa-file-invoice'],
             ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'icon' => 'fas fa-users-cog'],
+            ['label' => 'Briefings', 'route' => 'office-alerts.settings', 'active' => 'office-alerts.settings*', 'icon' => 'fas fa-bell'],
         ];
     @endphp
     

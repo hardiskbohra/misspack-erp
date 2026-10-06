@@ -14,7 +14,7 @@
             <button type="button" class="ob-close" data-ob-close aria-label="Close">&times;</button>
         </div>
         <div class="ob-body" data-ob-list></div>
-        <p class="ob-foot">You only see your desk. Critical items clear for the office when one person marks them read. Snooze if you need time. The popup shows once per item until you act.</p>
+        <p class="ob-foot">You only see your desk. Critical items clear for the office when one person marks them read. Snooze if you need time. The popup shows once per item until you act. <a href="{{ route('office-alerts.settings') }}">Organisation settings</a></p>
     </div>
 </div>
 

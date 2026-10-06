@@ -49,6 +49,7 @@ use App\Http\Controllers\ClientPortalQuoteController;
 use App\Http\Controllers\ClientPortalShipmentController;
 use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\OfficeAlertController;
+use App\Http\Controllers\OfficeBriefingSettingController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
 
@@ -121,6 +122,8 @@ Route::middleware('auth')->group(function () {
         Route::patch('/office-alerts/{office_alert}/ack', [OfficeAlertController::class, 'ack'])->name('office-alerts.ack');
         Route::patch('/office-alerts/{office_alert}/snooze', [OfficeAlertController::class, 'snooze'])->name('office-alerts.snooze');
         Route::patch('/office-alerts/{office_alert}/popup', [OfficeAlertController::class, 'popupShown'])->name('office-alerts.popup');
+        Route::get('/office-alerts/settings', [OfficeBriefingSettingController::class, 'index'])->name('office-alerts.settings');
+        Route::put('/office-alerts/settings', [OfficeBriefingSettingController::class, 'update'])->name('office-alerts.settings.update');
 
         // User Management (CRUD — all handled via modal on index page)
         Route::get('/users',             [UserController::class, 'index'])->name('users.index');

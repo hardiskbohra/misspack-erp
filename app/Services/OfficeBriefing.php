@@ -7,6 +7,7 @@ use App\Models\CashflowEntry;
 use App\Models\Client;
 use App\Models\OfficeAlert;
 use App\Models\OfficeAlertState;
+use App\Models\OfficeSetting;
 use App\Models\Shipment;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -17,8 +18,12 @@ use Illuminate\Support\Str;
 
 class OfficeBriefing
 {
-    public function kycSubmitted(Client $client): OfficeAlert
+    public function kycSubmitted(Client $client): ?OfficeAlert
     {
+        if (! $this->sourceOn('kyc')) {
+            return null;
+        }
+
         $name = $client->company_name ?: $client->client_number ?: 'A client';
 
         return $this->raise([
@@ -38,6 +43,10 @@ class OfficeBriefing
 
     public function shipmentStatusChanged(Shipment $shipment, ?string $from = null): ?OfficeAlert
     {
+        if (! $this->sourceOn('shipment_exception')) {
+            return null;
+        }
+
         if (in_array($shipment->status, [Shipment::STATUS_CUSTOM_HOLD, Shipment::STATUS_DELAYED], true)) {
             $label = $shipment->statusLabel();
             $number = $shipment->shipment_number ?: '#'.$shipment->id;
@@ -64,6 +73,10 @@ class OfficeBriefing
     {
         $raised = [];
 
+        if (! $this->settings()['enabled']) {
+            return [];
+        }
+
         if (class_exists(Shipment::class) && Schema::hasTable('shipments')) {
             $raised[] = $this->inTransitDigest();
             $raised[] = $this->holdDigest();
@@ -77,13 +90,19 @@ class OfficeBriefing
         return array_values(array_filter($raised));
     }
 
-    public function chaseUnacked(int $hours = 4): int
+    public function chaseUnacked(?int $hours = null): int
     {
+        $settings = $this->settings();
+        if (! $settings['enabled'] || ! $settings['emails'] || ! $settings['chase_emails']) {
+            return 0;
+        }
+
         if (! Schema::hasTable('office_alerts')) {
             return 0;
         }
 
-        $cutoff = now()->subHours($hours);
+        $hours = $hours ?? (int) $settings['chase_hours'];
+        $cutoff = now()->subHours(max(1, $hours));
         $sent = 0;
 
         OfficeAlert::query()
@@ -105,7 +124,7 @@ class OfficeBriefing
 
     public function payload(User $user): array
     {
-        if (! $user->isAdmin() || ! Schema::hasTable('office_alerts')) {
+        if (! $user->isAdmin() || ! Schema::hasTable('office_alerts') || ! $this->settings()['enabled']) {
             return ['unread' => 0, 'critical' => 0, 'items' => [], 'toasts' => [], 'popup' => null];
         }
 
@@ -114,9 +133,11 @@ class OfficeBriefing
         $items = $this->openFor($user);
         $active = $items->where('snoozed', false);
         $toasts = $active->where('severity', OfficeAlert::SEVERITY_INFO)->values();
-        $popup = $active->first(function ($row) {
-            return $row['requires_ack'] && $row['severity'] === OfficeAlert::SEVERITY_CRITICAL && ! $row['popup_shown'];
-        });
+        $popup = $this->settings()['popups']
+            ? $active->first(function ($row) {
+                return $row['requires_ack'] && $row['severity'] === OfficeAlert::SEVERITY_CRITICAL && ! $row['popup_shown'];
+            })
+            : null;
 
         return [
             'unread' => $active->count(),
@@ -226,6 +247,7 @@ class OfficeBriefing
             $raised[] = $this->shipmentStatusChanged($shipment);
         });
 
+        if ($this->sourceOn('shipment_overdue')) {
         Shipment::query()->open()->attention('overdue')->limit(30)->get()
             ->each(function (Shipment $shipment) use (&$raised) {
                 $number = $shipment->shipment_number ?: '#'.$shipment->id;
@@ -243,14 +265,18 @@ class OfficeBriefing
                     'subject_id' => $shipment->id,
                 ], email: true);
             });
+        }
 
-        Shipment::query()->open()->attention('stale', 2)->limit(30)->get()
-            ->each(function (Shipment $shipment) use (&$raised) {
+        $staleDays = max(1, (int) $this->settings()['stale_days']);
+        if ($this->sourceOn('shipment_stale')) {
+        Shipment::query()->open()->attention('stale', $staleDays)->limit(30)->get()
+            ->each(function (Shipment $shipment) use (&$raised, $staleDays) {
                 $number = $shipment->shipment_number ?: '#'.$shipment->id;
+                $hours = $staleDays * 24;
                 $raised[] = $this->raise([
                     'event_key' => 'shipment.stale',
                     'fingerprint' => 'shipment.stale:'.$shipment->id.':'.now()->toDateString(),
-                    'title' => $number.' has had no tracking note in 48 hours',
+                    'title' => $number.' has had no tracking note in '.$hours.' hours',
                     'body' => 'Leave a note on the file even if nothing moved — silence is the exception.',
                     'severity' => OfficeAlert::SEVERITY_CRITICAL,
                     'requires_ack' => true,
@@ -261,12 +287,17 @@ class OfficeBriefing
                     'subject_id' => $shipment->id,
                 ], email: true);
             });
+        }
 
         return $raised;
     }
 
     private function inTransitDigest(): ?OfficeAlert
     {
+        if (! $this->sourceOn('digest_in_transit')) {
+            return null;
+        }
+
         $rows = Shipment::query()
             ->open()
             ->where('status', Shipment::STATUS_IN_TRANSIT)
@@ -296,6 +327,10 @@ class OfficeBriefing
 
     private function holdDigest(): ?OfficeAlert
     {
+        if (! $this->sourceOn('digest_hold')) {
+            return null;
+        }
+
         $count = Shipment::query()->attention('hold')->count();
         if ($count === 0) {
             return null;
@@ -316,6 +351,10 @@ class OfficeBriefing
 
     private function pendingCashflowDigest(): ?OfficeAlert
     {
+        if (! $this->sourceOn('digest_cashflow')) {
+            return null;
+        }
+
         $count = CashflowEntry::query()->where('accounting_status', 'pending')->count();
         if ($count === 0) {
             return null;
@@ -366,23 +405,44 @@ class OfficeBriefing
 
     private function emailWatchers(OfficeAlert $alert): void
     {
-        if (! Schema::hasTable('users')) {
+        if (! $this->settings()['emails']) {
             return;
         }
 
-        User::query()
-            ->get()
-            ->filter(fn (User $user) => $user->watchesTeam($alert->team) && filled($user->email))
-            ->each(function (User $user) use ($alert) {
-                try {
-                    Mail::to($user->email)->send(new OfficeBriefingMail($alert));
-                } catch (\Throwable $e) {
-                    // Mail is best-effort: a log driver or a down SMTP must not break the inbox.
-                }
-            });
+        $addresses = collect();
+
+        if (Schema::hasTable('users')) {
+            $addresses = User::query()
+                ->get()
+                ->filter(fn (User $user) => $user->watchesTeam($alert->team) && filled($user->email))
+                ->pluck('email');
+        }
+
+        $extra = collect(preg_split('/[\s,;]+/', (string) $this->settings()['extra_emails']))
+            ->filter();
+
+        $addresses->merge($extra)->unique()->filter()->each(function ($email) use ($alert) {
+            try {
+                Mail::to($email)->send(new OfficeBriefingMail($alert));
+            } catch (\Throwable $e) {
+                // Mail is best-effort: a log driver or a down SMTP must not break the inbox.
+            }
+        });
 
         $alert->emailed_at = now();
         $alert->save();
+    }
+
+    private function settings(): array
+    {
+        return OfficeSetting::briefings();
+    }
+
+    private function sourceOn(string $source): bool
+    {
+        $settings = $this->settings();
+
+        return $settings['enabled'] && ($settings['sources'][$source] ?? true);
     }
 
     private function state(OfficeAlert $alert, User $user): OfficeAlertState

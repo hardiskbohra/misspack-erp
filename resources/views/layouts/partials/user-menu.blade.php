@@ -64,6 +64,12 @@
             </a>
         @endif
 
+        @if (! $menuEmployee)
+            <a href="{{ route('office-alerts.settings') }}" role="menuitem">
+                <i class="fas fa-bell" aria-hidden="true"></i> Briefing settings
+            </a>
+        @endif
+
         <a href="{{ route('account.index') }}#password" role="menuitem">
             <i class="fa-solid fa-key" aria-hidden="true"></i> Change password
         </a>
