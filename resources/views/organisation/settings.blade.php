@@ -6,6 +6,10 @@
 @section('page-actions')
     @if ($tab === 'company')
         <button type="submit" form="organisationProfile" class="master-btn master-btn-primary">Save organisation</button>
+    @elseif ($tab === 'addresses')
+        <button type="button" class="master-btn master-btn-primary" data-org-address-add>
+            <i class="fas fa-plus" aria-hidden="true"></i> Add address
+        </button>
     @endif
 @endsection
 
@@ -203,40 +207,75 @@
                     </form>
                 </section>
             @elseif ($tab === 'addresses')
-                <section class="master-tab-panel org-stack" aria-label="Addresses">
-                    <div class="master-card master-card--flat master-section">
-                        <h3 class="master-section-title">Add an address</h3>
-                        <p class="master-sub account-note">Billing prints on sales invoices. Shipping is dispatch. Branch is another office.</p>
-                        <form method="POST" action="{{ route('organisation.addresses.store') }}">
-                            @csrf
-                            @include('organisation.partials.address-fields', ['address' => null, 'kinds' => $kinds])
-                            <button class="master-btn master-btn-primary" type="submit">Add address</button>
-                        </form>
+                <section class="master-tab-panel" aria-label="Addresses">
+                    <p class="master-sub account-note" style="margin-top:0">
+                        Billing prints on sales invoices. Shipping is dispatch. Branch is another office.
+                    </p>
+                    <div class="master-table-wrap">
+                        <table class="master-table">
+                            <thead>
+                                <tr>
+                                    <th>Kind</th>
+                                    <th>Label</th>
+                                    <th>Address</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($organisation->addresses as $address)
+                                    @php
+                                        $editPayload = [
+                                            'kind' => $address->kind,
+                                            'label' => $address->label,
+                                            'line1' => $address->line1,
+                                            'line2' => $address->line2,
+                                            'city' => $address->city,
+                                            'state' => $address->state,
+                                            'pincode' => $address->pincode,
+                                            'country' => $address->country,
+                                            'is_default' => $address->is_default,
+                                            'update_url' => route('organisation.addresses.update', $address),
+                                        ];
+                                    @endphp
+                                    <tr>
+                                        <td>
+                                            <strong>{{ $address->kindLabel() }}</strong>
+                                            @if ($address->is_default)
+                                                <div><span class="master-status-chip success">Default</span></div>
+                                            @endif
+                                        </td>
+                                        <td>{{ $address->label ?: '—' }}</td>
+                                        <td>{{ $address->oneLine() ?: '—' }}</td>
+                                        <td class="master-list-actions">
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm" data-org-address-edit='@json($editPayload)'>Edit</button>
+                                            <form method="POST" action="{{ route('organisation.addresses.destroy', $address) }}" class="org-inline-form">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="master-btn master-btn-ghost master-btn-sm" type="submit" data-confirm="Remove this address?">Remove</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4">
+                                            <div class="master-list-empty">
+                                                <span class="master-list-empty-icon" aria-hidden="true"><i class="fas fa-map-marker-alt"></i></span>
+                                                <p class="master-list-empty-title">No addresses yet</p>
+                                                <p class="master-list-empty-text">Add the registered office first. Billing, shipping and branches all live in this list.</p>
+                                                <div class="master-list-empty-actions">
+                                                    <button type="button" class="master-btn master-btn-primary" data-org-address-add>Add address</button>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
-
-                    @forelse ($organisation->addresses as $address)
-                        <form class="master-card master-card--flat master-section" method="POST" action="{{ route('organisation.addresses.update', $address) }}">
-                            @csrf
-                            @method('PUT')
-                            <div class="master-section-head">
-                                <div>
-                                    <h3 class="master-section-title">{{ $address->label ?: $address->kindLabel() }}</h3>
-                                    @if ($address->is_default)
-                                        <span class="master-status-chip success">Default {{ strtolower($address->kindLabel()) }}</span>
-                                    @endif
-                                </div>
-                                <button class="master-btn master-btn-ghost master-btn-sm" type="submit" form="org-addr-del-{{ $address->id }}" data-confirm="Remove this address?">Remove</button>
-                            </div>
-                            @include('organisation.partials.address-fields', ['address' => $address, 'kinds' => $kinds])
-                            <button class="master-btn master-btn-primary" type="submit">Save address</button>
-                        </form>
-                        <form id="org-addr-del-{{ $address->id }}" method="POST" action="{{ route('organisation.addresses.destroy', $address) }}">
-                            @csrf
-                            @method('DELETE')
-                        </form>
-                    @empty
-                        <p class="master-sub">No addresses yet. Add the registered office first.</p>
-                    @endforelse
+                    @include('organisation.partials.address-modal')
+                    @if ($errors->any() && $tab === 'addresses')
+                        <div hidden data-open-address-modal="add"></div>
+                    @endif
                 </section>
             @else
                 <section class="master-tab-panel org-stack" aria-label="Bank accounts">
@@ -279,3 +318,7 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+    <script src="{{ $assetVer('assets/js/organisation.js') }}"></script>
+@endpush

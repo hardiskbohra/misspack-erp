@@ -63,6 +63,17 @@
     margin-top: 16px;
 }
 
+.org-inline-form {
+    display: inline;
+}
+
+.org-record .master-list-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    white-space: nowrap;
+}
+
 @media (max-width: 720px) {
     .org-logos {
         grid-template-columns: 1fr;
