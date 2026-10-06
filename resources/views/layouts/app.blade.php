@@ -112,6 +112,7 @@
                account, in the currency their statement is kept in. */
             ['label' => 'Statements', 'route' => 'cashflows.statements', 'active' => 'cashflows.statements*', 'icon' => 'fa-solid fa-file-invoice'],
             ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'icon' => 'fas fa-users-cog'],
+            ['label' => 'Organisation', 'route' => 'organisation.settings', 'active' => 'organisation.*', 'icon' => 'fas fa-building'],
             ['label' => 'Briefings', 'route' => 'office-alerts.settings', 'active' => 'office-alerts.settings*', 'icon' => 'fas fa-bell'],
         ];
     @endphp
@@ -125,8 +126,8 @@
     <aside class="sidebar" id="sidebar" aria-label="Main sidebar">
         <div class="sidebar-logo">
             <div>
-                <div class="sidebar-logo-text sidebar-text">MissPack</div>
-                <div class="sidebar-logo-sub sidebar-text">Packed Perfect</div>
+                <div class="sidebar-logo-text sidebar-text">{{ $officeBrand['name'] ?? 'MissPack' }}</div>
+                <div class="sidebar-logo-sub sidebar-text">{{ $officeBrand['tagline'] ?? 'Packed Perfect' }}</div>
             </div>
         </div>
 

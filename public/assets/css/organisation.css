@@ -1,0 +1,56 @@
+.org-settings .org-tabs {
+    margin: 24px 0 0;
+}
+
+.org-stack {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.org-settings .master-section {
+    margin-bottom: 0;
+    padding: 20px;
+}
+
+.org-logos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.org-logo-preview {
+    display: block;
+    width: 100%;
+    max-width: 180px;
+    height: 72px;
+    object-fit: contain;
+    margin: 8px 0 12px;
+    padding: 8px;
+    border: 1px solid var(--mc-border, #e5eaf2);
+    border-radius: 12px;
+    background: #0f172a;
+}
+
+.org-logo-preview.is-print {
+    background: #fff;
+}
+
+.org-row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.org-row-head .master-section-title {
+    margin: 0;
+}
+
+@media (max-width: 720px) {
+    .org-logos {
+        grid-template-columns: 1fr;
+    }
+}

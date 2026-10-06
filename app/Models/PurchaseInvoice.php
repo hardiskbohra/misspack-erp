@@ -543,19 +543,7 @@ class PurchaseInvoice extends Model
     /** Our own company details — the buyer on every purchase document. */
     public static function defaultBuyerDetails(): array
     {
-        return [
-            'buyer_company_name' => 'MissPack India Pvt Ltd',
-            'buyer_address' => 'E-410, 4th Floor, City Centre, Near Idgah Circle, Prem Darwaja Road, Idgah',
-            'buyer_city' => 'Ahmedabad',
-            'buyer_state' => 'Gujarat',
-            'buyer_country' => 'India',
-            'buyer_pincode' => '380016',
-            'buyer_gstin' => '24AATCM8816E1Z5',
-            'buyer_pan' => 'AATCM8816E',
-            'buyer_email' => 'misspackindia@gmail.com',
-            'buyer_mobile' => '7041110823',
-            'buyer_website' => 'www.themisspack.com',
-        ];
+        return Organisation::current()->buyerDetails();
     }
 
     public static function defaultTerms(): string
