@@ -118,6 +118,21 @@ body.ob-open {
     overflow: hidden;
 }
 
+.ob-settings > form {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.ob-settings .master-grid {
+    gap: 24px;
+}
+
+.ob-settings .master-section {
+    margin-bottom: 0;
+}
+
 .ob-settings .master-toggle-group {
     padding: 12px 0;
     border-bottom: 1px solid var(--mc-border, #e5eaf2);
@@ -125,6 +140,11 @@ body.ob-open {
 
 .ob-settings .master-toggle-group:last-of-type {
     border-bottom: 0;
+}
+
+.ob-settings .master-textarea {
+    min-height: 96px;
+    resize: vertical;
 }
 
 @media (max-width: 640px) {

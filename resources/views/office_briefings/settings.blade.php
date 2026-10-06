@@ -62,60 +62,74 @@
                     </div>
                     <div class="master-field master-field-full">
                         <label class="master-label" for="extra_emails">Also email</label>
-                        <input class="master-input" id="extra_emails" type="text" name="extra_emails" value="{{ $settings['extra_emails'] }}" placeholder="ops@misspack.com, accounts@…">
-                        <p class="master-sub">Extra addresses, comma-separated. Desk watchers still get mail from their user record.</p>
+                        <textarea class="master-textarea" id="extra_emails" name="extra_emails" rows="4" placeholder="ops@misspack.com&#10;accounts@misspack.com">{{ $settings['extra_emails'] }}</textarea>
+                        <p class="master-sub">One address per line, or comma-separated. These are extra to the watchers below.</p>
                     </div>
                 </div>
             </div>
 
-            <div>
-                <div class="master-card master-card--flat master-section">
-                    <h3 class="master-section-title">What to raise</h3>
-                    <p class="master-sub account-note">Each source can be off without touching the others.</p>
+            <div class="master-card master-card--flat master-section">
+                <h3 class="master-section-title">What to raise</h3>
+                <p class="master-sub account-note">Each source can be off without touching the others.</p>
 
-                    @foreach ($sources as $key => $meta)
-                        <div class="master-toggle-group">
-                            <div>
-                                <label class="master-label" for="ob_src_{{ $key }}">{{ $meta[0] }}</label>
-                                <p class="master-sub">{{ $meta[1] }}</p>
-                            </div>
-                            <label class="master-switch">
-                                <input type="checkbox" id="ob_src_{{ $key }}" name="sources[{{ $key }}]" value="1" @checked($settings['sources'][$key] ?? false)>
-                                <span class="master-slider"></span>
-                            </label>
+                @foreach ($sources as $key => $meta)
+                    <div class="master-toggle-group">
+                        <div>
+                            <label class="master-label" for="ob_src_{{ $key }}">{{ $meta[0] }}</label>
+                            <p class="master-sub">{{ $meta[1] }}</p>
                         </div>
-                    @endforeach
-                </div>
-
-                <div class="master-card master-card--flat master-section" style="margin-top:16px">
-                    <h3 class="master-section-title">Who is watching</h3>
-                    <p class="master-sub account-note">Administrators, by department. An empty department sees every desk.</p>
-
-                    <div class="master-table-wrap">
-                        <table class="master-table">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Desk</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($watchers as $watcher)
-                                    <tr>
-                                        <td>{{ $watcher['name'] }}</td>
-                                        <td>{{ $watcher['email'] }}</td>
-                                        <td>{{ $watcher['desk'] }}</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="3">No office accounts yet.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                        <label class="master-switch">
+                            <input type="checkbox" id="ob_src_{{ $key }}" name="sources[{{ $key }}]" value="1" @checked($settings['sources'][$key] ?? false)>
+                            <span class="master-slider"></span>
+                        </label>
                     </div>
-                </div>
+                @endforeach
+            </div>
+        </div>
+
+        <div class="master-card master-card--flat master-section">
+            <h3 class="master-section-title">Who is watching</h3>
+            <p class="master-sub account-note">
+                Office accounts only. Turn someone off to keep them out of the bell and the mail.
+                Desk is for briefings only — it does not change their user record.
+            </p>
+
+            <div class="master-table-wrap">
+                <table class="master-table">
+                    <thead>
+                        <tr>
+                            <th>Watch</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Desk</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($watchers as $watcher)
+                            <tr>
+                                <td>
+                                    <label class="master-switch">
+                                        <input type="checkbox" name="watchers[{{ $watcher['id'] }}][on]" value="1" @checked($watcher['watching'])>
+                                        <span class="master-slider"></span>
+                                    </label>
+                                </td>
+                                <td>{{ $watcher['name'] }}</td>
+                                <td>{{ $watcher['email'] }}</td>
+                                <td>
+                                    <select class="master-select" name="watchers[{{ $watcher['id'] }}][desk]">
+                                        @foreach ($desks as $key => $label)
+                                            <option value="{{ $key }}" @selected($watcher['desk'] === $key)>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4">No office accounts yet.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </form>

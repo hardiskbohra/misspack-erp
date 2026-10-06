@@ -13,17 +13,19 @@ class OfficeBriefingSettingController extends Controller
     public function index(): View
     {
         $settings = OfficeSetting::briefings();
+        $watcherIds = $settings['watcher_ids'] ?? null;
 
         $watchers = User::query()
             ->orderBy('name')
             ->get()
             ->filter(fn (User $user) => $user->isAdmin())
-            ->map(function (User $user) {
-                $desk = trim((string) $user->department);
+            ->map(function (User $user) use ($watcherIds) {
                 return [
+                    'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'desk' => $desk === '' ? 'All desks' : $desk,
+                    'watching' => ! is_array($watcherIds) || in_array((int) $user->id, array_map('intval', $watcherIds), true),
+                    'desk' => OfficeSetting::deskFor($user),
                 ];
             })
             ->values();
@@ -31,6 +33,7 @@ class OfficeBriefingSettingController extends Controller
         return view('office_briefings.settings', [
             'settings' => $settings,
             'sources' => OfficeSetting::sourceLabels(),
+            'desks' => OfficeSetting::deskOptions(),
             'watchers' => $watchers,
         ]);
     }
@@ -40,18 +43,38 @@ class OfficeBriefingSettingController extends Controller
         $data = $request->validate([
             'chase_hours' => ['required', 'integer', 'min:1', 'max:72'],
             'stale_days' => ['required', 'integer', 'min:1', 'max:14'],
-            'extra_emails' => ['nullable', 'string', 'max:2000'],
+            'extra_emails' => ['nullable', 'string', 'max:4000'],
             'sources' => ['nullable', 'array'],
+            'watchers' => ['nullable', 'array'],
+            'watchers.*.on' => ['nullable'],
+            'watchers.*.desk' => ['nullable', 'in:office,sales,operations,accounts'],
         ]);
 
         $emails = collect(preg_split('/[\s,;]+/', (string) ($data['extra_emails'] ?? '')))
             ->filter()
             ->unique()
-            ->implode(', ');
+            ->implode("\n");
 
         $sources = [];
         foreach (array_keys(OfficeSetting::sourceLabels()) as $key) {
             $sources[$key] = $request->boolean('sources.'.$key);
+        }
+
+        $adminIds = User::query()->get()->filter(fn (User $user) => $user->isAdmin())->pluck('id')->all();
+        $posted = $data['watchers'] ?? [];
+        $watcherIds = [];
+        $desks = [];
+
+        foreach ($adminIds as $id) {
+            $row = $posted[$id] ?? $posted[(string) $id] ?? [];
+            $desk = $row['desk'] ?? 'office';
+            if (! array_key_exists($desk, OfficeSetting::deskOptions())) {
+                $desk = 'office';
+            }
+            $desks[$id] = $desk;
+            if (! empty($row['on'])) {
+                $watcherIds[] = (int) $id;
+            }
         }
 
         OfficeSetting::putBriefings([
@@ -63,6 +86,8 @@ class OfficeBriefingSettingController extends Controller
             'stale_days' => (int) $data['stale_days'],
             'extra_emails' => $emails,
             'sources' => $sources,
+            'watcher_ids' => $watcherIds,
+            'watcher_desks' => $desks,
         ]);
 
         return redirect()

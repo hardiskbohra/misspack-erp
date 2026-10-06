@@ -111,7 +111,7 @@ class User extends Authenticatable
      */
     public function watchesTeam(?string $team): bool
     {
-        if (! $this->isAdmin()) {
+        if (! OfficeSetting::isWatcher($this)) {
             return false;
         }
 
@@ -120,18 +120,12 @@ class User extends Authenticatable
             return true;
         }
 
-        $department = strtolower(trim((string) $this->department));
-        if ($department === '') {
+        $desk = OfficeSetting::deskFor($this);
+        if ($desk === 'office') {
             return true;
         }
 
-        foreach (OfficeAlert::teamAliases()[$team] ?? [$team] as $alias) {
-            if (str_contains($department, $alias)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $desk === $team;
     }
 
     /** On the payroll: their own workspace, and nothing else. */

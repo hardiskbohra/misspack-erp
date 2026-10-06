@@ -31,6 +31,8 @@ class OfficeSetting extends Model
             'chase_hours' => 4,
             'stale_days' => 2,
             'extra_emails' => '',
+            'watcher_ids' => null,
+            'watcher_desks' => [],
             'sources' => [
                 'kyc' => true,
                 'shipment_exception' => true,
@@ -67,8 +69,64 @@ class OfficeSetting extends Model
         $row = static::query()->find(self::BRIEFINGS);
         $value = is_array($row?->value) ? $row->value : [];
         $sources = array_merge($defaults['sources'], $value['sources'] ?? []);
+        $desks = is_array($value['watcher_desks'] ?? null) ? $value['watcher_desks'] : [];
 
-        return array_merge($defaults, $value, ['sources' => $sources]);
+        return array_merge($defaults, $value, [
+            'sources' => $sources,
+            'watcher_desks' => $desks,
+        ]);
+    }
+
+    public static function deskOptions(): array
+    {
+        return [
+            'office' => 'All desks',
+            'sales' => 'Sales',
+            'operations' => 'Operations',
+            'accounts' => 'Accounts',
+        ];
+    }
+
+    public static function deskFor(User $user): string
+    {
+        $settings = self::briefings();
+        $desks = $settings['watcher_desks'] ?? [];
+        $key = $desks[$user->id] ?? $desks[(string) $user->id] ?? null;
+        if (is_string($key) && array_key_exists($key, self::deskOptions())) {
+            return $key;
+        }
+
+        $department = strtolower(trim((string) $user->department));
+        if ($department === '') {
+            return 'office';
+        }
+
+        foreach (self::deskOptions() as $desk => $label) {
+            if ($desk === 'office') {
+                continue;
+            }
+            foreach (OfficeAlert::teamAliases()[$desk] ?? [$desk] as $alias) {
+                if (str_contains($department, $alias)) {
+                    return $desk;
+                }
+            }
+        }
+
+        return 'office';
+    }
+
+    public static function isWatcher(User $user): bool
+    {
+        if (! $user->isAdmin()) {
+            return false;
+        }
+
+        $ids = self::briefings()['watcher_ids'] ?? null;
+        if (! is_array($ids)) {
+            return true;
+        }
+
+        return in_array((int) $user->id, array_map('intval', $ids), true);
     }
 
     public static function putBriefings(array $value): void
