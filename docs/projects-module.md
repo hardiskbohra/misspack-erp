@@ -74,7 +74,7 @@ button. It is now the shared record page:
 - **The tabs are links.** `SHOW_TABS` in `ProjectController` is the one list —
   the view draws the strip from it and the controller validates `?tab=` against
   it (an unknown tab lands on the overview). Because every sub-action redirects
-  `back()`, adding a product, a milestone, a payment or a comment returns to the
+  `back()`, adding a product, a milestone, an attachment or a comment returns to the
   tab it was posted from; and a panel can be shared, bookmarked, or opened in a
   new window. The old `initTabs` handler and the ten-panel render are gone.
 - **The panels are the shell's.** Each is a `section.master-tab-panel` holding
@@ -106,6 +106,20 @@ button. It is now the shared record page:
   `feedback.css` (`.fb-*`) is only loaded by the feedback pages, so a class from
   that sheet landing here would arrive with no rules at all.
 
+**Project money is the ledger's.** A payment entry used to be its own row — recorded on the
+project, published to the client with its own flag, and counted beside the ledger entry that
+carried the same receipt. Two rows for one payment is two facts to keep in step, so
+`project_payments` is dropped (a guarded migration, empty `down()`), with the model, the
+controller, the three `projects.payments.*` routes, the modal pair on the record and the
+`project_payment_id` column on project attachments. The Payments panel reads
+`cashflowEntries` — all of them, every status, because the office may see what is not
+confirmed — and `paymentTotals()` sums the same relation, so the list's Value cell and the
+panel cannot disagree. What a *client* sees is one definition, in
+`app/Services/ProjectReceipts.php`: ledger entries tagged to a published project,
+`moneyIn()` (a credit), `booked` or `reconciled`. The portal's payments page, the portal
+dashboard's tally, a project's receipts tab on the portal and the statement of account all
+read that service, which is why the four answer the same way.
+
 The milestones tab keeps its own `pmile-*` stepper — a genuinely bespoke timeline
 — but its chrome is the shell's now: the five-box stat row is a `master-stats`
 row, its action bar is a `master-card`, its badges are `master-badge` tones, and
@@ -130,7 +144,7 @@ fact the check reads, not a decoration.
 | --- | --- | --- |
 | how many projects are in each status / health | `ProjectController::index()`'s two grouped queries | the left "figures" row, the status/health chips, the filter drawer |
 | whether the client sees this project | `projects.show_client_portal`, written by the project form | the login portal's dashboard, project list and record; the office record's *Client portal* card |
-| what a project is worth and what has been received | `Project::paymentTotals()` (`payments` + `cashflowEntries`) | the Value cell, the quick-details drawer, the project page |
+| what a project is worth and what has been received | `Project::paymentTotals()` (`cashflowEntries` — the ledger is the source of truth for project money; the `project_payments` table that used to add a second copy is gone) | the Value cell, the quick-details drawer, the Payments panel |
 | what a row's relations are | the list's `with([...])` | the row, the drawer — `paymentTotals()` reuses the eager load instead of querying per project |
 
 The four figures are derived from the grouped counts (`total` is their sum,
@@ -196,7 +210,7 @@ portal's own sheet, and the static preview under `public/_preview/` still render
 
 ## Checks
 
-`tools/checks/projects-check.cjs` (54 checks) pins the composition above: the
+`tools/checks/projects-check.cjs` (56 checks) pins the composition above: the
 root is the master-list, the two cards sit in that order, the gap is not
 declared in the module's sheet, every chip carries its tally, the columns are
 named in the order the table draws them, the figures come from the grouped

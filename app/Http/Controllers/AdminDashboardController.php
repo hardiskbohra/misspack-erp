@@ -24,8 +24,8 @@ class AdminDashboardController extends Controller
         $purchaseSeries = $this->purchaseSeries($period);
         $incomeSeries = $this->cashflowSeries('credit_amount', $period);
         $expenseSeries = $this->cashflowSeries('debit_amount', $period);
-        $projectInwardSeries = $this->projectPaymentSeries('inward', $period);
-        $projectOutwardSeries = $this->projectPaymentSeries('outward', $period);
+        $projectInwardSeries = $this->projectLedgerSeries('credit_amount', $period);
+        $projectOutwardSeries = $this->projectLedgerSeries('debit_amount', $period);
 
         $charts = [
             'period' => [
@@ -234,11 +234,14 @@ class AdminDashboardController extends Controller
         $projectOutwardRange = array_sum($charts['projectPayments']['outward']);
 
         $estimatedProjectValue = $this->sum(\App\Models\Project::class, 'projects', 'estimated_value');
-        $projectInwardAll = $this->sum(\App\Models\ProjectPayment::class, 'project_payments', 'amount', function ($query) {
-            $query->where('transaction_type', 'inward');
+        /* A project's money is the ledger's money: the project-payment rows
+           that used to carry a second copy of it are gone. A credit is inward,
+           a debit outward, and both are counted where they are tagged. */
+        $projectInwardAll = $this->sum(\App\Models\CashflowEntry::class, 'cashflow_entries', 'credit_amount', function ($query) {
+            $query->whereNotNull('project_id');
         });
-        $projectOutwardAll = $this->sum(\App\Models\ProjectPayment::class, 'project_payments', 'amount', function ($query) {
-            $query->where('transaction_type', 'outward');
+        $projectOutwardAll = $this->sum(\App\Models\CashflowEntry::class, 'cashflow_entries', 'debit_amount', function ($query) {
+            $query->whereNotNull('project_id');
         });
 
         return [
@@ -400,17 +403,18 @@ class AdminDashboardController extends Controller
         return $this->sumSeries('cashflow_entries', $dateColumn, $amountColumn, $period);
     }
 
-    private function projectPaymentSeries(string $type, array $period): array
+    /** Money tagged to a project: `credit_amount` is inward, `debit_amount` out. */
+    private function projectLedgerSeries(string $expression, array $period): array
     {
-        $dateColumn = $this->dateColumn('project_payments', ['payment_date', 'created_at']);
-        if (! $dateColumn || ! $this->tableColumn('project_payments', 'amount')) {
+        $dateColumn = $this->dateColumn('cashflow_entries', ['entry_date', 'created_at']);
+        if (! $dateColumn
+            || ! $this->tableColumn('cashflow_entries', $expression)
+            || ! $this->tableColumn('cashflow_entries', 'project_id')) {
             return $this->zeroSeries($period);
         }
 
-        return $this->sumSeries('project_payments', $dateColumn, 'amount', $period, function ($query) use ($type) {
-            if (Schema::hasColumn('project_payments', 'transaction_type')) {
-                $query->where('transaction_type', $type);
-            }
+        return $this->sumSeries('cashflow_entries', $dateColumn, $expression, $period, function ($query) {
+            $query->whereNotNull('project_id');
         });
     }
 

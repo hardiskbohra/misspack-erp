@@ -6,7 +6,6 @@ use App\Models\ClientPortalConversation;
 use App\Models\ClientPortalDocument;
 use App\Models\ClientPortalNotification;
 use App\Models\Project;
-use App\Models\ProjectPayment;
 use App\Models\SalesInvoice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -52,17 +51,10 @@ class ClientPortalDashboardController extends ClientPortalBaseController
             ->limit(4)
             ->get();
 
-        $paymentTotal = 0;
-        if (class_exists(ProjectPayment::class) && Schema::hasTable('project_payments')) {
-            $publishedProjectIds = Project::query()
-                ->where('client_id', $client->id)
-                ->where('show_client_portal', true)
-                ->pluck('id');
-            $paymentTotal = ProjectPayment::query()
-                ->whereIn('project_id', $publishedProjectIds)
-                ->visibleToClient()
-                ->count();
-        }
+        /* Receipts are ledger entries on this client's published projects, read
+           through the one service that defines them, so the dashboard's count
+           and the payments page can never disagree. */
+        $paymentTotal = \App\Services\ProjectReceipts::countForClient($client->id);
 
         $notificationScope = fn ($query) => $query
             ->where('client_id', $client->id)

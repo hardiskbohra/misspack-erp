@@ -5,8 +5,8 @@
      - project list: the shared quick-create dialog (.master-modal), the
        shared list toolkit (row navigation and the pinned-header shadow) and
        delete confirmation
-     - project detail: portal link copy, tab navigation (hash +
-       localStorage restore) and the add/edit modals
+     - project detail: tab navigation (hash + localStorage restore) and the
+       add/edit modals for products, milestones, attachments and tracking
      - milestones tab: timeline editor modal (pmile-*, module-specific
        design)
    The standard .master-modal dialogs on the detail page use the shared
@@ -209,41 +209,6 @@
         if (addAttachmentModal && openAddAttachment) {
             openAddAttachment.addEventListener('click', function () {
                 window.MasterModal.open(addAttachmentModal);
-            });
-        }
-
-        /* Edit-payment */
-        var editPaymentModal = document.getElementById('editPaymentModal');
-        var editPaymentForm = document.getElementById('editPaymentForm');
-        if (editPaymentModal && editPaymentForm) {
-            document.querySelectorAll('.editPaymentBtn').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    var payment = JSON.parse(this.getAttribute('data-payment') || '{}');
-                    bindUpdateUrl(editPaymentForm, payment.id);
-                    setValue(editPaymentForm, 'transaction_type', payment.transaction_type);
-                    var paymentDate = payment.payment_date;
-                    if (paymentDate) {
-                        paymentDate = paymentDate.substring(0, 10);
-                    }
-                    setValue(editPaymentForm, 'payment_date', paymentDate);
-                    setValue(editPaymentForm, 'amount', payment.amount);
-                    setValue(editPaymentForm, 'currency', payment.currency);
-                    setValue(editPaymentForm, 'payment_mode', payment.payment_mode);
-                    setValue(editPaymentForm, 'reference_number', payment.reference_number);
-                    setValue(editPaymentForm, 'category', payment.category);
-                    setValue(editPaymentForm, 'notes', payment.notes);
-                    setValue(editPaymentForm, 'is_public', payment.is_public);
-                    window.MasterModal.open(editPaymentModal);
-                });
-            });
-        }
-
-        /* Add-payment */
-        var addPaymentModal = document.getElementById('addPaymentModal');
-        var openAddPayment = document.getElementById('openAddPaymentModal');
-        if (addPaymentModal && openAddPayment) {
-            openAddPayment.addEventListener('click', function () {
-                window.MasterModal.open(addPaymentModal);
             });
         }
     }

@@ -44,10 +44,11 @@ class ProjectController extends Controller
         $clientId = $request->query('client_id', 'all');
         $health = $request->query('health', 'all');
 
-        /* The money column reads the project's payments and its ledger entries,
-           and the row's quick view reads the same totals: loaded here, the list
-           costs one query per relation instead of two per project. */
-        $with = ['products', 'products.milestones', 'payments', 'cashflowEntries', 'assignedUser'];
+        /* The money column reads the project's ledger entries — the ledger is
+           the source of truth for project-level money — and the row's quick
+           view reads the same totals: loaded here, the list costs one query
+           per relation instead of two per project. */
+        $with = ['products', 'products.milestones', 'cashflowEntries', 'assignedUser'];
         if ($this->clientModelAvailable()) {
             $with[] = 'client';
         }
@@ -182,7 +183,7 @@ class ProjectController extends Controller
             'comments.user', 'comments.product',
             'attachments.product', 'attachments.uploader',
             'trackingUpdates.product', 'trackingUpdates.creator',
-            'payments.creator', 'logs.user', 'logs.product', 'assignedUser', 'creator',
+            'logs.user', 'logs.product', 'assignedUser', 'creator',
         ];
         if (class_exists(\App\Models\ProjectMilestone::class) && Schema::hasTable('project_milestones')) {
             $with[] = 'milestones.product';
@@ -232,7 +233,7 @@ class ProjectController extends Controller
             'tabCounts' => [
                 'products' => $project->products->count(),
                 'milestones' => $project->milestones->count(),
-                'payments' => $project->payments->count() + $cashflowCount,
+                'payments' => $cashflowCount,
                 'shipments' => $project->shipments->count(),
                 'attachments' => $project->attachments->count(),
                 'comments' => $project->comments->count(),
@@ -321,7 +322,6 @@ class ProjectController extends Controller
             $project->comments()->delete();
             $project->attachments()->delete();
             $project->trackingUpdates()->delete();
-            $project->payments()->delete();
             $project->logs()->delete();
     
             // If cashflow relation exists
@@ -388,9 +388,6 @@ class ProjectController extends Controller
             'productStageOptions' => \App\Models\ProjectProduct::stageOptions(),
             'attachmentCategoryOptions' => \App\Models\ProjectAttachment::categoryOptions(),
             'trackingStatusOptions' => \App\Models\ProjectTrackingUpdate::statusOptions(),
-            'paymentTypeOptions' => \App\Models\ProjectPayment::transactionTypeOptions(),
-            'paymentStatusOptions' => \App\Models\ProjectPayment::statusOptions(),
-            'paymentModeOptions' => \App\Models\ProjectPayment::paymentModeOptions(),
             'milestoneOptions' => class_exists(\App\Models\ProjectMilestone::class) ? \App\Models\ProjectMilestone::milestoneOptions() : [],
             'milestoneStatusOptions' => class_exists(\App\Models\ProjectMilestone::class) ? \App\Models\ProjectMilestone::statusOptions() : [],
         ];

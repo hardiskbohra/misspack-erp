@@ -26,7 +26,6 @@ use App\Http\Controllers\LeadCommentController;
 use App\Http\Controllers\ProjectAttachmentController;
 use App\Http\Controllers\ProjectCommentController;
 use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\ProjectPaymentController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectTrackingController;
 use App\Http\Controllers\ProjectMilestoneController;
@@ -323,9 +322,6 @@ Route::middleware('auth')->group(function () {
         Route::put('/project-tracking/{trackingUpdate}', [ProjectTrackingController::class, 'update'])->name('projects.tracking.update');
         Route::delete('/project-tracking/{trackingUpdate}', [ProjectTrackingController::class, 'destroy'])->name('projects.tracking.destroy');
 
-        Route::post('/projects/{project}/payments', [ProjectPaymentController::class, 'store'])->name('projects.payments.store');
-        Route::put('/project-payments/{projectPayment}', [ProjectPaymentController::class, 'update'])->name('projects.payments.update');
-        Route::delete('/project-payments/{projectPayment}', [ProjectPaymentController::class, 'destroy'])->name('projects.payments.destroy');
     
         Route::post('/projects/{project}/milestones', [ProjectMilestoneController::class, 'store'])->name('projects.milestones.store');
         Route::post('/projects/{project}/milestones/defaults', [ProjectMilestoneController::class, 'generateDefaults'])->name('projects.milestones.defaults');

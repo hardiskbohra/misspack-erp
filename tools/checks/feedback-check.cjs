@@ -224,7 +224,6 @@ check('the office changes consent through one route, and it never touches the sc
 const gatingFiles = [
     'app/Http/Controllers/ProjectController.php',
     'app/Http/Controllers/SalesInvoiceController.php',
-    'app/Http/Controllers/ProjectPaymentController.php',
     'app/Http/Controllers/ClientPortalPaymentController.php',
     'app/Http/Controllers/ClientPortalProjectController.php',
 ].filter(exists);

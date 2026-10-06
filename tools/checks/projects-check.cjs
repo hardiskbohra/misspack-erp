@@ -572,17 +572,45 @@ check('the facts, the notes and the empty blocks are the shell\'s',
     && !/master-info-list|pd-info-list/.test(recordViews));
 
 check('every table on the record is the shared table in a wrapper',
-    (recordViews.match(/<table class="master-table">/g) || []).length === 5
-    && (recordViews.match(/class="master-table-wrap"/g) || []).length === 5
+    (recordViews.match(/<table class="master-table">/g) || []).length === 4
+    && (recordViews.match(/class="master-table-wrap"/g) || []).length === 4
     && (recordViews.match(/<th scope="col"/g) || []).length === (recordViews.match(/<th[\s>]/g) || []).length
     && !/style="color:(green|red)"/.test(recordViews));
 
 check('the update path is the server\'s, not the script\'s',
-    ['products', 'tracking', 'comments', 'payments']
+    ['products', 'tracking', 'comments']
         .every(name => new RegExp(`data-update-url="\\{\\{ route\\('projects\\.${name}\\.update'`).test(recordViews))
     && /__ID__/.test(recordViews)
     && /function bindUpdateUrl/.test(script)
     && !/'\/project-/.test(plain(script)));
+
+/* A project payment used to be its own row (`project_payments`): a copy of
+   money the ledger already carried, with its own publish flag, and therefore a
+   second thing to keep in step with the ledger entry beside it. The ledger is
+   the only source of truth for project-level payments now — the Payments panel
+   reads `cashflowEntries`, and every client-facing read goes through
+   `ProjectReceipts` (ledger entries tagged to a published project, money in,
+   booked or reconciled). A model, controller, route or view that still names
+   the dropped table is a door into nothing. */
+const paymentCorpus = [
+    read('routes/web.php'),
+    read('app/Models/Project.php'),
+    read('app/Http/Controllers/ProjectController.php'),
+    recordViews,
+    script,
+].join('\n');
+
+check('project payments are the ledger\'s rows, not a table of their own',
+    ! /project_payments|ProjectPayment|projects\.payments/.test(paymentCorpus)
+    && ! exists('app/Models/ProjectPayment.php')
+    && ! exists('app/Http/Controllers/ProjectPaymentController.php')
+    && ! exists('database/migrations/2026_07_18_010400_create_project_payments_table.php')
+    && /projectReceipts/.test(read('app/Models/Project.php'))
+    && /\$project->cashflowEntries/.test(read('resources/views/projects/partials/record-money.blade.php'))
+    && /'payments' => \$cashflowCount/.test(read('app/Http/Controllers/ProjectController.php'))
+    && /ProjectReceipts::query\(/.test(read('app/Http/Controllers/ClientPortalPaymentController.php'))
+    && /ProjectReceipts::available\(/.test(read('app/Http/Controllers/ClientPortalPaymentController.php'))
+    && (read('app/Services/PartyStatement.php').match(/ProjectReceipts::forClient\(/g) || []).length === 3);
 
 check('the second door into a dialog exists',
     /querySelectorAll\('\[data-modal-open\]'\)/.test(script)

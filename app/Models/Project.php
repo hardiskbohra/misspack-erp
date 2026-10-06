@@ -89,11 +89,6 @@ class Project extends Model
         return $this->hasMany(ProjectTrackingUpdate::class)->where('is_public', true)->latest('occurred_at')->latest('id');
     }
 
-    public function payments()
-    {
-        return $this->hasMany(ProjectPayment::class)->latest('payment_date')->latest('id');
-    }
-
     public function cashflowEntries()
     {
         return $this->hasMany(\App\Models\CashflowEntry::class, 'project_id')->latest('entry_date')->latest('id');
@@ -104,11 +99,20 @@ class Project extends Model
         return $this->hasMany(\App\Models\Shipment::class, 'project_id')->latest('id');
     }
 
-    public function clientVisiblePayments()
+    /**
+     * The receipts the client portal shows for this project. A project payment
+     * used to be its own row; the cashflow ledger is the source of truth now,
+     * so a receipt is a ledger entry tagged to the project — money in, and
+     * booked or reconciled, so a tentative row never reaches a client. The
+     * office's own ledger panel reads `cashflowEntries`, every status, on
+     * purpose: the office may see what is not confirmed yet.
+     */
+    public function projectReceipts()
     {
-        return $this->hasMany(ProjectPayment::class)
-            ->visibleToClient()
-            ->latest('payment_date')
+        return $this->hasMany(\App\Models\CashflowEntry::class, 'project_id')
+            ->moneyIn()
+            ->whereIn('accounting_status', ['booked', 'reconciled'])
+            ->latest('entry_date')
             ->latest('id');
     }
 
@@ -195,29 +199,21 @@ class Project extends Model
         return 'Client #'.$this->client_id;
     }
 
+    /**
+     * What the project is worth and what has moved against it. The ledger is
+     * the only source: a credit is money in, a debit is money out, and the
+     * separate payment entries that used to be added on top are gone.
+     */
     public function paymentTotals(): array
     {
-        $payments = $this->relationLoaded('payments')
-            ? $this->payments
-            : $this->payments()->get();
-    
         /* One name for the ledger relation: it is `cashflowEntries`, here and
            in every eager load, so the loaded rows are the ones counted. */
         $cashflows = $this->relationLoaded('cashflowEntries')
             ? $this->cashflowEntries
             : $this->cashflowEntries()->get();
     
-        // Payments
-        $paymentInward = (float) $payments->where('transaction_type', 'inward')->sum('amount');
-        $paymentOutward = (float) $payments->where('transaction_type', 'outward')->sum('amount');
-    
-        // Cashflows
-        $cashflowCredit = (float) $cashflows->where('transaction_type', 'credit')->sum('credit_amount');
-        $cashflowDebit = (float) $cashflows->where('transaction_type', 'debit')->sum('debit_amount');
-    
-        // Combined totals
-        $inward = $paymentInward + $cashflowCredit;
-        $outward = $paymentOutward + $cashflowDebit;
+        $inward = (float) $cashflows->where('transaction_type', 'credit')->sum('credit_amount');
+        $outward = (float) $cashflows->where('transaction_type', 'debit')->sum('debit_amount');
     
         $estimated = (float) ($this->estimated_value ?: 0);
     

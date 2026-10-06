@@ -71,11 +71,11 @@
                 <div class="master-section-head">
                     <div>
                         <h2 class="master-section-title" id="project-money-heading">Money at a glance</h2>
-                        <p class="master-sub">Payments and the ledger rows linked to this project</p>
+                        <p class="master-sub">What the project is worth, and the ledger rows linked to it</p>
                     </div>
                     <div class="master-section-meta">
                         <a class="master-btn master-btn-soft master-btn-sm" href="{{ $recordUrl('payments') }}">
-                            <i class="fa-solid fa-indian-rupee-sign" aria-hidden="true"></i> Open payments
+                            <i class="fa-solid fa-indian-rupee-sign" aria-hidden="true"></i> Open the ledger
                         </a>
                     </div>
                 </div>
@@ -89,7 +89,6 @@
                     <div class="master-info"><span>{{ $totals['net'] >= 0 ? 'Profit' : 'Loss' }}</span>
                         <strong class="{{ $totals['net'] >= 0 ? 'project-money-in' : 'project-money-out' }}">{{ $money(abs($totals['net'])) }}</strong>
                     </div>
-                    <div class="master-info"><span>Payment entries</span><strong>{{ number_format($project->payments->count()) }}</strong></div>
                     <div class="master-info"><span>Ledger entries</span><strong>{{ number_format($project->relationLoaded('cashflowEntries') ? $project->cashflowEntries->count() : 0) }}</strong></div>
                     <div class="master-info"><span>Received against</span><strong>{{ $receivedPercent }}% of the estimate</strong></div>
                 </div>
