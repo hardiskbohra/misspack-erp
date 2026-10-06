@@ -63,6 +63,22 @@
     overflow-x: auto
 }
 
+.si-items.is-import .si-tax-col {
+    display: none
+}
+
+.si-show .si-lines th,
+.si-show .si-lines td {
+    vertical-align: middle
+}
+
+.si-show .si-lines th.is-num,
+.si-show .si-lines td.is-num {
+    text-align: center;
+    white-space: nowrap;
+    width: 1%
+}
+
 /* A cell may hold a product select, a name and a description: the row reads
    from the top rather than from the middle of its tallest cell. */
 .si-items .master-table td {
@@ -484,6 +500,8 @@
 
 .si-type.type-proforma { --tone-bg: rgba(123, 97, 255, .16); --tone-fg: #6d4bd8; }
 .si-type.type-tax { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
+.si-type.type-order { --tone-bg: rgba(123, 97, 255, .16); --tone-fg: #6d4bd8; }
+.si-type.type-bill { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
 
 .si-portal.is-public { --tone-bg: rgba(16, 185, 129, .16); --tone-fg: #047857; }
 .si-portal.is-private { --tone-bg: var(--mc-soft); --tone-fg: var(--mc-text-3); }
@@ -499,6 +517,8 @@
 
 :root[data-theme="dark"] .si-type.type-proforma { --tone-fg: #c4b5fd; }
 :root[data-theme="dark"] .si-type.type-tax { --tone-fg: #93b4ff; }
+:root[data-theme="dark"] .si-type.type-order { --tone-fg: #c4b5fd; }
+:root[data-theme="dark"] .si-type.type-bill { --tone-fg: #93b4ff; }
 
 :root[data-theme="dark"] .si-portal.is-public { --tone-fg: #6ee7b7; }
 :root[data-theme="dark"] .si-portal.is-private { --tone-fg: #aab6c9; }
@@ -637,6 +657,32 @@
     width: 6%
 }
 
+/* Purchase list has no Due column and must fit the card: no sideways scroll.
+   Action keeps extra right padding so the menu is not on the card edge. */
+.si-index .pi-table {
+    width: 100%;
+    min-width: 0;
+}
+
+.si-index .pi-col-pick { width: 44px }
+.si-index .pi-col-doc { width: 17% }
+.si-index .pi-col-vendor { width: 16% }
+.si-index .pi-col-project { width: 13% }
+.si-index .pi-col-total { width: 11% }
+.si-index .pi-col-paid { width: 10% }
+.si-index .pi-col-balance { width: 12% }
+.si-index .pi-col-state { width: 12% }
+.si-index .pi-col-action { width: 72px }
+
+.si-index .pi-table th:last-child,
+.si-index .pi-table td:last-child {
+    padding-right: 20px;
+}
+
+.si-index .master-table-wrap:has(.pi-table) {
+    overflow-x: hidden;
+}
+
 /* A listing's cell rhythm is its own: the shared 18/20 is sized for reading a
    page of text, and these are ten short columns. Scoped to this table, so the
    tables next door keep the shared padding. */
@@ -655,7 +701,7 @@
    them. */
 .si-index td.is-num,
 .si-index th.is-num {
-    text-align: right
+    text-align: center
 }
 
 .si-index .master-dropdown-toggle {

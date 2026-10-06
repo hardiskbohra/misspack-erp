@@ -71,12 +71,12 @@
                 <p class="master-sub">{{ $stats['on_hold'] }} on hold · {{ $stats['blacklisted'] }} blacklisted</p>
             </div>
         </div>
-        <div class="master-stat master-stat--flat {{ $stats['payable'] > 0 ? 'purple' : 'teal' }}">
+        <div class="master-stat master-stat--flat {{ ($stats['owing_vendors'] ?? 0) > 0 ? 'purple' : 'teal' }}">
             <span class="icon" aria-hidden="true"><i class="fa-solid fa-file-invoice-dollar"></i></span>
             <div>
-                <p class="master-stat-title">Payable</p>
-                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($stats['payable']) }}</p>
-                <p class="master-sub">across every vendor ledger</p>
+                <p class="master-stat-title">Owing</p>
+                <p class="master-stat-value">{{ number_format($stats['owing_vendors'] ?? 0) }}</p>
+                <p class="master-sub">vendors with an open balance</p>
             </div>
         </div>
         <div class="master-stat master-stat--flat {{ $stats['overdue_vendors'] ? 'red' : 'teal' }}">
@@ -274,26 +274,24 @@
                     <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
                 </div>
             </div>
-        </div>
 
-        {{-- The bulk bar appears only when a row is ticked: one status change
-             across the vendors the office selected, without opening them one
-             by one. The table's checkboxes belong to this form through the
-             form attribute, so the table stays a table. --}}
-        <form method="POST" action="{{ route('vendors.bulk-status') }}" id="vendorBulkForm"
-            class="master-list-bulk" data-bulk-bar hidden>
-            @csrf
-            @method('PATCH')
-            <span class="master-list-bulk-count" data-bulk-count>0 vendors selected</span>
-            <select class="master-select" name="action" aria-label="Bulk action" required>
-                <option value="">Choose an action…</option>
-                @foreach ($statusActions as $key => $label)
-                    <option value="{{ $key }}">{{ $label }}</option>
-                @endforeach
-            </select>
-            <button type="submit" class="master-btn master-btn-primary master-btn-sm">Apply to selected</button>
-            <button type="button" class="master-btn master-btn-light master-btn-sm" data-bulk-clear>Clear</button>
-        </form>
+            {{-- Own toolbar row, same as sales invoices: count on the left,
+                 action + Apply + Clear on the right. Checkboxes point here by id. --}}
+            <form method="POST" action="{{ route('vendors.bulk-status') }}" id="vendorBulkForm"
+                class="master-list-bulk" data-bulk-bar hidden>
+                @csrf
+                @method('PATCH')
+                <span class="master-list-bulk-count" data-bulk-count>0 selected</span>
+                <select class="master-select" name="action" aria-label="Action for the selected vendors" required>
+                    <option value="">Choose an action…</option>
+                    @foreach ($statusActions as $key => $label)
+                        <option value="{{ $key }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+                <button type="submit" class="master-btn master-btn-primary master-btn-sm">Apply</button>
+                <button type="button" class="master-btn master-btn-light master-btn-sm" data-bulk-clear>Clear</button>
+            </form>
+        </div>
 
         <div class="master-table-wrap ui-mobile-cards">
             <table class="master-table vendor-table" data-table-settings data-table-key="vendors">
@@ -306,7 +304,6 @@
                         <th scope="col">Type</th>
                         <th scope="col">Contact</th>
                         <th scope="col" class="ui-mobile-secondary">Location</th>
-                        <th scope="col" class="ui-mobile-secondary">Terms</th>
                         <th scope="col" class="is-num">Payable</th>
                         <th scope="col">Status</th>
                         <th scope="col">Action</th>
@@ -325,8 +322,9 @@
                             $avatarTone = abs(crc32($vendor->vendor_name)) % 6;
                         @endphp
                         @php
-                            $billed = (float) ($vendor->billed_inr ?? 0);
-                            $paid = (float) ($vendor->paid_inr ?? 0);
+                            $vendorListCurrency = $vendor->preferred_currency ?: 'RMB';
+                            $billed = (float) ($vendor->billed_foreign ?? 0);
+                            $paid = (float) ($vendor->paid_foreign ?? 0);
                             $payable = max($billed - $paid, 0);
                         @endphp
                         <tr class="vendor-row is-clickable" data-href="{{ route('vendors.show', $vendor) }}">
@@ -350,12 +348,14 @@
                                 </div>
                             </td>
                             <td data-label="Type">
-                                <span class="vendor-type-chip type-{{ $typeClass }}">{{ $vendor->typeLabel() }}</span>
-                                @if($vendor->rating)
-                                    <span class="vendor-table-meta ui-mobile-secondary" aria-label="Rated {{ $vendor->rating }} of 5">
-                                        {{ str_repeat('★', $vendor->rating) }}
-                                    </span>
-                                @endif
+                                <div class="vendor-type-stack">
+                                    <span class="vendor-type-chip type-{{ $typeClass }}">{{ $vendor->typeLabel() }}</span>
+                                    @if($vendor->rating)
+                                        <span class="vendor-table-meta" aria-label="Rated {{ $vendor->rating }} of 5">
+                                            {{ str_repeat('★', $vendor->rating) }}
+                                        </span>
+                                    @endif
+                                </div>
                             </td>
                             <td data-label="Contact">
                                 @if($vendor->contact_person_name)
@@ -374,14 +374,10 @@
                                 {{ $vendor->city ?: '—' }}
                                 <span class="master-sub">{{ $vendor->country ?: 'Country not set' }}</span>
                             </td>
-                            <td data-label="Terms" class="ui-mobile-secondary">
-                                {{ $vendor->preferred_currency ?: 'INR' }}
-                                <span class="master-sub">{{ $vendor->payment_terms ?: 'No terms on file' }}</span>
-                            </td>
                             <td data-label="Payable" class="is-num">
                                 @if ($payable > 0)
-                                    <strong class="vendor-payable">{{ \App\Helpers\CommonHelper::indianCurrency($payable) }}</strong>
-                                    <span class="master-sub">{{ $billed > 0 ? 'of '.\App\Helpers\CommonHelper::indianCurrency($billed).' billed' : '' }}</span>
+                                    <strong class="vendor-payable">{{ \App\Helpers\CommonHelper::amount($payable, $vendorListCurrency) }}</strong>
+                                    <span class="master-sub">{{ $billed > 0 ? 'of '.\App\Helpers\CommonHelper::amount($billed, $vendorListCurrency).' billed' : '' }}</span>
                                 @else
                                     <span class="master-empty-value">Settled</span>
                                 @endif

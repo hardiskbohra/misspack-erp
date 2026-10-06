@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SavedView;
+use App\Models\PurchaseInvoice;
 use App\Models\Vendor;
 use App\Models\VendorAttachment;
 use App\Models\VendorComment;
@@ -101,15 +102,14 @@ class VendorController extends Controller
         $vendors = Vendor::query()
             ->with('creator')
             ->when(Schema::hasTable('vendor_payment_entries'), function ($query) {
-                /* Payable per vendor, summed in the database: billed less paid,
-                   both in rupees, so a page of 25 vendors does not load 25
-                   ledgers to draw one column. */
-                $query->withSum(['paymentEntries as billed_inr' => function ($ledger) {
+                /* Payable per vendor in that vendor's ledger currency, so a
+                   page of 25 vendors does not load 25 ledgers for one column. */
+                $query->withSum(['paymentEntries as billed_foreign' => function ($ledger) {
                     $ledger->where('transaction_type', 'credit');
-                }], 'amount_in_inr')
-                    ->withSum(['paymentEntries as paid_inr' => function ($ledger) {
+                }], 'foreign_amount')
+                    ->withSum(['paymentEntries as paid_foreign' => function ($ledger) {
                         $ledger->where('transaction_type', 'debit');
-                    }], 'amount_in_inr');
+                    }], 'foreign_amount');
             })
             ->search($search)
             ->when($status !== 'all', fn ($q) => $q->where('status', $status))
@@ -146,7 +146,7 @@ class VendorController extends Controller
                 ->where('country', '!=', 'India')
                 ->count(),
             'with_contact' => Vendor::query()->whereNotNull('contact_person_name')->where('contact_person_name', '!=', '')->count(),
-            'payable' => $this->modulePayable(),
+            'owing_vendors' => $this->owingVendorCount(),
             'overdue_vendors' => $this->overdueVendorCount(),
         ];
 
@@ -451,6 +451,7 @@ class VendorController extends Controller
             'transaction_date' => ['required', 'date'],
             'due_date' => ['nullable', 'date', 'after_or_equal:transaction_date'],
             'invoice_number' => ['nullable', 'string', 'max:255'],
+            'purchase_invoice_id' => ['nullable', 'integer'],
             'foreign_amount' => ['required', 'numeric', 'min:0'],
             'foreign_currency' => ['required', 'in:RMB,USD,INR'],
             'exchange_rate' => ['nullable', 'numeric', 'min:0'],
@@ -486,6 +487,8 @@ class VendorController extends Controller
 
         $entry = DB::transaction(function () use ($request, $data, $vendor, $syncCashflow) {
             $entry = VendorPaymentEntry::create($data);
+            $this->attachPurchaseDocument($entry);
+            $this->assertVendorMoneyAllowed($entry);
 
             $this->cashflowSync()->sync($entry, $syncCashflow);
 
@@ -506,6 +509,7 @@ class VendorController extends Controller
             'transaction_date' => ['required', 'date'],
             'due_date' => ['nullable','date','after_or_equal:transaction_date'],
             'invoice_number' => ['nullable','string','max:255'],
+            'purchase_invoice_id' => ['nullable', 'integer'],
             'foreign_amount' => ['required','numeric','min:0'],
             'foreign_currency' => ['required','in:RMB,USD,INR'],
             'exchange_rate' => ['nullable','numeric','min:0'],
@@ -540,6 +544,8 @@ class VendorController extends Controller
 
         DB::transaction(function () use ($request,$data,$vendor,$entry,$syncCashflow) {
             $entry->update($data);
+            $this->attachPurchaseDocument($entry);
+            $this->assertVendorMoneyAllowed($entry);
             $this->cashflowSync()->sync($entry, $syncCashflow);
             $this->storeVendorPaymentAttachments($request,$entry);
         });
@@ -645,6 +651,66 @@ class VendorController extends Controller
         }
     }
 
+    /**
+     * When a Money-tab payment names a purchase order or bill number, hang it
+     * on that document so converting the order can take the advance with it.
+     */
+    private function attachPurchaseDocument(VendorPaymentEntry $entry): void
+    {
+        if (! Schema::hasTable('purchase_invoices')
+            || ! Schema::hasColumn('vendor_payment_entries', 'purchase_invoice_id')
+            || $entry->purchase_invoice_id
+            || ! filled($entry->invoice_number)) {
+            return;
+        }
+
+        $document = PurchaseInvoice::query()
+            ->where('vendor_id', $entry->vendor_id)
+            ->where(function ($query) use ($entry) {
+                $query->where('invoice_number', $entry->invoice_number)
+                    ->orWhere('vendor_bill_number', $entry->invoice_number);
+            })
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $document) {
+            return;
+        }
+
+        $entry->purchase_invoice_id = $document->id;
+        $entry->save();
+    }
+
+    /**
+     * Money out needs an approved PO or a raised bill. Credits (a bill
+     * received) are the document; they do not wait on this gate.
+     */
+    private function assertVendorMoneyAllowed(VendorPaymentEntry $entry): void
+    {
+        if ($entry->transaction_type !== 'debit' || $entry->status === 'cancelled') {
+            return;
+        }
+
+        if (! class_exists(PurchaseInvoice::class) || ! Schema::hasTable('purchase_invoices')) {
+            return;
+        }
+
+        $document = $entry->purchase_invoice_id
+            ? PurchaseInvoice::query()->find($entry->purchase_invoice_id)
+            : null;
+
+        if ($document && $document->canReceiveMoney()) {
+            return;
+        }
+
+        $message = $document?->moneyGateMessage()
+            ?: 'Pick an approved purchase order or a raised bill before paying this vendor. A sent PO still needs the checker to approve it.';
+
+        throw ValidationException::withMessages([
+            'purchase_invoice_id' => $message,
+        ]);
+    }
+
     private function paymentSavedMessage(VendorPaymentEntry $entry, string $verb): string
     {
         if ($entry->cashflow_entry_id) {
@@ -741,6 +807,7 @@ class VendorController extends Controller
         $products = $this->vendorProducts($projectProducts);
         $cashflowAccounts = $this->cashflowAccounts();
         $projectsForPayment = $this->projectsForVendorPayment($vendor);
+        [$payableDocuments, $pendingApprovals] = $this->vendorPurchaseDocuments($vendor);
         $attachmentOptions = class_exists(VendorAttachment::class) ? VendorAttachment::categoryOptions() : [];
         $commentsAvailable = Schema::hasTable('vendor_comments');
         $attachmentsAvailable = Schema::hasTable('vendor_attachments');
@@ -751,10 +818,11 @@ class VendorController extends Controller
 
         /* The payables settle the ledger first; spend and the ledger totals
            then read from that settlement, so no two cards can disagree. */
-        $payables = $this->vendorPayables($vendorPaymentEntries);
-        $performance = $this->vendorPerformance($vendor, $vendorPaymentEntries, $payables);
         $currencySummary = $this->vendorCurrencySummary($vendorPaymentEntries);
-        $preferredCurrency = $vendor->preferred_currency ?: 'RMB';
+        $preferredCurrency = $vendor->preferred_currency
+            ?: (array_key_first($currencySummary) ?: 'RMB');
+        $payables = $this->vendorPayables($vendorPaymentEntries, $preferredCurrency);
+        $performance = $this->vendorPerformance($vendor, $vendorPaymentEntries, $payables);
         $preferredCurrencySummary = $currencySummary[$preferredCurrency] ?? [
             'bill' => 0, 'expense' => 0, 'credit' => 0, 'debit' => 0, 'balance' => 0,
             'inr_credit' => 0, 'inr_debit' => 0,
@@ -828,6 +896,8 @@ class VendorController extends Controller
             'products',
             'cashflowAccounts',
             'projectsForPayment',
+            'payableDocuments',
+            'pendingApprovals',
             'paymentOptions',
             'attachmentOptions',
             'summary',
@@ -849,12 +919,10 @@ class VendorController extends Controller
      * is actually applied — so a partly-paid bill shows one still-open row
      * rather than a settled one and an unrelated credit.
      *
-     * Everything here is in the row's own currency *and* in rupees: the
-     * foreign amounts are what the supplier invoices in, the rupee amounts
-     * are what the office pays with, and adding the two together is the one
-     * arithmetic this module must never do.
+     * Totals on this page are in the vendor's own currency. Rupees belong on
+     * the cashflow, not here.
      */
-    private function vendorPayables($entries): array
+    private function vendorPayables($entries, string $preferredCurrency = 'RMB'): array
     {
         $today = Carbon::today();
         $open = [];
@@ -878,6 +946,8 @@ class VendorController extends Controller
             if ($isBill) {
                 $open[] = [
                     'id' => $entry->id,
+                    'purchase_invoice_id' => $entry->purchase_invoice_id ? (int) $entry->purchase_invoice_id : null,
+                    'kind' => $entry->entry_category === 'order' ? 'order' : 'bill',
                     'particular' => (string) $entry->particular,
                     'invoice' => (string) ($entry->invoice_number ?: ''),
                     'date' => $entry->transaction_date,
@@ -927,15 +997,12 @@ class VendorController extends Controller
         $dueSoon = 0.0;
 
         foreach ($open as $bill) {
-            /* A bill is open while anything is left of it — in rupees when the
-               rupee figure is known, and otherwise in its own currency, so a
-               missing exchange rate cannot make a debt disappear. */
-            if ((float) $bill['rupee_left'] <= 0.009 && (float) $bill['foreign_left'] <= 0.0001) {
+            if ((float) $bill['foreign_left'] <= 0.0001 && (float) $bill['rupee_left'] <= 0.009) {
                 continue;
             }
 
-            $left = (float) $bill['rupee_left'];
-            $outstanding += $left;
+            $inPreferred = ($bill['currency'] ?: $preferredCurrency) === $preferredCurrency;
+            $left = (float) $bill['foreign_left'];
 
             $daysLeft = $this->daysUntil($bill['due'], $today);
 
@@ -943,7 +1010,9 @@ class VendorController extends Controller
                 $bucket = 'not_due';
             } elseif ($daysLeft >= 0) {
                 $bucket = 'due_soon';
-                $dueSoon += $left;
+                if ($inPreferred) {
+                    $dueSoon += $left;
+                }
             } elseif ($daysLeft >= -30) {
                 $bucket = 'overdue_1_30';
             } elseif ($daysLeft >= -60) {
@@ -952,11 +1021,14 @@ class VendorController extends Controller
                 $bucket = 'overdue_60_plus';
             }
 
-            $buckets[$bucket]['amount'] += $left;
-            $buckets[$bucket]['count']++;
+            if ($inPreferred) {
+                $outstanding += $left;
+                $buckets[$bucket]['amount'] += $left;
+                $buckets[$bucket]['count']++;
+            }
 
             $isOverdue = $daysLeft !== null && $daysLeft < 0;
-            if ($isOverdue) {
+            if ($isOverdue && $inPreferred) {
                 $overdue += $left;
             }
 
@@ -1013,8 +1085,8 @@ class VendorController extends Controller
             return $entry->transaction_type === 'debit' && $entry->status !== 'cancelled';
         });
 
-        $billed = (float) $bills->sum('amount_in_inr');
-        $paid = (float) $payments->sum('amount_in_inr');
+        $billed = (float) $bills->sum('foreign_amount');
+        $paid = (float) $payments->sum('foreign_amount');
 
         /* Six bars, oldest first; a month with no bill is a zero-height bar
            rather than a missing column, so the shape of the run is readable. */
@@ -1026,13 +1098,13 @@ class VendorController extends Controller
             $amount = (float) $bills
                 ->filter(fn ($entry) => $entry->transaction_date
                     && $entry->transaction_date->format('Y-m') === $month->format('Y-m'))
-                ->sum('amount_in_inr');
+                ->sum('foreign_amount');
 
             $peak = max($peak, $amount);
             $series[] = ['label' => $month->format('M'), 'amount' => round($amount, 2)];
         }
 
-        $billAmounts = $bills->pluck('amount_in_inr')->map(fn ($value) => (float) $value)->filter();
+        $billAmounts = $bills->pluck('foreign_amount')->map(fn ($value) => (float) $value)->filter();
         $dates = $entries->pluck('transaction_date')->filter();
 
         return [
@@ -1067,17 +1139,21 @@ class VendorController extends Controller
         return (int) round(($date->copy()->startOfDay()->timestamp - $from->timestamp) / 86400);
     }
 
-    /** Every vendor's payable, from the ledger, summed in the database. */
-    private function modulePayable(): float
+    /** Vendors with an open ledger balance. Counted, not summed: the
+     *  ledgers are in different currencies and must not be added together. */
+    private function owingVendorCount(): int
     {
         if (! Schema::hasTable('vendor_payment_entries')) {
-            return 0.0;
+            return 0;
         }
 
-        $billed = (float) VendorPaymentEntry::query()->where('transaction_type', 'credit')->sum('amount_in_inr');
-        $paid = (float) VendorPaymentEntry::query()->where('transaction_type', 'debit')->sum('amount_in_inr');
-
-        return round(max($billed - $paid, 0), 2);
+        return (int) Vendor::query()
+            ->whereRaw('(
+                select coalesce(sum(case when transaction_type = \'credit\' then foreign_amount else -foreign_amount end), 0)
+                from vendor_payment_entries
+                where vendor_id = vendors.id
+            ) > 0.009')
+            ->count();
     }
 
     /**
@@ -1419,7 +1495,7 @@ class VendorController extends Controller
             if ($entry->transaction_type === 'credit') {
                 $summary[$currency]['credit'] += $foreignAmount;
                 $summary[$currency]['inr_credit'] += $inrAmount;
-                if ($entry->entry_category === 'bill') {
+                if (in_array($entry->entry_category, ['bill', 'order'], true)) {
                     $summary[$currency]['bill'] += $foreignAmount;
                 }
                 if ($entry->entry_category === 'expense') {
@@ -1443,6 +1519,30 @@ class VendorController extends Controller
         }
 
         return \App\Models\CashflowAccount::query()->orderBy('account_name')->get();
+    }
+
+    /** Approved POs and raised bills that may take money, plus POs still waiting on the checker. */
+    private function vendorPurchaseDocuments(Vendor $vendor): array
+    {
+        if (! class_exists(PurchaseInvoice::class) || ! Schema::hasTable('purchase_invoices')) {
+            return [collect(), collect()];
+        }
+
+        $documents = PurchaseInvoice::query()
+            ->where('vendor_id', $vendor->id)
+            ->where('status', '!=', 'cancelled')
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get();
+
+        $payable = $documents->filter(fn (PurchaseInvoice $document) => $document->canReceiveMoney())->values();
+        $pending = $documents->filter(function (PurchaseInvoice $document) {
+            return $document->isOrder()
+                && ! $document->isSuperseded()
+                && in_array($document->status, ['draft', 'sent'], true);
+        })->values();
+
+        return [$payable, $pending];
     }
 
     private function projectsForVendorPayment(Vendor $vendor)

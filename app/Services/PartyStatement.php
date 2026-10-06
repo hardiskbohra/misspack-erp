@@ -132,7 +132,7 @@ class PartyStatement
      */
     public function currencies(string $type, int $id, bool $clientPortal = false): array
     {
-        $preferred = strtoupper((string) ($this->findParty($type, $id)?->preferred_currency ?: 'INR'));
+        $preferred = strtoupper((string) ($this->findParty($type, $id)?->preferred_currency ?: ''));
         $found = [];
 
         if ($type === 'vendor') {
@@ -176,15 +176,19 @@ class PartyStatement
 
         sort($found);
 
+        if ($preferred === '') {
+            $preferred = $type === 'vendor'
+                ? (string) ($found[0] ?? 'RMB')
+                : 'INR';
+        }
+
         return array_values(array_unique(array_merge([$preferred], $found)));
     }
 
     /** The statement currency when nobody has chosen: what the party quotes in. */
     public function defaultCurrency(string $type, int $id): string
     {
-        $preferred = strtoupper((string) ($this->findParty($type, $id)?->preferred_currency ?: 'INR'));
-
-        return $preferred !== '' ? $preferred : 'INR';
+        return $this->currencies($type, $id)[0] ?? ($type === 'vendor' ? 'RMB' : 'INR');
     }
 
     /** The month the office is closing when the screen opens. */
@@ -409,7 +413,7 @@ class PartyStatement
 
                         $add(
                             (int) $entry->vendor_id,
-                            strtoupper((string) ($entry->foreign_currency ?: 'INR')),
+                            strtoupper((string) ($entry->foreign_currency ?: 'RMB')),
                             (string) $entry->transaction_date,
                             $isBill ? 0.0 : $amount,
                             $isBill ? $amount : 0.0
@@ -469,7 +473,8 @@ class PartyStatement
         $from = DateRanges::normalise($from);
         $to = DateRanges::normalise($to);
 
-        $currency = strtoupper((string) ($options['currency'] ?? $this->defaultCurrency($type, $id)));
+        $requested = strtoupper(trim((string) ($options['currency'] ?? '')));
+        $currency = $requested !== '' ? $requested : $this->defaultCurrency($type, $id);
         $clientPortal = $type === 'client' && (bool) ($options['client_portal'] ?? false);
         $rows = $this->statementRows($type, $party, $currency, $clientPortal);
 
@@ -706,14 +711,19 @@ class PartyStatement
     {
         $rows = [];
 
+        $hasVendorLedger = false;
+
         if (Schema::hasTable('vendor_payment_entries')) {
             $entries = VendorPaymentEntry::query()
                 ->where('vendor_id', $vendor->id)
                 ->orderBy('transaction_date')->orderBy('id')
                 ->get();
+            $hasVendorLedger = $entries->isNotEmpty();
+            $ledgerCurrency = strtoupper((string) ($vendor->preferred_currency ?: 'RMB'));
 
             foreach ($entries as $entry) {
-                if (strtoupper((string) ($entry->foreign_currency ?: 'INR')) !== $currency) {
+                $entryCurrency = strtoupper((string) ($entry->foreign_currency ?: $ledgerCurrency));
+                if ($entryCurrency !== $currency) {
                     continue;
                 }
 
@@ -734,7 +744,9 @@ class PartyStatement
             }
         }
 
-        if ($rows === [] && Schema::hasTable('cashflow_entries')) {
+        /* Cashflow is rupees. If this vendor has a currency ledger, an empty
+           INR statement must not be filled with those rupee rows. */
+        if ($rows === [] && ! $hasVendorLedger && Schema::hasTable('cashflow_entries')) {
             foreach ($this->partyCashflow($vendor->id, 'vendor', (string) $vendor->vendor_name) as $entry) {
                 if (strtoupper((string) ($entry->currency ?: 'INR')) !== $currency) {
                     continue;
@@ -757,7 +769,13 @@ class PartyStatement
 
     private function vendorParticular(VendorPaymentEntry $entry): string
     {
-        $kind = $entry->transaction_type === 'debit' ? 'Paid to vendor' : 'Bill received';
+        if (filled($entry->particular)) {
+            return (string) $entry->particular;
+        }
+
+        $kind = $entry->transaction_type === 'debit'
+            ? 'Paid to vendor'
+            : ($entry->entry_category === 'order' ? 'Purchase order' : 'Bill received');
         $category = $entry->entry_category ? ' · '.ucfirst((string) $entry->entry_category) : '';
 
         return $kind.$category;
@@ -1037,10 +1055,12 @@ class PartyStatement
         }
 
         $items = [];
+        $ledgerCurrency = strtoupper((string) (Vendor::find($id)?->preferred_currency ?: 'RMB'));
 
         foreach (VendorPaymentEntry::where('vendor_id', $id)
             ->orderBy('transaction_date')->orderBy('id')->get() as $entry) {
-            if (strtoupper((string) ($entry->foreign_currency ?: 'INR')) !== $currency) {
+            $entryCurrency = strtoupper((string) ($entry->foreign_currency ?: $ledgerCurrency));
+            if ($entryCurrency !== $currency) {
                 continue;
             }
 

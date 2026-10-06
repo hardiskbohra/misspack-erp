@@ -29,7 +29,12 @@ use Illuminate\Support\Facades\Schema;
  * Payments against the bill are **debits** carrying the same
  * `purchase_invoice_id`; they are written by the module's payment action (and
  * mirrored into the INR cashflow by `VendorPaymentCashflowSync`), never by this
- * service. An order posts nothing: only the bill is owed.
+ * service.
+ *
+ * A purchase order posts once it has left the office (`sent` or `approved`),
+ * so the vendor Money tab and the statement show the commitment. The moment
+ * that order becomes a bill, the order row is taken out and only the bill
+ * remains — one purchase, one credit.
  */
 class PurchaseBillLedger
 {
@@ -44,7 +49,8 @@ class PurchaseBillLedger
      * Create or refresh the bill's ledger row.
      *
      * Returns the row when one exists afterwards, or null when the document
-     * does not need one (an order, a cancelled bill, a bill without a vendor).
+     * does not need one (a draft or cancelled order, a billed order whose bill
+     * has taken over, a cancelled bill, a document without a vendor).
      */
     public function sync(PurchaseInvoice $invoice): ?VendorPaymentEntry
     {
@@ -52,14 +58,44 @@ class PurchaseBillLedger
             return null;
         }
 
-        if (! $invoice->isBill() || $invoice->status === 'cancelled' || ! $invoice->vendor_id) {
+        if (! $invoice->vendor_id || $invoice->status === 'cancelled') {
             $this->remove($invoice);
 
             return null;
         }
 
+        if ($invoice->isOrder()) {
+            if (! $this->orderIsOpen($invoice)) {
+                $this->remove($invoice);
+
+                return null;
+            }
+
+            return $this->write($invoice, 'order');
+        }
+
+        if (! $invoice->isBill()) {
+            $this->remove($invoice);
+
+            return null;
+        }
+
+        return $this->write($invoice, 'bill');
+    }
+
+    /** Sent or approved, and not yet raised as a bill. */
+    private function orderIsOpen(PurchaseInvoice $invoice): bool
+    {
+        return in_array($invoice->status, ['sent', 'approved'], true)
+            && ! $invoice->converted_invoice_id;
+    }
+
+    private function write(PurchaseInvoice $invoice, string $kind): VendorPaymentEntry
+    {
         $entry = $this->posting($invoice) ?? new VendorPaymentEntry();
-        $order = $invoice->purchase_order_id ? $invoice->purchaseOrder : null;
+        $order = $kind === 'bill' && $invoice->purchase_order_id
+            ? $invoice->purchaseOrder
+            : null;
 
         $entry->fill([
             'vendor_id' => $invoice->vendor_id,
@@ -67,21 +103,21 @@ class PurchaseBillLedger
             'project_id' => $invoice->project_id,
             'transaction_date' => $invoice->invoice_date ?: now()->toDateString(),
             'due_date' => $invoice->due_date,
-            'invoice_number' => $invoice->referenceNumber(),
+            'invoice_number' => $kind === 'bill' ? $invoice->referenceNumber() : $invoice->invoice_number,
             'foreign_currency' => $invoice->currency ?: 'INR',
             'foreign_amount' => (float) $invoice->total_amount,
             'exchange_rate' => $this->rate($invoice),
             'transaction_type' => 'credit',
-            'entry_category' => 'bill',
-            /* The office reconciles against the vendor's own number, so the
-               ledger row carries it: our number says which document of ours
-               posted, theirs says which of theirs is being paid. */
-            'particular' => trim('Purchase bill '.$invoice->invoice_number
-                .($order ? ' against '.$order->invoice_number : '')
-                .($invoice->vendor_bill_number ? ' · vendor bill '.$invoice->vendor_bill_number : '')),
+            'entry_category' => $kind === 'order' ? 'order' : 'bill',
+            'particular' => $kind === 'order'
+                ? 'Purchase order '.$invoice->invoice_number
+                : trim('Purchase bill '.$invoice->invoice_number
+                    .($order ? ' against '.$order->invoice_number : '')),
             'status' => 'booked',
             'amount_in_inr' => $this->rupees($invoice),
-            'remarks' => 'Auto-posted from purchase bill '.$invoice->invoice_number.'.',
+            'remarks' => $kind === 'order'
+                ? 'Auto-posted from purchase order '.$invoice->invoice_number.'.'
+                : 'Auto-posted from purchase bill '.$invoice->invoice_number.'.',
             'created_by' => $invoice->created_by ?: Auth::id(),
         ]);
 
@@ -109,10 +145,9 @@ class PurchaseBillLedger
     /**
      * The advance follows the document.
      *
-     * An order is not owed, but money can be paid against one before the bill
-     * arrives. When the order becomes a bill, those debits move with it — one
-     * purchase, one payable, the way a proforma's receipts move to its tax
-     * invoice.
+     * Money paid against the order — a debit on the order id, a debit whose
+     * invoice number is the PO number, or an amount typed on the order itself —
+     * becomes money paid against the bill. One purchase, one payable.
      */
     public function movePayments(PurchaseInvoice $order, PurchaseInvoice $bill): void
     {
@@ -120,10 +155,45 @@ class PurchaseBillLedger
             return;
         }
 
-        VendorPaymentEntry::query()
-            ->where('purchase_invoice_id', $order->id)
+        $numbers = array_values(array_unique(array_filter([
+            (string) $order->invoice_number,
+            (string) ($order->vendor_bill_number ?? ''),
+        ])));
+
+        $entries = VendorPaymentEntry::query()
             ->where('transaction_type', 'debit')
-            ->update(['purchase_invoice_id' => $bill->id]);
+            ->where(function ($query) use ($order, $numbers) {
+                $query->where('purchase_invoice_id', $order->id);
+                if ($numbers !== []) {
+                    $query->orWhere(function ($match) use ($order, $numbers) {
+                        $match->where('vendor_id', $order->vendor_id)
+                            ->where(function ($id) {
+                                $id->whereNull('purchase_invoice_id')
+                                    ->orWhere('purchase_invoice_id', 0);
+                            })
+                            ->whereIn('invoice_number', $numbers);
+                    });
+                }
+            })
+            ->get();
+
+        $billNumber = $bill->referenceNumber();
+
+        foreach ($entries as $entry) {
+            $entry->purchase_invoice_id = $bill->id;
+            $entry->invoice_number = $billNumber;
+            $entry->particular = 'Advance against purchase bill '.$bill->invoice_number
+                .' (from '.$order->invoice_number.')';
+            $entry->save();
+        }
+
+        $carried = (float) $order->amount_paid;
+        if ($carried > 0.009) {
+            $bill->amount_paid = round((float) $bill->amount_paid + $carried, 2);
+            $bill->save();
+            $order->amount_paid = 0;
+            $order->save();
+        }
     }
 
     /** The row this service owns for the bill: the auto-posted credit. */

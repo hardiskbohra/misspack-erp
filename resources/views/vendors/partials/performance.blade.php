@@ -14,7 +14,7 @@
 
     <div class="vendor-spend">
         @foreach ($performance['series'] as $month)
-            <div class="vendor-spend-bar" title="{{ $month['label'] }}: {{ \App\Helpers\CommonHelper::indianCurrency($month['amount']) }}">
+            <div class="vendor-spend-bar" title="{{ $month['label'] }}: {{ $money($month['amount']) }}">
                 <span class="vendor-spend-fill" style="height: {{ max(4, (int) round(($month['amount'] / $performance['peak']) * 100)) }}%"></span>
                 <span class="vendor-spend-label">{{ $month['label'] }}</span>
             </div>
@@ -22,12 +22,12 @@
     </div>
 
     <div class="master-facts">
-        <div class="master-info"><span>Billed, all time</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($performance['billed']) }}</strong></div>
+        <div class="master-info"><span>Billed, all time</span><strong>{{ $money($performance['billed']) }}</strong></div>
         <div class="master-info"><span>Settled</span><strong class="{{ $performance['settled_percent'] >= 90 ? 'vendor-amount-credit' : '' }}">{{ $performance['settled_percent'] }}%</strong></div>
         <div class="master-info"><span>Bills raised</span><strong>{{ number_format($performance['bills']) }}</strong></div>
         <div class="master-info"><span>Payments made</span><strong>{{ number_format($performance['payments']) }}</strong></div>
-        <div class="master-info"><span>Average bill</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($performance['average_bill']) }}</strong></div>
-        <div class="master-info"><span>Largest bill</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($performance['largest_bill']) }}</strong></div>
+        <div class="master-info"><span>Average bill</span><strong>{{ $money($performance['average_bill']) }}</strong></div>
+        <div class="master-info"><span>Largest bill</span><strong>{{ $money($performance['largest_bill']) }}</strong></div>
         <div class="master-info"><span>Open bills</span><strong>{{ number_format($performance['open_bills']) }}</strong></div>
         <div class="master-info"><span>First business</span><strong>{{ $performance['first_entry']?->format('d M Y') ?: 'Not on file' }}</strong></div>
     </div>

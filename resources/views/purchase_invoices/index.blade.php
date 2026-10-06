@@ -1,78 +1,55 @@
 @extends('layouts.app')
 
-@section('title', $docType === 'order' ? 'Purchase Orders' : 'Purchase Bills')
-@section('page-title', $docType === 'order' ? 'Purchase Orders' : 'Purchase Bills')
+@section('title', 'Purchases')
+@section('page-title', 'Purchases')
 
-{{-- What the office buys, in the two documents it buys with: the order that
-     goes out, and the bill that comes back. The primary action lives in the
-     header so it stays reachable however far the list scrolls. --}}
 @section('page-actions')
-    @if ($docType === 'order')
-        <a class="master-btn master-btn-primary" href="{{ route('purchase-orders.create') }}">+ New Purchase Order</a>
-        <a class="master-btn master-btn-soft" href="{{ route('purchase-bills.index') }}">Purchase Bills</a>
-    @else
-        <a class="master-btn master-btn-primary" href="{{ route('purchase-bills.create') }}">+ New Purchase Bill</a>
-        <a class="master-btn master-btn-soft" href="{{ route('purchase-orders.index') }}">Purchase Orders</a>
-    @endif
-    {{-- The file the office takes away, with whatever the screen is filtered by:
-         the CSV asks the same query, never a copy of it. --}}
-    <a class="master-btn master-btn-ghost desktop-only" href="{{ route($prefix.'.export', request()->query()) }}">Export CSV</a>
+    <a class="master-btn master-btn-primary" href="{{ route('purchase-invoices.create', ['type' => 'bill']) }}">+ New Purchase Bill</a>
+    <a class="master-btn master-btn-soft" href="{{ route('purchase-invoices.create', ['type' => 'order']) }}">New Purchase Order</a>
 @endsection
 
 @section('content')
 @push('styles')
-    <link rel="stylesheet" href="{{ $assetVer('assets/css/purchase-invoices.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/sales-invoices.css') }}">
 @endpush
 
 @php
-    $isOrder = $docType === 'order';
-    $prefix = $isOrder ? 'purchase-orders' : 'purchase-bills';
-    $noun = $isOrder ? 'purchase order' : 'purchase bill';
-
-    /* Which chips are lit. The counts come from the controller, asked of the
-       same query the rows come from — a chip that claims a number has to be
-       showing it. */
-    $chipBase = collect(request()->except(['status', 'payment', 'currency', 'date_from', 'date_to', 'page']))
+    $chipBase = collect(request()->except(['invoice_type', 'status', 'payment', 'date_from', 'date_to', 'page']))
         ->reject(fn ($value) => $value === null || $value === '' || $value === 'all');
-
+    $chipActive = [
+        'all' => $type === 'all' && $status === 'all' && $payment === 'all' && blank($dateFrom) && blank($dateTo),
+        'order' => $type === 'order',
+        'bill' => $type === 'bill',
+        'draft' => $status === 'draft',
+    ];
     $filtersActive = $appliedChips !== [];
-
-    /* Removing a chip drops the query keys it owns. */
-    $chipUrl = function (array $keys) use ($prefix) {
+    $chipUrl = function (array $keys) {
         $keep = collect(request()->except(array_merge($keys, ['page'])))
             ->reject(fn ($value) => $value === null || $value === '' || $value === 'all');
 
-        return route($prefix.'.index', $keep->all());
+        return route('purchase-invoices.index', $keep->all());
     };
-
-    $statusChips = $isOrder
-        ? ['draft' => 'Drafts', 'sent' => 'Sent', 'approved' => 'Approved', 'billed' => 'Billed']
-        : ['draft' => 'Drafts', 'received' => 'Received', 'partial' => 'Partly paid', 'paid' => 'Paid', 'overdue' => 'Overdue'];
 @endphp
 
-<div class="pi-index master-list">
-    {{-- The figures: what the filtered rows add up to, and the one number that is
-         deliberately not filtered (the drafts waiting to go out). Every figure is
-         the model's money rule asked of the whole filtered set in one aggregate,
-         never a sum of what happens to be on this page. --}}
+<div class="si-index master-list">
     <div class="master-stats">
         @foreach ($stats as $stat)
-            <div class="master-stat master-stat--flat {{ $stat['tone'] }} tooltip-container">
-                <span class="icon" aria-hidden="true">
-                    <i class="fa-solid {{ $stat['tone'] === 'red' ? 'fa-triangle-exclamation' : ($stat['money'] ?? true ? 'fa-indian-rupee-sign' : 'fa-pen-ruler') }}"></i>
-                </span>
+            <div class="master-stat master-stat--flat {{ $stat['tone'] }}">
+                <span class="icon">{{ ($stat['money'] ?? true) ? \App\Helpers\CommonHelper::symbol($stat['currency'] ?? 'INR') : '✎' }}</span>
                 <div>
                     <p class="master-stat-title">{{ $stat['label'] }}</p>
                     <p class="master-stat-value">
-                        {{ ($stat['money'] ?? true) ? \App\Helpers\CommonHelper::indianCurrency($stat['value']) : $stat['value'] }}
+                        @if ($stat['money'] ?? true)
+                            {{ \App\Helpers\CommonHelper::amount($stat['value'], $stat['currency'] ?? 'INR') }}
+                        @else
+                            {{ $stat['value'] }}
+                        @endif
                     </p>
-                    @if ($stat['note'] ?? null)
-                        <p class="master-sub">{{ $stat['note'] }}</p>
+                    @if (($stat['money'] ?? true) && isset($stat['open']))
+                        <p class="master-sub">Open {{ \App\Helpers\CommonHelper::amount($stat['open'], $stat['currency']) }}
+                            · outstanding {{ \App\Helpers\CommonHelper::amount($stat['outstanding'] ?? 0, $stat['currency']) }}</p>
                     @endif
                 </div>
-                @if ($stat['label'] === 'Drafts')
-                    <span class="tooltip-text">Across the module, not the filtered set — the chip that asks for drafts is the one that makes them the filtered set.</span>
-                @endif
             </div>
         @endforeach
     </div>
@@ -80,179 +57,136 @@
     <div class="master-card master-card--flat">
         <div class="master-list-bar">
             <div class="master-list-chips">
-                <a class="master-list-chip {{ $status === 'all' ? 'is-active' : '' }}"
-                    href="{{ route($prefix.'.index', $chipBase->all()) }}">All {{ $isOrder ? 'orders' : 'bills' }}</a>
-
-                @foreach ($statusChips as $statusKey => $statusLabel)
-                    <a class="master-list-chip {{ $status === $statusKey ? 'is-active' : '' }}"
-                        href="{{ route($prefix.'.index', $chipBase->all() + ['status' => $statusKey]) }}">
-                        {{ $statusLabel }} <span class="master-list-chip-count">{{ $chipCounts[$statusKey] ?? 0 }}</span>
-                    </a>
-                @endforeach
-
-                {{-- The money questions (nothing paid / part paid / paid) and how
-                     late a bill is live in the filter row, where they read as the
-                     lists they are. --}}
-            </div>
-
-            {{-- The quick periods: the same range-object the shared helper gives
-                 every listing, so "this month" means the same thing here. --}}
-            <div class="master-list-chips">
+                <a class="master-list-chip {{ $chipActive['all'] ? 'is-active' : '' }}"
+                    href="{{ route('purchase-invoices.index', $chipBase->all()) }}">All purchases</a>
+                <a class="master-list-chip {{ $chipActive['order'] ? 'is-active' : '' }}"
+                    href="{{ route('purchase-invoices.index', $chipBase->all() + ['invoice_type' => 'order']) }}">
+                    Orders <span class="master-list-chip-count">{{ $chipCounts['order'] ?? 0 }}</span>
+                </a>
+                <a class="master-list-chip {{ $chipActive['bill'] ? 'is-active' : '' }}"
+                    href="{{ route('purchase-invoices.index', $chipBase->all() + ['invoice_type' => 'bill']) }}">
+                    Bills <span class="master-list-chip-count">{{ $chipCounts['bill'] ?? 0 }}</span>
+                </a>
+                <a class="master-list-chip {{ $chipActive['draft'] ? 'is-active' : '' }}"
+                    href="{{ route('purchase-invoices.index', $chipBase->all() + ['status' => 'draft']) }}">
+                    Drafts <span class="master-list-chip-count">{{ $chipCounts['draft'] ?? 0 }}</span>
+                </a>
                 @foreach ($dateRanges as $rangeKey => $range)
                     <a class="master-list-chip {{ $activeRange === $rangeKey ? 'is-active' : '' }}"
-                        href="{{ route($prefix.'.index', $chipBase->all() + ['date_from' => $range['from'], 'date_to' => $range['to']]) }}">
+                        href="{{ route('purchase-invoices.index', $chipBase->all() + ['date_from' => $range['from'], 'date_to' => $range['to']]) }}">
                         {{ $dateRangeLabels[$rangeKey] }}
-                        <span class="master-list-chip-count">{{ $chipCounts[$rangeKey] ?? 0 }}</span>
                     </a>
                 @endforeach
-            </div>
-
-            {{-- A saved view is a filter set with a name. The link re-runs it; the
-                 cross removes it, and only its own owner can do that. --}}
-            <div class="master-list-saved">
-                @foreach ($savedViews as $view)
-                    <span class="master-list-saved-chip">
-                        <a href="{{ route($prefix.'.index', ['saved_view' => $view->id]) }}"
-                            title="{{ $view->is_shared ? 'Shared view' : 'Your view' }}">{{ $view->name }}</a>
-                        @if ((int) $view->user_id === (int) auth()->id())
-                            <form method="POST" action="{{ route($prefix.'.saved-views.destroy', $view) }}">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" title="Remove saved view">&times;</button>
-                            </form>
-                        @endif
-                    </span>
-                @endforeach
-                <button type="button" class="master-btn master-btn-soft master-btn-sm" id="toggleSaveView">☆ Save this view</button>
-                <form method="POST" action="{{ route($prefix.'.saved-views.store', request()->except(['page', 'saved_view'])) }}"
-                    class="master-list-save-view" id="saveViewForm" hidden>
-                    @csrf
-                    <input class="master-input" name="name" placeholder="View name" maxlength="60"
-                        aria-label="Saved view name" required>
-                    <label class="master-check"><input type="checkbox" name="is_shared" value="1"> Share</label>
-                    <button class="master-btn master-btn-primary master-btn-sm">Save</button>
-                </form>
             </div>
         </div>
 
-        <form method="GET" action="{{ route($prefix.'.index') }}">
-            <div class="pi-filter-toolbar" role="search" aria-label="Search and filter {{ $noun }}s">
-                <div class="master-search pi-filter-search">
+        <form method="GET" action="{{ route('purchase-invoices.index') }}">
+            <div class="si-filter-toolbar" role="search">
+                <div class="master-search si-filter-search">
                     <span aria-hidden="true">⌕</span>
                     <input class="master-input" type="text" name="search" value="{{ $search }}"
-                        placeholder="Search number, vendor, bill number, reference..."
-                        aria-label="Search {{ $noun }}s">
-                    <button class="pi-search-submit" type="submit" aria-label="Search {{ $noun }}s">
+                        placeholder="Search number, vendor, bill no...">
+                    <button class="si-search-submit" type="submit" aria-label="Search">
                         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                     </button>
                 </div>
                 <x-filter-trigger drawer="purchaseFiltersDrawer" label="Filters" :count="count($appliedChips)" />
             </div>
 
-            <x-drawer id="purchaseFiltersDrawer" title="Filter {{ $noun }}s"
-                eyebrow="{{ $isOrder ? 'Purchase order' : 'Purchase bill' }} filters"
-                subtitle="Refine the list by vendor, payment state, currency, or date." size="medium">
+            <x-drawer id="purchaseFiltersDrawer" title="Filter purchases" eyebrow="Purchase filters"
+                subtitle="Refine by type, vendor, payment or date." size="medium">
                 <section class="core-drawer-section">
                     <h3 class="core-drawer-section-title">Document</h3>
-                    <div class="pi-filter-grid">
-                        <div class="pi-filter-field">
+                    <div class="si-filter-grid">
+                        <div class="si-filter-field">
+                            <label class="master-label" for="piFilterType">Type</label>
+                            <select class="master-select" name="invoice_type" id="piFilterType">
+                                <option value="all">All types</option>
+                                @foreach($typeOptions as $key => $label)
+                                    <option value="{{ $key }}" @selected($type === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="si-filter-field">
                             <label class="master-label" for="piFilterStatus">Status</label>
-                            <select class="master-select" name="status" id="piFilterStatus" aria-label="Filter by status">
+                            <select class="master-select" name="status" id="piFilterStatus">
                                 <option value="all">All statuses</option>
-                                @foreach ($allStatusOptions as $key => $label)
+                                @foreach($allStatusOptions as $key => $label)
                                     <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
                                 @endforeach
                                 <option value="overdue" @selected($status === 'overdue')>Overdue</option>
                             </select>
                         </div>
-                        <div class="pi-filter-field">
+                        <div class="si-filter-field">
                             <label class="master-label" for="piFilterCurrency">Currency</label>
-                            <select class="master-select" name="currency" id="piFilterCurrency" aria-label="Filter by currency">
+                            <select class="master-select" name="currency" id="piFilterCurrency">
                                 <option value="all">Any currency</option>
-                                @foreach ($currencyOptions as $key => $label)
+                                @foreach($currencyOptions as $key => $label)
                                     <option value="{{ $key }}" @selected($currency === $key)>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="pi-filter-field">
-                            <label class="master-label" for="piFilterDateFrom">Dated from</label>
-                            <input class="master-input" type="date" name="date_from" id="piFilterDateFrom"
-                                value="{{ $dateFrom }}" aria-label="Dated from">
+                        <div class="si-filter-field">
+                            <label class="master-label" for="piFilterDateFrom">From</label>
+                            <input class="master-input" type="date" name="date_from" id="piFilterDateFrom" value="{{ $dateFrom }}">
                         </div>
-                        <div class="pi-filter-field">
-                            <label class="master-label" for="piFilterDateTo">Dated to</label>
-                            <input class="master-input" type="date" name="date_to" id="piFilterDateTo"
-                                value="{{ $dateTo }}" aria-label="Dated to">
+                        <div class="si-filter-field">
+                            <label class="master-label" for="piFilterDateTo">To</label>
+                            <input class="master-input" type="date" name="date_to" id="piFilterDateTo" value="{{ $dateTo }}">
                         </div>
                     </div>
                 </section>
-
                 <section class="core-drawer-section">
                     <h3 class="core-drawer-section-title">Vendor &amp; project</h3>
-                    <div class="pi-filter-grid">
-                        <div class="pi-filter-field">
+                    <div class="si-filter-grid">
+                        <div class="si-filter-field">
                             <label class="master-label" for="piFilterVendor">Vendor</label>
-                            <select class="master-select" name="vendor" id="piFilterVendor" aria-label="Filter by vendor">
-                                <option value="all">All vendors</option>
-                                @foreach ($vendors as $vendorOption)
-                                    <option value="{{ $vendorOption->id }}" @selected((string) request('vendor') === (string) $vendorOption->id)>{{ $vendorOption->vendor_name }}</option>
+                            <select class="master-select" name="vendor" id="piFilterVendor">
+                                <option value="0">All vendors</option>
+                                @foreach($vendors as $vendorRow)
+                                    <option value="{{ $vendorRow->id }}" @selected((int) $vendor === (int) $vendorRow->id)>{{ $vendorRow->vendor_name }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="pi-filter-field">
+                        <div class="si-filter-field">
                             <label class="master-label" for="piFilterProject">Project</label>
-                            <select class="master-select" name="project" id="piFilterProject" aria-label="Filter by project">
-                                <option value="all">All projects</option>
-                                @foreach ($projects as $projectOption)
-                                    <option value="{{ $projectOption->id }}" @selected((string) request('project') === (string) $projectOption->id)>{{ $projectOption->project_number }} - {{ $projectOption->name }}</option>
+                            <select class="master-select" name="project" id="piFilterProject">
+                                <option value="0">All projects</option>
+                                @foreach($projects as $projectRow)
+                                    <option value="{{ $projectRow->id }}" @selected((int) $project === (int) $projectRow->id)>{{ $projectRow->project_number }} - {{ $projectRow->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="si-filter-field">
+                            <label class="master-label" for="piFilterPayment">Payment</label>
+                            <select class="master-select" name="payment" id="piFilterPayment">
+                                <option value="all">Any payment state</option>
+                                @foreach($paymentLabels as $key => $label)
+                                    <option value="{{ $key }}" @selected($payment === $key)>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
                     </div>
                 </section>
-
-                @if (! $isOrder)
-                    <section class="core-drawer-section">
-                        <h3 class="core-drawer-section-title">Payment</h3>
-                        <div class="pi-filter-grid">
-                            <div class="pi-filter-field">
-                                <label class="master-label" for="piFilterPayment">Payment state</label>
-                                <select class="master-select" name="payment" id="piFilterPayment" aria-label="Filter by what has been paid">
-                                    <option value="all">Any payment state</option>
-                                    <option value="nothing" @selected($payment === 'nothing')>Nothing paid</option>
-                                    <option value="partial" @selected($payment === 'partial')>Part paid</option>
-                                    <option value="paid" @selected($payment === 'paid')>Fully paid</option>
-                                </select>
-                            </div>
-                        </div>
-                    </section>
-                @endif
-
                 <x-slot:footer>
                     @if ($filtersActive)
-                        <a class="master-btn master-btn-soft" href="{{ route($prefix.'.index') }}">Reset</a>
+                        <a class="master-btn master-btn-soft" href="{{ route('purchase-invoices.index') }}">Reset</a>
                     @endif
-                    <button class="master-btn master-btn-primary" type="submit">
-                        <i class="fa-solid fa-filter" aria-hidden="true"></i> Apply filters
-                    </button>
+                    <button class="master-btn master-btn-primary" type="submit">Apply filters</button>
                 </x-slot:footer>
             </x-drawer>
 
             @if ($filtersActive)
                 <div class="master-list-applied">
                     <span class="master-list-applied-title">Filtered by</span>
-
                     @foreach ($appliedChips as $chip)
                         <span class="master-list-applied-chip">
                             <span class="master-list-applied-key">{{ $chip['label'] }}</span>
                             <span class="master-list-applied-value">{{ $chip['value'] }}</span>
-                            <a class="master-list-applied-x" href="{{ $chipUrl($chip['query']) }}"
-                                aria-label="Remove the {{ strtolower($chip['label']) }} filter"
-                                title="Remove the {{ strtolower($chip['label']) }} filter">&times;</a>
+                            <a class="master-list-applied-x" href="{{ $chipUrl($chip['query'] ?? []) }}">&times;</a>
                         </span>
                     @endforeach
-
-                    <a class="master-list-applied-clear" href="{{ route($prefix.'.index') }}">Clear all filters</a>
+                    <a class="master-list-applied-clear" href="{{ route('purchase-invoices.index') }}">Clear all filters</a>
                 </div>
             @endif
         </form>
@@ -260,53 +194,26 @@
 
     <div class="master-card master-table-card master-card--flat">
         <div class="master-list-toolbar">
-            <p class="master-list-hint"
-                title="{{ $isOrder
-                    ? 'Newest document date on top. Open value is what has not been billed yet.'
-                    : 'Newest document date on top. The balance is what the vendor ledger says is still owed.' }}">
-                {{ $isOrder ? 'Newest first · open value is what is not billed yet' : 'Newest first · balance is what the ledger says' }}
+            <p class="master-list-hint" title="Newest document date on top.">
+                Newest first &middot; a converted order is history, the bill is what is owed
             </p>
 
-            <div class="master-list-toolbar-actions">
-                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
-                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
-                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
-                </div>
-            </div>
-
-            {{-- The bulk bar has a row of its own. The table's checkboxes point to
-                 it by id; wrapping the table would nest each row menu's forms, and
-                 a form inside a form is not a form. --}}
-            <form id="purchaseBulkForm" method="POST" action="{{ route($prefix.'.bulk') }}"
+            <form id="bulkForm" method="POST" action="{{ route('purchase-invoices.bulk') }}"
                 class="master-list-bulk" data-bulk-bar hidden>
                 @csrf
                 <span class="master-list-bulk-count" data-bulk-count>0 selected</span>
-                <select class="master-select" name="action" aria-label="Action for the selected {{ $noun }}s">
+                <select class="master-select" name="action" aria-label="Action for the selected documents">
                     @foreach ($bulkActions as $actionKey => $actionLabel)
                         <option value="{{ $actionKey }}">{{ $actionLabel }}</option>
                     @endforeach
                 </select>
                 <button class="master-btn master-btn-primary master-btn-sm" type="submit">Apply</button>
-                <a class="master-btn master-btn-soft master-btn-sm" data-bulk-export
-                    href="{{ route($prefix.'.export') }}">
-                    <i class="fas fa-file-csv" aria-hidden="true"></i> Export selected
-                </a>
-                <a class="master-btn master-btn-soft master-btn-sm" data-bulk-gst
-                    href="{{ route($prefix.'.gstExport') }}">
-                    <i class="fas fa-percent" aria-hidden="true"></i> GST summary
-                </a>
                 <button class="master-btn master-btn-light master-btn-sm" type="button" data-bulk-clear>Clear</button>
             </form>
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table pi-table" data-table-settings data-table-key="{{ $prefix }}">
-                {{-- Ten columns, in the order the headings are written: the pick
-                     box, the document (number, type chip, date), the vendor, the
-                     project, what it is worth, what has been paid, what is left,
-                     the due date, the state chip, the one action. The widths live
-                     in the sheet, next to the other rules about this table. --}}
+            <table class="master-table si-table pi-table">
                 <colgroup>
                     <col class="pi-col-pick">
                     <col class="pi-col-doc">
@@ -315,22 +222,20 @@
                     <col class="pi-col-total">
                     <col class="pi-col-paid">
                     <col class="pi-col-balance">
-                    <col class="pi-col-due">
                     <col class="pi-col-state">
                     <col class="pi-col-action">
                 </colgroup>
                 <thead>
                     <tr>
-                        <th scope="col" class="master-list-pick ui-mobile-secondary">
-                            <input type="checkbox" data-bulk-all aria-label="Select every {{ $noun }} on this page">
+                        <th scope="col" class="master-list-pick">
+                            <input type="checkbox" data-bulk-all aria-label="Select every document on this page">
                         </th>
                         <th scope="col">Document</th>
                         <th scope="col">Vendor</th>
                         <th scope="col" class="ui-mobile-secondary">Project</th>
                         <th scope="col" class="is-num">Total</th>
-                        <th scope="col" class="is-num ui-mobile-secondary">{{ $isOrder ? 'Billed' : 'Paid' }}</th>
-                        <th scope="col" class="is-num">{{ $isOrder ? 'Open value' : 'Balance' }}</th>
-                        <th scope="col">{{ $isOrder ? 'Expected' : 'Due' }}</th>
+                        <th scope="col" class="is-num ui-mobile-secondary">Paid</th>
+                        <th scope="col" class="is-num">Balance</th>
                         <th scope="col">State</th>
                         <th scope="col">Action</th>
                     </tr>
@@ -338,192 +243,115 @@
                 <tbody>
                     @forelse($invoices as $invoice)
                         @php
-                            /* Every one of these is the model's rule, not the
-                               view's arithmetic: the list, the record page and the
-                               figures cannot disagree. */
-                            $paid = $invoice->paidAmount();
-                            $due = $invoice->balanceDue();
+                            $paidAmt = $invoice->paidAmount();
+                            $balance = $invoice->balanceDue();
+                            $openAmt = $invoice->openAmount();
                             $stateKey = $invoice->stateKey();
-                            $daysLate = $invoice->daysOverdue();
                         @endphp
-                        <tr data-href="{{ route($prefix.'.show', $invoice) }}">
-                            <td data-label="Pick" class="master-list-pick ui-mobile-secondary">
-                                <input type="checkbox" name="ids[]" value="{{ $invoice->id }}" form="purchaseBulkForm"
+                        <tr class="{{ $invoice->needsChecker() ? 'is-attention' : '' }}" data-href="{{ route('purchase-invoices.show', $invoice) }}">
+                            <td class="master-list-pick" data-label="Select">
+                                <input type="checkbox" name="ids[]" value="{{ $invoice->id }}" form="bulkForm"
                                     data-bulk-pick aria-label="Select {{ $invoice->invoice_number }}">
                             </td>
                             <td data-label="Document">
-                                <a class="pi-number" href="{{ route($prefix.'.show', $invoice) }}">{{ $invoice->invoice_number }}</a>
-                                <span class="pi-doc-chips">
-                                    @if ($invoice->isSuperseded())
-                                        <span class="pi-type type-bill">Billed</span>
-                                    @endif
+                                <a class="si-number" href="{{ route('purchase-invoices.show', $invoice) }}">{{ $invoice->invoice_number }}</a>
+                                <span class="si-invoice-chips">
+                                    <span class="si-type type-{{ $invoice->invoice_type }}">{{ $invoice->typeLabel() }}</span>
                                     @if ($invoice->vendor_bill_number)
                                         <span class="master-chip">Vendor {{ $invoice->vendor_bill_number }}</span>
                                     @endif
-                                    @if ($invoice->our_reference)
-                                        <span class="master-chip">Ref {{ $invoice->our_reference }}</span>
-                                    @endif
                                 </span>
                                 @if ($invoice->invoice_date)
-                                    <span class="master-sub pi-date">{{ $invoice->invoice_date->format('d M Y') }}</span>
+                                    <span class="master-sub si-date">{{ $invoice->invoice_date->format('d M Y') }}</span>
                                 @endif
                             </td>
                             <td data-label="Vendor">
-                                <span class="pi-vendor">{{ $invoice->vendor_company_name ?: 'No vendor' }}</span>
+                                <span class="si-client">{{ $invoice->vendor_company_name ?: 'No vendor' }}</span>
                                 <span class="master-sub ui-mobile-secondary">{{ $invoice->vendor_gstin ?: 'No GSTIN on file' }}</span>
                             </td>
                             <td data-label="Project" class="ui-mobile-secondary">
-                                @if ($invoice->project?->project_number)
+                                @if ($invoice->project)
                                     {{ $invoice->project->project_number }}
-                                    <span class="master-sub">{{ $invoice->project->name ?: 'Unnamed project' }}</span>
+                                    <span class="master-sub">{{ $invoice->project->name }}</span>
                                 @else
                                     <span class="master-empty-value">No project mapped</span>
                                 @endif
                             </td>
                             <td data-label="Total" class="is-num">
                                 <strong>{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</strong>
-                                <span class="master-sub">
-                                    {{ $invoice->items->count() }} {{ \Illuminate\Support\Str::plural('item', $invoice->items->count()) }}
-                                </span>
                             </td>
-                            <td data-label="{{ $isOrder ? 'Billed' : 'Paid' }}" class="is-num ui-mobile-secondary">
-                                @if ($isOrder)
-                                    @if ($invoice->isSuperseded())
-                                        <strong>{{ \App\Helpers\CommonHelper::amount($invoice->billedAmount(), $invoice->currency) }}</strong>
-                                        <span class="master-sub">Billed in full</span>
-                                    @else
-                                        <span class="master-empty-value">—</span>
-                                        <span class="master-sub">Not billed yet</span>
-                                    @endif
+                            <td data-label="Paid" class="is-num ui-mobile-secondary">
+                                @if ($invoice->isSuperseded())
+                                    <span class="master-empty-value">On the bill</span>
+                                @elseif ($invoice->needsChecker())
+                                    <x-step-flag compact :label="$invoice->checkerLabel()" />
+                                @elseif ($invoice->canReceiveMoney() || $paidAmt > 0)
+                                    <strong>{{ \App\Helpers\CommonHelper::amount($paidAmt, $invoice->currency) }}</strong>
                                 @else
-                                    <strong>{{ \App\Helpers\CommonHelper::amount($paid, $invoice->currency) }}</strong>
-                                    <span class="master-sub">
-                                        @if ($invoice->payments_count > 0)
-                                            {{ $invoice->payments_count }} {{ \Illuminate\Support\Str::plural('payment', $invoice->payments_count) }}
-                                        @else
-                                            {{ $invoice->amount_paid > 0 ? 'Opening figure' : 'Nothing paid' }}
-                                        @endif
-                                    </span>
+                                    <span class="master-empty-value">—</span>
                                 @endif
                             </td>
-                            <td data-label="{{ $isOrder ? 'Open value' : 'Balance' }}" class="is-num">
-                                @if ($isOrder)
-                                    @if ($invoice->isSuperseded())
-                                        <span class="master-sub">Became {{ $invoice->convertedInvoice?->invoice_number }}</span>
-                                    @else
-                                        <strong>{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</strong>
-                                        <span class="master-sub">To be billed</span>
-                                    @endif
+                            <td data-label="Balance" class="is-num">
+                                @if ($invoice->isSuperseded())
+                                    <span class="master-sub">Moved to {{ $invoice->convertedInvoice?->invoice_number }}</span>
+                                @elseif ($invoice->canReceiveMoney())
+                                    <strong class="si-balance {{ $openAmt > 0 ? ($invoice->isOverdue() ? 'is-due' : '') : 'is-clear' }}">
+                                        {{ \App\Helpers\CommonHelper::amount($openAmt, $invoice->currency) }}
+                                    </strong>
+                                @elseif ($invoice->needsChecker())
+                                    <span class="master-empty-value">—</span>
                                 @else
-                                    <strong class="pi-balance {{ $due > 0 ? ($invoice->isOverdue() ? 'is-due' : '') : 'is-clear' }}">
-                                        {{ \App\Helpers\CommonHelper::amount($due, $invoice->currency) }}
+                                    <strong class="si-balance {{ $balance > 0 ? ($invoice->isOverdue() ? 'is-due' : '') : 'is-clear' }}">
+                                        {{ \App\Helpers\CommonHelper::amount($balance, $invoice->currency) }}
                                     </strong>
                                 @endif
                             </td>
-                            <td data-label="{{ $isOrder ? 'Expected' : 'Due' }}">
-                                @php($milestone = $isOrder ? $invoice->expected_date : $invoice->due_date)
-                                @if ($milestone)
-                                    <span class="pi-date">{{ $milestone->format('d M Y') }}</span>
-                                @else
-                                    <span class="master-empty-value">{{ $isOrder ? 'No expected date' : 'No due date' }}</span>
-                                @endif
-                                @if ($daysLate > 0)
-                                    <span class="master-sub">{{ $daysLate }} {{ \Illuminate\Support\Str::plural('day', $daysLate) }} late</span>
-                                @elseif (! $isOrder && $invoice->due_date && $due > 0)
-                                    <span class="master-sub">Not late yet</span>
-                                @endif
-                            </td>
                             <td data-label="State">
-                                <span class="pi-status status-{{ $stateKey }}">{{ $invoice->stateLabel() }}</span>
+                                <span class="si-status status-{{ $stateKey }}">{{ $invoice->stateLabel() }}</span>
                                 @if ($invoice->isSuperseded())
-                                    <a class="master-sub pi-converted-link"
-                                        href="{{ route('purchase-bills.show', $invoice->convertedInvoice) }}">Became
-                                        {{ $invoice->convertedInvoice?->invoice_number }}</a>
-                                @elseif ($invoice->purchaseOrder)
-                                    <a class="master-sub pi-converted-link"
-                                        href="{{ route('purchase-orders.show', $invoice->purchaseOrder) }}">From
-                                        {{ $invoice->purchaseOrder->invoice_number }}</a>
+                                    <a class="master-sub si-converted-link" href="{{ route('purchase-invoices.show', $invoice->convertedInvoice) }}">
+                                        Became {{ $invoice->convertedInvoice?->invoice_number }}
+                                    </a>
                                 @endif
-                                <span class="master-sub">
-                                    <span class="pi-public {{ $invoice->public_token ? 'is-public' : 'is-private' }}">
-                                        {{ $invoice->public_token ? 'Link live' : 'No link' }}
-                                    </span>
-                                </span>
                             </td>
                             <td data-label="Action">
                                 <div class="master-row-actions">
                                     <div class="master-dropdown">
-                                        <button type="button" class="master-dropdown-toggle"
-                                            aria-label="Actions for {{ $invoice->invoice_number }}"
-                                            aria-haspopup="true" aria-expanded="false">
+                                        <button type="button" class="master-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
                                             <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
                                         </button>
-
                                         <div class="master-dropdown-menu">
-                                            <a href="{{ route($prefix.'.show', $invoice) }}">
-                                                <i class="fas fa-eye" aria-hidden="true"></i> View
-                                            </a>
-                                            <a href="{{ route($prefix.'.edit', $invoice) }}">
-                                                <i class="fas fa-pen" aria-hidden="true"></i> Edit
-                                            </a>
-                                            @if (! $isOrder && $due > 0)
-                                                {{-- The payment goes into the vendor ledger, where the
-                                                     bank line is reconciled — not into a second number
-                                                     on the bill. --}}
+                                            <a href="{{ route('purchase-invoices.show', $invoice) }}"><i class="fas fa-eye"></i> View</a>
+                                            <a href="{{ route('purchase-invoices.edit', $invoice) }}"><i class="fas fa-pen"></i> Edit</a>
+                                            @if ($invoice->canReceiveMoney() && $openAmt > 0)
                                                 <button type="button" data-open-payment
                                                     data-invoice-id="{{ $invoice->id }}"
                                                     data-invoice-number="{{ $invoice->invoice_number }}"
-                                                    data-invoice-currency="{{ $invoice->currency }}"
-                                                    data-invoice-rate="{{ (float) ($invoice->currency === 'INR' ? 1 : ($invoice->exchange_rate ?: 1)) }}"
-                                                    data-invoice-balance-figure="{{ number_format($due, 2, '.', '') }}"
-                                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($due, $invoice->currency) }}">
-                                                    <i class="fas fa-indian-rupee-sign" aria-hidden="true"></i> Record payment
+                                                    data-invoice-kind="{{ $invoice->invoice_type }}"
+                                                    data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
+                                                    data-invoice-rate="{{ $invoice->exchange_rate }}"
+                                                    data-project-id="{{ $invoice->project_id }}"
+                                                    data-invoice-amount="{{ number_format($openAmt, 2, '.', '') }}"
+                                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($openAmt, $invoice->currency) }}">
+                                                    <i class="fas fa-indian-rupee-sign"></i> {{ $invoice->isOrder() ? 'Record advance' : 'Record payment' }}
                                                 </button>
                                             @endif
-                                            <a href="{{ route($prefix.'.print', $invoice) }}" target="_blank">
-                                                <i class="fas fa-print" aria-hidden="true"></i> Print
-                                            </a>
-                                            <button type="button"
-                                                data-copy-link="{{ route('purchase-invoices.public', $invoice->public_token) }}">
-                                                <i class="fas fa-link" aria-hidden="true"></i> Copy print link
-                                            </button>
-                                            @if ($isOrder && $invoice->canConvert())
-                                                <form method="POST" action="{{ route('purchase-orders.convert', $invoice) }}"
-                                                    data-confirm="Raise a purchase bill from {{ $invoice->invoice_number }}? Its lines and terms are copied onto the bill.">
+                                            <a href="{{ route('purchase-invoices.print', $invoice) }}" target="_blank"><i class="fas fa-print"></i> Print</a>
+                                            @if ($invoice->canConvert())
+                                                <form method="POST" action="{{ route('purchase-invoices.convert', $invoice) }}"
+                                                    data-confirm="Raise a purchase bill from {{ $invoice->invoice_number }}?"
+                                                    data-confirm-title="Convert to bill"
+                                                    data-confirm-text="Convert to bill"
+                                                    data-confirm-danger="false">
                                                     @csrf
-                                                    <button type="submit">
-                                                        <i class="fas fa-file-invoice" aria-hidden="true"></i> Convert to purchase bill
-                                                    </button>
+                                                    <button type="submit"><i class="fas fa-file-invoice"></i> Convert to bill</button>
                                                 </form>
                                             @endif
-                                            @if ($stateKey === 'draft')
-                                                <form method="POST" action="{{ route($prefix.'.status', $invoice) }}">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <input type="hidden" name="status" value="{{ $isOrder ? 'sent' : 'received' }}">
-                                                    <button type="submit">
-                                                        <i class="fas fa-paper-plane" aria-hidden="true"></i> {{ $isOrder ? 'Mark sent' : 'Mark received' }}
-                                                    </button>
-                                                </form>
-                                            @endif
-                                            @if (in_array($stateKey, ['draft', 'sent', 'approved', 'received'], true))
-                                                <form method="POST" action="{{ route($prefix.'.status', $invoice) }}"
-                                                    data-confirm="Cancel {{ $invoice->invoice_number }}?">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <input type="hidden" name="status" value="cancelled">
-                                                    <button type="submit">
-                                                        <i class="fas fa-ban" aria-hidden="true"></i> Cancel
-                                                    </button>
-                                                </form>
-                                            @endif
-                                            <form method="POST" action="{{ route($prefix.'.destroy', $invoice) }}"
+                                            <form method="POST" action="{{ route('purchase-invoices.destroy', $invoice) }}"
                                                 data-confirm="Delete {{ $invoice->invoice_number }}?">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="danger">
-                                                    <i class="far fa-trash-alt" aria-hidden="true"></i> Delete
-                                                </button>
+                                                <button type="submit" class="danger"><i class="fas fa-trash"></i> Delete</button>
                                             </form>
                                         </div>
                                     </div>
@@ -532,59 +360,89 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10">
+                            <td colspan="9">
                                 <div class="master-list-empty">
-                                    <span class="master-list-empty-icon" aria-hidden="true">
-                                        <i class="fa-solid {{ $isOrder ? 'fa-file-signature' : 'fa-file-invoice' }}"></i>
-                                    </span>
-                                    <h3 class="master-list-empty-title">No {{ $noun }}s yet</h3>
+                                    <span class="master-list-empty-icon">₹</span>
+                                    <p class="master-list-empty-title">{{ $filtersActive ? 'No documents match these filters' : 'No purchase documents yet' }}</p>
                                     <p class="master-list-empty-text">
-                                        {{ $isOrder
-                                            ? 'Raise an order for what you are buying; the bill that arrives from it is raised from the order itself.'
-                                            : 'A bill can be raised from an approved purchase order, or entered on its own when the vendor’s paperwork arrives first.' }}
+                                        {{ $filtersActive
+                                            ? 'Adjust the search or the filters above.'
+                                            : 'Raise a purchase order to ask for supply, or a purchase bill once the vendor invoices you.' }}
                                     </p>
                                     <div class="master-list-empty-actions">
-                                        <a class="master-btn master-btn-primary" href="{{ route($prefix.'.create') }}">
-                                            <i class="fas fa-plus" aria-hidden="true"></i> New {{ $isOrder ? 'order' : 'bill' }}
-                                        </a>
+                                        @if ($filtersActive)
+                                            <a class="master-btn master-btn-soft" href="{{ route('purchase-invoices.index') }}">Clear filters</a>
+                                        @endif
+                                        <a class="master-btn master-btn-primary" href="{{ route('purchase-invoices.create', ['type' => 'bill']) }}">+ New Purchase Bill</a>
                                     </div>
                                 </div>
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
-
-                @if ($invoices->isNotEmpty())
-                    <tfoot>
-                        <tr>
-                            <td colspan="4">
-                                <span class="master-sub">{{ $invoices->total() }} {{ \Illuminate\Support\Str::plural($noun, $invoices->total()) }} · filtered</span>
-                            </td>
-                            <td class="is-num">
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($pageTotals['total']) }}</strong>
-                                <span class="master-sub">{{ $isOrder ? 'Ordered' : 'Billed' }} · all pages</span>
-                            </td>
-                            <td class="is-num ui-mobile-secondary">
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($isOrder ? $pageTotals['open'] : $pageTotals['paid']) }}</strong>
-                                <span class="master-sub">{{ $isOrder ? 'Open' : 'Paid' }} · all pages</span>
-                            </td>
-                            <td class="is-num">
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($isOrder ? $pageTotals['total'] - $pageTotals['open'] : $pageTotals['outstanding']) }}</strong>
-                                <span class="master-sub">{{ $isOrder ? 'Billed' : 'Outstanding' }} · all pages</span>
-                            </td>
-                            <td colspan="3"></td>
-                        </tr>
-                    </tfoot>
-                @endif
             </table>
         </div>
 
+        @if ($invoices->isNotEmpty())
+            @php
+                $currencyRows = collect($pageTotals['byCurrency'] ?? [])->filter(fn ($row) =>
+                    ((float) $row['billed'] + (float) $row['open'] + (float) $row['paid'] + (float) $row['outstanding']) > 0.01
+                );
+            @endphp
+            <div class="master-list-foot">
+                <table class="master-table si-table pi-table">
+                    <colgroup>
+                        <col class="pi-col-pick">
+                        <col class="pi-col-doc">
+                        <col class="pi-col-vendor">
+                        <col class="pi-col-project">
+                        <col class="pi-col-total">
+                        <col class="pi-col-paid">
+                        <col class="pi-col-balance">
+                        <col class="pi-col-state">
+                        <col class="pi-col-action">
+                    </colgroup>
+                    <tr class="master-list-total">
+                        <td colspan="4">
+                            <strong>Total — {{ $invoices->count() }} {{ \Illuminate\Support\Str::plural('document', $invoices->count()) }} shown</strong>
+                            <span class="master-sub">Filtered totals cover every page · a converted order counts once · each currency on its own line</span>
+                        </td>
+                        <td class="is-num">
+                            @forelse ($currencyRows as $code => $row)
+                                <strong>{{ \App\Helpers\CommonHelper::amount($row['billed'] + $row['open'], $code) }}</strong>
+                                <span class="master-sub">{{ $code }} billed + open</span>
+                            @empty
+                                <strong>{{ \App\Helpers\CommonHelper::amount(0, 'INR') }}</strong>
+                                <span class="master-sub">Billed + open</span>
+                            @endforelse
+                        </td>
+                        <td class="is-num ui-mobile-secondary">
+                            @forelse ($currencyRows as $code => $row)
+                                <strong>{{ \App\Helpers\CommonHelper::amount($row['paid'], $code) }}</strong>
+                                <span class="master-sub">{{ $code }} paid · all pages</span>
+                            @empty
+                                <strong>{{ \App\Helpers\CommonHelper::amount(0, 'INR') }}</strong>
+                                <span class="master-sub">Paid · all pages</span>
+                            @endforelse
+                        </td>
+                        <td class="is-num">
+                            @forelse ($currencyRows as $code => $row)
+                                <strong>{{ \App\Helpers\CommonHelper::amount($row['outstanding'], $code) }}</strong>
+                                <span class="master-sub">{{ $code }} outstanding</span>
+                            @empty
+                                <strong>{{ \App\Helpers\CommonHelper::amount(0, 'INR') }}</strong>
+                                <span class="master-sub">Outstanding · all pages</span>
+                            @endforelse
+                        </td>
+                        <td colspan="2"></td>
+                    </tr>
+                </table>
+            </div>
+        @endif
         <x-pagination :items="$invoices" />
     </div>
 
-    @unless ($isOrder)
-        @include('purchase_invoices.partials.payment-modal')
-    @endunless
+    @include('purchase_invoices.partials.payment-modal')
 </div>
 @endsection
 

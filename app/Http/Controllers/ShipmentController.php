@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ShipmentStatusChanged;
 use App\Models\CashflowAccount;
 use App\Models\CashflowEntry;
 use App\Models\SalesInvoice;
@@ -253,8 +254,9 @@ class ShipmentController extends Controller
             'remarks' => $request->input('delay_reason') ?: $request->input('remarks'),
         ]);
 
-        DB::transaction(function () use ($request, $shipment, $data, $items) {
-            $oldStatus = $shipment->status;
+        $oldStatus = $shipment->status;
+
+        DB::transaction(function () use ($request, $shipment, $data, $items, $oldStatus) {
             $data['show_client_portal'] = $request->boolean('show_client_portal');
             $shipment->update($data);
             $this->syncItems($shipment, $items);
@@ -265,6 +267,10 @@ class ShipmentController extends Controller
                 $this->notifyClientOfStatus($shipment, $oldStatus, $request->boolean('notify_client', true));
             }
         });
+
+        if ($oldStatus !== $shipment->status) {
+            ShipmentStatusChanged::dispatch($shipment->fresh(), $oldStatus);
+        }
 
         $redirect = redirect()
             ->route('shipments.show', $shipment)
@@ -351,6 +357,10 @@ class ShipmentController extends Controller
                 $this->notifyClientOfStatus($shipment, $oldStatus, $notify);
             }
         });
+
+        if ($oldStatus !== $shipment->status) {
+            ShipmentStatusChanged::dispatch($shipment->fresh(), $oldStatus);
+        }
 
         $message = 'Tracking history added successfully.';
 

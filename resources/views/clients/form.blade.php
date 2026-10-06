@@ -16,7 +16,7 @@
             <h1>{{ $isEdit ? 'Edit client' : 'Add a client' }}</h1>
             <p>{{ $isEdit ? 'Keep this client’s company, contacts and commercial details up to date.' : 'Create a client profile. You can add more details now or complete them later.' }}</p>
             <nav class="master-breadcrumb" aria-label="Breadcrumb">
-                <a href="{{ route('dashboard') }}">Home</a><span aria-hidden="true">/</span>
+                <a href="{{ route('clients.index') }}">Clients</a><span aria-hidden="true">/</span>
                 <a href="{{ route('clients.index') }}">Clients</a><span aria-hidden="true">/</span>
                 <span class="active" aria-current="page">{{ $isEdit ? 'Edit' : 'New' }}</span>
             </nav>

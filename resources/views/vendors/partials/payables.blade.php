@@ -3,9 +3,8 @@
      * What is owed on this vendor, aged.
      *
      * The ledger says what was billed and what was paid; this says what is
-     * still open, when it falls due and how late it already is. Rupees
-     * throughout, because a payment is made in rupees whatever the bill was
-     * written in — the foreign figure stays on the bill row beside it.
+     * still open, when it falls due and how late it already is — in the
+     * vendor's own currency. Rupees live on the cashflow, not here.
      *
      * One card, three bands: the head, the five ages as one strip, and the open
      * bills. The card the chase list used to occupy is gone — the table below
@@ -24,12 +23,12 @@
 <section class="master-card master-card--flat vendor-detail-card vendor-block-card" id="vendor-block-payables" aria-labelledby="vendor-block-payables-heading">
     <div class="vendor-panel-head">
         <div>
-            <h2 class="vendor-detail-title" id="vendor-block-payables-heading">Payables</h2>
-            <p class="vendor-detail-help">Bills and expenses raised by this vendor, less what has been paid. Oldest money is settled first.</p>
+            <h2 class="vendor-detail-title" id="vendor-block-payables-heading">Account</h2>
+            <p class="vendor-detail-help">{{ $money(($summary['vendor_bill_foreign'] ?? 0) + ($summary['vendor_expense_foreign'] ?? 0)) }} billed · {{ $money($summary['vendor_paid_foreign'] ?? 0) }} paid · {{ $money($summary['vendor_balance_foreign'] ?? 0) }} balance</p>
         </div>
         <div class="vendor-panel-meta">
             @if ($hasOverdue)
-                <span class="vendor-pill is-alert">{{ \App\Helpers\CommonHelper::indianCurrency($payables['overdue']) }} overdue</span>
+                <span class="vendor-pill is-alert">{{ $money($payables['overdue']) }} overdue</span>
             @else
                 <span class="vendor-pill">Nothing late</span>
             @endif
@@ -46,7 +45,7 @@
         @foreach ($buckets as $key => $bucket)
             <div class="vendor-ageing-cell {{ $bucket['count'] === 0 ? 'is-zero' : '' }}" role="listitem">
                 <span class="vendor-ageing-label">{{ $bucket['label'] }}</span>
-                <strong class="vendor-ageing-amount is-num">{{ \App\Helpers\CommonHelper::indianCurrency($bucket['amount']) }}</strong>
+                <strong class="vendor-ageing-amount is-num">{{ $money($bucket['amount']) }}</strong>
                 @if (in_array($key, $lateBuckets, true) && $bucket['count'] > 0)
                     <span class="vendor-pill is-alert">{{ $bucket['count'] }} {{ \Illuminate\Support\Str::plural('bill', $bucket['count']) }}</span>
                 @else
@@ -59,7 +58,7 @@
     <div class="vendor-subhead">
         <h3 class="vendor-subhead-title">Open bills</h3>
         <span class="vendor-subhead-note">
-            {{ \App\Helpers\CommonHelper::indianCurrency($payables['outstanding']) }} outstanding
+            {{ $money($payables['outstanding']) }} outstanding
             @if (count($openRows))
                 · {{ count($openRows) }} {{ \Illuminate\Support\Str::plural('bill', count($openRows)) }}
             @endif
@@ -73,25 +72,40 @@
                     <tr>
                         <th scope="col">Bill</th>
                         <th scope="col">Due</th>
-                        <th scope="col" class="is-num">Open in currency</th>
-                        <th scope="col" class="is-num">Open in rupees</th>
+                        <th scope="col" class="is-num">Billed</th>
+                        <th scope="col" class="is-num">Paid</th>
+                        <th scope="col" class="is-num">Balance</th>
                         <th scope="col" class="vendor-table-actions-cell">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($visibleRows as $bill)
-                        @php($billPayload = [
-                            'id' => $bill['id'],
-                            'particular' => $bill['particular'],
-                            'invoice' => $bill['invoice'],
-                            'currency' => $bill['currency'],
-                            'amount' => $bill['foreign_left'],
-                        ])
+                        @php
+                            $billedAmt = (float) $bill['foreign_total'];
+                            $openAmt = (float) $bill['foreign_left'];
+                            $paidAmt = max($billedAmt - $openAmt, 0);
+                            $documentUrl = ! empty($bill['purchase_invoice_id']) && \Illuminate\Support\Facades\Route::has('purchase-invoices.show')
+                                ? route('purchase-invoices.show', $bill['purchase_invoice_id'])
+                                : null;
+                            $billPayload = [
+                                'id' => $bill['id'],
+                                'particular' => $bill['particular'],
+                                'invoice' => $bill['invoice'],
+                                'currency' => $bill['currency'] ?: ($vendorCurrency ?? 'RMB'),
+                                'amount' => $bill['foreign_left'],
+                                'purchase_invoice_id' => $bill['purchase_invoice_id'] ?? '',
+                            ];
+                        @endphp
                         <tr>
                             <td data-label="Bill">
-                                <strong>{{ $bill['particular'] ?: 'Ledger entry' }}</strong>
+                                @if ($documentUrl)
+                                    <a class="vendor-table-name" href="{{ $documentUrl }}">{{ $bill['invoice'] ?: ($bill['particular'] ?: 'Open document') }}</a>
+                                @else
+                                    <strong>{{ $bill['invoice'] ?: ($bill['particular'] ?: 'Ledger entry') }}</strong>
+                                @endif
                                 <span class="master-sub">
-                                    {{ $bill['invoice'] ?: 'No invoice number' }} · {{ $bill['date']?->format('d M Y') ?: '—' }}@if ($bill['is_expense']) · Expense @endif
+                                    {{ $bill['particular'] ?: 'Ledger entry' }}
+                                    · {{ $bill['date']?->format('d M Y') ?: '—' }}@if ($bill['is_expense']) · Expense @endif
                                 </span>
                             </td>
                             <td data-label="Due">
@@ -109,11 +123,14 @@
                                     <span class="master-sub">Set payment terms to fill this in</span>
                                 @endif
                             </td>
-                            <td data-label="Open in currency" class="is-num">
-                                {{ \App\Helpers\CommonHelper::amount($bill['foreign_left'], $bill['currency']) }}
+                            <td data-label="Billed" class="is-num">
+                                {{ \App\Helpers\CommonHelper::amount($billedAmt, $bill['currency']) }}
                             </td>
-                            <td data-label="Open in rupees" class="is-num">
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($bill['rupee_left']) }}</strong>
+                            <td data-label="Paid" class="is-num">
+                                {{ \App\Helpers\CommonHelper::amount($paidAmt, $bill['currency']) }}
+                            </td>
+                            <td data-label="Balance" class="is-num">
+                                <strong>{{ \App\Helpers\CommonHelper::amount($openAmt, $bill['currency']) }}</strong>
                             </td>
                             <td data-label="Action" class="vendor-table-actions-cell">
                                 <button type="button" class="master-btn master-btn-soft master-btn-sm payBillBtn"
@@ -133,13 +150,13 @@
     @if ($hiddenRows > 0)
         <p class="vendor-panel-note">
             {{ $hiddenRows }} more {{ \Illuminate\Support\Str::plural('bill', $hiddenRows) }} beyond the 25 that need attention first —
-            <a href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id]) }}">the statement lists them all</a>.
+            <a href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id, 'currency' => $vendorCurrency, 'period' => 'all']) }}">the statement lists them all</a>.
         </p>
     @endif
 
     <div class="vendor-detail-actions">
         <a class="master-btn master-btn-soft master-btn-sm"
-            href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id]) }}">
+            href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id, 'currency' => $vendorCurrency, 'period' => 'all']) }}">
             <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Vendor statement
         </a>
         <a class="master-btn master-btn-light master-btn-sm"

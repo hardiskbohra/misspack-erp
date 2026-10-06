@@ -1,0 +1,81 @@
+/* Organisation is a record page: identity, figures, then the shared tab strip.
+   Spacing follows the list shell; this sheet only covers the two marks and
+   the stacked cards inside a panel. */
+
+.org-record > .master-card + .master-stats,
+.org-record > .master-stats + .master-tabs-card,
+.org-record > .master-card + .master-tabs-card {
+    margin-top: 24px;
+}
+
+.org-record .master-tab-panel > .master-grid,
+.org-record .master-tab-panel > .master-section,
+.org-record .master-tab-panel > form > .master-grid {
+    margin-top: 0;
+}
+
+.org-record .master-tab-panel > form > .master-card,
+.org-record .org-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.org-record .master-tab-panel > form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.org-record .master-section {
+    margin-bottom: 0;
+}
+
+.org-record .master-section-head .master-section-title {
+    margin-bottom: 6px;
+}
+
+.org-logos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 10px;
+}
+
+.org-logo-preview {
+    display: block;
+    width: 100%;
+    height: 88px;
+    object-fit: contain;
+    margin: 8px 0 12px;
+    padding: 10px;
+    border: 1px solid var(--mc-border, #e5eaf2);
+    border-radius: 12px;
+    background: #0f172a;
+}
+
+.org-logo-preview.is-print {
+    background: var(--mc-card, #fff);
+}
+
+.org-record .master-btn + .master-form-grid,
+.org-record form > .master-btn {
+    margin-top: 16px;
+}
+
+.org-inline-form {
+    display: inline;
+}
+
+.org-record .master-list-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+    .org-logos {
+        grid-template-columns: 1fr;
+    }
+}

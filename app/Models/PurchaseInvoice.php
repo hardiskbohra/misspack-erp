@@ -55,7 +55,7 @@ class PurchaseInvoice extends Model
     ];
 
     /** The paid figure is upstream of every balance: one SQL, read everywhere. */
-    public const PAID_SQL = '(coalesce(purchase_invoices.amount_paid, 0) + (select coalesce(sum(debit_amount), 0) from vendor_payment_entries where vendor_payment_entries.purchase_invoice_id = purchase_invoices.id))';
+    public const PAID_SQL = '(coalesce(purchase_invoices.amount_paid, 0) + (select coalesce(sum(foreign_amount), 0) from vendor_payment_entries where vendor_payment_entries.purchase_invoice_id = purchase_invoices.id and vendor_payment_entries.transaction_type = \'debit\'))';
 
     /** The supplier's own bill number, falling back to our document number. */
     public function referenceNumber(): string
@@ -185,12 +185,77 @@ class PurchaseInvoice extends Model
         return $this->isOrder() && (int) $this->converted_invoice_id > 0;
     }
 
-    /** An order that can still become a bill. */
+    /** Draft or sent: the checker has not signed this order off yet. */
+    public function needsChecker(): bool
+    {
+        return $this->isOrder() && in_array($this->status, ['draft', 'sent'], true);
+    }
+
+    public function checkerLabel(): string
+    {
+        return $this->status === 'draft' ? 'Send, then approve' : 'Needs approval';
+    }
+
+    /** An approved order that can still become a bill. */
     public function canConvert(): bool
     {
         return $this->isOrder()
             && ! $this->isSuperseded()
-            && $this->status !== 'cancelled';
+            && $this->status === 'approved';
+    }
+
+    /**
+     * Maker-checker for money out: a debit is allowed only against an
+     * approved purchase order, or a bill that has actually been raised
+     * (not a draft). Sent and draft orders wait for approval.
+     */
+    public function canReceiveMoney(): bool
+    {
+        if ($this->status === 'cancelled') {
+            return false;
+        }
+
+        if ($this->isBill()) {
+            return $this->status !== 'draft';
+        }
+
+        return $this->isOrder()
+            && $this->status === 'approved'
+            && ! $this->isSuperseded();
+    }
+
+    /** What the office must do before this document can take an advance or payment. */
+    public function moneyGateMessage(): ?string
+    {
+        if ($this->canReceiveMoney()) {
+            return null;
+        }
+
+        if ($this->isOrder() && $this->isSuperseded()) {
+            return 'This order has already become a bill. Record the payment on the bill.';
+        }
+
+        if ($this->isOrder() && $this->status === 'draft') {
+            return 'Send this purchase order, then approve it, before recording an advance.';
+        }
+
+        if ($this->isOrder() && $this->status === 'sent') {
+            return 'Approve this purchase order before recording an advance. It has been sent; the checker has not approved it yet.';
+        }
+
+        if ($this->isOrder() && $this->status === 'cancelled') {
+            return $this->invoice_number.' is cancelled, so money cannot be filed against it.';
+        }
+
+        if ($this->isBill() && $this->status === 'draft') {
+            return 'Mark this purchase bill as received before recording a payment.';
+        }
+
+        if ($this->status === 'cancelled') {
+            return $this->invoice_number.' is cancelled, so a payment cannot be filed against it.';
+        }
+
+        return 'An approved purchase order or a raised bill is required before money can go to this vendor.';
     }
 
     /**
@@ -235,21 +300,21 @@ class PurchaseInvoice extends Model
     /** The route prefix this document's screens live under. */
     public function routePrefix(): string
     {
-        return $this->isOrder() ? 'purchase-orders' : 'purchase-bills';
+        return 'purchase-invoices';
     }
 
     /* ------------------------------------------------------------------
        The money
        ------------------------------------------------------------------ */
 
-    /** The payments filed against this bill, in the ledger, in rupees. */
+    /** Payments against this document, in the document's own currency. */
     public function ledgerPaid(): float
     {
         if ($this->relationLoaded('payments')) {
-            return round((float) $this->payments->sum('amount_in_inr'), 2);
+            return round((float) $this->payments->sum('foreign_amount'), 2);
         }
 
-        return round((float) $this->payments()->sum('amount_in_inr'), 2);
+        return round((float) $this->payments()->sum('foreign_amount'), 2);
     }
 
     public function paidAmount(): float
@@ -266,6 +331,16 @@ class PurchaseInvoice extends Model
     public function balanceDue(): float
     {
         if (! $this->isBill() || $this->status === 'cancelled') {
+            return 0.0;
+        }
+
+        return round(max((float) $this->total_amount - $this->paidAmount(), 0), 2);
+    }
+
+    /** What is still open to record as an advance or a payment. */
+    public function openAmount(): float
+    {
+        if ($this->status === 'cancelled' || $this->isSuperseded() || ! $this->canReceiveMoney()) {
             return 0.0;
         }
 
@@ -396,8 +471,7 @@ class PurchaseInvoice extends Model
     public function scopeWithPaid(Builder $query): Builder
     {
         return $query
-            ->withSum('payments as paid_total', 'amount_in_inr')
-            ->withSum('ledgerEntries as ledger_credit_total', 'credit_amount');
+            ->withSum('payments as paid_total', 'amount_in_inr');
     }
 
     public function scopeSearch(Builder $query, ?string $search): Builder
@@ -469,19 +543,7 @@ class PurchaseInvoice extends Model
     /** Our own company details — the buyer on every purchase document. */
     public static function defaultBuyerDetails(): array
     {
-        return [
-            'buyer_company_name' => 'MissPack India Pvt Ltd',
-            'buyer_address' => 'E-410, 4th Floor, City Centre, Near Idgah Circle, Prem Darwaja Road, Idgah',
-            'buyer_city' => 'Ahmedabad',
-            'buyer_state' => 'Gujarat',
-            'buyer_country' => 'India',
-            'buyer_pincode' => '380016',
-            'buyer_gstin' => '24AATCM8816E1Z5',
-            'buyer_pan' => 'AATCM8816E',
-            'buyer_email' => 'misspackindia@gmail.com',
-            'buyer_mobile' => '7041110823',
-            'buyer_website' => 'www.themisspack.com',
-        ];
+        return Organisation::current()->buyerDetails();
     }
 
     public static function defaultTerms(): string

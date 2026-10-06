@@ -13,7 +13,7 @@
             <h1>{{ $isEdit ? 'Edit vendor' : 'Add a vendor' }}</h1>
             <p>{{ $isEdit ? 'Keep this supplier’s contacts, tax and bank details, and terms up to date.' : 'Create a supplier record. You can add more details now or complete them later.' }}</p>
             <nav class="master-breadcrumb" aria-label="Breadcrumb">
-                <a href="{{ route('dashboard') }}">Home</a><span aria-hidden="true">/</span>
+                <a href="{{ route('vendors.index') }}">Vendors</a><span aria-hidden="true">/</span>
                 <a href="{{ route('vendors.index') }}">Vendors</a><span aria-hidden="true">/</span>
                 <span class="active" aria-current="page">{{ $isEdit ? 'Edit' : 'New' }}</span>
             </nav>

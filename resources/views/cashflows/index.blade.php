@@ -342,12 +342,28 @@
                     <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
                 </div>
             </div>
+
+            <form id="cashflowBulkForm" method="POST" action="{{ route('cashflows.bulk') }}"
+                class="master-list-bulk" data-bulk-bar hidden>
+                @csrf
+                <span class="master-list-bulk-count" data-bulk-count>0 selected</span>
+                <select class="master-select" name="action" aria-label="Action for the selected entries">
+                    @foreach ($bulkActions as $actionKey => $actionLabel)
+                        <option value="{{ $actionKey }}">{{ $actionLabel }}</option>
+                    @endforeach
+                </select>
+                <button class="master-btn master-btn-primary master-btn-sm" type="submit">Apply</button>
+                <button class="master-btn master-btn-light master-btn-sm" type="button" data-bulk-clear>Clear</button>
+            </form>
         </div>
 
         <div class="master-table-wrap">
             <table class="master-table" data-table-settings data-table-key="cashflows">
                 <thead>
                     <tr>
+                        <th scope="col" class="master-list-pick">
+                            <input type="checkbox" data-bulk-all aria-label="Select every entry on this page">
+                        </th>
                         <th scope="col">Date</th>
                         <th scope="col">Particular</th>
                         <th scope="col">Account</th>
@@ -368,7 +384,7 @@
                                 {{-- the cell stays a table cell: display:flex on a <td>
                                      takes it out of the table layout and colspan stops
                                      spanning, so the strip lives in a wrapper inside it --}}
-                                <td colspan="8">
+                                <td colspan="9">
                                     <div class="master-list-group-inner">
                                         <span>{{ $bucket }}</span>
                                         <span class="master-list-group-count">{{ $bucketCounts[$bucket] ?? 0 }}</span>
@@ -379,6 +395,10 @@
                         {{-- The whole row opens the record (assets/js/master-list.js);
                              anything interactive inside it keeps its own click. --}}
                         <tr class="cf-row is-clickable" data-href="{{ route('cashflows.show', $entry) }}">
+                            <td class="master-list-pick" data-label="Select">
+                                <input type="checkbox" name="ids[]" value="{{ $entry->id }}" form="cashflowBulkForm"
+                                    data-bulk-pick aria-label="Select {{ $entry->particular }}">
+                            </td>
                             <td data-label="Date">
                                 <span class="cf-date">{{ $entry->entry_date?->format('d M') }}</span>
                                 <span class="master-sub ui-mobile-secondary">{{ $entry->entry_date?->format('Y') }}</span>
@@ -472,7 +492,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8">
+                            <td colspan="9">
                                 <div class="master-list-empty">
                                     <span class="master-list-empty-icon" aria-hidden="true">₹</span>
                                     <p class="master-list-empty-title">
@@ -494,9 +514,14 @@
                         </tr>
                     @endforelse
                 </tbody>
-                <tfoot>
+            </table>
+        </div>
+
+        @if ($entries->isNotEmpty())
+            <div class="master-list-foot">
+                <table class="master-table">
                     <tr class="master-list-total">
-                        <td colspan="3">
+                        <td colspan="4">
                             <strong>Total — {{ $entries->count() }} {{ \Illuminate\Support\Str::plural('entry', $entries->count()) }} shown</strong>
                             <span class="master-sub">Filtered totals cover every page</span>
                         </td>
@@ -514,9 +539,9 @@
                         </td>
                         <td colspan="2"></td>
                     </tr>
-                </tfoot>
-            </table>
-        </div>
+                </table>
+            </div>
+        @endif
 
         <x-pagination :items="$entries" />
     </div>
@@ -636,6 +661,18 @@
                                 @endforeach
                             </select>
                             @error('vendor_id')<p class="master-error">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div class="master-field party-picker" data-party-for="office_service"
+                            @if ($quickPartyType !== 'office_service') hidden @endif>
+                            <label class="master-label" for="quickOfficeService">Office service</label>
+                            <select class="master-select" id="quickOfficeService" name="office_service_id">
+                                <option value="">No office service linked</option>
+                                @foreach(($officeServices ?? []) as $officeService)
+                                    <option value="{{ $officeService->id }}" @selected((string) old('office_service_id') === (string) $officeService->id)>{{ $officeService->name }} — {{ $officeService->classLabel() }}</option>
+                                @endforeach
+                            </select>
+                            @error('office_service_id')<p class="master-error">{{ $message }}</p>@enderror
                         </div>
 
                         <div class="master-field party-picker" data-party-for="expense"

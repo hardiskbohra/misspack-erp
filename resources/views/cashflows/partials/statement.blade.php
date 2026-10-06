@@ -134,10 +134,9 @@
 
             @forelse ($statement['rows'] as $row)
                 @php
-                    /* On a foreign statement the rupee figure sits under the
-                       foreign one — what it was worth on the day, from the rate
-                       the entry carries, never a rate invented at print time. */
-                    $inrNote = (! $isInr && ! empty($row['inr']))
+                    /* Cashflow is rupees. A vendor statement is the vendor's
+                       currency, so the rupee equivalent stays off the page. */
+                    $inrNote = ($statement['party_type'] !== 'vendor' && ! $isInr && ! empty($row['inr']))
                         ? \App\Helpers\CommonHelper::indianCurrency($row['inr'])
                         : null;
                 @endphp
@@ -145,7 +144,7 @@
                     <td>{{ $row['date'] ? $row['date']->format('d M Y') : '—' }}</td>
                     <td>
                         {{ $row['particular'] }}
-                        @if (! empty($row['rate']))
+                        @if ($statement['party_type'] !== 'vendor' && ! empty($row['rate']))
                             <span class="stmt-cell-note">@ {{ $row['rate'] }}</span>
                         @endif
                     </td>

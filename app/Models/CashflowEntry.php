@@ -15,7 +15,7 @@ class CashflowEntry extends Model
     protected $fillable = [
         'entry_date', 'particular', 'invoice_bill_number', 'bank_reference_number', 'transaction_type','project_id','sales_invoice_id',
         'credit_amount', 'debit_amount', 'balance', 'currency', 'account_id', 'category_id',
-        'accounting_status', 'payment_mode', 'client_id', 'vendor_id', 'employee_id', 'expense_head',
+        'accounting_status', 'payment_mode', 'client_id', 'vendor_id', 'employee_id', 'office_service_id', 'expense_head',
         'related_party_type', 'related_party_name', 'notes', 'created_by',
     ];
 
@@ -75,6 +75,7 @@ class CashflowEntry extends Model
         return (string) ($this->client?->company_name
             ?? $this->vendor?->vendor_name
             ?? $this->employee?->name
+            ?? $this->officeService?->name
             ?? $this->related_party_name
             ?? $this->expense_head
             ?? '');
@@ -83,6 +84,11 @@ class CashflowEntry extends Model
     public function vendor()
     {
         return $this->belongsTo(\App\Models\Vendor::class, 'vendor_id');
+    }
+
+    public function officeService()
+    {
+        return $this->belongsTo(OfficeService::class, 'office_service_id');
     }
 
     public function scopeSearch(Builder $query, ?string $search): Builder
@@ -159,6 +165,40 @@ class CashflowEntry extends Model
         return round((float) ($this->isMoneyOut()
             ? $this->debit_amount
             : $this->credit_amount), 2);
+    }
+
+    public function isCashAccount(): bool
+    {
+        return ($this->account?->account_type ?? '') === 'cash';
+    }
+
+    public function voucherKind(): string
+    {
+        if (! $this->isMoneyOut()) {
+            return 'receipt';
+        }
+
+        return $this->isCashAccount() ? 'cash' : 'payment';
+    }
+
+    public function voucherTitle(): string
+    {
+        return match ($this->voucherKind()) {
+            'cash' => 'Cash voucher',
+            'receipt' => 'Receipt voucher',
+            default => 'Payment voucher',
+        };
+    }
+
+    public function voucherNumber(): string
+    {
+        $prefix = match ($this->voucherKind()) {
+            'cash' => 'CV',
+            'receipt' => 'RV',
+            default => 'PV',
+        };
+
+        return $prefix.'-'.str_pad((string) $this->id, 5, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -250,6 +290,7 @@ class CashflowEntry extends Model
             'expense' => 'Cash Expense',
             'owner' => 'Owner / Capital',
             'employee' => 'Employee',
+            'office_service' => 'Office service',
             'other' => 'Other',
         ];
     }
@@ -269,6 +310,7 @@ class CashflowEntry extends Model
             'client' => 'client_id',
             'vendor' => 'vendor_id',
             'employee' => 'employee_id',
+            'office_service' => 'office_service_id',
         ];
     }
 

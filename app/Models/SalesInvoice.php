@@ -642,25 +642,7 @@ class SalesInvoice extends Model
 
     public static function defaultSellerDetails(): array
     {
-        return [
-            'seller_company_name' => 'MissPack India Pvt Ltd',
-            'seller_address' => 'E-410, 4th Floor, City Centre, Near Idgah Circle, Prem Darwaja Road, Idgah',
-            'seller_city' => 'Ahmedabad',
-            'seller_state' => 'Gujarat',
-            'seller_country' => 'India',
-            'seller_pincode' => '380016',
-            'seller_gstin' => '24AATCM8816E1Z5',
-            'seller_pan' => 'AATCM8816E',
-            'seller_email' => 'misspackindia@gmail.com',
-            'seller_mobile' => '7041110823',
-            'seller_website' => 'www.themisspack.com',
-            'seller_bank_name' => 'HDFC BANK LTD',
-            'seller_account_holder' => 'MISSPACK INDIA PRIVATE LIMITED',
-            'seller_account_number' => '50200115168612',
-            'seller_ifsc' => 'HDFC0000006 (0=Zero)',
-            'seller_branch' => 'NAVRANGPURA',
-            'seller_swift' => 'HDFCINBBXXX',
-        ];
+        return Organisation::current()->sellerDetails();
     }
 
     public static function defaultTerms(): string

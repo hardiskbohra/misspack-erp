@@ -299,7 +299,7 @@ class AdminDashboardController extends Controller
             'tasks_overdue' => $this->overdueTasks(),
 
             'vendors_total' => $this->count(\App\Models\Vendor::class, 'vendors'),
-            'vendor_payables_total' => $this->vendorPayablesTotal(),
+            'vendor_quotes_total' => $this->count(\App\Models\VendorQuote::class, 'vendor_quotes'),
             'cash_credit_range' => $incomeTotal,
             'cash_debit_range' => $expenseTotal,
             'cash_net_range' => $incomeTotal - $expenseTotal,
@@ -374,31 +374,32 @@ class AdminDashboardController extends Controller
         });
     }
 
-    /**
-     * Purchase spend, read from the vendor ledger rather than the old vendor
-     * quote table: a bill or an expense raised by a vendor is the purchase,
-     * and the ledger is where the office actually records it. Amounts are the
-     * INR figure stored on the row, so a RMB bill is never added to a rupee
-     * one at face value.
-     */
     private function purchaseSeries(array $period): array
     {
-        if (! Schema::hasTable('vendor_payment_entries')) {
+        if (! Schema::hasTable('vendor_quotes')) {
             return $this->zeroSeries($period);
         }
 
-        $dateColumn = $this->dateColumn('vendor_payment_entries', ['transaction_date', 'created_at']);
+        $dateColumn = $this->dateColumn('vendor_quotes', ['quote_date', 'created_at']);
         if (! $dateColumn) {
             return $this->zeroSeries($period);
         }
 
-        $hasCategory = Schema::hasColumn('vendor_payment_entries', 'entry_category');
+        $hasLandingCost = Schema::hasColumn('vendor_quotes', 'landing_cost_inr');
+        $hasUnitPurchase = Schema::hasColumn('vendor_quotes', 'vendor_unit_price') && Schema::hasColumn('vendor_quotes', 'quantity');
 
-        return $this->sumExpressionSeries('vendor_payment_entries', $dateColumn, 'COALESCE(amount_in_inr, 0)', $period, function ($query) use ($hasCategory) {
-            $query->where('transaction_type', 'credit');
+        $expression = '0';
+        if ($hasLandingCost && $hasUnitPurchase) {
+            $expression = 'CASE WHEN COALESCE(landing_cost_inr, 0) > 0 THEN COALESCE(landing_cost_inr, 0) ELSE COALESCE(vendor_unit_price, 0) * COALESCE(quantity, 0) END';
+        } elseif ($hasLandingCost) {
+            $expression = 'COALESCE(landing_cost_inr, 0)';
+        } elseif ($hasUnitPurchase) {
+            $expression = 'COALESCE(vendor_unit_price, 0) * COALESCE(quantity, 0)';
+        }
 
-            if ($hasCategory) {
-                $query->whereIn('entry_category', ['bill', 'expense']);
+        return $this->sumExpressionSeries('vendor_quotes', $dateColumn, $expression, $period, function ($query) {
+            if (Schema::hasColumn('vendor_quotes', 'status')) {
+                $query->whereIn('status', ['received', 'shortlisted', 'approved', 'converted']);
             }
         });
     }
@@ -651,71 +652,38 @@ class AdminDashboardController extends Controller
             ->toArray();
     }
 
-    /**
-     * The same ledger figures, grouped by the vendor they were billed to —
-     * the eight suppliers the period's spend actually went to.
-     */
     private function purchaseByVendorBreakdown(array $period): array
     {
-        if (! Schema::hasTable('vendor_payment_entries')) {
+        if (! Schema::hasTable('vendor_quotes')) {
             return [];
         }
 
-        $dateColumn = $this->dateColumn('vendor_payment_entries', ['transaction_date', 'created_at']);
-        if (! $dateColumn || ! Schema::hasTable('vendors')) {
+        $dateColumn = $this->dateColumn('vendor_quotes', ['quote_date', 'created_at']);
+        if (! $dateColumn) {
             return [];
         }
 
-        $hasCategory = Schema::hasColumn('vendor_payment_entries', 'entry_category');
-        $label = Schema::hasColumn('vendors', 'vendor_name') ? 'vendor_name' : 'name';
+        $hasLandingCost = Schema::hasColumn('vendor_quotes', 'landing_cost_inr');
+        $hasUnitPurchase = Schema::hasColumn('vendor_quotes', 'vendor_unit_price') && Schema::hasColumn('vendor_quotes', 'quantity');
 
-        $query = DB::table('vendor_payment_entries')
-            ->leftJoin('vendors', 'vendors.id', '=', 'vendor_payment_entries.vendor_id')
-            ->where('vendor_payment_entries.transaction_type', 'credit')
-            ->whereBetween('vendor_payment_entries.'.$dateColumn, [
-                $this->dateBoundary($period['start'], $dateColumn),
-                $this->dateBoundary($period['end'], $dateColumn, true),
-            ]);
-
-        if ($hasCategory) {
-            $query->whereIn('vendor_payment_entries.entry_category', ['bill', 'expense']);
+        $expression = '0';
+        if ($hasLandingCost && $hasUnitPurchase) {
+            $expression = 'CASE WHEN COALESCE(landing_cost_inr, 0) > 0 THEN COALESCE(landing_cost_inr, 0) ELSE COALESCE(vendor_unit_price, 0) * COALESCE(quantity, 0) END';
+        } elseif ($hasLandingCost) {
+            $expression = 'COALESCE(landing_cost_inr, 0)';
+        } elseif ($hasUnitPurchase) {
+            $expression = 'COALESCE(vendor_unit_price, 0) * COALESCE(quantity, 0)';
         }
 
-        return $query
-            ->selectRaw("COALESCE(vendors.".$label.", 'Unassigned vendor') as label, SUM(COALESCE(vendor_payment_entries.amount_in_inr, 0)) as total")
+        return DB::table('vendor_quotes')
+            ->whereBetween($dateColumn, [$this->dateBoundary($period['start'], $dateColumn), $this->dateBoundary($period['end'], $dateColumn, true)])
+            ->selectRaw("COALESCE(vendor_name, 'Vendor') as label, SUM(".$expression.") as total")
             ->groupBy('label')
             ->orderByDesc('total')
             ->limit(8)
             ->pluck('total', 'label')
             ->mapWithKeys(function ($value, $key) { return [(string) $key => round((float) $value, 2)]; })
             ->toArray();
-    }
-
-    /**
-     * What is still owed to vendors: the bills and expenses raised, less what
-     * has been paid, floored at zero so an over-payment does not read as a
-     * negative payable. Rupees only — the ledger stores the INR figure.
-     */
-    private function vendorPayablesTotal(): float
-    {
-        if (! Schema::hasTable('vendor_payment_entries')) {
-            return 0.0;
-        }
-
-        $hasCategory = Schema::hasColumn('vendor_payment_entries', 'entry_category');
-
-        $billed = (float) DB::table('vendor_payment_entries')
-            ->where('transaction_type', 'credit')
-            ->when($hasCategory, function ($query) {
-                $query->whereIn('entry_category', ['bill', 'expense']);
-            })
-            ->sum('amount_in_inr');
-
-        $paid = (float) DB::table('vendor_payment_entries')
-            ->where('transaction_type', 'debit')
-            ->sum('amount_in_inr');
-
-        return round(max($billed - $paid, 0), 2);
     }
 
     private function breakdown(string $model, string $table, string $column): array

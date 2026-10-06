@@ -1,15 +1,22 @@
 /* ==========================================================================
-   PURCHASE-INVOICES.JS — the purchase module's screens
+   PURCHASE-INVOICES.JS — Purchase orders and bills
    --------------------------------------------------------------------------
-   The invoice script's sibling, and deliberately the same shape: one line-item
-   builder and money preview that mirror `PurchaseInvoiceController::syncItemsAndTotals()`
-   step for step, one dialog wiring, one clipboard helper, one listing boot.
+   Two screens' behaviour, one file:
 
-   Where the two differ is who is on the other side of the document. An invoice
-   fills itself from a **client**; a purchase document fills itself from a
-   **vendor** — a name, a GSTIN and an address that come off the vendor record
-   the way the client's come off theirs. There is no client portal here, so the
-   public link is a print link and nothing else.
+     the form   the line-item builder (add/remove rows, product autofill), the
+                live GST/discount/total preview and the client snapshot prefill
+                (the client's own record, in one list the form carries).
+                The product options and existing items arrive through data
+                attributes on #invoiceItemsBody (Blade cannot render inside an
+                external script);
+     the list   the shared list chrome every module's listing wears — clickable
+                rows, the density switch, the saved-view toggle — plus the two
+                actions that only exist here: the receipt dialog (which posts to
+                the cashflow ledger, so its form's action is filled in from the
+                row that opened it) and the client link, copied to the clipboard.
+
+   The list half is keyed off `.si-index`, so a page without the list boots
+   nothing, and the modal is opened through the shared `MasterModal`.
    ========================================================================== */
 (function () {
     'use strict';
@@ -22,10 +29,62 @@
         }
     }
 
-    /* ======================================================= the form
-       The line-item editor, the money preview, and the vendor snapshot. */
     onReady(function () {
-        var body = document.getElementById('purchaseItemsBody');
+        var portalPromptForm = null;
+        if (false) {
+            var portalPromptOpen = false;
+            var continueAfterPortalChoice = false;
+
+            portalPromptForm.addEventListener('submit', function (event) {
+                if (continueAfterPortalChoice) {
+                    continueAfterPortalChoice = false;
+                    return;
+                }
+
+                var portalChoice = portalPromptForm.querySelector('[data-invoice-portal-choice]');
+                if (!portalChoice) return;
+
+                event.preventDefault();
+                if (portalPromptOpen) return;
+                portalPromptOpen = true;
+
+                var submitter = event.submitter || null;
+                function submitWithVisibility(showInPortal) {
+                    portalChoice.value = showInPortal ? '1' : '0';
+                    portalPromptOpen = false;
+                    continueAfterPortalChoice = true;
+
+                    if (typeof portalPromptForm.requestSubmit === 'function') {
+                        if (submitter && portalPromptForm.contains(submitter)) {
+                            portalPromptForm.requestSubmit(submitter);
+                        } else {
+                            portalPromptForm.requestSubmit();
+                        }
+                    } else {
+                        portalPromptForm.submit();
+                    }
+                }
+
+                if (!window.MasterAlert || typeof window.MasterAlert.confirm !== 'function') {
+                    submitWithVisibility(false);
+                    return;
+                }
+
+                window.MasterAlert.confirm(
+                    'Choose Yes to make the invoice visible to the client, or No to create it privately.',
+                    {
+                        title: 'Show this invoice in the client portal?',
+                        confirmText: 'Yes',
+                        cancelText: 'No',
+                        danger: false
+                    }
+                ).then(submitWithVisibility).catch(function () {
+                    submitWithVisibility(false);
+                });
+            });
+        }
+
+        var body = document.getElementById('invoiceItemsBody');
         if (!body) return;
 
         var productOptions = [];
@@ -38,31 +97,40 @@
         } catch (e) { /* ignore malformed payload */ }
 
         var rowIndex = 0;
-        var ledgerPaid = parseFloat(body.getAttribute('data-ledger-paid')) || 0;
-        var currency = body.getAttribute('data-currency') || 'INR';
+        var ledgerReceived = parseFloat(body.getAttribute('data-ledger-received')) || 0;
+
+        function currencySymbol() {
+            var el = document.getElementById('invoiceCurrency');
+            var code = el ? String(el.value || 'INR').toUpperCase() : 'INR';
+            if (code === 'USD') return '$';
+            if (code === 'RMB' || code === 'CNY') return '¥';
+            if (code === 'INR') return '₹';
+            return code + ' ';
+        }
 
         function money(v) {
-            /* A purchase document can be raised in the vendor's currency, and a
-               preview that printed ₹ over an RMB bill would be the one figure on
-               the page nobody could trust. */
-            var symbol = currency === 'INR' ? '₹ ' : currency + ' ';
-            return symbol + (Number(v || 0)).toLocaleString('en-IN', {
+            return currencySymbol() + (Number(v || 0)).toLocaleString('en-IN', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
         }
 
-        /* A figure that moves the total down is written as a subtraction. */
+        /* A figure that moves the total down is written as a subtraction, not as
+           a negative amount: "− ₹ 1,000.00", never "₹ -1,000.00". */
         function minus(v) {
             var amount = round2(Math.abs(Number(v) || 0));
             return amount === 0 ? money(0) : '− ' + money(amount);
         }
 
-        /* The same rounding the server does, so a preview and a save agree. */
+        /* The same rounding the server does, so a preview and a save agree to
+           the paisa. */
         function round2(v) {
             return Math.round((Number(v || 0) + Number.EPSILON) * 100) / 100;
         }
 
+        /* Everything the office types into a field ends up inside an attribute
+           or a text node: a product description with a quote in it must not be
+           able to break the row it is typed into. */
         function esc(value) {
             return String(value === undefined || value === null ? '' : value)
                 .replace(/&/g, '&amp;')
@@ -72,6 +140,8 @@
                 .replace(/'/g, '&#39;');
         }
 
+        /* An empty field is not a zero: `val(item.quantity, 1)` keeps the row's
+           own default, where `item.quantity || 1` would turn a typed 0 into 1. */
         function val(value, fallback) {
             return (value === undefined || value === null || value === '') ? fallback : value;
         }
@@ -91,15 +161,22 @@
             if (el) el.textContent = text;
         }
 
+        /* One line of the money ledger: the value, and whether the line applies
+           at all. A ledger of eleven rows of ₹ 0.00 hides the two that matter. */
         function setRow(rowId, valueId, text, show) {
             var row = document.getElementById(rowId);
             if (row) row.hidden = !show;
             setText(valueId, text);
         }
 
-        /* Every `.master-select` in this app is a select2, and a pick made in
-           its list is announced with a **jQuery** trigger — which a plain DOM
-           listener never hears. Bind the way the pick is announced. */
+        /* A pick made in a select2 is announced with `$el.trigger('change')` —
+           a **jQuery** trigger, which runs jQuery handlers and the inline
+           `onchange` and dispatches no DOM event at all. A plain
+           `addEventListener('change', …)` never hears it, so a handler bound
+           that way fills nothing when the office chooses from the list; every
+           `.master-select` in this app is a select2. Bind the way the pick is
+           announced: jQuery when it is here (the shell loads it, and select2
+           needs it anyway), the native listener as the fallback. */
         function onChange(el, handler) {
             if (!el) return;
 
@@ -119,19 +196,18 @@
         }
 
         /* ------------------------------------------------------------- the money
-           The office sees the purchase document before it is saved, and the
-           figures they see have to be the figures that get stored. This mirrors
-           `syncItemsAndTotals()` step for step: gross, the line's own discount,
-           taxable, the document discount, the tax scaled by that discount's
-           ratio, the charges, the round off, the total — and then the model's
-           balance rule, with the payments already in the vendor ledger (handed
-           over in `data-ledger-paid`) on the same side of the subtraction.
-
-           An import carries no GST on its lines (`gst_type = export`), exactly
-           as the controller stores it. */
+           The office sees the invoice before it is saved, and the figures they
+           see have to be the figures that get stored. This mirrors
+           `SalesInvoiceController::syncItemsAndTotals()` step for step: gross,
+           the line's own discount, taxable, the invoice discount, the tax
+           scaled by the discount's ratio, the charges, the round off, the total
+           — and then the model's balance rule, with the receipts already in the
+           ledger (handed over in `data-ledger-received`) on the same side of the
+           subtraction. A preview that adds up a different invoice is how the
+           office learns not to trust either figure. */
         function calculateTotals() {
             var gstType = fieldText('gstType');
-            var noGst = gstType === 'export';
+            var exportSale = gstType === 'export';
 
             var gross = 0;
             var taxable = 0;
@@ -149,7 +225,7 @@
                 var lineTaxable = Math.max(round2(lineGross - round2(lineGross * discount / 100)), 0);
                 var lineTax = 0;
 
-                if (!noGst) {
+                if (!exportSale) {
                     if (gstType === 'inter_state') {
                         lineTax = round2(lineTaxable * gst / 100);
                     } else {
@@ -161,7 +237,7 @@
                 gross += lineGross;
                 taxable += lineTaxable;
 
-                if (!noGst) {
+                if (!exportSale) {
                     if (gstType === 'inter_state') {
                         igst += lineTax;
                     } else {
@@ -176,11 +252,11 @@
 
             var discountValue = fieldValue('discountValue');
             var discountType = fieldText('discountType') || 'amount';
-            var documentDiscount = discountType === 'percent'
+            var invoiceDiscount = discountType === 'percent'
                 ? round2(taxable * discountValue / 100)
                 : Math.min(discountValue, taxable);
 
-            var taxableAfter = Math.max(round2(taxable - documentDiscount), 0);
+            var taxableAfter = Math.max(round2(taxable - invoiceDiscount), 0);
             var ratio = taxable > 0 ? (taxableAfter / taxable) : 1;
 
             cgst = round2(cgst * ratio);
@@ -195,13 +271,13 @@
             var tax = round2(cgst + sgst + igst);
 
             var total = round2(taxableAfter + tax + charges + roundOff);
-            var paid = round2(fieldValue('amountPaid') + ledgerPaid);
-            var balance = Math.max(round2(total - paid), 0);
+            var received = round2(fieldValue('amountPaid') + ledgerReceived);
+            var balance = Math.max(round2(total - received), 0);
 
             setRow('rowSubtotal', 'previewSubtotal', money(gross), true);
             setRow('rowLineDiscount', 'previewLineDiscount', minus(taxable - gross), round2(taxable - gross) !== 0);
-            setRow('rowDocDiscount', 'previewDocDiscount', minus(documentDiscount), documentDiscount > 0);
-            setRow('rowTaxable', 'previewTaxable', money(taxableAfter), true);
+            setRow('rowInvoiceDiscount', 'previewInvoiceDiscount', minus(invoiceDiscount), invoiceDiscount > 0);
+            setRow('rowTaxable', 'previewTaxable', money(taxableAfter), !exportSale);
             setRow('rowCgst', 'previewCgst', money(cgst), cgst !== 0);
             setRow('rowSgst', 'previewSgst', money(sgst), sgst !== 0);
             setRow('rowIgst', 'previewIgst', money(igst), igst !== 0);
@@ -210,15 +286,20 @@
             setRow('rowOther', 'previewOther', money(other), other !== 0);
             setRow('rowRoundOff', 'previewRoundOff', money(roundOff), roundOff !== 0);
             setRow('rowTotal', 'previewTotal', money(total), true);
-            setRow('rowPaid', 'previewPaid', minus(paid), paid !== 0);
+            setRow('rowReceived', 'previewReceived', minus(received), received !== 0);
             setRow('rowBalance', 'previewBalance', money(balance), true);
 
+            /* Red while money is owed, green when nothing is: the same two tones
+               the listing's balance column reads. */
             var balanceText = document.getElementById('previewBalance');
-            if (balanceText) balanceText.className = balance > 0 ? 'pi-due' : 'pi-clear';
+            if (balanceText) balanceText.className = balance > 0 ? 'si-due' : 'si-clear';
         }
 
-        /* One line of the document. Every name here is one
-           `syncItemsAndTotals()` reads. */
+        /* One line of the invoice. Every name here is one
+           `SalesInvoiceController::syncItemsAndTotals()` reads — including
+           `discount_percent`, which the row did not post at all: the office
+           could type a line discount into the database and the next save of the
+           invoice wrote it back as zero. */
         function addRow(item) {
             item = item || {};
             var i = rowIndex++;
@@ -228,15 +309,15 @@
                 '    <td>',
                 '        ' + productSelect('items[' + i + '][product_id]', val(item.product_id, '')),
                 '        <input type="hidden" name="items[' + i + '][project_product_id]" value="' + esc(val(item.project_product_id, '')) + '">',
-                '        <input class="master-input" name="items[' + i + '][product_name]" value="' + esc(val(item.product_name, '')) + '" placeholder="Item name">',
-                '        <textarea class="master-textarea" rows="3" name="items[' + i + '][description]" placeholder="Specification / description">' + esc(val(item.description, '')) + '</textarea>',
+                '        <input class="master-input" name="items[' + i + '][product_name]" value="' + esc(val(item.product_name, '')) + '" placeholder="Product name">',
+                '        <textarea class="master-textarea" rows="3" name="items[' + i + '][description]" placeholder="Description">' + esc(val(item.description, '')) + '</textarea>',
                 '    </td>',
                 '    <td><input class="master-input" name="items[' + i + '][hsn_sac]" value="' + esc(val(item.hsn_sac, '')) + '" placeholder="HSN"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.001" min="0" name="items[' + i + '][quantity]" value="' + esc(val(item.quantity, 1)) + '"></td>',
                 '    <td><input class="master-input" name="items[' + i + '][unit]" value="' + esc(val(item.unit, 'pcs')) + '"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.01" min="0" name="items[' + i + '][unit_price]" value="' + esc(val(item.unit_price, 0)) + '"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.01" min="0" name="items[' + i + '][discount_percent]" value="' + esc(val(item.discount_percent, 0)) + '"></td>',
-                '    <td class="is-num"><input class="master-input calc" type="number" step="0.05" min="0" name="items[' + i + '][gst_percent]" value="' + esc(val(item.gst_percent, 18)) + '"></td>',
+                '    <td class="is-num si-tax-col"><input class="master-input calc" type="number" step="0.05" min="0" name="items[' + i + '][gst_percent]" value="' + esc(val(item.gst_percent, 0)) + '"></td>',
                 '    <td class="is-num"><strong class="line-total">₹ 0.00</strong>',
                 '        <input type="hidden" name="items[' + i + '][remarks]" value="' + esc(val(item.remarks, '')) + '"></td>',
                 '    <td class="is-num"><button type="button" class="master-btn master-btn-ghost master-remove" aria-label="Remove this line"><i class="fas fa-xmark" aria-hidden="true"></i></button></td>',
@@ -258,6 +339,9 @@
             if (e.target.classList.contains('calc')) calculateTotals();
         });
 
+        /* The same trap as the client select: the row's product list is a
+           select2 too (the shell decorates every `.master-select`, including the
+           rows this file injects). */
         onChange(body, function (e) {
             if (e.target.classList.contains('master-product-select')) {
                 var product = productOptions.find(function (p) { return String(p.id) === String(e.target.value); });
@@ -272,6 +356,8 @@
         });
 
         body.addEventListener('click', function (e) {
+            /* the button carries an icon: the click may land on the <i> inside
+               it, so the handler walks up to the control itself */
             var remove = e.target.closest ? e.target.closest('.master-remove') : null;
 
             if (remove) {
@@ -286,35 +372,68 @@
             var el = document.getElementById(id);
             if (el) el.addEventListener('input', calculateTotals);
         });
-        ['discountType', 'gstType'].forEach(function (id) {
-            var el = document.getElementById(id);
-            if (el) el.addEventListener('change', calculateTotals);
-        });
-
-        /* The currency decides what the preview prints, and the rate decides what
-           the ledger will store in rupees: keep the symbol honest as it changes. */
-        var currencySelect = document.getElementById('invoiceCurrency');
-        if (currencySelect) {
-            onChange(currencySelect, function () {
-                currency = currencySelect.value || 'INR';
-                document.querySelectorAll('[data-preview-currency]').forEach(function (node) {
-                    node.textContent = currency;
+        function applyImportUi() {
+            var gstTypeEl = document.getElementById('gstType');
+            var isImport = gstTypeEl && gstTypeEl.value === 'export';
+            document.querySelectorAll('.si-tax-col, [data-import-hide]').forEach(function (el) {
+                el.hidden = isImport;
+            });
+            var itemsWrap = document.querySelector('.si-items');
+            if (itemsWrap) itemsWrap.classList.toggle('is-import', isImport);
+            if (isImport) {
+                body.querySelectorAll('input[name$="[gst_percent]"]').forEach(function (input) {
+                    if (!input.value || input.value === '18') input.value = '0';
                 });
+            }
+        }
+
+        ['discountType', 'gstType', 'invoiceCurrency'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('change', function () {
+                if (id === 'invoiceCurrency') {
+                    var gstTypeEl = document.getElementById('gstType');
+                    if (gstTypeEl && el.value && el.value !== 'INR') {
+                        gstTypeEl.value = 'export';
+                    }
+                }
+                applyImportUi();
                 calculateTotals();
+            });
+        });
+        applyImportUi();
+
+        /* The next PO / bill number is already in the field. Switching type
+           swaps it for the other series unless the office has typed their own. */
+        var typeSelect = document.getElementById('invoiceType');
+        var numberInput = document.getElementById('invoiceNumber');
+        if (typeSelect && numberInput && numberInput.getAttribute('data-next-order')) {
+            function suggestedNumber(type) {
+                return type === 'bill'
+                    ? (numberInput.getAttribute('data-next-bill') || '')
+                    : (numberInput.getAttribute('data-next-order') || '');
+            }
+
+            typeSelect.addEventListener('change', function () {
+                var current = (numberInput.value || '').trim();
+                var orderNext = numberInput.getAttribute('data-next-order') || '';
+                var billNext = numberInput.getAttribute('data-next-bill') || '';
+                if (!current || current === orderNext || current === billNext) {
+                    numberInput.value = suggestedNumber(typeSelect.value);
+                }
             });
         }
 
-        /* ------------------------------------------ the vendor's own record
-           The purchase document keeps a copy of the vendor, and the form has a
-           field for every part of that copy. Both sides read ONE list: the
-           controller writes it onto the option as JSON, and this applies it by
-           field name, so a column added there arrives here with no edit to this
-           file — and there is no second list to fall out of step with the first.
-           The handler is bound through `onChange`, because a select2 announces a
-           pick with a jQuery trigger that a DOM listener never hears. */
-        var vendorSelect = document.getElementById('vendorSelect');
-        if (vendorSelect) {
-            var vendorForm = vendorSelect.closest('.master-form') || document;
+        /* ------------------------------------------ the client's own record
+           The invoice keeps a copy of the client, and the form has a field for
+           every part of that copy. Both sides read ONE list: the controller
+           writes it onto the option as JSON, and this applies it by field name,
+           so a column added there arrives here with no edit to this file — and
+           there is no second list to fall out of step with the first — and the
+           handler is bound through `onChange` below, because a select2 announces
+           a pick with a jQuery trigger that a DOM listener never hears. */
+        var clientSelect = document.getElementById('vendorSelect');
+        if (clientSelect) {
+            var clientForm = clientSelect.closest('.master-form') || document;
 
             function readJson(text) {
                 try {
@@ -324,7 +443,7 @@
                 }
             }
 
-            var snapshotFields = readJson(vendorSelect.dataset.snapshotFields) || [];
+            var snapshotFields = readJson(clientSelect.dataset.snapshotFields) || [];
             var gstStateCodes = {
                 jammukashmir: '01', jammuandkashmir: '01', jandk: '01', jk: '01',
                 himachalpradesh: '02', hp: '02', punjab: '03', pb: '03', chandigarh: '04', ch: '04',
@@ -368,41 +487,31 @@
                 return match ? match[1] : '';
             }
 
-            var gstTypeSelect = vendorForm.querySelector('[name="gst_type"]');
-            var gstTypeTouched = false;
+            var gstTypeSelect = clientForm.querySelector('[name="gst_type"]');
+            var gstAutoState = portalPromptForm && portalPromptForm.querySelector('[name="_invoice_auto_gst"]');
+            var gstTypeManuallyChanged = Boolean(
+                portalPromptForm && portalPromptForm.getAttribute('data-invoice-auto-gst') === 'false'
+            );
             var settingGstType = false;
 
-            /* Whose state decides the split: the vendor's against **ours**. A
-               purchase from a Gujarat supplier is a CGST + SGST bill; one from
-               Shanghai or Mumbai is IGST (or no GST at all, for an import). */
             function autoSelectGstType() {
-                if (!gstTypeSelect || gstTypeTouched || fieldText('gstType') === 'export') return;
+                if (!gstTypeSelect || gstTypeManuallyChanged) return;
 
-                var vendorState = vendorForm.querySelector('[name="vendor_state"]');
-                var vendorGstin = vendorForm.querySelector('[name="vendor_gstin"]');
-                var buyerState = vendorForm.querySelector('[name="buyer_state"]');
-                var buyerGstin = vendorForm.querySelector('[name="buyer_gstin"]');
-                var vendorCode = stateCodeFromName(vendorState && vendorState.value)
-                    || stateCodeFromGstin(vendorGstin && vendorGstin.value);
-
-                /* A supplier outside India has no GST state code: the bill is an
-                   import and carries no GST on its lines. */
-                var outsideIndia = (vendorForm.querySelector('[name="vendor_country"]') || {}).value || '';
-                if (!vendorCode && outsideIndia && !/^india$/i.test(String(outsideIndia).trim())) {
-                    setGstType('export');
-                    return;
-                }
-                if (!vendorCode) return;
-
-                var buyerCode = stateCodeFromName(buyerState && buyerState.value)
-                    || stateCodeFromGstin(buyerGstin && buyerGstin.value)
+                var billingState = clientForm.querySelector('[name="vendor_state"]');
+                var clientGstin = clientForm.querySelector('[name="vendor_gstin"]');
+                var sellerState = clientForm.querySelector('[name="buyer_state"]');
+                var sellerGstin = clientForm.querySelector('[name="buyer_gstin"]');
+                var clientStateCode = stateCodeFromName(billingState && billingState.value)
+                    || stateCodeFromGstin(clientGstin && clientGstin.value);
+                var sellerStateCode = stateCodeFromName(sellerState && sellerState.value)
+                    || stateCodeFromGstin(sellerGstin && sellerGstin.value)
                     || '24';
+                if (!clientStateCode) return;
 
-                setGstType(vendorCode !== buyerCode ? 'inter_state' : 'intra_state');
-            }
-
-            function setGstType(nextType) {
-                if (!gstTypeSelect || gstTypeSelect.value === nextType) return;
+                var nextType = clientStateCode !== sellerStateCode
+                    ? 'inter_state'
+                    : 'intra_state';
+                if (gstTypeSelect.value === nextType) return;
 
                 settingGstType = true;
                 if (window.jQuery && window.jQuery.fn) {
@@ -417,70 +526,304 @@
 
             if (gstTypeSelect) {
                 onChange(gstTypeSelect, function () {
-                    if (!settingGstType) gstTypeTouched = true;
+                    if (!settingGstType) {
+                        gstTypeManuallyChanged = true;
+                        if (gstAutoState) gstAutoState.value = 'false';
+                    }
                     calculateTotals();
                 });
             }
 
-            ['vendor_state', 'vendor_gstin', 'vendor_country'].forEach(function (name) {
-                var field = vendorForm.querySelector('[name="' + name + '"]');
+            ['vendor_state', 'vendor_gstin'].forEach(function (name) {
+                var field = clientForm.querySelector('[name="' + name + '"]');
                 if (field) field.addEventListener('input', autoSelectGstType);
             });
 
-            /* `onlyEmpty` is the difference between showing and choosing. A
-               document already raised holds the office's copy of the vendor — a
-               copy older, sometimes, than the vendor record — and a screen that
-               rewrote it on sight would change a sent order's address by being
-               opened. Picking a vendor is the office saying whose details they
-               want now: that pass fills every field, and clears what the last one
-               had. */
+            /* `onlyEmpty` is the difference between showing and choosing. An
+               invoice already holds the office's copy of the client — sometimes
+               a copy older than the client record — and a screen that rewrote it
+               on sight would change a sent invoice's address by being opened.
+               Picking a client is the office saying whose details they want now:
+               that pass fills every field, and clears what the last one had. */
             function applySnapshot(option, onlyEmpty) {
                 var snapshot = option ? readJson(option.dataset.snapshot) : null;
                 if (!snapshot) return;
 
                 snapshotFields.forEach(function (name) {
-                    var el = vendorForm.querySelector('[name="' + name + '"]');
+                    var el = clientForm.querySelector('[name="' + name + '"]');
                     if (!el) return;
                     if (onlyEmpty && el.value) return;
                     el.value = snapshot[name] || '';
                 });
             }
 
-            function vendorChosen() {
-                if (!vendorSelect.value) return;
-                gstTypeTouched = false;
-                applySnapshot(vendorSelect.options[vendorSelect.selectedIndex], false);
+            function clientChosen() {
+                /* The placeholder is not a client: picking it leaves what the
+                   office has typed where it is. */
+                if (!clientSelect.value) return;
+                gstTypeManuallyChanged = false;
+                if (gstAutoState) gstAutoState.value = 'true';
+                applySnapshot(clientSelect.options[clientSelect.selectedIndex], false);
+                var currencyEl = clientForm.querySelector('[name="currency"]');
+                var gstTypeEl = document.getElementById('gstType');
+                if (currencyEl && gstTypeEl && currencyEl.value && currencyEl.value !== 'INR') {
+                    gstTypeEl.value = 'export';
+                }
+                applyImportUi();
+                if (!currencyEl || currencyEl.value === 'INR') {
+                    autoSelectGstType();
+                }
+                calculateTotals();
+            }
+
+            /* Through `onChange`, so a pick made in the select2 list is heard:
+               a DOM `change` listener is the one binding select2 never fires. */
+            onChange(clientSelect, clientChosen);
+
+            applySnapshot(clientSelect.options[clientSelect.selectedIndex], true);
+            if (portalPromptForm && portalPromptForm.getAttribute('data-invoice-auto-gst') === 'true') {
                 autoSelectGstType();
             }
 
-            onChange(vendorSelect, vendorChosen);
-            applySnapshot(vendorSelect.options[vendorSelect.selectedIndex], true);
+            /* Shipping is usually the billing address: one click, five fields. */
+            var copyBilling = clientForm.querySelector('[data-copy-billing]');
+            if (copyBilling) {
+                copyBilling.addEventListener('click', function () {
+                    ['address', 'city', 'state', 'country', 'pincode'].forEach(function (part) {
+                        var from = clientForm.querySelector('[name="billing_' + part + '"]');
+                        var to = clientForm.querySelector('[name="shipping_' + part + '"]');
+                        if (from && to) to.value = from.value;
+                    });
+                });
+            }
         }
 
         calculateTotals();
     });
 
-    /* ============================================================ the listing
-       The same chrome as every other listing: row navigation, the grid shadow,
-       the density switch and the "save this view" toggle, all from the shared
-       `MasterList`. */
+    /* ============================================================ the list
+       The invoice list wears the same chrome as every other listing in the
+       office: it is the module's job to boot it and the shell's job to draw it.
+       Every piece is guarded, because this same file loads on the form, which
+       has none of it. */
     onReady(function () {
-        var list = document.querySelector('.pi-index');
+        var list = document.querySelector('.si-index');
         if (!list || typeof window.MasterList === 'undefined') return;
 
-        window.MasterList.rowNavigation({ root: '.pi-index' });
-        window.MasterList.gridShadow({ root: '.pi-index' });
-        window.MasterList.density({ root: '.pi-index', key: 'purchaseDensity' });
+        window.MasterList.rowNavigation({ root: '.si-index' });
+        window.MasterList.gridShadow({ root: '.si-index' });
         window.MasterList.saveViewToggle();
+        window.MasterList.density({ root: '.si-index', key: 'invoiceDensity' });
+    });
+
+    /* --------------------------------------------------- the receipt dialog
+       One dialog serves the whole page; the row that opens it says which
+       invoice it is for, and the form's action comes from the template the
+       controller's route rendered (so the route lives in Blade, not here). */
+    onReady(function () {
+        var modal = document.getElementById('paymentModal');
+        var form = modal ? modal.querySelector('[data-payment-form]') : null;
+        var triggers = document.querySelectorAll('[data-open-payment]');
+
+        if (!modal || !form || !triggers.length) return;
+
+        var template = form.getAttribute('data-action-template') || '';
+        var subtitle = modal.querySelector('[data-payment-subtitle]');
+        var title = modal.querySelector('#purchasePaymentTitle');
+        var amount = modal.querySelector('input[name="foreign_amount"], input[name="amount"]');
+        var currency = modal.querySelector('[name="foreign_currency"]');
+        var rate = modal.querySelector('[name="exchange_rate"]');
+        var inr = modal.querySelector('input[name="amount_in_inr"]');
+        var particular = modal.querySelector('[name="particular"]');
+        var project = modal.querySelector('[name="project_id"]');
+
+        function applyOperatingCurrency(code) {
+            if (!currency) return;
+
+            var want = String(code || '').toUpperCase();
+            if (!want) return;
+
+            var match = Array.prototype.find.call(currency.options, function (option) {
+                return String(option.value).toUpperCase() === want;
+            });
+
+            if (match) {
+                currency.value = match.value;
+            } else {
+                var option = document.createElement('option');
+                option.value = want;
+                option.textContent = want;
+                currency.appendChild(option);
+                currency.value = want;
+            }
+
+            currency.dispatchEvent(new Event('change'));
+        }
+
+        function calculateInrAmount() {
+            if (!inr) return;
+
+            var foreign = parseFloat((amount && amount.value) || '0');
+            var exchange = parseFloat((rate && rate.value) || '0');
+            var code = currency ? currency.value : '';
+
+            if (code === 'INR' && foreign > 0) {
+                inr.value = foreign.toFixed(2);
+                return;
+            }
+
+            if (foreign > 0 && exchange > 0) {
+                inr.value = (foreign * exchange).toFixed(2);
+                return;
+            }
+
+            inr.value = '';
+        }
+
+        [amount, rate].forEach(function (field) {
+            field && field.addEventListener('input', calculateInrAmount);
+        });
+        currency && currency.addEventListener('change', calculateInrAmount);
+
+        triggers.forEach(function (trigger) {
+            trigger.addEventListener('click', function () {
+                var id = trigger.getAttribute('data-invoice-id');
+                var number = trigger.getAttribute('data-invoice-number') || 'this invoice';
+                var balance = trigger.getAttribute('data-invoice-balance') || '';
+                var kind = trigger.getAttribute('data-invoice-kind') || 'bill';
+                var code = trigger.getAttribute('data-invoice-currency') || '';
+                var exchange = trigger.getAttribute('data-invoice-rate') || '';
+                var projectId = trigger.getAttribute('data-project-id') || '';
+
+                form.setAttribute('action', template.replace('__INVOICE__', id));
+
+                if (title) {
+                    title.textContent = kind === 'order' ? 'Record an advance' : 'Record a payment';
+                }
+
+                if (subtitle) {
+                    subtitle.textContent = 'Against ' + number + (balance ? ' · ' + balance + ' still open' : '');
+                }
+
+                if (amount) {
+                    amount.value = trigger.getAttribute('data-invoice-amount') || balance.replace(/[^0-9.]/g, '');
+                }
+
+                applyOperatingCurrency(code);
+
+                if (rate) {
+                    rate.value = exchange && Number(exchange) > 0 ? exchange : '';
+                }
+
+                if (particular) {
+                    particular.value = kind === 'order'
+                        ? 'Advance against purchase order ' + number
+                        : 'Payment against purchase bill ' + number;
+                }
+
+                if (project && projectId) {
+                    project.value = projectId;
+                }
+
+                calculateInrAmount();
+
+                if (window.MasterModal) {
+                    window.MasterModal.open(modal);
+                }
+            });
+        });
+    });
+
+    /* ----------------------------------------------------------- clipboard
+       The office sends an invoice by WhatsApp far more often than by email, so
+       the link, and the words that ask for the money, go to the clipboard. Two
+       sources, one helper: the button may carry the text (`data-copy-text`), or
+       name the field whose *current* value to copy (`data-copy-target`) — the
+       reminder dialog's message, which the office may have edited a moment ago.
+       Neither works on plain HTTP, so both fall back to selecting the text. */
+    function copyText(text, button) {
+        var label = button.innerHTML;
+        var done = function () {
+            button.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Copied';
+
+            window.setTimeout(function () {
+                button.innerHTML = label;
+            }, 1600);
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () {
+                window.prompt('Copy', text);
+            });
+
+            return;
+        }
+
+        window.prompt('Copy', text);
+    }
+
+    onReady(function () {
+        document.querySelectorAll('[data-copy-link], [data-copy-text]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                copyText(button.getAttribute('data-copy-link') || button.getAttribute('data-copy-text') || '', button);
+            });
+        });
+
+        document.querySelectorAll('[data-copy-target]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var field = document.getElementById(button.getAttribute('data-copy-target'));
+                if (!field) return;
+
+                /* a field the office is editing is copied as it stands */
+                copyText(field.value || field.textContent || '', button);
+            });
+        });
+    });
+
+    /* --------------------------------------------------- the reminder dialog
+       One dialog for the page, exactly like the receipt dialog beside it: the
+       row says which invoice, the words come from the model, and the office may
+       edit them before sending — the copy button then copies what they wrote. */
+    onReady(function () {
+        var modal = document.getElementById('reminderModal');
+        var form = modal ? modal.querySelector('[data-reminder-form]') : null;
+        var triggers = document.querySelectorAll('[data-open-reminder]');
+
+        if (!modal || !form || !triggers.length) return;
+
+        var template = form.getAttribute('data-action-template') || '';
+        var subtitle = modal.querySelector('[data-reminder-subtitle]');
+        var message = modal.querySelector('[data-reminder-message]');
+
+        triggers.forEach(function (trigger) {
+            trigger.addEventListener('click', function () {
+                var id = trigger.getAttribute('data-invoice-id');
+                var number = trigger.getAttribute('data-invoice-number') || 'this invoice';
+
+                form.setAttribute('action', template.replace('__INVOICE__', id));
+
+                if (subtitle) {
+                    subtitle.textContent = 'Against ' + number + ' — what was asked, and when';
+                }
+
+                if (message) {
+                    message.value = trigger.getAttribute('data-invoice-message') || '';
+                }
+
+                if (window.MasterModal) {
+                    window.MasterModal.open(modal);
+                }
+            });
+        });
     });
 
     /* ---------------------------------------------------------- the sweep
-       Ticking rows is the month-end move: mark a batch sent, approve the lot, or
-       take the selection to the CSV and the GST register. The boxes are attached
-       to the bulk form by id — a form inside a form is not a form — so the bar
-       lives in the toolbar while the boxes live in the table. */
+       Ticking rows is the month-end move: mark a batch sent, push it to the
+       portal, log one reminder for a dozen clients, or take the selection to the
+       CSV and the GST summary. The checkboxes are attached to the bulk form by
+       id, so the bar can live in the toolbar while the boxes live in the table. */
     onReady(function () {
-        var form = document.getElementById('purchaseBulkForm');
+        var form = document.getElementById('bulkForm');
         var bar = document.querySelector('[data-bulk-bar]');
         var picks = document.querySelectorAll('[data-bulk-pick]');
 
@@ -491,13 +834,12 @@
         var exportLink = form.querySelector('[data-bulk-export]');
         var gstLink = form.querySelector('[data-bulk-gst]');
         var clear = form.querySelector('[data-bulk-clear]');
+        var action = form.querySelector('[name="action"]');
 
         var selected = function () {
             return Array.prototype.filter.call(picks, function (pick) { return pick.checked; });
         };
 
-        /* The exporters are the screen's own, narrowed: what was ticked goes in
-           the URL, so the file and the screen can never disagree about the rows. */
         var withIds = function (link, ids) {
             if (!link) return;
 
@@ -516,6 +858,11 @@
                 count.textContent = ids.length === 1 ? '1 selected' : ids.length + ' selected';
             }
 
+            picks.forEach(function (pick) {
+                pick.closest('tr')?.classList.toggle('is-picked', pick.checked);
+            });
+
+            /* "export the selected rows" is the screen's own exporter, narrowed */
             withIds(exportLink, ids);
             withIds(gstLink, ids);
 
@@ -544,101 +891,21 @@
             });
         }
 
+        form.addEventListener('submit', function (event) {
+            if (!selected().length) {
+                event.preventDefault();
+                return;
+            }
+
+            if (action && (action.value === 'delete_drafts' || action.value === 'cancel')) {
+                var ok = window.confirm(action.value === 'cancel'
+                    ? 'Cancel the selected purchase documents that are allowed to cancel?'
+                    : 'Delete selected drafts only? Documents past draft are left alone.');
+                if (!ok) event.preventDefault();
+            }
+        });
+
         sync();
-    });
-
-    /* --------------------------------------------------- the payment dialog
-       One dialog serves the page; the row that opens it says which bill it is
-       for, and the form's action comes from the template the route rendered (so
-       the route lives in Blade, not here). A foreign-currency bill shows what
-       the payment is worth in rupees at the bill's own rate — the figure the
-       vendor ledger will store. */
-    onReady(function () {
-        var modal = document.getElementById('paymentModal');
-        var form = modal ? modal.querySelector('[data-payment-form]') : null;
-        var triggers = document.querySelectorAll('[data-open-payment]');
-
-        if (!modal || !form || !triggers.length) return;
-
-        var template = form.getAttribute('data-action-template') || '';
-        var subtitle = modal.querySelector('[data-payment-subtitle]');
-        var amount = modal.querySelector('input[name="amount"]');
-        var currencyNote = modal.querySelector('[data-payment-currency]');
-        var conversion = modal.querySelector('[data-payment-conversion]');
-
-        triggers.forEach(function (trigger) {
-            trigger.addEventListener('click', function () {
-                var id = trigger.getAttribute('data-invoice-id');
-                var number = trigger.getAttribute('data-invoice-number') || 'this bill';
-                var currency = trigger.getAttribute('data-invoice-currency') || 'INR';
-                var rate = parseFloat(trigger.getAttribute('data-invoice-rate')) || 1;
-                var balance = trigger.getAttribute('data-invoice-balance-figure') || '';
-                var balanceLabel = trigger.getAttribute('data-invoice-balance') || '';
-
-                form.setAttribute('action', template.replace('__INVOICE__', id));
-
-                if (subtitle) {
-                    subtitle.textContent = 'Against ' + number + (balanceLabel ? ' · ' + balanceLabel + ' still owed' : '');
-                }
-
-                /* What the figure is denominated in, said before it is typed: the
-                   vendor ledger stores rupees either way, and a payment typed in
-                   RMB against a rupee bill is the mistake this line prevents. */
-                if (currencyNote) {
-                    currencyNote.textContent = currency === 'INR'
-                        ? 'In rupees — the bill is in INR.'
-                        : 'In ' + currency + ' — the vendor ledger stores the rupee value at the bill\\'s rate.';
-                }
-
-                /* What is owed is opened ready to be confirmed, not retyped. */
-                if (amount) amount.value = balance;
-
-                if (conversion) {
-                    var rupees = (parseFloat(balance) || 0) * rate;
-                    conversion.hidden = currency === 'INR';
-                    conversion.textContent = 'Equals ₹ ' + rupees.toLocaleString('en-IN', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    }) + ' at the bill\'s rate of ' + rate + '.';
-                }
-
-                if (window.MasterModal) {
-                    window.MasterModal.open(modal);
-                }
-            });
-        });
-    });
-
-    /* ----------------------------------------------------------- clipboard
-       The office sends a purchase order to a supplier by WhatsApp far more often
-       than by email, so the print link goes to the clipboard. */
-    function copyText(text, button) {
-        var label = button.innerHTML;
-        var done = function () {
-            button.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Copied';
-
-            window.setTimeout(function () {
-                button.innerHTML = label;
-            }, 1600);
-        };
-
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(done, function () {
-                window.prompt('Copy', text);
-            });
-
-            return;
-        }
-
-        window.prompt('Copy', text);
-    }
-
-    onReady(function () {
-        document.querySelectorAll('[data-copy-link], [data-copy-text]').forEach(function (button) {
-            button.addEventListener('click', function () {
-                copyText(button.getAttribute('data-copy-link') || button.getAttribute('data-copy-text') || '', button);
-            });
-        });
     });
 
     /* A failed save comes back with the input kept and the errors on the bag:

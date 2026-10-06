@@ -1,8 +1,28 @@
 <section class="master-card master-card--flat vendor-detail-card vendor-block-card" id="vendor-block-ledger" aria-labelledby="vendor-block-ledger-title">
+    @if (($pendingApprovals ?? collect())->isNotEmpty())
+        <x-step-banner
+            tone="warning"
+            eyebrow="Pending checker"
+            title="Approve the purchase order before paying this vendor"
+            body="Money cannot go out until a checker approves the PO, or a bill is raised."
+        >
+            <ul>
+                @foreach ($pendingApprovals as $pending)
+                    <li>
+                        <a href="{{ route('purchase-invoices.show', $pending) }}">{{ $pending->invoice_number }}</a>
+                        is {{ strtolower($pending->statusLabel()) }}.
+                    </li>
+                @endforeach
+            </ul>
+            <x-slot:actions>
+                <a class="master-btn master-btn-primary" href="{{ route('purchase-invoices.show', $pendingApprovals->first()) }}">Open purchase order</a>
+            </x-slot:actions>
+        </x-step-banner>
+    @endif
     <div class="vendor-panel-head">
         <div>
             <h2 class="vendor-detail-title" id="vendor-block-ledger-title">Vendor-currency ledger</h2>
-            <p class="vendor-detail-help">Bills raised and payments made in the vendor's own currency — the account the statement is built from.</p>
+            <p class="vendor-detail-help">Purchase orders (once sent), bills and payments in the vendor's own currency. After a PO becomes a bill, only the bill stays on this ledger.</p>
         </div>
         <div class="vendor-panel-meta">
             <span class="vendor-pill">{{ $vendorPaymentEntries->count() }} {{ \Illuminate\Support\Str::plural('entry', $vendorPaymentEntries->count()) }}</span>
@@ -60,10 +80,8 @@
                                  the entry's own currency, with the rupee value under
                                  it — that is the pair the office reads together. --}}
                             <td data-label="Amount" class="is-num {{ $entry->transaction_type === 'credit' ? 'vendor-amount-debit' : 'vendor-amount-credit' }}">
-                                {{ $money($entry->foreign_amount, $entry->foreign_currency ?: 'RMB') }}
-                                <span class="master-sub">
-                                    {{ $entry->transaction_type === 'credit' ? 'Billed' : 'Paid' }} · {{ $money($entry->amount_in_inr) }}@if ($entry->exchange_rate) @ {{ number_format((float) $entry->exchange_rate, 2) }}@endif
-                                </span>
+                                {{ $money($entry->foreign_amount, $entry->foreign_currency ?: $vendorCurrency) }}
+                                <span class="master-sub">{{ $entry->transaction_type === 'credit' ? ($entry->entry_category === 'order' ? 'Ordered' : 'Billed') : 'Paid' }}</span>
                             </td>
                             <td data-label="Account" class="ui-mobile-secondary">
                                 {{ $entry->paidAccount?->account_name ?: '—' }}
@@ -135,70 +153,6 @@
                                             <i class="fas fa-plus" aria-hidden="true"></i> Add first entry
                                         </button>
                                     </div>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="vendor-panel-head vendor-panel-head--spaced">
-        <div>
-            <h2 class="vendor-detail-title">Linked / matched cashflow entries</h2>
-            <p class="vendor-detail-help">The INR side of the same money, from the Cashflow module. These rows are kept in sync from the ledger above.</p>
-        </div>
-        <div class="vendor-panel-meta">
-            <span class="vendor-pill">{{ $summary['cashflow_count'] }} cashflow</span>
-            @if ($routes['cashflows'] !== '#')
-                <a class="master-btn master-btn-soft master-btn-sm" href="{{ $routes['cashflows'] }}">
-                    <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Open cashflow
-                </a>
-            @endif
-        </div>
-    </div>
-
-    <div class="master-card master-card--flat vendor-table-card vendor-table-bleed">
-        <div class="master-table-wrap ui-mobile-cards">
-            <table class="master-table vendor-table vendor-money-table vendor-money-table--cashflow">
-                <thead>
-                    <tr>
-                        <th scope="col">Date</th>
-                        <th scope="col">Particular</th>
-                        <th scope="col" class="is-num">Amount (INR)</th>
-                        <th scope="col" class="ui-mobile-secondary">Account / reference</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($statementEntries->filter(fn ($cashflowRow) => (float) ($cashflowRow->debit_amount ?? 0) > 0 || (float) ($cashflowRow->credit_amount ?? 0) > 0) as $cashflowRow)
-                        <tr>
-                            @php($isOutgoing = (float) ($cashflowRow->debit_amount ?? 0) > 0)
-                            <td data-label="Date">{{ optional($cashflowRow->entry_date)->format('d M y') ?: '—' }}</td>
-                            <td data-label="Particular">
-                                <strong>{{ $cashflowRow->particular }}</strong>
-                                <span class="master-sub">
-                                    {{ $cashflowRow->category?->name ?? ($cashflowRow->expense_head ?? '—') }}@if ($cashflowRow->notes) · {{ $cashflowRow->notes }}@endif
-                                </span>
-                            </td>
-                            <td data-label="Amount (INR)" class="is-num {{ $isOutgoing ? 'vendor-amount-credit' : 'vendor-amount-debit' }}">
-                                {{ $isOutgoing ? $money($cashflowRow->debit_amount, $cashflowRow->currency) : $money($cashflowRow->credit_amount, $cashflowRow->currency) }}
-                                <span class="master-sub">{{ $isOutgoing ? 'Paid out' : 'Received' }}</span>
-                            </td>
-                            <td data-label="Account / reference" class="ui-mobile-secondary">
-                                {{ $cashflowRow->account?->name ?? '—' }}
-                                <span class="master-sub">
-                                    {{ $cashflowRow->payment_mode ?: '—' }}@if ($cashflowRow->bank_reference_number) · {{ $cashflowRow->bank_reference_number }}@elseif ($cashflowRow->invoice_bill_number) · {{ $cashflowRow->invoice_bill_number }}@endif
-                                </span>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4">
-                                <div class="master-list-empty">
-                                    <span class="master-list-empty-icon" aria-hidden="true"><i class="fa-solid fa-scale-balanced"></i></span>
-                                    <h3 class="master-list-empty-title">No cashflow rows linked</h3>
-                                    <p class="master-list-empty-text">Tick “record this payment in the INR cashflow” when you add a vendor payment and it will appear here.</p>
                                 </div>
                             </td>
                         </tr>
