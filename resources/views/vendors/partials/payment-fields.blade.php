@@ -1,150 +1,143 @@
-@php($paymentOld = old('_vendor_payment_form') === ($isEdit ? 'edit' : 'add'))
-<div class="master-modal-grid vendor-payment-grid">
+@php($fieldId = fn (string $name) => $formPrefix.'_'.$name)
+<div class="master-modal-grid">
     <div class="master-field">
-        <label class="master-label" for="{{ $prefix }}_transaction_date">Date <span class="master-required" aria-hidden="true">*</span></label>
-        <input class="master-input @error('transaction_date') is-invalid @enderror" id="{{ $prefix }}_transaction_date" type="date" name="transaction_date"
-            value="{{ $paymentOld ? old('transaction_date') : ($isEdit ? '' : now()->toDateString()) }}" required>
-
-        @error('transaction_date')<span class="master-error">{{ $message }}</span>@enderror
+        <label class="master-label" for="{{ $fieldId('transaction_date') }}">Date <span class="master-required" aria-hidden="true">*</span></label>
+        <input class="master-input" id="{{ $fieldId('transaction_date') }}" type="date" name="transaction_date"
+            value="{{ now()->toDateString() }}" required>
     </div>
     <div class="master-field">
-        <label class="master-label" for="{{ $prefix }}_invoice_number">Invoice / bill number</label>
-        <input class="master-input @error('invoice_number') is-invalid @enderror" id="{{ $prefix }}_invoice_number" type="text" name="invoice_number"
-            value="{{ $paymentOld ? old('invoice_number') : '' }}" maxlength="255" placeholder="Vendor invoice reference">
-
-        @error('invoice_number')<span class="master-error">{{ $message }}</span>@enderror
+        <label class="master-label" for="{{ $fieldId('due_date') }}">Due date</label>
+        <input class="master-input" id="{{ $fieldId('due_date') }}" type="date" name="due_date">
+        <div class="master-help">Leave blank on a bill and the vendor's payment terms decide it.</div>
     </div>
     <div class="master-field full">
-        <label class="master-label" for="{{ $prefix }}_particular">Particular <span class="master-required" aria-hidden="true">*</span></label>
-        <input class="master-input @error('particular') is-invalid @enderror" id="{{ $prefix }}_particular" type="text" name="particular" required
-            value="{{ $paymentOld ? old('particular') : '' }}" placeholder="Bill, advance payment, expense or adjustment">
-
-        @error('particular')<span class="master-error">{{ $message }}</span>@enderror
+        <label class="master-label" for="{{ $fieldId('purchase_invoice_id') }}">PO / bill for money out</label>
+        <select class="master-select" id="{{ $fieldId('purchase_invoice_id') }}" name="purchase_invoice_id">
+            <option value="">Not a payment — bill or expense only</option>
+            @foreach (($payableDocuments ?? collect()) as $document)
+                <option value="{{ $document->id }}"
+                    data-currency="{{ $document->currency ?: ($vendor->preferred_currency ?: 'RMB') }}"
+                    data-rate="{{ $document->exchange_rate }}">
+                    {{ $document->invoice_number }} · {{ $document->typeLabel() }} · {{ $document->statusLabel() }}
+                </option>
+            @endforeach
+        </select>
+        <div class="master-help">A debit / payment must sit on an approved purchase order or a raised bill. Sent POs wait for the checker.</div>
+        @if (($pendingApprovals ?? collect())->isNotEmpty())
+            <div class="master-help">
+                Waiting on approval:
+                @foreach ($pendingApprovals as $pending)
+                    <a href="{{ route('purchase-invoices.show', $pending) }}">{{ $pending->invoice_number }}</a>
+                    ({{ $pending->statusLabel() }})@if (! $loop->last), @endif
+                @endforeach
+                — approve the PO before recording an advance.
+            </div>
+        @endif
     </div>
     <div class="master-field">
-        <label class="master-label" for="{{ $prefix }}_foreign_amount">Vendor-currency amount <span class="master-required" aria-hidden="true">*</span></label>
-        <input class="master-input @error('foreign_amount') is-invalid @enderror" id="{{ $prefix }}_foreign_amount" type="number" step="0.0001" min="0" name="foreign_amount" required
-            value="{{ $paymentOld ? old('foreign_amount') : '' }}" inputmode="decimal">
-
-        @error('foreign_amount')<span class="master-error">{{ $message }}</span>@enderror
+        <label class="master-label" for="{{ $fieldId('invoice_number') }}">Invoice / bill no.</label>
+        <input class="master-input" id="{{ $fieldId('invoice_number') }}" type="text" name="invoice_number"
+            placeholder="Vendor invoice number">
+    </div>
+    <div class="master-field full">
+        <label class="master-label" for="{{ $fieldId('particular') }}">Particular <span class="master-required" aria-hidden="true">*</span></label>
+        <input class="master-input" id="{{ $fieldId('particular') }}" type="text" name="particular" required
+            placeholder="Bill generated / advance payment / vendor expense / adjustment">
     </div>
     <div class="master-field">
-        <label class="master-label" for="{{ $prefix }}_foreign_currency">Currency <span class="master-required" aria-hidden="true">*</span></label>
-        <select class="master-select @error('foreign_currency') is-invalid @enderror" id="{{ $prefix }}_foreign_currency" name="foreign_currency" required>
+        <label class="master-label" for="{{ $fieldId('foreign_amount') }}">Vendor-currency value <span class="master-required" aria-hidden="true">*</span></label>
+        <input class="master-input" id="{{ $fieldId('foreign_amount') }}" type="number" step="0.0001" min="0" name="foreign_amount" required inputmode="decimal">
+    </div>
+    <div class="master-field">
+        <label class="master-label" for="{{ $fieldId('foreign_currency') }}">Currency <span class="master-required" aria-hidden="true">*</span></label>
+        <select class="master-select" id="{{ $fieldId('foreign_currency') }}" name="foreign_currency" required>
             @foreach ($paymentOptions['currency'] as $key => $label)
-                <option value="{{ $key }}" @selected(($paymentOld ? old('foreign_currency', $vendor->preferred_currency ?: 'RMB') : ($isEdit ? '' : ($vendor->preferred_currency ?: 'RMB'))) === $key)>{{ $label }}</option>
+                <option value="{{ $key }}" @selected($key === ($vendor->preferred_currency ?: 'RMB'))>{{ $label }}</option>
             @endforeach
         </select>
-
-        @error('foreign_currency')<span class="master-error">{{ $message }}</span>@enderror
     </div>
     <div class="master-field">
-        <label class="master-label" for="{{ $prefix }}_exchange_rate">Exchange rate</label>
-        <input class="master-input @error('exchange_rate') is-invalid @enderror" id="{{ $prefix }}_exchange_rate" type="number" step="0.000001" min="0" name="exchange_rate"
-            value="{{ $paymentOld ? old('exchange_rate') : '' }}" inputmode="decimal" placeholder="₹ per unit">
-
-        @error('exchange_rate')<span class="master-error">{{ $message }}</span>@enderror
+        <label class="master-label" for="{{ $fieldId('exchange_rate') }}">Exchange rate</label>
+        <input class="master-input" id="{{ $fieldId('exchange_rate') }}" type="number" step="0.000001" min="0" name="exchange_rate"
+            placeholder="₹ per 1 unit" inputmode="decimal">
     </div>
     <div class="master-field">
-        <label class="master-label" for="{{ $prefix }}_amount_in_inr">Amount in INR</label>
-        <input class="master-input @error('amount_in_inr') is-invalid @enderror" id="{{ $prefix }}_amount_in_inr" type="number" step="0.01" min="0" name="amount_in_inr"
-            value="{{ $paymentOld ? old('amount_in_inr') : '' }}" inputmode="decimal" placeholder="Calculated from exchange rate">
-
-        @error('amount_in_inr')<span class="master-error">{{ $message }}</span>@enderror
+        <label class="master-label" for="{{ $fieldId('amount_in_inr') }}">Amount in INR</label>
+        <input class="master-input" id="{{ $fieldId('amount_in_inr') }}" type="number" step="0.01" min="0" name="amount_in_inr"
+            placeholder="Calculated from the rate when left blank" inputmode="decimal">
     </div>
     <div class="master-field">
-        <label class="master-label" for="{{ $prefix }}_transaction_type">Entry direction <span class="master-required" aria-hidden="true">*</span></label>
-        <select class="master-select @error('transaction_type') is-invalid @enderror" id="{{ $prefix }}_transaction_type" name="transaction_type" required>
+        <label class="master-label" for="{{ $fieldId('transaction_type') }}">Credit / debit <span class="master-required" aria-hidden="true">*</span></label>
+        <select class="master-select" id="{{ $fieldId('transaction_type') }}" name="transaction_type" required>
             @foreach ($paymentOptions['type'] as $key => $label)
-                <option value="{{ $key }}" @selected(($paymentOld ? old('transaction_type', 'credit') : ($isEdit ? '' : 'credit')) === $key)>{{ $label }}</option>
+                <option value="{{ $key }}">{{ $label }}</option>
             @endforeach
         </select>
-
-        @error('transaction_type')<span class="master-error">{{ $message }}</span>@enderror
     </div>
     <div class="master-field">
-        <label class="master-label" for="{{ $prefix }}_entry_category">Entry category <span class="master-required" aria-hidden="true">*</span></label>
-        <select class="master-select @error('entry_category') is-invalid @enderror" id="{{ $prefix }}_entry_category" name="entry_category" required>
+        <label class="master-label" for="{{ $fieldId('entry_category') }}">Entry category <span class="master-required" aria-hidden="true">*</span></label>
+        <select class="master-select" id="{{ $fieldId('entry_category') }}" name="entry_category" required>
             @foreach ($paymentOptions['category'] as $key => $label)
-                <option value="{{ $key }}" @selected(($paymentOld ? old('entry_category', 'bill') : ($isEdit ? '' : 'bill')) === $key)>{{ $label }}</option>
+                <option value="{{ $key }}">{{ $label }}</option>
             @endforeach
         </select>
-
-        @error('entry_category')<span class="master-error">{{ $message }}</span>@enderror
     </div>
     <div class="master-field">
-        <label class="master-label" for="{{ $prefix }}_status">Status <span class="master-required" aria-hidden="true">*</span></label>
-        <select class="master-select @error('status') is-invalid @enderror" id="{{ $prefix }}_status" name="status" required>
+        <label class="master-label" for="{{ $fieldId('status') }}">Status <span class="master-required" aria-hidden="true">*</span></label>
+        <select class="master-select" id="{{ $fieldId('status') }}" name="status" required>
             @foreach ($paymentOptions['status'] as $key => $label)
-                <option value="{{ $key }}" @selected(($paymentOld ? old('status', 'pending') : ($isEdit ? '' : 'pending')) === $key)>{{ $label }}</option>
+                <option value="{{ $key }}" @selected($key === 'pending')>{{ $label }}</option>
             @endforeach
         </select>
-
-        @error('status')<span class="master-error">{{ $message }}</span>@enderror
     </div>
     <div class="master-field">
-        <label class="master-label" for="{{ $prefix }}_project_id">Project</label>
-        <select class="master-select @error('project_id') is-invalid @enderror" id="{{ $prefix }}_project_id" name="project_id">
+        <label class="master-label" for="{{ $fieldId('project_id') }}">Project</label>
+        <select class="master-select" id="{{ $fieldId('project_id') }}" name="project_id">
             <option value="">No project mapping</option>
             @foreach ($projectsForPayment as $project)
-                <option value="{{ $project->id }}" @selected($paymentOld && (string) old('project_id') === (string) $project->id)>{{ $project->project_number ?? '#'.$project->id }} · {{ $project->name }}</option>
+                <option value="{{ $project->id }}">{{ $project->project_number ?? '#'.$project->id }} - {{ $project->name }}</option>
             @endforeach
         </select>
-
-        @error('project_id')<span class="master-error">{{ $message }}</span>@enderror
     </div>
     <div class="master-field">
-        <label class="master-label" for="{{ $prefix }}_paid_account_id">Paid account</label>
-        <select class="master-select @error('paid_account_id') is-invalid @enderror" id="{{ $prefix }}_paid_account_id" name="paid_account_id">
-            <option value="">Select account</option>
+        <label class="master-label" for="{{ $fieldId('paid_account_id') }}">Paid account</label>
+        <select class="master-select" id="{{ $fieldId('paid_account_id') }}" name="paid_account_id">
+            <option value="">Select paid account</option>
             @foreach ($cashflowAccounts as $account)
-                <option value="{{ $account->id }}" @selected($paymentOld && (string) old('paid_account_id') === (string) $account->id)>{{ $account->account_name }}</option>
+                <option value="{{ $account->id }}">{{ $account->account_name }}</option>
             @endforeach
         </select>
-        @if ($errors->has('paid_account_id'))<span class="master-error">{{ $errors->first('paid_account_id') }}</span>@endif
     </div>
     <div class="master-field">
-        <label class="master-label" for="{{ $prefix }}_payment_mode">Payment mode</label>
-        <select class="master-select @error('payment_mode') is-invalid @enderror" id="{{ $prefix }}_payment_mode" name="payment_mode">
+        <label class="master-label" for="{{ $fieldId('payment_mode') }}">Payment mode</label>
+        <select class="master-select" id="{{ $fieldId('payment_mode') }}" name="payment_mode">
             <option value="">Select mode</option>
             @foreach ($paymentOptions['mode'] as $key => $label)
-                <option value="{{ $key }}" @selected($paymentOld && old('payment_mode') === $key)>{{ $label }}</option>
+                <option value="{{ $key }}">{{ $label }}</option>
             @endforeach
         </select>
-
-        @error('payment_mode')<span class="master-error">{{ $message }}</span>@enderror
     </div>
     <div class="master-field">
-        <label class="master-label" for="{{ $prefix }}_bank_reference_number">Bank reference</label>
-        <input class="master-input @error('bank_reference_number') is-invalid @enderror" id="{{ $prefix }}_bank_reference_number" type="text" name="bank_reference_number"
-            value="{{ $paymentOld ? old('bank_reference_number') : '' }}" maxlength="255" placeholder="UTR / TT / reference">
-
-        @error('bank_reference_number')<span class="master-error">{{ $message }}</span>@enderror
+        <label class="master-label" for="{{ $fieldId('bank_reference_number') }}">Bank reference</label>
+        <input class="master-input" id="{{ $fieldId('bank_reference_number') }}" type="text" name="bank_reference_number"
+            placeholder="UTR / TT / reference no.">
+    </div>
+    <div class="master-field">
+        <label class="master-label" for="{{ $fieldId('remarks') }}">Remarks</label>
+        <input class="master-input" id="{{ $fieldId('remarks') }}" type="text" name="remarks" placeholder="Additional details">
     </div>
     <div class="master-field full">
-        <label class="master-label" for="{{ $prefix }}_remarks">Remarks</label>
-        <textarea class="master-textarea @error('remarks') is-invalid @enderror" id="{{ $prefix }}_remarks" name="remarks" rows="2" placeholder="Additional notes for this entry">{{ $paymentOld ? old('remarks') : '' }}</textarea>
-
-        @error('remarks')<span class="master-error">{{ $message }}</span>@enderror
-    </div>
-    <div class="master-field full">
-        <label class="master-label" for="{{ $prefix }}_attachments">Bills or payment proof</label>
-        <input class="master-input @error('attachments') is-invalid @enderror" id="{{ $prefix }}_attachments" type="file" name="attachments[]" multiple
+        <label class="master-label" for="{{ $fieldId('attachments') }}">Bill / proof attachments</label>
+        <input class="master-input" id="{{ $fieldId('attachments') }}" type="file" name="attachments[]" multiple
             accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip">
-        <small class="master-help">You can attach more than one supporting file.</small>
-
-        @error('attachments')<span class="master-error">{{ $message }}</span>@enderror
-        @if ($errors->has('attachments.*'))<span class="master-error">{{ $errors->first('attachments.*') }}</span>@endif
     </div>
     <div class="master-field full vendor-sync-field">
-        <label class="master-check">
+        <label class="master-check" for="{{ $fieldId('also_create_cashflow') }}">
             <input type="hidden" name="also_create_cashflow" value="0">
-            <input type="checkbox" name="also_create_cashflow" value="1" class="vendor-cashflow-sync" @error('also_create_cashflow') aria-invalid="true" @enderror
-                @checked($paymentOld && old('also_create_cashflow'))>
+            <input type="checkbox" id="{{ $fieldId('also_create_cashflow') }}" name="also_create_cashflow" value="1"
+                class="vendor-cashflow-sync" checked>
             Record this payment in the INR cashflow
         </label>
-        <small class="vendor-sync-hint">For a payment, this creates and keeps a matching INR cashflow entry in sync. Bills do not move cash unless you choose this option.</small>
-
-        @error('also_create_cashflow')<span class="master-error">{{ $message }}</span>@enderror
+        <small class="vendor-sync-hint">One entry here also creates the INR entry in the Cashflow module — it stays in sync when you edit or delete this payment.</small>
     </div>
 </div>

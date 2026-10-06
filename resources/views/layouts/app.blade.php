@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>MissPack ERP - @yield('title', 'Dashboard')</title>
+    <title>MissPack ERP - @yield('title', 'Office')</title>
 
     {{-- Favicon --}}
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
@@ -54,6 +54,7 @@
          and the statement page did — it wore .master-list without ever loading
          the sheet that spaces and insets it. --}}
     <link rel="stylesheet" href="{{ $assetVer('assets/css/master-list.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/office-briefing.css') }}">
 
     {{-- Compatibility layer for the existing four-module markup; the shared
          core design system follows and remains the canonical component owner. --}}
@@ -65,9 +66,10 @@
     $uiModule = match (true) {
         request()->routeIs('shipments.*') => 'shipments',
         request()->routeIs('clients.*') => 'clients',
-        request()->routeIs('vendors.*') => 'vendors',
         request()->routeIs('cashflows.*') => 'cashflows',
         request()->routeIs('users.*') => 'users',
+        request()->routeIs('organisation.*') => 'users',
+        request()->routeIs('vendors.*') => 'vendors',
         default => null,
     };
 @endphp
@@ -87,8 +89,6 @@
         ];
 
         $sidebarItems = Auth::user() && Auth::user()->isEmployee() ? $employeeItems : [
-            ['section' => 'Dashboards'],
-            ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'fas fa-th-large'],
             ['section' => 'Management'],
             ['label' => 'Tasks', 'route' => 'tasks.index', 'active' => 'tasks.*', 'icon' => 'fa-solid fa-layer-group'],
             ['label' => 'Products', 'route' => 'products.index', 'active' => 'products.*', 'icon' => 'fas fa-box-open'],
@@ -99,7 +99,10 @@
             ['label' => 'Invoices', 'route' => 'sales-invoices.index', 'active' => 'sales-invoices.*', 'icon' => 'fa-solid fa-file-invoice-dollar'],
             ['section' => 'Purchase'],
             ['label' => 'Vendors', 'route' => 'vendors.index', 'active' => 'vendors.*', 'icon' => 'fa-solid fa-user-gear'],
-            ['label' => 'Vendor Quotes', 'route' => 'vendor-quotes.index', 'active' => 'vendor-quotes.*', 'icon' => 'fa-solid fa-money-bill'],
+            ['label' => 'Office services', 'route' => 'office-services.index', 'active' => 'office-services.*', 'icon' => 'fas fa-hands-helping'],
+            /* One list, two documents — a purchase order and the bill it
+               becomes — the same way Invoices holds a proforma and a tax invoice. */
+            ['label' => 'Purchases', 'route' => 'purchase-invoices.index', 'active' => 'purchase-invoices.*', 'icon' => 'fas fa-file-invoice'],
             ['section' => 'Accounts'],
             ['label' => 'Cashflow', 'route' => 'cashflows.index', 'active' => 'cashflows.*', 'except' => ['cashflows.documents', 'cashflows.statements', 'cashflows.statements.*'], 'icon' => 'fa-solid fa-scale-balanced'],
             /* The archive is a page of the module, not a second module: it sits
@@ -110,6 +113,8 @@
                account, in the currency their statement is kept in. */
             ['label' => 'Statements', 'route' => 'cashflows.statements', 'active' => 'cashflows.statements*', 'icon' => 'fa-solid fa-file-invoice'],
             ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'icon' => 'fas fa-users-cog'],
+            ['label' => 'Organisation', 'route' => 'organisation.settings', 'active' => 'organisation.*', 'icon' => 'fas fa-building'],
+            ['label' => 'Briefings', 'route' => 'office-alerts.settings', 'active' => 'office-alerts.settings*', 'icon' => 'fas fa-bell'],
         ];
     @endphp
     
@@ -122,8 +127,8 @@
     <aside class="sidebar" id="sidebar" aria-label="Main sidebar">
         <div class="sidebar-logo">
             <div>
-                <div class="sidebar-logo-text sidebar-text">MissPack</div>
-                <div class="sidebar-logo-sub sidebar-text">Packed Perfect</div>
+                <div class="sidebar-logo-text sidebar-text">{{ $officeBrand['name'] ?? 'MissPack' }}</div>
+                <div class="sidebar-logo-sub sidebar-text">{{ $officeBrand['tagline'] ?? 'Packed Perfect' }}</div>
             </div>
         </div>
 
@@ -167,7 +172,7 @@
                 <i class="fas fa-bars"></i>
             </button>
 
-            <span class="topbar-title">@yield('page-title', 'Dashboard')</span>
+            <span class="topbar-title">@yield('page-title', 'Office')</span>
 
             {{-- A page's primary action belongs beside its title, not buried in
                  a toolbar: it stays reachable however far the list scrolls. --}}
@@ -178,9 +183,11 @@
             <div class="topbar-spacer"></div>
 
             <div class="topbar-actions">
-                <button type="button" class="topbar-btn desktop-only" aria-label="Search">
-                    <i class="fas fa-search"></i>
-                </button>
+                @if (auth()->user()?->isAdmin())
+                    <button type="button" class="topbar-btn" data-gs-open aria-label="Search" title="Search (Ctrl+/Cmd+K)">
+                        <i class="fas fa-search"></i>
+                    </button>
+                @endif
 
                 <form method="POST" action="{{ route('theme.toggle') }}" class="theme-form">
                     @csrf
@@ -193,10 +200,12 @@
                     </button>
                 </form>
 
-                <button type="button" class="topbar-btn desktop-only" aria-label="Notifications">
-                    <i class="fas fa-bell"></i>
-                    <span class="topbar-badge">3</span>
-                </button>
+                @if (auth()->user()?->isAdmin())
+                    <button type="button" class="topbar-btn" data-ob-open aria-label="Office briefings">
+                        <i class="fas fa-bell"></i>
+                        <span class="topbar-badge" data-ob-badge @if (($officeBriefing['unread'] ?? 0) === 0) hidden @endif>{{ ($officeBriefing['unread'] ?? 0) > 9 ? '9+' : ($officeBriefing['unread'] ?? 0) }}</span>
+                    </button>
+                @endif
 
                 {{-- The avatar opens your own account — for both roles. It used
                      to be a link only for an employee and a dead <div> for the
@@ -211,6 +220,11 @@
         </main>
     </div>
 
+    @if (auth()->user()?->isAdmin())
+        @include('layouts.partials.global-search')
+        @include('layouts.partials.office-briefing')
+    @endif
+
     {{-- Vendor Scripts --}}
     <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
     <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
@@ -220,6 +234,8 @@
     <script src="{{ $assetVer('assets/js/master-selects.js') }}"></script>
     <script src="{{ $assetVer('assets/js/money.js') }}"></script>
     <script src="{{ $assetVer('assets/js/app-layout.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/global-search.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/office-briefing.js') }}"></script>
     <script src="{{ $assetVer('assets/js/master-list.js') }}"></script>
     <script src="{{ $assetVer('assets/js/master-drawer.js') }}"></script>
 

@@ -39,7 +39,8 @@ resources/css/
 │   ├── attachments.css
 │   └── activity.css
 └── pages/
-    └── module-adapters.css       # bridge for existing module markup
+    ├── module-adapters.css       # bridge for existing module markup
+    └── vendors.css               # vendor list, record and form composition
 ```
 
 ## Cascade and ownership
@@ -73,6 +74,11 @@ Page CSS may own domain composition (grid columns, ordering, widths) and states 
 - Opt a table into user preferences with `data-table-settings` and a unique `data-table-key`; action columns remain visible and defaults should keep the primary identifier/status/amount useful. Tables preserve their mobile card/scroll treatment.
 - Existing component aliases are listed in `docs/ui-component-inventory.md`; update the inventory when a shared component is added, promoted, or retired.
 - `resources/css/pages/module-adapters.css` is a temporary bridge for the recent Shipments, Clients, Cashflows, and Users normalization. It is imported after shared components but before the global responsive pass, and should shrink as those views adopt core components.
+- `resources/css/pages/vendors.css` is the vendor module's page sheet (list cells, status/type tones, record composition, payables/ageing, spend bars, activity trail, contacts, form sections). It is imported beside `module-adapters.css`, so it ships in the design-system bundle and the legacy `public/assets/css/vendors.css` that the vendor views used to link has been removed. Its rules stay scoped to `.vendor-index`, `.vendor-show` and `.vendor-form`, and it declares no generic button, card, field, table, tab, badge or modal: the record's cards are still `.master-card` with the module's own inner padding, and its lists are still `.master-table`.
+- Money tables are the module's one exception to the shared row height: `.vendor-money-table` is a `.master-table` that takes the card's own width (`min-width: 0`, not the list's 1280 px floor) at 11×14 px rows, and its wrapper bleeds to the card's edges (`.vendor-table-bleed`) so the first and last cells carry the head's 20 px inset. A money row states each fact once — one `Amount` cell and one `Account` cell, with the second line in `.master-sub` — rather than two half-empty columns; `.vendor-late-chip` badges the days late and the status cell carries the cashflow link and the proof links. Below 768 px the tables become `.ui-mobile-cards` and the bleed, with its insets, is reset.
+- A vendor record tab renders one `.master-tab-panel`; a tab that answers several questions (procurement, money) stacks its sections in `.vendor-blocks` (a 16 px column of cards) and each section is a `.vendor-block-card` — a `master-card` on the soft panel, per the guideline that cards inside a tab panel use `--mc-card`. Inside a block, content groups are flat and only tiles (ageing, product, currency, attachment) take the nested treatment — the same surface with a quieter border.
+- The vendor form follows the client form's field rules: `.vendor-form-nav` is the same control bar, each `.vendor-form-section` is its own card inside the form card, and `.master-detail-grid` lays three fields across on a desk, two at 992–1199 px, and one on a phone.
+- The vendor list's bulk bar wears the shared `.master-list-bulk` chrome and the record's bulk checkboxes reach their form through the `form` attribute, so the bar can sit above the table without a second styling rule. The record's tabs stay URL-addressable: `.vendor-jump` is an in-panel anchor strip, not a tab set, and each composite tab (procurement, money) is one `role="tabpanel"` holding several `.vendor-block` sections.
 - Existing page styles still linked from `public/assets/css/` are the legacy page layer. When migrating one, update all Blade links to the resource entry/appropriate page source, check its relative image/font URLs, and remove the old duplicate only after the Vite build and page are verified.
 
 ## Quality gates

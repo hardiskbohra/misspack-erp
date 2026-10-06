@@ -10,6 +10,8 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\VendorQuoteController;
+use App\Http\Controllers\OfficeServiceController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CashflowAttachmentController;
 use App\Http\Controllers\CashflowController;
@@ -23,7 +25,6 @@ use App\Http\Controllers\PublicLeadController;
 use App\Http\Controllers\LeadSettingController;
 use App\Http\Controllers\LeadCommentController;
 use App\Http\Controllers\LeadQuoteController;
-use App\Http\Controllers\VendorQuoteController;
 use App\Http\Controllers\ProjectAttachmentController;
 use App\Http\Controllers\ProjectCommentController;
 use App\Http\Controllers\ProjectController;
@@ -47,7 +48,11 @@ use App\Http\Controllers\ClientPortalProductController;
 use App\Http\Controllers\ClientPortalProjectController;
 use App\Http\Controllers\ClientPortalQuoteController;
 use App\Http\Controllers\ClientPortalShipmentController;
-use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\GlobalSearchController;
+use App\Http\Controllers\OfficeAlertController;
+use App\Http\Controllers\OfficeBriefingSettingController;
+use App\Http\Controllers\OrganisationController;
+use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
 
 // Redirect root to login
@@ -70,6 +75,8 @@ Route::get('/public-products/{token}', [ProductController::class, 'publicShow'])
 
 /* Public invoice print/client portal link */
 Route::get('/public-sales-invoices/{token}', [SalesInvoiceController::class, 'publicShow'])->name('sales-invoices.public');
+/* A purchase document's public print link: the token is the key, no login. */
+Route::get('/public-purchase-invoices/{token}', [PurchaseInvoiceController::class, 'publicShow'])->name('purchase-invoices.public');
 
 // Public lead enquiry form. Keep outside auth middleware.
 Route::get('/lead-enquiry', [PublicLeadController::class, 'create'])->name('leads.public.create');
@@ -110,8 +117,30 @@ Route::middleware('auth')->group(function () {
         Route::patch('/clients/{client}/portal/support/{conversation}/status', [ClientPortalSupportManagementController::class, 'updateStatus'])->name('clients.portal.support.status');
         Route::get('/clients/{client}/portal/documents/{document}/file', [ClientPortalManagementController::class, 'downloadDocument'])->name('clients.portal.documents.file');
 
-        // Dashboard
-        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::redirect('/dashboard', '/clients');
+        Route::get('/search', GlobalSearchController::class)->name('search');
+        Route::get('/office-alerts', [OfficeAlertController::class, 'inbox'])->name('office-alerts.inbox');
+        Route::patch('/office-alerts/{office_alert}/seen', [OfficeAlertController::class, 'seen'])->name('office-alerts.seen');
+        Route::patch('/office-alerts/{office_alert}/ack', [OfficeAlertController::class, 'ack'])->name('office-alerts.ack');
+        Route::patch('/office-alerts/{office_alert}/snooze', [OfficeAlertController::class, 'snooze'])->name('office-alerts.snooze');
+        Route::patch('/office-alerts/{office_alert}/popup', [OfficeAlertController::class, 'popupShown'])->name('office-alerts.popup');
+        Route::get('/office-alerts/settings', [OfficeBriefingSettingController::class, 'index'])->name('office-alerts.settings');
+        Route::put('/office-alerts/settings', [OfficeBriefingSettingController::class, 'update'])->name('office-alerts.settings.update');
+
+        Route::get('/organisation', [OrganisationController::class, 'index'])->name('organisation.settings');
+        Route::put('/organisation', [OrganisationController::class, 'update'])->name('organisation.update');
+        Route::post('/organisation/addresses', [OrganisationController::class, 'storeAddress'])->name('organisation.addresses.store');
+        Route::put('/organisation/addresses/{address}', [OrganisationController::class, 'updateAddress'])->name('organisation.addresses.update');
+        Route::delete('/organisation/addresses/{address}', [OrganisationController::class, 'destroyAddress'])->name('organisation.addresses.destroy');
+        Route::post('/organisation/contacts', [OrganisationController::class, 'storeContact'])->name('organisation.contacts.store');
+        Route::put('/organisation/contacts/{contact}', [OrganisationController::class, 'updateContact'])->name('organisation.contacts.update');
+        Route::delete('/organisation/contacts/{contact}', [OrganisationController::class, 'destroyContact'])->name('organisation.contacts.destroy');
+        Route::post('/organisation/socials', [OrganisationController::class, 'storeSocial'])->name('organisation.socials.store');
+        Route::put('/organisation/socials/{social}', [OrganisationController::class, 'updateSocial'])->name('organisation.socials.update');
+        Route::delete('/organisation/socials/{social}', [OrganisationController::class, 'destroySocial'])->name('organisation.socials.destroy');
+        Route::post('/organisation/banks', [OrganisationController::class, 'storeBank'])->name('organisation.banks.store');
+        Route::put('/organisation/banks/{bank}', [OrganisationController::class, 'updateBank'])->name('organisation.banks.update');
+        Route::delete('/organisation/banks/{bank}', [OrganisationController::class, 'destroyBank'])->name('organisation.banks.destroy');
 
         // User Management (CRUD — all handled via modal on index page)
         Route::get('/users',             [UserController::class, 'index'])->name('users.index');
@@ -174,7 +203,23 @@ Route::middleware('auth')->group(function () {
         Route::resource('clients', ClientController::class);
 
         // Vendor Management
+        /* The list's own vocabulary routes come first: `/vendors/saved-views`
+           read by the resource route below is a vendor whose id is
+           "saved-views". */
         Route::post('/vendors/quick', [VendorController::class, 'quickStore'])->name('vendors.quickStore');
+        Route::post('/vendors/saved-views', [VendorController::class, 'storeSavedView'])->name('vendors.saved-views.store');
+        Route::delete('/vendors/saved-views/{savedView}', [VendorController::class, 'destroySavedView'])->name('vendors.saved-views.destroy');
+
+        /* Acting on the list as a whole: one status change across ticked rows,
+           and the payable book as a spreadsheet for the accountant. Both are
+           literals, so they are registered before the resource route that
+           would otherwise read them as a vendor id. */
+        Route::patch('/vendors/bulk-status', [VendorController::class, 'bulkStatus'])->name('vendors.bulk-status');
+        Route::get('/vendors/payables/export', [VendorController::class, 'exportPayables'])->name('vendors.payables.export');
+
+        Route::post('/vendors/{vendor}/contacts', [VendorController::class, 'storeContact'])->name('vendors.contacts.store');
+        Route::put('/vendors/{vendor}/contacts/{contact}', [VendorController::class, 'updateContact'])->name('vendors.contacts.update');
+        Route::delete('/vendors/{vendor}/contacts/{contact}', [VendorController::class, 'destroyContact'])->name('vendors.contacts.destroy');
 
         Route::post('/vendors/{vendor}/attachments', [VendorController::class, 'storeAttachment'])->name('vendors.attachments.store');
         Route::delete('/vendor-attachments/{attachment}', [VendorController::class, 'destroyAttachment'])->name('vendors.attachments.destroy');
@@ -187,6 +232,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/vendors/{vendor}/comments', [VendorController::class, 'storeComment'])->name('vendors.comments.store');
         Route::delete('/vendor-comments/{comment}', [VendorController::class, 'destroyComment'])->name('vendors.comments.destroy');
         Route::resource('vendors', VendorController::class);
+
+        Route::post('/vendor-quotes/quick', [VendorQuoteController::class, 'quickStore'])->name('vendor-quotes.quickStore');
+        Route::get('/vendor-quotes/{vendorQuote}/image', [VendorQuoteController::class, 'image'])->name('vendor-quotes.image');
+        Route::resource('vendor-quotes', VendorQuoteController::class)->parameters([
+            'vendor-quotes' => 'vendorQuote',
+        ]);
+
+        Route::resource('office-services', OfficeServiceController::class);
     
         // Product Management
         Route::resource('products', ProductController::class);
@@ -211,6 +264,20 @@ Route::middleware('auth')->group(function () {
         Route::post('/sales-invoices/{salesInvoice}/convert', [SalesInvoiceController::class, 'convert'])->name('sales-invoices.convert');
         Route::delete('/sales-invoice-attachments/{attachment}', [SalesInvoiceController::class, 'destroyAttachment'])->name('sales-invoices.attachments.destroy');
         Route::resource('sales-invoices', SalesInvoiceController::class);
+
+        // Purchase Orders & Purchase Bills — one UI, the way sales invoices
+        // hold a proforma and a tax invoice. Vocabulary routes first so
+        // /purchase-invoices/create is not read as an id.
+        Route::post('/purchase-invoices/{purchaseInvoice}/payments', [PurchaseInvoiceController::class, 'recordPayment'])->name('purchase-invoices.payments.store');
+        Route::patch('/purchase-invoices/{purchaseInvoice}/status', [PurchaseInvoiceController::class, 'updateStatus'])->name('purchase-invoices.status');
+        Route::get('/purchase-invoices/{purchaseInvoice}/print', [PurchaseInvoiceController::class, 'print'])->name('purchase-invoices.print');
+        Route::post('/purchase-invoices/{purchaseInvoice}/convert', [PurchaseInvoiceController::class, 'convert'])->name('purchase-invoices.convert');
+        Route::post('/purchase-invoices/bulk', [PurchaseInvoiceController::class, 'bulk'])->name('purchase-invoices.bulk');
+        Route::resource('purchase-invoices', PurchaseInvoiceController::class);
+
+        /* Old split URLs keep working as a hop onto the one list. */
+        Route::redirect('/purchase-orders', '/purchase-invoices?invoice_type=order');
+        Route::redirect('/purchase-bills', '/purchase-invoices?invoice_type=bill');
 
         // Price Calculator
         Route::get('/price-calculator', [PriceCalculatorController::class, 'index'])->name('price-calculator.index');
@@ -237,13 +304,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/leads/{lead}/image', [LeadController::class, 'image'])->name('leads.image');
         Route::resource('leads', LeadController::class);
 
-        // Vendor Quote Management
-        Route::post('/vendor-quotes/quick', [VendorQuoteController::class, 'quickStore'])->name('vendor-quotes.quickStore');
-        Route::get('/vendor-quotes/{vendorQuote}/image', [VendorQuoteController::class, 'image'])->name('vendor-quotes.image');
-        Route::resource('vendor-quotes', VendorQuoteController::class)->parameters([
-            'vendor-quotes' => 'vendorQuote',
-        ]);
-    
         // Project Management
         Route::post('/projects/quick', [ProjectController::class, 'quickStore'])->name('projects.quickStore');
         Route::patch('/projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.status.update');
@@ -325,6 +385,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/cashflows/quick', [CashflowController::class, 'quickStore'])->name('cashflows.quickStore');
         Route::post('/cashflows/accounts', [CashflowController::class, 'storeAccount'])->name('cashflows.accounts.store');
         Route::post('/cashflows/categories', [CashflowController::class, 'storeCategory'])->name('cashflows.categories.store');
+        Route::post('/cashflows/bulk', [CashflowController::class, 'bulk'])->name('cashflows.bulk');
+        Route::get('/cashflows/{cashflow}/voucher', [CashflowController::class, 'voucher'])->name('cashflows.voucher');
+        Route::get('/cashflows/{cashflow}/expense-statement', [CashflowController::class, 'expenseStatement'])->name('cashflows.expenseStatement');
+        Route::post('/cashflows/{cashflow}/duplicate', [CashflowController::class, 'duplicate'])->name('cashflows.duplicate');
+        Route::patch('/cashflows/{cashflow}/status', [CashflowController::class, 'updateStatus'])->name('cashflows.status');
         Route::resource('cashflows', CashflowController::class);
     });
 

@@ -81,42 +81,7 @@
                     </div>
                 </div>
                 
-                <div class="master-card master-section">
-                    <h3 class="master-section-title">Vendor Quotes</h3>
-                    <div class="master-table-wrap">
-                        <table class="master-table">
-                            <thead>
-                                <tr>
-                                    <th>Vendor</th>
-                                    <th>Qty</th>
-                                    <th>Price</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($product->vendorQuotes as $quote)
-                                    <tr style="line-height:1.5;">
-                                        <td>{{ $quote->vendor?->vendor_contact_name ?? ($quote->vendor_contact_name ?? '-') }}</td>
-                                        <td>{!! $quote->items->isNotEmpty()
-                                            ? $quote->items->map(fn($item) => number_format($item->quantity) . ' ' . $item->unit)->implode('<br>')
-                                            : ($quote->quantity ? number_format($quote->quantity) . ' ' . $quote->unit : '-')
-                                        !!}</td>
-                                        <td>{!! $quote->items->isNotEmpty()
-                                            ? $quote->items->map(fn($item) => \App\Helpers\CommonHelper::amount($item->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : ''))->implode('<br>')
-                                            : ($quote->vendor_unit_price
-                                                ? \App\Helpers\CommonHelper::amount($quote->vendor_unit_price, $quote->currency) . ($quote->incoterm ? ' ' . $quote->incoterm : '')
-                                                : '-')
-                                        !!}</td>
-                                        <td><a href="{{ route('vendor-quotes.show',$quote) }}">View</a></td>
-                                    </tr>@empty<tr>
-                                        <td colspan="6">No ladder added.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+                            </div>
             <div>
                 <div class="master-card master-section">
                     <h3 class="master-section-title">Specifications</h3>

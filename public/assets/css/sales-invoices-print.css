@@ -306,7 +306,7 @@
 
 .items td.right,
 .items th.right {
-    text-align: right;
+    text-align: center;
 }
 
 .items td.right {
@@ -542,7 +542,7 @@
 .summary td:last-child {
     color: var(--invoice-text);
     font-weight: 600;
-    text-align: right;
+    text-align: center;
     white-space: nowrap;
 }
 

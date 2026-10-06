@@ -1,496 +1,345 @@
-/* Vendor directory, record, and form pages. Shared controls, cards, tables,
-   tabs and theme surfaces stay owned by the design-system components. */
+/* ==========================================================================
+   VENDORS.CSS — the vendor module's own cells
+   --------------------------------------------------------------------------
+   The list (resources/views/vendors/index.blade.php), the record
+   (resources/views/vendors/show.blade.php + partials) and the form
+   (resources/views/vendors/form.blade.php).
 
-body[data-ui-module="vendors"] .vendor {
-    --vendor-green-text: #087a54;
-    --vendor-blue-text: #356bd4;
-    --vendor-orange-text: #a86700;
-    --vendor-purple-text: #7544d3;
-    --vendor-red-text: #c9365a;
-    color: var(--mc-text);
-    font-family: var(--app-font-family, "Inter", "Segoe UI", Roboto, Arial, sans-serif);
+   This sheet is deliberately small. Everything the three screens wear — the
+   tile strip, the chips, the filter row, the applied strip, the toolbar, the
+   table, the density switch, the empty state, the mobile cards, the dialogs,
+   the tabs, the facts vocabulary and the form grid — is the shared surface
+   (master-list.css, master-index.css, master-detail.css, master-form.css,
+   master-show.css) plus the canonical design-system components. What is left
+   here is what is genuinely the vendor module's:
+
+     - the status and vendor-type tones (light and dark);
+     - the vendor cell in the list (avatar, name, second line, terms);
+     - the record's identity row, its fact cards, its mini lists, its
+       currency summary, document grid and comment cards;
+     - the form page's jump nav and section composition.
+
+   It must not define a generic button, card, field, table, tab, badge or
+   modal: those belong to the shared sheets, and a module-local copy of one
+   drifts the moment the shared one is fixed (the users sheet learned that
+   with its private modal system).
+
+   The vendor_quotes screens still load this file for their price-break rows;
+   those two rules are kept at the foot of the sheet.
+   ========================================================================== */
+
+/* ==========================================================================
+   1. STATUS AND TYPE TONES
+   Light first, then the dark-theme counterpart for every hue — a status that
+   cannot be read on the dark panel is a status that is not there.
+   ========================================================================== */
+
+.vendor-index .status-active,
+.vendor-show .status-active {
+    background: #e8fff7;
+    color: #0e9f6e;
 }
 
-html[data-theme="dark"] body[data-ui-module="vendors"] .vendor {
-    --vendor-green-text: #6ee7b7;
-    --vendor-blue-text: #9dbdff;
-    --vendor-orange-text: #f8c56a;
-    --vendor-purple-text: #c3a7ff;
-    --vendor-red-text: #ff9caf;
-}
-
-body[data-ui-module="vendors"] .vendor-index,
-body[data-ui-module="vendors"] .vendor-form,
-body[data-ui-module="vendors"] .vendor-show {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-body[data-ui-module="vendors"] .vendor-detail-panels {
-    background: var(--mc-card-soft);
-}
-
-body[data-ui-module="vendors"] .vendor-detail-card,
-body[data-ui-module="vendors"] .vendor-record-header,
-body[data-ui-module="vendors"] .vendor-form-header,
-body[data-ui-module="vendors"] .vendor-form-card {
-    background: var(--mc-card);
-    border: 1px solid var(--mc-border);
-    border-radius: 18px;
-    box-shadow: var(--mc-shadow, 0 14px 35px rgba(25, 42, 70, .08));
-}
-
-/* Directory list */
-.vendor-index .master-stats {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.vendor-index .master-card {
-    min-width: 0;
-}
-
-.vendor-index .master-list-chips {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 14px;
-    overflow-x: auto;
-    padding-bottom: 2px;
-}
-
-.vendor-index .master-list-chip {
-    flex: 0 0 auto;
-}
-
-.vendor-index .master-filter-row {
-    align-items: center;
-}
-
-.vendor-index .master-search {
-    flex: 1 1 360px;
-    min-width: min(100%, 260px);
-}
-
-.vendor-index .master-table {
-    min-width: 900px;
-}
-
-.vendor-index .vendor-table-identity {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    min-width: 190px;
-}
-
-.vendor-table-avatar,
-.vendor-record-avatar {
-    display: inline-flex;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    border: 1px solid var(--mc-border);
-    border-radius: 50%;
+.vendor-index .status-inactive,
+.vendor-show .status-inactive {
     background: var(--mc-card-soft);
     color: var(--mc-text-2);
-    object-fit: cover;
+}
+
+.vendor-index .status-on-hold,
+.vendor-show .status-on-hold {
+    background: #fff4e5;
+    color: #b45309;
+}
+
+.vendor-index .status-blacklisted,
+.vendor-show .status-blacklisted {
+    background: #ffeaf0;
+    color: #be123c;
+}
+
+:root[data-theme="dark"] .vendor-index .status-active,
+:root[data-theme="dark"] .vendor-show .status-active {
+    background: rgba(16, 185, 129, .18);
+    color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .vendor-index .status-on-hold,
+:root[data-theme="dark"] .vendor-show .status-on-hold {
+    background: rgba(245, 158, 11, .18);
+    color: #fcd34d;
+}
+
+:root[data-theme="dark"] .vendor-index .status-blacklisted,
+:root[data-theme="dark"] .vendor-show .status-blacklisted {
+    background: rgba(239, 71, 112, .2);
+    color: #fda4af;
+}
+
+.vendor-type-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.vendor-index .type-manufacturer,
+.vendor-show .type-manufacturer {
+    background: #eaf1ff;
+    color: #3f7cf4;
+}
+
+.vendor-index .type-trader,
+.vendor-show .type-trader {
+    background: #fff4e5;
+    color: #b45309;
+}
+
+.vendor-index .type-distributor,
+.vendor-show .type-distributor {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.vendor-index .type-service-provider,
+.vendor-show .type-service-provider {
+    background: #ece7ff;
+    color: #6d28d9;
+}
+
+:root[data-theme="dark"] .vendor-index .type-manufacturer,
+:root[data-theme="dark"] .vendor-show .type-manufacturer {
+    background: rgba(79, 131, 241, .2);
+    color: #93b4ff;
+}
+
+:root[data-theme="dark"] .vendor-index .type-trader,
+:root[data-theme="dark"] .vendor-show .type-trader {
+    background: rgba(245, 158, 11, .18);
+    color: #fcd34d;
+}
+
+:root[data-theme="dark"] .vendor-index .type-distributor,
+:root[data-theme="dark"] .vendor-show .type-distributor {
+    background: rgba(16, 185, 129, .18);
+    color: #6ee7b7;
+}
+
+:root[data-theme="dark"] .vendor-index .type-service-provider,
+:root[data-theme="dark"] .vendor-show .type-service-provider {
+    background: rgba(139, 92, 246, .22);
+    color: #c4b5fd;
+}
+
+/* A neutral meta chip (currency, rating, entry status) — the shared
+   .master-chip is the record page's own meta chip, so this sheet does not
+   restate it; the vendor meta chip only tightens its geometry. */
+.vendor-meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border: 1px solid var(--mc-border);
+    border-radius: 999px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+.vendor-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-2);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.vendor-pill.is-pinned {
+    border-color: rgba(79, 131, 241, .35);
+    color: var(--master-primary, #4f83f1);
+}
+
+/* ==========================================================================
+   2. THE LIST — resources/views/vendors/index.blade.php
+   ========================================================================== */
+
+.vendor-index .vendor-table th:nth-child(1) { width: 260px; }
+.vendor-index .vendor-table th:nth-child(2) { width: 170px; }
+.vendor-index .vendor-table th:nth-child(3) { width: 220px; }
+.vendor-index .vendor-table th:nth-child(4) { width: 160px; }
+.vendor-index .vendor-table th:nth-child(5) { width: 160px; }
+.vendor-index .vendor-table th:nth-child(6) { width: 130px; }
+.vendor-index .vendor-table th:nth-child(7) { width: 90px; }
+
+.vendor-index .vendor-row.is-clickable {
+    cursor: pointer;
+}
+
+.vendor-index .vendor-row.is-clickable:hover {
+    background: var(--mc-hover, var(--mc-card-soft));
+}
+
+.vendor-table-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
 }
 
 .vendor-table-avatar {
-    width: 40px;
-    height: 40px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.vendor-avatar-tone-0 { background: rgba(79, 131, 241, .13); color: var(--vendor-blue-text, #356bd4); }
-.vendor-avatar-tone-1 { background: rgba(18, 203, 183, .13); color: var(--vendor-green-text, #087a54); }
-.vendor-avatar-tone-2 { background: rgba(139, 92, 246, .13); color: var(--vendor-purple-text, #7544d3); }
-.vendor-avatar-tone-3 { background: rgba(245, 158, 11, .14); color: var(--vendor-orange-text, #a86700); }
-.vendor-avatar-tone-4 { background: rgba(16, 185, 129, .13); color: var(--vendor-green-text, #087a54); }
-.vendor-avatar-tone-5 { background: rgba(239, 71, 112, .12); color: var(--vendor-red-text, #c9365a); }
-
-.vendor-table-copy,
-.vendor-primary-contact,
-.vendor-table-meta,
-.vendor-table-name {
-    display: block;
-}
-
-.vendor-table-copy {
-    min-width: 0;
-}
-
-.vendor-table-name,
-.vendor-detail-link,
-.vendor-primary-contact a,
-.vendor-inline-link {
-    color: var(--master-primary, #4f83f1);
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.vendor-table-name {
-    width: fit-content;
-    max-width: 100%;
-    font-weight: 600;
-}
-
-.vendor-table-name:hover,
-.vendor-detail-link:hover,
-.vendor-primary-contact a:hover,
-.vendor-inline-link:hover {
-    color: var(--master-primary-hover, #356bd4);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-}
-
-.vendor-table-meta {
-    margin-top: 4px;
-    color: var(--mc-text-3);
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 1.4;
-    overflow-wrap: anywhere;
-}
-
-.vendor-primary-contact strong {
-    display: block;
-    color: var(--mc-text);
-    font-weight: 500;
-}
-
-.vendor-primary-contact a {
-    width: fit-content;
-    margin-top: 3px;
-    font-size: 12px;
-    overflow-wrap: anywhere;
-}
-
-.vendor-type,
-.vendor-status,
-.vendor-payment-status,
-.vendor-shipment-status,
-.vendor-quote-status,
-.vendor-project-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-    padding: 4px 9px;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1.35;
-    white-space: nowrap;
-}
-
-.vendor-type-manufacturer { border-color: rgba(79, 131, 241, .24); background: rgba(79, 131, 241, .10); color: var(--vendor-blue-text, #356bd4); }
-.vendor-type-trader { border-color: rgba(245, 158, 11, .25); background: rgba(245, 158, 11, .10); color: var(--vendor-orange-text, #a86700); }
-.vendor-type-distributor { border-color: rgba(16, 185, 129, .25); background: rgba(16, 185, 129, .10); color: var(--vendor-green-text, #087a54); }
-.vendor-type-service-provider { border-color: rgba(139, 92, 246, .25); background: rgba(139, 92, 246, .10); color: var(--vendor-purple-text, #7544d3); }
-
-.vendor-status-active,
-.vendor-payment-status-paid,
-.vendor-payment-status-reconciled,
-.vendor-shipment-status-delivered,
-.vendor-quote-status-approved,
-.vendor-quote-status-converted,
-.vendor-project-status-ready,
-.vendor-project-status-shipped,
-.vendor-project-status-delivered,
-.vendor-project-status-completed {
-    border-color: rgba(16, 185, 129, .28);
-    background: rgba(16, 185, 129, .11);
-    color: var(--vendor-green-text, #087a54);
-}
-
-.vendor-status-inactive,
-.vendor-status-on-hold,
-.vendor-payment-status-pending,
-.vendor-shipment-status-planning,
-.vendor-shipment-status-custom-hold,
-.vendor-quote-status-requested,
-.vendor-quote-status-pending,
-.vendor-project-status-planned,
-.vendor-project-status-sourcing,
-.vendor-project-status-po-pending,
-.vendor-project-status-artwork-pending,
-.vendor-project-status-qc-pending {
-    border-color: rgba(245, 158, 11, .3);
-    background: rgba(245, 158, 11, .11);
-    color: var(--vendor-orange-text, #a86700);
-}
-
-.vendor-status-blacklisted,
-.vendor-payment-status-cancelled,
-.vendor-shipment-status-delayed,
-.vendor-shipment-status-cancelled,
-.vendor-quote-status-rejected,
-.vendor-project-status-cancelled {
-    border-color: rgba(239, 71, 112, .26);
-    background: rgba(239, 71, 112, .10);
-    color: var(--vendor-red-text, #c9365a);
-}
-
-.vendor-payment-status-booked,
-.vendor-shipment-status-picked-up,
-.vendor-shipment-status-in-transit,
-.vendor-shipment-status-out-for-delivery,
-.vendor-quote-status-received,
-.vendor-quote-status-shortlisted,
-.vendor-quote-status-sent,
-.vendor-project-status-in-production,
-.vendor-project-status-artwork-review,
-.vendor-project-status-pps-development,
-.vendor-project-status-pps-review {
-    border-color: rgba(79, 131, 241, .25);
-    background: rgba(79, 131, 241, .10);
-    color: var(--vendor-blue-text, #356bd4);
-}
-
-.vendor-rating {
-    color: var(--vendor-orange-text, #d58b00);
-    font-size: 14px;
-    letter-spacing: .04em;
-    white-space: nowrap;
-}
-
-.vendor-rating span {
-    color: var(--mc-text-3);
-}
-
-.vendor-index .master-icon-btn,
-.vendor-payment-actions .master-icon-btn {
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 36px;
-    min-height: 36px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: var(--mc-card-soft);
     border: 1px solid var(--mc-border);
-    border-radius: 10px;
-    background: var(--mc-card);
     color: var(--mc-text-2);
-    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .02em;
 }
 
-.vendor-index .master-icon-btn:hover,
-.vendor-payment-actions .master-icon-btn:hover {
-    border-color: var(--master-primary, #4f83f1);
-    color: var(--master-primary, #4f83f1);
-}
+.vendor-index .vendor-avatar-tone-0 { background: #3b82f6; color: #fff; border-color: transparent; }
+.vendor-index .vendor-avatar-tone-1 { background: #10b981; color: #fff; border-color: transparent; }
+.vendor-index .vendor-avatar-tone-2 { background: #f59e0b; color: #fff; border-color: transparent; }
+.vendor-index .vendor-avatar-tone-3 { background: #ef4444; color: #fff; border-color: transparent; }
+.vendor-index .vendor-avatar-tone-4 { background: #8b5cf6; color: #fff; border-color: transparent; }
+.vendor-index .vendor-avatar-tone-5 { background: #06b6d4; color: #fff; border-color: transparent; }
 
-.vendor-index .master-icon-btn.danger:hover,
-.vendor-payment-actions .master-icon-btn.danger:hover {
-    border-color: var(--master-red, #ef4770);
-    color: var(--master-red, #ef4770);
-}
-
-/* Create/edit form */
-.vendor-form-header {
+.vendor-table-copy {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    padding: 20px 22px;
-}
-
-.vendor-form-heading h1,
-.vendor-record-copy h1 {
-    margin: 7px 0 0;
-    color: var(--mc-text);
-    font-size: 22px;
-    font-weight: 700;
-    line-height: 1.25;
-}
-
-.vendor-form-heading > p {
-    max-width: 720px;
-    margin: 6px 0 0;
-    color: var(--mc-text-2);
-    font-size: 13px;
-    line-height: 1.5;
-}
-
-.vendor-form-nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 2px 0;
-}
-
-.vendor-form-nav a {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    min-height: 38px;
-    padding: 8px 12px;
-    border: 1px solid var(--mc-border);
-    border-radius: 999px;
-    background: var(--mc-card);
-    color: var(--mc-text-2);
-    font-size: 12px;
-    font-weight: 500;
-    text-decoration: none;
-}
-
-.vendor-form-nav a:hover,
-.vendor-form-nav a:focus-visible {
-    border-color: var(--master-primary, #4f83f1);
-    color: var(--master-primary, #4f83f1);
-}
-
-.vendor-form-card {
-    padding: 0 22px;
-}
-
-.vendor-form-section {
-    padding: 22px 0;
-    border-bottom: 1px solid var(--mc-border);
-    scroll-margin-top: 100px;
-}
-
-.vendor-form-section:last-of-type {
-    border-bottom: 0;
-}
-
-.vendor-form-section .master-section-title {
-    margin: 0;
-}
-
-.vendor-form-section-note {
-    margin: 5px 0 16px;
-    color: var(--mc-text-3);
-    font-size: 13px;
-    line-height: 1.5;
-}
-
-.vendor-form .master-detail-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-}
-
-.vendor-form .master-detail-grid > .master-field,
-.vendor-form .master-detail-grid > div {
+    flex-direction: column;
+    gap: 2px;
     min-width: 0;
 }
 
-.vendor-form .master-field.full,
-.vendor-form .master-detail-grid > .full {
-    grid-column: 1 / -1;
-}
-
-.vendor-form textarea.master-textarea {
-    min-height: 96px;
-}
-
-.vendor-form .is-invalid {
-    border-color: var(--master-red, #ef4770);
-}
-
-.vendor-form-errors {
-    margin: 0 0 14px;
-    padding: 12px 14px;
-    border: 1px solid rgba(239, 71, 112, .32);
-    border-radius: 12px;
-    background: rgba(239, 71, 112, .08);
+.vendor-table-name {
     color: var(--mc-text);
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
 }
 
-.vendor-form-errors ul {
-    margin: 7px 0 0;
-    padding-left: 20px;
+.vendor-table-name:hover,
+.vendor-table-name:focus-visible {
+    color: var(--master-primary, #4f83f1);
 }
 
-.vendor-form-errors a {
-    color: var(--master-red, #c9365a);
+.vendor-table-meta {
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
 }
 
-.vendor-form-actions {
-    position: sticky;
-    bottom: 12px;
-    z-index: 3;
-    display: flex;
+.vendor-contact-line {
+    display: block;
+    color: var(--mc-text-2);
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.vendor-contact-line:hover,
+.vendor-contact-line:focus-visible {
+    color: var(--master-primary, #4f83f1);
+}
+
+.vendor-index .vendor-table td:last-child,
+.vendor-index .vendor-table th:last-child {
+    text-align: right;
+}
+
+.vendor-index .vendor-table .master-row-actions {
     justify-content: flex-end;
-    gap: 9px;
-    margin: 0 -22px;
-    padding: 14px 22px;
-    border-top: 1px solid var(--mc-border);
-    border-radius: 0 0 18px 18px;
-    background: var(--mc-card);
 }
 
-/* Vendor record shell */
-.vendor-record-header {
+.vendor-table-actions-cell {
+    width: 90px;
+}
+
+.vendor-modal-foot {
+    margin: 10px 0 0;
+}
+
+/* ==========================================================================
+   3. THE RECORD — resources/views/vendors/show.blade.php
+   ========================================================================== */
+
+.vendor-show .vendor-record-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 20px;
-    padding: 18px 20px;
+    gap: 18px;
+    flex-wrap: wrap;
 }
 
 .vendor-record-identity {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 16px;
     min-width: 0;
 }
 
-.vendor-record-avatar {
+.vendor-record-mark {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 58px;
     height: 58px;
-    font-size: 17px;
+    border-radius: 18px;
+    object-fit: cover;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-2);
+    font-size: 20px;
     font-weight: 600;
-}
-
-.vendor-record-avatar--initials {
-    background: rgba(79, 131, 241, .12);
-    color: var(--master-primary, #4f83f1);
-}
-
-.vendor-record-copy {
-    min-width: 0;
+    letter-spacing: .02em;
 }
 
 .vendor-record-copy h1 {
-    margin-top: 0;
-    overflow-wrap: anywhere;
+    margin: 0;
+    color: var(--mc-text);
+    font-size: 21px;
+    font-weight: 600;
+    line-height: 1.25;
 }
 
 .vendor-record-meta {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: 7px;
+    flex-wrap: wrap;
+    gap: 8px;
     margin-top: 8px;
-    color: var(--mc-text-2);
+    color: var(--mc-text-3);
     font-size: 12px;
 }
 
 .vendor-record-actions {
     display: flex;
-    flex: 0 0 auto;
+    align-items: center;
     flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 8px;
+    gap: 10px;
 }
 
-.vendor-detail-tabs-card {
-    overflow: hidden;
-}
-
-.vendor-detail-panels {
-    min-height: 210px;
-    padding: 18px;
-}
-
-.vendor-detail-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
+/* ---- the fact cards ---- */
 
 .vendor-detail-grid {
     display: grid;
@@ -498,272 +347,207 @@ body[data-ui-module="vendors"] .vendor-form-card {
     gap: 16px;
 }
 
+.vendor-detail-grid + .vendor-detail-grid {
+    margin-top: 16px;
+}
+
+.vendor-detail-grid--lists {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+/* The card is the shared one; what this sheet adds is the padding the card
+   itself does not carry. Without it every fact row, hairline and mini row ran
+   into the border — the record page read as one undivided block. Same 22/24
+   as the client record's fact cards, so the two records sit the same way. */
 .vendor-detail-card {
-    min-width: 0;
-    padding: 18px;
-}
-
-.vendor-detail-card .master-section-head,
-.vendor-detail-card .master-section-head h2 {
-    margin-top: 0;
-}
-
-.vendor .master-section-head {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
+    flex-direction: column;
     gap: 14px;
-    margin-bottom: 14px;
-}
-
-.vendor .master-section-head > div:first-child {
     min-width: 0;
+    padding: 22px 24px;
 }
 
-.vendor .master-section-title {
+.vendor-detail-title {
+    margin: 0;
     color: var(--mc-text);
     font-size: 15px;
     font-weight: 600;
-    line-height: 1.35;
 }
 
-.vendor .master-sub {
-    margin: 5px 0 0;
-    color: var(--mc-text-3);
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 1.5;
-}
-
-.vendor .master-empty-value {
-    color: var(--mc-text-3) !important;
-    font-weight: 400 !important;
-}
-
-.vendor .master-facts {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 18px;
-}
-
-.vendor .master-info {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    gap: 4px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--mc-border);
-}
-
-.vendor .master-info > span:first-child {
+.vendor-detail-note {
     color: var(--mc-text-3);
     font-size: 11px;
     font-weight: 500;
 }
 
-.vendor .master-info strong,
-.vendor .master-info a,
-.vendor-detail-address {
-    color: var(--mc-text);
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.45;
+.vendor-detail-link {
+    color: var(--master-primary, #4f83f1);
+    text-decoration: none;
     overflow-wrap: anywhere;
 }
 
-.vendor .master-info .vendor-detail-link {
-    color: var(--master-primary, #4f83f1);
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.vendor .master-info .vendor-detail-link:hover {
+.vendor-detail-link:hover,
+.vendor-detail-link:focus-visible {
     text-decoration: underline;
-}
-
-.vendor .master-info.is-wide {
-    grid-column: 1 / -1;
 }
 
 .vendor-detail-address {
     margin: 0;
     font-style: normal;
+    line-height: 1.6;
 }
 
-.vendor-profile-url {
-    overflow-wrap: anywhere;
+.vendor-detail-notes {
+    white-space: pre-line;
 }
 
-.vendor-inline-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    width: fit-content;
+.vendor-detail-help {
+    margin: 0;
+    color: var(--mc-text-3);
     font-size: 12px;
-    font-weight: 500;
+    line-height: 1.55;
 }
 
-.vendor-contact-actions,
-.vendor-document-toolbar,
-.vendor-comment-toolbar,
-.vendor-shipment-toolbar,
-.vendor-statement-toolbar-actions {
+.vendor-detail-actions {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
     gap: 8px;
+    margin-top: auto;
 }
 
-.vendor-contact-actions {
+/* Under a table (not at the foot of a fact card) it needs its own gap: the
+   table wrap's margin is above the table, not below it. */
+.vendor-table-bleed + .vendor-detail-actions,
+.vendor-empty-text + .vendor-detail-actions,
+.vendor-panel-note + .vendor-detail-actions {
     margin-top: 14px;
 }
 
-.vendor-tab-footnote {
+/* ---- the mini lists on the overview ---- */
+
+.vendor-card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.vendor-card-link {
+    color: var(--master-primary, #4f83f1);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.vendor-card-link:hover,
+.vendor-card-link:focus-visible {
+    text-decoration: underline;
+}
+
+.vendor-empty-text {
     margin: 0;
-    padding: 0 2px;
     color: var(--mc-text-3);
-    font-size: 12px;
-    line-height: 1.5;
-}
-
-/* Overview activity */
-.vendor-overview-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.vendor-muted-inline {
-    color: var(--mc-text-3);
-    font-size: 11px;
-    font-weight: 500;
-}
-
-.vendor-overview-stats {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-}
-
-.vendor-overview-stat {
-    min-width: 0;
-}
-
-.vendor-overview-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-}
-
-.vendor-activity-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.vendor-activity-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 11px 0;
-    border-bottom: 1px solid var(--mc-border);
-}
-
-.vendor-activity-row:last-child {
-    border-bottom: 0;
-}
-
-.vendor-activity-copy {
-    min-width: 0;
-}
-
-.vendor-activity-copy strong,
-.vendor-activity-value {
-    color: var(--mc-text);
     font-size: 13px;
-    font-weight: 500;
+    line-height: 1.6;
 }
 
-.vendor-activity-copy span {
-    display: block;
-    margin-top: 3px;
-    color: var(--mc-text-3);
-    font-size: 12px;
-}
+/* ---- panel head, used by the tab panels ---- */
 
-.vendor-activity-value {
-    flex: 0 0 auto;
-    font-variant-numeric: tabular-nums;
-}
-
-.vendor-activity-value.is-positive,
-.vendor-amount-debit {
-    color: var(--vendor-green-text, #087a54) !important;
-}
-
-.vendor-activity-value.is-neutral,
-.vendor-amount-credit {
-    color: var(--vendor-blue-text, #356bd4) !important;
-}
-
-.vendor-note-preview {
-    padding: 11px 0;
-    border-bottom: 1px solid var(--mc-border);
-}
-
-.vendor-note-preview:last-child {
-    border-bottom: 0;
-}
-
-.vendor-note-meta,
-.vendor-comment-head {
+.vendor-panel-head {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 10px;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
 }
 
-.vendor-note-meta strong,
-.vendor-comment-head strong {
+.vendor-panel-head--spaced {
+    margin-top: 26px;
+}
+
+.vendor-panel-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.vendor-table-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.vendor-table-card .master-table-wrap {
+    margin-top: 0;
+}
+
+.vendor-table-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+
+.vendor-table-link strong {
     color: var(--mc-text);
-    font-size: 12px;
     font-weight: 600;
 }
 
-.vendor-note-meta span,
-.vendor-comment-head span {
-    color: var(--mc-text-3);
+.vendor-table-link:hover strong,
+.vendor-table-link:focus-visible strong {
+    color: var(--master-primary, #4f83f1);
+}
+
+.vendor-file-link {
+    display: inline-block;
+    margin-right: 8px;
+    color: var(--master-primary, #4f83f1);
     font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    text-decoration: none;
 }
 
-.vendor-note-preview p {
-    margin: 6px 0 0;
-    color: var(--mc-text-2);
-    font-size: 12px;
-    line-height: 1.5;
-    white-space: pre-wrap;
+.vendor-sync-link {
+    display: block;
+    margin-top: 4px;
+    color: var(--master-primary, #4f83f1);
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
 }
 
-/* Projects, products, quotes and shipments */
-.vendor-detail-table {
-    min-width: 760px;
+.vendor-sync-link:hover,
+.vendor-sync-link:focus-visible {
+    text-decoration: underline;
 }
 
-.vendor-detail-table th,
-.vendor-detail-table td {
-    vertical-align: top;
+/* ---- money tones (debit / credit stay local to the figure) ---- */
+
+.vendor-amount-debit {
+    color: var(--master-red, #ef4770);
 }
 
-.vendor-numeric {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
+.vendor-amount-credit {
+    color: var(--master-green, #10b981);
 }
+
+/* the same red as .vendor-amount-debit, and the name the record's balance
+   figures are marked with */
+.vendor-amount-negative {
+    color: var(--master-red, #ef4770);
+}
+
+/* ---- the statement's currency strip ---- */
+
+
+
+/* ---- products ---- */
 
 .vendor-product-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
 }
 
 .vendor-product-card {
@@ -771,608 +555,1160 @@ body[data-ui-module="vendors"] .vendor-form-card {
     align-items: center;
     gap: 12px;
     min-width: 0;
-    padding: 11px;
-    border: 1px solid var(--mc-border);
-    border-radius: 13px;
-    background: var(--mc-card);
-    color: var(--mc-text);
-    cursor: pointer;
+    padding: 14px;
+    color: inherit;
     text-decoration: none;
 }
 
-.vendor-product-card:hover {
-    border-color: var(--master-primary, #4f83f1);
-    box-shadow: 0 5px 16px rgba(37, 76, 145, .08);
-}
-
-.vendor-product-image {
-    display: grid;
-    flex: 0 0 52px;
-    width: 52px;
-    height: 52px;
-    border: 1px solid var(--mc-border);
-    border-radius: 10px;
-    background: var(--mc-card-soft);
-    color: var(--mc-text-3);
-    object-fit: cover;
-    place-items: center;
-}
-
-.vendor-product-image--empty {
+.vendor-product-card:hover .vendor-product-copy strong,
+.vendor-product-card:focus-visible .vendor-product-copy strong {
     color: var(--master-primary, #4f83f1);
-    font-size: 19px;
+}
+
+.vendor-product-media {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-3);
+}
+
+.vendor-product-media.is-empty {
+    font-size: 18px;
 }
 
 .vendor-product-copy {
     display: flex;
-    min-width: 0;
-    flex: 1;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
+    min-width: 0;
 }
 
 .vendor-product-copy strong {
     color: var(--mc-text);
     font-size: 13px;
     font-weight: 600;
-    overflow-wrap: anywhere;
 }
 
-.vendor-product-copy > span {
+.vendor-product-copy small {
     color: var(--mc-text-3);
     font-size: 11px;
-    line-height: 1.4;
 }
 
-.vendor-product-open {
-    color: var(--mc-text-3);
-}
+/* ---- documents ---- */
 
-.vendor-shipment-eta {
-    display: block;
-    width: fit-content;
-}
-
-.vendor-shipment-eta-overdue { color: var(--master-red, #c9365a); }
-.vendor-shipment-eta-due-soon { color: var(--vendor-orange-text, #a86700); }
-.vendor-shipment-eta-on-track { color: var(--mc-text-3); }
-
-/* Vendor-currency statement. Keep its ledger metrics distinct from the payment
-   workflow; these totals describe the filtered statement period and balance. */
-.vendor-statement-workspace {
-    gap: 16px;
-}
-
-.vendor-statement-filter-card,
-.vendor-statement-entries {
-    padding: 18px;
-}
-
-.vendor-statement-toolbar-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
+.vendor-attachment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 14px;
-    margin-bottom: 12px;
 }
 
-.vendor-tab-eyebrow {
-    margin: 0 0 4px;
+.vendor-attachment {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+}
+
+.vendor-attachment-media {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 130px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
     color: var(--mc-text-3);
+}
+
+.vendor-attachment-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.vendor-attachment-media.is-file {
+    flex-direction: column;
+    gap: 6px;
+    font-size: 22px;
+}
+
+.vendor-attachment-media.is-file span {
     font-size: 11px;
     font-weight: 600;
     letter-spacing: .06em;
-    text-transform: uppercase;
 }
 
-.vendor-statement-toolbar-actions {
-    justify-content: flex-end;
+.vendor-attachment-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
 }
 
-.vendor-statement-source {
-    margin: 12px 0 0;
-    color: var(--mc-text-3);
-    font-size: 11px;
+.vendor-attachment-copy strong {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.vendor-attachment-note {
+    color: var(--mc-text-2);
+    font-size: 12px;
     line-height: 1.5;
 }
 
-.vendor-statement-metrics {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-}
-
-.vendor-statement-metric {
-    min-width: 0;
-}
-
-.vendor-statement-metric .master-stat-value {
-    font-size: 17px;
-}
-
-.vendor-statement-balance-label {
-    margin-top: 3px;
-}
-
-.vendor-statement-other-currencies {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 11px 14px;
-    border: 1px solid var(--mc-border);
-    border-radius: 12px;
-    background: var(--mc-card);
-    color: var(--mc-text-2);
-    font-size: 12px;
-}
-
-.vendor-statement-other-currencies strong {
-    color: var(--mc-text);
-    font-weight: 600;
-}
-
-.vendor-statement-table {
-    min-width: 860px;
-}
-
-.vendor-statement-table .text-right {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-}
-
-.vendor-statement-opening-row,
-.vendor-statement-table tfoot tr {
-    background: var(--mc-card-soft);
-}
-
-.vendor-statement-table tfoot td {
-    border-top: 1px solid var(--mc-border);
-    color: var(--mc-text);
-}
-
-/* Documents and comments */
-.vendor-document-link {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    min-width: 200px;
-    color: var(--mc-text);
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.vendor-document-link:hover strong {
-    color: var(--master-primary, #4f83f1);
-    text-decoration: underline;
-}
-
-.vendor-document-icon {
-    display: grid;
-    flex: 0 0 34px;
-    width: 34px;
-    height: 34px;
-    border: 1px solid var(--mc-border);
-    border-radius: 10px;
-    background: var(--mc-card-soft);
-    color: var(--master-primary, #4f83f1);
-    place-items: center;
-}
-
-.vendor-document-link > span:nth-child(2) {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-}
-
-.vendor-document-link strong {
-    color: var(--mc-text);
-    font-size: 12px;
-    font-weight: 600;
-    overflow-wrap: anywhere;
-}
-
-.vendor-file-link {
-    display: block;
-    width: fit-content;
-    max-width: 220px;
-    margin: 2px 0;
-    color: var(--master-primary, #4f83f1);
-    font-size: 11px;
-    text-decoration: none;
-    overflow-wrap: anywhere;
-}
-
-.vendor-file-link:hover {
-    text-decoration: underline;
-}
-
-.vendor-comment-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.vendor-comment-card {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 15px 0;
-    border-bottom: 1px solid var(--mc-border);
-}
-
-.vendor-comment-card:last-child {
-    border-bottom: 0;
-}
-
-.vendor-comment-card.is-pinned {
-    margin: 0 -8px;
-    padding-right: 8px;
-    padding-left: 8px;
-    border-radius: 12px;
-    background: rgba(245, 158, 11, .06);
-}
-
-.vendor-comment-avatar {
-    display: grid;
-    flex: 0 0 36px;
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--mc-border);
-    border-radius: 50%;
-    background: var(--mc-card-soft);
-    color: var(--mc-text-2);
-    font-size: 12px;
-    font-weight: 600;
-    place-items: center;
-}
-
-.vendor-comment-content {
-    min-width: 0;
-    flex: 1;
-}
-
-.vendor-comment-head {
-    align-items: center;
-}
-
-.vendor-comment-head > div {
+.vendor-attachment-actions {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
+    align-items: center;
     gap: 8px;
+    margin-top: 8px;
 }
 
-.vendor-comment-head strong {
-    font-size: 13px;
+.vendor-attachment-actions form {
+    margin: 0;
 }
 
-.vendor-comment-body {
-    margin: 8px 0 10px;
-    color: var(--mc-text-2);
-    font-size: 13px;
-    line-height: 1.55;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-}
-
-.vendor-pinned-badge {
-    border-color: rgba(245, 158, 11, .28);
-    background: rgba(245, 158, 11, .10);
-    color: var(--vendor-orange-text, #a86700);
-}
-
-.vendor-comment-delete {
-    min-height: 32px;
-    padding: 6px 9px;
-    font-size: 11px;
-}
-
-/* Modal forms */
-.vendor-modal-card {
-    width: min(760px, calc(100vw - 32px));
-}
-
-.vendor-delete-dialog {
-    width: min(480px, calc(100vw - 32px));
-}
-
-.vendor-payment-modal-card {
-    width: min(920px, calc(100vw - 32px));
-}
-
-.vendor-attachment-modal-card,
-.vendor-comment-modal-card {
-    width: min(680px, calc(100vw - 32px));
-}
-
-.vendor-payment-modal-card .master-modal-body,
-.vendor-attachment-modal-card .master-modal-body,
-.vendor-comment-modal-card .master-modal-body,
-.vendor-modal-card .master-modal-body {
-    max-height: min(70vh, 720px);
-    overflow-y: auto;
-}
-
-.vendor-payment-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-}
-
-.vendor-payment-grid > .master-field {
-    min-width: 0;
-}
-
-.vendor-payment-grid .master-field.full {
+.vendor-attachment-empty {
     grid-column: 1 / -1;
 }
 
-.vendor-payment-form .master-field,
-.vendor-attachment-form .master-field,
-.vendor-comment-form .master-field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+/* ---- comments ---- */
+
+.vendor-comment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
 }
 
-.vendor-sync-field .master-check {
+.vendor-comment {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+}
+
+.vendor-comment.is-pinned {
+    border-left: 3px solid var(--master-primary, #4f83f1);
+}
+
+.vendor-comment-head {
     display: flex;
     align-items: flex-start;
-    gap: 9px;
-    color: var(--mc-text);
-    cursor: pointer;
-    font-weight: 500;
-    line-height: 1.45;
+    justify-content: space-between;
+    gap: 12px;
 }
 
-.vendor-sync-field .master-check input {
-    flex: 0 0 auto;
-    margin-top: 2px;
+.vendor-comment-head form {
+    margin: 0;
 }
 
-.vendor-sync-hint {
-    display: block;
-    margin-top: 5px;
-    color: var(--mc-text-3);
-    font-size: 11px;
-    font-weight: 400;
-    line-height: 1.5;
-}
-
-.vendor-sync-link {
-    display: inline-flex;
-    width: fit-content;
-    margin-top: 5px;
-    padding: 3px 8px;
-    border: 1px solid rgba(79, 131, 241, .24);
-    border-radius: 999px;
-    background: rgba(79, 131, 241, .09);
-    color: var(--master-primary, #4f83f1);
-    font-size: 11px;
-    font-weight: 500;
-    text-decoration: none;
-}
-
-.vendor-sync-link:hover {
-    text-decoration: underline;
-}
-
-.vendor .master-empty-state {
+.vendor-comment-author {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.vendor-comment-author strong {
+    display: block;
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.vendor-comment-avatar {
+    flex: 0 0 auto;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 7px;
-    min-height: 120px;
-    padding: 22px;
-    border: 1px dashed var(--mc-border);
-    border-radius: 14px;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
     background: var(--mc-card-soft);
-    color: var(--mc-text-3);
-    text-align: center;
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-2);
+    font-size: 12px;
+    font-weight: 600;
 }
 
-.vendor .master-empty-state > i {
-    color: var(--master-primary, #4f83f1);
-    font-size: 18px;
-}
-
-.vendor .master-empty-state p {
-    max-width: 560px;
+.vendor-comment-body {
     margin: 0;
     color: var(--mc-text-2);
     font-size: 13px;
-    font-weight: 400;
+    line-height: 1.6;
+    white-space: pre-line;
+}
+
+/* ---- the ledger dialogs ---- */
+
+.vendor-payment-form .master-modal-grid {
+    row-gap: 14px;
+}
+
+.vendor-sync-field {
+    gap: 6px;
+}
+
+.vendor-sync-hint {
+    color: var(--mc-text-3);
+    font-size: 12px;
     line-height: 1.5;
 }
 
-.vendor .master-empty-state .vendor-inline-link {
-    margin-top: 3px;
+.vendor-row-delete {
+    color: var(--master-red, #ef4770);
 }
 
+/* The mirror checkbox: the field row reads as one line, and the box carries
+   the module's accent so a ticked sync is visible at a glance. */
+.vendor-sync-field .master-check {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.vendor-cashflow-sync {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--master-primary, #4f83f1);
+    cursor: pointer;
+}
+
+/* ---- payables, ageing and spend ---- */
+
+/* The five ages are one strip: a 1 px grid gap over the border token draws
+   every divider, so the strip divides the same way whether it is five cells
+   across a desk or two on a phone. */
+.vendor-ageing {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-border);
+    margin: 2px 0 14px;
+}
+
+.vendor-ageing-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
+    padding: 11px 14px;
+    background: var(--mc-card-soft);
+}
+
+.vendor-ageing-cell.is-zero .vendor-ageing-amount {
+    color: var(--mc-text-3);
+    font-weight: 500;
+}
+
+.vendor-ageing-label {
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.vendor-ageing-amount {
+    color: var(--mc-text);
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.vendor-ageing-count {
+    color: var(--mc-text-3);
+    font-size: 11px;
+}
+
+/* A heading inside a card: the card head answers "what is this", this answers
+   "what am I looking at now". */
+.vendor-subhead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* The shared table wrap opens 20px above itself; a subhead that belongs to the
+   table is part of it, so the gap closes to a line. */
+.vendor-subhead + .master-table-wrap {
+    margin-top: 8px;
+}
+
+.vendor-subhead-title {
+    margin: 0;
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.vendor-subhead-note {
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.vendor-panel-note {
+    margin: 10px 0 0;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.vendor-panel-note a {
+    color: var(--mc-text);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.vendor-jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 16px;
+    padding: 8px;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-card);
+}
+
+.vendor-jump a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 6px 10px;
+    border-radius: 9px;
+    color: var(--mc-text-2);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.vendor-jump a:hover,
+.vendor-jump a:focus-visible {
+    background: var(--mc-card-soft);
+    color: var(--master-primary, #4f83f1);
+    outline: none;
+}
+
+.vendor-jump-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* A composite tab stacks its blocks as cards. The guideline puts cards inside
+   a soft tab panel; each block is one of them, and what sits inside a block is
+   flat — the card is the only frame — except for tiles, which take the nested
+   treatment: the same surface with a quieter border. */
+.vendor-blocks {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.vendor-block-card {
+    padding: 18px 20px;
+}
+
+/* A money table needs every pixel: the padding belongs to the head and the
+   foot, and the first and last cells of the table carry their own inset so the
+   text still lines up with them. */
+.vendor-block-card > .vendor-table-bleed {
+    margin: 0 -20px;
+}
+
+.vendor-block-card > .vendor-table-bleed .master-table th:first-child,
+.vendor-block-card > .vendor-table-bleed .master-table td:first-child {
+    padding-left: 20px;
+}
+
+.vendor-block-card > .vendor-table-bleed .master-table th:last-child,
+.vendor-block-card > .vendor-table-bleed .master-table td:last-child {
+    padding-right: 20px;
+}
+
+.vendor-block-card .vendor-panel-head,
+.vendor-block-card .vendor-detail-grid + .vendor-detail-grid {
+    margin-bottom: 0;
+    margin-top: 0;
+}
+
+/* A second section inside one card — the ledger and its cashflow mirror — is
+   separated by a rule rather than by a card: the card is the frame. */
+.vendor-block-card .vendor-panel-head--spaced {
+    margin-top: 2px;
+    padding-top: 16px;
+    border-top: 1px solid var(--mc-border);
+}
+
+.vendor-block-card .vendor-detail-card,
+.vendor-block-card .vendor-table-card,
+.vendor-block-card > .master-card--flat {
+    gap: 12px;
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+}
+
+.vendor-block-card .vendor-product-card,
+.vendor-block-card .vendor-attachment {
+    border-color: var(--mc-border);
+    box-shadow: none;
+}
+
+/* The record's rows keep one rhythm: the spend card sits between two grids with
+   nothing to space it. Scoped to the panel's own children, because a card that
+   is the second cell of a grid row is an adjacent sibling too — a margin there
+   pushes that card down and the row stops lining up. */
+.vendor-show .master-tab-panel > .vendor-detail-grid + .vendor-detail-grid,
+.vendor-show .master-tab-panel > .vendor-detail-grid + .vendor-detail-card,
+.vendor-show .master-tab-panel > .vendor-detail-card + .vendor-detail-grid,
+.vendor-show .master-tab-panel > .vendor-detail-card + .vendor-detail-card {
+    margin-top: 16px;
+}
+
+.vendor-pill.is-alert {
+    border-color: rgba(239, 71, 112, .42);
+    color: var(--master-red, #ef4770);
+}
+
+.vendor-payable {
+    color: var(--mc-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.vendor-pick-cell {
+    width: 44px;
+}
+
+.vendor-index .vendor-table th.vendor-pick-cell,
+.vendor-index .vendor-table td.vendor-pick-cell {
+    width: 44px;
+    text-align: center;
+}
+
+/* A selected row keeps its tick visible beside the hover wash. */
+.vendor-index .vendor-row.is-picked td {
+    background: var(--mc-hover, var(--mc-card-soft));
+}
+
+/* ---- the attention strip on the overview ---- */
+
+.vendor-attention {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(239, 71, 112, .42);
+    border-radius: 16px;
+    background: var(--mc-card);
+}
+
+.vendor-attention-icon {
+    display: inline-flex;
+    flex: 0 0 36px;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: rgba(239, 71, 112, .14);
+    color: var(--master-red, #ef4770);
+}
+
+.vendor-attention-copy {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.vendor-attention-copy strong {
+    color: var(--mc-text);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.vendor-attention-copy span {
+    color: var(--mc-text-2);
+    font-size: 12px;
+}
+
+.vendor-detail-card--wide {
+    grid-column: 1 / -1;
+}
+
+.vendor-mini-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--mc-border);
+}
+
+.vendor-mini-row:first-child {
+    padding-top: 0;
+}
+
+.vendor-mini-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.vendor-mini-row > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.vendor-mini-row strong {
+    display: block;
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.vendor-mini-row small {
+    display: block;
+    margin-top: 2px;
+    color: var(--mc-text-3);
+    font-size: 11px;
+}
+
+.vendor-mini-row > b {
+    flex: 0 0 auto;
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* The bill table's action column is a button, not a number: it takes the
+   width it needs and never wraps the label onto two lines. */
+
+
+/* A money table reads row by row, so it takes a tighter row than the shared
+   18/20: the figures stay at body size and the air goes to the numbers rather
+   than around them. */
+/* The shared .master-table carries a 1280px floor for the list screens. A
+   money table has fewer, narrower columns than that, so it takes the card's
+   own width — the same way the client list sets its own floor. */
+.vendor-block-card .vendor-money-table {
+    width: 100%;
+    min-width: 0;
+}
+
+.vendor-money-table--ledger {
+    min-width: 860px;
+}
+
+.vendor-money-table--ledger th:nth-child(1) { width: 116px; }
+.vendor-money-table--ledger th:nth-child(4) { width: 152px; }
+.vendor-money-table--ledger th:nth-child(5) { width: 168px; }
+.vendor-money-table--ledger th:nth-child(6) { width: 150px; }
+
+.vendor-money-table--statement {
+    min-width: 720px;
+}
+
+.vendor-money-table--statement th:nth-child(1) { width: 104px; }
+.vendor-money-table--statement th:nth-child(4) { width: 172px; }
+.vendor-money-table--statement th:nth-child(5) { width: 152px; }
+.vendor-money-table--statement th:nth-child(6) { width: 216px; }
+
+.vendor-money-table--cashflow th:nth-child(1) { width: 96px; }
+.vendor-money-table--cashflow th:nth-child(3) { width: 168px; }
+.vendor-money-table--cashflow th:nth-child(4) { width: 228px; }
+
+.vendor-money-table--payables {
+    min-width: 720px;
+}
+
+.vendor-money-table--payables th:nth-child(1) { width: 32%; }
+.vendor-money-table--payables th:nth-child(2) { width: 132px; }
+.vendor-money-table--payables th:nth-child(5) { width: 170px; }
+
+.vendor-block-card .vendor-money-table th,
+.vendor-block-card .vendor-money-table td {
+    padding: 11px 14px;
+}
+
+.vendor-block-card .vendor-money-table td {
+    font-size: 13px;
+}
+
+.vendor-block-card .vendor-money-table th {
+    padding-top: 11px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+}
+
+/* "12 days late" is a badge, not a number: the semantic colour belongs on the
+   chip, and the date beside it stays plain text. */
+.vendor-late-chip {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 3px;
+    padding: 2px 8px;
+    border: 1px solid rgba(239, 71, 112, .42);
+    border-radius: 999px;
+    color: var(--master-red, #ef4770);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ---- the ledger by currency, on the statement ---- */
+
+.vendor-currency-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-border);
+    margin: 2px 0 0;
+}
+
+.vendor-currency-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    padding: 11px 14px;
+    background: var(--mc-card-soft);
+}
+
+.vendor-currency-label {
+    color: var(--mc-text);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .02em;
+}
+
+.vendor-currency-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    color: var(--mc-text-3);
+    font-size: 12px;
+}
+
+.vendor-currency-line strong {
+    color: var(--mc-text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---- the six-month spend bars ---- */
+
+.vendor-spend {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    height: 120px;
+    padding: 8px 0 4px;
+}
+
+.vendor-spend-bar {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    height: 100%;
+    min-width: 0;
+}
+
+.vendor-spend-fill {
+    width: 100%;
+    max-width: 46px;
+    border-radius: 8px 8px 3px 3px;
+    background: linear-gradient(180deg, rgba(79, 131, 241, .85), rgba(79, 131, 241, .35));
+}
+
+.vendor-spend-label {
+    color: var(--mc-text-3);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* ---- the activity trail ---- */
+
+.vendor-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.vendor-timeline-row {
+    margin: 0;
+}
+
+.vendor-timeline-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 6px 8px;
+    margin: 0 -8px;
+    border-radius: 12px;
+    color: inherit;
+    text-decoration: none;
+}
+
+a.vendor-timeline-item:hover,
+a.vendor-timeline-item:focus-visible {
+    background: var(--mc-card-soft);
+}
+
+.vendor-timeline-icon {
+    display: inline-flex;
+    flex: 0 0 32px;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-2);
+}
+
+.vendor-timeline-copy {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.vendor-timeline-copy strong {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.vendor-timeline-time {
+    flex: 0 0 auto;
+    color: var(--mc-text-3);
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+/* ---- the other-people list on the contacts tab ---- */
+
+.vendor-contact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.vendor-contact-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-card-soft);
+}
+
+.vendor-contact-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.vendor-contact-copy {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.vendor-contact-copy strong {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.vendor-contact-lines {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+}
+
+.vendor-contact-lines .vendor-contact-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ==========================================================================
+   4. THE FORM — resources/views/vendors/form.blade.php
+   The same composition as the client form page: heading, error summary,
+   jump nav, sectioned card, sticky actions. The shared pieces (header card,
+   field grid, labels, errors, actions) come from master-form / master-show.
+   ========================================================================== */
+
+.vendor-form .master-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.vendor-form-heading h1 {
+    margin: 0;
+    color: var(--mc-text);
+    font-size: 21px;
+    font-weight: 600;
+}
+
+.vendor-form-heading p {
+    margin: 6px 0 0;
+    max-width: 62ch;
+    color: var(--mc-text-2);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.vendor-form-heading .master-breadcrumb {
+    margin-top: 10px;
+}
+
+/* The jump nav is a control bar, not a row of buttons — the same shape and
+   states as the client form's. */
+.vendor-form-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 14px;
+    padding: 10px;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-card);
+}
+
+.vendor-form-nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 34px;
+    padding: 6px 10px;
+    border-radius: 9px;
+    color: var(--mc-text-2);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.vendor-form-nav a:hover,
+.vendor-form-nav a:focus-visible {
+    background: var(--mc-card-soft);
+    color: var(--master-primary, #4f83f1);
+    outline: none;
+}
+
+/* Each section is its own card inside the form card, so a long form reads as
+   a stack of named groups rather than one undivided sheet. */
+.vendor-form .master-form-card {
+    padding: 20px;
+}
+
+.vendor-form .vendor-form-section {
+    margin: 0 0 14px;
+    padding: 21px;
+    border: 1px solid var(--mc-border);
+    border-radius: 16px;
+    background: var(--mc-card);
+    scroll-margin-top: 90px;
+}
+
+.vendor-form .vendor-form-section:last-of-type {
+    margin-bottom: 0;
+}
+
+/* Two to three columns of fields. Three across from 992 px up — the shared
+   responsive layer already drops the band to two at 768–991 px and to one on
+   a phone — so nothing here has to re-declare those bands. */
+.vendor-form .master-detail-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 13px 18px;
+}
+
+.vendor-form .master-field {
+    min-width: 0;
+}
+
+.vendor-form .master-field.full {
+    grid-column: 1 / -1;
+}
+
+.vendor-form .master-field.two {
+    grid-column: span 2;
+}
+
+.vendor-form .master-textarea {
+    min-height: 108px;
+}
+
+.vendor-form .master-section-title {
+    margin: 0 0 5px;
+    color: var(--mc-text);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .02em;
+}
+
+/* The shared title draws a full-width rule in the primary colour; inside a
+   form section it reads as a divider, so it takes the border token. */
+.vendor-form .master-section-title::after {
+    background: var(--mc-border);
+}
+
+.vendor-form-section-note {
+    margin: 6px 0 16px;
+    max-width: 76ch;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.vendor-form-subsection + .vendor-form-subsection {
+    margin-top: 20px;
+}
+
+.vendor-form-subsection-title {
+    margin: 0 0 10px;
+    color: var(--mc-text-2);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.vendor-image-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.vendor-image-preview {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 84px;
+    height: 84px;
+    border-radius: 18px;
+    object-fit: cover;
+    background: var(--mc-card-soft);
+    border: 1px solid var(--mc-border);
+    color: var(--mc-text-3);
+    font-size: 24px;
+}
+
+.vendor-image-field {
+    flex: 1 1 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+}
+
+.vendor-form .master-actions.is-sticky {
+    padding: 16px 0 0;
+}
+
+/* ==========================================================================
+   5. RESPONSIVE — the shared breakpoint bands, module composition only
+   ========================================================================== */
+
 @media (max-width: 1199px) {
-    .vendor-index .master-stats {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .vendor-record-header {
-        align-items: flex-start;
-    }
-
-    .vendor-record-actions {
-        max-width: 360px;
-    }
+    .vendor-index .vendor-table th:nth-child(4) { width: 140px; }
+    .vendor-index .vendor-table th:nth-child(5) { width: 140px; }
 }
 
 @media (max-width: 991px) {
-    .vendor-overview-stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    .vendor-detail-grid {
+        grid-template-columns: minmax(0, 1fr);
     }
 
-    .vendor-statement-metrics {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    .vendor-ageing {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+
+    .vendor-block-card .vendor-detail-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .vendor-record-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .vendor-record-actions {
+        justify-content: flex-start;
+    }
+
 }
 
 @media (max-width: 767px) {
-    body[data-ui-module="vendors"] .vendor-detail-panels {
-        padding: 12px;
-    }
-
-    .vendor-index .master-stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .vendor-index .master-filter-row,
-    .vendor-form-header,
-    .vendor-record-header,
-    .vendor-statement-toolbar-head {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .vendor-index .master-search {
-        flex-basis: 100%;
-        min-width: 0;
-    }
-
     .vendor-record-identity {
         align-items: flex-start;
     }
 
-    .vendor-record-avatar {
-        width: 48px;
-        height: 48px;
-    }
-
-    .vendor-record-copy h1,
-    .vendor-form-heading h1 {
-        font-size: 20px;
-    }
-
-    .vendor-record-actions,
-    .vendor-record-actions .master-btn {
-        width: 100%;
-        max-width: none;
-    }
-
-    .vendor-detail-grid,
-    .vendor-overview-grid,
-    .vendor-product-grid,
-    .vendor-form .master-detail-grid,
-    .vendor-payment-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .vendor-form-card {
-        padding: 0 14px;
-    }
-
-    .vendor-form-section {
-        padding: 18px 0;
+    .vendor-record-mark {
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+        font-size: 16px;
     }
 
     .vendor-form-nav {
         flex-wrap: nowrap;
         overflow-x: auto;
-        padding-bottom: 5px;
     }
 
     .vendor-form-nav a {
-        flex: 0 0 auto;
+        white-space: nowrap;
     }
 
-    .vendor-form-actions {
-        position: static;
-        flex-direction: column-reverse;
-        margin: 0 -14px;
-        padding: 12px 14px;
+    .vendor-form .master-form-card {
+        padding: 10px;
     }
 
-    .vendor-form-actions .master-btn {
-        width: 100%;
+    .vendor-form .vendor-form-section {
+        padding: 16px;
     }
 
-    .vendor-detail-card,
-    .vendor-statement-filter-card,
-    .vendor-statement-entries {
-        padding: 14px;
+    .vendor-form .master-detail-grid {
+        grid-template-columns: minmax(0, 1fr);
     }
 
-    .vendor .master-facts {
-        grid-template-columns: 1fr;
-    }
-
-    .vendor .master-info.is-wide {
+    .vendor-form .master-field.full,
+    .vendor-form .master-field.two {
         grid-column: auto;
     }
 
-    .vendor .master-section-head,
-    .vendor-document-toolbar,
-    .vendor-comment-toolbar,
-    .vendor-shipment-toolbar,
-    .vendor-statement-toolbar-actions {
-        align-items: flex-start;
+    .vendor-form .master-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        margin: 12px -10px -10px;
+        padding: 12px 10px max(12px, env(safe-area-inset-bottom));
+        border-top: 1px solid var(--mc-border);
+        background: var(--mc-card);
     }
 
-    .vendor-document-toolbar,
-    .vendor-comment-toolbar,
-    .vendor-shipment-toolbar {
-        justify-content: flex-start;
+    .vendor-form .master-actions .master-btn {
+        flex: 1 1 0;
     }
 
-    .vendor-statement-toolbar-actions {
-        justify-content: flex-start;
+    .vendor-ageing {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .vendor-statement-other-currencies {
-        align-items: flex-start;
+    /* The tables become labelled cards here, so the bleed and its insets go. */
+    .vendor-block-card > .vendor-table-bleed {
+        margin: 0;
+    }
+
+    .vendor-block-card > .vendor-table-bleed .master-table th:first-child,
+    .vendor-block-card > .vendor-table-bleed .master-table td:first-child,
+    .vendor-block-card > .vendor-table-bleed .master-table th:last-child,
+    .vendor-block-card > .vendor-table-bleed .master-table td:last-child {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .vendor-jump {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    .vendor-jump a {
+        white-space: nowrap;
+    }
+
+    .vendor-panel-head {
         flex-direction: column;
+        align-items: stretch;
     }
 
-    .vendor-statement-metrics {
-        gap: 8px;
+    .vendor-panel-meta {
+        justify-content: flex-start;
     }
 
-    .vendor-statement-metric {
-        align-items: flex-start;
-        padding: 11px;
+    .vendor-mini-row {
+        flex-direction: column;
+        gap: 4px;
     }
 
-    .vendor-statement-metric .master-stat-value {
-        font-size: 15px;
+    .vendor-mini-row b {
+        text-align: left;
     }
 
-    .vendor-payment-modal-card,
-    .vendor-modal-card,
-    .vendor-attachment-modal-card,
-    .vendor-comment-modal-card,
-    .vendor-delete-dialog {
-        width: calc(100vw - 20px);
-        max-height: calc(100vh - 20px);
+    .vendor-attachment-grid,
+    .vendor-comment-grid,
+    .vendor-product-grid {
+        grid-template-columns: minmax(0, 1fr);
     }
 
-    .vendor-payment-modal-card .master-modal-body,
-    .vendor-attachment-modal-card .master-modal-body,
-    .vendor-comment-modal-card .master-modal-body,
-    .vendor-modal-card .master-modal-body {
-        max-height: calc(100vh - 210px);
-    }
-}
-
-@media (max-width: 420px) {
-    .vendor-index .master-stats,
-    .vendor-overview-stats,
-    .vendor-statement-metrics {
-        grid-template-columns: 1fr;
-    }
-
-    .vendor-stat-value {
-        font-size: 16px;
-    }
-
-    .vendor-record-meta {
-        gap: 6px;
+    .vendor-record-actions .master-btn {
+        flex: 1 1 auto;
+        justify-content: center;
     }
 }

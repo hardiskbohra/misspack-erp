@@ -57,11 +57,18 @@ class CommonHelper
      */
     public static function amount($amount, ?string $currency = 'INR'): string
     {
-        $code = strtoupper((string) ($currency ?: 'INR'));
+        return self::indianCurrency($amount, self::symbol($currency));
+    }
 
-        return $code === 'INR'
-            ? self::indianCurrency($amount)
-            : $code.' '.number_format((float) $amount, 2);
+    /** The sign a currency wears: ₹, $, ¥. Unknown codes keep the code itself. */
+    public static function symbol(?string $currency = 'INR'): string
+    {
+        return match (strtoupper((string) ($currency ?: 'INR'))) {
+            'INR' => self::SYMBOL,
+            'USD' => '$',
+            'RMB', 'CNY' => '¥',
+            default => strtoupper((string) $currency).' ',
+        };
     }
 
     /**
@@ -77,7 +84,7 @@ class CommonHelper
     {
         $code = strtoupper((string) ($code ?: 'INR'));
 
-        return $code === 'INR' ? self::SYMBOL : $code;
+        return self::symbol($code);
     }
 
     /**

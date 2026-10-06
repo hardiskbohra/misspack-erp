@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Lead;
 use App\Models\LeadMasterOption;
-use App\Models\VendorQuote;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,7 +25,6 @@ class LeadController extends Controller
 
         $query = Lead::query()
             ->with(['assignee', 'creator'])
-            ->withCount('vendorQuotes')
             ->search($search)
             ->when($status !== 'all', fn ($q) => $q->where('status', $status))
             ->when($priority !== 'all', fn ($q) => $q->where('priority', $priority))
@@ -129,7 +127,7 @@ class LeadController extends Controller
 
     public function show(Lead $lead): View
     {
-        $with = ['attachments', 'vendorQuotes.prices', 'customerQuotes.items', 'comments.creator', 'assignee', 'creator'];
+        $with = ['attachments', 'customerQuotes.items', 'comments.creator', 'assignee', 'creator'];
         if ($this->clientModelAvailable()) $with[] = 'client';
         $lead->load($with);
 
@@ -291,7 +289,6 @@ class LeadController extends Controller
             'finishOptions' => $this->masterOptions('finish', Lead::finishOptions()),
             'printingOptions' => $this->masterOptions('printing', Lead::printingOptions()),
             'currencyOptions' => $this->masterOptions('currency', Lead::currencyOptions()),
-            'quoteStatusOptions' => $this->masterOptions('quote_status', VendorQuote::statusOptions()),
             'commentTypeOptions' => \App\Models\LeadComment::typeOptions(),
             'clients' => $this->clients(),
             'users' => \App\Models\User::query()->orderBy('id')->get(),

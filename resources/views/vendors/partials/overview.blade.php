@@ -1,126 +1,166 @@
-<div class="vendor-overview-stack">
-    <div class="master-stats vendor-overview-stats" aria-label="Vendor activity and financial summary">
-        <div class="master-stat master-stat--flat blue">
-            <span class="icon"><i class="fa-solid fa-diagram-project" aria-hidden="true"></i></span>
-            <div><p class="master-stat-title">Running projects</p><p class="master-stat-value">{{ number_format($summary['running_projects']) }}</p></div>
+@php
+    /**
+     * The overview: who this vendor is, who answers the phone, what the money
+     * looks like, what the relationship has been worth, and what has happened
+     * lately. Every card links to the tab that owns the detail behind it.
+     */
+    $empty = fn ($value) => blank($value);
+    $overdue = $payables['overdue'] ?? 0;
+@endphp
+<section class="master-tab-panel" id="vendor-panel-overview" role="tabpanel" aria-labelledby="vendor-tab-overview">
+    @if ($overdue > 0)
+        {{-- The one thing on this page that says "do something today". --}}
+        <div class="vendor-attention">
+            <span class="vendor-attention-icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></span>
+            <div class="vendor-attention-copy">
+                <strong>{{ $money($overdue) }} is past its due date</strong>
+                <span>{{ $payables['overdue_count'] }} {{ \Illuminate\Support\Str::plural('bill', $payables['overdue_count']) }} on this vendor — oldest first, with the statement ready to send.</span>
+            </div>
+            <a class="master-btn master-btn-soft master-btn-sm" href="{{ $recordUrl('money') }}">
+                <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Open payables
+            </a>
         </div>
-        <div class="master-stat master-stat--flat purple">
-            <span class="icon"><i class="fa-solid fa-file-signature" aria-hidden="true"></i></span>
-            <div><p class="master-stat-title">Vendor quotes</p><p class="master-stat-value">{{ number_format($summary['vendor_quotes_count']) }}</p></div>
-        </div>
-        <div class="master-stat master-stat--flat orange">
-            <span class="icon"><i class="fa-solid fa-file-invoice" aria-hidden="true"></i></span>
-            <div><p class="master-stat-title">Bills · {{ $summary['vendor_currency'] }}</p><p class="master-stat-value">{{ $money($summary['vendor_bill_foreign'], $summary['vendor_currency']) }}</p></div>
-        </div>
-        <div class="master-stat master-stat--flat green">
-            <span class="icon"><i class="fa-solid fa-arrow-up-right-dots" aria-hidden="true"></i></span>
-            <div><p class="master-stat-title">Paid · {{ $summary['vendor_currency'] }}</p><p class="master-stat-value">{{ $money($summary['vendor_paid_foreign'], $summary['vendor_currency']) }}</p></div>
-        </div>
-        <div class="master-stat master-stat--flat red">
-            <span class="icon"><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i></span>
-            <div><p class="master-stat-title">Estimated balance · INR</p><p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($summary['need_to_pay']) }}</p></div>
-        </div>
-    </div>
+    @endif
 
     <div class="vendor-detail-grid">
-        <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-overview-profile-title">
-            <div class="master-section-head">
-                <h2 class="master-section-title" id="vendor-overview-profile-title">At a glance</h2>
-                <a class="vendor-inline-link" href="{{ $tabUrl('profile') }}">Business profile <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+        <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-snapshot-heading">
+            <div class="vendor-card-head">
+                <h2 class="vendor-detail-title" id="vendor-snapshot-heading">Supplier snapshot</h2>
+                <a class="vendor-card-link" href="{{ $recordUrl('profile') }}">Full profile</a>
             </div>
             <div class="master-facts">
-                <div class="master-info"><span>Vendor number</span><strong class="{{ blank($vendor->vendor_number) ? 'master-empty-value' : '' }}">{{ $vendor->vendor_number ?: 'Not assigned' }}</strong></div>
-                <div class="master-info"><span>Vendor type</span><strong>{{ $vendor->typeLabel() }}</strong></div>
-                <div class="master-info"><span>Category</span><strong class="{{ blank($vendor->category) ? 'master-empty-value' : '' }}">{{ $vendor->category ?: 'Not on file' }}</strong></div>
-                <div class="master-info"><span>Country</span><strong class="{{ blank($vendor->country) ? 'master-empty-value' : '' }}">{{ $vendor->country ?: 'Not on file' }}</strong></div>
-                <div class="master-info is-wide"><span>Primary contact</span>
-                    @if ($vendor->contact_person_name)
-                        <strong>{{ $vendor->contact_person_name }}</strong>
+                <div class="master-info"><span>Vendor number</span><strong @class(['master-empty-value' => $empty($vendor->vendor_number)])>{{ $vendor->vendor_number ?: 'Not on file' }}</strong></div>
+                <div class="master-info"><span>Type</span><strong>{{ $vendor->typeLabel() }}</strong></div>
+                <div class="master-info"><span>Category</span><strong @class(['master-empty-value' => $empty($vendor->category)])>{{ $vendor->category ?: 'Not on file' }}</strong></div>
+                <div class="master-info"><span>Brand</span><strong @class(['master-empty-value' => $empty($vendor->brand_name)])>{{ $vendor->brand_name ?: 'Not on file' }}</strong></div>
+                <div class="master-info"><span>Status</span><strong><span class="master-badge status-{{ str_replace('_', '-', $vendor->status) }}">{{ $vendor->statusLabel() }}</span></strong></div>
+                <div class="master-info"><span>Rating</span><strong @class(['master-empty-value' => ! $vendor->rating])>{{ $vendor->rating ? str_repeat('★', $vendor->rating).' ('.$vendor->rating.' of 5)' : 'Not rated' }}</strong></div>
+                <div class="master-info"><span>Preferred currency</span><strong>{{ $vendor->preferred_currency ?: 'INR' }}</strong></div>
+                <div class="master-info"><span>Lead time</span><strong @class(['master-empty-value' => $vendor->lead_time_days === null])>{{ $vendor->lead_time_days !== null ? $vendor->lead_time_days.' days' : 'Not set' }}</strong></div>
+                <div class="master-info"><span>Payment terms</span><strong @class(['master-empty-value' => $empty($vendor->payment_terms)])>{{ $vendor->payment_terms ?: 'Not on file' }}</strong></div>
+                <div class="master-info"><span>Record created</span><strong @class(['master-empty-value' => ! $vendor->created_at])>{{ $vendor->created_at?->format('d M Y') ?: '—' }}@if ($vendor->creator) <span class="vendor-detail-note">by {{ $vendor->creator->name }}</span>@endif</strong></div>
+            </div>
+        </section>
+
+        <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-overview-contact-heading">
+            <div class="vendor-card-head">
+                <h2 class="vendor-detail-title" id="vendor-overview-contact-heading">Primary contact</h2>
+                <a class="vendor-card-link" href="{{ $recordUrl('contacts') }}">
+                    {{ $contactsAvailable && $vendor->relationLoaded('contacts') && $vendor->contacts->count() ? $vendor->contacts->count().' others' : 'All contacts' }}
+                </a>
+            </div>
+            <div class="master-facts">
+                <div class="master-info"><span>Contact person</span><strong @class(['master-empty-value' => $empty($vendor->contact_person_name)])>{{ $vendor->contact_person_name ?: 'Not on file' }}</strong></div>
+                <div class="master-info"><span>Email</span>
+                    @if ($vendor->contact_person_email)
+                        <a class="vendor-detail-link" href="mailto:{{ $vendor->contact_person_email }}">{{ $vendor->contact_person_email }}</a>
                     @else
-                        <strong class="master-empty-value">No contact on file</strong>
+                        <strong class="master-empty-value">Not on file</strong>
+                    @endif
+                </div>
+                <div class="master-info"><span>Mobile</span>
+                    @if ($vendor->contact_person_mobile)
+                        <a class="vendor-detail-link" href="tel:{{ preg_replace('/[^0-9+]/', '', $vendor->contact_person_mobile) }}">{{ $vendor->contact_person_mobile }}</a>
+                    @else
+                        <strong class="master-empty-value">Not on file</strong>
+                    @endif
+                </div>
+                <div class="master-info"><span>WhatsApp</span><strong @class(['master-empty-value' => $empty($vendor->whatsapp_number)])>{{ $vendor->whatsapp_number ?: 'Not on file' }}</strong></div>
+                <div class="master-info"><span>Alternate contact</span><strong @class(['master-empty-value' => $empty($vendor->alternate_contact)])>{{ $vendor->alternate_contact ?: 'Not on file' }}</strong></div>
+                <div class="master-info"><span>Website</span>
+                    @if ($vendor->website)
+                        <a class="vendor-detail-link" href="{{ $vendor->website }}" target="_blank" rel="noopener noreferrer">{{ $vendor->website }}</a>
+                    @else
+                        <strong class="master-empty-value">Not on file</strong>
                     @endif
                 </div>
             </div>
+            <div class="vendor-detail-actions">
+                @if ($vendor->contact_person_email)
+                    <a class="master-btn master-btn-soft master-btn-sm" href="mailto:{{ $vendor->contact_person_email }}">
+                        <i class="fa-regular fa-envelope" aria-hidden="true"></i> Email
+                    </a>
+                @endif
+                @if ($vendor->contact_person_mobile)
+                    <a class="master-btn master-btn-soft master-btn-sm" href="tel:{{ preg_replace('/[^0-9+]/', '', $vendor->contact_person_mobile) }}">
+                        <i class="fa-solid fa-phone" aria-hidden="true"></i> Call
+                    </a>
+                @endif
+                <a class="master-btn master-btn-light master-btn-sm" href="{{ $recordUrl('contacts') }}">
+                    <i class="fa-regular fa-address-book" aria-hidden="true"></i> Contacts
+                </a>
+            </div>
         </section>
 
-        <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-overview-finance-title">
-            <div class="master-section-head">
-                <h2 class="master-section-title" id="vendor-overview-finance-title">Account snapshot</h2>
-                <a class="vendor-inline-link" href="{{ $tabUrl('statement') }}">View statement <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+        <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-overview-money-heading">
+            <div class="vendor-card-head">
+                <h2 class="vendor-detail-title" id="vendor-overview-money-heading">Money at a glance</h2>
+                <a class="vendor-card-link" href="{{ $recordUrl('money') }}">Open money tab</a>
             </div>
             <div class="master-facts">
-                <div class="master-info"><span>Vendor currency</span><strong>{{ $summary['vendor_currency'] }}</strong></div>
-                <div class="master-info"><span>Vendor bills</span><strong>{{ $money($summary['vendor_bill_foreign'], $summary['vendor_currency']) }}</strong></div>
-                <div class="master-info"><span>Paid to vendor</span><strong>{{ $money($summary['vendor_paid_foreign'], $summary['vendor_currency']) }}</strong></div>
-                <div class="master-info"><span>Vendor expenses</span><strong>{{ $money($summary['vendor_expense_foreign'], $summary['vendor_currency']) }}</strong></div>
-                <div class="master-info is-wide"><span>INR paid / estimated balance</span><strong>{{ \App\Helpers\CommonHelper::indianCurrency($summary['paid_to_vendor']) }} <span class="vendor-muted-inline">paid</span> · {{ \App\Helpers\CommonHelper::indianCurrency($summary['need_to_pay']) }} <span class="vendor-muted-inline">estimated balance</span></strong></div>
+                <div class="master-info"><span>Outstanding</span><strong class="{{ $payables['outstanding'] > 0 ? 'vendor-amount-debit' : '' }}">{{ $money($payables['outstanding']) }}</strong></div>
+                <div class="master-info"><span>Overdue</span><strong class="{{ $overdue > 0 ? 'vendor-amount-debit' : 'master-empty-value' }}">{{ $overdue > 0 ? $money($overdue) : 'Nothing late' }}</strong></div>
+                <div class="master-info"><span>Next due</span><strong @class(['master-empty-value' => ! $payables['next_due']])>{{ $payables['next_due']?->format('d M Y') ?: 'No due date set' }}</strong></div>
+                <div class="master-info"><span>Open bills</span><strong>{{ number_format(count($payables['rows'])) }}</strong></div>
+                <div class="master-info"><span>Billed, all time</span><strong>{{ $money($performance['billed']) }}</strong></div>
+                <div class="master-info"><span>Settled</span><strong>{{ $performance['settled_percent'] }}%</strong></div>
+                <div class="master-info"><span>Balance</span><strong @class(['vendor-amount-negative' => $summary['vendor_balance_foreign'] > 0])>{{ $money($summary['vendor_balance_foreign']) }}</strong></div>
+                <div class="master-info"><span>Ledger entries</span><strong>{{ number_format($summary['statement_count']) }}</strong></div>
+            </div>
+        </section>
+
+        <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-overview-record-heading">
+            <div class="vendor-card-head">
+                <h2 class="vendor-detail-title" id="vendor-overview-record-heading">What is on the record</h2>
+                <a class="vendor-card-link" href="{{ $recordUrl('procurement') }}">Procurement</a>
+            </div>
+            <div class="master-facts">
+                <div class="master-info"><span>Project products</span><strong>{{ number_format($summary['project_products_count']) }}</strong></div>
+                <div class="master-info"><span>Running projects</span><strong>{{ number_format($summary['running_projects']) }}</strong></div>
+                <div class="master-info"><span>Products supplied</span><strong>{{ number_format($summary['products_count']) }}</strong></div>
+                <div class="master-info"><span>Shipments</span><strong>{{ number_format($summary['shipments_count']) }}</strong></div>
+                <div class="master-info"><span>Documents</span><strong>{{ number_format($summary['attachments_count']) }}</strong></div>
+                <div class="master-info"><span>Comments</span><strong>{{ $vendor->relationLoaded('comments') ? number_format($vendor->comments->count()) : '—' }}</strong></div>
+                <div class="master-info is-wide"><span>Internal notes</span><strong class="vendor-detail-notes {{ blank($vendor->notes) ? 'master-empty-value' : '' }}">{{ $vendor->notes ?: 'No internal notes on file' }}</strong></div>
+            </div>
+            <div class="vendor-detail-actions">
+                <a class="master-btn master-btn-soft master-btn-sm" href="{{ $recordUrl('documents') }}">
+                    <i class="fa-regular fa-folder-open" aria-hidden="true"></i> Documents
+                </a>
+                <a class="master-btn master-btn-soft master-btn-sm" href="{{ $recordUrl('procurement') }}">
+                    <i class="fa-solid fa-truck" aria-hidden="true"></i> Shipments
+                </a>
             </div>
         </section>
     </div>
 
-    <div class="vendor-overview-grid">
-        <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-recent-projects-title">
-            <div class="master-section-head">
-                <h2 class="master-section-title" id="vendor-recent-projects-title">Recent project products</h2>
-                <a class="vendor-inline-link" href="{{ $tabUrl('projects') }}">All projects <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+    @include('vendors.partials.performance')
+
+    <div class="vendor-detail-grid vendor-detail-grid--lists">
+        <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-activity-heading">
+            <div class="vendor-card-head">
+                <h2 class="vendor-detail-title" id="vendor-activity-heading">Recent activity</h2>
+                <span class="vendor-card-link">Last {{ count($vendorActivity) }}</span>
             </div>
-            <div class="vendor-activity-list">
-                @forelse ($projectProducts->take(4) as $row)
-                    @php($overviewProject = $row->relationLoaded('project') ? $row->project : null)
-                    <div class="vendor-activity-row">
-                        <div class="vendor-activity-copy">
-                            <strong>{{ $row->product_name ?: 'Project product' }}</strong>
-                            <span>{{ $overviewProject?->project_number ?: 'No project linked' }} · {{ $row->statusLabel() }}</span>
-                        </div>
-                        <strong class="vendor-activity-value">{{ $money($row->total_amount, $row->currency ?: 'INR') }}</strong>
-                    </div>
-                @empty
-                    <div class="master-empty-state"><i class="fa-solid fa-diagram-project" aria-hidden="true"></i><p>No project products are linked to this vendor yet.</p></div>
-                @endforelse
-            </div>
+            @include('vendors.partials.timeline')
         </section>
 
-        <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-recent-payments-title">
-            <div class="master-section-head">
-                <h2 class="master-section-title" id="vendor-recent-payments-title">Recent ledger activity</h2>
-                <a class="vendor-inline-link" href="{{ $tabUrl('payments') }}">Open payments <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+        <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-latest-projects-heading">
+            <div class="vendor-card-head">
+                <h2 class="vendor-detail-title" id="vendor-latest-projects-heading">Latest project products</h2>
+                <a class="vendor-card-link" href="{{ $recordUrl('procurement') }}">All projects</a>
             </div>
-            <div class="vendor-activity-list">
-                @forelse ($vendorPaymentEntries->sortByDesc('transaction_date')->take(4) as $entry)
-                    <div class="vendor-activity-row">
-                        <div class="vendor-activity-copy">
-                            <strong>{{ $entry->particular }}</strong>
-                            <span>{{ optional($entry->transaction_date)->format('d M Y') ?: 'No date' }} · {{ $entry->categoryLabel() }}</span>
-                        </div>
-                        <strong class="vendor-activity-value {{ $entry->transaction_type === 'debit' ? 'is-positive' : 'is-neutral' }}">
-                            {{ $money($entry->foreign_amount, $entry->foreign_currency ?: $summary['vendor_currency']) }}
-                        </strong>
+            @forelse($projectProducts->take(5) as $row)
+                <div class="vendor-mini-row">
+                    <div>
+                        <strong>{{ $row->product_name }}</strong>
+                        <small>{{ $row->project?->project_number ?? 'No project' }} · {{ $row->statusLabel() }}</small>
                     </div>
-                @empty
-                    <div class="master-empty-state"><i class="fa-solid fa-receipt" aria-hidden="true"></i><p>No manual vendor ledger entries have been recorded.</p></div>
-                @endforelse
-            </div>
-        </section>
-
-        <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-recent-notes-title">
-            <div class="master-section-head">
-                <h2 class="master-section-title" id="vendor-recent-notes-title">Team notes</h2>
-                <a class="vendor-inline-link" href="{{ $tabUrl('comments') }}">View notes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
-            </div>
-            <div class="vendor-activity-list">
-                @if ($commentsAvailable)
-                    @forelse ($vendor->comments->take(3) as $comment)
-                        <article class="vendor-note-preview">
-                            <div class="vendor-note-meta"><strong>{{ $comment->creator?->name ?? 'Team' }}</strong><span>{{ $comment->created_at?->format('d M Y') ?: '' }}@if($comment->is_pinned) · Pinned @endif</span></div>
-                            <p>{{ \Illuminate\Support\Str::limit($comment->body, 120) }}</p>
-                        </article>
-                    @empty
-                        <div class="master-empty-state"><i class="fa-regular fa-note-sticky" aria-hidden="true"></i><p>No team notes yet.</p></div>
-                    @endforelse
-                @else
-                    <div class="master-empty-state"><i class="fa-regular fa-note-sticky" aria-hidden="true"></i><p>Team notes are currently unavailable.</p></div>
-                @endif
-            </div>
+                    <b class="is-num">{{ $money($row->total_amount, $row->currency) }}</b>
+                </div>
+            @empty
+                <p class="vendor-empty-text">No project product mapping yet. Map a product to this vendor from a project.</p>
+            @endforelse
         </section>
     </div>
-</div>
+</section>

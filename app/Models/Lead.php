@@ -54,11 +54,6 @@ class Lead extends Model
         return $this->hasMany(LeadAttachment::class);
     }
 
-    public function vendorQuotes()
-    {
-        return $this->hasMany(VendorQuote::class);
-    }
-
     public function customerQuotes()
     {
         return $this->hasMany(\App\Models\LeadQuote::class, 'lead_id');

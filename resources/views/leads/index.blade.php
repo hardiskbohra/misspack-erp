@@ -49,8 +49,7 @@
                             target="_blank" class="master-btn master-btn-light">Public Link</a><a
                             href="{{ route('lead-quotes.index') }}" class="master-btn master-btn-light">Lead
                             Quotes</a><a href="{{ route('leads.settings.index') }}"
-                            class="master-btn master-btn-light">Settings</a><a href="{{ route('vendor-quotes.index') }}"
-                            class="master-btn master-btn-light">Vendor Quotes</a></div>
+                            class="master-btn master-btn-light">Settings</a></div>
                 </div>
                 <x-drawer id="leadFiltersDrawer" title="Filter leads" eyebrow="Lead filters"
                     subtitle="Narrow the pipeline by status, priority, source, or owner." size="medium">
@@ -114,7 +113,6 @@
                             <th class="ui-mobile-secondary">Qty / Capacity</th>
                             <th class="ui-mobile-secondary">Finish / Print</th>
                             <th class="ui-mobile-secondary">Assigned</th>
-                            <th class="ui-mobile-secondary">Quotes</th>
                             <th>Status</th>
                             <th>Action</th>
                         </tr>
@@ -147,7 +145,6 @@
                                         class="master-sub">{{ $printingOptions[$lead->printing_required] ?? '-' }}</span>
                                 </td>
                                 <td data-label="Assigned" class="ui-mobile-secondary">{{ $lead->assignee?->name ?? ($lead->assignee?->email ?? '-') }}</td>
-                                <td data-label="Quotes" class="ui-mobile-secondary">{{ $lead->vendor_quotes_count }}</td>
                                 <td data-label="Status"><span
                                         class="master-badge priority-{{ $lead->priority }}">{{ $lead->priorityLabel() }}</span>
                                     <form method="POST" action="{{ route('leads.status.update', $lead) }}"
@@ -186,16 +183,7 @@
                                                     <i class="fas fa-pen"></i>
                                                     Quick Lead Quote
                                                 </a>
-                                    
-                                                <button
-                                                    type="button"
-                                                    class="openQuickQuoteModal"
-                                                    data-lead-id="{{ $lead->id }}">
-                                                    <i class="fas fa-indian-rupee-sign"></i>
-                                                    Quick Vendor Quote
-                                                </button>
-                                    
-                                                <button
+                                                                                    <button
                                                     type="button"
                                                     class="lead-quotes-btn"
                                                     data-lead-id="{{ $lead->id }}">
@@ -223,7 +211,7 @@
                                     </div>
                                 </td>
                         </tr>@empty<tr>
-                                <td colspan="8">
+                                <td colspan="7">
                                     <div class="master-empty">No leads found. Create your first sales lead.</div>
                                 </td>
                             </tr>

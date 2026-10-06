@@ -95,8 +95,8 @@ check('vendor and project indexes provide a quick-detail drawer example',
 const filterDrawerPages = [
     'resources/views/clients/index.blade.php',
     'resources/views/users/index.blade.php',
+    'resources/views/office_services/index.blade.php',
     'resources/views/vendors/index.blade.php',
-    'resources/views/vendor_quotes/index.blade.php',
     'resources/views/leads/index.blade.php',
     'resources/views/lead_quotes/index.blade.php',
     'resources/views/projects/index.blade.php',
@@ -117,7 +117,6 @@ const filterDrawerPages = [
     'resources/views/client_portal/statements/index.blade.php',
     'resources/views/client_portal/products/index.blade.php',
     'resources/views/client_portal/quotes/index.blade.php',
-    'resources/views/dashboard/index.blade.php',
 ];
 const missingFilterDrawers = filterDrawerPages.filter((file) => {
     const source = read(file);

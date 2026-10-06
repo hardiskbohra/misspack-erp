@@ -1,41 +1,33 @@
-<div class="vendor-detail-grid">
-    <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-profile-heading">
-        <h2 class="master-section-title" id="vendor-profile-heading">Business profile</h2>
-        <div class="master-facts">
-            <div class="master-info"><span>Company name</span><strong>{{ $vendor->vendor_name }}</strong></div>
-            <div class="master-info"><span>Vendor number</span><strong class="{{ blank($vendor->vendor_number) ? 'master-empty-value' : '' }}">{{ $vendor->vendor_number ?: 'Not assigned' }}</strong></div>
-            <div class="master-info"><span>Brand name</span><strong class="{{ blank($vendor->brand_name) ? 'master-empty-value' : '' }}">{{ $vendor->brand_name ?: 'Not on file' }}</strong></div>
-            <div class="master-info"><span>Vendor type</span><strong>{{ $vendor->typeLabel() }}</strong></div>
-            <div class="master-info"><span>Category</span><strong class="{{ blank($vendor->category) ? 'master-empty-value' : '' }}">{{ $vendor->category ?: 'Not on file' }}</strong></div>
-            <div class="master-info"><span>Account status</span><strong><span class="master-badge vendor-status vendor-status-{{ $statusClass }}">{{ $vendor->statusLabel() }}</span></strong></div>
-            <div class="master-info"><span>Supplier rating</span>
-                @if ($vendor->rating)
-                    <strong><span class="vendor-rating" aria-label="{{ $vendor->rating }} out of 5 stars">{{ str_repeat('★', $vendor->rating) }}<span>{{ str_repeat('☆', 5 - $vendor->rating) }}</span></span> <span class="vendor-muted-inline">{{ $vendor->rating }} of 5</span></strong>
-                @else
-                    <strong class="master-empty-value">Not rated</strong>
-                @endif
+@php($empty = fn ($value) => blank($value))
+<section class="master-tab-panel" id="vendor-panel-profile" role="tabpanel" aria-labelledby="vendor-tab-profile">
+    <div class="vendor-detail-grid">
+        <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-profile-identity-heading">
+            <h2 class="vendor-detail-title" id="vendor-profile-identity-heading">Identity</h2>
+            <div class="master-facts">
+                <div class="master-info"><span>Vendor number</span><strong @class(['master-empty-value' => $empty($vendor->vendor_number)])>{{ $vendor->vendor_number ?: 'Not on file' }}</strong></div>
+                <div class="master-info"><span>Vendor name</span><strong>{{ $vendor->vendor_name }}</strong></div>
+                <div class="master-info"><span>Brand name</span><strong @class(['master-empty-value' => $empty($vendor->brand_name)])>{{ $vendor->brand_name ?: 'Not on file' }}</strong></div>
+                <div class="master-info"><span>Vendor type</span><strong>{{ $vendor->typeLabel() }}</strong></div>
+                <div class="master-info"><span>Category</span><strong @class(['master-empty-value' => $empty($vendor->category)])>{{ $vendor->category ?: 'Not on file' }}</strong></div>
+                <div class="master-info"><span>Status</span><strong><span class="master-badge status-{{ str_replace('_', '-', $vendor->status) }}">{{ $vendor->statusLabel() }}</span></strong></div>
+                <div class="master-info"><span>Rating</span><strong @class(['master-empty-value' => ! $vendor->rating])>{{ $vendor->rating ? str_repeat('★', $vendor->rating).' ('.$vendor->rating.' of 5)' : 'Not rated' }}</strong></div>
+                <div class="master-info"><span>Record created</span><strong>{{ $vendor->created_at?->format('d M Y') ?: '—' }}</strong></div>
+                <div class="master-info"><span>Added by</span><strong @class(['master-empty-value' => ! $vendor->creator])>{{ $vendor->creator?->name ?: 'Not on file' }}</strong></div>
+                <div class="master-info"><span>Last updated</span><strong>{{ $vendor->updated_at?->format('d M Y, h:i A') ?: '—' }}</strong></div>
             </div>
-            <div class="master-info"><span>Record created</span><strong>{{ $vendor->created_at?->format('d M Y') ?: '—' }}</strong></div>
-            <div class="master-info is-wide"><span>Created by</span><strong class="{{ blank($vendor->creator?->name) ? 'master-empty-value' : '' }}">{{ $vendor->creator?->name ?? $vendor->creator?->email ?? 'Not on file' }}</strong></div>
-        </div>
-    </section>
+            <div class="vendor-detail-actions">
+                <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('vendors.edit', $vendor) }}">
+                    <i class="fa-solid fa-pen" aria-hidden="true"></i> Edit these details
+                </a>
+            </div>
+        </section>
 
-    <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-location-heading">
-        <h2 class="master-section-title" id="vendor-location-heading">Location & online presence</h2>
-        <div class="master-facts">
-            <div class="master-info is-wide"><span>Business address</span>
-                @if ($vendorAddress)
-                    <address class="vendor-detail-address">{{ $vendorAddress }}</address>
-                @else
-                    <strong class="master-empty-value">Not on file</strong>
-                @endif
+        <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-profile-notes-heading">
+            <h2 class="vendor-detail-title" id="vendor-profile-notes-heading">Internal notes</h2>
+            <div class="master-facts">
+                <div class="master-info is-wide"><span>Notes</span><strong class="vendor-detail-notes {{ $empty($vendor->notes) ? 'master-empty-value' : '' }}">{{ $vendor->notes ?: 'No notes on file' }}</strong></div>
             </div>
-            <div class="master-info"><span>City</span><strong class="{{ blank($vendor->city) ? 'master-empty-value' : '' }}">{{ $vendor->city ?: 'Not on file' }}</strong></div>
-            <div class="master-info"><span>State / province</span><strong class="{{ blank($vendor->state) ? 'master-empty-value' : '' }}">{{ $vendor->state ?: 'Not on file' }}</strong></div>
-            <div class="master-info"><span>Country</span><strong class="{{ blank($vendor->country) ? 'master-empty-value' : '' }}">{{ $vendor->country ?: 'Not on file' }}</strong></div>
-            <div class="master-info"><span>Postal code</span><strong class="{{ blank($vendor->pincode) ? 'master-empty-value' : '' }}">{{ $vendor->pincode ?: 'Not on file' }}</strong></div>
-            <div class="master-info"><span>Website</span><strong class="vendor-profile-url {{ blank($vendor->website) ? 'master-empty-value' : '' }}">{{ $vendor->website ?: 'Not on file' }}</strong></div>
-            <div class="master-info is-wide"><span>Alibaba profile</span><strong class="vendor-profile-url {{ blank($vendor->alibaba_link) ? 'master-empty-value' : '' }}">{{ $vendor->alibaba_link ?: 'Not on file' }}</strong></div>
-        </div>
-    </section>
-</div>
+            <p class="vendor-detail-help">Notes are for your team only. They are never printed on vendor-facing paperwork.</p>
+        </section>
+    </div>
+</section>

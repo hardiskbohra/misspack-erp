@@ -21,7 +21,7 @@
                 ({{ $linkedVendorPayment->relationLoaded('vendor') && $linkedVendorPayment->vendor ? $linkedVendorPayment->vendor->vendor_name : 'Vendor' }}).
                 Amount, date, reference and account come from the vendor ledger —
                 @if (\Illuminate\Support\Facades\Route::has('vendors.show'))
-                    <a href="{{ route('vendors.show', ['vendor' => $linkedVendorPayment->vendor_id, 'tab' => 'payments']) }}">edit the vendor payment</a> to change them here as well.
+                    <a href="{{ route('vendors.show', $linkedVendorPayment->vendor_id) }}#payments">edit the vendor payment</a> to change them here as well.
                 @else
                     edit the vendor payment to change them here as well.
                 @endif
@@ -177,6 +177,10 @@
                 <div class="master-field"><label class="master-label">Vendor</label><select class="master-select" name="vendor_id">
                         <option value="">No vendor</option>@foreach($vendors as $vendor)<option
                         value="{{ $vendor->id }}" @selected((string) old('vendor_id', $entry->vendor_id) === (string) $vendor->id)>{{ $vendor->vendor_name }}</option>@endforeach
+                    </select></div>
+                <div class="master-field"><label class="master-label">Office service</label><select class="master-select" name="office_service_id">
+                        <option value="">No office service</option>@foreach(($officeServices ?? []) as $officeService)<option
+                        value="{{ $officeService->id }}" @selected((string) old('office_service_id', $entry->office_service_id) === (string) $officeService->id)>{{ $officeService->name }} — {{ $officeService->classLabel() }}</option>@endforeach
                     </select></div>
                 {{-- The link the free-text name never had: "paid to Ramesh" becomes
                      a row against Ramesh, so the report can group by him and the

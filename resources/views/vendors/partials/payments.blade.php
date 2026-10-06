@@ -1,171 +1,164 @@
-@php
-    $paymentLedgerAvailable = \Illuminate\Support\Facades\Schema::hasTable('vendor_payment_entries');
-    $cashflowRows = $statementEntries->filter(fn ($entry) => (float) ($entry->debit_amount ?? 0) > 0 || (float) ($entry->credit_amount ?? 0) > 0);
-@endphp
-
-<div class="vendor-detail-stack">
-    <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-payments-heading">
-        <div class="master-section-head">
-            <div>
-                <h2 class="master-section-title" id="vendor-payments-heading">Vendor currency ledger</h2>
-                <p class="master-sub">Bills, payments, adjustments and supporting documents in the vendor's currency.</p>
-            </div>
-            @if ($paymentLedgerAvailable)
-                <button type="button" class="master-btn master-btn-primary" id="openAddPaymentModal">
-                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Add ledger entry
-                </button>
-            @endif
-        </div>
-
-        @if ($paymentLedgerAvailable)
-            <div class="master-table-wrap ui-mobile-cards">
-                <table class="master-table vendor-detail-table vendor-payment-table">
-                    <thead>
-                        <tr>
-                            <th scope="col">Date / invoice</th>
-                            <th scope="col">Particular</th>
-                            <th scope="col">Credit / bill</th>
-                            <th scope="col">Debit / paid</th>
-                            <th scope="col">₹ equivalent</th>
-                            <th scope="col">Account / mode</th>
-                            <th scope="col">Status / cashflow</th>
-                            <th scope="col">Proof</th>
-                            <th scope="col"><span class="visually-hidden">Actions</span></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($vendorPaymentEntries->sortByDesc('transaction_date') as $entry)
-                            @php
-                                $entryAttachments = $entry->relationLoaded('attachments') ? $entry->attachments : collect();
-                                $entryProject = $entry->relationLoaded('project') ? $entry->project : null;
-                            @endphp
-                            <tr>
-                                <td data-label="Date / invoice">
-                                    <strong>{{ optional($entry->transaction_date)->format('d M Y') ?: '—' }}</strong>
-                                    <span class="vendor-table-meta">{{ $entry->invoice_number ?: 'No bill number' }}</span>
-                                </td>
-                                <td data-label="Particular">
-                                    <strong>{{ $entry->particular }}</strong>
-                                    <span class="vendor-table-meta">{{ $entry->categoryLabel() }} · {{ $entryProject?->project_number ?: ($entryProject ? 'Project #'.$entryProject->id : 'No project') }}</span>
-                                    @if ($entry->remarks)<span class="vendor-table-meta">{{ $entry->remarks }}</span>@endif
-                                </td>
-                                <td data-label="Credit / bill" class="vendor-numeric vendor-amount-credit">
-                                    {{ $entry->transaction_type === 'credit' ? $money($entry->foreign_amount, $entry->foreign_currency ?: 'RMB') : '—' }}
-                                </td>
-                                <td data-label="Debit / paid" class="vendor-numeric vendor-amount-debit">
-                                    {{ $entry->transaction_type === 'debit' ? $money($entry->foreign_amount, $entry->foreign_currency ?: 'RMB') : '—' }}
-                                </td>
-                                <td data-label="₹ equivalent" class="vendor-numeric">
-                                    {{ $money($entry->amount_in_inr, 'INR') }}
-                                    <span class="vendor-table-meta">Rate {{ $entry->exchange_rate ? number_format((float) $entry->exchange_rate, 4) : '—' }}</span>
-                                </td>
-                                <td data-label="Account / mode">
-                                    <span>{{ $entry->relationLoaded('paidAccount') ? ($entry->paidAccount?->account_name ?: 'No account') : 'No account' }}</span>
-                                    <span class="vendor-table-meta">{{ $paymentOptions['mode'][$entry->payment_mode] ?? ($entry->payment_mode ? \Illuminate\Support\Str::headline($entry->payment_mode) : 'No payment mode') }}</span>
-                                    @if ($entry->bank_reference_number)<span class="vendor-table-meta">{{ $entry->bank_reference_number }}</span>@endif
-                                </td>
-                                <td data-label="Status / cashflow">
-                                    <span class="master-badge vendor-payment-status vendor-payment-status-{{ str_replace('_', '-', $entry->status) }}">{{ $entry->statusLabel() }}</span>
-                                    @if ($entry->cashflow_entry_id)
-                                        @if (\Illuminate\Support\Facades\Route::has('cashflows.show'))
-                                            <a class="vendor-table-meta vendor-detail-link" href="{{ route('cashflows.show', $entry->cashflow_entry_id) }}">Cashflow #{{ $entry->cashflow_entry_id }}</a>
-                                        @else
-                                            <span class="vendor-table-meta">Cashflow #{{ $entry->cashflow_entry_id }}</span>
-                                        @endif
-                                    @endif
-                                </td>
-                                <td data-label="Proof">
-                                    @forelse ($entryAttachments as $attachment)
-                                        <a class="vendor-file-link" href="{{ $attachment->fileUrl() }}" target="_blank" rel="noopener">
-                                            <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
-                                            {{ $attachment->title ?: ($attachment->extension ?: 'File') }}
-                                            <span class="visually-hidden">(opens in a new tab)</span>
-                                        </a>
-                                    @empty
-                                        <span class="master-empty-value">No files</span>
-                                    @endforelse
-                                </td>
-                                <td data-label="Actions">
-                                    <div class="master-row-actions vendor-payment-actions">
-                                        @if (\Illuminate\Support\Facades\Route::has('vendors.payments.update'))
-                                            <button type="button" class="master-icon-btn editPaymentBtn"
-                                                data-update-url="{{ route('vendors.payments.update', [$vendor, $entry]) }}"
-                                                data-payment='@json($entry)'
-                                                aria-label="Edit ledger entry: {{ $entry->particular }}" title="Edit entry">
-                                                <i class="fa-solid fa-pen" aria-hidden="true"></i>
-                                            </button>
-                                        @endif
-                                        @if (\Illuminate\Support\Facades\Route::has('vendors.payments.destroy'))
-                                            <form method="POST" action="{{ route('vendors.payments.destroy', $entry) }}"
-                                                data-confirm="Delete this vendor payment entry and its linked INR cashflow entry?">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button class="master-icon-btn danger" type="submit" aria-label="Delete ledger entry: {{ $entry->particular }}" title="Delete entry">
-                                                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="9"><div class="master-empty-state"><i class="fa-solid fa-receipt" aria-hidden="true"></i><p>No vendor ledger entries yet. Add a bill, payment or adjustment to begin.</p></div></td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        @else
-            <div class="master-empty-state"><i class="fa-solid fa-database" aria-hidden="true"></i><p>The vendor-currency ledger is not installed. Existing cashflow records remain available below.</p></div>
-        @endif
-    </section>
-
-    <section class="master-card master-card--flat vendor-detail-card" aria-labelledby="vendor-cashflow-heading">
-        <div class="master-section-head">
-            <div>
-                <h2 class="master-section-title" id="vendor-cashflow-heading">Linked INR cashflow</h2>
-                <p class="master-sub">Cashbook entries linked to this vendor, including records created before the vendor-currency ledger.</p>
-            </div>
-            <span class="master-chip">{{ number_format($cashflowRows->count()) }} {{ \Illuminate\Support\Str::plural('entry', $cashflowRows->count()) }}</span>
-        </div>
-
-        @if ($cashflowRows->isNotEmpty())
-            <div class="master-table-wrap ui-mobile-cards">
-                <table class="master-table vendor-detail-table vendor-linked-cashflow-table">
-                    <thead>
-                        <tr>
-                            <th scope="col">Date</th>
-                            <th scope="col">Category</th>
-                            <th scope="col">Particular</th>
-                            <th scope="col">Credit</th>
-                            <th scope="col">Debit / paid</th>
-                            <th scope="col">Account / mode</th>
-                            <th scope="col">Reference</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($cashflowRows as $entry)
-                            <tr>
-                                <td data-label="Date">{{ optional($entry->entry_date)->format('d M Y') ?: '—' }}</td>
-                                <td data-label="Category">{{ ($entry->relationLoaded('category') ? $entry->category?->name : null) ?: ($entry->expense_head ?: '—') }}</td>
-                                <td data-label="Particular"><strong>{{ $entry->particular }}</strong>@if ($entry->notes)<span class="vendor-table-meta">{{ $entry->notes }}</span>@endif</td>
-                                <td data-label="Credit" class="vendor-numeric vendor-amount-credit">{{ (float) ($entry->credit_amount ?? 0) > 0 ? $money($entry->credit_amount, $entry->currency ?: 'INR') : '—' }}</td>
-                                <td data-label="Debit / paid" class="vendor-numeric vendor-amount-debit">{{ (float) ($entry->debit_amount ?? 0) > 0 ? $money($entry->debit_amount, $entry->currency ?: 'INR') : '—' }}</td>
-                                <td data-label="Account / mode">
-                                    <span>{{ $entry->relationLoaded('account') ? ($entry->account?->account_name ?: 'No account') : 'No account' }}</span>
-                                    <span class="vendor-table-meta">{{ $entry->payment_mode ?: 'No payment mode' }}</span>
-                                </td>
-                                <td data-label="Reference">{{ $entry->bank_reference_number ?: ($entry->invoice_bill_number ?: '—') }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @else
-            <div class="master-empty-state"><i class="fa-solid fa-building-columns" aria-hidden="true"></i><p>No linked cashflow entries were found for this vendor.</p></div>
-        @endif
-    </section>
-
-    @if ($paymentLedgerAvailable)
-        @include('vendors.partials.payment-modals')
+<section class="master-card master-card--flat vendor-detail-card vendor-block-card" id="vendor-block-ledger" aria-labelledby="vendor-block-ledger-title">
+    @if (($pendingApprovals ?? collect())->isNotEmpty())
+        <x-step-banner
+            tone="warning"
+            eyebrow="Pending checker"
+            title="Approve the purchase order before paying this vendor"
+            body="Money cannot go out until a checker approves the PO, or a bill is raised."
+        >
+            <ul>
+                @foreach ($pendingApprovals as $pending)
+                    <li>
+                        <a href="{{ route('purchase-invoices.show', $pending) }}">{{ $pending->invoice_number }}</a>
+                        is {{ strtolower($pending->statusLabel()) }}.
+                    </li>
+                @endforeach
+            </ul>
+            <x-slot:actions>
+                <a class="master-btn master-btn-primary" href="{{ route('purchase-invoices.show', $pendingApprovals->first()) }}">Open purchase order</a>
+            </x-slot:actions>
+        </x-step-banner>
     @endif
-</div>
+    <div class="vendor-panel-head">
+        <div>
+            <h2 class="vendor-detail-title" id="vendor-block-ledger-title">Vendor-currency ledger</h2>
+            <p class="vendor-detail-help">Purchase orders (once sent), bills and payments in the vendor's own currency. After a PO becomes a bill, only the bill stays on this ledger.</p>
+        </div>
+        <div class="vendor-panel-meta">
+            <span class="vendor-pill">{{ $vendorPaymentEntries->count() }} {{ \Illuminate\Support\Str::plural('entry', $vendorPaymentEntries->count()) }}</span>
+            <button type="button" class="master-btn master-btn-primary master-btn-sm" id="openAddPaymentModal">
+                <i class="fas fa-plus" aria-hidden="true"></i> Add entry
+            </button>
+        </div>
+    </div>
+
+    <div class="master-card master-card--flat vendor-table-card vendor-table-bleed">
+        <div class="master-table-wrap ui-mobile-cards">
+            <table class="master-table vendor-table vendor-money-table vendor-money-table--ledger">
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Entry</th>
+                        <th scope="col">Particular</th>
+                        <th scope="col" class="is-num">Amount</th>
+                        <th scope="col" class="ui-mobile-secondary">Account</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($vendorPaymentEntries->sortByDesc('transaction_date') as $entry)
+                        <tr>
+                            <td data-label="Date">
+                                {{ $entry->transaction_date?->format('d M Y') ?: '—' }}
+                                @if ($entry->transaction_type === 'credit' && $entry->due_date)
+                                    @php($daysLate = $entry->days_to_due)
+                                    @if ($daysLate !== null && $daysLate < 0)
+                                        <span class="vendor-late-chip">{{ abs($daysLate) }} {{ \Illuminate\Support\Str::plural('day', abs($daysLate)) }} late</span>
+                                    @else
+                                        <span class="master-sub">
+                                            Due {{ $entry->due_date->format('d M y') }}@if ($daysLate !== null && $daysLate <= 7) · due soon @endif
+                                        </span>
+                                    @endif
+                                @elseif ($entry->transaction_type === 'credit')
+                                    <span class="master-sub">No due date</span>
+                                @endif
+                            </td>
+                            <td data-label="Entry">
+                                <strong>{{ $entry->invoice_number ?: 'No invoice' }}</strong>
+                                <span class="master-sub">{{ $entry->categoryLabel() }}</span>
+                            </td>
+                            <td data-label="Particular">
+                                <strong>{{ $entry->particular }}</strong>
+                                <span class="master-sub">{{ $entry->project ? $entry->project->project_number.' - '.$entry->project->name : 'No project mapping' }}</span>
+                                @if ($entry->remarks)
+                                    <span class="master-sub">{{ $entry->remarks }}</span>
+                                @endif
+                            </td>
+                            {{-- The bill and the payment never both land on one row, so
+                                 the two amount columns were half empty. One cell, in
+                                 the entry's own currency, with the rupee value under
+                                 it — that is the pair the office reads together. --}}
+                            <td data-label="Amount" class="is-num {{ $entry->transaction_type === 'credit' ? 'vendor-amount-debit' : 'vendor-amount-credit' }}">
+                                {{ $money($entry->foreign_amount, $entry->foreign_currency ?: $vendorCurrency) }}
+                                <span class="master-sub">{{ $entry->transaction_type === 'credit' ? ($entry->entry_category === 'order' ? 'Ordered' : 'Billed') : 'Paid' }}</span>
+                            </td>
+                            <td data-label="Account" class="ui-mobile-secondary">
+                                {{ $entry->paidAccount?->account_name ?: '—' }}
+                                <span class="master-sub">{{ $entry->payment_mode ? str_replace('_', ' ', $entry->payment_mode) : '—' }}{{ $entry->bank_reference_number ? ' · '.$entry->bank_reference_number : '' }}</span>
+                            </td>
+                            <td data-label="Status">
+                                <span class="vendor-meta-chip">{{ $entry->statusLabel() }}</span>
+                                @if ($entry->cashflow_entry_id)
+                                    @if (\Illuminate\Support\Facades\Route::has('cashflows.show'))
+                                        <a class="vendor-sync-link" href="{{ route('cashflows.show', $entry->cashflow_entry_id) }}"
+                                            title="Open the linked INR cashflow entry">
+                                            <i class="fa-solid fa-link" aria-hidden="true"></i> #{{ $entry->cashflow_entry_id }}
+                                        </a>
+                                    @else
+                                        <span class="master-sub">Cashflow #{{ $entry->cashflow_entry_id }}</span>
+                                    @endif
+                                @endif
+                                @foreach ($entry->attachments as $attachment)
+                                    <a class="vendor-file-link" href="{{ $attachment->fileUrl() }}" target="_blank" rel="noopener"
+                                        title="{{ $attachment->original_name ?: 'Proof' }}">{{ strtoupper($attachment->extension ?: 'file') }}</a>
+                                @endforeach
+                            </td>
+                            <td data-label="Action" class="vendor-table-actions-cell">
+                                <div class="master-row-actions">
+                                    <div class="master-dropdown">
+                                        <button type="button" class="master-dropdown-toggle"
+                                            aria-label="Actions for {{ $entry->particular }}"
+                                            aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="master-dropdown-menu">
+                                            <button type="button" class="editPaymentBtn" data-payment='@json($entry)'>
+                                                <i class="fas fa-pen" aria-hidden="true"></i> Edit entry
+                                            </button>
+                                            @if ($entry->cashflow_entry_id && \Illuminate\Support\Facades\Route::has('cashflows.show'))
+                                                <a href="{{ route('cashflows.show', $entry->cashflow_entry_id) }}">
+                                                    <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Open cashflow row
+                                                </a>
+                                            @endif
+                                            @foreach ($entry->attachments as $attachment)
+                                                <a href="{{ $attachment->fileUrl() }}" target="_blank" rel="noopener">
+                                                    <i class="fa-solid fa-paperclip" aria-hidden="true"></i> {{ $attachment->original_name ?: 'Proof' }}
+                                                </a>
+                                            @endforeach
+                                            @if (\Illuminate\Support\Facades\Route::has('vendors.payments.destroy'))
+                                                <form method="POST" action="{{ route('vendors.payments.destroy', $entry) }}"
+                                                    data-confirm="Delete this vendor payment entry?">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="danger">
+                                                        <i class="far fa-trash-alt" aria-hidden="true"></i> Delete entry
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7">
+                                <div class="master-list-empty">
+                                    <span class="master-list-empty-icon" aria-hidden="true"><i class="fa-solid fa-scale-balanced"></i></span>
+                                    <h3 class="master-list-empty-title">No ledger entries yet</h3>
+                                    <p class="master-list-empty-text">Record the vendor's bill first, then the payments that settle it — the statement and the balances follow.</p>
+                                    <div class="master-list-empty-actions">
+                                        <button type="button" class="master-btn master-btn-primary" id="openAddPaymentModalEmpty">
+                                            <i class="fas fa-plus" aria-hidden="true"></i> Add first entry
+                                        </button>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>

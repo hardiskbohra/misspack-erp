@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -100,6 +101,31 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role !== self::ROLE_EMPLOYEE;
+    }
+
+    /**
+     * Whether this office account sits on a briefing desk.
+     *
+     * An empty department is a director: they see every desk. A named
+     * department only sees that desk plus unscoped office briefings.
+     */
+    public function watchesTeam(?string $team): bool
+    {
+        if (! OfficeSetting::isWatcher($this)) {
+            return false;
+        }
+
+        $team = strtolower(trim((string) $team));
+        if ($team === '' || $team === 'office') {
+            return true;
+        }
+
+        $desk = OfficeSetting::deskFor($this);
+        if ($desk === 'office') {
+            return true;
+        }
+
+        return $desk === $team;
     }
 
     /** On the payroll: their own workspace, and nothing else. */
@@ -249,8 +275,4 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\Lead::class, 'created_by');
     }
 
-    public function createdVendorQuotes()
-    {
-        return $this->hasMany(\App\Models\VendorQuote::class, 'created_by');
-    }
 }

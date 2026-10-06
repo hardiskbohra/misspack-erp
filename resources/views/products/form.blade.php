@@ -173,8 +173,7 @@
         </div>
         <div class="master-section">
             <h3 class="master-section-title">Quantity Price Ladder</h3>
-            <div class="master-items">
-                <div class="master-table-wrap">
+            <div class="master-table-wrap">
                 <table class="master-table" id="priceLadderTable">
                     <thead>
                         <tr>
@@ -219,8 +218,8 @@
                         @endforeach
                     </tbody>
                 </table>
-                </div>
-            </div><button type="button" class="master-btn master-btn-light" id="addLadderRow"
+            </div>
+            <button type="button" class="master-btn master-btn-light" id="addLadderRow"
                 style="margin-top:12px;">+ Add Price Row</button>
         </div>
         <div class="master-actions"><a

@@ -288,13 +288,13 @@
 
 /* --------------------------------------------------------------------------
    Numbers in tables
-   Money and quantities are right-aligned and use tabular figures so digits
-   line up column to column.
+   Money and quantities are centre-aligned and use tabular figures so digits
+   still sit on a shared grid.
    -------------------------------------------------------------------------- */
 
 .master-table th.is-num,
 .master-table td.is-num {
-    text-align: right;
+    text-align: center;
     font-variant-numeric: tabular-nums
 }
 
@@ -579,5 +579,298 @@
 
     .master-tabs-panels {
         padding: 12px;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Step banner
+   The next important action on a record — approve, raise, confirm. It is a
+   strip, not another white card, so it cannot be mistaken for body copy.
+   -------------------------------------------------------------------------- */
+
+.step-banner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 0 0 16px;
+    padding: 16px 18px;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    box-shadow: 0 10px 28px rgba(180, 83, 9, .12);
+}
+
+.step-banner-mark {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    font-size: 18px;
+}
+
+.step-banner-copy {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.step-banner-eyebrow {
+    margin: 0 0 4px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.step-banner-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -.01em;
+    line-height: 1.3;
+}
+
+.step-banner-body {
+    margin: 4px 0 0;
+    font-size: 13px;
+    font-weight: 550;
+    line-height: 1.45;
+}
+
+.step-banner-extra {
+    margin-top: 8px;
+    font-size: 13px;
+}
+
+.step-banner-extra a {
+    font-weight: 700;
+}
+
+.step-banner-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.step-banner--warning {
+    background: linear-gradient(180deg, #fff7ed, #ffedd5);
+    border-color: #fdba74;
+    color: #9a3412;
+}
+
+.step-banner--warning .step-banner-mark {
+    background: #ea580c;
+    color: #fff;
+    box-shadow: 0 0 0 6px rgba(234, 88, 12, .16);
+}
+
+.step-banner--warning .step-banner-eyebrow { color: #c2410c; }
+.step-banner--warning .step-banner-title { color: #7c2d12; }
+.step-banner--warning .step-banner-body { color: #9a3412; }
+
+.step-banner--danger {
+    background: linear-gradient(180deg, #fff1f2, #ffe4e6);
+    border-color: #fda4af;
+    color: #9f1239;
+    box-shadow: 0 10px 28px rgba(190, 18, 60, .12);
+}
+
+.step-banner--danger .step-banner-mark {
+    background: #e11d48;
+    color: #fff;
+    box-shadow: 0 0 0 6px rgba(225, 29, 72, .16);
+}
+
+.step-banner--danger .step-banner-eyebrow { color: #be123c; }
+.step-banner--danger .step-banner-title { color: #881337; }
+
+.step-banner--info {
+    background: linear-gradient(180deg, #eff6ff, #dbeafe);
+    border-color: #93c5fd;
+    color: #1e3a8a;
+    box-shadow: 0 10px 28px rgba(37, 99, 235, .1);
+}
+
+.step-banner--info .step-banner-mark {
+    background: #2563eb;
+    color: #fff;
+    box-shadow: 0 0 0 6px rgba(37, 99, 235, .16);
+}
+
+.step-banner--info .step-banner-eyebrow { color: #1d4ed8; }
+.step-banner--info .step-banner-title { color: #1e3a8a; }
+
+.step-banner--success {
+    background: linear-gradient(180deg, #ecfdf5, #d1fae5);
+    border-color: #6ee7b7;
+    color: #065f46;
+    box-shadow: 0 10px 28px rgba(5, 150, 105, .1);
+}
+
+.step-banner--success .step-banner-mark {
+    background: #059669;
+    color: #fff;
+    box-shadow: 0 0 0 6px rgba(5, 150, 105, .16);
+}
+
+.step-banner--success .step-banner-eyebrow { color: #047857; }
+.step-banner--success .step-banner-title { color: #064e3b; }
+
+:root[data-theme="dark"] .step-banner--warning {
+    background: linear-gradient(180deg, rgba(234, 88, 12, .22), rgba(154, 52, 18, .28));
+    border-color: rgba(251, 146, 60, .45);
+    color: #fed7aa;
+    box-shadow: none;
+}
+
+:root[data-theme="dark"] .step-banner--warning .step-banner-title { color: #ffedd5; }
+:root[data-theme="dark"] .step-banner--warning .step-banner-body,
+:root[data-theme="dark"] .step-banner--warning .step-banner-eyebrow { color: #fdba74; }
+
+:root[data-theme="dark"] .step-banner--danger {
+    background: linear-gradient(180deg, rgba(225, 29, 72, .2), rgba(136, 19, 55, .28));
+    border-color: rgba(251, 113, 133, .4);
+    box-shadow: none;
+}
+
+:root[data-theme="dark"] .step-banner--info {
+    background: linear-gradient(180deg, rgba(37, 99, 235, .2), rgba(30, 58, 138, .28));
+    border-color: rgba(96, 165, 250, .4);
+    box-shadow: none;
+}
+
+:root[data-theme="dark"] .step-banner--success {
+    background: linear-gradient(180deg, rgba(5, 150, 105, .2), rgba(6, 78, 59, .28));
+    border-color: rgba(52, 211, 153, .4);
+    box-shadow: none;
+}
+
+.step-flag {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px 3px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .01em;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.step-flag i {
+    font-size: 11px;
+}
+
+.step-flag--warning {
+    background: #ffedd5;
+    color: #9a3412;
+    border: 1px solid #fdba74;
+}
+
+.step-flag--danger {
+    background: #ffe4e6;
+    color: #9f1239;
+    border: 1px solid #fda4af;
+}
+
+.step-flag--info {
+    background: #dbeafe;
+    color: #1e3a8a;
+    border: 1px solid #93c5fd;
+}
+
+.step-flag--success {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+}
+
+:root[data-theme="dark"] .step-flag--warning {
+    background: rgba(234, 88, 12, .22);
+    color: #fdba74;
+    border-color: rgba(251, 146, 60, .4);
+}
+
+.step-flag.is-compact {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: help;
+}
+
+.step-flag-tip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    z-index: 20;
+    width: max-content;
+    max-width: 220px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: #1f2937;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: 0;
+    line-height: 1.35;
+    white-space: normal;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, .2);
+    transform: translateX(-50%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .15s ease, visibility .15s ease;
+}
+
+.step-flag-tip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border: 5px solid transparent;
+    border-top-color: #1f2937;
+}
+
+.step-flag.is-compact:hover .step-flag-tip,
+.step-flag.is-compact:focus-visible .step-flag-tip {
+    opacity: 1;
+    visibility: visible;
+}
+
+.master-table td.is-num .step-flag {
+    justify-content: center;
+}
+
+.master-table tr.is-attention td:first-child {
+    box-shadow: inset 3px 0 0 #ea580c;
+}
+
+@media screen and (max-width: 767px) {
+    .step-banner {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .step-banner-actions {
+        justify-content: stretch;
+    }
+
+    .step-banner-actions .master-btn,
+    .step-banner-actions form {
+        width: 100%;
+    }
+
+    .step-banner-actions .master-btn {
+        justify-content: center;
     }
 }

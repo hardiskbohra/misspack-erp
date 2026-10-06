@@ -99,7 +99,7 @@
 .cp-record-link { color: #263e53; text-decoration: none; }
 .cp-record-link:hover { color: var(--cp-primary); }
 .cp-table-sub { display: block; margin-top: 3px; color: #8190a0; font-size: 10px; }
-.cp-number { text-align: right !important; white-space: nowrap; }
+.cp-number { text-align: center !important; white-space: nowrap; }
 .cp-empty { padding: 25px 14px; color: #8b99a8; text-align: center; font-size: 11px; }
 .cp-empty-spacious { min-height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 22px; }
 .cp-empty-spacious > i { margin-bottom: 5px; color: #9cb6d0; font-size: 21px; }

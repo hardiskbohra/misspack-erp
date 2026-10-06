@@ -220,10 +220,8 @@
 </div>
 
 <script>
-    window.leadPublicFlash = @json([
-        'success' => session('success'),
-        'error' => $errors->first() ?: null,
-    ]);
+    @php($leadPublicFlash = ['success' => session('success'), 'error' => $errors->first() ?: null])
+    window.leadPublicFlash = @json($leadPublicFlash);
 </script>
 <script src="{{ asset('assets/js/leads-public.js') }}"></script>
     <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>

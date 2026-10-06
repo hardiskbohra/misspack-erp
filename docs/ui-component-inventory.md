@@ -40,6 +40,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Filterable table | Shared | Visible search and quick chips stay in the list toolbar; secondary criteria open in the shared, theme-aware right drawer across administrative and client-portal modules |
 | Selectable table | Partial | `.master-list-pick` and bulk controls on some lists; not available on every data table |
 | Column chooser | Shared | `master-list.js` creates an accessible per-table chooser for `data-table-settings` tables; visibility preferences persist by `data-table-key` in localStorage and action columns remain visible |
+| Saved views | Shared | Named filter sets are stored per user and module in `saved_views` (`app/Services/SavedViews.php`) and rendered by the `.master-list-saved*` chrome in the list toolbar; clients, shipments, cashflows, sales invoices and vendors use the same store |
 | Server-side pagination | Shared | Laravel paginator/query pagination in module controllers and shared view partial |
 | Grid view | Partial | Product/catalogue and portal cards; not a general table/grid switch |
 | List view | Shared | `.master-list` list chrome for the administrative index pages |
@@ -56,7 +57,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Summary card | Partial | `.master-info`, statement summaries, report totals; semantics vary by module |
 | Product card | Partial | Product grid and client-portal catalogue card styles |
 | Project card | Partial | Project list/show and client portal project cards |
-| Vendor card | Partial | Vendor pages use master card and vendor-specific summary patterns |
+| Vendor card | Partial | Vendor pages use master card and vendor-specific summary patterns; the record adds payables/ageing, six-month spend bars and an activity trail built from the same shared cards |
 | Activity card | Gap | Timeline entries exist; no shared activity card/feed component |
 | Alert card | Partial | Semantic alerts exist; informational callout and alert-card hierarchy are not fully standardized |
 
@@ -111,7 +112,9 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Component | Status | Current implementation |
 | --- | --- | --- |
 | Price ladder | Shared, domain-specific | Product price ladders and price-calculator grid (`products.css`, `price-calculator.css`) |
-| Quote comparison | Partial | Vendor/lead quote comparison data is shown in module pages; no reusable compare matrix component |
+| Quote comparison | Gap | Lead quotes are listed per lead; the vendor-quote module was removed, so no comparison matrix exists |
+| Payables ageing | Partial | Vendor module only: `.vendor-ageing` is one hairline-divided strip of five age cells over the ledger's settled open bills, each late cell badged; there is no shared ageing component for other modules to reuse yet |
+| Bulk row actions | Partial | The shared `.master-list-bulk` bar and the `form` attribute carry vendor status changes; sales invoices uses its own script for the same pattern |
 | Payment summary | Partial | Invoice, portal, and Cashflow payment summaries use separate markup |
 | Invoice summary | Partial | Sales invoice show/list and portal invoice detail cards |
 | Shipment tracker | Shared, domain-specific | Shipment detail tracker plus public tracking/stepper (`shipments.css`, `shipment-public.css`) |

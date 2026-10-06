@@ -94,6 +94,9 @@ class PartyStatementController extends Controller
     public function show(Request $request, string $partyType, int $party): View
     {
         $filters = $this->filters($request);
+        if (! $request->filled('currency')) {
+            $filters['currency'] = $this->statements->defaultCurrency($partyType, $party);
+        }
         $statement = $this->statements->build(
             $partyType,
             $party,
@@ -128,6 +131,9 @@ class PartyStatementController extends Controller
     public function pdf(Request $request, string $partyType, int $party)
     {
         $filters = $this->filters($request);
+        if (! $request->filled('currency')) {
+            $filters['currency'] = $this->statements->defaultCurrency($partyType, $party);
+        }
         $statement = $this->statements->build(
             $partyType,
             $party,

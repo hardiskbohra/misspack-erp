@@ -1,0 +1,44 @@
+/* Person cell — same shape as Users, scoped here so this list is not a user-index. */
+
+.office-services .user-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    text-decoration: none;
+}
+
+.office-services .user-avatar-mini {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--emp-avatar-bg, linear-gradient(135deg, #4f83f1, #6366f1));
+    color: var(--emp-avatar-fg, #ffffff);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+}
+
+.office-services .user-cell-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.office-services .user-cell-name {
+    font-weight: 600;
+    color: var(--mc-text);
+    line-height: 1.35;
+}
+
+.office-services .user-cell-text .master-sub {
+    margin-top: 1px;
+}
+
+.office-services .user-row td:nth-child(1) { min-width: 230px; }
+.office-services .user-row td:nth-child(3) { min-width: 160px; }
