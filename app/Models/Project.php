@@ -116,6 +116,55 @@ class Project extends Model
             ->latest('id');
     }
 
+    /**
+     * The money documents this project generated.
+     *
+     * A project does not raise an invoice here — the invoices module does, and
+     * the row is tagged with `project_id` — so the record page reads the tag
+     * instead of keeping a list of its own. The four relations are the four
+     * documents the office asks for, each written once, in the order the
+     * record's Invoices tab reads them: the tax invoices the client owes, the
+     * proformas that asked for the money first, the purchase orders placed for
+     * the job, and the bills the vendors raised against them. A proforma is
+     * history once a tax invoice carries it; the section says so rather than
+     * the relation hiding it.
+     *
+     * `payments` is eager-loaded by the reader so a page of documents costs one
+     * query per relation instead of one per row: `receivedAmount()` and
+     * `paidAmount()` both read the ledger rows through that relation.
+     */
+    public function taxInvoices()
+    {
+        return $this->hasMany(\App\Models\SalesInvoice::class, 'project_id')
+            ->where('invoice_type', 'tax')
+            ->latest('invoice_date')
+            ->latest('id');
+    }
+
+    public function proformaInvoices()
+    {
+        return $this->hasMany(\App\Models\SalesInvoice::class, 'project_id')
+            ->where('invoice_type', 'proforma')
+            ->latest('invoice_date')
+            ->latest('id');
+    }
+
+    public function purchaseOrders()
+    {
+        return $this->hasMany(\App\Models\PurchaseInvoice::class, 'project_id')
+            ->where('invoice_type', \App\Models\PurchaseInvoice::TYPE_ORDER)
+            ->latest('invoice_date')
+            ->latest('id');
+    }
+
+    public function bills()
+    {
+        return $this->hasMany(\App\Models\PurchaseInvoice::class, 'project_id')
+            ->where('invoice_type', \App\Models\PurchaseInvoice::TYPE_BILL)
+            ->latest('invoice_date')
+            ->latest('id');
+    }
+
     public function publicShipments()
     {
         return $this->hasMany(\App\Models\Shipment::class, 'project_id')

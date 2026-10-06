@@ -445,6 +445,29 @@ check('the tabs are links drawn from one list, with their counts',
 check('a tab the URL invented lands on the overview',
     /array_key_exists\(\$tab, self::SHOW_TABS\) \? \$tab : 'overview'/.test(controller));
 
+/* The strip is drawn from `SHOW_TABS` and the panels from the `@if`/`@elseif`
+   chain below it, so the two lists have to hold the same tabs: a key added to
+   one and not the other is either a tab that opens nothing or a panel nobody
+   can reach — and neither throws. `overview` is the chain's `@else`, which is
+   also what an unknown tab lands on, so it is the one key with no branch. */
+const stripKeys = [...(controller.match(/private const SHOW_TABS = \[([\s\S]*?)\n    \];/)?.[1] || '')
+    .matchAll(/'([a-z_]+)' =>/g)].map(match => match[1]);
+const branchKeys = [...showView.matchAll(/@(?:if|elseif) \(\$tab === '([a-z_]+)'\)/g)].map(match => match[1]);
+
+const tallyBlock = controller.match(/'tabCounts' => \[([\s\S]*?)\n            \],/)?.[1] || '';
+
+check('every tab in the strip has a panel, and every panel a tab',
+    stripKeys.length === 11
+    && branchKeys.length === 10
+    && stripKeys.filter(key => key !== 'overview').every(key => branchKeys.includes(key))
+    && branchKeys.every(key => stripKeys.includes(key))
+    /* The Invoices chip counts the four sections it opens — the same four
+       relations the tab draws, so the chip cannot disagree with the panel. */
+    && /'invoices' => collect\(\['taxInvoices', 'proformaInvoices', 'purchaseOrders', 'bills'\]\)/
+        .test(tallyBlock)
+    && stripKeys.filter(key => key !== 'overview')
+        .every(key => new RegExp(`'${key}' =>`).test(tallyBlock)));
+
 /* The button strip rendered all ten panels on every request and pushed the
    active one into localStorage. A panel is a URL now: one per response, each
    shareable, and a form posted from a tab returns to it through `back()`. */
@@ -452,14 +475,15 @@ check('one panel is rendered per request',
     !/data-tab-panel=/.test(showView)
     && !/pd-tab-(panel|btn)/.test(showView + recordViews + milestoneViews)
     && !/function initTabs/.test(script)
-    && showIncludes.length === 10
+    && showIncludes.length === 11
     && ['record-overview', 'record-products', 'record-money', 'record-shipments', 'record-documents',
-        'record-comments', 'record-activity', 'record-logs', 'milestones-tab', 'feedback-tab']
+        'record-invoices', 'record-comments', 'record-activity', 'record-logs', 'milestones-tab',
+        'feedback-tab']
         .every(name => showIncludes.includes('projects.partials.' + name))
-    && (showView.match(/@elseif \(\$tab === '/g) || []).length === 8);
+    && (showView.match(/@elseif \(\$tab === '/g) || []).length === 9);
 
 check('every panel is a panel of the shared kind',
-    recordFiles.length === 8
+    recordFiles.length === 9
     && Object.values(recordSource).every(text => /class="master-tab-panel"/.test(text))
     && Object.values(recordSource).every(text => /id="project-panel-[a-z]+"/.test(text))
     && Object.values(recordSource).every(text => /role="tabpanel"/.test(text))
@@ -538,7 +562,7 @@ const nesting = recordFiles.concat(['resources/views/projects/partials/milestone
     .flatMap(file => nestingErrors(file, read(file)));
 
 check('every panel is well formed',
-    recordFiles.length === 8 && nesting.length === 0,
+    recordFiles.length === 9 && nesting.length === 0,
     nesting.slice(0, 3).join(' | '));
 
 /* The wrapper is the panel's only child: the cards inside it stack on the
@@ -557,13 +581,72 @@ check('the card wrapper is the panel\'s own child',
 /* The other direction: a tone the page prints that the sheet does not own is a
    badge with no colour, which is how the record page shipped a page of grey
    pills the first time. */
+/* The tone's own class — `status-draft`, `band-promoter`. `\b` would let
+   `status-overdue` be owned by a rule for `status-overdue-x`, so the boundary
+   has to exclude a dash and a digit too. */
+const toneOwned = (tone, code = sheetCode) => new RegExp(`\\.project \\.${tone}(?![A-Za-z0-9_-])`).test(code);
 const printedTones = new Set([...(showView + recordViews + milestoneViews + feedbackTab)
     .matchAll(/[\s"']status-([a-z-]+)/g)].map(match => match[1]));
 
 check('every tone the page prints is one the sheet owns',
     printedTones.size >= 3
-    && [...printedTones].every(tone => new RegExp(`\\.project \\.status-${tone}\\b`).test(sheetCode)),
-    [...printedTones].filter(tone => !new RegExp(`\\.project \\.status-${tone}\\b`).test(sheetCode)).join(' | '));
+    && [...printedTones].every(tone => toneOwned(`status-${tone}`)),
+    [...printedTones].filter(tone => ! toneOwned(`status-${tone}`)).join(' | '));
+
+/* The Invoices tab prints a tone per document state, and that state is a method
+   call — `$invoice->stateKey()`, `$invoice->status` — so the literal scan above
+   cannot see the words. They come from the models, and every one of them has to
+   keep a tone in both themes: a document whose badge lost its colour is a row
+   nobody can scan. The tab is the reader that decides which sets are printed,
+   so it is checked, then the whole vocabulary it can reach. */
+const invoiceTab = read('resources/views/projects/partials/record-invoices.blade.php');
+const salesStateBody = read('app/Models/SalesInvoice.php').match(/public function stateLabel\([\s\S]*?\n    \}/);
+const DOCUMENT_TONES = [...new Set([
+    ...(salesStateBody ? [...salesStateBody[0].matchAll(/'([a-z_]+)' => /g)].map(match => match[1]) : []),
+    ...optionKeys('app/Models/PurchaseInvoice.php', 'statusOptions'),
+])].map(state => `status-${state.replace(/_/g, '-')}`);
+
+check('the invoices tab wears a tone for every state a document can be in',
+    /status-\{\{ \$invoice->stateKey\(\) \}\}/.test(invoiceTab)
+    && /status-\{\{ \$invoice->status \}\}/.test(invoiceTab)
+    && DOCUMENT_TONES.length >= 11
+    && DOCUMENT_TONES.every(tone => toneOwned(tone, lightCode) && darkTones.has(tone)),
+    DOCUMENT_TONES.filter(tone => ! toneOwned(tone, lightCode) || ! darkTones.has(tone)).join(' | '));
+
+/* The tab's four sections are four relations, and the whole point of the
+   design is that none of them is a copy: the tag `project_id` is the link, the
+   type word is the model's, and the money on a row is the model's own reader of
+   the ledger. Every one of those is the sort of sentence that stays true in a
+   comment and stops being true in the code, so each is read. */
+const documentRelationsUsed = [...new Set([...invoiceTab
+    .matchAll(/\$project->([a-zA-Z]+)->(?:count|isEmpty|first|sum)\(/g)].map(match => match[1]))];
+const declaredRelations = new Set([...read('app/Models/Project.php')
+    .matchAll(/public function ([a-zA-Z]+)\(/g)].map(match => match[1]));
+
+check('the invoices tab draws each document from its own relation',
+    documentRelationsUsed.length === 4
+    && documentRelationsUsed.every(name => declaredRelations.has(name))
+    && ['taxInvoices', 'proformaInvoices', 'purchaseOrders', 'bills']
+        .every(name => documentRelationsUsed.includes(name))
+    /* Each family reads its own type off the model, not a word this module
+       invented: the tax invoices are `tax`, the proformas `proforma`, and the
+       two purchase documents are the model's own type constants. */
+    && /public function taxInvoices\(\)[\s\S]{0,220}?where\('invoice_type', 'tax'\)/.test(read('app/Models/Project.php'))
+    && /public function proformaInvoices\(\)[\s\S]{0,220}?where\('invoice_type', 'proforma'\)/.test(read('app/Models/Project.php'))
+    && /public function purchaseOrders\(\)[\s\S]{0,260}?TYPE_ORDER/.test(read('app/Models/Project.php'))
+    && /public function bills\(\)[\s\S]{0,260}?TYPE_BILL/.test(read('app/Models/Project.php'))
+    /* The money on a row is the document's own reading of the ledger — the
+       stored `amount_paid` is the opening figure the ledger rows are added to. */
+    && /\$invoice->receivedAmount\(\)/.test(invoiceTab)
+    && /\$invoice->paidAmount\(\)/.test(invoiceTab)
+    && ! /\$invoice->amount_paid/.test(invoiceTab)
+    /* One query per relation for a page of documents: the ledger rows and, on
+       a purchase document, the vendor it was raised from. */
+    && /\$with\[\] = \$relation\.'\.payments';/.test(controller)
+    && (controller.match(/'purchase_invoices', \['vendor'\]\]/g) || []).length === 2
+    /* The guard: a document table without the tag cannot be read, and a table
+       that is absent is not queried at all. */
+    && /Schema::hasColumn\(\$table, 'project_id'\)/.test(controller));
 
 check('the facts, the notes and the empty blocks are the shell\'s',
     (recordViews.match(/class="master-facts"/g) || []).length >= 4
@@ -572,8 +655,8 @@ check('the facts, the notes and the empty blocks are the shell\'s',
     && !/master-info-list|pd-info-list/.test(recordViews));
 
 check('every table on the record is the shared table in a wrapper',
-    (recordViews.match(/<table class="master-table">/g) || []).length === 4
-    && (recordViews.match(/class="master-table-wrap"/g) || []).length === 4
+    (recordViews.match(/<table class="master-table">/g) || []).length === 8
+    && (recordViews.match(/class="master-table-wrap"/g) || []).length === 8
     && (recordViews.match(/<th scope="col"/g) || []).length === (recordViews.match(/<th[\s>]/g) || []).length
     && !/style="color:(green|red)"/.test(recordViews));
 

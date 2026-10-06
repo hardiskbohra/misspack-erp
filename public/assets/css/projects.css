@@ -492,45 +492,59 @@
     color: var(--mc-text-2)
 }
 
-/* Planned, agreed, not started. */
-.project .status-planned {
+/* Planned, agreed, not started — or handed on: a converted proforma and a
+   billed order are documents a later one carries, not failures. */
+.project .status-planned,
+.project .status-converted,
+.project .status-billed {
     background: #ece7ff;
     color: #6d28d9
 }
 
-/* Moving. */
+/* Moving. A document sent to the client or accepted on a purchase order is
+   under way the same way a shipment is. */
 .project .status-in-progress,
 .project .status-started,
 .project .status-picked-up,
 .project .status-in-transit,
-.project .status-out-for-delivery {
+.project .status-out-for-delivery,
+.project .status-sent,
+.project .status-accepted {
     background: #eaf2ff;
     color: #2563eb
 }
 
-/* Somebody else has to act, or the date is slipping. */
+/* Somebody else has to act, or the date is slipping: a part-paid invoice is
+   waiting for the rest, and goods received are waiting for the bill. */
 .project .status-waiting,
 .project .status-waiting-client,
 .project .status-waiting-vendor,
 .project .status-on-hold,
 .project .status-custom-hold,
-.project .status-delayed {
+.project .status-delayed,
+.project .status-partial,
+.project .status-received {
     background: #fff7e6;
     color: #b54708
 }
 
-/* Done. */
+/* Done. A paid invoice and an approved order are as finished as a delivered
+   milestone — the same green the invoices listing gives them. */
 .project .status-completed,
 .project .status-delivered,
-.project .status-resolved {
+.project .status-resolved,
+.project .status-paid,
+.project .status-approved {
     background: #e8fff3;
     color: #039855
 }
 
-/* Stopped. */
+/* Stopped. An overdue invoice is stopped in the way a cancelled one is: the
+   reader has to do something before the row moves again. */
 .project .status-cancelled,
 .project .status-blocked,
-.project .status-issue {
+.project .status-issue,
+.project .status-overdue {
     background: #fff1f3;
     color: #d92d20
 }
@@ -594,7 +608,9 @@
     color: #cbd5e1
 }
 
-:root[data-theme="dark"] .project .status-planned {
+:root[data-theme="dark"] .project .status-planned,
+:root[data-theme="dark"] .project .status-converted,
+:root[data-theme="dark"] .project .status-billed {
     background: rgba(139, 92, 246, .2);
     color: #c4b5fd
 }
@@ -604,6 +620,8 @@
 :root[data-theme="dark"] .project .status-picked-up,
 :root[data-theme="dark"] .project .status-in-transit,
 :root[data-theme="dark"] .project .status-out-for-delivery,
+:root[data-theme="dark"] .project .status-sent,
+:root[data-theme="dark"] .project .status-accepted,
 :root[data-theme="dark"] .project .band-passive {
     background: rgba(37, 99, 235, .18);
     color: #93c5fd
@@ -615,6 +633,8 @@
 :root[data-theme="dark"] .project .status-on-hold,
 :root[data-theme="dark"] .project .status-custom-hold,
 :root[data-theme="dark"] .project .status-delayed,
+:root[data-theme="dark"] .project .status-partial,
+:root[data-theme="dark"] .project .status-received,
 :root[data-theme="dark"] .project .health-amber,
 :root[data-theme="dark"] .project .project-priority-chip.is-high {
     background: rgba(217, 119, 6, .2);
@@ -624,6 +644,8 @@
 :root[data-theme="dark"] .project .status-completed,
 :root[data-theme="dark"] .project .status-delivered,
 :root[data-theme="dark"] .project .status-resolved,
+:root[data-theme="dark"] .project .status-paid,
+:root[data-theme="dark"] .project .status-approved,
 :root[data-theme="dark"] .project .health-green,
 :root[data-theme="dark"] .project .band-promoter {
     background: rgba(16, 185, 129, .18);
@@ -633,6 +655,7 @@
 :root[data-theme="dark"] .project .status-cancelled,
 :root[data-theme="dark"] .project .status-blocked,
 :root[data-theme="dark"] .project .status-issue,
+:root[data-theme="dark"] .project .status-overdue,
 :root[data-theme="dark"] .project .health-red,
 :root[data-theme="dark"] .project .project-priority-chip.is-urgent,
 :root[data-theme="dark"] .project .band-detractor {

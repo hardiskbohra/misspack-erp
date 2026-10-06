@@ -67,7 +67,7 @@ button. It is now the shared record page:
 ├── .project-attention            only when the target date has passed
 ├── .master-stats                 four .master-stat--flat figures
 └── .master-tabs-card
-    ├── nav.master-tabs            ten links, each ?tab=key, each with its count
+    ├── nav.master-tabs            eleven links, each ?tab=key, each with its count
     └── .master-tabs-panels        one panel per request
 ```
 
@@ -102,7 +102,7 @@ button. It is now the shared record page:
 - **The feedback tab is a record panel, not a copy of the feedback module.** The
   ask is issued from here (one live link per kind, refused while it is open), the
   answers are read here, and every door leads into `feedback.*` — that is where the
-  queue lives. Its chrome is this page's vocabulary like the other nine panels:
+  queue lives. Its chrome is this page's vocabulary like the other ten panels:
   `feedback.css` (`.fb-*`) is only loaded by the feedback pages, so a class from
   that sheet landing here would arrive with no rules at all.
 
@@ -119,6 +119,30 @@ panel cannot disagree. What a *client* sees is one definition, in
 `moneyIn()` (a credit), `booked` or `reconciled`. The portal's payments page, the portal
 dashboard's tally, a project's receipts tab on the portal and the statement of account all
 read that service, which is why the four answer the same way.
+
+**The documents a project generated are read from the modules that raise them.** The
+Invoices tab is four sections — the tax invoices the client owes, the proformas that asked
+for the money first, the purchase orders placed for the job, the vendor bills recorded
+against it — and not one of them is a row this module writes. A project does not raise an
+invoice: the invoices module does, and the row carries `project_id`. The tag is the whole
+link, so the tab reads the same rows the invoice listings do, through the four relations on
+`Project` (`taxInvoices`, `proformaInvoices`, `purchaseOrders`, `bills`), and the reader
+that loads them is also the list the tab's tally counts. A document appears here the moment
+it is tagged — there is no second add, no copy kept in step, and a converted proforma keeps
+its row and wears "Converted" rather than vanishing.
+
+Each row reads the money the way its own module does: `stateKey()`/`stateLabel()` for a
+sales invoice (late, paid, part paid — or the document's own state), `status`/`statusLabel()`
+for a purchase document, and `receivedAmount()`/`paidAmount()` for the money, which come
+from the ledger rows the relations eager-load. Nine new tones join the module's one colour
+table — `status-paid` and `status-approved` in the done green, `status-partial` and
+`status-received` in the amber "somebody has to act", `status-sent` and `status-accepted`
+in the moving blue, `status-overdue` in the stopped red, `status-converted` and
+`status-billed` in the purple "a later document carries this one" — and the check reads the
+vocabulary off the models, so a state the badge can print without a tone in either theme
+fails rather than shipping a grey pill. The strip and the `@if`/`@elseif` chain below it are
+read against each other too: a tab added to one list and not the other is a link that opens
+nothing or a panel nobody can reach, and neither throws.
 
 The milestones tab keeps its own `pmile-*` stepper — a genuinely bespoke timeline
 — but its chrome is the shell's now: the five-box stat row is a `master-stats`
@@ -198,7 +222,7 @@ One screen is still outside this file's scope: the form
 (`projects/form.blade.php`, `pf-*`). The client's own view of a project is the
 login portal's screen (`client_portal/projects/show.blade.php`), which loads the
 portal's own sheets — there is no second, public copy of the record any more.
-Everything the record page renders is in scope — all ten panels are a
+Everything the record page renders is in scope — all eleven panels are a
 `master-tab-panel` of shell cards — and the milestones sheet section keeps
 the stepper's own vocabulary (`pmile-step-*`, `pmile-current-*`,
 `pmile-product-head`, `pmile-head-actions`): a timeline drawn as a strip of
@@ -210,7 +234,7 @@ portal's own sheet, and the static preview under `public/_preview/` still render
 
 ## Checks
 
-`tools/checks/projects-check.cjs` (56 checks) pins the composition above: the
+`tools/checks/projects-check.cjs` (59 checks) pins the composition above: the
 root is the master-list, the two cards sit in that order, the gap is not
 declared in the module's sheet, every chip carries its tally, the columns are
 named in the order the table draws them, the figures come from the grouped

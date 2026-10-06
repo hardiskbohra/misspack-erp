@@ -31,6 +31,7 @@ class ProjectController extends Controller
         'payments' => 'Payments',
         'shipments' => 'Shipments',
         'attachments' => 'Documents',
+        'invoices' => 'Invoices',
         'comments' => 'Comments',
         'tracking' => 'Activities',
         'feedback' => 'Feedback',
@@ -205,6 +206,21 @@ class ProjectController extends Controller
             $with[] = 'shipments';
         }
 
+        /* The Invoices tab: the money documents the modules raised against this
+           project. A project does not raise one itself — the tag `project_id`
+           is the whole link — so the tab reads the same rows the invoices
+           listings do, and each family arrives with its ledger rows loaded
+           (a document's received amount is the ledger's, not a second column). */
+        foreach ($this->documentRelations() as $relation => [$table, $deeper]) {
+            if ($this->documentTableAvailable($table)) {
+                $with[] = $relation;
+                $with[] = $relation.'.payments';
+                foreach ($deeper as $path) {
+                    $with[] = $relation.'.'.$path;
+                }
+            }
+        }
+
         /* The feedback tab: the asks and what came back. Guarded like every other
            optional module on this page, so a deployment without the migrations
            renders the project instead of failing on a missing table. */
@@ -223,6 +239,11 @@ class ProjectController extends Controller
         if (! $project->relationLoaded('feedbackRequests')) {
             $project->setRelation('feedbackRequests', collect());
         }
+        foreach (array_keys($this->documentRelations()) as $relation) {
+            if (! $project->relationLoaded($relation)) {
+                $project->setRelation($relation, collect());
+            }
+        }
 
         $cashflowCount = $project->relationLoaded('cashflowEntries') ? $project->cashflowEntries->count() : 0;
 
@@ -238,6 +259,8 @@ class ProjectController extends Controller
                 'attachments' => $project->attachments->count(),
                 'comments' => $project->comments->count(),
                 'tracking' => $project->trackingUpdates->count(),
+                'invoices' => collect(['taxInvoices', 'proformaInvoices', 'purchaseOrders', 'bills'])
+                    ->sum(fn (string $relation) => $project->{$relation}->count()),
                 'feedback' => $project->relationLoaded('feedbackRequests') ? $project->feedbackRequests->count() : 0,
                 'logs' => $project->logs->count(),
             ],
@@ -495,6 +518,36 @@ class ProjectController extends Controller
     private function cashflowEntryModelAvailable(): bool
     {
         return class_exists(\App\Models\CashflowEntry::class) && Schema::hasTable('cashflow_entries');
+    }
+
+    /**
+     * The four documents the Invoices tab reads, relation => table.
+     *
+     * One list, so the eager load, the empty-collection fallback and the tab's
+     * tally cannot disagree about what the tab holds. The type words live on
+     * the models (`SalesInvoice::typeOptions()`, `PurchaseInvoice::DOC_LABELS`)
+     * and the relations carry them; this list only names the relations, the
+     * table each reads and the row reads the tab makes beyond the ledger
+     * (a purchase document names its vendor).
+     */
+    private function documentRelations(): array
+    {
+        return [
+            'taxInvoices' => ['sales_invoices', []],
+            'proformaInvoices' => ['sales_invoices', []],
+            'purchaseOrders' => ['purchase_invoices', ['vendor']],
+            'bills' => ['purchase_invoices', ['vendor']],
+        ];
+    }
+
+    /** A document module is readable when its model is installed and its rows carry the project tag. */
+    private function documentTableAvailable(string $table): bool
+    {
+        $model = $table === 'sales_invoices' ? \App\Models\SalesInvoice::class : \App\Models\PurchaseInvoice::class;
+
+        return class_exists($model)
+            && Schema::hasTable($table)
+            && Schema::hasColumn($table, 'project_id');
     }
 
     private function shipmentModelAvailable(): bool

@@ -166,6 +166,8 @@
                     @include('projects.partials.record-shipments')
                 @elseif ($tab === 'attachments')
                     @include('projects.partials.record-documents')
+                @elseif ($tab === 'invoices')
+                    @include('projects.partials.record-invoices')
                 @elseif ($tab === 'comments')
                     @include('projects.partials.record-comments')
                 @elseif ($tab === 'tracking')
