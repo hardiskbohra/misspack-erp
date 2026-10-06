@@ -12,6 +12,12 @@ use Illuminate\View\View;
 
 class OfficeServiceController extends Controller
 {
+    private const SHOW_TABS = [
+        'overview' => 'Overview',
+        'details' => 'Details',
+        'money' => 'Payments',
+    ];
+
     public function index(Request $request): View
     {
         $search = is_string($request->query('search')) ? trim($request->query('search')) : '';
@@ -35,15 +41,56 @@ class OfficeServiceController extends Controller
             ->paginate(40)
             ->withQueryString();
 
+        $classCounts = ['all' => OfficeService::query()->count()];
+        foreach (array_keys(OfficeService::classOptions()) as $key) {
+            $classCounts[$key] = 0;
+        }
+        foreach (OfficeService::query()->selectRaw('service_class, COUNT(*) as aggregate')->groupBy('service_class')->get() as $row) {
+            $classCounts[$row->service_class] = (int) $row->aggregate;
+        }
+
+        $paidThisMonth = 0.0;
+        if (Schema::hasTable('cashflow_entries') && Schema::hasColumn('cashflow_entries', 'office_service_id')) {
+            $paidThisMonth = (float) CashflowEntry::query()
+                ->whereNotNull('office_service_id')
+                ->whereYear('entry_date', now()->year)
+                ->whereMonth('entry_date', now()->month)
+                ->sum('debit_amount');
+        }
+
+        $missingPay = OfficeService::query()
+            ->where('status', OfficeService::STATUS_ACTIVE)
+            ->where(function ($q) {
+                $q->whereNull('bank_account_number')->orWhere('bank_account_number', '');
+            })
+            ->where(function ($q) {
+                $q->whereNull('upi_id')->orWhere('upi_id', '');
+            })
+            ->count();
+
         $stats = [
-            'total' => OfficeService::query()->count(),
+            'total' => $classCounts['all'],
             'active' => OfficeService::query()->where('status', OfficeService::STATUS_ACTIVE)->count(),
-            'classes' => OfficeService::query()->distinct()->count('service_class'),
+            'classes' => OfficeService::query()->whereNotNull('service_class')->distinct()->count('service_class'),
             'retainers' => (float) OfficeService::query()
                 ->where('status', OfficeService::STATUS_ACTIVE)
                 ->where('retainer_cycle', 'monthly')
                 ->sum('retainer_amount'),
+            'paid_this_month' => $paidThisMonth,
+            'month_label' => now()->format('M Y'),
+            'missing_pay' => $missingPay,
         ];
+
+        $filterChips = [];
+        if ($search) {
+            $filterChips[] = ['key' => 'search', 'label' => 'Search', 'value' => $search];
+        }
+        if ($class !== 'all') {
+            $filterChips[] = ['key' => 'class', 'label' => 'Class', 'value' => OfficeService::classOptions()[$class] ?? $class];
+        }
+        if ($status !== 'all') {
+            $filterChips[] = ['key' => 'status', 'label' => 'Status', 'value' => OfficeService::statusOptions()[$status] ?? $status];
+        }
 
         return view('office_services.index', [
             'services' => $services,
@@ -53,19 +100,16 @@ class OfficeServiceController extends Controller
             'status' => $status,
             'classOptions' => OfficeService::classOptions(),
             'statusOptions' => OfficeService::statusOptions(),
+            'cycleOptions' => OfficeService::cycleOptions(),
+            'classCounts' => $classCounts,
+            'filterChips' => $filterChips,
+            'filtersActive' => $filterChips !== [],
         ]);
     }
 
-    public function create(): View
+    public function create(): RedirectResponse
     {
-        return view('office_services.form', [
-            'service' => new OfficeService([
-                'status' => OfficeService::STATUS_ACTIVE,
-                'service_class' => OfficeService::CLASS_HOUSEKEEPING,
-                'retainer_cycle' => 'monthly',
-                'currency' => 'INR',
-            ]),
-        ]);
+        return redirect()->route('office-services.index');
     }
 
     public function store(Request $request): RedirectResponse
@@ -74,38 +118,66 @@ class OfficeServiceController extends Controller
         $data['service_number'] = $this->makeNumber();
         $service = OfficeService::create($data);
 
-        return redirect()->route('office-services.show', $service)
-            ->with('success', 'Office service saved.');
+        return redirect()->route('office-services.index')->with('success', $service->name.' saved.');
     }
 
-    public function show(OfficeService $office_service): View
+    public function show(Request $request, OfficeService $office_service): View
     {
+        $tab = $request->query('tab', 'overview');
+        if (! is_string($tab) || ! array_key_exists($tab, self::SHOW_TABS)) {
+            $tab = 'overview';
+        }
+
         $payments = collect();
+        $paidYear = 0.0;
         if (Schema::hasTable('cashflow_entries') && Schema::hasColumn('cashflow_entries', 'office_service_id')) {
             $payments = CashflowEntry::query()
                 ->where('office_service_id', $office_service->id)
                 ->orderByDesc('entry_date')
                 ->orderByDesc('id')
-                ->limit(20)
+                ->limit(40)
                 ->get();
+            $paidYear = (float) CashflowEntry::query()
+                ->where('office_service_id', $office_service->id)
+                ->whereYear('entry_date', now()->year)
+                ->sum('debit_amount');
+        }
+
+        $missing = [];
+        if (! $office_service->phone) {
+            $missing[] = 'Phone';
+        }
+        if (! $office_service->retainer_amount) {
+            $missing[] = 'Retainer';
+        }
+        if (! $office_service->bank_account_number && ! $office_service->upi_id) {
+            $missing[] = 'Bank or UPI';
         }
 
         return view('office_services.show', [
             'service' => $office_service,
             'payments' => $payments,
+            'tab' => $tab,
+            'tabs' => self::SHOW_TABS,
+            'tabCounts' => ['money' => $payments->count()],
+            'paidYear' => $paidYear,
+            'missing' => $missing,
+            'classOptions' => OfficeService::classOptions(),
+            'statusOptions' => OfficeService::statusOptions(),
+            'cycleOptions' => OfficeService::cycleOptions(),
         ]);
     }
 
-    public function edit(OfficeService $office_service): View
+    public function edit(OfficeService $office_service): RedirectResponse
     {
-        return view('office_services.form', ['service' => $office_service]);
+        return redirect()->route('office-services.show', [$office_service, 'tab' => 'details']);
     }
 
     public function update(Request $request, OfficeService $office_service): RedirectResponse
     {
         $office_service->update($this->validated($request, $office_service));
 
-        return redirect()->route('office-services.show', $office_service)
+        return redirect()->route('office-services.show', [$office_service, 'tab' => 'details'])
             ->with('success', 'Office service updated.');
     }
 

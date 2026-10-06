@@ -95,6 +95,7 @@ check('vendor and project indexes provide a quick-detail drawer example',
 const filterDrawerPages = [
     'resources/views/clients/index.blade.php',
     'resources/views/users/index.blade.php',
+    'resources/views/office_services/index.blade.php',
     'resources/views/vendors/index.blade.php',
     'resources/views/leads/index.blade.php',
     'resources/views/lead_quotes/index.blade.php',

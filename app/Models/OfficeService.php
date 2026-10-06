@@ -41,6 +41,17 @@ class OfficeService extends Model
         return $this->hasMany(CashflowEntry::class, 'office_service_id');
     }
 
+    public function initials(): string
+    {
+        $parts = preg_split('/\s+/', trim((string) $this->name)) ?: [];
+        $letters = '';
+        foreach (array_slice($parts, 0, 2) as $part) {
+            $letters .= mb_strtoupper(mb_substr($part, 0, 1));
+        }
+
+        return $letters !== '' ? $letters : 'OS';
+    }
+
     public function classLabel(): string
     {
         return self::classOptions()[$this->service_class] ?? Str::headline($this->service_class);
