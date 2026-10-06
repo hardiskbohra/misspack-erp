@@ -43,16 +43,16 @@
 
         <div class="fb-grid">
             <label class="fb-field">
-                <span>Your name <em>*</em></span>
-                <input type="text" name="respondent_name" value="{{ old('respondent_name', $prefill['name'] ?? '') }}" required autocomplete="name">
+                <span class="master-label">Your name <span class="master-required" aria-hidden="true">*</span></span>
+                <input class="master-input" type="text" name="respondent_name" value="{{ old('respondent_name', $prefill['name'] ?? '') }}" required autocomplete="name">
             </label>
             <label class="fb-field">
-                <span>Designation</span>
-                <input type="text" name="respondent_designation" value="{{ old('respondent_designation') }}" autocomplete="organization-title">
+                <span class="master-label">Designation</span>
+                <input class="master-input" type="text" name="respondent_designation" value="{{ old('respondent_designation') }}" autocomplete="organization-title">
             </label>
             <label class="fb-field">
-                <span>Email <small>(optional)</small></span>
-                <input type="email" name="respondent_email" value="{{ old('respondent_email', $prefill['email'] ?? '') }}" autocomplete="email">
+                <span class="master-label">Email <small>(optional)</small></span>
+                <input class="master-input" type="email" name="respondent_email" value="{{ old('respondent_email', $prefill['email'] ?? '') }}" autocomplete="email">
             </label>
         </div>
     </section>
@@ -120,7 +120,7 @@
 
                     <label class="fb-line-comment">
                         <span class="fb-sr">Comment on {{ $dimension['label'] }}</span>
-                        <input type="text" name="comments[{{ $dimension['key'] }}]"
+                        <input class="master-input" type="text" name="comments[{{ $dimension['key'] }}]"
                             value="{{ old('comments.'.$dimension['key']) }}"
                             placeholder="Anything to add about this line? (optional)">
                     </label>
@@ -135,13 +135,13 @@
         <p class="fb-step-hint">One of the two is enough — but the sentence is the part we can actually fix something with.</p>
 
         <label class="fb-field">
-            <span>What went well?</span>
-            <textarea name="went_well" rows="3" maxlength="4000">{{ old('went_well') }}</textarea>
+            <span class="master-label">What went well?</span>
+            <textarea class="master-textarea" name="went_well" rows="3" maxlength="4000">{{ old('went_well') }}</textarea>
         </label>
 
         <label class="fb-field fb-field--attention" id="fb-could-improve">
-            <span>What could be better?</span>
-            <textarea name="could_improve" rows="3" maxlength="4000" placeholder="A late dispatch, a print mismatch, a call that never came back — the specific thing helps.">{{ old('could_improve') }}</textarea>
+            <span class="master-label">What could be better?</span>
+            <textarea class="master-textarea" name="could_improve" rows="3" maxlength="4000" placeholder="A late dispatch, a print mismatch, a call that never came back — the specific thing helps.">{{ old('could_improve') }}</textarea>
         </label>
 
         <fieldset class="fb-choice">
@@ -168,8 +168,8 @@
         <p class="fb-step-hint">Optional, and entirely your call. We will only ever use your words where you tick.</p>
 
         <label class="fb-field">
-            <span>A line about working with us <small>(optional)</small></span>
-            <textarea name="testimonial" rows="3" maxlength="2000" placeholder="If you are happy, a sentence we can put on the website helps other businesses find us.">{{ old('testimonial') }}</textarea>
+            <span class="master-label">A line about working with us <small>(optional)</small></span>
+            <textarea class="master-textarea" name="testimonial" rows="3" maxlength="2000" placeholder="If you are happy, a sentence we can put on the website helps other businesses find us.">{{ old('testimonial') }}</textarea>
         </label>
 
         <fieldset class="fb-choice">

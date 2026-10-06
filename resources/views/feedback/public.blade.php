@@ -10,13 +10,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('assets/css/feedback.css') }}">
+    {{-- The shared control shape — `.master-input`, `.master-textarea`, the
+         field label — lives in the shared form sheet, the same one the portal's
+         own standalone login page loads. A one-page public form must not invent
+         a second control of its own. --}}
+    <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
     @include('layouts.partials.design-system-styles')
 </head>
 
 {{-- What the client opens from the link. No app chrome, no menu, no other
      client's name anywhere: one project, one form, readable in the reader's own
      theme and on a phone in one hand. --}}
-<body class="fb-standalone" data-ui-shell="public">
+<body class="fb fb-standalone" data-ui-shell="public">
     <header class="fb-public-bar">
         <div>
             <p class="fb-public-brand">{{ $ask->project?->client?->company_name ?: \App\Models\SalesInvoice::defaultSellerDetails()['seller_company_name'] }}</p>

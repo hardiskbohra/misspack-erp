@@ -3,8 +3,14 @@
 
    Two surfaces, one vocabulary. Everything here is `fb-*` and module-local:
    surfaces, borders and text come from the shared tokens (`--ui-*`, which fall
-   back to `--mc-*`), so the sheet works on the app shell, in the client portal
-   and on the standalone public page without three copies of the same card.
+   back to `--mc-*`), and every measurement the design system already owns is
+   taken from it rather than re-invented — the card surface and its 18px radius,
+   the 44px control, the 8px label gap, 20px between two columns.
+
+   What this sheet does own, per `docs/ui-design-guidelines.md`: the padding
+   inside a card of its own (20–24px) and the space between cards on a page no
+   shell wrapper covers — 24px at page level, where the shell's own block rhythm
+   lives (`.master-list.css`), and 16px inside a panel, a tab or the side rail.
 
    The public page is the part that has to survive a phone in one hand: 44px
    targets, a score row that wraps rather than scrolls, and no interaction that
@@ -17,11 +23,11 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 9px;
+    padding: 5px 10px;
     border-radius: 999px;
     font-size: 11px;
     font-weight: 600;
-    letter-spacing: .02em;
+    letter-spacing: .03em;
     white-space: nowrap;
 }
 
@@ -37,7 +43,7 @@
     display: inline-block;
     width: 9px;
     height: 9px;
-    margin-right: 6px;
+    margin-right: 8px;
     border-radius: 50%;
     vertical-align: middle;
 }
@@ -49,30 +55,106 @@
 .fb-dot--orange { background: #f59e0b; }
 .fb-dot--red    { background: #ef4770; }
 
+/* The small line under a value — the shared `.master-sub` measurement (12px,
+   3px below its parent, muted, medium weight), spelled here so a module sheet
+   does not have to wear a layout class to get a caption. */
 .fb-cell-sub {
     display: block;
-    margin-top: 2px;
+    margin-top: 3px;
     font-size: 12px;
+    font-weight: 500;
     color: var(--ui-text-muted, var(--mc-text-3, #7d8aa0));
 }
 
 .fb-col-actions { width: 1%; white-space: nowrap; text-align: right; }
-.fb-subhead { margin: 22px 0 10px; font-size: 15px; font-weight: 600; color: var(--ui-text, var(--mc-text, #17233b)); }
 
 .fb-card-head {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 12px;
+    gap: 14px;
+    margin-bottom: 14px;
 }
 
-.fb-lede { max-width: 76ch; margin: 0 0 16px; font-size: 13px; line-height: 1.55; color: var(--ui-text-secondary, var(--mc-text-2, #536079)); }
+.fb-subhead {
+    margin: 20px 0 12px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ui-text, var(--mc-text, #17233b));
+}
 
-.fb-split {
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-    gap: 16px;
+.fb-lede {
+    max-width: 76ch;
+    margin: 0 0 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ui-text-secondary, var(--mc-text-2, #536079));
+}
+
+.fb-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ------------------------------------------------- rhythm and card padding
+
+   The page's rhythm belongs to the shell, not to a module, and the shell's own
+   screen rule (`.master-list.css`) stacks two page blocks 24px apart. This
+   sheet mirrors that number rather than inventing a second one: `.fb-show` and
+   `.fb-settings` are record and form pages the shell has no named wrapper for,
+   so without it their cards ran flush — two tables sharing a border.
+
+   The surfaces the shell *does* wrap keep their own rhythm, and the module only
+   opts into it:
+
+     - the index is a `.master-list`, so its cards, its figures row and its
+       two-column grid are already 24px apart, and the grid's own gutter is
+       20px — nothing to add;
+     - the client panel is a `.client-detail-tools` column and the project tab
+       is a `.pd-tabs-content` panel, both of which stack their blocks at 16px;
+     - `.fb-side` and `.fb-project-tab` are the module's own nested stacks, and
+       take the same 16px.
+
+   What the shared `.master-card` deliberately leaves unset is the padding
+   *inside* a card, and that is what `.fb-card` is for (the guideline's 20–24px):
+   a card of prose, figures or controls carries 20px 22px; a card holding a
+   table carries none, insets its bar at 16px, and lets the table run to the
+   card's edges with the row padding doing the work — exactly as the lists do.
+   ------------------------------------------------------------------------- */
+
+.fb-card { padding: 20px 22px; }
+
+.fb-card--flush { padding: 0; }
+
+.fb-card--flush > .fb-card-head {
+    padding: 16px 16px 0;
+    margin-bottom: 14px;
+}
+
+/* A card head is a title and its action: the shared `.master-section-title`
+   already carries a 14px bottom margin for the content under a heading, which
+   inside a head is 14px of nothing — the card below starts where the head ends. */
+.fb-card-head > :is(h2, h3, .master-section-title) { margin-bottom: 0; }
+
+/* A record page of its own: the shell's page rhythm, 24px between its cards.
+   The header card's own 24px below it collapses into this, not onto it. */
+.fb-show > * + * { margin-top: 24px; }
+
+/* The two columns on the office and record pages are the shared `.master-grid`;
+   the module only picks a ratio — the left column is the evidence, the right one
+   the client's own words. Below 992px the shared responsive pass stacks it, so
+   the ratio is scoped to the desktop band rather than set for every width. */
+.fb-split { align-items: start; }
+
+@media (min-width: 992px) {
+    .fb-split.master-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
 }
 
 /* ------------------------------------------------------------ public shell */
@@ -100,25 +182,36 @@
 }
 
 .fb-public-brand { margin: 0; font-size: 14px; font-weight: 600; }
-.fb-public-sub { margin: 2px 0 0; font-size: 12px; color: var(--ui-text-muted, #7d8aa0); }
+.fb-public-sub { margin: 3px 0 0; font-size: 12px; color: var(--ui-text-muted, #7d8aa0); }
 .fb-public-expiry { font-size: 12px; color: var(--ui-text-muted, #7d8aa0); }
 
 .fb-public-main,
 .fb-public-foot { max-width: 900px; margin: 0 auto; padding: 24px 20px; }
 
 .fb-public-foot {
-    padding-top: 8px;
+    padding-top: 0;
     font-size: 12px;
-    line-height: 1.6;
+    line-height: 1.7;
     color: var(--ui-text-muted, #7d8aa0);
 }
 
-.fb-public-foot p { margin: 0 0 4px; }
+.fb-public-foot p { margin: 0 0 6px; }
+.fb-public-foot p:last-child { margin-bottom: 0; }
 
 .fb-intro { margin-bottom: 20px; }
 .fb-intro h1 { margin: 0 0 8px; font-size: 22px; font-weight: 700; }
 .fb-intro p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ui-text-secondary, #536079); }
-.fb-intro-note { margin-top: 10px !important; padding: 10px 12px; border-left: 3px solid var(--ui-accent, #4f83f1); background: var(--ui-card-surface, #fff); border-radius: 8px; }
+
+.fb-intro-note {
+    margin: 12px 0 0;
+    padding: 12px 14px;
+    border-left: 3px solid var(--ui-accent, #4f83f1);
+    background: var(--ui-card-surface, #fff);
+    border-radius: 12px;
+}
+
+/* …also when it sits under the intro paragraph, which zeroes its siblings. */
+.fb-intro p.fb-intro-note { margin: 12px 0 0; }
 
 /* ------------------------------------------------------------- the form */
 
@@ -126,17 +219,19 @@
 
 .fb-step {
     margin-bottom: 16px;
-    padding: 20px;
+    padding: 22px 24px;
     background: var(--ui-card-surface, #fff);
     border: 1px solid var(--ui-border, #dfe7f3);
     border-radius: 18px;
 }
 
+.fb-step:last-of-type { margin-bottom: 20px; }
+
 .fb-step-title {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: 0 0 6px;
+    margin: 0 0 8px;
     font-size: 16px;
     font-weight: 600;
 }
@@ -154,41 +249,50 @@
     font-weight: 600;
 }
 
-.fb-step-hint { margin: 0 0 16px; font-size: 13px; line-height: 1.55; color: var(--ui-text-muted, #7d8aa0); }
-
-.fb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-
-.fb-field { display: block; margin-bottom: 12px; }
-.fb-field > span { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: var(--ui-text-secondary, #536079); }
-.fb-field > span em { color: var(--ui-danger, #ef4770); font-style: normal; }
-.fb-field > span small { font-weight: 400; color: var(--ui-text-muted, #7d8aa0); }
-
-.fb-field input[type="text"],
-.fb-field input[type="email"],
-.fb-field textarea {
-    width: 100%;
-    min-height: 44px;
-    padding: 10px 12px;
-    font: inherit;
-    font-size: 14px;
-    color: var(--ui-text, #17233b);
-    background: var(--ui-muted-surface, var(--mc-card-soft, #f8fbff));
-    border: 1px solid var(--ui-border, #dfe7f3);
-    border-radius: 10px;
-    box-sizing: border-box;
+.fb-step-hint {
+    margin: 0 0 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ui-text-muted, #7d8aa0);
 }
 
-.fb-field textarea { min-height: 84px; resize: vertical; }
-.fb-field input:focus-visible,
-.fb-field textarea:focus-visible { outline: 2px solid var(--ui-accent, #4f83f1); outline-offset: 1px; }
+.fb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
 
-.fb-field--attention textarea { border-color: rgba(239, 71, 112, .35); }
+/* The field is a stack, not a box: the label, then the control 8px under it
+   (the guideline's spacing step), then 14px to the next field — the gap the
+   app's own `.master-form-grid` uses. The control itself is the shared one
+   (`.master-input` / `.master-textarea`), so no control shape is invented here;
+   only the label keeps a margin reset, because the shared sheets disagree on it
+   (10px in master.css, 7px in master-index.css, 0 in master-form.css). */
+.fb .fb-field,
+.fb .master-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 0 0 14px; }
+
+.fb .fb-field > .master-label,
+.fb .master-field > .master-label { margin: 0; }
+
+/* A field that ends a card hands the space to the card's own padding… */
+.fb .fb-field:last-child,
+.fb .master-field:last-child { margin-bottom: 0; }
+
+/* …and a field grid has its own gutter, so a field inside one brings no margin
+   of its own with it: otherwise the gap below it doubles. */
+.fb-grid > :is(.master-field, .fb-field),
+.fb-action-grid > :is(.master-field, .fb-field),
+.fb-dimension-row > :is(.master-field, .fb-field) { margin: 0; }
+
+/* The parenthetical part of a label — "(optional)", "(2 minutes)" — is a note,
+   not a second label: inline, at the muted weight. */
+.fb .master-label small { font-weight: 500; color: var(--ui-text-muted, var(--mc-text-3, #7d8aa0)); }
+
+/* The one field that asks for the awkward answer gets a warning hairline rather
+   than a second colour: it is the field the follow-up loop depends on. */
+.fb-field--attention > .master-textarea { border-color: rgba(239, 71, 112, .35); }
 
 /* the honeypot: present for the robots, invisible to people */
 .fb-trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
 /* the 1–5 scale, as five touch-sized choices */
-.fb-scale { margin-bottom: 18px; }
+.fb-scale { margin-bottom: 20px; }
 
 .fb-scale-item {
     display: inline-flex;
@@ -197,7 +301,7 @@
     gap: 4px;
     min-width: 92px;
     margin: 0 8px 8px 0;
-    padding: 10px 12px;
+    padding: 11px 13px;
     background: var(--ui-muted-surface, #f8fbff);
     border: 1px solid var(--ui-border, #dfe7f3);
     border-radius: 12px;
@@ -212,7 +316,8 @@
 .fb-scale-item:has(input:focus-visible) { outline: 2px solid var(--ui-accent, #4f83f1); outline-offset: 2px; }
 
 /* the NPS question, asked verbatim */
-.fb-question { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
+.fb-scale--nps { margin-bottom: 0; }
+.fb-question { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
 .fb-nps-row { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .fb-nps-item {
@@ -223,7 +328,7 @@
     height: 44px;
     background: var(--ui-muted-surface, #f8fbff);
     border: 1px solid var(--ui-border, #dfe7f3);
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -232,7 +337,7 @@
 .fb-nps-item input { position: absolute; opacity: 0; pointer-events: none; }
 .fb-nps-item:has(input:checked) { border-color: var(--ui-accent, #4f83f1); background: rgba(79, 131, 241, .12); }
 .fb-nps-item:has(input:focus-visible) { outline: 2px solid var(--ui-accent, #4f83f1); outline-offset: 2px; }
-.fb-nps-anchors { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; font-size: 11px; color: var(--ui-text-muted, #7d8aa0); }
+.fb-nps-anchors { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; font-size: 11px; color: var(--ui-text-muted, #7d8aa0); }
 
 /* one line of the scorecard */
 .fb-lines { display: flex; flex-direction: column; gap: 12px; }
@@ -240,9 +345,9 @@
 .fb-line {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 10px 16px;
+    gap: 12px 16px;
     align-items: center;
-    padding: 12px 14px;
+    padding: 14px 16px;
     background: var(--ui-muted-surface, #f8fbff);
     border: 1px solid var(--ui-border, #dfe7f3);
     border-radius: 14px;
@@ -250,10 +355,11 @@
 
 .fb-line-head { grid-column: 1; }
 .fb-line-label { margin: 0; font-size: 14px; font-weight: 600; }
-.fb-line-hint { margin: 2px 0 0; font-size: 12px; line-height: 1.5; color: var(--ui-text-muted, #7d8aa0); }
+.fb-line-hint { margin: 4px 0 0; font-size: 12px; line-height: 1.55; color: var(--ui-text-muted, #7d8aa0); }
 .fb-line-score { grid-column: 2; display: flex; gap: 6px; }
 .fb-line-comment { grid-column: 1 / -1; }
-.fb-line-comment input { width: 100%; min-height: 40px; padding: 8px 10px; font: inherit; font-size: 13px; background: var(--ui-card-surface, #fff); border: 1px solid var(--ui-border, #dfe7f3); border-radius: 10px; box-sizing: border-box; }
+
+.fb-line-comment .master-input { width: 100%; }
 
 .fb-score-pill {
     display: inline-flex;
@@ -263,7 +369,7 @@
     height: 44px;
     background: var(--ui-card-surface, #fff);
     border: 1px solid var(--ui-border, #dfe7f3);
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -273,23 +379,33 @@
 .fb-score-pill:has(input:checked) { border-color: var(--ui-accent, #4f83f1); background: rgba(79, 131, 241, .12); }
 .fb-score-pill:has(input:focus-visible) { outline: 2px solid var(--ui-accent, #4f83f1); outline-offset: 2px; }
 
-.fb-lines--readonly .fb-line { grid-template-columns: minmax(0, 1fr) auto; background: transparent; border: 0; border-bottom: 1px solid var(--ui-border, #dfe7f3); border-radius: 0; padding: 10px 0; }
-.fb-lines--readonly .fb-line:last-child { border-bottom: 0; }
+.fb-lines--readonly .fb-line {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 12px 0;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--ui-border, #dfe7f3);
+    border-radius: 0;
+}
+
+.fb-lines--readonly .fb-line:first-child { padding-top: 0; }
+.fb-lines--readonly .fb-line:last-child { padding-bottom: 0; border-bottom: 0; }
 
 /* the yes/no and consent rows */
-.fb-choice { margin: 0 0 14px; padding: 0; border: 0; }
-.fb-choice legend { padding: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--ui-text-secondary, #536079); }
+.fb-choice { margin: 0 0 16px; padding: 0; border: 0; }
+.fb-choice:last-child { margin-bottom: 0; }
+.fb-choice legend { padding: 0 0 10px; font-size: 12px; font-weight: 600; color: var(--ui-text-secondary, #536079); }
 .fb-choice-row { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .fb-choice-item {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    min-height: 40px;
-    padding: 8px 12px;
+    min-height: 42px;
+    padding: 9px 14px;
     background: var(--ui-muted-surface, #f8fbff);
     border: 1px solid var(--ui-border, #dfe7f3);
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 13px;
     cursor: pointer;
 }
@@ -300,20 +416,20 @@
 
 .fb-note {
     margin: 0;
-    padding: 12px 14px;
+    padding: 14px 16px;
     font-size: 13px;
-    line-height: 1.55;
+    line-height: 1.6;
     color: var(--ui-text-secondary, #536079);
     background: var(--ui-muted-surface, #f8fbff);
     border-left: 3px solid var(--ui-warning, #f59e0b);
-    border-radius: 10px;
+    border-radius: 12px;
 }
 
-.fb-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin: 4px 0 40px; }
+.fb-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin: 0 0 32px; }
 
 .fb-submit {
-    min-height: 48px;
-    padding: 12px 26px;
+    min-height: 44px;
+    padding: 11px 24px;
     font: inherit;
     font-size: 15px;
     font-weight: 600;
@@ -326,114 +442,184 @@
 
 .fb-submit:hover { filter: brightness(1.05); }
 .fb-submit:focus-visible { outline: 2px solid var(--ui-text, #17233b); outline-offset: 2px; }
-.fb-actions-note { flex: 1 1 260px; margin: 0; font-size: 12px; line-height: 1.55; color: var(--ui-text-muted, #7d8aa0); }
+.fb-actions-note { flex: 1 1 260px; margin: 0; font-size: 12px; line-height: 1.6; color: var(--ui-text-muted, #7d8aa0); }
 
 /* alerts */
-.fb-alert { margin: 0 0 16px; padding: 12px 14px; font-size: 13px; line-height: 1.55; border-radius: 12px; border: 1px solid transparent; }
-.fb-alert ul { margin: 6px 0 0; padding-left: 18px; }
+.fb-alert { margin: 0 0 16px; padding: 14px 16px; font-size: 13px; line-height: 1.6; border-radius: 12px; border: 1px solid transparent; }
+.fb-alert:last-child { margin-bottom: 0; }
+.fb-alert ul { margin: 8px 0 0; padding-left: 18px; }
+.fb-alert li + li { margin-top: 4px; }
 .fb-alert--error { background: #ffeaf0; border-color: rgba(225, 29, 72, .25); color: #a3123c; }
 .fb-alert--info { background: #eaf1ff; border-color: rgba(63, 124, 244, .25); color: #274b9f; }
 .fb-alert--attention { background: #fff4e5; border-color: rgba(217, 119, 6, .28); color: #92500a; }
 
 /* thank-you and expired, on the standalone shell */
-.fb-thanks { max-width: 620px; padding: 32px 28px; background: var(--ui-card-surface, #fff); border: 1px solid var(--ui-border, #dfe7f3); border-radius: 18px; }
-.fb-thanks-mark { margin: 0 0 8px; font-size: 28px; }
-.fb-thanks-mark--muted { opacity: .8; }
-.fb-thanks-title { margin: 0 0 10px; font-size: 20px; font-weight: 700; }
-.fb-thanks-text { margin: 0 0 14px; font-size: 14px; line-height: 1.6; color: var(--ui-text-secondary, #536079); }
-.fb-thanks-list { margin: 0 0 18px; padding-left: 20px; font-size: 13px; line-height: 1.7; color: var(--ui-text-secondary, #536079); }
-.fb-thanks-foot { margin: 0; font-size: 12px; color: var(--ui-text-muted, #7d8aa0); }
+.fb-thanks {
+    max-width: 620px;
+    padding: 24px;
+    background: var(--ui-card-surface, #fff);
+    border: 1px solid var(--ui-border, #dfe7f3);
+    border-radius: 18px;
+}
 
-.fb-expired-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 0 0 18px; }
-.fb-expired-facts dt { font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: var(--ui-text-muted, #7d8aa0); }
-.fb-expired-facts dd { margin: 2px 0 0; font-size: 13px; font-weight: 600; }
+.fb-thanks-mark { margin: 0 0 10px; font-size: 28px; }
+.fb-thanks-mark--muted { opacity: .8; }
+.fb-thanks-title { margin: 0 0 12px; font-size: 20px; font-weight: 700; }
+.fb-thanks-text { margin: 0 0 16px; font-size: 14px; line-height: 1.65; color: var(--ui-text-secondary, #536079); }
+.fb-thanks-list { margin: 0 0 20px; padding-left: 20px; font-size: 13px; line-height: 1.75; color: var(--ui-text-secondary, #536079); }
+.fb-thanks-list li + li { margin-top: 6px; }
+.fb-thanks-foot { margin: 0; font-size: 12px; line-height: 1.7; color: var(--ui-text-muted, #7d8aa0); }
+
+.fb-expired-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 0 0 20px; }
+.fb-expired-facts dt { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--ui-text-muted, #7d8aa0); }
+.fb-expired-facts dd { margin: 3px 0 0; font-size: 13px; font-weight: 600; }
 
 /* ------------------------------------------------------------ office page */
 
 .fb-attention { border-left: 3px solid var(--ui-danger, #ef4770); }
-.fb-cell-quote { max-width: 320px; font-size: 13px; color: var(--ui-text-secondary, #536079); }
+.fb-cell-quote { max-width: 320px; font-size: 13px; line-height: 1.55; color: var(--ui-text-secondary, #536079); }
 
-.fb-meter { display: block; width: 78px; height: 4px; margin-top: 6px; background: var(--ui-border, #dfe7f3); border-radius: 999px; overflow: hidden; }
+.fb-meter { display: block; width: 78px; height: 4px; margin-top: 8px; background: var(--ui-border, #dfe7f3); border-radius: 999px; overflow: hidden; }
 .fb-meter span { display: block; height: 100%; background: var(--ui-accent, #4f83f1); }
 
-.fb-trend { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--ui-border, #dfe7f3); }
-.fb-trend-title { margin: 0 0 10px; font-size: 12px; font-weight: 600; color: var(--ui-text-secondary, #536079); }
-.fb-trend-bars { display: flex; align-items: flex-end; gap: 10px; height: 72px; }
+/* The trend sits at the foot of a flush table card: full-width hairline, its
+text back on the 16px inset the card's bar uses. */
+.fb-trend { margin-top: 16px; padding: 14px 16px 0; border-top: 1px solid var(--ui-border, #dfe7f3); }
+.fb-trend-title { margin: 0 0 12px; font-size: 12px; font-weight: 600; color: var(--ui-text-secondary, #536079); }
+.fb-trend-bars { display: flex; align-items: flex-end; gap: 10px; height: 76px; }
 .fb-trend-month { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; flex: 1; height: 100%; }
 .fb-trend-bar { display: block; width: 100%; max-width: 34px; min-height: 2px; background: var(--ui-accent, #4f83f1); border-radius: 6px 6px 0 0; }
-.fb-trend-label { margin-top: 4px; font-size: 11px; color: var(--ui-text-muted, #7d8aa0); }
+.fb-trend-label { margin-top: 6px; font-size: 11px; color: var(--ui-text-muted, #7d8aa0); }
 
-.fb-quote { margin: 0 0 16px; padding: 14px 16px; background: var(--ui-muted-surface, #f8fbff); border-left: 3px solid var(--ui-accent, #4f83f1); border-radius: 12px; }
-.fb-quote blockquote { margin: 0 0 8px; font-size: 14px; line-height: 1.6; font-style: italic; }
+.fb-quote {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    background: var(--ui-muted-surface, #f8fbff);
+    border-left: 3px solid var(--ui-accent, #4f83f1);
+    border-radius: 12px;
+}
+
+.fb-quote:last-child { margin-bottom: 0; }
+.fb-quote blockquote { margin: 0 0 10px; font-size: 14px; line-height: 1.65; font-style: italic; }
 .fb-quote figcaption { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; color: var(--ui-text-secondary, #536079); }
 .fb-consent { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 
 /* one ask, on its own page */
-.fb-ask-sub { margin: 4px 0 0; font-size: 13px; color: var(--ui-text-secondary, #536079); }
+.fb-ask-head { align-items: flex-start; }
+.fb-ask-sub { margin: 6px 0 0; font-size: 13px; color: var(--ui-text-secondary, #536079); }
 .fb-ask-state { text-align: right; }
+.fb-ask-state .fb-badge { margin-bottom: 6px; }
 
-.fb-link-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.fb-link-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
 .fb-link-input { flex: 1 1 320px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-.fb-share-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.fb-share-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .fb-share-actions form { margin: 0; }
 
-.fb-scoreline { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 4px 0 16px; }
-.fb-scoreline-item { padding: 12px; background: var(--ui-muted-surface, #f8fbff); border: 1px solid var(--ui-border, #dfe7f3); border-radius: 12px; }
+.fb-scoreline { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 0 0 16px; }
+.fb-scoreline-item { padding: 14px; background: var(--ui-muted-surface, #f8fbff); border: 1px solid var(--ui-border, #dfe7f3); border-radius: 12px; }
 .fb-scoreline-item strong { display: block; font-size: 18px; font-weight: 600; }
 .fb-scoreline-item strong small { font-size: 12px; font-weight: 500; color: var(--ui-text-muted, #7d8aa0); }
-.fb-scoreline-item span { display: block; margin-top: 2px; font-size: 12px; color: var(--ui-text-muted, #7d8aa0); }
+.fb-scoreline-item span { display: block; margin-top: 4px; font-size: 12px; line-height: 1.5; color: var(--ui-text-muted, #7d8aa0); }
 
-.fb-verbatim { margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; background: var(--ui-muted-surface, #f8fbff); }
-.fb-verbatim p { margin: 0; font-size: 13px; line-height: 1.6; }
-.fb-verbatim-title { margin-bottom: 4px !important; font-size: 11px !important; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--ui-text-muted, #7d8aa0); }
+.fb-verbatim { margin: 0 0 16px; padding: 14px 16px; border-radius: 12px; background: var(--ui-muted-surface, #f8fbff); }
+.fb-verbatim:last-child { margin-bottom: 0; }
+.fb-verbatim p { margin: 0; font-size: 13px; line-height: 1.65; }
+.fb-verbatim-title { margin-bottom: 6px !important; font-size: 11px !important; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--ui-text-muted, #7d8aa0); }
 .fb-verbatim--attention { background: #fff7f9; }
 
 .fb-side { display: flex; flex-direction: column; gap: 16px; }
+.fb-side > .master-card { margin: 0; }
 .fb-facts { margin: 0; padding: 0; list-style: none; }
-.fb-facts li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--ui-border, #dfe7f3); font-size: 13px; }
-.fb-facts li:last-child { border-bottom: 0; }
+.fb-facts li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--ui-border, #dfe7f3); font-size: 13px; }
+.fb-facts li:last-child { border-bottom: 0; padding-bottom: 0; }
 .fb-facts span { color: var(--ui-text-muted, #7d8aa0); }
 .fb-consent-form { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.fb-consent-form .fb-cell-sub { margin-top: 4px; }
 
-.fb-action { margin-bottom: 16px; padding: 14px; border: 1px solid var(--ui-border, #dfe7f3); border-radius: 14px; }
-.fb-action-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
-.fb-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 10px; }
-.fb-action-form .fb-field,
-.fb-action-new .fb-field { margin-bottom: 10px; }
-.fb-action-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
-.fb-action-new { padding: 14px; background: var(--ui-muted-surface, #f8fbff); border-radius: 14px; }
-
+.fb-action { margin-bottom: 16px; padding: 16px; border: 1px solid var(--ui-border, #dfe7f3); border-radius: 14px; }
+.fb-action-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.fb-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.fb-action-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.fb-action-new { margin-top: 16px; padding: 16px; background: var(--ui-muted-surface, #f8fbff); border-radius: 14px; }
+.fb-action-new .fb-subhead { margin: 0 0 12px; }
+.fb-action-new .fb-field { margin-bottom: 14px; }
 /* ------------------------------------------------------- project tab + panel */
 
-.fb-inline-ask { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 14px; }
-.fb-inline-link { display: flex; gap: 8px; margin: 4px 0; }
+/* The project tab's own stack: the panel above it insets the tab, and this
+   keeps its cards 16px apart like every other tab's. Each card is the project
+   page's own `.pd-card` (18px, no shadow — a nested card must not cast the
+   page card's shadow into the panel), so the module keeps no padding of its own
+   here. */
+.fb-project-tab { display: flex; flex-direction: column; gap: 16px; }
+.fb-project-tab > * { margin: 0; }
+.fb-project-tab > .pd-card { min-width: 0; }
+
+.fb-inline-ask { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.fb-inline-link { display: flex; gap: 8px; margin: 8px 0; }
 .fb-inline-link input { min-width: 260px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 .fb-inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.fb-project-answer { margin-bottom: 16px; }
 .fb-issue-form { max-width: 720px; }
+.fb-issue-form .fb-action-grid { margin-bottom: 14px; }
+
 .fb-dimension-list { display: flex; flex-direction: column; gap: 14px; }
-.fb-dimension { padding: 14px; background: var(--ui-muted-surface, #f8fbff); border: 1px solid var(--ui-border, #dfe7f3); border-radius: 14px; }
-.fb-dimension-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.fb-dimension { padding: 16px; background: var(--ui-muted-surface, #f8fbff); border: 1px solid var(--ui-border, #dfe7f3); border-radius: 14px; }
+.fb-dimension-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .fb-dimension-key { font-size: 11px; color: var(--ui-text-muted, #7d8aa0); }
-.fb-dimension-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; }
-.fb-dimension-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.fb-dimension-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; align-items: end; }
+.fb-dimension-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
 .fb-dimension-new { max-width: 860px; }
+.fb-dimension-new .fb-dimension-row { margin-bottom: 14px; }
+.fb-settings .master-card + .master-card { margin-top: 24px; }
+
+/* The client profile's Feedback panel is one of that page's tab panels: the
+   wrapper wears the panel's own `.client-detail-tools` stack (16px) and each
+   verdict is one of the page's `.client-detail-card`s (22px 24px), exactly as
+   the statement tab beside it is built. The module adds only what is particular
+   to a verdict — and cancels the figures row's own 24px, which would otherwise
+   add to the panel's 16px gap and leave the alert sitting 40px under it. */
+.fb-client-panel { min-width: 0; }
+.fb-client-panel .master-stats { margin-bottom: 0; }
+.fb-client-panel .fb-alert { margin: 0; }
+.fb-client-answer .fb-scoreline { margin-bottom: 16px; }
+
+/* --------------------------------------------------------------- the portal
+
+   A `.cp-card` is a surface with no padding of its own — every portal module
+   insets it (`.cp-support-compose` and friends at 20px) — so the module insets
+   its own two cards the same way and stacks them 16px apart, the portal's own
+   rhythm between blocks. */
+.fb-portal-index .fb-portal-ask,
+.fb-portal-index .fb-portal-answer { padding: 20px; margin-bottom: 16px; }
+
+.fb-portal-ask:last-child,
+.fb-portal-answer:last-child { margin-bottom: 0; }
+
+.fb-portal-ask { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.fb-portal-ask h3 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+.fb-portal-answer h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.fb-portal-index .fb-subhead:first-of-type { margin-top: 0; }
+.fb-portal-answer .fb-alert { margin-bottom: 0; }
 
 /* -------------------------------------------------------------- responsive */
 
 @media (max-width: 991px) {
-    .fb-split { grid-template-columns: minmax(0, 1fr); }
     .fb-ask-state { text-align: left; }
 }
 
 @media (max-width: 767px) {
-    .fb-public-main, .fb-public-foot { padding: 16px 14px; }
-    .fb-step { padding: 16px 14px; border-radius: 14px; }
+    .fb-public-main { padding: 20px 16px; }
+    .fb-public-foot { padding: 0 16px 24px; }
+    .fb-step { padding: 18px 16px; border-radius: 16px; }
+    .fb-thanks { padding: 22px 18px; }
+    .fb-card { padding: 18px 16px; }
+    .fb-card--flush > .fb-card-head { padding: 14px 14px 0; }
+    .fb-card--flush .fb-trend { padding: 14px 14px 0; }
     .fb-line { grid-template-columns: minmax(0, 1fr); }
     .fb-line-score { grid-column: 1; }
     .fb-nps-item { width: 40px; height: 40px; }
-    .fb-scale-item { flex: 1 1 46%; min-width: 0; margin-right: 0; }
     .fb-scale { display: flex; flex-wrap: wrap; gap: 8px; }
+    .fb-scale-item { flex: 1 1 46%; min-width: 0; margin-right: 0; }
     .fb-submit { width: 100%; }
-    .fb-thanks { padding: 22px 18px; }
+    .fb-actions { gap: 12px; margin-bottom: 24px; }
+    .fb-action-foot { flex-direction: column; align-items: stretch; }
 }

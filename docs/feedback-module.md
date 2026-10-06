@@ -270,3 +270,13 @@ purchase module was built.
 | Screens | `resources/views/feedback/*` (list, ask, settings, public form, thank-you, expired), the project tab, the client panel, the portal pages |
 | Asset | `public/assets/css/feedback.css` (module-local `fb-*`, shared tokens), `public/assets/js/feedback.js` (copy only — the module works with JavaScript off) |
 | Guard | `tools/checks/feedback-check.cjs` — run it after touching any of the above |
+
+The sheet follows `docs/ui-design-guidelines.md` rather than a look of its own: a card
+the module owns is padded 20–24px (`.fb-card`), a card holding a table is flush with its
+bar inset at 16px (`.fb-card--flush`), controls and buttons are 40–44px, and the space
+between cards is the shell's own — 24px between page blocks (the `.master-list.css`
+rhythm, mirrored on `.fb-show` and `.fb-settings`), 16px inside a panel, a tab or the
+side rail. Nothing here spaces its own page, and no control shape is invented: the
+public form wears the shared `.master-input` / `.master-textarea`, and loads the shared
+form sheet to get them. Three checks pin this: the page rhythm, the card padding, and
+the shared control.

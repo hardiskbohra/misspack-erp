@@ -15,7 +15,7 @@
 
 <div class="fb fb-project-tab">
     @if ($liveAsk)
-        <div class="master-card master-card--flat fb-inline-ask">
+        <div class="master-card master-card--flat pd-card fb-inline-ask">
             <div>
                 <p class="master-eyebrow">{{ $liveAsk->title() }} · {{ $liveAsk->stateLabel() }}</p>
                 <p class="fb-inline-link">
@@ -46,7 +46,7 @@
             @php
                 $response = $ask->response;
             @endphp
-            <div class="master-card master-card--flat fb-project-answer">
+            <div class="master-card master-card--flat pd-card fb-project-answer">
                 <div class="fb-card-head">
                     <div>
                         <p class="master-eyebrow">{{ $ask->title() }} · {{ $response->submitted_at?->format('d M Y') }}</p>
@@ -93,7 +93,7 @@
     @endif
 
     @if (! $liveAsk)
-        <div class="master-card master-card--flat">
+        <div class="master-card master-card--flat pd-card">
             <div class="fb-card-head">
                 <div>
                     <p class="master-eyebrow">
@@ -122,16 +122,16 @@
                 @csrf
                 <div class="fb-action-grid">
                     <label class="master-field">
-                        <span>What to ask for</span>
-                        <select name="kind" required>
+                        <span class="master-label">What to ask for</span>
+                        <select class="master-select" name="kind" required>
                             @foreach (\App\Models\FeedbackRequest::kindOptions() as $key => $label)
                                 <option value="{{ $key }}" @selected($project->status === 'completed' ? $key === 'close_out' : $key === 'pulse')>{{ $label }}</option>
                             @endforeach
                         </select>
                     </label>
                     <label class="master-field">
-                        <span>Link open for</span>
-                        <select name="expires_in_days">
+                        <span class="master-label">Link open for</span>
+                        <select class="master-select" name="expires_in_days">
                             @foreach (\App\Models\FeedbackRequest::expiryChoices() as $days => $label)
                                 <option value="{{ $days }}" @selected($days === \App\Models\FeedbackRequest::DEFAULT_EXPIRY_DAYS)>{{ $label }}</option>
                             @endforeach
@@ -139,7 +139,7 @@
                     </label>
                 </div>
                 <label class="master-field">
-                    <span>A line above the form <small>(optional)</small></span>
+                    <span class="master-label">A line above the form <small>(optional)</small></span>
                     <input class="master-input" type="text" name="note" maxlength="255"
                         placeholder="e.g. Thank you for the Diwali order — two minutes would help us do better next time.">
                 </label>

@@ -14,7 +14,7 @@
 @endpush
 
 <div class="fb fb-settings">
-    <div class="master-card master-card--flat">
+    <div class="master-card master-card--flat fb-card">
         <div class="fb-card-head">
             <div>
                 <p class="master-eyebrow">The questions</p>
@@ -50,27 +50,27 @@
                     </div>
 
                     <label class="master-field">
-                        <span>Question</span>
+                        <span class="master-label">Question</span>
                         <input class="master-input" type="text" name="label" value="{{ $dimension->label }}" required maxlength="80">
                     </label>
 
                     <label class="master-field">
-                        <span>Hint under it</span>
+                        <span class="master-label">Hint under it</span>
                         <input class="master-input" type="text" name="hint" value="{{ $dimension->hint }}" maxlength="255"
                             placeholder="What the client should think about when scoring this line.">
                     </label>
 
                     <div class="fb-dimension-row">
                         <label class="master-field">
-                            <span>Colour</span>
-                            <select name="color">
+                            <span class="master-label">Colour</span>
+                            <select class="master-select" name="color">
                                 @foreach (['blue', 'teal', 'green', 'orange', 'purple', 'red'] as $color)
                                     <option value="{{ $color }}" @selected(($dimension->color ?: 'blue') === $color)>{{ ucfirst($color) }}</option>
                                 @endforeach
                             </select>
                         </label>
                         <label class="master-field">
-                            <span>Order</span>
+                            <span class="master-label">Order</span>
                             <input class="master-input" type="number" name="sort_order" value="{{ $dimension->sort_order }}" min="0" max="999">
                         </label>
                         <label class="fb-choice-item fb-choice-item--inline">
@@ -88,7 +88,7 @@
         </div>
     </div>
 
-    <div class="master-card master-card--flat">
+    <div class="master-card master-card--flat fb-card">
         <div class="fb-card-head">
             <div>
                 <p class="master-eyebrow">Add a line</p>
@@ -100,18 +100,18 @@
             @csrf
             <div class="fb-dimension-row">
                 <label class="master-field">
-                    <span>Question</span>
+                    <span class="master-label">Question</span>
                     <input class="master-input" type="text" name="label" required maxlength="80"
                         placeholder="e.g. Support after delivery">
                 </label>
                 <label class="master-field">
-                    <span>Hint</span>
+                    <span class="master-label">Hint</span>
                     <input class="master-input" type="text" name="hint" maxlength="255"
                         placeholder="Did somebody answer when something went wrong?">
                 </label>
                 <label class="master-field">
-                    <span>Colour</span>
-                    <select name="color">
+                    <span class="master-label">Colour</span>
+                    <select class="master-select" name="color">
                         @foreach (['blue', 'teal', 'green', 'orange', 'purple', 'red'] as $color)
                             <option value="{{ $color }}">{{ ucfirst($color) }}</option>
                         @endforeach

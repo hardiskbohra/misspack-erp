@@ -278,6 +278,22 @@ check('the module sheet declares no shared class',
 check('the sheet uses the shared tokens rather than a theme of its own',
     /var\(--ui-text/.test(sheet) && /var\(--ui-border/.test(sheet) && /var\(--ui-card-surface/.test(sheet));
 
+/* The design pass lives here as a check, because a spacing number is the first
+   thing an edit loses: `docs/ui-design-guidelines.md` asks for 20-24px outside a
+   card, 16px between blocks, and the shell's own 24px between page blocks. */
+check('the module mirrors the shell rhythm instead of spacing its own page',
+    /\.fb-show > \* \+ \* \{ margin-top: 24px; \}/.test(sheet)
+    && /\.fb-settings \.master-card \+ \.master-card \{ margin-top: 24px; \}/.test(sheet));
+
+check('a card of its own is padded 20-24px, or is flush with an inset bar',
+    /\.fb-card \{ padding: 20px 22px; \}/.test(sheet)
+    && /\.fb-card--flush \{ padding: 0; \}/.test(sheet)
+    && /\.fb-card--flush > \.fb-card-head \{\s*padding: 16px 16px 0;/.test(sheet));
+
+check('the shared control carries the shape and the module only the gap',
+    /\.fb \.fb-field,\s*\n\.fb \.master-field \{ display: flex; flex-direction: column; gap: 8px;/.test(sheet)
+    && !/\.fb-field (input|textarea|select)/.test(sheet));
+
 check('every route the module links to is registered',
     [...allViews.matchAll(/route\('(feedback[.a-z-]*|client-portal\.feedback[.a-z-]*)'/g)]
         .map(m => m[1])

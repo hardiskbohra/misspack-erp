@@ -19,7 +19,7 @@
         <p>Feedback is not set up on this install yet. Run the feedback migrations and this panel fills itself from the module's own rows.</p>
     </div>
 @else
-    <div class="fb fb-client-panel">
+    <div class="fb fb-client-panel client-detail-tools">
         @if ($history->isNotEmpty())
             <div class="master-stats">
                 <div class="master-stat master-stat--flat blue">
@@ -76,7 +76,7 @@
         @endif
 
         @forelse ($history as $response)
-            <div class="master-card master-card--flat fb-client-answer">
+            <div class="master-card master-card--flat client-detail-card fb-client-answer">
                 <div class="fb-card-head">
                     <div>
                         <p class="master-eyebrow">

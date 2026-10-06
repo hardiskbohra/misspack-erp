@@ -19,7 +19,7 @@
     $ownerName = $ask->project?->assignedUser?->name ?: $ask->creator?->name;
 @endphp
 
-<body class="fb-standalone fb-centered" data-ui-shell="public">
+<body class="fb fb-standalone fb-centered" data-ui-shell="public">
     <div class="fb-thanks">
         <p class="fb-thanks-mark" aria-hidden="true">✓</p>
         <h1 class="fb-thanks-title">{{ $already ? 'This one has been answered' : 'Thank you — that has been read' }}</h1>

@@ -29,7 +29,7 @@
     };
 @endphp
 
-<body class="fb-standalone fb-centered" data-ui-shell="public">
+<body class="fb fb-standalone fb-centered" data-ui-shell="public">
     <div class="fb-thanks">
         <p class="fb-thanks-mark fb-thanks-mark--muted" aria-hidden="true">🔒</p>
         <h1 class="fb-thanks-title">{{ $heading }}</h1>

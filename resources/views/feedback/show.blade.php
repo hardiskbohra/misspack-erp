@@ -47,7 +47,7 @@
 
     {{-- ─────────────────────────────────────────────── the link, while it is live --}}
     @if ($canShare)
-        <div class="master-card master-card--flat fb-share">
+        <div class="master-card master-card--flat fb-share fb-card">
             <div class="fb-card-head">
                 <div>
                     <p class="master-eyebrow">Send it</p>
@@ -114,7 +114,7 @@
             </div>
         </div>
     @elseif (! $response)
-        <div class="master-card master-card--flat">
+        <div class="master-card master-card--flat fb-card">
             <div class="master-empty-state">
                 <i class="fa-regular fa-circle-xmark" aria-hidden="true"></i>
                 <p>
@@ -132,8 +132,8 @@
 
     {{-- ───────────────────────────────────────────────────────────── the answer --}}
     @if ($response)
-        <div class="fb-split">
-            <div class="master-card master-card--flat">
+        <div class="master-grid fb-split">
+            <div class="master-card master-card--flat fb-card">
                 <div class="fb-card-head">
                     <div>
                         <p class="master-eyebrow">Answered {{ $response->submitted_at?->format('d M Y') }}</p>
@@ -205,7 +205,7 @@
             <div class="fb-side">
                 {{-- Consent is the client's to give and the client's to change; the
                      score is not editable here, on purpose. --}}
-                <div class="master-card master-card--flat">
+                <div class="master-card master-card--flat fb-card">
                     <div class="fb-card-head">
                         <div>
                             <p class="master-eyebrow">Publishing</p>
@@ -230,7 +230,7 @@
                     </form>
                 </div>
 
-                <div class="master-card master-card--flat fb-timeline">
+                <div class="master-card master-card--flat fb-card fb-timeline">
                     <p class="master-eyebrow">The record</p>
                     <h2 class="master-section-title">What the ask did</h2>
                     <ul class="fb-facts">
@@ -246,7 +246,7 @@
         </div>
 
         {{-- ────────────────────────────────────────────────────────── the loop --}}
-        <div class="master-card master-card--flat">
+        <div class="master-card master-card--flat fb-card">
             <div class="fb-card-head">
                 <div>
                     <p class="master-eyebrow">Nobody has to notice it</p>
@@ -279,16 +279,16 @@
                         @method('PATCH')
                         <div class="fb-action-grid">
                             <label class="master-field fb-field">
-                                <span>Status</span>
-                                <select name="status" required>
+                                <span class="master-label">Status</span>
+                                <select class="master-select" name="status" required>
                                     @foreach ($actionStatuses as $key => $label)
                                         <option value="{{ $key }}" @selected($action->status === $key)>{{ $label }}</option>
                                     @endforeach
                                 </select>
                             </label>
                             <label class="master-field fb-field">
-                                <span>Owner</span>
-                                <select name="owner_id">
+                                <span class="master-label">Owner</span>
+                                <select class="master-select" name="owner_id">
                                     <option value="">Unassigned</option>
                                     @foreach ($actionOwners as $id => $name)
                                         <option value="{{ $id }}" @selected((int) $action->owner_id === (int) $id)>{{ $name }}</option>
@@ -296,12 +296,12 @@
                                 </select>
                             </label>
                             <label class="master-field fb-field">
-                                <span>Due</span>
+                                <span class="master-label">Due</span>
                                 <input class="master-input" type="date" name="due_on" value="{{ $action->due_on?->toDateString() }}">
                             </label>
                             <label class="master-field fb-field">
-                                <span>Severity</span>
-                                <select name="severity">
+                                <span class="master-label">Severity</span>
+                                <select class="master-select" name="severity">
                                     @foreach ($actionSeverities as $key => $label)
                                         <option value="{{ $key }}" @selected($action->severity === $key)>{{ $label }}</option>
                                     @endforeach
@@ -310,8 +310,8 @@
                         </div>
 
                         <label class="master-field fb-field">
-                            <span>What was done</span>
-                            <textarea name="resolution_note" rows="2" maxlength="2000"
+                            <span class="master-label">What was done</span>
+                            <textarea class="master-textarea" name="resolution_note" rows="2" maxlength="2000"
                                 placeholder="The sentence the client may be told, in plain words.">{{ $action->resolution_note }}</textarea>
                         </label>
 
@@ -344,24 +344,24 @@
                 <h3 class="fb-subhead">Open a follow-up</h3>
                 <div class="fb-action-grid">
                     <label class="master-field fb-field">
-                        <span>Type</span>
-                        <select name="type" required>
+                        <span class="master-label">Type</span>
+                        <select class="master-select" name="type" required>
                             @foreach ($actionTypes as $key => $label)
                                 <option value="{{ $key }}">{{ $label }}</option>
                             @endforeach
                         </select>
                     </label>
                     <label class="master-field fb-field">
-                        <span>Severity</span>
-                        <select name="severity" required>
+                        <span class="master-label">Severity</span>
+                        <select class="master-select" name="severity" required>
                             @foreach ($actionSeverities as $key => $label)
                                 <option value="{{ $key }}" @selected($key === 'normal')>{{ $label }}</option>
                             @endforeach
                         </select>
                     </label>
                     <label class="master-field fb-field">
-                        <span>Owner</span>
-                        <select name="owner_id">
+                        <span class="master-label">Owner</span>
+                        <select class="master-select" name="owner_id">
                             <option value="">Unassigned</option>
                             @foreach ($actionOwners as $id => $name)
                                 <option value="{{ $id }}" @selected((int) $ask->project?->assigned_to === (int) $id)>{{ $name }}</option>
@@ -369,13 +369,13 @@
                         </select>
                     </label>
                     <label class="master-field fb-field">
-                        <span>Due</span>
+                        <span class="master-label">Due</span>
                         <input class="master-input" type="date" name="due_on" value="{{ now()->addDay()->toDateString() }}">
                     </label>
                 </div>
                 <label class="master-field fb-field">
-                    <span>Note</span>
-                    <textarea name="note" rows="2" maxlength="2000" placeholder="Optional — what this follow-up is for."></textarea>
+                    <span class="master-label">Note</span>
+                    <textarea class="master-textarea" name="note" rows="2" maxlength="2000" placeholder="Optional — what this follow-up is for."></textarea>
                 </label>
                 <button class="master-btn master-btn-primary master-btn-sm" type="submit">Open follow-up</button>
             </form>

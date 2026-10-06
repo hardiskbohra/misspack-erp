@@ -96,7 +96,7 @@
 
     {{-- ───────────────────────────────────────────────────── needs attention --}}
     @if ($attention->isNotEmpty())
-        <div class="master-card master-card--flat fb-attention">
+        <div class="master-card master-card--flat fb-attention fb-card--flush">
             <div class="fb-card-head">
                 <div>
                     <p class="master-eyebrow">Act first</p>
@@ -185,8 +185,8 @@
                 <section class="core-drawer-section">
                     <h3 class="core-drawer-section-title">The ask</h3>
                     <label class="master-field">
-                        <span>Kind</span>
-                        <select name="kind">
+                        <span class="master-label">Kind</span>
+                        <select class="master-select" name="kind">
                             <option value="all">Every ask</option>
                             @foreach ($kindOptions as $key => $label)
                                 <option value="{{ $key }}" @selected($kind === $key)>{{ $label }}</option>
@@ -198,8 +198,8 @@
                 <section class="core-drawer-section">
                     <h3 class="core-drawer-section-title">The score</h3>
                     <label class="master-field">
-                        <span>Verdict</span>
-                        <select name="band">
+                        <span class="master-label">Verdict</span>
+                        <select class="master-select" name="band">
                             <option value="all">Any answer</option>
                             @foreach ($bandOptions as $key => $label)
                                 <option value="{{ $key }}" @selected($band === $key)>{{ $label }}</option>
@@ -211,8 +211,8 @@
                 <section class="core-drawer-section">
                     <h3 class="core-drawer-section-title">Who</h3>
                     <label class="master-field">
-                        <span>Client</span>
-                        <select name="client">
+                        <span class="master-label">Client</span>
+                        <select class="master-select" name="client">
                             <option value="0">Every client</option>
                             @foreach ($clients as $clientOption)
                                 <option value="{{ $clientOption->id }}" @selected((int) $client === (int) $clientOption->id)>
@@ -223,8 +223,8 @@
                     </label>
                     @if ($projects->isNotEmpty())
                         <label class="master-field">
-                            <span>Project</span>
-                            <select name="project">
+                            <span class="master-label">Project</span>
+                            <select class="master-select" name="project">
                                 <option value="0">Every project</option>
                                 @foreach ($projects as $projectOption)
                                     <option value="{{ $projectOption->id }}" @selected((int) $project === (int) $projectOption->id)>
@@ -240,11 +240,11 @@
                     <h3 class="core-drawer-section-title">Period</h3>
                     <div class="master-form-grid">
                         <label class="master-field">
-                            <span>From</span>
+                            <span class="master-label">From</span>
                             <input class="master-input" type="date" name="date_from" value="{{ $date_from }}">
                         </label>
                         <label class="master-field">
-                            <span>To</span>
+                            <span class="master-label">To</span>
                             <input class="master-input" type="date" name="date_to" value="{{ $date_to }}">
                         </label>
                     </div>
@@ -284,7 +284,7 @@
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table ui-mobile-cards">
+            <table class="master-table ui-mobile-cards" data-table-settings data-table-key="feedback-asks">
                 <thead>
                     <tr>
                         <th>Client</th>
@@ -361,8 +361,8 @@
     </div>
 
     {{-- ─────────────────────────────────────── the lines and the good words --}}
-    <div class="fb-split">
-        <div class="master-card master-card--flat">
+    <div class="master-grid fb-split">
+        <div class="master-card master-card--flat fb-card--flush">
             <div class="fb-card-head">
                 <div>
                     <p class="master-eyebrow">Where we win and lose</p>
@@ -422,7 +422,7 @@
             </div>
         </div>
 
-        <div class="master-card master-card--flat">
+        <div class="master-card master-card--flat fb-card">
             <div class="fb-card-head">
                 <div>
                     <p class="master-eyebrow">Consented, quotable</p>
