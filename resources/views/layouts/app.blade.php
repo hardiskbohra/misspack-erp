@@ -47,8 +47,8 @@
 
     @stack('styles')
 
-    {{-- The shared list chrome — chips, applied strip, density, pinned grid,
-         mobile cards, totals row, empty state, the modal sheet, and the rhythm
+    {{-- The shared list chrome — chips, applied strip, pinned grid, mobile
+         cards, totals row, empty state, the modal sheet, and the rhythm
          between two stacked cards. Loaded by the shell, after the module's own
          sheet so the chrome keeps its own properties: a page cannot forget it,
          and the statement page did — it wore .master-list without ever loading

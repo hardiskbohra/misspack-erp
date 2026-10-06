@@ -164,12 +164,17 @@ check('one removable chip per active filter, each dropping only its own key',
 
 check('the records card carries the table the toolkit keys on',
     /class="master-table-wrap ui-mobile-cards"/.test(view)
-    && /<table class="master-table" data-table-settings data-table-key="projects">/.test(view)
-    && /MasterList\.density\(\{ root: '\.project-index', key: 'misspack\.projects\.density' \}\)/.test(script));
+    && /<table class="master-table">/.test(view)
+    && /MasterList\.rowNavigation\(\{ root: '\.project-index' \}\)/.test(script)
+    && /MasterList\.gridShadow\(\{ root: '\.project-index' \}\)/.test(script));
 
-check('the density group is the shell\'s markup, declared before the toolkit runs',
-    (view.match(/class="master-list-density-btn"/g) || []).length === 3
-    && /data-density="standard" aria-pressed="true"/.test(view)
+/* The density switch and the column chooser were removed ERP-wide: one
+   comfortable rhythm for every table, and the columns the controller sends, so
+   a reader cannot be looking at a different table than the office. The list
+   keeps no hook for either. */
+check('the list offers no density or column switch',
+    !/master-list-density|data-density|data-table-settings|data-table-key/.test(view)
+    && !/MasterList\.density/.test(script)
     && !/density/.test(listSection));
 
 const headers = [...view.matchAll(/<th scope="col"([^>]*)>\s*([^<]+?)\s*<\/th>/g)]

@@ -104,7 +104,7 @@
 
         <div class="master-card master-table-card">
             <div class="master-table-wrap ui-mobile-cards">
-                <table class="master-table" data-table-settings data-table-key="leads">
+                <table class="master-table">
                     <thead>
                         <tr>
                             <th>Lead / Product</th>

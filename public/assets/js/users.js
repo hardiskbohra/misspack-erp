@@ -405,7 +405,6 @@
 
         if (window.MasterList) {
             window.MasterList.rowNavigation({ root: '.user-index' });
-            window.MasterList.density({ root: '.user-index', key: 'misspack.users.density' });
             window.MasterList.gridShadow({ root: '.user-index' });
         }
     }

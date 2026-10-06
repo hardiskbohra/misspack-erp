@@ -70,7 +70,7 @@
         <span class="cp-muted">{{ $payments->total() }} receipts</span>
     </div>
     <div class="cp-table-wrap ui-mobile-cards">
-        <table class="cp-table" data-table-settings data-table-key="portal-payments">
+        <table class="cp-table">
             <thead><tr><th>Date</th><th class="ui-mobile-secondary">Project</th><th>Reference</th><th class="ui-mobile-secondary">Method</th><th class="cp-number">Amount</th></tr></thead>
             <tbody>
                 @forelse($payments as $payment)

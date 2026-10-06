@@ -199,8 +199,8 @@ is a rule a copy-paste would break silently:
 8. **The figures on the office page and the CSV are the same query** — one service
    method, two renderings, as the other modules keep it.
 9. **The office list is a list like the ERP's other lists** — the order hint and the
-   toolbar's right-hand group stand where the shared sheet expects them (and the density
-   presets are bound to the shared toolkit), the counts wear the shared pill, the figures
+   toolbar's right-hand group (the export) stand where the shared sheet expects them,
+   the counts wear the shared pill, the figures
    wear the module's own icon vocabulary, the action column is named, and the filter row
    and the records are two cards — the shell's own 24px is what stands between them, never
    a margin the module wrote for itself.
@@ -299,11 +299,11 @@ and the form's own vocabulary.
 
 The list is the same rule on the other surface. It is a list like the ERP's other lists,
 so it wears the shared chrome in the shared places: the order hint on the left, the export
-and the three density presets grouped in the toolbar's right-hand end, the counts in the
-shared count pill, the module's own Font Awesome icons on the four figures, and a named
-action column. Declaring that right-hand group is what keeps the controls in the toolbar
-rather than on a line of their own above the table — and the group needs
-`MasterList.density`, because the shared script binds only the controls it created itself.
+link in the toolbar's right-hand end, the counts in the shared count pill, the module's own
+Font Awesome icons on the four figures, and a named action column. The density switch and
+the column chooser are not part of it — they were removed ERP-wide, so the export is the
+whole of that group and the shared sheet does not have to make room for a switch nobody
+reads.
 It is two cards as well, the search and filter one and then the records one, because the
 shared sheet puts the shell's 24px between two cards and nothing between two blocks inside
 one: as a single card, the search row ran straight into the table. Two more checks pin it:

@@ -297,13 +297,6 @@ body[data-ui-shell] :is(.master-table-wrap, .cf-table-wrap, .cpa-table-wrap, .cp
         display: none !important;
     }
 
-    /* Persisted column preferences must not be undone by the mobile-card
-       display rules above. */
-    body[data-ui-shell] .ui-mobile-cards td[data-column-hidden],
-    body[data-ui-shell] td[data-column-hidden] {
-        display: none !important;
-    }
-
     body[data-ui-shell] :is(.master-filter-form, .master-period-form, .cf-filter-grid, .client-statement-filter-form, .cp-payment-filters, .projects-filter-form) > * {
         min-width: 0;
         max-width: 100%;

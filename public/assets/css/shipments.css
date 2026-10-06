@@ -1452,14 +1452,7 @@
     margin-top: 12px;
 }
 
-.ship-index .master-table th,
-.ship-index .master-table td {
-    padding: 12px 14px;
-}
-
 .ship-index .master-table th {
-    padding-top: 10px;
-    padding-bottom: 10px;
     font-size: 11px;
     color: var(--mc-text-3);
 }
@@ -1701,25 +1694,3 @@
     font-size: 14px;
 }
 
-/* ---------------- row density variants ----------------
-   Comfortable is the default; compact fits roughly a third more rows on the
-   same screen. Scoped above the mobile breakpoint because the stacked cards
-   have their own spacing. */
-
-@media (min-width: 768px) {
-
-    .ship-index[data-density="compact"] .master-table {
-        --ship-line: 18px;
-        --ship-sub: 15px;
-    }
-
-    .ship-index[data-density="compact"] .ship-date,
-    .ship-index[data-density="compact"] .ship-cell-id {
-        font-size: 12.5px;
-    }
-
-    .ship-index[data-density="compact"] .ship-cell-name,
-    .ship-index[data-density="compact"] td .master-sub {
-        font-size: 11.5px;
-    }
-}

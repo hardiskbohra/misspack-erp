@@ -3,7 +3,7 @@
    --------------------------------------------------------------------------
    Page behaviour for the Projects section:
      - project list: the shared quick-create dialog (.master-modal), the
-       shared list toolkit (row navigation, density, column chooser) and the
+       shared list toolkit (row navigation and the pinned-header shadow) and
        delete confirmation
      - project detail: portal link copy, tab navigation (hash +
        localStorage restore) and the add/edit modals
@@ -30,8 +30,8 @@
 
        The quick-create dialog is a .master-modal, so close, Escape, the
        backdrop and the scroll lock are the shared layer's job; this only
-       opens it. Row navigation, the density presets and the column chooser
-       come from MasterList, the same toolkit every other list uses.
+       opens it. Row navigation and the pinned-header shadow come from
+       MasterList, the same toolkit every other list uses.
        ------------------------------------------------------------------ */
     function initProjectList() {
         var dialog = document.getElementById('quickProjectModal');
@@ -47,7 +47,6 @@
 
         window.MasterList.rowNavigation({ root: '.project-index' });
         window.MasterList.gridShadow({ root: '.project-index' });
-        window.MasterList.density({ root: '.project-index', key: 'misspack.projects.density' });
     }
 
     /* ------------------------------------------------------------------

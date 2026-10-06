@@ -30,7 +30,7 @@
     <div hidden data-open-dialog="add"></div>
 @endif
 
-<div class="office-services master-list" data-density="comfortable">
+<div class="office-services master-list">
 
     <div class="master-stats desktop-only">
         <div class="master-stat master-stat--flat blue">
@@ -147,11 +147,10 @@
     <div class="master-card master-table-card master-card--flat">
         <div class="master-list-toolbar">
             <p class="master-list-hint">Facility retainers — not employees, not purchase vendors</p>
-            <div class="master-list-toolbar-actions"></div>
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table" data-table-settings data-table-key="office-services" data-table-density="off" data-density="comfortable">
+            <table class="master-table">
                 <thead>
                     <tr>
                         <th scope="col">Service</th>

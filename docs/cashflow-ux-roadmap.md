@@ -11,7 +11,7 @@ or an upgrade**, not a rebuild. File references are to this repo.
 | --- | --- |
 | Ledger row | date, particular, invoice/bill no, bank reference, credit/debit, running balance, currency, account, category, payment mode, related party (client/vendor/expense/owner/employee/other) + name, project, linked sales invoice, notes, created-by |
 | Accounts & masters | current/saving/cash accounts, categories, and master options (payment mode, expense head, related party…) — `cashflows/settings.blade.php` |
-| Working surface | quick-view chips, saved views (private/shared), applied-filters strip, density switch, day-grouped rows, totals row, mobile cards, pinned header — the shared `master-list.css` layer |
+| Working surface | quick-view chips, saved views (private/shared), applied-filters strip, day-grouped rows, totals row, mobile cards, pinned header — the shared `master-list.css` layer |
 | Period chips | This month · Last month · This year · Last year, with counts (`app/Helpers/DateRanges.php`) |
 | Reports | period + report type (overall / client / vendor / cash expense), account summary, category summary, statement entries with bill + reference, **PDF export** — `CashflowController::reportData()` |
 | Status | pending → booked → reconciled → disputed / ignored (manual only) |

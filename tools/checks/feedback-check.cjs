@@ -318,13 +318,11 @@ check('the form wears the shared components and invents no shape of its own',
 
 /* The list is the other half of the module's surface, and it is a list like the
    ERP's other lists: the same chrome in the same places. The toolbar declares
-   its right-hand group — the export and the three density presets — instead of
-   leaving the shared toolkit to fall back to a line of its own above the table;
-   the counts wear the shared pill; the figures wear the module's own icon
-   vocabulary rather than an emoji per tile; and the last column says what it is.
-   The recipe line is the one that breaks quietly: master-list.js binds only the
-   controls it created, so a declared group with no binding is three inert
-   buttons that look like a preference. */
+   its own right-hand group — the export link — and nothing else: the density
+   switch and the column chooser were removed ERP-wide, so a list that declared
+   one would be a control nothing reads. The counts wear the shared pill, the
+   figures wear the module's own icon vocabulary rather than an emoji per tile,
+   and the last column says what it is. */
 const indexView = viewText['resources/views/feedback/index.blade.php'] ?? '';
 const headerCells = [...indexView.matchAll(/<th\b[^>]*>/g)].map(match => match[0]);
 const statIcons = [...indexView.matchAll(/<span class="icon"[^>]*>([\s\S]*?)<\/span>/g)].map(match => match[1]);
@@ -333,8 +331,7 @@ check('the office list wears the shared list chrome in the shared places',
     /class="master-list-toolbar"[\s\S]{0,240}class="master-list-hint"/.test(indexView)
     && /class="master-list-toolbar-actions"/.test(indexView)
     && /class="master-list-toolbar-actions"[\s\S]{0,500}feedback\.export/.test(indexView)
-    && /class="master-list-density desktop-only" role="group" aria-label="Table density"[\s\S]{0,500}data-density="compact" aria-pressed="false">Compact/.test(indexView)
-    && /MasterList\.density\(\{ root: '\.fb-index'/.test(script)
+    && !/master-list-density|data-density|data-table-settings/.test(indexView)
     && /class="master-list-chip-count"/.test(indexView)
     && headerCells.length > 0 && headerCells.every(cell => /scope="col"/.test(cell))
     && /<th scope="col" class="fb-col-actions">Action<\/th>/.test(indexView)

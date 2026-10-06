@@ -23,9 +23,10 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const VIEW = path.join(ROOT, 'resources/views/shipments/index.blade.php');
 const CSS = path.join(ROOT, 'public/assets/css/shipments.css');
-/* the list chrome is shared: chips, applied strip, density, pinned grid, the
-   mobile card, the divider row, the totals row and the empty state all live
-   here so every module list is the same surface */
+/* the list chrome is shared: chips, applied strip, pinned grid, the mobile
+   card, the divider row, the totals row and the empty state all live here so
+   every module list is the same surface. Row geometry is the table contract's
+   (components/tables.css): one comfortable rhythm, no switch, no variants. */
 const LIST_CSS = path.join(ROOT, 'public/assets/css/master-list.css');
 const CASHFLOW_VIEW = path.join(ROOT, 'resources/views/cashflows/index.blade.php');
 /* the archive is the second table of the same module: same shell, its own
@@ -225,8 +226,14 @@ check('every shipment type has a light and dark tone', missingType.length === 0,
 
 /* ------------------------------------------------------------ 3. the rows */
 
-check('rows are dense enough to scan',
-    /\.ship-index \.master-table th,\s*\n?\.ship-index \.master-table td \{\s*\n?\s*padding: 12px 14px/.test(css));
+/* One rhythm for every table in the ERP, declared once. The module sheets used
+   to restate their own cell padding (12/14 here, 14/12 on the invoice list) and
+   the density switch then overrode the lot — three statements of one fact, and
+   the table you saw depended on a local preference. The contract owns it now. */
+check('the shared contract owns the row rhythm, and the module sheet agrees',
+    (tableCss.match(/padding: 14px 16px/g) || []).length === 2
+    && !/\.ship-index \.master-table (?:th|td)[\s\S]{0,60}padding/.test(css)
+    && !/\[data-density/.test(tableCss + listCss + css + cashCss));
 check('the money cell uses tabular figures through .is-num',
     /\.master-table td\.is-num \{[\s\S]{0,80}font-variant-numeric: tabular-nums/.test(
         fs.readFileSync(path.join(ROOT, 'public/assets/css/master-detail.css'), 'utf8')));
@@ -273,30 +280,34 @@ check('the applied strip is themed rather than light-only',
     /\.master-list \.master-list-applied-chip \{[\s\S]{0,400}var\(--mc-card-soft\)/.test(listCss)
     && /\.master-list-applied-x:hover \{[\s\S]{0,80}var\(--danger-light\)/.test(listCss));
 
-/* row density — a long list should let the reader decide how long */
-const densityContract = view => /role="group" aria-label="Table density"/.test(view)
-    && (view.match(/class="master-list-density-btn"/g) || []).length === 3
-    && /data-density="standard" aria-pressed="true">Standard/.test(view)
-    && /data-density="comfortable" aria-pressed="false">Comfortable/.test(view)
-    && /data-density="compact" aria-pressed="false">Compact/.test(view);
+/* Row density and column visibility were the reader's, kept on the device.
+   Both are gone: one comfortable rhythm for every table, and the columns the
+   controller sends. A local preference made two people look at two different
+   tables — the office could not reproduce the screen it was asked about — and
+   a hidden column took the figure the reader came for without saying so. */
+const listViews = [];
+(function walk(dir) {
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+        const rel = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(rel);
+        else if (rel.endsWith('.blade.php')) listViews.push([rel, fs.readFileSync(path.join(ROOT, rel), 'utf8')]);
+    }
+})('resources/views');
+const switchHooks = listViews
+    .filter(([, source]) => /master-list-density|data-density|data-table-settings|data-table-key|data-table-density/.test(source))
+    .map(([file]) => file);
 
-check('the three density controls expose their pressed state',
-    densityContract(view) && /class="master-list-density desktop-only"/.test(view));
+check('no screen offers a density or a column switch',
+    switchHooks.length === 0, switchHooks.join(', '));
+check('no module script binds one either',
+    !/MasterList\.density/.test(js + cashflowJs + listJs));
 
-/* one implementation: the module passes its root and its storage key to the
-   shared toolkit, so the two lists cannot behave differently */
-check('the density choice is remembered on the device by the shared toolkit',
-    /misspack\.shipments\.density/.test(js) && /misspack\.cashflows\.density/.test(cashflowJs)
-    && /localStorage/.test(listJs) && /setAttribute\('data-density'/.test(listJs)
-    && /MasterList\.density/.test(js) && /MasterList\.density/.test(cashflowJs));
-check('all three density presets actually change row geometry',
-    /master-list\[data-density="comfortable"\] \.master-table :is\(th, td\),[\s\S]{0,200}padding: 14px 16px/.test(tableCss)
-    && /master-list\[data-density="standard"\] \.master-table :is\(th, td\),[\s\S]{0,200}padding: 10px 12px/.test(tableCss)
-    && /master-list\[data-density="compact"\] \.master-table :is\(th, td\),[\s\S]{0,200}padding: 6px 10px/.test(tableCss)
-    && /--ship-line: 18px/.test(css));
-check('the density is applied before the table paints',
-    /document\.readyState === 'loading'/.test(js + cashflowJs)
-    && /MasterList\.density/.test(js) && /MasterList\.density/.test(cashflowJs));
+/* The toolkit is behaviour: navigation, the pinned-header shadow, the saved
+   view form. Geometry is the sheet's, so the exports say exactly that. */
+check('the toolkit carries behaviour, not table geometry',
+    /return \{[\s\S]{0,200}rowNavigation: rowNavigation,[\s\S]{0,120}gridShadow: gridShadow,[\s\S]{0,120}saveViewToggle: saveViewToggle/
+        .test(listJs)
+    && !/createColumnChooser|createDensityControl|tableSettings|DENSITIES/.test(listJs));
 
 /* the desktop grid — header and totals stay with the reader */
 check('the desktop list scrolls with a pinned header and pinned totals',
@@ -451,7 +462,6 @@ const CHROME = [
     ['applied chips', /class="master-list-applied-chip"/],
     ['clear-all escape', /class="master-list-applied-clear"/],
     ['table bar + order hint', /class="master-list-toolbar"[\s\S]{0,600}class="master-list-hint"/],
-    ['density control', /class="master-list-density desktop-only" role="group" aria-label="Table density"[\s\S]{0,500}data-density="compact" aria-pressed="false">Compact/],
     ['group divider', /class="master-list-group"/],
     ['group count', /class="master-list-group-count"/],
     ['totals row', /class="master-list-total"/],
@@ -483,10 +493,10 @@ check('no module sheet re-declares the list chrome',
     !/\.master-list/.test(css) && !/\.master-list/.test(cashCss));
 
 /* the same behaviour, from one toolkit */
-const toolkitCalls = ['rowNavigation', 'gridShadow', 'saveViewToggle', 'density']
+const toolkitCalls = ['rowNavigation', 'gridShadow', 'saveViewToggle']
     .filter(name => js.includes('MasterList.' + name) && cashflowJs.includes('MasterList.' + name));
 check('both lists drive the shared list toolkit',
-    toolkitCalls.length === 4, 'missing in one list: ' + toolkitCalls.join(', '));
+    toolkitCalls.length === 3, 'missing in one list: ' + toolkitCalls.join(', '));
 
 /* the list is the module's front door: the pages it links to and the dialogs
    it opens must stay reachable from it (a rebuild once shipped a list that
@@ -578,8 +588,8 @@ const onlyInMedia = (cssText, query, needle) => {
 check('the mobile card labels only exist below the card breakpoint',
     onlyInMedia(listCss, 'max-width: 767px', 'td[data-label]::before'));
 
-check('the density chrome only exists above the card breakpoint',
-    onlyInMedia(listCss, 'min-width: 768px', 'data-density="compact"'));
+check('no sheet carries a second row rhythm',
+    !/\[data-density/.test(listCss + tableCss + css + cashCss));
 
 /* ---- table shell integrity ----
    A table lays out as one box: the header and the body share a column grid
@@ -902,8 +912,6 @@ const shipCell = ruleBody(css, '.ship-index .master-table th,');
 const cashCell = ruleBody(cashCss, '.cashflow-index .master-table th,');
 const cashHeader = ruleBody(cashCss, '.cashflow-index .master-table th {');
 const cashLink = ruleBody(cashCss, '.cashflow-index .cf-entry-link {');
-const listDensityButton = ruleBody(listCss, '.master-list .master-list-density-btn {');
-const sharedDensityButton = ruleBody(tableCss, 'body[data-ui-shell] .core-table-density-btn {');
 
 check('the cashflow row key is a blue hyperlink with a hand cursor',
     /<a class="cf-entry-link" href="\{\{ route\('cashflows\.show', \$entry\) \}\}">[\s\S]*?\$entry->particular/.test(cashView)
@@ -913,30 +921,26 @@ check('the cashflow row key is a blue hyperlink with a hand cursor',
     && /text-decoration:\s*underline/.test(ruleBody(cashCss, '.cashflow-index .cf-entry-link:hover,')));
 check('cashflow table headers use the strong theme text colour',
     /color:\s*var\(--mc-text\)/.test(cashHeader));
-check('density buttons have consistent, touch-friendly vertical padding',
-    /min-height:\s*40px/.test(listDensityButton)
-    && /padding:\s*9px 12px/.test(listDensityButton)
-    && /align-items:\s*center/.test(listDensityButton)
-    && /min-height:\s*40px/.test(sharedDensityButton)
-    && /padding:\s*9px 12px/.test(sharedDensityButton)
-    && /align-items:\s*center/.test(sharedDensityButton));
+check('the removed switches leave no styling behind',
+    !/master-list-density|core-table-density|core-column-chooser|core-table-toolbar/
+        .test(listCss + tableCss));
 
 check('both lists measure their table the same way',
-    /padding:\s*12px 14px/.test(shipCell) && /padding:\s*12px 14px/.test(cashCell)
+    !/padding/.test(shipCell) && !/padding/.test(cashCell)
+    && /padding: 14px 16px/.test(tableCss)
     && /margin-top:\s*4px/.test(ruleBody(css, '.ship-index td .master-sub {'))
     && /margin-top:\s*4px/.test(ruleBody(cashCss, '.cashflow-index td .master-sub {')));
 
 const lineToken = sheet => /--\w+-line:\s*(\d+)px/.exec(sheet)?.[1];
 const subToken = sheet => /--\w+-sub:\s*(\d+)px/.exec(sheet)?.[1];
-const compactToken = sheet => [...sheet.matchAll(/\[data-density="compact"\][\s\S]{0,200}?--\w+-line:\s*(\d+)px/g)].map(m => m[1]);
+/* The compact pass is gone with the switch, so the two sheets only have to
+   agree on the one rhythm they both keep. */
 
 check('both lists share one row rhythm',
     lineToken(css) === lineToken(cashCss) && lineToken(css) === '20'
     && subToken(css) === subToken(cashCss) && subToken(css) === '16'
-    && /min-height:\s*var\(--\w+-line\)/.test(css) && /min-height:\s*var\(--\w+-line\)/.test(cashCss)
-    && compactToken(css).join() === compactToken(cashCss).join() && compactToken(css).length === 1,
-    'line ' + lineToken(css) + '/' + lineToken(cashCss) + ' sub ' + subToken(css) + '/' + subToken(cashCss)
-    + ' compact ' + compactToken(css) + '/' + compactToken(cashCss));
+    && /min-height:\s*var\(--\w+-line\)/.test(css) && /min-height:\s*var\(--\w+-line\)/.test(cashCss),
+    'line ' + lineToken(css) + '/' + lineToken(cashCss) + ' sub ' + subToken(css) + '/' + subToken(cashCss));
 
 /* Every table names a width per column, and the widths are 1..n with no gap:
    a column without one is the column that reflows. The count is read per root

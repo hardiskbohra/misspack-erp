@@ -121,7 +121,7 @@ Capability, all from the listing:
 - **figures** — invoiced / received / outstanding / overdue for the *filtered* set, one
   `selectRaw` aggregate, plus a module-wide draft count. Never a loop over the fetched
   page;
-- **density switch**, clickable rows, one row menu of real routes (View · Edit ·
+- clickable rows, one row menu of real routes (View · Edit ·
   Record payment · Print · Copy client link · Mark sent · Hide/Show in portal ·
   Convert to tax invoice · Duplicate as draft · Delete);
 - **CSV export** of the same rows, honouring every filter, with a BOM so Excel reads
@@ -249,7 +249,7 @@ module's own names live here (`.si-*`, the line-items table, `.si-total-box`,
 every page that loads the sheet.
 
 `public/assets/js/sales-invoices.js` boots the form's line-item builder **and** the
-list's chrome (density, saved-view toggle, clickable rows, the receipt dialog, the
+list's chrome (saved-view toggle, clickable rows, the receipt dialog, the
 client link). Every piece is guarded: the same file loads on the form, which has none
 of it.
 

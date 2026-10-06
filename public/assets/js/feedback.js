@@ -83,13 +83,6 @@
         }
     });
 
-    /* The list offers the three density presets in its toolbar, so the shared
-       toolkit binds them here — one switch for every list on the ERP, and the
-       choice is remembered on the device like the others. */
-    if (window.MasterList) {
-        window.MasterList.density({ root: '.fb-index', key: 'misspack.feedback.density' });
-    }
-
     /* A low score on the public form highlights the "we will call you" note, so
        the promise is beside the answer that triggers it. The note is always on
        the page; this only draws the eye. */

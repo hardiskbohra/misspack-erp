@@ -295,16 +295,11 @@
                     <i class="fa-solid fa-file-csv" aria-hidden="true"></i> Export CSV
                 </a>
 
-                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
-                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
-                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
-                </div>
             </div>
         </div>
 
         <div class="master-table-wrap ui-mobile-cards">
-            <table class="master-table" data-table-settings data-table-key="feedback-asks">
+            <table class="master-table">
                 <thead>
                     <tr>
                         <th scope="col">Client</th>

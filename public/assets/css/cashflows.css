@@ -674,14 +674,7 @@
     margin-top: 12px;
 }
 
-.cashflow-index .master-table th,
-.cashflow-index .master-table td {
-    padding: 12px 14px;
-}
-
 .cashflow-index .master-table th {
-    padding-top: 10px;
-    padding-bottom: 10px;
     font-size: 11px;
     color: var(--mc-text);
 }
@@ -914,28 +907,6 @@
 :root[data-theme="dark"] .cf .master-badge.type-debit {
     background: rgba(225, 29, 72, .16);
     color: #ff9b9b;
-}
-
-/* ---------------- density ----------------
-   Comfortable is the default; compact fits roughly a third more rows on the
-   same screen. The padding and the header come from master-list.css; the
-   ledger's own type scale tightens here, exactly as the shipment cells do. */
-
-@media (min-width: 768px) {
-    .cashflow-index[data-density="compact"] .master-table {
-        --cf-line: 18px;
-        --cf-sub: 15px;
-    }
-
-    .cashflow-index[data-density="compact"] .cf-date,
-    .cashflow-index[data-density="compact"] .cf-particular strong,
-    .cashflow-index[data-density="compact"] .cf-account {
-        font-size: 12.5px;
-    }
-
-    .cashflow-index[data-density="compact"] td .master-sub {
-        font-size: 11px;
-    }
 }
 
 /* ---------------- documents ----------------

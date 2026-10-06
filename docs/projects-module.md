@@ -42,10 +42,11 @@ next door, and it is gone. The page is now:
   `Action` menu — open, quick details, edit, delete. The rows are
   `.project-row.is-clickable` with `data-href`, so the row is the door and the
   inner links keep their own click.
-- **The table is the shared table.** `data-table-settings data-table-key="projects"`
-  opts it into the column chooser, the density group is the shell's
-  `.master-list-density-btn` markup, and `MasterList.density({ root: '.project-index' })`
-  binds it to `misspack.projects.density`.
+- **The table is the shared table.** It is a plain `class="master-table"` in a
+  `.master-table-wrap ui-mobile-cards`, with `MasterList.rowNavigation` and
+  `gridShadow` bound to `.project-index`. The density switch and the column
+  chooser that used to hang off `data-table-settings` were removed ERP-wide:
+  every table keeps the comfortable rhythm and the columns the controller sends.
 - **The dialog is the shared dialog.** Quick create is one `.master-modal`
   opened through `window.MasterModal`; the module's own `projects-modal`
   wiring is deleted. Close, backdrop, Escape and the scroll lock are the

@@ -33,13 +33,12 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Component | Status | Current implementation |
 | --- | --- | --- |
 | Standard table | Shared | `.core-table`, `.master-table`, `.cp-table`; wrappers keep horizontal scrolling outside the table |
-| Table density | Shared | Standard, compact, and comfortable modes; `master-list.js` persists each opted-in view in localStorage and `tables.css` applies responsive paddings |
-| Compact table | Shared | Compact preset is one of the three shared density modes; `master-list` keeps its mobile card treatment |
+| Comfortable table | Shared | One row rhythm for every table (`padding: 14px 16px` on the table family in `components/tables.css`); the mobile card keeps its own spacing below 768px |
 | Grouped table | Partial | Sectioned lists/subtotals exist in Cashflows and reports; no general grouped-table API |
 | Sortable table | Partial | Some lists sort via query controls; no shared accessible sort-header component |
 | Filterable table | Shared | Visible search and quick chips stay in the list toolbar; secondary criteria open in the shared, theme-aware right drawer across administrative and client-portal modules |
 | Selectable table | Partial | `.master-list-pick` and bulk controls on some lists; not available on every data table |
-| Column chooser | Shared | `master-list.js` creates an accessible per-table chooser for `data-table-settings` tables; visibility preferences persist by `data-table-key` in localStorage and action columns remain visible |
+| Table controls | Removed | The list toolbar carries the module's own actions only; the reader-local row-height and column-visibility controls were removed ERP-wide — see `docs/ui-design-guidelines.md` |
 | Saved views | Shared | Named filter sets are stored per user and module in `saved_views` (`app/Services/SavedViews.php`) and rendered by the `.master-list-saved*` chrome in the list toolbar; clients, shipments, cashflows, sales invoices and vendors use the same store |
 | Server-side pagination | Shared | Laravel paginator/query pagination in module controllers and shared view partial |
 | Grid view | Partial | Product/catalogue and portal cards; not a general table/grid switch |
@@ -126,4 +125,4 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 
 ## Architecture follow-up
 
-The inventory records what exists today. The shared responsive contract lives in `resources/css/layout/responsive.css`: use `.ui-mobile-secondary` for genuinely optional tablet/phone details and `.ui-mobile-cards` plus `data-label` for labelled mobile rows. Keep core actions and required data visible. Tables opt into saved columns and three density modes with `data-table-settings` plus a unique `data-table-key`. Use `<x-drawer>`, `<x-filter-trigger>`, and the shared `data-drawer-*` API for keyboard-accessible quick details and module filter panels; leave primary search and quick chips visible. See `docs/ui-design-guidelines.md` for usage rules. The detailed UX guideline should specify when to choose each pattern, interaction and keyboard behavior, empty/loading/error states, responsive transformations, and content rules. It should not create a second visual token or component API.
+The inventory records what exists today. The shared responsive contract lives in `resources/css/layout/responsive.css`: use `.ui-mobile-secondary` for genuinely optional tablet/phone details and `.ui-mobile-cards` plus `data-label` for labelled mobile rows. Keep core actions and required data visible. Every table keeps the one comfortable row rhythm declared in `resources/css/components/tables.css`; there is no per-table height or column preference to opt into. Use `<x-drawer>`, `<x-filter-trigger>`, and the shared `data-drawer-*` API for keyboard-accessible quick details and module filter panels; leave primary search and quick chips visible. See `docs/ui-design-guidelines.md` for usage rules. The detailed UX guideline should specify when to choose each pattern, interaction and keyboard behavior, empty/loading/error states, responsive transformations, and content rules. It should not create a second visual token or component API.

@@ -23,18 +23,16 @@
     }
 
     /* The list behaves like every other list screen: the shared toolkit owns
-       row navigation, the density switch, the pinned-header shadow and the
-       saved-view form; this file names the cashflow lists. The ledger and the
-       document archive are the same surface, so the density choice is shared
-       between them. */
+       row navigation, the pinned-header shadow and the saved-view form; this
+       file names the cashflow lists. The ledger, the archive and the
+       statements run are the same surface, so the shadow is shared between
+       them. */
     function initList() {
         /* The ledger, the archive, the statements run and the report builder
-           share one density choice and one pinned-header shadow: they are the
-           same surface seen from four angles. (The report has no density
-           buttons, so only the shadow applies to it.) */
+           share one pinned-header shadow: they are the same surface seen from
+           four angles. */
         ['.cashflow-index', '.cashflow-documents', '.cashflow-statements', '.cashflow-reports'].forEach(function (root) {
             window.MasterList.gridShadow({ root: root });
-            window.MasterList.density({ root: root, key: 'misspack.cashflows.density' });
         });
 
         /* only the ledger's rows carry data-href */

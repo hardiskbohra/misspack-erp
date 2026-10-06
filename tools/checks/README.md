@@ -13,7 +13,7 @@ node tools/checks/design-check.cjs    # stylesheets, cascade, design rules
 node tools/checks/blade-check.cjs     # templates parse: directives, includes, components
 node tools/checks/mark-check.cjs      # shipping-mark geometry + QR payloads
 node tools/checks/list-check.cjs      # one index page: chips, columns, toolbar, row actions,
-                                      # applied filters, density, the pinned grid
+                                      # applied filters, the pinned grid
 node tools/checks/ui-components-check.cjs # shared Drawer/DataTable API, persistence, a11y, and inventory
 node tools/checks/status-check.cjs    # the rules a shipment status change keeps: the delivery
                                       # date it fills in, the hold/delay reason it still refuses
@@ -129,7 +129,7 @@ guards actually fail when the behaviour they describe is broken.
 | Row linking | the row opens the record and the inner links/buttons keep their own click; the guard lives in JS and is checked, because a half-linked row is worse than none |
 | Toolbar honesty | a Reset appears only when a filter is set, the empty state offers a way out, and the closed block says how many rows it holds |
 | Applied filters | one removable chip per active filter, each removing only its own key — a filter you cannot see is a filter you cannot undo |
-| Row density | the list remembers how tight the rows are, and both densities are checked to really change the row geometry |
+| One row rhythm | every table keeps the comfortable geometry from the shared contract, and no sheet, screen or script carries a density or column switch |
 | A pinned grid | above 1200px the header and the totals row stay put while the rows scroll, and the borders are separated so a sticky header keeps its hairline |
 | Stacked-row labels | on a phone the row becomes a card and every value keeps the column name it had |
 | One row rhythm | every first line and every second line shares a line box, so a row reads as a row instead of a pile of boxes |

@@ -10,7 +10,7 @@
                 attributes on #invoiceItemsBody (Blade cannot render inside an
                 external script);
      the list   the shared list chrome every module's listing wears — clickable
-                rows, the density switch, the saved-view toggle — plus the two
+                rows, the saved-view toggle — plus the two
                 actions that only exist here: the receipt dialog (which posts to
                 the cashflow ledger, so its form's action is filled in from the
                 row that opened it) and the client link, copied to the clipboard.
@@ -613,7 +613,6 @@
         window.MasterList.rowNavigation({ root: '.si-index' });
         window.MasterList.gridShadow({ root: '.si-index' });
         window.MasterList.saveViewToggle();
-        window.MasterList.density({ root: '.si-index', key: 'invoiceDensity' });
     });
 
     /* --------------------------------------------------- the receipt dialog

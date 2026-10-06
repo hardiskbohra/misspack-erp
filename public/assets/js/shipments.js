@@ -32,13 +32,12 @@
     }
 
     /* ---------------- Listing behaviour ----------------
-       Row navigation, the density switch, the sticky-header shadow and the
-       saved-view form are the same on every list screen, so they live in
-       assets/js/master-list.js; this file only names the shipment list. */
+       Row navigation, the sticky-header shadow and the saved-view form are the
+       same on every list screen, so they live in assets/js/master-list.js;
+       this file only names the shipment list. */
     function initList(root) {
         window.MasterList.rowNavigation({ root: root });
         window.MasterList.gridShadow({ root: root });
-        window.MasterList.density({ root: root, key: 'misspack.shipments.density' });
         window.MasterList.saveViewToggle();
     }
 
@@ -160,7 +159,7 @@
         });
     }
 
-    /* the remembered density and the pre-paint apply live in master-list.js */
+    /* the shared list bindings live in master-list.js */
 
     function initCostModal() {
         var modal = document.getElementById('costModal');
@@ -540,8 +539,8 @@
     };
 
     /* Run now when the markup is already parsed (this file is pushed at the end
-       of the body) so the remembered density is in place before the first
-       paint; otherwise wait for it. */
+       of the body) so the list is live before the first interaction; otherwise
+       wait for it. */
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () { initList('.ship-index'); });
     } else {

@@ -160,36 +160,24 @@ check('statement PDF and document-pack downloads remain available with their fil
     && /cashflows\.documents\.pack/.test(documentsView)
     && /Download pack/.test(documentsView));
 
-check('DataTable settings are opt-in and column state is persisted per key',
-    /table\[data-table-settings/.test(listJs)
-    && /data-table-key/.test(listJs)
-    && /localStorage\.setItem\(key, JSON\.stringify\(visibility\)\)/.test(listJs));
-check('column chooser protects the action column, keeps a visible column, and can reset',
-    /actions\?/.test(listJs)
-    && /if \(!visibility\.some\(Boolean\)\)/.test(listJs)
-    && /Restore defaults/.test(listJs)
-    && /localStorage\.removeItem\(key\)/.test(listJs));
-check('visible table columns reclaim the grid width and restore its original sizing',
-    /function captureColumnSizing\(table, count\)/.test(listJs)
-    && /sizing\.widths\[index\] \/ visibleWidth\) \* 100/.test(listJs)
-    && /sizing\.inlineWidths\[index\]/.test(listJs)
-    && /sizing\.minWidth \* visibleWidth \/ sizing\.totalWidth/.test(listJs)
-    && /applyColumnVisibility\(table, visibility, columnSizing\)/.test(listJs));
-check('column chooser exposes labelled controls and state to assistive technology',
-    /aria-haspopup', 'dialog'/.test(listJs)
-    && /aria-expanded', open \? 'true' : 'false'/.test(listJs)
-    && /role', 'dialog'/.test(listJs)
-    && /Show ' \+ column\.label \+ ' column/.test(listJs));
-check('the three density presets are available and persisted',
-    /\['comfortable', 'standard', 'compact'\]/.test(listJs)
-    && /localStorage\.setItem\(key, value\)/.test(listJs)
-    && /\[data-density="comfortable"\]/.test(tableCss)
-    && /\[data-density="standard"\]/.test(tableCss)
-    && /\[data-density="compact"\]/.test(tableCss));
-check('responsive table controls preserve mobile essentials and tablet column reduction',
-    /@media \(max-width: 991px\)[\s\S]*?core-column-chooser/.test(tableCss)
-    && /@media screen and \(min-width: 768px\) and \(max-width: 991px\)[\s\S]*?ui-mobile-secondary/.test(responsiveCss)
-    && /data-column-hidden/.test(responsiveCss));
+/* Table geometry and column visibility are not the reader's to change any
+   more: one comfortable rhythm for every table in the ERP, and the columns the
+   controller sends. The toolkit is behaviour — navigation, the pinned-header
+   shadow, the saved-view form — and the sheets keep no switch to style. */
+const listExports = (listJs.match(/return \{[\s\S]*?\};/) || [''])[0];
+check('the table toolkit carries behaviour, not geometry',
+    /rowNavigation: rowNavigation/.test(listExports)
+    && /gridShadow: gridShadow/.test(listExports)
+    && /saveViewToggle: saveViewToggle/.test(listExports)
+    && (listExports.match(/:\s*[a-zA-Z]+/g) || []).length === 3
+    && !/createColumnChooser|createDensityControl|tableSettings|DENSITIES|localStorage/.test(listJs));
+check('one comfortable rhythm for every table, with no switch and no variants',
+    (tableCss.match(/padding: 14px 16px/g) || []).length === 2
+    && !/\[data-density|core-table-density|core-column-chooser|core-table-toolbar|data-column-hidden/
+        .test(tableCss + responsiveCss));
+check('the responsive contract keeps the mobile-card rules and the tablet reductions',
+    /@media screen and \(min-width: 768px\) and \(max-width: 991px\)[\s\S]*?ui-mobile-secondary/.test(responsiveCss)
+    && /td\.ui-mobile-secondary/.test(responsiveCss));
 
 const viewFiles = [];
 function walk(directory) {
@@ -200,18 +188,20 @@ function walk(directory) {
     }
 }
 walk('resources/views');
-const tableKeys = viewFiles.flatMap((file) => {
+/* Every table preference hook is gone with the controls that used them, so a
+   listing cannot opt into a switch that no longer exists. */
+const tableHooks = viewFiles.flatMap((file) => {
     const source = read(file);
-    return [...source.matchAll(/data-table-key="([^"]+)"/g)].map((match) => [match[1], file]);
+    return [...source.matchAll(/data-table-(?:settings|key|density)/g)].map((match) => [match[0], file]);
 });
-const duplicates = tableKeys.filter(([key], index) => tableKeys.findIndex(([other]) => other === key) !== index);
-check('every opted-in listing uses a unique stable table preference key',
-    tableKeys.length >= 12 && duplicates.length === 0,
-    duplicates.map(([key, file]) => `${key} (${file})`).join(', '));
-check('the component inventory marks drawers, column chooser, and density modes shared',
+check('no listing opts a table into a preference that no longer exists',
+    tableHooks.length === 0,
+    tableHooks.map(([hook, file]) => `${hook} (${file})`).join(', '));
+check('the component inventory lists the shared drawer and no removed switch',
     /\| Drawer \| Shared \|/.test(inventory)
-    && /\| Column chooser \| Shared \|/.test(inventory)
-    && /\| Table density \| Shared \|/.test(inventory));
+    && !/Column chooser/i.test(inventory)
+    && !/Table density/i.test(inventory)
+    && !/density/i.test(inventory));
 
 let failures = 0;
 for (const [name, ok, detail] of checks) {

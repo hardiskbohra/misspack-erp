@@ -259,21 +259,9 @@
                 title="Open shipments first, newest pickup date on top. Delivered and cancelled shipments sit in a closed block below, also newest first.">
                 Open shipments first &middot; closed block below
             </p>
-
-            {{-- How much of the list fits on screen is a preference, not a
-                 filter, so it lives beside the ordering rule — in the same
-                 right-hand slot every list uses, so a module can put its own
-                 destinations next to the density switch. --}}
-            <div class="master-list-toolbar-actions">
-                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
-                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
-                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
-                </div>
-            </div>
         </div>
         <div class="master-table-wrap">
-            <table class="master-table" data-table-settings data-table-key="shipments">
+            <table class="master-table">
                 <thead>
                     <tr>
                         <th scope="col" class="ui-mobile-secondary">Pickup</th>

@@ -198,16 +198,9 @@
             <p class="master-list-hint" title="Client profiles are shown newest first.">
                 {{ $clientCount === 0 ? 'No matching clients' : 'Newest first · Showing '.$firstClient.'–'.$lastClient.' of '.$clientCount }}
             </p>
-            <div class="master-list-toolbar-actions">
-                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
-                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
-                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
-                </div>
-            </div>
         </div>
         <div class="master-table-wrap">
-            <table class="master-table client-table" data-table-settings data-table-key="clients">
+            <table class="master-table client-table">
                 <thead>
                     <tr>
                         <th scope="col">Client</th>
