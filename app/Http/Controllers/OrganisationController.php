@@ -31,6 +31,10 @@ class OrganisationController extends Controller
             'organisation' => $organisation,
             'tab' => $tab,
             'kinds' => OrganisationAddress::KINDS,
+            'counts' => [
+                'addresses' => $organisation->addresses->count(),
+                'banks' => $organisation->banks->count(),
+            ],
         ]);
     }
 
