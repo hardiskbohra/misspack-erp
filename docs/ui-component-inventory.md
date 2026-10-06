@@ -78,7 +78,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Image upload | Partial | Product, shipment, vendor, and portal upload flows are page-specific |
 | Rich text | Gap | No reusable rich-text editor component found |
 | Checkbox | Shared | `.master-check` and core checkbox styles |
-| Radio | Partial | Native radios in module forms, no shared radio-card group |
+| Radio | Partial | Native radios in module forms, no shared radio-card group; a pick-one-of-few question that fits a pill wears the shared `.master-choice-chip` group |
 | Toggle | Partial | Theme toggle and shipment visibility switch; no general setting-toggle API |
 | Tags | Partial | Badges and Select2 tags on some screens; no common editable tag input |
 | Quantity + unit | Partial | Product/shipment line-item controls; no shared quantity-unit component |

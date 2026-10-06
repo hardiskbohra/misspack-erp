@@ -276,7 +276,17 @@ the module owns is padded 20–24px (`.fb-card`), a card holding a table is flus
 bar inset at 16px (`.fb-card--flush`), controls and buttons are 40–44px, and the space
 between cards is the shell's own — 24px between page blocks (the `.master-list.css`
 rhythm, mirrored on `.fb-show` and `.fb-settings`), 16px inside a panel, a tab or the
-side rail. Nothing here spaces its own page, and no control shape is invented: the
-public form wears the shared `.master-input` / `.master-textarea`, and loads the shared
-form sheet to get them. Three checks pin this: the page rhythm, the card padding, and
-the shared control.
+side rail, and the guideline's own 16px between the five cards of the form itself.
+Nothing here spaces its own page, and no shared control is redrawn.
+
+The form is that shared API rather than a look beside it: a section is a `core-card` (the
+module adds only `.fb-card`'s padding and `.fb-step`'s rhythm), a field is a `core-label`
+over a `core-text-input` or `core-textarea` with its `core-field-error` under it, the
+error summary is a `core-alert`, the submit is a `core-button core-button-primary`, and
+the two pick-one-of-few questions — work with us again, and which uses of a quote you
+consent to — are the app's `.master-choice-chip` group. The standalone copy of the form
+loads `core.css` and `master-form.css` for those components (the same two sheets the
+office and the portal already load), and re-states the two border longhands the legacy
+`--mc-*` tokens would have carried, because a public page has no app shell to define
+them. Four checks pin the result: the page rhythm, the card padding, the shared control,
+and the form's own vocabulary.

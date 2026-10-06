@@ -9,12 +9,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('assets/css/feedback.css') }}">
-    {{-- The shared control shape — `.master-input`, `.master-textarea`, the
-         field label — lives in the shared form sheet, the same one the portal's
-         own standalone login page loads. A one-page public form must not invent
-         a second control of its own. --}}
+    {{-- The shared components the form is built on, in the office layout's own
+         order: `core.css` owns the control geometry (the 44px field, the 12px
+         radius, the label's 8px step) and the compatibility sheets that follow
+         it the two pieces of the app's vocabulary the form still shares — the
+         `.master-choice-chip` group it asks its yes/no and consent questions
+         with. A one-page public form must not invent a control of its own. --}}
+    <link rel="stylesheet" href="{{ asset('assets/css/core.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/feedback.css') }}">
     @include('layouts.partials.design-system-styles')
 </head>
 

@@ -494,8 +494,11 @@
     padding: 10px 16px;
     border: 0;
     border-radius: 999px;
-    background: var(--mc-soft);
-    color: var(--mc-text-2);
+    /* the compatibility tokens an app shell defines (light values here as the
+       fallback, so a standalone page that loads this sheet still draws the
+       chip's fill) */
+    background: var(--mc-soft, #eef3ff);
+    color: var(--mc-text-2, #536079);
     font-size: 14px;
     font-weight: 600;
     display: inline-flex;
@@ -508,7 +511,7 @@
 /* with no border to tint, the fill carries the hover: one step from --mc-soft
    to --mc-border, which reads darker in light and lighter in dark */
 .master-choice-chip:hover span {
-    background: var(--mc-border);
+    background: var(--mc-border, #dfe7f3);
 }
 
 .master-choice-chip input:checked + span {

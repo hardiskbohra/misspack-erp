@@ -294,6 +294,28 @@ check('the shared control carries the shape and the module only the gap',
     /\.fb \.fb-field,\s*\n\.fb \.master-field \{ display: flex; flex-direction: column; gap: 8px;/.test(sheet)
     && !/\.fb-field (input|textarea|select)/.test(sheet));
 
+/* The form is the module's newest surface, and the guideline's own rule for a new
+   screen is that it wears the shared component API rather than a look beside it.
+   Both halves are pinned: the markup carries the shared classes (a card, a label,
+   a control, its error, the button, the alert, the choice-chip group), and the
+   sheet declares no card, control or button shape of its own. The last line is
+   the one that breaks first if the public page stops loading `core.css`: without
+   it the shared geometry the markup depends on is simply not there. */
+const formView = viewText['resources/views/feedback/partials/form.blade.php'] ?? '';
+
+check('the form wears the shared components and invents no shape of its own',
+    /class="core-card fb-card fb-step"/.test(formView)
+    && /class="core-label"/.test(formView)
+    && /class="core-text-input"/.test(formView)
+    && /class="core-textarea"/.test(formView)
+    && /class="core-button core-button-primary fb-submit"/.test(formView)
+    && /class="core-alert fb-alert fb-alert--error"/.test(formView)
+    && /class="core-required"/.test(formView)
+    && /class="master-choice-chip/.test(formView)
+    && !/\.fb-step \{[^}]*background/.test(sheet)
+    && !/\.fb-submit \{[^}]*background/.test(sheet)
+    && /assets\/css\/core\.css/.test(viewText['resources/views/feedback/public.blade.php'] ?? ''));
+
 check('every route the module links to is registered',
     [...allViews.matchAll(/route\('(feedback[.a-z-]*|client-portal\.feedback[.a-z-]*)'/g)]
         .map(m => m[1])

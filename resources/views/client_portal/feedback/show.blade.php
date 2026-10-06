@@ -21,7 +21,7 @@
     </div>
 
     @if ($errors->any())
-        <div class="fb-alert fb-alert--error" role="alert">
+        <div class="core-alert fb-alert fb-alert--error" role="alert">
             <strong>Not quite submitted.</strong>
             <ul>
                 @foreach ($errors->all() as $error)

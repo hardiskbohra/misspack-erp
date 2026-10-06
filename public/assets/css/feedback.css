@@ -170,6 +170,21 @@
 
 .fb-centered { display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
 
+/* The app shell defines the legacy `--mc-*` compatibility tokens; a public page
+   has no shell. The shared primitives read those tokens for their hairline
+   (`core.css` builds every border from `--core-border` / `--core-field-border`),
+   so with nothing to resolve they would drop the declaration and leave a card and
+   a control with no border at all — the one piece of the shared shape the theme
+   token layer paints only as a colour. The two missing longhands are re-stated
+   here, scoped to the standalone body: the portal renders the same form through
+   the shell, where the shared sheets are already complete. */
+.fb-standalone .core-card,
+.fb-standalone .core-text-input,
+.fb-standalone .core-textarea {
+    border-style: solid;
+    border-width: 1px;
+}
+
 .fb-public-bar {
     display: flex;
     align-items: center;
@@ -213,19 +228,18 @@
 /* …also when it sits under the intro paragraph, which zeroes its siblings. */
 .fb-intro p.fb-intro-note { margin: 12px 0 0; }
 
-/* ------------------------------------------------------------- the form */
+/* ------------------------------------------------------------- the form
+
+   A section is the shared `.core-card` — the theme surface, the 1px hairline, the
+   18px radius and the shared shadow all come from the design system — plus
+   `.fb-card` for the 20–24px the guideline wants inside a card of its own. What
+   is left for `.fb-step` is the one thing no shared rule owns: the 16px between
+   two cards of this form (the guideline's own step between cards).
+   ------------------------------------------------------------------------- */
 
 .fb-form { display: block; }
 
-.fb-step {
-    margin-bottom: 16px;
-    padding: 22px 24px;
-    background: var(--ui-card-surface, #fff);
-    border: 1px solid var(--ui-border, #dfe7f3);
-    border-radius: 18px;
-}
-
-.fb-step:last-of-type { margin-bottom: 20px; }
+.fb-step { margin-bottom: 16px; }
 
 .fb-step-title {
     display: flex;
@@ -256,19 +270,26 @@
     color: var(--ui-text-muted, #7d8aa0);
 }
 
-.fb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.fb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
 
-/* The field is a stack, not a box: the label, then the control 8px under it
-   (the guideline's spacing step), then 14px to the next field — the gap the
-   app's own `.master-form-grid` uses. The control itself is the shared one
-   (`.master-input` / `.master-textarea`), so no control shape is invented here;
-   only the label keeps a margin reset, because the shared sheets disagree on it
-   (10px in master.css, 7px in master-index.css, 0 in master-form.css). */
+/* The field is a stack, not a box: the shared label, then the shared control
+   8px under it (the guideline's spacing step), then 14px to the next field — the
+   gap the app's own `.master-form-grid` uses. No control shape is invented here,
+   so the only thing the stack has to say to the shared label is "the gap is
+   already there": `.core-label` carries a margin of its own (as `.master-label`
+   does in some sheets), and inside a flex column it would double the step. */
 .fb .fb-field,
 .fb .master-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 0 0 14px; }
 
+.fb .fb-field > .core-label,
 .fb .fb-field > .master-label,
 .fb .master-field > .master-label { margin: 0; }
+
+/* The shared inline error carries its own 5px step; the module keeps the 8px
+   rhythm, and a stack that already has the gap adds nothing to it. */
+.fb .core-field-error { margin-top: 8px; }
+.fb .fb-field > .core-field-error,
+.fb .fb-lines > .core-field-error { margin-top: 0; }
 
 /* A field that ends a card hands the space to the card's own padding… */
 .fb .fb-field:last-child,
@@ -282,17 +303,19 @@
 
 /* The parenthetical part of a label — "(optional)", "(2 minutes)" — is a note,
    not a second label: inline, at the muted weight. */
+.fb .core-label small,
 .fb .master-label small { font-weight: 500; color: var(--ui-text-muted, var(--mc-text-3, #7d8aa0)); }
 
 /* The one field that asks for the awkward answer gets a warning hairline rather
    than a second colour: it is the field the follow-up loop depends on. */
+.fb-field--attention > .core-textarea,
 .fb-field--attention > .master-textarea { border-color: rgba(239, 71, 112, .35); }
 
 /* the honeypot: present for the robots, invisible to people */
 .fb-trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
 /* the 1–5 scale, as five touch-sized choices */
-.fb-scale { margin-bottom: 20px; }
+.fb-scale { margin-bottom: 16px; }
 
 .fb-scale-item {
     display: inline-flex;
@@ -359,7 +382,7 @@
 .fb-line-score { grid-column: 2; display: flex; gap: 6px; }
 .fb-line-comment { grid-column: 1 / -1; }
 
-.fb-line-comment .master-input { width: 100%; }
+/* the line comment is the shared input, which is already full width */
 
 .fb-score-pill {
     display: inline-flex;
@@ -391,11 +414,16 @@
 .fb-lines--readonly .fb-line:first-child { padding-top: 0; }
 .fb-lines--readonly .fb-line:last-child { padding-bottom: 0; border-bottom: 0; }
 
-/* the yes/no and consent rows */
+/* The yes/no and consent rows are the app's own choice-chip group
+   (`.master-choice-chip`, declared by the two shared sheets that own it): the
+   chip is the control, the legend is a shared `.core-label`, and the module only
+   spaces the block. The chip that stays for the office's own inline boxes
+   (`.fb-choice-item`) keeps its shape below — nothing new wears it. */
 .fb-choice { margin: 0 0 16px; padding: 0; border: 0; }
 .fb-choice:last-child { margin-bottom: 0; }
-.fb-choice legend { padding: 0 0 10px; font-size: 12px; font-weight: 600; color: var(--ui-text-secondary, #536079); }
-.fb-choice-row { display: flex; flex-wrap: wrap; gap: 8px; }
+/* the legend is a shared `.core-label`; its 8px step to the chips is spelled
+   here too, because a rendered legend does not always carry a margin. */
+.fb-choice legend { padding: 0; margin-bottom: 8px; }
 
 .fb-choice-item {
     display: inline-flex;
@@ -410,7 +438,6 @@
     cursor: pointer;
 }
 
-.fb-choice-item--single { background: transparent; border-style: dashed; }
 .fb-choice-item--inline { align-self: end; }
 .fb-choice-item input { width: 18px; height: 18px; accent-color: var(--ui-accent, #4f83f1); }
 
@@ -425,27 +452,16 @@
     border-radius: 12px;
 }
 
-.fb-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin: 0 0 32px; }
+.fb-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin: 0; }
 
-.fb-submit {
-    min-height: 44px;
-    padding: 11px 24px;
-    font: inherit;
-    font-size: 15px;
-    font-weight: 600;
-    color: #fff;
-    background: var(--ui-accent, #4f83f1);
-    border: 0;
-    border-radius: 12px;
-    cursor: pointer;
-}
-
-.fb-submit:hover { filter: brightness(1.05); }
-.fb-submit:focus-visible { outline: 2px solid var(--ui-text, #17233b); outline-offset: 2px; }
+/* The button is the shared `.core-button` (42px, the app's primary colour, its
+   own hover and focus), so the module's own class has nothing left to declare —
+   it stays for the one rule the shared button cannot know: full width on a
+   phone. */
 .fb-actions-note { flex: 1 1 260px; margin: 0; font-size: 12px; line-height: 1.6; color: var(--ui-text-muted, #7d8aa0); }
 
 /* alerts */
-.fb-alert { margin: 0 0 16px; padding: 14px 16px; font-size: 13px; line-height: 1.6; border-radius: 12px; border: 1px solid transparent; }
+.fb-alert { margin: 0 0 16px; padding: 14px 16px; font-size: 13px; line-height: 1.6; border-radius: var(--ui-radius-nested, 14px); border: 1px solid transparent; }
 .fb-alert:last-child { margin-bottom: 0; }
 .fb-alert ul { margin: 8px 0 0; padding-left: 18px; }
 .fb-alert li + li { margin-top: 4px; }
@@ -609,7 +625,6 @@ text back on the 16px inset the card's bar uses. */
 @media (max-width: 767px) {
     .fb-public-main { padding: 20px 16px; }
     .fb-public-foot { padding: 0 16px 24px; }
-    .fb-step { padding: 18px 16px; border-radius: 16px; }
     .fb-thanks { padding: 22px 18px; }
     .fb-card { padding: 18px 16px; }
     .fb-card--flush > .fb-card-head { padding: 14px 14px 0; }
