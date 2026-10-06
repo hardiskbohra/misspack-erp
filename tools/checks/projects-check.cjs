@@ -480,6 +480,21 @@ check('the cards are the shell\'s, and the rhythm between them is the module\'s'
     && !/\.master-card/.test(recordSection)
     && (recordViews.match(/class="master-card master-card--flat/g) || []).length >= 10);
 
+/* A timeline is wider than any card: five 285px steps and their connectors do
+   not fit a laptop, let alone the panel they sit in. The strip is meant to
+   scroll inside itself — but a bare `auto` grid track may not shrink below
+   its content, so the strip's max-content width walked up through the card
+   and widened the page. The reader then got a page-wide horizontal scrollbar
+   and cropped panels (the figures row included) instead of a scrolling
+   timeline. The fix is structural, so all four parts of it are checked: the
+   explicit zero track, the zero minimums down the chain, the scroll container
+   and the scrollbar it draws. */
+check('a timeline wider than its card scrolls inside the card',
+    /\.project-blocks \{[\s\S]{0,200}grid-template-columns: minmax\(0, 1fr\)/.test(sheet)
+    && /\.project-blocks > \*,[\s\S]{0,200}\.pmile-step-scroll \{\s*min-width: 0/.test(sheet)
+    && /\.pmile-step-scroll \{[\s\S]{0,140}overflow-x: auto/.test(sheet)
+    && /\.pmile-step-scroll::-webkit-scrollbar \{[\s\S]{0,80}height: 6px/.test(sheet));
+
 /* The framework never reads the markup, so a panel that closes its wrapper one
    line early puts every card after it outside the grid and nothing complains:
    the tag stack is the only reader that can see it. */

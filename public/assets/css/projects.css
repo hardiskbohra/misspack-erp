@@ -755,10 +755,26 @@
    ========================================================================== */
 
 /* The panels stack their cards with the guideline's 16px, the same rhythm the
-   list shows between its own two. */
+   list shows between its own two, and one explicit `minmax(0, 1fr)` column:
+   a bare `auto` track may not shrink below its content, which is how the
+   milestone strip's max-content width (one 285px step per milestone) once
+   walked up through the card and widened the whole page instead of scrolling
+   inside its own container. */
 .project-blocks {
     display: grid;
-    gap: 16px
+    gap: 16px;
+    grid-template-columns: minmax(0, 1fr)
+}
+
+/* Every link in the strip's chain takes a zero minimum, so the overflow rule
+   on `.pmile-step-scroll` is what decides the width and the timeline scrolls
+   inside the card. The same guard keeps a long product name or a wide date
+   range from stretching a product card in the flex column below. */
+.project-blocks > *,
+.pmile-product-list > *,
+.pmile-step-wrapper,
+.pmile-step-scroll {
+    min-width: 0
 }
 
 /* The panel card. The shared `.master-card` is a surface with no padding of its
