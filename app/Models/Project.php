@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class Project extends Model
@@ -14,7 +15,7 @@ class Project extends Model
     protected $fillable = [
         'project_number', 'client_id', 'name', 'status',
         'stage', 'priority', 'health', 'start_date', 'target_date', 'completed_at', 'currency',
-        'estimated_value', 'budget_amount', 'progress_percent', 'scope_summary', 'deliverables',
+        'progress_percent', 'scope_summary', 'deliverables',
         'client_notes', 'internal_notes', 'show_client_portal', 'assigned_to', 'created_by',
     ];
 
@@ -22,8 +23,6 @@ class Project extends Model
         'start_date' => 'date',
         'target_date' => 'date',
         'completed_at' => 'datetime',
-        'estimated_value' => 'decimal:2',
-        'budget_amount' => 'decimal:2',
         'progress_percent' => 'integer',
         'show_client_portal' => 'boolean',
     ];
@@ -249,9 +248,84 @@ class Project extends Model
     }
 
     /**
-     * What the project is worth and what has moved against it. The ledger is
-     * the only source: a credit is money in, a debit is money out, and the
-     * separate payment entries that used to be added on top are gone.
+     * What the project is worth: the documents raised on it, not a figure typed
+     * on the project. That is the tax invoices the client owes plus the
+     * proformas no tax invoice has carried yet — `SalesInvoice::
+     * countsTowardsProject()` is the one rule, so a cancelled invoice and a
+     * converted proforma are both off, and neither is counted twice.
+     */
+    public function estimatedValue(): float
+    {
+        return $this->documentsValue('taxInvoices', 'proformaInvoices');
+    }
+
+    /**
+     * What the project may spend: the purchase orders placed for it plus the
+     * bills recorded against it, read by `PurchaseInvoice::countsTowardsProject()`
+     * — an order that became a bill is carried by that bill, and a cancelled
+     * document is on neither figure.
+     */
+    public function budgetAmount(): float
+    {
+        return $this->documentsValue('purchaseOrders', 'bills');
+    }
+
+    /**
+     * The documents a side of the money is read from, summed in the project's
+     * currency. The relations are eager-loaded by every screen that lists
+     * projects, so a page of rows costs four queries and not four per row.
+     */
+    private function documentsValue(string ...$relations): float
+    {
+        $total = 0.0;
+
+        foreach ($relations as $relation) {
+            if (! $this->documentRelationAvailable($relation)) {
+                continue;
+            }
+
+            $documents = $this->relationLoaded($relation) ? $this->{$relation} : $this->{$relation}()->get();
+
+            foreach ($documents as $document) {
+                if ($document->countsTowardsProject()) {
+                    $total += $this->documentValue($document);
+                }
+            }
+        }
+
+        return round($total, 2);
+    }
+
+    /**
+     * A document counts in the project's currency. A project's documents are
+     * normally raised in its own currency; when one is not, it counts at the
+     * rate it was raised at, and a document with no rate counts at face value —
+     * the same reading the rest of the app gives a missing rate.
+     */
+    private function documentValue(Model $document): float
+    {
+        $value = (float) $document->total_amount;
+
+        return (string) $document->currency === (string) $this->currency
+            ? $value
+            : $value * (float) ($document->exchange_rate ?: 1);
+    }
+
+    /** A document module may not be installed on a deployment that predates it. */
+    private function documentRelationAvailable(string $relation): bool
+    {
+        [$model, $table] = in_array($relation, ['taxInvoices', 'proformaInvoices'], true)
+            ? [\App\Models\SalesInvoice::class, 'sales_invoices']
+            : [\App\Models\PurchaseInvoice::class, 'purchase_invoices'];
+
+        return class_exists($model) && Schema::hasTable($table) && Schema::hasColumn($table, 'project_id');
+    }
+
+    /**
+     * What the project is worth and what has moved against it: the value comes
+     * from the documents (`estimatedValue()`), the movement from the ledger —
+     * a credit is money in, a debit is money out, and the separate payment
+     * entries that used to be added on top are gone.
      */
     public function paymentTotals(): array
     {
@@ -264,13 +338,11 @@ class Project extends Model
         $inward = (float) $cashflows->where('transaction_type', 'credit')->sum('credit_amount');
         $outward = (float) $cashflows->where('transaction_type', 'debit')->sum('debit_amount');
     
-        $estimated = (float) ($this->estimated_value ?: 0);
-    
         return [
             'inward' => $inward,
             'outward' => $outward,
             'net' => $inward - $outward,
-            'outstanding' => max($estimated - $inward, 0),
+            'outstanding' => max($this->estimatedValue() - $inward, 0),
         ];
     }
 

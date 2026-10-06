@@ -189,6 +189,12 @@ invoice for a project starts from that list) reads what the last document wrote.
 owns the matching (a line updates its row instead of adding a second one) and nothing else:
 the quantity × rate arithmetic stays `ProjectProduct::saving`'s.
 
+The invoice is also what a **project's estimated value** is made of:
+`SalesInvoice::countsTowardsProject()` — not cancelled, and not a proforma a tax invoice has
+already carried — is the one rule `Project::estimatedValue()` sums, so the project's figure is
+read from its documents rather than typed beside them. A proforma counts while it is waiting
+for the money and stops counting the moment the tax invoice it asked for exists.
+
 ## Chasing the money
 
 A bill that has been sent is not money in the bank, and the office's real work is

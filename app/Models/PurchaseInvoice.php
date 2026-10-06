@@ -287,6 +287,19 @@ class PurchaseInvoice extends Model
         return self::DOC_LABELS[$this->invoice_type] ?? Str::headline((string) $this->invoice_type);
     }
 
+    /**
+     * Whether this document counts towards the project's budget.
+     *
+     * A cancelled document is owed to nobody, and an order that has become a
+     * bill (`converted_invoice_id`) is carried by that bill — it stays on the
+     * project's Invoices tab as history and is not counted twice. The project's
+     * budget reads this predicate and nothing else.
+     */
+    public function countsTowardsProject(): bool
+    {
+        return $this->status !== 'cancelled' && ! $this->converted_invoice_id;
+    }
+
     public function statusLabel(): string
     {
         return self::statusOptions()[$this->status] ?? Str::headline((string) $this->status);

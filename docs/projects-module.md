@@ -106,15 +106,34 @@ button. It is now the shared record page:
   `feedback.css` (`.fb-*`) is only loaded by the feedback pages, so a class from
   that sheet landing here would arrive with no rules at all.
 
-**Project money is the ledger's.** A payment entry used to be its own row — recorded on the
+**What a project is worth is its documents'.** `estimated_value` and `budget_amount` were
+typed on the project form — *Estimated Deal Value* and *Project Budget* — while the invoices
+and purchase documents that decide both were raised in their own modules, so a project could
+claim a value no invoice agreed with, and the budget nothing else read was wrong from the day
+it was typed. Both columns are dropped (a guarded migration, empty `down()`, and the create
+migration no longer makes them), and both figures are derived where they are read:
+`Project::estimatedValue()` sums the tax invoices and the proformas no tax invoice has carried
+(`SalesInvoice::countsTowardsProject()`), `Project::budgetAmount()` sums the purchase orders
+and the bills (`PurchaseInvoice::countsTowardsProject()`). Cancelled documents are on neither
+figure, a converted proforma and a billed order are carried by the document that superseded
+them, and a document raised in another currency counts at the rate it was raised at. The
+four document relations ride along in the list's eager load, so a page of projects costs four
+queries and not four per row, and the screens that print either figure read the accessor —
+the list's Value cell and its quick-details drawer, the record page's *Estimated value* stat
+(with the budget and what was spent in the *Profit/Loss* sub), and the *Money at a glance*
+card's *Estimated value* and *Budget* facts. `Outstanding` stays the derived difference,
+`estimatedValue() - inward`. `paymentTotals()` is still the ledger's: a credit is money in, a
+debit is money out.
+
+**A project payment used to be its own row.** A payment entry used to be its own row — recorded on the
 project, published to the client with its own flag, and counted beside the ledger entry that
 carried the same receipt. Two rows for one payment is two facts to keep in step, so
 `project_payments` is dropped (a guarded migration, empty `down()`), with the model, the
 controller, the three `projects.payments.*` routes, the modal pair on the record and the
 `project_payment_id` column on project attachments. The Payments panel reads
 `cashflowEntries` — all of them, every status, because the office may see what is not
-confirmed — and `paymentTotals()` sums the same relation, so the list's Value cell and the
-panel cannot disagree. What a *client* sees is one definition, in
+confirmed — and `paymentTotals()` sums the same relation, so the Payments panel's figures and
+the record's stat row cannot disagree. What a *client* sees is one definition, in
 `app/Services/ProjectReceipts.php`: ledger entries tagged to a published project,
 `moneyIn()` (a credit), `booked` or `reconciled`. The portal's payments page, the portal
 dashboard's tally, a project's receipts tab on the portal and the statement of account all
@@ -170,10 +189,21 @@ not take the job's work with it. And `total_amount` is still only written by
 `ProjectProduct::saving` — quantity × rate, once — because a second arithmetic is how the two
 start disagreeing.
 
-The products tab says so and keeps its manual door for what no document says yet: the header
-sub names the documents, the empty state offers *Raise an invoice* (the door that fills it)
-beside *Add product*, and the edit and remove buttons stay — the office still has to be able
-to correct a row a document got wrong.
+The tab has **no add door and no delete door**. Adding by hand is what made the same product
+exist twice in the first place, and deleting is the wrong verb for a row that carries
+milestones, comments and attachments — a line dropped from a draft invoice must not take the
+job's work with it. Gone with them: `ProjectProductController::store()` and `destroy()`, the
+two routes, the add modal, the row's delete form, and the `$products` / `$vendors` master
+lists the modals fed (the controller's `productModelAvailable()` / `vendorModelAvailable()`
+guards went too; `products.vendor` is eager-loaded instead, so the tab still names the vendor).
+
+What the tab keeps is the project's own half of the row, and only that: the edit dialog asks
+for **status, expected ready, actually ready and notes**, and the controller validates exactly
+those four — so a crafted form cannot overwrite a fact the invoice owns. The header sub says
+whose facts they are (product, quantity, rate, currency, vendor, the supplier's document number
+are the documents'), the empty state offers the two doors that *do* fill it — *Raise an
+invoice* and *Record a purchase* — and `ProjectProduct::saving` remains the only writer of
+`total_amount`.
 
 The milestones tab keeps its own `pmile-*` stepper — a genuinely bespoke timeline
 — but its chrome is the shell's now: the five-box stat row is a `master-stats`
@@ -199,7 +229,8 @@ fact the check reads, not a decoration.
 | --- | --- | --- |
 | how many projects are in each status / health | `ProjectController::index()`'s two grouped queries | the left "figures" row, the status/health chips, the filter drawer |
 | whether the client sees this project | `projects.show_client_portal`, written by the project form | the login portal's dashboard, project list and record; the office record's *Client portal* card |
-| what a project is worth and what has been received | `Project::paymentTotals()` (`cashflowEntries` — the ledger is the source of truth for project money; the `project_payments` table that used to add a second copy is gone) | the Value cell, the quick-details drawer, the Payments panel |
+| what a project is worth, and what it may spend | `Project::estimatedValue()` (tax invoices + un-converted proformas) and `Project::budgetAmount()` (purchase orders + bills) — derived from the documents, not a column; the `estimated_value` / `budget_amount` columns are gone | the Value cell, the quick-details drawer (Estimated + Budget), the record page's stat row, the *Money at a glance* card |
+| what has been received and spent | `Project::paymentTotals()` (`cashflowEntries` — the ledger is the source of truth for money movement; the `project_payments` table that used to add a second copy is gone) | the stat row, the quick-details drawer, the Payments panel |
 | what a row's relations are | the list's `with([...])` | the row, the drawer — `paymentTotals()` reuses the eager load instead of querying per project |
 
 The four figures are derived from the grouped counts (`total` is their sum,
@@ -265,7 +296,7 @@ portal's own sheet, and the static preview under `public/_preview/` still render
 
 ## Checks
 
-`tools/checks/projects-check.cjs` (60 checks) pins the composition above: the
+`tools/checks/projects-check.cjs` (61 checks) pins the composition above: the
 root is the master-list, the two cards sit in that order, the gap is not
 declared in the module's sheet, every chip carries its tally, the columns are
 named in the order the table draws them, the figures come from the grouped

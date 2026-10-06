@@ -80,7 +80,8 @@
                     </div>
                 </div>
                 <div class="master-facts">
-                    <div class="master-info"><span>Estimated value</span><strong>{{ $money($project->estimated_value) }}</strong></div>
+                    <div class="master-info"><span>Estimated value</span><strong>{{ $money($project->estimatedValue()) }}</strong></div>
+                    <div class="master-info"><span>Budget</span><strong>{{ $money($project->budgetAmount()) }}</strong></div>
                     <div class="master-info"><span>Received</span><strong class="project-money-in">{{ $money($totals['inward']) }}</strong></div>
                     <div class="master-info"><span>Outstanding</span>
                         <strong class="{{ $totals['outstanding'] > 0 ? 'project-money-out' : 'master-empty-value' }}">{{ $totals['outstanding'] > 0 ? $money($totals['outstanding']) : 'Nothing pending' }}</strong>

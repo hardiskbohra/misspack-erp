@@ -45,11 +45,15 @@ class ProjectController extends Controller
         $clientId = $request->query('client_id', 'all');
         $health = $request->query('health', 'all');
 
-        /* The money column reads the project's ledger entries — the ledger is
-           the source of truth for project-level money — and the row's quick
-           view reads the same totals: loaded here, the list costs one query
-           per relation instead of two per project. */
+        /* The row's money is two reads: the ledger is the source of truth for
+           what has been received and spent, the documents for what the project
+           is worth and may spend — so the list loads the cashflow entries and
+           the four document relations, one query each instead of a query per
+           project per figure. The row's quick view reads the same totals. */
         $with = ['products', 'products.milestones', 'cashflowEntries', 'assignedUser'];
+        foreach (array_keys($this->documentRelations()) as $relation) {
+            $with[] = $relation;
+        }
         if ($this->clientModelAvailable()) {
             $with[] = 'client';
         }
@@ -101,8 +105,6 @@ class ProjectController extends Controller
             'start_date' => now()->toDateString(),
             'target_date' => now()->addDays(30)->toDateString(),
             'currency' => 'INR',
-            'estimated_value' => 0,
-            'budget_amount' => 0,
             'progress_percent' => 0,
             'show_client_portal' => true,
         ]);
@@ -159,7 +161,6 @@ class ProjectController extends Controller
                 'start_date' => $data['start_date'] ?? now()->toDateString(),
                 'target_date' => $data['target_date'] ?? now()->addDays(30)->toDateString(),
                 'currency' => 'INR',
-                'estimated_value' => 0,
                 'progress_percent' => 0,
                 'show_client_portal' => true,
                 'assigned_to' => $data['assigned_to'] ?? null,
@@ -180,7 +181,7 @@ class ProjectController extends Controller
         $tab = array_key_exists($tab, self::SHOW_TABS) ? $tab : 'overview';
 
         $with = [
-            'products.assignee', 'products.attachments', 'products.comments',
+            'products.assignee', 'products.attachments', 'products.comments', 'products.vendor',
             'comments.user', 'comments.product',
             'attachments.product', 'attachments.uploader',
             'trackingUpdates.product', 'trackingUpdates.creator',
@@ -381,8 +382,9 @@ class ProjectController extends Controller
             'start_date' => ['nullable', 'date'],
             'target_date' => ['nullable', 'date'],
             'currency' => ['required', Rule::in(array_keys(Project::currencyOptions()))],
-            'estimated_value' => ['nullable', 'numeric', 'min:0'],
-            'budget_amount' => ['nullable', 'numeric', 'min:0'],
+            /* The value and the budget are the documents' — see
+               `Project::estimatedValue()` and `Project::budgetAmount()`. The
+               form has no field for either, so neither is validated here. */
             'progress_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
             'scope_summary' => ['nullable', 'string'],
             'deliverables' => ['nullable', 'string'],
@@ -396,8 +398,6 @@ class ProjectController extends Controller
     {
         return [
             'clients' => $this->clients(),
-            'vendors' => $this->vendors(),
-            'products' => $this->products(),
             'users' => User::query()->orderBy('name')->get(),
             'cashflowEntries' => $this->cashflowEntries(),
             'cashflowAccounts' => $this->cashflowAccounts(),
@@ -408,7 +408,6 @@ class ProjectController extends Controller
             'healthOptions' => Project::healthOptions(),
             'currencyOptions' => Project::currencyOptions(),
             'productStatusOptions' => \App\Models\ProjectProduct::statusOptions(),
-            'productStageOptions' => \App\Models\ProjectProduct::stageOptions(),
             'attachmentCategoryOptions' => \App\Models\ProjectAttachment::categoryOptions(),
             'trackingStatusOptions' => \App\Models\ProjectTrackingUpdate::statusOptions(),
             'milestoneOptions' => class_exists(\App\Models\ProjectMilestone::class) ? \App\Models\ProjectMilestone::milestoneOptions() : [],
@@ -455,24 +454,6 @@ class ProjectController extends Controller
         return \App\Models\Client::query()->orderBy('company_name')->get();
     }
 
-    private function vendors()
-    {
-        if (! $this->vendorModelAvailable()) {
-            return collect();
-        }
-
-        return \App\Models\Vendor::query()->orderBy('contact_person_name')->get();
-    }
-
-    private function products()
-    {
-        if (! $this->productModelAvailable()) {
-            return collect();
-        }
-
-        return \App\Models\Product::query()->where('status', 'active')->orderBy('name')->get();
-    }
-
     private function cashflowEntries()
     {
         if (! $this->cashflowEntryModelAvailable()) {
@@ -503,11 +484,6 @@ class ProjectController extends Controller
     private function clientModelAvailable(): bool
     {
         return class_exists(\App\Models\Client::class) && Schema::hasTable('clients');
-    }
-
-    private function vendorModelAvailable(): bool
-    {
-        return class_exists(\App\Models\Vendor::class) && Schema::hasTable('vendors');
     }
 
     private function productModelAvailable(): bool

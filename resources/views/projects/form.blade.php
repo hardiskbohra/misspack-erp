@@ -150,16 +150,11 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="master-field">
-                    <label class="master-label">Estimated Deal Value</label>
-                    <input class="master-input" type="number" step="0.01" min="0" name="estimated_value"
-                        value="{{ old('estimated_value', $project->estimated_value) }}">
-                </div>
-                <div class="master-field">
-                    <label class="master-label">Project Budget</label>
-                    <input class="master-input" type="number" step="0.01" min="0" name="budget_amount"
-                        value="{{ old('budget_amount', $project->budget_amount) }}">
-                </div>
+                {{-- The value and the budget have no input: they are the
+                     documents'. The Estimated value is what the tax invoices
+                     and the un-converted proformas say, and the Budget is what
+                     the purchase orders and bills say — both read on the
+                     project's record page, both derived where they are read. --}}
                 <label class="pf-toggle-card">
                     <input type="checkbox" name="show_client_portal" value="1"
                         {{ old('show_client_portal', $project->show_client_portal) ? 'checked' : '' }}>

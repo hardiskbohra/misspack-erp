@@ -306,9 +306,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/projects/quick', [ProjectController::class, 'quickStore'])->name('projects.quickStore');
         Route::patch('/projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.status.update');
 
-        Route::post('/projects/{project}/products', [ProjectProductController::class, 'store'])->name('projects.products.store');
+        /* One route: a project product is created by the invoice or purchase
+           document that mentions it (`App\Services\ProjectProducts`) and is not
+           deleted from the project — the row carries milestones, comments and
+           attachments, and the office edits only what the project owns. */
         Route::put('/project-products/{projectProduct}', [ProjectProductController::class, 'update'])->name('projects.products.update');
-        Route::delete('/project-products/{projectProduct}', [ProjectProductController::class, 'destroy'])->name('projects.products.destroy');
 
         Route::post('/projects/{project}/comments', [ProjectCommentController::class, 'store'])->name('projects.comments.store');
         Route::put('/project-comments/{projectComment}', [ProjectCommentController::class, 'update'])->name('projects.comments.update');

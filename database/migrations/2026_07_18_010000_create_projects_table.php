@@ -23,8 +23,6 @@ return new class extends Migration
             $table->date('target_date')->nullable();
             $table->timestamp('completed_at')->nullable();
             $table->string('currency', 10)->default('INR');
-            $table->decimal('estimated_value', 16, 2)->default(0);
-            $table->decimal('budget_amount', 16, 2)->default(0);
             $table->unsignedTinyInteger('progress_percent')->default(0);
             $table->text('scope_summary')->nullable();
             $table->text('deliverables')->nullable();

@@ -233,7 +233,22 @@ class AdminDashboardController extends Controller
         $projectInwardRange = array_sum($charts['projectPayments']['inward']);
         $projectOutwardRange = array_sum($charts['projectPayments']['outward']);
 
-        $estimatedProjectValue = $this->sum(\App\Models\Project::class, 'projects', 'estimated_value');
+        /* A project's value is its documents', so the dashboard reads the
+           invoices rather than a figure typed on the project: every tax
+           invoice and every proforma no tax invoice has carried, cancelled
+           documents aside. The monthly series below is the ledger's, which is
+           why the two read different tables and mean different things — one is
+           what was sold, the other what was received. */
+        $estimatedProjectValue = $this->sum(\App\Models\SalesInvoice::class, 'sales_invoices', 'total_amount', function ($query) {
+            $query->whereNotNull('project_id')
+                ->where('status', '!=', 'cancelled')
+                ->where(function ($query) {
+                    $query->where('invoice_type', 'tax')
+                        ->orWhere(function ($query) {
+                            $query->where('invoice_type', 'proforma')->whereNull('converted_invoice_id');
+                        });
+                });
+        });
         /* A project's money is the ledger's money: the project-payment rows
            that used to carry a second copy of it are gone. A credit is inward,
            a debit outward, and both are counted where they are tagged. */
@@ -952,9 +967,21 @@ class AdminDashboardController extends Controller
             return [];
         }
 
+        /* A client's value is its projects' invoices, not a column on the
+           project: the subquery is the same rule `Project::estimatedValue()`
+           sums row by row, written once here because this list is a report
+           over every client and cannot load each project's documents. */
+        $valueSelect = $this->tableColumn('sales_invoices', 'total_amount')
+            ? DB::raw('coalesce((select sum(si.total_amount) from sales_invoices si'
+                .' join projects sp on sp.id = si.project_id'
+                .' where sp.client_id = projects.client_id'
+                .' and si.status <> \'cancelled\''
+                .' and (si.invoice_type = \'tax\' or (si.invoice_type = \'proforma\' and si.converted_invoice_id is null))), 0) as total_value')
+            : DB::raw('0 as total_value');
+
         return \App\Models\Project::query()
             ->with('client')
-            ->select('client_id', DB::raw('COUNT(*) as project_count'), DB::raw('SUM(estimated_value) as total_value'), DB::raw('AVG(progress_percent) as avg_progress'))
+            ->select('client_id', DB::raw('COUNT(*) as project_count'), $valueSelect, DB::raw('AVG(progress_percent) as avg_progress'))
             ->whereNotNull('client_id')
             ->groupBy('client_id')
             ->orderByDesc('total_value')

@@ -15,8 +15,10 @@
         $daysLate = $isLate ? (int) $project->target_date->diffInDays(now()->startOfDay()) : 0;
         $milestonesDone = $project->milestones->where('status', 'completed')->count();
         $milestonesOpen = $project->milestones->whereNotIn('status', ['completed', 'skipped'])->count();
-        $receivedPercent = $project->estimated_value > 0
-            ? min(100, (int) round($totals['inward'] / (float) $project->estimated_value * 100))
+        $estimatedValue = $project->estimatedValue();
+        $budgetAmount = $project->budgetAmount();
+        $receivedPercent = $estimatedValue > 0
+            ? min(100, (int) round($totals['inward'] / $estimatedValue * 100))
             : 0;
         $progress = max(0, min(100, (int) $project->progress_percent));
         /* The initials, the way the client and vendor pages compute theirs: a
@@ -107,7 +109,8 @@
                 <span class="icon" aria-hidden="true"><i class="fa-solid fa-file-invoice-dollar"></i></span>
                 <div>
                     <p class="master-stat-title">Estimated value</p>
-                    <p class="master-stat-value">{{ $money($project->estimated_value) }}</p>
+                    <p class="master-stat-value">{{ $money($estimatedValue) }}</p>
+                    <p class="master-sub">From the invoices and proformas</p>
                 </div>
             </div>
             <div class="master-stat master-stat--flat green">
@@ -133,7 +136,7 @@
                 <div>
                     <p class="master-stat-title">{{ $totals['net'] >= 0 ? 'Profit' : 'Loss' }}</p>
                     <p class="master-stat-value">{{ $money(abs($totals['net'])) }}</p>
-                    <p class="master-sub">Expenses {{ $money($totals['outward']) }}</p>
+                    <p class="master-sub">Budget {{ $money($budgetAmount) }} · spent {{ $money($totals['outward']) }}</p>
                 </div>
             </div>
         </div>

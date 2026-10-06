@@ -100,6 +100,12 @@
             });
         });
 
+        /* `type="date"` wants `YYYY-MM-DD`; a model cast hands over a full ISO
+           timestamp, which the field quietly refuses and shows as empty. */
+        function readyDate(value) {
+            return value ? String(value).substring(0, 10) : '';
+        }
+
         function setValue(form, name, value) {
             var field = form.elements[name];
             if (!field) return;
@@ -110,16 +116,9 @@
             }
         }
 
-        /* Add-product */
-        var addProductModal = document.getElementById('addProductModal');
-        var openAddProduct = document.getElementById('openAddProductModal');
-        if (addProductModal && openAddProduct) {
-            openAddProduct.addEventListener('click', function () {
-                window.MasterModal.open(addProductModal);
-            });
-        }
-
-        /* Edit-product */
+        /* Edit-product — the tab's only dialog: the product, the quantity, the
+           rate and the vendor are the documents', so the form carries the
+           project's own facts. */
         var editProductModal = document.getElementById('editProductModal');
         var editProductForm = document.getElementById('editProductForm');
         if (editProductModal && editProductForm) {
@@ -127,19 +126,10 @@
                 btn.addEventListener('click', function () {
                     var product = JSON.parse(this.getAttribute('data-product') || '{}');
                     bindUpdateUrl(editProductForm, product.id);
-                    setValue(editProductForm, 'product_id', product.product_id);
-                    setValue(editProductForm, 'quantity', product.quantity);
-                    setValue(editProductForm, 'unit_price', product.unit_price);
                     setValue(editProductForm, 'status', product.status);
-                    setValue(editProductForm, 'stage', product.stage);
-                    setValue(editProductForm, 'assigned_to', product.assigned_to);
-                    setValue(editProductForm, 'vendor_id', product.vendor_id);
-                    setValue(editProductForm, 'vendor_invoice_number', product.vendor_invoice_number);
-                    setValue(editProductForm, 'expected_ready_date', product.expected_ready_date);
-                    setValue(editProductForm, 'actual_ready_date', product.actual_ready_date);
+                    setValue(editProductForm, 'expected_ready_date', readyDate(product.expected_ready_date));
+                    setValue(editProductForm, 'actual_ready_date', readyDate(product.actual_ready_date));
                     setValue(editProductForm, 'notes', product.notes);
-                    setValue(editProductForm, 'currency', product.currency);
-                    setValue(editProductForm, 'sort_order', product.sort_order);
                     window.MasterModal.open(editProductModal);
                 });
             });

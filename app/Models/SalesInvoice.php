@@ -448,6 +448,19 @@ class SalesInvoice extends Model
     }
 
     /**
+     * Whether this document counts towards the project it is tagged to.
+     *
+     * A cancelled invoice is not owed, and a proforma a tax invoice has already
+     * carried (`isSuperseded()`) is history: it keeps its row on the project's
+     * Invoices tab and is not counted a second time. The project's estimated
+     * value reads this predicate and nothing else.
+     */
+    public function countsTowardsProject(): bool
+    {
+        return $this->status !== 'cancelled' && ! $this->isSuperseded();
+    }
+
+    /**
      * Load the ledger totals for a whole page of invoices in two subqueries
      * rather than one query per row.
      */

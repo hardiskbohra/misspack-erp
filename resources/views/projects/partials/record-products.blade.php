@@ -5,13 +5,10 @@
                 <div>
                     <h2 class="master-section-title">Project products</h2>
                     <p class="master-sub">{{ $project->products->count() }}
-                    {{ \Illuminate\Support\Str::plural('product', $project->products->count()) }} on this project.
-                    Lines from the project's invoices and purchase documents land here on their own — add one by hand
-                    only for what no document says yet.</p>
-                </div>
-                <div class="master-section-meta">
-                    <button type="button" class="master-btn master-btn-primary addProductBtn" id="openAddProductModal">
-                        <i class="fas fa-plus" aria-hidden="true"></i> Add product</button>
+                    {{ \Illuminate\Support\Str::plural('product', $project->products->count()) }} on this project,
+                    written by the invoices and purchase documents raised for it — the product, the quantity, the rate
+                    and the vendor are theirs. Only what the project owns is editable here: its status, its dates and
+                    its notes.</p>
                 </div>
             </div>
 
@@ -64,13 +61,6 @@
                                         <button type="button" class="master-icon-btn editProductBtn"
                                             aria-label="Edit {{ $projectProduct->product_name }}"
                                             data-product='@json($projectProduct)'><i class="fas fa-pen" aria-hidden="true"></i></button>
-                                        <form method="POST" action="{{ route('projects.products.destroy', $projectProduct) }}"
-                                            data-confirm="Remove this product from the project?">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="master-icon-btn danger"
-                                                aria-label="Remove {{ $projectProduct->product_name }}"><i class="fas fa-trash" aria-hidden="true"></i></button>
-                                        </form>
                                     </div>
                                 </td>
                             </tr>
@@ -81,12 +71,13 @@
                                         <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
                                         <p>No products on this project yet. Save an invoice or a purchase document tagged to
                                         this project and its lines appear here on their own — quantity, rate and vendor come
-                                        from the documents, so nothing has to be typed twice.</p>
+                                        from the documents, so nothing has to be typed here at all.</p>
                                         <a class="master-btn master-btn-soft master-btn-sm"
                                             href="{{ route('sales-invoices.create', ['project_id' => $project->id]) }}">
                                             <i class="fas fa-file-invoice" aria-hidden="true"></i> Raise an invoice</a>
-                                        <button type="button" class="master-btn master-btn-soft master-btn-sm"
-                                            data-modal-open="addProductModal"><i class="fas fa-plus" aria-hidden="true"></i> Add product</button>
+                                        <a class="master-btn master-btn-soft master-btn-sm"
+                                            href="{{ route('purchase-invoices.create', ['project_id' => $project->id]) }}">
+                                            <i class="fas fa-file-invoice" aria-hidden="true"></i> Record a purchase</a>
                                     </div>
                                 </td>
                             </tr>
@@ -99,86 +90,6 @@
 </section>
 
 
-<!--Add Product-->
-<div class="master-modal" id="addProductModal" aria-hidden="true">
-    <div class="master-modal-card">
-        <form method="POST" action="{{ route('projects.products.store', $project) }}">
-            @csrf
-            <div class="master-modal-header">
-                <div class="master-modal-heading">
-                    <div>
-                        <h3 class="master-modal-title">Add Product</h3>
-                    </div>
-                </div>
-                <button type="button" class="master-modal-close" data-close-modal id="closeAddProductModal">×</button>
-            </div>
-            <div class="master-modal-body">
-                <div class="master-modal-grid">
-                    <div class="master-field">
-                        <label class="master-label">Mapped Product</label>
-                        <select class="master-select" name="product_id" required>
-                            <option value="">Manual product</option>
-                            @foreach($products as $product)
-                                <option value="{{ $product->id }}">{{ $product->product_number }} - {{ $product->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="master-field" style="display:none;">
-                        <label class="master-label">Product Name</label>
-                        <input class="master-input" type="text" name="product_name" placeholder="Required if product not selected">
-                    </div>
-                    <div class="master-field small">
-                        <label class="master-label">Qty</label>
-                        <input class="master-input" type="number" step="0.001" min="0.001" name="quantity" value="1" required>
-                    </div>
-                    <div class="master-field small" style="display:none;">
-                        <label class="master-label">Unit</label>
-                        <input class="master-input" type="text" name="unit" value="pcs">
-                    </div>
-                    <div class="master-field small">
-                        <label class="master-label">Unit Price</label>
-                        <input class="master-input" type="number" step="0.01" min="0" name="unit_price" value="0">
-                    </div>
-                    <div class="master-field">
-                        <label class="master-label">Status</label>
-                        <select class="master-select" name="status">
-                            @foreach($productStatusOptions as $key => $label)
-                                <option value="{{ $key }}">{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="master-field">
-                        <label class="master-label">Vendor</label>
-                        <select class="master-select" name="vendor_id">
-                            <option value="">Unassigned</option>
-                            @foreach ($vendors as $vendor)
-                                <option value="{{ $vendor->id }}">{{ $vendor->contact_person_name }} ({{ $vendor->vendor_name }})</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="master-field">
-                        <label class="master-label">Vendor Invoice Number</label>
-                        <input class="master-input" type="text" name="vendor_invoice_number">
-                    </div>
-                    <div class="master-field">
-                        <label class="master-label">Expected Ready</label>
-                        <input class="master-input" type="date" name="expected_ready_date">
-                    </div>
-                    <div class="master-field full">
-                        <label class="master-label">Notes</label>
-                        <textarea class="master-textarea" rows="5" name="notes" placeholder="Artwork, production, packaging notes"></textarea>
-                    </div>
-                    <input type="hidden" name="currency" value="{{ $project->currency }}">
-                </div>
-            </div>
-            <div class="master-modal-footer">
-                <button type="button" class="master-btn master-btn-light" id="cancelAddProductModal" data-close-modal>Cancel</button>
-                <button class="master-btn master-btn-primary" type="submit"> Add Product</button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <!--Edit Product-->
 <div class="master-modal" id="editProductModal">
     <div class="master-modal-card">
@@ -187,54 +98,23 @@
             @csrf
             @method('PUT')
             <div class="master-modal-header">
-                <div><h3 class="master-modal-title">Edit Product</h3></div>
+                <div>
+                    <h3 class="master-modal-title">Edit Product</h3>
+                    <p class="master-sub">Product, quantity, rate and vendor belong to the documents that raised them
+                    — edit the invoice or the purchase document and this row follows. What is here is the project's
+                    own: where the product stands, when it is expected, and its notes.</p>
+                </div>
                 <button type="button" class="master-modal-close" id="closeEditProductModal" data-close-modal>×</button>
             </div>
             <div class="master-modal-body">
                 <div class="master-modal-grid">
-
                     <div class="master-field">
-                        <label class="master-label">Mapped Product</label>
-                        <select class="master-select" name="product_id">
-                            <option value="">Manual product</option>
-                            @foreach ($products as $product)
-                                <option value="{{ $product->id }}"> {{ $product->name }}{{ $product->sku ? ' - ' . $product->sku : '' }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="master-field small">
-                        <label class="master-label">Qty</label>
-                        <input class="master-input" type="number" step="0.001" min="0.001" name="quantity" value="1" required>
-                    </div>
-                    <div class="master-field small">
-                        <label class="master-label">Unit Price</label>
-                        <input class="master-input" type="number" step="0.01" min="0" name="unit_price" value="0">
-                    </div>
-                    <div class="master-field">
-                        <label class="master-label">Expected Ready</label>
+                        <label class="master-label">Expected ready</label>
                         <input class="master-input" type="date" name="expected_ready_date">
                     </div>
-                    <!--<div class="master-field">-->
-                    <!--    <label class="master-label">Assignee</label>-->
-                    <!--    <select class="master-select" name="assigned_to">-->
-                    <!--        <option value="">Unassigned</option>-->
-                    <!--        @foreach ($users as $user)-->
-                    <!--            <option value="{{ $user->id }}">{{ $user->name }}</option>-->
-                    <!--        @endforeach-->
-                    <!--    </select>-->
-                    <!--</div>-->
                     <div class="master-field">
-                        <label class="master-label">Vendor</label>
-                        <select class="master-select" name="vendor_id">
-                            <option value="">Unassigned</option>
-                            @foreach ($vendors as $vendor)
-                                <option value="{{ $vendor->id }}">{{ $vendor->contact_person_name }} ({{ $vendor->vendor_name }})</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="master-field">
-                        <label class="master-label">Vendor Invoice Number</label>
-                        <input class="master-input" type="text" name="vendor_invoice_number">
+                        <label class="master-label">Actually ready</label>
+                        <input class="master-input" type="date" name="actual_ready_date">
                     </div>
                     <div class="master-field">
                         <label class="master-label">Status</label>
@@ -248,14 +128,6 @@
                         <label class="master-label">Notes</label>
                         <textarea class="master-textarea" rows="5" name="notes" placeholder="Artwork, production, packaging notes"></textarea>
                     </div>
-                    <!--<div class="master-field">-->
-                    <!--    <label class="master-label">Stage</label>-->
-                    <!--    <select class="master-select" name="stage"> -->
-                    <!--        @foreach ($productStageOptions as $key => $label) -->
-                    <!--            <option value="{{ $key }}">{{ $label }}</option> -->
-                    <!--        @endforeach -->
-                    <!--    </select> -->
-                    <!--</div>-->
                 </div>
             </div>
             <div class="master-modal-footer">

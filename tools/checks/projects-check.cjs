@@ -695,14 +695,81 @@ check('the project products are written by the documents that mention them',
     && ! /['"]total_amount['"]\s*=>/.test(productService)
     && ! /total_amount\s*=[^=]/.test(productService)
     && /total_amount = round\(\$qty \* \$price, 2\)/.test(read('app/Models/ProjectProduct.php'))
-    /* The tab says where its rows come from, keeps the manual add for what no
-       document says yet, and keeps a door to the document that fills it. */
-    && /documents land here on their own/.test(productTab)
+    /* There is no add door and no delete door. A project product is made by
+       the document that mentions it, and the row carries milestones, comments
+       and attachments — so the tab may not offer either, the router may not
+       declare either, and the controller answers one verb. */
+    && ! /addProductModal|openAddProductModal|projects\.products\.store/.test(productTab)
+    && ! /projects\.products\.destroy/.test(productTab)
+    && ! /addProductModal|openAddProductModal/.test(script)
+    && /projects\.products\.update/.test(read('routes/web.php'))
+    && ! /projects\.products\.store|products\.destroy/.test(read('routes/web.php'))
+    && ! /function (store|destroy)\(/.test(read('app/Http/Controllers/ProjectProductController.php'))
+    /* The controller edits the project's own half of the row and nothing else:
+       a crafted POST cannot overwrite the facts an invoice owns. */
+    && (read('app/Http/Controllers/ProjectProductController.php')
+        .match(/\$request->validate\(\[/g) || []).length === 1
+    && /'status' => \['required', Rule::in\(array_keys\(ProjectProduct::statusOptions\(\)\)\)\]/.test(read('app/Http/Controllers/ProjectProductController.php'))
+    && ! /'quantity'|'unit_price'|'vendor_invoice_number'|'product_id'|'currency'/.test(read('app/Http/Controllers/ProjectProductController.php'))
+    /* The tab says where its rows come from, and keeps a door to each document
+       that fills it — the empty state's two buttons. */
+    && /written by the invoices and purchase documents raised for it/.test(productTab)
     && /appear here on their own/.test(productTab)
-    && /data-modal-open="addProductModal"/.test(productTab)
-    && /master-btn-primary addProductBtn" id="openAddProductModal"/.test(productTab)
     && /route\('sales-invoices\.create', \['project_id' => \$project->id\]\)/.test(productTab)
-    && /projects\.products\.store/.test(read('routes/web.php')));
+    && /route\('purchase-invoices\.create', \['project_id' => \$project->id\]\)/.test(productTab));
+
+/* ------------------------------------------- what a project is worth, and may spend */
+
+/* The project's value and its budget were typed on the project form while the
+   documents that decide both were raised elsewhere — a project could claim a
+   value no invoice agreed with. Both are derived now: the value sums the tax
+   invoices and the proformas no tax invoice has carried, the budget sums the
+   purchase orders and the bills, and each document's own model owns the word
+   for whether it counts at all. The columns are gone, so nothing may write one
+   back. */
+const projectModel = read('app/Models/Project.php');
+check('the value and the budget are the documents\', not columns on the project',
+    /public function estimatedValue\(\): float\s*\{\s*return \$this->documentsValue\('taxInvoices', 'proformaInvoices'\);/.test(projectModel)
+    && /public function budgetAmount\(\): float\s*\{\s*return \$this->documentsValue\('purchaseOrders', 'bills'\);/.test(projectModel)
+    && /\$document->countsTowardsProject\(\)/.test(projectModel)
+    && /\$this->relationLoaded\(\$relation\) \? \$this->\{\$relation\} : \$this->\{\$relation\}\(\)->get\(\)/.test(projectModel)
+    /* The value a document contributes is the document's own total, in the
+       project's currency. */
+    && /\$value = \(float\) \$document->total_amount;/.test(projectModel)
+    && /\$value \* \(float\) \(\$document->exchange_rate \?: 1\)/.test(projectModel)
+    /* One predicate per side, on the model that owns the document. */
+    && /public function countsTowardsProject\(\): bool\s*\{\s*return \$this->status !== 'cancelled' && ! \$this->isSuperseded\(\);/.test(read('app/Models/SalesInvoice.php'))
+    && /public function countsTowardsProject\(\): bool\s*\{\s*return \$this->status !== 'cancelled' && ! \$this->converted_invoice_id;/.test(read('app/Models/PurchaseInvoice.php'))
+    /* Outstanding is the value minus what came in, so it reads the accessor. */
+    && /'outstanding' => max\(\$this->estimatedValue\(\) - \$inward, 0\)/.test(projectModel)
+    /* The stored columns have no writer and no reader left: not in the fillable
+       or the casts, not on the form, not summed by the dashboard, not in the
+       migrations that make the table — which is why the guarded one drops them
+       instead of adding them. */
+    /* The word survives as the dashboard payload's key — it names the figure,
+       it is not a column — so the rule is read as "nothing writes or sums the
+       column", not as "the word never appears". */
+    && ! /estimated_value|budget_amount/.test(projectModel)
+    && ! /estimated_value|budget_amount/.test(read('app/Http/Controllers/ProjectController.php') + read('routes/web.php'))
+    && ! /SUM\(estimated_value\)|sum\([^)]*['"]estimated_value['"]/.test(read('app/Http/Controllers/AdminDashboardController.php'))
+    && ! /budget_amount/.test(read('app/Http/Controllers/AdminDashboardController.php'))
+    && ! /estimated_value|budget_amount/.test(read('resources/views/projects/form.blade.php'))
+    && ! /estimated_value|budget_amount/.test(read('database/migrations/2026_07_18_010000_create_projects_table.php'))
+    && exists('database/migrations/2026_10_06_100000_drop_the_project_value_columns.php')
+    /* Every screen that prints the value reads the accessor — including the two
+       figures on the record page's stat row and the list's Value cell. */
+    && (read('resources/views/projects/index.blade.php').match(/\$project->estimatedValue\(\)/g) || []).length === 2
+    /* The budget is the drawer's and the record page's; the list's own columns
+       carry the value and what is outstanding. */
+    && (read('resources/views/projects/index.blade.php').match(/\$project->budgetAmount\(\)/g) || []).length === 1
+    && /data-drawer-budget=/.test(read('resources/views/projects/index.blade.php'))
+    && /\$estimatedValue = \$project->estimatedValue\(\);/.test(read('resources/views/projects/show.blade.php'))
+    && /\$project->estimatedValue\(\)/.test(read('resources/views/projects/partials/record-overview.blade.php'))
+    && /\$project->budgetAmount\(\)/.test(read('resources/views/projects/partials/record-overview.blade.php'))
+    /* A page of rows costs four queries, not four per row: the list eager-loads
+       the same four relations `documentRelations()` names. */
+    && /foreach \(array_keys\(\$this->documentRelations\(\)\) as \$relation\) \{\s*\n\s*\$with\[\] = \$relation;/.test(read('app/Http/Controllers/ProjectController.php'))
+);
 
 check('the facts, the notes and the empty blocks are the shell\'s',
     (recordViews.match(/class="master-facts"/g) || []).length >= 4
@@ -788,7 +855,7 @@ const deleteForms = [...(recordViews + milestoneViews).matchAll(/<form[\s\S]*?<\
     .filter(form => /@method\('DELETE'\)/.test(form));
 
 check('a destructive action asks first',
-    deleteForms.length >= 5
+    deleteForms.length >= 4
     && deleteForms.every(form => /data-confirm=/.test(form) || /master-modal-footer/.test(form)));
 
 /* The public project portal is gone — the client follows a project by signing

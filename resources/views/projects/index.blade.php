@@ -291,7 +291,7 @@
                                     Start {{ $project->start_date?->format('d M Y') ?? 'not set' }}</span>
                             </td>
                             <td data-label="Value" class="is-num">
-                                <strong>{{ \App\Helpers\CommonHelper::amount($project->estimated_value, $project->currency) }}</strong>
+                                <strong>{{ \App\Helpers\CommonHelper::amount($project->estimatedValue(), $project->currency) }}</strong>
                                 <span class="master-sub">{{ \App\Helpers\CommonHelper::amount($totals['outstanding'], $project->currency) }} outstanding</span>
                             </td>
                             <td data-label="Status">
@@ -324,7 +324,8 @@
                                                 data-drawer-progress="{{ $project->progress_percent }}%"
                                                 data-drawer-start-date="{{ $project->start_date?->format('d M Y') ?? 'No start date' }}"
                                                 data-drawer-target-date="{{ $project->target_date?->format('d M Y') ?? 'No target date' }}"
-                                                data-drawer-estimated="{{ \App\Helpers\CommonHelper::amount($project->estimated_value, $project->currency) }}"
+                                                data-drawer-estimated="{{ \App\Helpers\CommonHelper::amount($project->estimatedValue(), $project->currency) }}"
+                                                data-drawer-budget="{{ \App\Helpers\CommonHelper::amount($project->budgetAmount(), $project->currency) }}"
                                                 data-drawer-received="{{ \App\Helpers\CommonHelper::amount($totals['inward'], $project->currency) }}"
                                                 data-drawer-expense="{{ \App\Helpers\CommonHelper::amount($totals['outward'], $project->currency) }}"
                                                 data-drawer-outstanding="{{ \App\Helpers\CommonHelper::amount($totals['outstanding'], $project->currency) }}"
@@ -400,6 +401,7 @@
                 <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Estimated</span><span class="core-drawer-field-value" data-drawer-bind="estimated"></span></div>
                 <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Received</span><span class="core-drawer-field-value" data-drawer-bind="received"></span></div>
                 <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Expense</span><span class="core-drawer-field-value" data-drawer-bind="expense"></span></div>
+                <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Budget</span><span class="core-drawer-field-value" data-drawer-bind="budget"></span></div>
                 <div class="core-drawer-field" data-drawer-field><span class="core-drawer-field-label">Outstanding</span><span class="core-drawer-field-value" data-drawer-bind="outstanding"></span></div>
             </div>
         </section>
