@@ -5,10 +5,29 @@
 .voucher-head {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
     gap: 16px;
     padding-bottom: 14px;
     border-bottom: 2px solid #1b2a41;
     margin-bottom: 16px;
+}
+
+.voucher-letterhead {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    min-width: 0;
+}
+
+.voucher-logo {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    flex: none;
+}
+
+.voucher-letterhead-copy {
+    min-width: 0;
 }
 
 .voucher-brand {
@@ -18,9 +37,16 @@
 }
 
 .voucher-sub {
-    margin: 4px 0 0;
+    margin: 2px 0 0;
     color: #667085;
     font-size: 12px;
+}
+
+.voucher-legal {
+    margin: 3px 0 0;
+    color: #344054;
+    font-size: 11.5px;
+    line-height: 1.45;
 }
 
 .voucher-kind {

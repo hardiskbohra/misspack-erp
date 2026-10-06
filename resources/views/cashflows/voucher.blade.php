@@ -25,10 +25,7 @@
 
     <main class="pdf-sheet voucher-sheet voucher-sheet--{{ $kind }}">
         <header class="voucher-head">
-            <div>
-                <p class="voucher-brand">MissPack India Pvt Ltd</p>
-                <p class="voucher-sub">Packed Perfect · Ahmedabad</p>
-            </div>
+            @include('cashflows.partials.voucher-letterhead')
             <div class="voucher-kind">
                 <strong>{{ $entry->voucherTitle() }}</strong>
                 <span>{{ $entry->voucherNumber() }}</span>

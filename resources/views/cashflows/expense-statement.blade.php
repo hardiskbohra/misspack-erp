@@ -20,10 +20,7 @@
 
     <main class="pdf-sheet pdf-sheet--landscape voucher-sheet">
         <header class="voucher-head">
-            <div>
-                <p class="voucher-brand">MissPack India Pvt Ltd</p>
-                <p class="voucher-sub">Expense statement by type</p>
-            </div>
+            @include('cashflows.partials.voucher-letterhead')
             <div class="voucher-kind">
                 <strong>{{ $head }}</strong>
                 <span>{{ $from->format('d M Y') }} – {{ $to->format('d M Y') }}</span>
