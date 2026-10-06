@@ -479,6 +479,153 @@
         }
 
 /* ==========================================================================
+   PROJECT STATE — the state colours, shared by the list and the record page.
+   The shell owns the badge's shape; the module owns what each state means.
+   One row per meaning: a project's status, a milestone's stage, an activity's
+   state and a shipment's leg all read from this table, so the same word is the
+   same colour wherever the record prints it.
+   ========================================================================== */
+
+/* Nothing has happened yet. */
+.project .status-draft,
+.project .status-not-started,
+.project .status-skipped,
+.project .status-planning,
+.project .status-info {
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2)
+}
+
+/* Planned, agreed, not started. */
+.project .status-planned {
+    background: #ece7ff;
+    color: #6d28d9
+}
+
+/* Moving. */
+.project .status-in-progress,
+.project .status-started,
+.project .status-picked-up,
+.project .status-in-transit,
+.project .status-out-for-delivery {
+    background: #eaf2ff;
+    color: #2563eb
+}
+
+/* Somebody else has to act, or the date is slipping. */
+.project .status-waiting,
+.project .status-waiting-client,
+.project .status-waiting-vendor,
+.project .status-on-hold,
+.project .status-custom-hold,
+.project .status-delayed {
+    background: #fff7e6;
+    color: #b54708
+}
+
+/* Done. */
+.project .status-completed,
+.project .status-delivered,
+.project .status-resolved {
+    background: #e8fff3;
+    color: #039855
+}
+
+/* Stopped. */
+.project .status-cancelled,
+.project .status-blocked,
+.project .status-issue {
+    background: #fff1f3;
+    color: #d92d20
+}
+
+.project .health-green {
+    background: #e8fff3;
+    color: #039855
+}
+
+.project .health-amber {
+    background: #fff7e6;
+    color: #b54708
+}
+
+.project .health-red {
+    background: #fff1f3;
+    color: #d92d20
+}
+
+/* Priority is meta, not a status: it keeps the shared chip and adds only the
+   tone, so a row's urgency reads the same on the list and in the record
+   header, without a second pill design. */
+.project .project-priority-chip.is-high {
+    border-color: #fde3b8;
+    background: #fff7e6;
+    color: #b54708
+}
+
+.project .project-priority-chip.is-urgent {
+    border-color: #ffd7de;
+    background: #fff1f3;
+    color: #d92d20
+}
+
+.project-index .project-priority-chip {
+    margin-top: 6px
+}
+
+:root[data-theme="dark"] .project .status-draft,
+:root[data-theme="dark"] .project .status-not-started,
+:root[data-theme="dark"] .project .status-skipped,
+:root[data-theme="dark"] .project .status-planning,
+:root[data-theme="dark"] .project .status-info {
+    background: rgba(148, 163, 184, .16);
+    color: #cbd5e1
+}
+
+:root[data-theme="dark"] .project .status-planned {
+    background: rgba(139, 92, 246, .2);
+    color: #c4b5fd
+}
+
+:root[data-theme="dark"] .project .status-in-progress,
+:root[data-theme="dark"] .project .status-started,
+:root[data-theme="dark"] .project .status-picked-up,
+:root[data-theme="dark"] .project .status-in-transit,
+:root[data-theme="dark"] .project .status-out-for-delivery {
+    background: rgba(37, 99, 235, .18);
+    color: #93c5fd
+}
+
+:root[data-theme="dark"] .project .status-waiting,
+:root[data-theme="dark"] .project .status-waiting-client,
+:root[data-theme="dark"] .project .status-waiting-vendor,
+:root[data-theme="dark"] .project .status-on-hold,
+:root[data-theme="dark"] .project .status-custom-hold,
+:root[data-theme="dark"] .project .status-delayed,
+:root[data-theme="dark"] .project .health-amber,
+:root[data-theme="dark"] .project .project-priority-chip.is-high {
+    background: rgba(217, 119, 6, .2);
+    color: #fcd34d
+}
+
+:root[data-theme="dark"] .project .status-completed,
+:root[data-theme="dark"] .project .status-delivered,
+:root[data-theme="dark"] .project .status-resolved,
+:root[data-theme="dark"] .project .health-green {
+    background: rgba(16, 185, 129, .18);
+    color: #6ee7b7
+}
+
+:root[data-theme="dark"] .project .status-cancelled,
+:root[data-theme="dark"] .project .status-blocked,
+:root[data-theme="dark"] .project .status-issue,
+:root[data-theme="dark"] .project .health-red,
+:root[data-theme="dark"] .project .project-priority-chip.is-urgent {
+    background: rgba(225, 29, 72, .18);
+    color: #fda4af
+}
+
+/* ==========================================================================
    PROJECT LIST — resources/views/projects/index.blade.php
    The list is the shared master-list: the chips and the filter drawer in the
    first card, the records in the second, the shell's own rhythm between them,
@@ -516,24 +663,6 @@
     margin-top: 2px;
     color: var(--mc-text-3);
     font-size: 12px
-}
-
-/* Priority is meta, not a status: it keeps the shared chip and adds only the
-   tone, so a row's urgency reads at a glance without a second pill design. */
-.project-index .project-priority-chip {
-    margin-top: 6px
-}
-
-.project-index .project-priority-chip.is-high {
-    border-color: #fde3b8;
-    background: #fff7e6;
-    color: #b54708
-}
-
-.project-index .project-priority-chip.is-urgent {
-    border-color: #ffd7de;
-    background: #fff1f3;
-    color: #d92d20
 }
 
 .project-index .project-table-stage {
@@ -582,55 +711,6 @@
     text-align: right
 }
 
-/* Status and health, in the domain's own colours: the shared badge keeps the
-   shape, the module keeps the meaning. */
-.project-index .status-draft {
-    background: var(--mc-card-soft);
-    color: var(--mc-text-2)
-}
-
-.project-index .status-planned {
-    background: #ece7ff;
-    color: #6d28d9
-}
-
-.project-index .status-in-progress {
-    background: #eaf2ff;
-    color: #2563eb
-}
-
-.project-index .status-waiting-client,
-.project-index .status-waiting-vendor,
-.project-index .status-on-hold {
-    background: #fff7e6;
-    color: #b54708
-}
-
-.project-index .status-completed {
-    background: #e8fff3;
-    color: #039855
-}
-
-.project-index .status-cancelled {
-    background: #fff1f3;
-    color: #d92d20
-}
-
-.project-index .health-green {
-    background: #e8fff3;
-    color: #039855
-}
-
-.project-index .health-amber {
-    background: #fff7e6;
-    color: #b54708
-}
-
-.project-index .health-red {
-    background: #fff1f3;
-    color: #d92d20
-}
-
 .project-index .project-health-dot {
     font-size: 7px
 }
@@ -647,36 +727,503 @@
     color: #d92d20
 }
 
-:root[data-theme="dark"] .project-index .status-planned,
-:root[data-theme="dark"] .project-index .status-in-progress {
-    background: rgba(37, 99, 235, .18);
-    color: #93c5fd
+
+:root[data-theme="dark"] .project-index .project-table-date.is-late {
+    color: #fda4af
 }
 
-:root[data-theme="dark"] .project-index .status-waiting-client,
-:root[data-theme="dark"] .project-index .status-waiting-vendor,
-:root[data-theme="dark"] .project-index .status-on-hold,
-:root[data-theme="dark"] .project-index .health-amber,
-:root[data-theme="dark"] .project-index .project-priority-chip.is-high {
+/* ==========================================================================
+   PROJECT RECORD — resources/views/projects/show.blade.php
+   The shell's header, cards, facts and tabs do the work; this section only
+   composes them: the identity header, the attention strip, the two-column
+   detail grid, and the thread / document / log rows the panels render.
+   ========================================================================== */
+
+/* The panels stack their cards with the guideline's 16px, the same rhythm the
+   list shows between its own two. */
+.project-blocks {
+    display: grid;
+    gap: 16px
+}
+
+/* ------------------------------------------------------------- the header */
+
+.project-record-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap
+}
+
+.project-record-identity {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    min-width: 0
+}
+
+.project-record-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 54px;
+    height: 54px;
+    border: 1px solid var(--mc-border);
+    border-radius: 16px;
+    background: var(--mc-card-soft);
+    color: var(--master-primary);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    flex: 0 0 auto
+}
+
+.project-record-copy {
+    min-width: 0
+}
+
+.project-record-copy h1 {
+    margin: 0;
+    color: var(--mc-text);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3
+}
+
+.project-record-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    color: var(--mc-text-2);
+    font-size: 13px
+}
+
+.project-record-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap
+}
+
+.project-record-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px
+}
+
+.project-record-progress-track {
+    display: block;
+    width: 180px;
+    max-width: 100%;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--mc-card-soft)
+}
+
+.project-record-progress-track > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--master-primary)
+}
+
+.project-record-progress-value {
+    color: var(--mc-text);
+    font-size: 12.5px;
+    font-weight: 600
+}
+
+.project-record-progress-note {
+    color: var(--mc-text-3);
+    font-size: 12px
+}
+
+/* The one thing on the page that says “do something today”. */
+.project-attention {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border: 1px solid var(--mc-border);
+    border-left: 3px solid #d97706;
+    border-radius: 16px;
+    background: var(--mc-card)
+}
+
+.project-attention-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: #fff7e6;
+    color: #b54708;
+    flex: 0 0 auto
+}
+
+.project-attention-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1
+}
+
+.project-attention-copy strong {
+    color: var(--mc-text);
+    font-size: 14px;
+    font-weight: 600
+}
+
+.project-attention-copy span {
+    color: var(--mc-text-2);
+    font-size: 12.5px
+}
+
+/* --------------------------------------------------------------- the panels */
+
+.project-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px
+}
+
+.project-progress-block {
+    margin-bottom: 4px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--mc-border)
+}
+
+.project-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 10px
+}
+
+.project-progress-row .project-record-progress-track {
+    flex: 1;
+    width: auto
+}
+
+.project-progress-row strong {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600
+}
+
+.project-fact-note {
+    display: block;
+    margin-top: 2px;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-weight: 400
+}
+
+.project-note-text {
+    font-weight: 400;
+    white-space: pre-line
+}
+
+.project-money-in {
+    color: #039855
+}
+
+.project-money-out {
+    color: #d92d20
+}
+
+.project-money-late {
+    color: #d92d20
+}
+
+/* One link per tab, with its count: the overview's answer to “what is on the
+   record”, without a second tab strip. */
+.project-jump {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px
+}
+
+.project-jump a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none
+}
+
+.project-jump a:hover,
+.project-jump a:focus-visible {
+    border-color: var(--master-primary);
+    color: var(--master-primary)
+}
+
+.project-jump-count {
+    min-width: 24px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--mc-card);
+    color: var(--mc-text-2);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center
+}
+
+.project-timeline-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 0;
+    border-top: 1px solid var(--mc-border)
+}
+
+.project-timeline-row:first-of-type {
+    border-top: 0
+}
+
+.project-timeline-row strong {
+    display: block;
+    color: var(--mc-text);
+    font-size: 13.5px;
+    font-weight: 600
+}
+
+/* ------------------------------------------------------------ the panels' lists */
+
+.project-thumb {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+    object-fit: cover;
+    color: var(--mc-text-3)
+}
+
+.project-col-thumb {
+    width: 84px
+}
+
+.project-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 14px
+}
+
+.project-comment {
+    padding: 16px;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-card-soft)
+}
+
+.project-comment.is-pinned {
+    border-left: 3px solid var(--master-primary)
+}
+
+.project-comment-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap
+}
+
+.project-comment-head strong {
+    color: var(--mc-text);
+    font-size: 13.5px;
+    font-weight: 600
+}
+
+.project-comment-badges,
+.project-log-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap
+}
+
+.project-comment-meta {
+    margin: 4px 0 0;
+    color: var(--mc-text-3);
+    font-size: 12px
+}
+
+.project-comment-body {
+    margin: 8px 0 0;
+    color: var(--mc-text);
+    font-size: 13.5px;
+    font-weight: 400;
+    line-height: 1.55;
+    white-space: pre-line
+}
+
+.project-comment-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px
+}
+
+.project-doc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px
+}
+
+.project-doc {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-card-soft)
+}
+
+.project-doc-thumb {
+    width: 100%;
+    height: 132px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: var(--mc-card)
+}
+
+.project-doc-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--mc-card);
+    color: var(--mc-text-3);
+    font-size: 16px
+}
+
+.project-doc-body {
+    min-width: 0
+}
+
+.project-doc-body strong {
+    display: block;
+    color: var(--mc-text);
+    font-size: 13.5px;
+    font-weight: 600
+}
+
+.project-doc-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px
+}
+
+.project-log {
+    padding: 12px 0;
+    border-top: 1px solid var(--mc-border)
+}
+
+.project-log:first-of-type {
+    border-top: 0
+}
+
+.project-log-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap
+}
+
+.project-log-head strong {
+    color: var(--mc-text);
+    font-size: 13.5px;
+    font-weight: 600
+}
+
+/* ------------------------------------------------------- the status drawer */
+
+.project-status-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 14px
+}
+
+.project-portal-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap
+}
+
+/* ------------------------------------------------------------- dark theme */
+
+:root[data-theme="dark"] .project-attention-icon {
     background: rgba(217, 119, 6, .2);
     color: #fcd34d
 }
 
-:root[data-theme="dark"] .project-index .status-completed,
-:root[data-theme="dark"] .project-index .health-green {
-    background: rgba(16, 185, 129, .18);
+:root[data-theme="dark"] .project .project-money-in {
     color: #6ee7b7
 }
 
-:root[data-theme="dark"] .project-index .status-cancelled,
-:root[data-theme="dark"] .project-index .health-red,
-:root[data-theme="dark"] .project-index .project-priority-chip.is-urgent {
-    background: rgba(225, 29, 72, .18);
+:root[data-theme="dark"] .project .project-money-out,
+:root[data-theme="dark"] .project .project-money-late {
     color: #fda4af
 }
 
-:root[data-theme="dark"] .project-index .project-table-date.is-late {
-    color: #fda4af
+/* ---------------------------------------------------------------- phones */
+
+@media screen and (max-width: 991px) {
+    .project-detail-grid,
+    .project-jump {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+}
+
+@media screen and (max-width: 767px) {
+    .project-record-header {
+        flex-direction: column
+    }
+
+    .project-record-actions {
+        width: 100%
+    }
+
+    .project-record-actions .master-btn {
+        flex: 1
+    }
+
+    .project-detail-grid,
+    .project-jump,
+    .project-status-form {
+        grid-template-columns: 1fr
+    }
+
+    .project-record-progress-track {
+        width: 100%
+    }
 }
 
 /* ==========================================================================

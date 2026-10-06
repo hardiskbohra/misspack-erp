@@ -3,15 +3,18 @@
     $completed = $productMilestones->where('status', 'completed')->count();
     $progress = $count ? (int) round($productMilestones->avg('progress_percent')) : 0;
 @endphp
-<div class="pmile-product-block">
+<div class="master-card master-card--flat">
     <div class="pmile-product-head">
         <div>
-            <h3>{{ $title }}</h3>
-            <small>{{ $count }} {{ Str::plural('milestone', $count) }} · {{ $completed }} completed</small>
+            <h3 class="master-section-title">{{ $title }}</h3>
+            <span class="master-sub">{{ $count }} {{ Str::plural('milestone', $count) }} · {{ $completed }} completed</span>
         </div>
         <div class="pmile-product-progress">
-            <div class="pd-progress-text"><span>Overall Progress</span><strong>{{ $progress }}%</strong></div>
-            <div class="pd-progress"><span style="width: {{ $progress }}%"></span></div>
+            <div class="project-progress-row">
+                <span class="project-record-progress-track" role="img" aria-label="{{ $progress }} percent complete">
+                    <span style="width: {{ $progress }}%"></span></span>
+                <strong>{{ $progress }}%</strong>
+            </div>
         </div>
     </div>
 
@@ -86,17 +89,17 @@
                                 </div>
 
                                 <div class="pmile-step-badges">
-                                    <span class="pmile-status">{{ $milestone->statusLabel() }}</span>
+                                    <span class="master-badge status-{{ str_replace('_', '-', (string) $milestone->status) }}">{{ $milestone->statusLabel() }}</span>
                                     @if ($isOverdue)
-                                        <span class="pmile-overdue">Overdue</span>
+                                        <span class="master-badge health-red">Overdue</span>
                                     @endif
                                     @if ($milestone->is_public)
-                                        <span class="pmile-public">Public</span>
+                                        <span class="master-badge health-green">Public</span>
                                     @else
-                                        <span class="pmile-private">Internal</span>
+                                        <span class="master-badge status-draft">Internal</span>
                                     @endif
                                     @if ($milestone->is_required)
-                                        <span class="pmile-required">Required</span>
+                                        <span class="master-badge status-planned">Required</span>
                                     @endif
                                 </div>
 
@@ -127,6 +130,9 @@
             </div>
         </div>
     @else
-        <div class="pmile-empty">No milestones for this product yet.</div>
+        <div class="master-empty-state">
+            <i class="fa-solid fa-flag-checkered" aria-hidden="true"></i>
+            <p>No milestone on this product yet. Add one, or generate the default timeline from above.</p>
+        </div>
     @endif
 </div>

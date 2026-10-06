@@ -39,6 +39,15 @@ const read = relative => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 const exists = relative => fs.existsSync(path.join(ROOT, relative));
 const plain = text => text.replace(/\/\*[\s\S]*?\*\//g, '');
 
+const walk = (dir, out = []) => {
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+        const rel = path.join(dir, entry.name);
+        entry.isDirectory() ? walk(rel, out) : out.push(rel.replaceAll(path.sep, '/'));
+    }
+
+    return out;
+};
+
 let passed = 0;
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -62,24 +71,32 @@ const index = controller.slice(
     controller.indexOf('public function create('),
 );
 
-/* The list's own section: from its banner down to the detail page's. Sliced
-   off the raw sheet (the banners are comments) and read with the comments
-   stripped, so a selector can never be answered for by prose. */
-const LIST_MARK = 'PROJECT LIST — resources/views/projects/index.blade.php';
-const DETAIL_MARK = 'PROJECT DETAIL — resources/views/projects/show.blade.php';
-const listSection = (() => {
-    const start = sheet.lastIndexOf(LIST_MARK);
-    if (start === -1) return '';
+/* The sheet is read by section, not by position: every banner is a slice, and
+   the slices are named, so moving a section cannot silently hand a check the
+   wrong rules — a list check reading the record page's sheet is a check that
+   passes for the wrong reason. Prose is never an answer: the slices are read
+   with the comments stripped. */
+const sections = (() => {
+    const marks = [...sheet.matchAll(/\/\* ={10,}\n {3}([A-Z][^\n]*)\n/g)]
+        .map(match => ({ title: match[1].split(' — ')[0], start: match.index }));
+    const out = {};
 
-    const end = sheet.indexOf(DETAIL_MARK, start);
-    const from = sheet.indexOf('*/', start) + 2;
-    const to = end === -1 ? sheet.length : sheet.lastIndexOf('/*', end);
+    marks.forEach((mark, index) => {
+        const from = sheet.indexOf('*/', mark.start) + 2;
+        const to = index + 1 < marks.length ? marks[index + 1].start : sheet.length;
+        out[mark.title] = plain(sheet.slice(from, to));
+    });
 
-    return plain(sheet.slice(from, to));
+    return out;
 })();
 
-const listRules = listSection.split('\n').map(line => line.trim())
+const sectionRules = text => text.split('\n').map(line => line.trim())
     .filter(line => /^[^@\s{}][^{}]*\{\s*$/.test(line));
+
+const listSection = sections['PROJECT LIST'] || '';
+const recordSection = sections['PROJECT RECORD'] || '';
+const listRules = sectionRules(listSection);
+const recordRules = sectionRules(recordSection);
 
 /* ------------------------------------------------- 1. the shared shell */
 
@@ -216,16 +233,47 @@ check('the copy of the pattern is gone from the sheet',
     deadClasses.filter(name => sheetCode.includes('.' + name)).join(', '));
 
 check('the list section is scoped to the page it styles',
-    listRules.length > 20
+    listRules.length > 12
     && listRules.every(rule => rule.includes('.project-index'))
     && listRules.some(rule => rule.includes('.project-table-name'))
-    && listRules.some(rule => rule.includes('.project-health-dot')),
+    && listRules.some(rule => rule.includes('.project-health-dot'))
+    && !listRules.some(rule => rule.includes('.status-')),
     listRules.filter(rule => !rule.includes('.project-index')).join(' | '));
 
+/* One vocabulary for the two pages: the same tone answers for a status on the
+   list and on the record, so a badge cannot mean one thing in one place. Every
+   state the record can print — a project's status, a milestone's stage, an
+   activity's state, a shipment's leg — has a tone, and a tone for the dark
+   theme, because a badge with no tone is a state the reader cannot scan. */
+const optionKeys = (file, method) => {
+    const body = read(file).match(new RegExp(`function ${method}\\(\\): array\\s*\\{([\\s\\S]*?)\\n    \\}`));
+
+    return body ? [...body[1].matchAll(/'([a-z_]+)'\s*=>/g)].map(match => match[1]) : [];
+};
+const STATE_TONES = [...new Set([
+    ...optionKeys('app/Models/Project.php', 'statusOptions'),
+    ...optionKeys('app/Models/ProjectMilestone.php', 'statusOptions'),
+    ...optionKeys('app/Models/ProjectTrackingUpdate.php', 'statusOptions'),
+    ...[...read('app/Models/Shipment.php').matchAll(/const STATUS_[A-Z_]+ = '([a-z_]+)';/g)]
+        .map(match => match[1]),
+])].map(state => state.replace(/_/g, '-'));
+const HEALTH_TONES = optionKeys('app/Models/Project.php', 'healthOptions');
+const darkRules = [...sheetCode.matchAll(/:root\[data-theme="dark"\][^{]*\{[^}]*\}/g)].map(match => match[0]);
+const darkTones = new Set([...darkRules.join('\n').matchAll(/\.(status|health)-([a-z-]+)/g)]
+    .map(match => `${match[1]}-${match[2]}`));
+/* The light rules are read with the dark ones taken out: a tone that only
+   reached the sheet as a dark-theme selector is a tone the light page has not
+   got, and reading the sheet whole hides exactly that. */
+const lightCode = darkRules.reduce((text, rule) => text.replace(rule, ''), sheetCode);
+const missingTones = ['status', 'health'].flatMap(prefix => (prefix === 'status' ? STATE_TONES : HEALTH_TONES)
+    .map(tone => `${prefix}-${tone}`))
+    .filter(name => !new RegExp(`\\.project \\.${name}\\b`).test(lightCode) || !darkTones.has(name));
+
 check('the status and health tones are the module\'s, and both themes have one',
-    /\.project-index \.status-completed/.test(sheetCode)
-    && /\.project-index \.health-amber/.test(sheetCode)
-    && (sheetCode.match(/:root\[data-theme="dark"\] \.project-index/g) || []).length >= 4);
+    missingTones.length === 0
+    && /\.project-index \.status-completed/.test(sheetCode) === false
+    && /\.project \.project-priority-chip\.is-high/.test(sheetCode),
+    missingTones.join(' | '));
 
 /* ------------------------------------------------- 6. the dialog and the script */
 
@@ -265,6 +313,206 @@ check('the check itself is listed with its siblings',
 
 check('the portal page this rule protects still exists',
     /project-index|projects-project-card/.test(portalView));
+
+/* ------------------------------------------------- 8. the record page */
+
+const showView = read('resources/views/projects/show.blade.php');
+const recordFiles = walk('resources/views/projects/partials')
+    .filter(file => /record-[a-z-]+\.blade\.php$/.test(file));
+const recordSource = Object.fromEntries(recordFiles.map(file => [file, read(file)]));
+const recordViews = showView + '\n' + Object.values(recordSource).join('\n');
+const milestoneViews = read('resources/views/projects/partials/milestones-tab.blade.php')
+    + read('resources/views/projects/partials/milestone-product-block.blade.php');
+const showIncludes = [...showView.matchAll(/@include\('(projects\.partials\.[a-z-]+)'/g)].map(m => m[1]);
+
+check('the record page is the shared shell',
+    /<div class="project project-show master-list" data-project-id=/.test(showView)
+    && /<header class="master-card master-header project-record-header">/.test(showView)
+    && /<div class="master-stats desktop-only" aria-label="Project figures">/.test(showView)
+    && /<div class="master-tabs-card">/.test(showView)
+    && /<nav class="master-tabs" role="tablist" aria-label="Project sections">/.test(showView));
+
+check('the tabs are links drawn from one list, with their counts',
+    /@foreach \(\$tabs as \$key => \$label\)/.test(showView)
+    && /<a class="master-tab \{\{ \$tab === \$key/.test(showView)
+    && !/<button[^>]*class="master-tab/.test(showView)
+    && /href="\{\{ \$recordUrl\(\$key\) \}\}"/.test(showView)
+    && /is-active/.test(showView)
+    && /<span class="master-tab-count">/.test(showView)
+    && /'tabs' => self::SHOW_TABS/.test(controller)
+    && /'recordUrl' => fn \(string \$key\) => route\('projects\.show'/.test(controller)
+    && /'tabCounts' => \[/.test(controller));
+
+check('a tab the URL invented lands on the overview',
+    /array_key_exists\(\$tab, self::SHOW_TABS\) \? \$tab : 'overview'/.test(controller));
+
+/* The button strip rendered all ten panels on every request and pushed the
+   active one into localStorage. A panel is a URL now: one per response, each
+   shareable, and a form posted from a tab returns to it through `back()`. */
+check('one panel is rendered per request',
+    !/data-tab-panel=/.test(showView)
+    && !/pd-tab-(panel|btn)/.test(showView + recordViews + milestoneViews)
+    && !/function initTabs/.test(script)
+    && showIncludes.length === 10
+    && ['record-overview', 'record-products', 'record-money', 'record-shipments', 'record-documents',
+        'record-comments', 'record-activity', 'record-logs', 'milestones-tab', 'feedback-tab']
+        .every(name => showIncludes.includes('projects.partials.' + name))
+    && (showView.match(/@elseif \(\$tab === '/g) || []).length === 8);
+
+check('every panel is a panel of the shared kind',
+    recordFiles.length === 8
+    && Object.values(recordSource).every(text => /class="master-tab-panel"/.test(text))
+    && Object.values(recordSource).every(text => /id="project-panel-[a-z]+"/.test(text))
+    && Object.values(recordSource).every(text => /role="tabpanel"/.test(text))
+    && /<section class="master-tab-panel" id="project-panel-milestones"/.test(milestoneViews));
+
+check('the record page declares no copy of the shell',
+    !/pd-[a-z]/.test(showView + recordViews)
+    && !/\bpd-[a-z]/.test(milestoneViews)
+    && !/pmile-page|pmile-stats|pmile-actions-card|pmile-product-block|pmile-empty|pmile-status/.test(milestoneViews)
+    && !/class="master-empty"/.test(recordViews + milestoneViews));
+
+/* The shell owns the shape of every card, badge and button; the record
+   section may place them (a phone breakpoint flexing an action row) but never
+   restyle them from the top. */
+check('the record section declares no shared class',
+    recordRules.length > 20
+    && !recordRules.some(rule => /^\.(master|core)-/.test(rule))
+    && recordRules.some(rule => rule.includes('.project-record-header'))
+    && recordRules.some(rule => rule.includes('.project-blocks')));
+
+check('the cards are the shell\'s, and the rhythm between them is the module\'s',
+    /\.project-blocks \{\s*display: grid;\s*gap: 16px/.test(recordSection)
+    && !/\.master-card/.test(recordSection)
+    && (recordViews.match(/class="master-card master-card--flat"/g) || []).length >= 10);
+
+/* The framework never reads the markup, so a panel that closes its wrapper one
+   line early puts every card after it outside the grid and nothing complains:
+   the tag stack is the only reader that can see it. */
+const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link',
+    'meta', 'param', 'source', 'track', 'wbr']);
+const TAGS = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:"[^"]*"|'[^']*'|[^>"'])*?)(\/?)>/gs;
+
+const nestingErrors = (file, source) => {
+    const text = plain(source.replace(/\{\{--[\s\S]*?--\}\}/g, '').replace(/@php[\s\S]*?@endphp/g, ''));
+    const stack = [];
+    const errors = [];
+
+    [...text.matchAll(TAGS)].forEach(match => {
+        const [, closing, rawName, , selfClosing] = match;
+        const name = rawName.toLowerCase();
+        const line = text.slice(0, match.index).split('\n').length;
+
+        if (VOID_TAGS.has(name) || selfClosing) return;
+
+        if (!closing) {
+            stack.push({ name, line });
+            return;
+        }
+
+        const open = stack.pop();
+        if (!open || open.name !== name) {
+            errors.push(`${file}:${line} closes ${open ? `<${open.name}>` : 'nothing'}`);
+        }
+    });
+
+    return errors.concat(stack.map(open => `${file}:${open.line} <${open.name}> is never closed`));
+};
+
+const nesting = recordFiles.concat(['resources/views/projects/partials/milestones-tab.blade.php',
+    'resources/views/projects/partials/milestone-product-block.blade.php'])
+    .flatMap(file => nestingErrors(file, read(file)));
+
+check('every panel is well formed',
+    recordFiles.length === 8 && nesting.length === 0,
+    nesting.slice(0, 3).join(' | '));
+
+/* The wrapper is the panel's only child: the cards inside it stack on the
+   module's 16px. A card left outside it is a card with no rhythm. */
+check('the card wrapper is the panel\'s own child',
+    recordFiles.every(file => {
+        const lines = read(file).split('\n');
+        const panel = lines.findIndex(line => line.includes('<section class="master-tab-panel"'));
+
+        return panel !== -1
+            && lines[panel] === lines[panel].trimStart()
+            && lines[panel + 1] === '    <div class="project-blocks">'
+            && lines.some((line, index) => line === '    </div>' && lines[index + 1] === '</section>');
+    }));
+
+/* The other direction: a tone the page prints that the sheet does not own is a
+   badge with no colour, which is how the record page shipped a page of grey
+   pills the first time. */
+const printedTones = new Set([...(showView + recordViews + milestoneViews)
+    .matchAll(/[\s"']status-([a-z-]+)/g)].map(match => match[1]));
+
+check('every tone the page prints is one the sheet owns',
+    printedTones.size >= 3
+    && [...printedTones].every(tone => new RegExp(`\\.project \\.status-${tone}\\b`).test(sheetCode)),
+    [...printedTones].filter(tone => !new RegExp(`\\.project \\.status-${tone}\\b`).test(sheetCode)).join(' | '));
+
+check('the facts, the notes and the empty blocks are the shell\'s',
+    (recordViews.match(/class="master-facts"/g) || []).length >= 4
+    && (recordViews.match(/class="master-info"/g) || []).length >= 18
+    && (recordViews.match(/class="master-empty-state"/g) || []).length >= 8
+    && !/master-info-list|pd-info-list/.test(recordViews));
+
+check('every table on the record is the shared table in a wrapper',
+    (recordViews.match(/<table class="master-table">/g) || []).length === 5
+    && (recordViews.match(/class="master-table-wrap"/g) || []).length === 5
+    && (recordViews.match(/<th scope="col"/g) || []).length === (recordViews.match(/<th[\s>]/g) || []).length
+    && !/style="color:(green|red)"/.test(recordViews));
+
+check('the update path is the server\'s, not the script\'s',
+    ['products', 'tracking', 'comments', 'payments']
+        .every(name => new RegExp(`data-update-url="\\{\\{ route\\('projects\\.${name}\\.update'`).test(recordViews))
+    && /__ID__/.test(recordViews)
+    && /function bindUpdateUrl/.test(script)
+    && !/'\/project-/.test(plain(script)));
+
+check('the second door into a dialog exists',
+    /querySelectorAll\('\[data-modal-open\]'\)/.test(script)
+    && [...recordViews.matchAll(/data-modal-open="([A-Za-z]+)"/g)]
+        .every(match => recordViews.includes(`id="${match[1]}"`)));
+
+/* The record page is a hub: it opens the product dialogs, the money dialogs,
+   the shipment record, the portal and the PDFs. A name typo is a 500 here, and
+   a panel is only rendered when its tab is asked for — so the routes the views
+   name are checked against the routes the file declares, not against a request
+   someone happened to make. */
+const webRoutes = read('routes/web.php');
+const declaredRoutes = new Set([...webRoutes.matchAll(/name\('([a-z0-9_.-]+)'\)/g)].map(m => m[1]));
+const resourceBases = [...webRoutes.matchAll(/Route::resource\('([a-z-]+)'/g)].map(m => m[1]);
+const doorsUsed = [...(recordViews + milestoneViews).matchAll(/route\('([a-z0-9_.-]+)'/g)]
+    .map(m => m[1].replace(/['\s)]+$/, ''));
+
+check('every door a panel opens exists',
+    doorsUsed.length >= 25
+    && doorsUsed.every(name => declaredRoutes.has(name) || resourceBases.includes(name.split('.')[0])),
+    [...new Set(doorsUsed)].filter(name => !declaredRoutes.has(name) && !resourceBases.includes(name.split('.')[0])).join(' | '));
+
+/* A record page is a place where things are removed. The shared confirm layer
+   is `data-confirm` on the form; a form that already sits in its own modal
+   footer has asked the question, and asking twice is how people learn to click
+   through the question. */
+const deleteForms = [...(recordViews + milestoneViews).matchAll(/<form[\s\S]*?<\/form>/g)]
+    .map(form => form[0])
+    .filter(form => /@method\('DELETE'\)/.test(form));
+
+check('a destructive action asks first',
+    deleteForms.length >= 5
+    && deleteForms.every(form => /data-confirm=/.test(form) || /master-modal-footer/.test(form)));
+
+check('the status form keeps its four facts, in the shared drawer',
+    /<x-drawer id="projectStatusDrawer"/.test(showView)
+    && /action="\{\{ route\('projects\.status\.update', \$project\) \}\}"/.test(showView)
+    && /@method\('PATCH'\)/.test(showView)
+    && ['status', 'stage', 'health', 'progress_percent']
+        .every(name => new RegExp(`name="${name}"`).test(showView)));
+
+check('the record page is written down',
+    /record page/i.test(read('docs/projects-module.md'))
+    && /SHOW_TABS/.test(read('docs/projects-module.md')));
 
 /* ---------------------------------------------------------------- report */
 

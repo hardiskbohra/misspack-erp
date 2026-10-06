@@ -17,6 +17,26 @@ use Illuminate\View\View;
 
 class ProjectController extends Controller
 {
+    /**
+     * Every question the record page answers, in the order the office asks it:
+     * what is being made, how far it has got, what it is worth, what it
+     * carried, what was said, what happened. Each is a URL, not a button — so
+     * a panel can be shared, bookmarked, opened in a window, and a form posted
+     * from one tab returns to that tab (the sub-actions all redirect `back()`).
+     */
+    private const SHOW_TABS = [
+        'overview' => 'Overview',
+        'products' => 'Products',
+        'milestones' => 'Milestones',
+        'payments' => 'Payments',
+        'shipments' => 'Shipments',
+        'attachments' => 'Documents',
+        'comments' => 'Comments',
+        'tracking' => 'Activities',
+        'feedback' => 'Feedback',
+        'logs' => 'Logs',
+    ];
+
     public function index(Request $request): View
     {
         $search = $request->query('search');
@@ -173,8 +193,11 @@ class ProjectController extends Controller
         return redirect()->route('projects.show', $project)->with('success', 'Quick project created successfully.');
     }
 
-    public function show(Project $project): View
+    public function show(Request $request, Project $project): View
     {
+        $tab = (string) $request->query('tab', 'overview');
+        $tab = array_key_exists($tab, self::SHOW_TABS) ? $tab : 'overview';
+
         $with = [
             'products.assignee', 'products.attachments', 'products.comments',
             'comments.user', 'comments.product',
@@ -224,7 +247,25 @@ class ProjectController extends Controller
             $project->setRelation('feedbackRequests', collect());
         }
 
-        return view('projects.show', array_merge($this->sharedData(), ['project' => $project]));
+        $cashflowCount = $project->relationLoaded('cashflowEntries') ? $project->cashflowEntries->count() : 0;
+
+        return view('projects.show', array_merge($this->sharedData(), [
+            'project' => $project,
+            'tabs' => self::SHOW_TABS,
+            'tab' => $tab,
+            'tabCounts' => [
+                'products' => $project->products->count(),
+                'milestones' => $project->milestones->count(),
+                'payments' => $project->payments->count() + $cashflowCount,
+                'shipments' => $project->shipments->count(),
+                'attachments' => $project->attachments->count(),
+                'comments' => $project->comments->count(),
+                'tracking' => $project->trackingUpdates->count(),
+                'feedback' => $project->relationLoaded('feedbackRequests') ? $project->feedbackRequests->count() : 0,
+                'logs' => $project->logs->count(),
+            ],
+            'recordUrl' => fn (string $key) => route('projects.show', ['project' => $project, 'tab' => $key]),
+        ]));
     }
 
     public function edit(Project $project): View

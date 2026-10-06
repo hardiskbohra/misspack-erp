@@ -6,7 +6,7 @@ it, and the feedback that closes it. This file is the design of record for the
 screens that list and open it. `tools/checks/projects-check.cjs` is its guard,
 run with `node tools/checks/projects-check.cjs` before any commit that touches
 `resources/views/projects/`, `public/assets/css/projects.css`,
-`public/assets/js/projects.js` or `ProjectController::index()`.
+`public/assets/js/projects.js`, or the controller's `index()` and `show()`.
 
 ## The list is the shared master-list
 
@@ -51,6 +51,66 @@ next door, and it is gone. The page is now:
   wiring is deleted. Close, backdrop, Escape and the scroll lock are the
   shared layer's job.
 
+## The record page
+
+`resources/views/projects/show.blade.php` used to be a copy of the sheet too: a
+`.pd-page` with a gradient hero, a `pd-status-card` whose status form was always
+open, a five-box `pd-metrics` row, and a **button strip** of ten tabs whose panels
+were all rendered on every request — the active one was a `localStorage` value, so
+no panel could be linked to, opened in a second window, or reached by the back
+button. It is now the shared record page:
+
+```
+.project.project-show.master-list
+├── header.master-card.master-header.project-record-header   identity, state, four actions
+├── .project-attention            only when the target date has passed
+├── .master-stats                 four .master-stat--flat figures
+└── .master-tabs-card
+    ├── nav.master-tabs            ten links, each ?tab=key, each with its count
+    └── .master-tabs-panels        one panel per request
+```
+
+- **The tabs are links.** `SHOW_TABS` in `ProjectController` is the one list —
+  the view draws the strip from it and the controller validates `?tab=` against
+  it (an unknown tab lands on the overview). Because every sub-action redirects
+  `back()`, adding a product, a milestone, a payment or a comment returns to the
+  tab it was posted from; and a panel can be shared, bookmarked, or opened in a
+  new window. The old `initTabs` handler and the ten-panel render are gone.
+- **The panels are the shell's.** Each is a `section.master-tab-panel` holding
+  `master-card master-card--flat` cards laid out by `.project-blocks` (the
+  guideline's 16px between cards), and each panel is *well formed*: the wrapper
+  is its only child, and the checks walk the tag stack because the framework
+  never reads the markup — a wrapper closed one line early puts every card after
+  it outside the grid and nothing complains. Facts are `master-facts`/`master-info`,
+  empty blocks are `master-empty-state`, tables are `master-table` inside
+  `master-table-wrap` with scoped headers, and dialogs are the shared
+  `.master-modal`, closed through `[data-close-modal]`.
+- **The status form is the shared drawer.** `<x-drawer id="projectStatusDrawer">`
+  carries the four fields (`status`, `stage`, `health`, `progress_percent`) that
+  `updateStatus()` validates and posts to `projects.status.update` — the header
+  keeps one action instead of a permanently open form.
+- **Update URLs come from the server.** Each edit dialog carries
+  `data-update-url="{{ route(...) }}"` with an `__ID__` placeholder and
+  `projects.js` binds it through `bindUpdateUrl()`: a hand-built
+  `/project-products/12` misses an install served from a sub-path. A generic
+  `[data-modal-open="id"]` binder opens the same dialog from a second door (an
+  empty state), so an empty table is never a dead end.
+- **One colour vocabulary.** The `.status-*` and `.health-*` tones are scoped to
+  `.project` and shared by both pages, so a status reads the same in the list, in
+  the record header, in a milestone badge and in the log.
+
+The milestones tab keeps its own `pmile-*` stepper — a genuinely bespoke timeline
+— but its chrome is the shell's now: the five-box stat row is a `master-stats`
+row, its action bar is a `master-card`, its badges are `master-badge` tones, and
+its empty block is the shared one.
+
+## How the sheet is scoped
+
+`.project-index` on the list and `.project-show` on the record are the two
+scopes; `.project` carries the one thing they must agree on — the status and
+health tones. Nothing else in the sheet is a page scope, which is why the
+colour vocabulary is the only rule group whose selector is not the page's.
+
 ## One writer per fact
 
 | Fact | Written by | Read by |
@@ -80,18 +140,29 @@ the tabbed project page and the milestones tab. It owns:
   `resources/views/client_portal/projects/index.blade.php` still renders and
   which must not be deleted with the office list.
 
-The module's other screens are outside this file's scope: the form
-(`projects/form.blade.php`, `pf-*`), the tabbed record page
-(`projects/show.blade.php`, `pd-*` and the milestones tab, `pmile-*`), and the
-standalone client link (`projects/public.blade.php`).
+Two screens are still outside this file's scope: the form
+(`projects/form.blade.php`, `pf-*`) and the standalone client link
+(`projects/public.blade.php`, which is the client portal's branding, not the
+office's shell). The record page's panels are in scope now — every one of them
+is a `master-tab-panel` of shell cards — and the milestones sheet section keeps
+the stepper's own vocabulary (`pmile-step-*`, `pmile-current-*`,
+`pmile-product-head`, `pmile-head-actions`): a timeline drawn as a strip of
+connected steps is something no shared class describes. Those rules stay: the
+client portal's copy of the same block
+(`client_portal/projects/partials/milestone-product-block.blade.php`), the
+portal's own sheet, and the static preview under `public/_preview/` still render
+`pmile-*`, so nothing in that section is deleted with the office page.
 
 ## Checks
 
-`tools/checks/projects-check.cjs` (29 checks) pins the composition above: the
+`tools/checks/projects-check.cjs` (47 checks) pins the composition above: the
 root is the master-list, the two cards sit in that order, the gap is not
 declared in the module's sheet, every chip carries its tally, the columns are
 named in the order the table draws them, the figures come from the grouped
 rows, the row's relations are eager-loaded and `paymentTotals()` reuses them,
 the row says it is a link, the module sheet declares no shell class and keeps
 every portal class, the dialog is the shared modal opened through
-`MasterModal`, and every route the screen links to is registered.
+`MasterModal`, and every route the screen links to is registered — and the
+record page's half: the shared shell and tab strip, `SHOW_TABS` as the one list,
+one panel per request, the drawer form, the server-emitted update URLs, and the
+shared facts, tables and empty states.

@@ -42,7 +42,13 @@ node tools/checks/projects-check.cjs  # the projects list is the shared master-l
                                       # the criteria, one grouped query behind the figures and
                                       # the chip tallies, the row's relations eager-loaded, and
                                       # the module sheet owning colour and columns — not the
-                                      # shell — while the client portal's classes stay put
+                                      # shell — while the client portal's classes stay put — and
+                                      # the record page: the shared shell and tab links, one list
+                                      # of tab names behind both the strip and the URL, one panel
+                                      # per request, the status form in the shared drawer, update
+                                      # URLs the server writes, the shell's facts, tables and empty
+                                      # states, well-formed panels, and a tone for every state the
+                                      # models offer — light and dark
 node tools/checks/employees-check.cjs # the employee side of the user module: the office door is
                                       # on the whole admin group, no personal route takes a user id,
                                       # a file is ownership-checked before it is served, a draft
@@ -154,3 +160,8 @@ guards actually fail when the behaviour they describe is broken.
 | Two owners for one profile | the employee keeps their mobile, address, date of birth and emergency contact current; designation, joining date, pay and the salary bank account are the office's record, and the list of who may edit what is written once in `EmployeeAccess` |
 | Roles read as "not an employee" | any unknown or missing role keeps the account able to work, because an office locked out of its own ledger by a missing value is the worse failure — and the last administrator cannot be demoted or deleted |
 | One payroll list | the ledger's Employee field offers employees first and office accounts underneath, from one method on the model — entries filed before roles existed still point at people the picker contains |
+| A tab is a URL | the project record rendered all ten panels on every request and kept the active one in `localStorage`, so no panel could be linked, bookmarked, opened in a second window, or reached with the back button. One panel is rendered per request now, `?tab=` is validated against the controller's own list of names, and a form posted from a tab returns to that tab because every sub-action redirects `back()` |
+| The server writes the URL | each edit dialog carries `data-update-url="{{ route(...) }}"` with an `__ID__` placeholder, bound by one script helper: a hand-built `/project-products/12` misses an install served from a sub-path, and a renamed route is a 404 in whichever of the two places was forgotten |
+| One vocabulary, two pages | the status and health tones are scoped to `.project` and shared by the list, the record header, a milestone badge and the log — so a status cannot mean one thing on the list and another on the page it opens |
+| The record page speaks the shell | the record page's sheet may place the shell's classes and no more: it composes the header, the two-column grid and the thread rows, while the cards, facts, tables, badges, empty states and dialogs come from the shared sheets. A second card design on the detail page is how the module stopped matching the list next door |
+| A panel closes as it opens | the tag stack is the only reader a Blade panel has: a wrapper closed one line early moves every card after it out of the grid, and the browser silently recovers — so the checks walk the panel's tags instead of trusting the eye |

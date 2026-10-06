@@ -13,21 +13,57 @@
     $projectLevelMilestones = $milestones->whereNull('project_product_id')->values();
 @endphp
 
-<section class="pd-tab-panel" id="pd-tab-milestones" data-tab-panel="milestones" role="tabpanel">
-    <div class="pmile-page">
-        <div class="pmile-stats">
-            <div><span>Total Milestones</span><strong>{{ $milestoneTotal }}</strong></div>
-            <div><span>Completed</span><strong class="green">{{ $milestoneCompleted }}</strong></div>
-            <div><span>Public To Client</span><strong class="blue">{{ $milestonePublic }}</strong></div>
-            <div><span>Overdue / Attention</span><strong class="red">{{ $milestoneOverdue }}</strong></div>
-            <div><span>Average Progress</span><strong>{{ $milestoneProgress }}%</strong></div>
+<section class="master-tab-panel" id="project-panel-milestones" role="tabpanel"
+    aria-labelledby="project-tab-milestones">
+    <div class="project-blocks">
+        <div class="master-stats" aria-label="Milestone figures">
+            <div class="master-stat master-stat--flat blue">
+                <span class="icon" aria-hidden="true"><i class="fa-solid fa-flag-checkered"></i></span>
+                <div>
+                    <p class="master-stat-title">Milestones</p>
+                    <p class="master-stat-value">{{ $milestoneTotal }}</p>
+                    <p class="master-sub">Across the whole project</p>
+                </div>
+            </div>
+            <div class="master-stat master-stat--flat green">
+                <span class="icon" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></span>
+                <div>
+                    <p class="master-stat-title">Completed</p>
+                    <p class="master-stat-value">{{ $milestoneCompleted }}</p>
+                    <p class="master-sub">Signed off</p>
+                </div>
+            </div>
+            <div class="master-stat master-stat--flat teal">
+                <span class="icon" aria-hidden="true"><i class="fa-solid fa-eye"></i></span>
+                <div>
+                    <p class="master-stat-title">Public to client</p>
+                    <p class="master-stat-value">{{ $milestonePublic }}</p>
+                    <p class="master-sub">On the client portal</p>
+                </div>
+            </div>
+            <div class="master-stat master-stat--flat {{ $milestoneOverdue > 0 ? 'red' : 'teal' }}">
+                <span class="icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                <div>
+                    <p class="master-stat-title">Overdue</p>
+                    <p class="master-stat-value">{{ $milestoneOverdue }}</p>
+                    <p class="master-sub">{{ $milestoneOverdue > 0 ? 'Past the planned end' : 'Nothing past its date' }}</p>
+                </div>
+            </div>
+            <div class="master-stat master-stat--flat purple">
+                <span class="icon" aria-hidden="true"><i class="fa-solid fa-chart-simple"></i></span>
+                <div>
+                    <p class="master-stat-title">Average progress</p>
+                    <p class="master-stat-value">{{ $milestoneProgress }}%</p>
+                    <p class="master-sub">Across every milestone</p>
+                </div>
+            </div>
         </div>
 
-        <div class="pmile-actions-card">
-            <div class="pd-section-head">
+        <div class="master-card master-card--flat">
+            <div class="master-section-head">
                 <div>
-                    <p class="pd-eyebrow">Product Timeline</p>
-                    <h2>Project Milestone Timelines</h2>
+                    <h2 class="master-section-title">Project milestone timelines</h2>
+                    <p class="master-sub">One timeline per product, project-level milestones first</p>
                 </div>
                 <div class="pmile-head-actions">
                     @if (\Illuminate\Support\Facades\Route::has('projects.milestones.defaults'))
@@ -65,7 +101,10 @@
                 ])
             @empty
                 @if (!$projectLevelMilestones->count())
-                    <div class="pd-empty">Add products first, then generate product-wise milestone timelines.</div>
+                    <div class="master-empty-state">
+                        <i class="fa-solid fa-flag-checkered" aria-hidden="true"></i>
+                        <p>Add products first, then generate the product-wise milestone timelines.</p>
+                    </div>
                 @endif
             @endforelse
         </div>

@@ -102,71 +102,6 @@
     }
 
     /* ------------------------------------------------------------------
-       Project detail — tab navigation
-       Active tab persists per project (localStorage) and in the URL hash.
-       ------------------------------------------------------------------ */
-    function initTabs() {
-        var tabButtons = document.querySelectorAll('.pd-tab-btn');
-        if (!tabButtons.length) return;
-
-        var tabPanels = document.querySelectorAll('.pd-tab-panel');
-        var shell = document.querySelector('.pd-tabs-shell');
-        var projectId = shell ? shell.getAttribute('data-project-id') : '';
-        var storageKey = 'project_show_active_tab_' + (projectId || 'default');
-
-        function openProjectTab(tabName, updateHash) {
-            var found = false;
-            tabButtons.forEach(function (btn) {
-                var isActive = btn.getAttribute('data-tab') === tabName;
-                btn.classList.toggle('active', isActive);
-                btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-                if (isActive) found = true;
-            });
-            if (!found) {
-                openProjectTab('overview', updateHash);
-                return;
-            }
-            tabPanels.forEach(function (panel) {
-                panel.classList.toggle('active', panel.getAttribute('data-tab-panel') === tabName);
-            });
-            try {
-                localStorage.setItem(storageKey, tabName);
-            } catch (e) { /* private mode */ }
-            if (updateHash) {
-                history.replaceState(null, '', '#' + tabName);
-            }
-        }
-
-        tabButtons.forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                openProjectTab(btn.getAttribute('data-tab'), true);
-            });
-        });
-
-        document.querySelectorAll('[data-tab-jump]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                openProjectTab(btn.getAttribute('data-tab-jump'), true);
-                if (shell) {
-                    window.scrollTo({
-                        top: shell.offsetTop - 90,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        });
-
-        var initialTab = window.location.hash ? window.location.hash.replace('#', '') : '';
-        if (!initialTab) {
-            try {
-                initialTab = localStorage.getItem(storageKey) || 'overview';
-            } catch (e) {
-                initialTab = 'overview';
-            }
-        }
-        openProjectTab(initialTab, false);
-    }
-
-    /* ------------------------------------------------------------------
        Project detail — add/edit modals (standard .master-modal dialogs)
        Open triggers + form prefill live here; the shared master-* modal
        layer (app-layout.js) owns open/close state, backdrop, Escape and
@@ -174,6 +109,24 @@
        ------------------------------------------------------------------ */
     function initDetailModals() {
         if (typeof window.MasterModal === 'undefined') return;
+
+        /* The update URL is emitted by the form as a template: a hand-built
+           '/project-products/12' misses an install served from a sub-path. */
+        function bindUpdateUrl(form, id) {
+            var template = form.getAttribute('data-update-url') || '';
+            form.action = template.replace('__ID__', id);
+        }
+
+        /* Any element can open a dialog by naming it. The add buttons keep
+           their own ids for the pages that already bind them; this is the
+           second door into the same dialog — an empty state, a summary tile. */
+        document.querySelectorAll('[data-modal-open]').forEach(function (trigger) {
+            var target = document.getElementById(trigger.getAttribute('data-modal-open'));
+            if (!target) return;
+            trigger.addEventListener('click', function () {
+                window.MasterModal.open(target);
+            });
+        });
 
         function setValue(form, name, value) {
             var field = form.elements[name];
@@ -201,7 +154,7 @@
             document.querySelectorAll('.editProductBtn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var product = JSON.parse(this.getAttribute('data-product') || '{}');
-                    editProductForm.action = '/project-products/' + product.id;
+                    bindUpdateUrl(editProductForm, product.id);
                     setValue(editProductForm, 'product_id', product.product_id);
                     setValue(editProductForm, 'quantity', product.quantity);
                     setValue(editProductForm, 'unit_price', product.unit_price);
@@ -236,7 +189,7 @@
             document.querySelectorAll('.editTrackingBtn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var tracking = JSON.parse(this.getAttribute('data-tracking') || '{}');
-                    editTrackingForm.action = '/project-tracking/' + tracking.id;
+                    bindUpdateUrl(editTrackingForm, tracking.id);
                     setValue(editTrackingForm, 'project_product_id', tracking.project_product_id);
                     setValue(editTrackingForm, 'title', tracking.title);
                     setValue(editTrackingForm, 'status', tracking.status);
@@ -268,7 +221,7 @@
             document.querySelectorAll('.editCommentBtn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var comment = JSON.parse(this.getAttribute('data-comment') || '{}');
-                    editCommentForm.action = '/project-comments/' + comment.id;
+                    bindUpdateUrl(editCommentForm, comment.id);
                     setValue(editCommentForm, 'project_product_id', comment.project_product_id);
                     setValue(editCommentForm, 'body', comment.body);
                     setValue(editCommentForm, 'is_pinned', comment.is_pinned);
@@ -294,7 +247,7 @@
             document.querySelectorAll('.editPaymentBtn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var payment = JSON.parse(this.getAttribute('data-payment') || '{}');
-                    editPaymentForm.action = '/project-payments/' + payment.id;
+                    bindUpdateUrl(editPaymentForm, payment.id);
                     setValue(editPaymentForm, 'transaction_type', payment.transaction_type);
                     var paymentDate = payment.payment_date;
                     if (paymentDate) {
@@ -432,7 +385,6 @@
         initProjectList();
         initDeleteConfirm();
         initCopyPortalLink();
-        initTabs();
         initDetailModals();
         initMilestoneModal();
     });
