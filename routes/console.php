@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('office:briefings')->dailyAt('09:15');
+Schedule::command('office:briefings --chase')->hourly();

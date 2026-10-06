@@ -14,13 +14,14 @@ class OfficeAlert extends Model
     protected $fillable = [
         'event_key', 'fingerprint', 'title', 'body', 'severity', 'requires_ack',
         'team', 'action_url', 'action_label', 'subject_type', 'subject_id', 'meta',
-        'acked_at', 'acked_by',
+        'acked_at', 'acked_by', 'emailed_at',
     ];
 
     protected $casts = [
         'requires_ack' => 'boolean',
         'meta' => 'array',
         'acked_at' => 'datetime',
+        'emailed_at' => 'datetime',
     ];
 
     public function states(): HasMany

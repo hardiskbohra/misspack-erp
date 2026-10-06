@@ -18,14 +18,17 @@
         payload = {};
     }
 
-    function patch(url) {
+    function patch(url, body) {
+        var headers = {
+            'X-CSRF-TOKEN': token,
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        };
+        if (body) headers['Content-Type'] = 'application/json';
         return fetch(url, {
             method: 'PATCH',
-            headers: {
-                'X-CSRF-TOKEN': token,
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+            headers: headers,
+            body: body ? JSON.stringify(body) : undefined
         }).then(function (res) { return res.json(); });
     }
 
@@ -56,7 +59,12 @@
             return;
         }
         list.innerHTML = items.map(function (item) {
-            return '<article class="ob-item is-' + item.severity + '">' +
+            var snooze = item.snoozed
+                ? '<span class="ob-when">Snoozed until ' + esc(item.snoozed_until) + '</span>'
+                : '<button type="button" class="master-btn master-btn-ghost master-btn-sm" data-ob-snooze="' + item.id + '" data-until="1h">1h</button>' +
+                    '<button type="button" class="master-btn master-btn-ghost master-btn-sm" data-ob-snooze="' + item.id + '" data-until="4h">4h</button>' +
+                    '<button type="button" class="master-btn master-btn-ghost master-btn-sm" data-ob-snooze="' + item.id + '" data-until="tomorrow">Tomorrow 9:00</button>';
+            return '<article class="ob-item is-' + item.severity + (item.snoozed ? ' is-snoozed' : '') + '">' +
                 '<div class="ob-item-head">' +
                     '<span class="ob-pill">' + esc(item.severity_label) + '</span>' +
                     (item.team_label ? '<span class="ob-team">' + esc(item.team_label) + '</span>' : '') +
@@ -70,6 +78,7 @@
                         (item.requires_ack ? 'ack' : 'seen') + '="' + item.id + '">' +
                         (item.requires_ack ? 'Mark read for the office' : 'Got it') +
                     '</button>' +
+                    snooze +
                 '</div>' +
             '</article>';
         }).join('');
@@ -113,6 +122,7 @@
             modal.classList.add('open');
             modal.setAttribute('aria-hidden', 'false');
         }
+        patch(urlFor('popup', item.id));
     }
 
     function hidePopup() {
@@ -124,8 +134,9 @@
         }
     }
 
-    function handle(kind, id) {
-        return patch(urlFor(kind, id)).then(function (next) {
+    function handle(kind, id, body) {
+        return patch(urlFor(kind, id), body).then(function (next) {
+            if (kind === 'popup') return;
             apply(next);
             if (currentPopup && String(currentPopup.id) === String(id)) hidePopup();
             if (next.popup && (!currentPopup || String(next.popup.id) !== String(id))) {
@@ -151,14 +162,22 @@
     root.addEventListener('click', function (event) {
         var ack = event.target.closest('[data-ob-ack]');
         var seen = event.target.closest('[data-ob-seen]');
+        var snooze = event.target.closest('[data-ob-snooze]');
         if (ack) handle('ack', ack.getAttribute('data-ob-ack'));
         if (seen) handle('seen', seen.getAttribute('data-ob-seen'));
+        if (snooze) handle('snooze', snooze.getAttribute('data-ob-snooze'), { until: snooze.getAttribute('data-until') });
     });
 
     if (modal) {
         modal.querySelector('[data-ob-modal-ack]').addEventListener('click', function () {
             if (!currentPopup) return;
             handle(currentPopup.requires_ack ? 'ack' : 'seen', currentPopup.id);
+        });
+        modal.querySelectorAll('[data-ob-modal-snooze]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                if (!currentPopup) return;
+                handle('snooze', currentPopup.id, { until: button.getAttribute('data-ob-modal-snooze') });
+            });
         });
         modal.addEventListener('click', function (event) {
             if (event.target === modal && currentPopup && currentPopup.requires_ack) {

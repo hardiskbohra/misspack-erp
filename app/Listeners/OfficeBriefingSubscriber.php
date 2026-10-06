@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Events\KycWasSubmitted;
+use App\Events\ShipmentStatusChanged;
 use App\Services\OfficeBriefing;
 use Illuminate\Events\Dispatcher;
 
@@ -22,11 +23,17 @@ class OfficeBriefingSubscriber
     {
         return [
             KycWasSubmitted::class => 'onKycSubmitted',
+            ShipmentStatusChanged::class => 'onShipmentStatusChanged',
         ];
     }
 
     public function onKycSubmitted(KycWasSubmitted $event): void
     {
         $this->briefing->kycSubmitted($event->client);
+    }
+
+    public function onShipmentStatusChanged(ShipmentStatusChanged $event): void
+    {
+        $this->briefing->shipmentStatusChanged($event->shipment, $event->from);
     }
 }

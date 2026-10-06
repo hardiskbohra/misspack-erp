@@ -82,6 +82,10 @@
     box-shadow: inset 3px 0 0 #f59e0b;
 }
 
+.ob-item.is-snoozed {
+    opacity: .72;
+}
+
 .ob-item-head {
     display: flex;
     gap: 8px;

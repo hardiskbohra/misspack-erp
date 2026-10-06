@@ -27,4 +27,22 @@ class OfficeAlertController extends Controller
 
         return response()->json($briefing->payload($request->user()));
     }
+
+    public function snooze(Request $request, OfficeAlert $office_alert, OfficeBriefing $briefing): JsonResponse
+    {
+        $until = $request->validate([
+            'until' => ['required', 'in:1h,4h,tomorrow'],
+        ])['until'];
+
+        $briefing->snooze($office_alert, $request->user(), $until);
+
+        return response()->json($briefing->payload($request->user()));
+    }
+
+    public function popupShown(Request $request, OfficeAlert $office_alert, OfficeBriefing $briefing): JsonResponse
+    {
+        $briefing->markPopupShown($office_alert, $request->user());
+
+        return response()->json(['ok' => true]);
+    }
 }

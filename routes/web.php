@@ -119,6 +119,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/office-alerts', [OfficeAlertController::class, 'inbox'])->name('office-alerts.inbox');
         Route::patch('/office-alerts/{office_alert}/seen', [OfficeAlertController::class, 'seen'])->name('office-alerts.seen');
         Route::patch('/office-alerts/{office_alert}/ack', [OfficeAlertController::class, 'ack'])->name('office-alerts.ack');
+        Route::patch('/office-alerts/{office_alert}/snooze', [OfficeAlertController::class, 'snooze'])->name('office-alerts.snooze');
+        Route::patch('/office-alerts/{office_alert}/popup', [OfficeAlertController::class, 'popupShown'])->name('office-alerts.popup');
 
         // User Management (CRUD — all handled via modal on index page)
         Route::get('/users',             [UserController::class, 'index'])->name('users.index');

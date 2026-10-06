@@ -14,7 +14,7 @@
             <button type="button" class="ob-close" data-ob-close aria-label="Close">&times;</button>
         </div>
         <div class="ob-body" data-ob-list></div>
-        <p class="ob-foot">You only see desks you sit on. Critical items clear for the whole office when one person marks them read. FYI notes vanish after you have seen them once.</p>
+        <p class="ob-foot">You only see your desk. Critical items clear for the office when one person marks them read. Snooze if you need time. The popup shows once per item until you act.</p>
     </div>
 </div>
 
@@ -34,6 +34,8 @@
         </div>
         <div class="master-modal-footer">
             <a class="master-btn master-btn-soft" data-ob-modal-link hidden>Open</a>
+            <button type="button" class="master-btn master-btn-ghost" data-ob-modal-snooze="1h">Snooze 1h</button>
+            <button type="button" class="master-btn master-btn-ghost" data-ob-modal-snooze="tomorrow">Tomorrow 9:00</button>
             <button type="button" class="master-btn master-btn-primary" data-ob-modal-ack>Mark as read</button>
         </div>
     </div>
