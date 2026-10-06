@@ -21,6 +21,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Services\ProjectProducts;
 use App\Services\SalesInvoiceFilters;
 use App\Services\SavedViews;
 
@@ -919,6 +920,13 @@ class SalesInvoiceController extends Controller
             'balance_amount' => $balance,
             'amount_in_words' => $this->amountInWords($total, $invoice->currency),
         ]);
+
+        /* The lines are the client's own facts, so they are what the project is
+           making: the products tab reads them from here rather than from a
+           second entry the office has to keep in step. A row the office edits
+           later is updated, never duplicated — the service matches the line to
+           its product row before it writes. */
+        app(ProjectProducts::class)->fromSalesInvoice($invoice);
     }
 
     private function storeAttachments(Request $request, SalesInvoice $invoice): void

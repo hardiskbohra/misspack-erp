@@ -648,6 +648,62 @@ check('the invoices tab draws each document from its own relation',
        that is absent is not queried at all. */
     && /Schema::hasColumn\(\$table, 'project_id'\)/.test(controller));
 
+/* ------------------------------------------------------- where products come from */
+
+/* The products tab used to be the writer: the office typed a product onto the
+   project, and the sales invoice form pre-filled its lines from that list — so
+   the same product was entered twice, and an invoice raised before anyone
+   filled the tab left the project looking empty. The lines the office already
+   raises are the facts, so the documents write the products now. Two modules
+   hand their lines to one service; the two things that would rot first are the
+   call sites (a call on `store` alone would miss every edit) and the field
+   ownership (both kinds writing the quantity is what a second writer looks
+   like), so both are read. */
+const salesControllerCode = read('app/Http/Controllers/SalesInvoiceController.php');
+const purchaseControllerCode = read('app/Http/Controllers/PurchaseInvoiceController.php');
+const productService = read('app/Services/ProjectProducts.php');
+const productTab = read('resources/views/projects/partials/record-products.blade.php');
+
+check('the project products are written by the documents that mention them',
+    /^class ProjectProducts$/m.test(productService)
+    && /public function fromSalesInvoice\(SalesInvoice \$invoice\): int/.test(productService)
+    && /public function fromPurchaseInvoice\(PurchaseInvoice \$invoice\): int/.test(productService)
+    && /Schema::hasTable\('project_products'\)/.test(productService)
+    /* Exactly one call site per module, and the sales one is inside the line
+       writer both `store` and `update` go through. */
+    && (salesControllerCode.match(/->fromSalesInvoice\(/g) || []).length === 1
+    && /private function syncItemsAndTotals\(SalesInvoice \$invoice[\s\S]*?fromSalesInvoice\(\$invoice\);/.test(salesControllerCode)
+    && (purchaseControllerCode.match(/->fromPurchaseInvoice\(/g) || []).length === 1
+    && /private function afterSave\(PurchaseInvoice \$invoice\): void[\s\S]*?fromPurchaseInvoice\(\$invoice\);/.test(purchaseControllerCode)
+    /* One field, one writer: the client's document owns the quantity, the rate
+       and the currency; a purchase line owns the vendor and their document
+       number, and only seeds the ordered quantity on a row it creates. */
+    && /'quantity' => \$line->quantity \?: null,\s*\n\s*'unit' => \$line->unit \?: null,\s*\n\s*'unit_price' => \$line->unit_price,\s*\n\s*'currency' => \$invoice->currency \?: null,/.test(productService)
+    && /if \(! \$row->exists\) \{[\s\S]{0,220}\$facts\['quantity'\] = \$line->quantity \?: null;/.test(productService)
+    && /'vendor_id' => \$invoice->vendor_id \?: null/.test(productService)
+    && /'vendor_invoice_number' => \$invoice->vendor_bill_number \?: null/.test(productService)
+    /* A line is matched to its row before anything is written — by the row it
+       already points at, then the product, then the name — so re-saving an
+       invoice updates the product instead of adding a second one, and nothing
+       here deletes a row that carries milestones, comments and attachments. */
+    && /\$line->project_product_id && \(\$match = \(clone \$query\)->whereKey\(\$line->project_product_id\)/.test(productService)
+    && /\$line->product_id && \(\$match = \(clone \$query\)->where\('product_id', \$line->product_id\)/.test(productService)
+    && /whereRaw\('LOWER\(product_name\) = \?', \[mb_strtolower\(\$name\)\]\)/.test(productService)
+    && ! /->delete\(\)/.test(productService)
+    /* The arithmetic stays the model's: quantity × rate, written once.
+       Neither a facts key nor an assignment on the row may set it here. */
+    && ! /['"]total_amount['"]\s*=>/.test(productService)
+    && ! /total_amount\s*=[^=]/.test(productService)
+    && /total_amount = round\(\$qty \* \$price, 2\)/.test(read('app/Models/ProjectProduct.php'))
+    /* The tab says where its rows come from, keeps the manual add for what no
+       document says yet, and keeps a door to the document that fills it. */
+    && /documents land here on their own/.test(productTab)
+    && /appear here on their own/.test(productTab)
+    && /data-modal-open="addProductModal"/.test(productTab)
+    && /master-btn-primary addProductBtn" id="openAddProductModal"/.test(productTab)
+    && /route\('sales-invoices\.create', \['project_id' => \$project->id\]\)/.test(productTab)
+    && /projects\.products\.store/.test(read('routes/web.php')));
+
 check('the facts, the notes and the empty blocks are the shell\'s',
     (recordViews.match(/class="master-facts"/g) || []).length >= 4
     && (recordViews.match(/class="master-info"/g) || []).length >= 18

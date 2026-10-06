@@ -5,7 +5,9 @@
                 <div>
                     <h2 class="master-section-title">Project products</h2>
                     <p class="master-sub">{{ $project->products->count() }}
-                    {{ \Illuminate\Support\Str::plural('product', $project->products->count()) }} on this project</p>
+                    {{ \Illuminate\Support\Str::plural('product', $project->products->count()) }} on this project.
+                    Lines from the project's invoices and purchase documents land here on their own — add one by hand
+                    only for what no document says yet.</p>
                 </div>
                 <div class="master-section-meta">
                     <button type="button" class="master-btn master-btn-primary addProductBtn" id="openAddProductModal">
@@ -77,8 +79,12 @@
                                 <td colspan="7">
                                     <div class="master-empty-state">
                                         <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
-                                        <p>No products on this project yet. Add the first one — its milestones, value and vendor
-                                        follow from there.</p>
+                                        <p>No products on this project yet. Save an invoice or a purchase document tagged to
+                                        this project and its lines appear here on their own — quantity, rate and vendor come
+                                        from the documents, so nothing has to be typed twice.</p>
+                                        <a class="master-btn master-btn-soft master-btn-sm"
+                                            href="{{ route('sales-invoices.create', ['project_id' => $project->id]) }}">
+                                            <i class="fas fa-file-invoice" aria-hidden="true"></i> Raise an invoice</a>
                                         <button type="button" class="master-btn master-btn-soft master-btn-sm"
                                             data-modal-open="addProductModal"><i class="fas fa-plus" aria-hidden="true"></i> Add product</button>
                                     </div>

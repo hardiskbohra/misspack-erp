@@ -144,6 +144,37 @@ fails rather than shipping a grey pill. The strip and the `@if`/`@elseif` chain 
 read against each other too: a tab added to one list and not the other is a link that opens
 nothing or a panel nobody can reach, and neither throws.
 
+**The products are the documents' rows.** A project product used to be typed in on the
+project, and the sales invoice form pre-filled its lines from that list — the same product
+entered twice, and an invoice raised before anyone filled the tab left the project looking
+empty. It runs the other way now: the lines the office already raises are the facts, and
+`App\Services\ProjectProducts` materialises them into `project_products`. The sales
+controller calls it where its lines are written (`syncItemsAndTotals`, which both `store` and
+`update` go through — a call on `store` alone would miss every edit), and the purchase
+controller calls it from `afterSave()`, the module's own post-save hook, so a PO and a bill
+write here too.
+
+Whichever document mentions the product first creates the row; after that the two kinds own
+different facts and never write over each other. A **sales line** owns what the client sees —
+the product, the quantity, the unit, the rate, the currency, and the line's description as
+the specification, seeded once so re-saving an invoice cannot overwrite what the office typed
+on the product. A **purchase line** owns what we buy — the vendor, and the supplier's own
+`vendor_bill_number` (our number is not a vendor invoice number, which is why the tab can
+still say "No vendor invoice"), and it seeds the ordered quantity only on a row it is the
+first to mention, because the client's invoice owns that figure once it exists. A line is
+matched to its row before anything is written — the row it already points at
+(`project_product_id`), then the same product, then the same name — so re-saving an invoice
+updates a product instead of adding a second one. Nothing is ever deleted: a project product
+carries milestones, comments and attachments, and a line dropped from a draft invoice must
+not take the job's work with it. And `total_amount` is still only written by
+`ProjectProduct::saving` — quantity × rate, once — because a second arithmetic is how the two
+start disagreeing.
+
+The products tab says so and keeps its manual door for what no document says yet: the header
+sub names the documents, the empty state offers *Raise an invoice* (the door that fills it)
+beside *Add product*, and the edit and remove buttons stay — the office still has to be able
+to correct a row a document got wrong.
+
 The milestones tab keeps its own `pmile-*` stepper — a genuinely bespoke timeline
 — but its chrome is the shell's now: the five-box stat row is a `master-stats`
 row, its action bar is a `master-card`, its badges are `master-badge` tones, and
@@ -234,7 +265,7 @@ portal's own sheet, and the static preview under `public/_preview/` still render
 
 ## Checks
 
-`tools/checks/projects-check.cjs` (59 checks) pins the composition above: the
+`tools/checks/projects-check.cjs` (60 checks) pins the composition above: the
 root is the master-list, the two cards sit in that order, the gap is not
 declared in the module's sheet, every chip carries its tally, the columns are
 named in the order the table draws them, the figures come from the grouped

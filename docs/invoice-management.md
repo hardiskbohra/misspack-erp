@@ -180,6 +180,15 @@ One dialog serves the whole listing. The row that opens it says which invoice it
 for; the form action is filled in from the `data-action-template` the route rendered
 (`__INVOICE__`), and the amount opens prefilled with what is still owed.
 
+**Saving an invoice also writes the project's products.** When the invoice is tagged to a
+project, its lines are materialised into `project_products` by
+`App\Services\ProjectProducts` — called from the one place the lines are written, so
+`store`, `update` and every later edit agree. The project's products tab then shows what the
+client was invoiced without anyone typing it there, and the invoice form's own pre-fill (a new
+invoice for a project starts from that list) reads what the last document wrote. The service
+owns the matching (a line updates its row instead of adding a second one) and nothing else:
+the quantity × rate arithmetic stays `ProjectProduct::saving`'s.
+
 ## Chasing the money
 
 A bill that has been sent is not money in the bank, and the office's real work is

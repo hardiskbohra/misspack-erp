@@ -12,6 +12,7 @@ use App\Models\PurchaseInvoiceItem;
 use App\Models\Vendor;
 use App\Models\VendorPaymentAttachment;
 use App\Models\VendorPaymentEntry;
+use App\Services\ProjectProducts;
 use App\Services\PurchaseBillLedger;
 use App\Services\VendorPaymentCashflowSync;
 use Illuminate\Http\RedirectResponse;
@@ -1004,6 +1005,12 @@ class PurchaseInvoiceController extends Controller
     {
         (new PurchaseBillLedger())->sync($invoice);
         $this->refreshInvoiceMoney($invoice->fresh(['items']));
+
+        /* Buying facts land on the project too: the vendor and the supplier's
+           document number are what the project's product row is missing, and a
+           product only a purchase document mentions still appears on the
+           project instead of living only in this module. */
+        app(ProjectProducts::class)->fromPurchaseInvoice($invoice);
     }
 
     /**
