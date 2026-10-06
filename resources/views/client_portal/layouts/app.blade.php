@@ -60,7 +60,6 @@
             <a href="{{ route('client-portal.dashboard') }}" class="cp-nav-link {{ request()->routeIs('client-portal.dashboard*') ? 'active' : '' }}"><i class="fa-solid fa-house"></i><span>Overview</span></a>
             <a href="{{ route('client-portal.projects.index') }}" class="cp-nav-link {{ request()->routeIs('client-portal.projects.*') ? 'active' : '' }}"><i class="fa-solid fa-briefcase"></i><span>Projects</span></a>
             <a href="{{ route('client-portal.shipments.index') }}" class="cp-nav-link {{ request()->routeIs('client-portal.shipments.*') ? 'active' : '' }}"><i class="fa-solid fa-truck-fast"></i><span>Shipments</span></a>
-            <a href="{{ route('client-portal.quotes.index') }}" class="cp-nav-link {{ request()->routeIs('client-portal.quotes.*') ? 'active' : '' }}"><i class="fa-solid fa-file-signature"></i><span>Quotations</span></a>
             <a href="{{ route('client-portal.products.index') }}" class="cp-nav-link {{ request()->routeIs('client-portal.products.*') ? 'active' : '' }}"><i class="fa-solid fa-box-open"></i><span>Product catalogue</span></a>
 
             <div class="cp-nav-section">Finance & files</div>

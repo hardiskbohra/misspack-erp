@@ -43,7 +43,7 @@
             drawDonut('projectHealthChart',dashData.status.projectHealth,'projectHealthLegend','');
             drawDonut('shipmentStatusChart',dashData.status.shipments,'shipmentStatusLegend','');
             drawDonut('expenseCategoryChart',dashData.pies.expenseCategories,'expenseCategoryLegend','₹');
-            drawBarChart('pipelineChart',labels,[{label:'Leads',data:dashData.pipeline.leads,color:'#8b5cf6'},{label:'Quotes',data:dashData.pipeline.quotes,color:'#4f83f1'},{label:'Projects',data:dashData.pipeline.projects,color:'#ef4770'},{label:'Shipments',data:dashData.pipeline.shipments,color:'#10b981'}],'');
+            drawBarChart('pipelineChart',labels,[{label:'Leads',data:dashData.pipeline.leads,color:'#8b5cf6'},{label:'Projects',data:dashData.pipeline.projects,color:'#ef4770'},{label:'Shipments',data:dashData.pipeline.shipments,color:'#10b981'}],'');
             drawBarChart('salesPurchaseChart',labels,[{label:'Sales',data:dashData.salesPurchase.sales,color:'#4f83f1'},{label:'Purchase',data:dashData.salesPurchase.purchase,color:'#f59e0b'}]);
             drawLineChart('grossMarginChart',labels,[{label:'Gross Margin',data:dashData.salesPurchase.margin,color:'#10b981'}]);
             drawHorizontalBar('salesByClientChart',dashData.pies.salesByClient,'₹');

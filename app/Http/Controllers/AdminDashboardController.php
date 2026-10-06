@@ -53,7 +53,6 @@ class AdminDashboardController extends Controller
             ],
             'pipeline' => [
                 'leads' => $this->countSeries('leads', $this->dateColumn('leads', ['created_at']), $period),
-                'quotes' => $this->countSeries('customer_quotes', $this->dateColumn('customer_quotes', ['quote_date', 'created_at']), $period),
                 'projects' => $this->countSeries('projects', $this->dateColumn('projects', ['start_date', 'created_at']), $period),
                 'shipments' => $this->countSeries('shipments', $this->dateColumn('shipments', ['pickup_date', 'created_at']), $period),
             ],
@@ -61,7 +60,6 @@ class AdminDashboardController extends Controller
                 'projects' => $this->breakdown(\App\Models\Project::class, 'projects', 'status'),
                 'projectHealth' => $this->breakdown(\App\Models\Project::class, 'projects', 'health'),
                 'shipments' => $this->breakdown(\App\Models\Shipment::class, 'shipments', 'status'),
-                'quotes' => $this->breakdown(\App\Models\CustomerQuote::class, 'customer_quotes', 'status'),
                 'leads' => $this->breakdown(\App\Models\Lead::class, 'leads', 'status'),
                 'tasks' => $this->breakdown(\App\Models\Task::class, 'tasks', 'status'),
                 'clients' => $this->breakdown(\App\Models\Client::class, 'clients', 'status'),
@@ -76,7 +74,6 @@ class AdminDashboardController extends Controller
 
         $metrics = $this->metrics($period, $charts);
         $topClients = $this->topClients();
-        $topProducts = $this->topProducts($period);
         $recentActivity = $this->recentActivity();
         $alerts = $this->alerts();
         $attention = $this->immediateAttention();
@@ -92,7 +89,6 @@ class AdminDashboardController extends Controller
             'metrics',
             'charts',
             'topClients',
-            'topProducts',
             'recentActivity',
             'alerts',
             'attention',
@@ -265,11 +261,6 @@ class AdminDashboardController extends Controller
             'leads_range' => $this->count(\App\Models\Lead::class, 'leads', function ($query) use ($start, $end) { $query->whereBetween('created_at', [$start, $end]); }),
             'leads_converted' => $this->count(\App\Models\Lead::class, 'leads', function ($query) { $query->whereIn('status', ['converted', 'won', 'closed_won']); }),
 
-            'quotes_total' => $this->count(\App\Models\CustomerQuote::class, 'customer_quotes'),
-            'quotes_range' => $this->count(\App\Models\CustomerQuote::class, 'customer_quotes', function ($query) use ($start, $end) { $query->whereBetween('created_at', [$start, $end]); }),
-            'quotes_accepted' => $this->count(\App\Models\CustomerQuote::class, 'customer_quotes', function ($query) { $query->where('status', 'accepted'); }),
-            'quotes_value' => $this->sum(\App\Models\CustomerQuote::class, 'customer_quotes', 'total_amount'),
-
             'projects_total' => $this->count(\App\Models\Project::class, 'projects'),
             'projects_active' => $this->count(\App\Models\Project::class, 'projects', function ($query) { $query->whereIn('status', ['planned', 'in_progress', 'waiting_client', 'waiting_vendor', 'on_hold']); }),
             'projects_completed' => $this->count(\App\Models\Project::class, 'projects', function ($query) { $query->where('status', 'completed'); }),
@@ -299,7 +290,6 @@ class AdminDashboardController extends Controller
             'tasks_overdue' => $this->overdueTasks(),
 
             'vendors_total' => $this->count(\App\Models\Vendor::class, 'vendors'),
-            'vendor_quotes_total' => $this->count(\App\Models\VendorQuote::class, 'vendor_quotes'),
             'cash_credit_range' => $incomeTotal,
             'cash_debit_range' => $expenseTotal,
             'cash_net_range' => $incomeTotal - $expenseTotal,
@@ -360,47 +350,43 @@ class AdminDashboardController extends Controller
         return null;
     }
 
+    /* Sales and purchase are document facts now: a tax invoice is money the
+       office has billed, a vendor bill is money it owes. Proformas and purchase
+       orders are the paper before the one that counts, so both series take the
+       money type and leave drafts and cancellations out — one filter, used by
+       the series and by the pies, so a tile and a pie can never disagree. */
+    private function invoiceFilter($query, string $table, string $moneyType): void
+    {
+        if (Schema::hasColumn($table, 'invoice_type')) {
+            $query->where($table.'.invoice_type', $moneyType);
+        }
+
+        if (Schema::hasColumn($table, 'status')) {
+            $query->whereNotIn($table.'.status', ['draft', 'cancelled']);
+        }
+    }
+
     private function salesSeries(array $period): array
     {
-        $dateColumn = $this->dateColumn('customer_quotes', ['quote_date', 'created_at']);
-        if (! $dateColumn || ! $this->tableColumn('customer_quotes', 'total_amount')) {
+        $dateColumn = $this->dateColumn('sales_invoices', ['invoice_date', 'created_at']);
+        if (! $dateColumn || ! $this->tableColumn('sales_invoices', 'total_amount')) {
             return $this->zeroSeries($period);
         }
 
-        return $this->sumSeries('customer_quotes', $dateColumn, 'total_amount', $period, function ($query) {
-            if (Schema::hasColumn('customer_quotes', 'status')) {
-                $query->whereIn('status', ['sent', 'accepted', 'revised']);
-            }
+        return $this->sumSeries('sales_invoices', $dateColumn, 'total_amount', $period, function ($query) {
+            $this->invoiceFilter($query, 'sales_invoices', 'tax');
         });
     }
 
     private function purchaseSeries(array $period): array
     {
-        if (! Schema::hasTable('vendor_quotes')) {
+        $dateColumn = $this->dateColumn('purchase_invoices', ['invoice_date', 'created_at']);
+        if (! $dateColumn || ! $this->tableColumn('purchase_invoices', 'total_amount')) {
             return $this->zeroSeries($period);
         }
 
-        $dateColumn = $this->dateColumn('vendor_quotes', ['quote_date', 'created_at']);
-        if (! $dateColumn) {
-            return $this->zeroSeries($period);
-        }
-
-        $hasLandingCost = Schema::hasColumn('vendor_quotes', 'landing_cost_inr');
-        $hasUnitPurchase = Schema::hasColumn('vendor_quotes', 'vendor_unit_price') && Schema::hasColumn('vendor_quotes', 'quantity');
-
-        $expression = '0';
-        if ($hasLandingCost && $hasUnitPurchase) {
-            $expression = 'CASE WHEN COALESCE(landing_cost_inr, 0) > 0 THEN COALESCE(landing_cost_inr, 0) ELSE COALESCE(vendor_unit_price, 0) * COALESCE(quantity, 0) END';
-        } elseif ($hasLandingCost) {
-            $expression = 'COALESCE(landing_cost_inr, 0)';
-        } elseif ($hasUnitPurchase) {
-            $expression = 'COALESCE(vendor_unit_price, 0) * COALESCE(quantity, 0)';
-        }
-
-        return $this->sumExpressionSeries('vendor_quotes', $dateColumn, $expression, $period, function ($query) {
-            if (Schema::hasColumn('vendor_quotes', 'status')) {
-                $query->whereIn('status', ['received', 'shortlisted', 'approved', 'converted']);
-            }
+        return $this->sumSeries('purchase_invoices', $dateColumn, 'total_amount', $period, function ($query) {
+            $this->invoiceFilter($query, 'purchase_invoices', 'bill');
         });
     }
 
@@ -519,7 +505,7 @@ class AdminDashboardController extends Controller
 
     private function dateBoundary(Carbon $date, string $dateColumn, bool $end = false)
     {
-        $dateOnlyColumns = ['entry_date', 'payment_date', 'quote_date', 'invoice_date', 'pickup_date', 'drop_date', 'start_date', 'target_date'];
+        $dateOnlyColumns = ['entry_date', 'payment_date', 'invoice_date', 'pickup_date', 'drop_date', 'start_date', 'target_date'];
 
         if (in_array($dateColumn, $dateOnlyColumns, true)) {
             return $date->toDateString();
@@ -598,27 +584,25 @@ class AdminDashboardController extends Controller
 
     private function salesByClientBreakdown(array $period): array
     {
-        if (! Schema::hasTable('customer_quotes') || ! Schema::hasColumn('customer_quotes', 'total_amount')) {
+        if (! Schema::hasTable('sales_invoices') || ! Schema::hasColumn('sales_invoices', 'total_amount')) {
             return [];
         }
 
-        $dateColumn = $this->dateColumn('customer_quotes', ['quote_date', 'created_at']);
+        $dateColumn = $this->dateColumn('sales_invoices', ['invoice_date', 'created_at']);
         if (! $dateColumn) {
             return [];
         }
 
-        $query = DB::table('customer_quotes')
-            ->whereBetween('customer_quotes.'.$dateColumn, [$this->dateBoundary($period['start'], $dateColumn), $this->dateBoundary($period['end'], $dateColumn, true)]);
+        $query = DB::table('sales_invoices')
+            ->whereBetween('sales_invoices.'.$dateColumn, [$this->dateBoundary($period['start'], $dateColumn), $this->dateBoundary($period['end'], $dateColumn, true)]);
 
-        if (Schema::hasColumn('customer_quotes', 'status')) {
-            $query->whereIn('customer_quotes.status', ['sent', 'accepted', 'revised']);
-        }
+        $this->invoiceFilter($query, 'sales_invoices', 'tax');
 
-        if (Schema::hasTable('clients') && Schema::hasColumn('customer_quotes', 'client_id')) {
-            $query->leftJoin('clients', 'customer_quotes.client_id', '=', 'clients.id')
-                ->selectRaw("COALESCE(clients.company_name, customer_quotes.customer_company_name, 'Unknown Client') as label, SUM(customer_quotes.total_amount) as total");
+        if (Schema::hasTable('clients') && Schema::hasColumn('sales_invoices', 'client_id')) {
+            $query->leftJoin('clients', 'sales_invoices.client_id', '=', 'clients.id')
+                ->selectRaw("COALESCE(clients.company_name, sales_invoices.client_company_name, 'Unknown Client') as label, SUM(sales_invoices.total_amount) as total");
         } else {
-            $query->selectRaw("COALESCE(customer_company_name, 'Unknown Client') as label, SUM(total_amount) as total");
+            $query->selectRaw("COALESCE(client_company_name, 'Unknown Client') as label, SUM(total_amount) as total");
         }
 
         return $query->groupBy('label')->orderByDesc('total')->limit(8)->pluck('total', 'label')
@@ -628,22 +612,22 @@ class AdminDashboardController extends Controller
 
     private function salesByProductBreakdown(array $period): array
     {
-        if (! Schema::hasTable('customer_quote_items') || ! Schema::hasTable('customer_quotes')) {
+        if (! Schema::hasTable('sales_invoice_items') || ! Schema::hasTable('sales_invoices')) {
             return [];
         }
 
-        $dateColumn = $this->dateColumn('customer_quotes', ['quote_date', 'created_at']);
+        $dateColumn = $this->dateColumn('sales_invoices', ['invoice_date', 'created_at']);
         if (! $dateColumn) {
             return [];
         }
 
-        return DB::table('customer_quote_items')
-            ->join('customer_quotes', 'customer_quote_items.customer_quote_id', '=', 'customer_quotes.id')
-            ->whereBetween('customer_quotes.'.$dateColumn, [$this->dateBoundary($period['start'], $dateColumn), $this->dateBoundary($period['end'], $dateColumn, true)])
-            ->when(Schema::hasColumn('customer_quotes', 'status'), function ($query) {
-                $query->whereIn('customer_quotes.status', ['sent', 'accepted', 'revised']);
+        return DB::table('sales_invoice_items')
+            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+            ->whereBetween('sales_invoices.'.$dateColumn, [$this->dateBoundary($period['start'], $dateColumn), $this->dateBoundary($period['end'], $dateColumn, true)])
+            ->where(function ($query) {
+                $this->invoiceFilter($query, 'sales_invoices', 'tax');
             })
-            ->selectRaw("COALESCE(customer_quote_items.product_name, 'Product') as label, SUM(customer_quote_items.amount) as total")
+            ->selectRaw("COALESCE(sales_invoice_items.product_name, 'Product') as label, SUM(sales_invoice_items.line_total) as total")
             ->groupBy('label')
             ->orderByDesc('total')
             ->limit(8)
@@ -654,34 +638,28 @@ class AdminDashboardController extends Controller
 
     private function purchaseByVendorBreakdown(array $period): array
     {
-        if (! Schema::hasTable('vendor_quotes')) {
+        if (! Schema::hasTable('purchase_invoices') || ! Schema::hasColumn('purchase_invoices', 'total_amount')) {
             return [];
         }
 
-        $dateColumn = $this->dateColumn('vendor_quotes', ['quote_date', 'created_at']);
+        $dateColumn = $this->dateColumn('purchase_invoices', ['invoice_date', 'created_at']);
         if (! $dateColumn) {
             return [];
         }
 
-        $hasLandingCost = Schema::hasColumn('vendor_quotes', 'landing_cost_inr');
-        $hasUnitPurchase = Schema::hasColumn('vendor_quotes', 'vendor_unit_price') && Schema::hasColumn('vendor_quotes', 'quantity');
+        $query = DB::table('purchase_invoices')
+            ->whereBetween('purchase_invoices.'.$dateColumn, [$this->dateBoundary($period['start'], $dateColumn), $this->dateBoundary($period['end'], $dateColumn, true)]);
 
-        $expression = '0';
-        if ($hasLandingCost && $hasUnitPurchase) {
-            $expression = 'CASE WHEN COALESCE(landing_cost_inr, 0) > 0 THEN COALESCE(landing_cost_inr, 0) ELSE COALESCE(vendor_unit_price, 0) * COALESCE(quantity, 0) END';
-        } elseif ($hasLandingCost) {
-            $expression = 'COALESCE(landing_cost_inr, 0)';
-        } elseif ($hasUnitPurchase) {
-            $expression = 'COALESCE(vendor_unit_price, 0) * COALESCE(quantity, 0)';
+        $this->invoiceFilter($query, 'purchase_invoices', 'bill');
+
+        if (Schema::hasTable('vendors') && Schema::hasColumn('purchase_invoices', 'vendor_id')) {
+            $query->leftJoin('vendors', 'purchase_invoices.vendor_id', '=', 'vendors.id')
+                ->selectRaw("COALESCE(vendors.company_name, purchase_invoices.vendor_company_name, 'Vendor') as label, SUM(purchase_invoices.total_amount) as total");
+        } else {
+            $query->selectRaw("COALESCE(vendor_company_name, 'Vendor') as label, SUM(total_amount) as total");
         }
 
-        return DB::table('vendor_quotes')
-            ->whereBetween($dateColumn, [$this->dateBoundary($period['start'], $dateColumn), $this->dateBoundary($period['end'], $dateColumn, true)])
-            ->selectRaw("COALESCE(vendor_name, 'Vendor') as label, SUM(".$expression.") as total")
-            ->groupBy('label')
-            ->orderByDesc('total')
-            ->limit(8)
-            ->pluck('total', 'label')
+        return $query->groupBy('label')->orderByDesc('total')->limit(8)->pluck('total', 'label')
             ->mapWithKeys(function ($value, $key) { return [(string) $key => round((float) $value, 2)]; })
             ->toArray();
     }
@@ -990,43 +968,12 @@ class AdminDashboardController extends Controller
             ->toArray();
     }
 
-    private function topProducts(array $period): array
-    {
-        if (! Schema::hasTable('customer_quote_items') || ! Schema::hasTable('customer_quotes')) {
-            return [];
-        }
-
-        $dateColumn = $this->dateColumn('customer_quotes', ['quote_date', 'created_at']);
-        if (! $dateColumn) {
-            return [];
-        }
-
-        return DB::table('customer_quote_items')
-            ->join('customer_quotes', 'customer_quote_items.customer_quote_id', '=', 'customer_quotes.id')
-            ->whereBetween('customer_quotes.'.$dateColumn, [$this->dateBoundary($period['start'], $dateColumn), $this->dateBoundary($period['end'], $dateColumn, true)])
-            ->select('customer_quote_items.product_name', DB::raw('SUM(customer_quote_items.quantity) as qty'), DB::raw('SUM(customer_quote_items.amount) as value'), DB::raw('COUNT(*) as quote_count'))
-            ->groupBy('customer_quote_items.product_name')
-            ->orderByDesc('value')
-            ->limit(8)
-            ->get()
-            ->map(function ($row) {
-                return [
-                    'name' => $row->product_name ?: 'Product',
-                    'qty' => (float) $row->qty,
-                    'value' => (float) $row->value,
-                    'quotes' => (int) $row->quote_count,
-                ];
-            })
-            ->toArray();
-    }
-
     private function recentActivity(): array
     {
         $items = [];
 
         $this->pushRecent($items, \App\Models\Project::class, 'projects', 'project', 'Project', 'name', 'project_number', 'projects.show');
         $this->pushRecent($items, \App\Models\Shipment::class, 'shipments', 'shipment', 'Shipment', 'identity_name', 'shipment_number', 'shipments.show');
-        $this->pushRecent($items, \App\Models\CustomerQuote::class, 'customer_quotes', 'quote', 'Quote', 'title', 'quote_number', 'customer-quotes.show');
         $this->pushRecent($items, \App\Models\Lead::class, 'leads', 'lead', 'Lead', 'title', 'lead_number', 'leads.show');
         $this->pushRecent($items, \App\Models\Client::class, 'clients', 'client', 'Client', 'company_name', 'client_number', 'clients.show');
 
@@ -1122,7 +1069,6 @@ class AdminDashboardController extends Controller
         $min = $current - 5;
 
         foreach ([
-            ['customer_quotes', 'quote_date'],
             ['cashflow_entries', 'entry_date'],
             ['projects', 'created_at'],
             ['shipments', 'created_at'],
@@ -1155,7 +1101,6 @@ class AdminDashboardController extends Controller
             'projects' => $this->routeUrl('projects.index'),
             'shipments' => $this->routeUrl('shipments.index'),
             'cashflows' => $this->routeUrl('cashflows.index'),
-            'quotes' => $this->routeUrl('customer-quotes.index'),
             'vendors' => $this->routeUrl('vendors.index'),
             'users' => $this->routeUrl('users.index'),
         ];

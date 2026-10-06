@@ -125,7 +125,6 @@
     
     
             <!--['label' => 'Leads', 'route' => 'leads.index', 'active' => 'leads.*', 'icon' => 'fa-solid fa-people-group'],-->
-            <!--['label' => 'Lead Quotes', 'route' => 'lead-quotes.index', 'active' => 'lead-quotes.*', 'icon' => 'fa-solid fa-file-invoice-dollar'],-->
             <!--['label' => 'Price Calculator', 'route' => 'price-calculator.index', 'active' => 'price-calculator.*', 'icon' => 'fa-solid fa-calculator'],-->
 
     {{-- Sidebar --}}

@@ -15,7 +15,7 @@ class SalesInvoice extends Model
 
     protected $fillable = [
         'invoice_number', 'invoice_type', 'status', 'public_token', 'client_id', 'project_id',
-        'customer_quote_id', 'invoice_date', 'due_date', 'valid_until', 'currency', 'exchange_rate',
+        'invoice_date', 'due_date', 'valid_until', 'currency', 'exchange_rate',
         'gst_type', 'place_of_supply', 'po_number', 'po_date',
         'seller_company_name', 'seller_address', 'seller_city', 'seller_state', 'seller_country',
         'seller_pincode', 'seller_gstin', 'seller_pan', 'seller_email', 'seller_mobile',
@@ -161,11 +161,6 @@ class SalesInvoice extends Model
     public function project()
     {
         return $this->belongsTo(\App\Models\Project::class, 'project_id');
-    }
-
-    public function customerQuote()
-    {
-        return $this->belongsTo(\App\Models\CustomerQuote::class, 'customer_quote_id');
     }
 
     public function creator()

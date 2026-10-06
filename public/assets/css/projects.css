@@ -99,16 +99,6 @@
             margin-top: 28px
         }
 
-        .pf-quote-badge {
-            background: #fff7e6;
-            color: #b54708;
-            border: 1px solid #fedf89;
-            border-radius: 999px;
-            padding: 8px 12px;
-            font-weight: 600;
-            font-size: 12px
-        }
-
         .pf-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));

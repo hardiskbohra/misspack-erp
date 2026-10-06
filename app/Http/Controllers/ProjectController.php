@@ -86,34 +86,27 @@ class ProjectController extends Controller
         )));
     }
 
-    public function create(Request $request): View
+    public function create(): View
     {
-        $quote = $this->customerQuoteFromRequest($request);
-
         $project = new Project([
             'project_number' => $this->makeProjectNumber(),
-            'customer_quote_id' => $quote ? $quote->id : null,
-            'client_id' => $quote ? ($quote->client_id ?? null) : null,
-            'name' => $quote ? ($quote->title ?? 'New Project') : 'New Project',
+            'client_id' => null,
+            'name' => 'New Project',
             'status' => 'planned',
-            'stage' => 'quote_finalised',
+            'stage' => 'kickoff',
             'priority' => 'normal',
             'health' => 'green',
             'start_date' => now()->toDateString(),
             'target_date' => now()->addDays(30)->toDateString(),
-            'currency' => $quote ? ($quote->currency ?? 'INR') : 'INR',
-            'estimated_value' => $quote ? ($quote->total_amount ?? 0) : 0,
+            'currency' => 'INR',
+            'estimated_value' => 0,
             'budget_amount' => 0,
             'progress_percent' => 0,
             'show_client_portal' => true,
-            'scope_summary' => $quote ? ($quote->notes ?? null) : null,
-            'deliverables' => $quote ? ($quote->delivery_terms ?? null) : null,
-            'client_notes' => $quote ? ($quote->delivery_time ?? null) : null,
         ]);
 
         return view('projects.form', array_merge($this->sharedData(), [
             'project' => $project,
-            'quote' => $quote,
             'isEdit' => false,
         ]));
     }
@@ -130,16 +123,10 @@ class ProjectController extends Controller
             $data['progress_percent'] = 100;
         }
 
-        $quote = $this->customerQuoteFromId($data['customer_quote_id'] ?? null);
-
-        $project = DB::transaction(function () use ($data, $quote, $request) {
+        $project = DB::transaction(function () use ($data) {
             $project = Project::create($data);
 
             $this->writeLog($project, 'created', 'Project created', 'Project was created from the deal/project form.', null, $project->toArray(), false);
-
-            if ($quote && $request->has('import_quote_items')) {
-                $this->importQuoteItems($project, $quote);
-            }
 
             return $project;
         });
@@ -151,7 +138,6 @@ class ProjectController extends Controller
     {
         $data = $request->validate([
             'client_id' => ['required', 'integer'],
-            'customer_quote_id' => ['nullable', 'integer'],
             'name' => ['required', 'string', 'max:255'],
             'start_date' => ['nullable', 'date'],
             'target_date' => ['nullable', 'date'],
@@ -159,22 +145,19 @@ class ProjectController extends Controller
             'priority' => ['nullable', Rule::in(array_keys(Project::priorityOptions()))],
         ]);
 
-        $quote = $this->customerQuoteFromId($data['customer_quote_id'] ?? null);
-
-        $project = DB::transaction(function () use ($data, $quote) {
+        $project = DB::transaction(function () use ($data) {
             $project = Project::create([
                 'project_number' => $this->makeProjectNumber(),
                 'client_id' => $data['client_id'],
-                'customer_quote_id' => $data['customer_quote_id'] ?? null,
                 'name' => $data['name'],
                 'status' => 'planned',
-                'stage' => 'quote_finalised',
+                'stage' => 'kickoff',
                 'priority' => $data['priority'] ?? 'normal',
                 'health' => 'green',
                 'start_date' => $data['start_date'] ?? now()->toDateString(),
                 'target_date' => $data['target_date'] ?? now()->addDays(30)->toDateString(),
-                'currency' => $quote ? ($quote->currency ?? 'INR') : 'INR',
-                'estimated_value' => $quote ? ($quote->total_amount ?? 0) : 0,
+                'currency' => 'INR',
+                'estimated_value' => 0,
                 'progress_percent' => 0,
                 'show_client_portal' => true,
                 'assigned_to' => $data['assigned_to'] ?? null,
@@ -182,10 +165,6 @@ class ProjectController extends Controller
             ]);
 
             $this->writeLog($project, 'created', 'Quick project created', 'Project was created from quick create modal.', null, $project->toArray(), false);
-
-            if ($quote) {
-                $this->importQuoteItems($project, $quote);
-            }
 
             return $project;
         });
@@ -213,9 +192,6 @@ class ProjectController extends Controller
 
         if ($this->clientModelAvailable()) {
             $with[] = 'client';
-        }
-        if ($this->customerQuoteModelAvailable()) {
-            $with[] = 'customerQuote';
         }
         if ($this->productModelAvailable()) {
             $with[] = 'products.product';
@@ -274,14 +250,10 @@ class ProjectController extends Controller
         if ($this->clientModelAvailable()) {
             $with[] = 'client';
         }
-        if ($this->customerQuoteModelAvailable()) {
-            $with[] = 'customerQuote';
-        }
         $project->load($with);
 
         return view('projects.form', array_merge($this->sharedData(), [
             'project' => $project,
-            'quote' => $project->relationLoaded('customerQuote') ? $project->customerQuote : null,
             'isEdit' => true,
         ]));
     }
@@ -378,7 +350,6 @@ class ProjectController extends Controller
         return $request->validate([
             'project_number' => ['nullable', 'string', 'max:255', $uniqueProjectNumber],
             'client_id' => ['required', 'integer'],
-            'customer_quote_id' => ['nullable', 'integer'],
             'name' => ['required', 'string', 'max:255'],
             'status' => ['required', Rule::in(array_keys(Project::statusOptions()))],
             'stage' => ['required', Rule::in(array_keys(Project::stageOptions()))],
@@ -405,7 +376,6 @@ class ProjectController extends Controller
             'vendors' => $this->vendors(),
             'products' => $this->products(),
             'users' => User::query()->orderBy('name')->get(),
-            'quotes' => $this->customerQuotes(),
             'cashflowEntries' => $this->cashflowEntries(),
             'cashflowAccounts' => $this->cashflowAccounts(),
             'cashflowCategories' => $this->cashflowCategories(),
@@ -440,33 +410,6 @@ class ProjectController extends Controller
         return $number;
     }
 
-    private function importQuoteItems(Project $project, $quote): void
-    {
-        if (! method_exists($quote, 'items')) {
-            return;
-        }
-
-        $quote->load('items');
-        foreach ($quote->items as $index => $item) {
-            ProjectProduct::create([
-                'project_id' => $project->id,
-                'product_id' => $item->product_id ?? null,
-                'product_name' => $item->product_name ?: 'Product',
-                'sku' => null,
-                'quantity' => $item->quantity ?: 1,
-                'unit' => $item->unit ?: 'pcs',
-                'unit_price' => $item->unit_price ?: 0,
-                'currency' => $project->currency,
-                'status' => 'planned',
-                'stage' => 'pending',
-                'notes' => trim(($item->description ? $item->description."\n" : '').($item->remarks ?: '')),
-                'sort_order' => $index + 1,
-            ]);
-        }
-
-        $this->writeLog($project, 'quote_imported', 'Quote products imported', 'Accepted quote products were imported into this project.', null, ['quote_id' => $quote->id], false);
-    }
-
     private function writeLog(Project $project, string $eventType, string $title, ?string $description = null, ?array $oldValues = null, ?array $newValues = null, bool $isPublic = false): void
     {
         ProjectLog::create([
@@ -481,21 +424,6 @@ class ProjectController extends Controller
             'new_values' => $newValues,
             'is_public' => $isPublic,
         ]);
-    }
-
-    private function customerQuoteFromRequest(Request $request)
-    {
-        $id = $request->query('customer_quote_id', $request->query('quote_id'));
-        return $this->customerQuoteFromId($id);
-    }
-
-    private function customerQuoteFromId($id)
-    {
-        if (! $id || ! $this->customerQuoteModelAvailable()) {
-            return null;
-        }
-
-        return \App\Models\CustomerQuote::with('items')->find($id);
     }
 
     private function clients()
@@ -523,15 +451,6 @@ class ProjectController extends Controller
         }
 
         return \App\Models\Product::query()->where('status', 'active')->orderBy('name')->get();
-    }
-
-    private function customerQuotes()
-    {
-        if (! $this->customerQuoteModelAvailable()) {
-            return collect();
-        }
-
-        return \App\Models\CustomerQuote::query()->where('status', 'accepted')->latest('id')->get();
     }
 
     private function cashflowEntries()
@@ -574,11 +493,6 @@ class ProjectController extends Controller
     private function productModelAvailable(): bool
     {
         return class_exists(\App\Models\Product::class) && Schema::hasTable('products');
-    }
-
-    private function customerQuoteModelAvailable(): bool
-    {
-        return class_exists(\App\Models\CustomerQuote::class) && Schema::hasTable('customer_quotes');
     }
 
     private function cashflowEntryModelAvailable(): bool

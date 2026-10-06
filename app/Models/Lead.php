@@ -54,11 +54,6 @@ class Lead extends Model
         return $this->hasMany(LeadAttachment::class);
     }
 
-    public function customerQuotes()
-    {
-        return $this->hasMany(\App\Models\LeadQuote::class, 'lead_id');
-    }
-
     public function comments()
     {
         return $this->hasMany(LeadComment::class)->latest('is_pinned')->latest('created_at');

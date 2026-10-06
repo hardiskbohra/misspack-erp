@@ -27,9 +27,6 @@
                     <div class="master-info"><span>Completed</span>
                         <strong @class(['master-empty-value' => ! $project->completed_at])>{{ $project->completed_at?->format('d M Y') ?: 'Still running' }}</strong>
                     </div>
-                    <div class="master-info"><span>Accepted quote</span>
-                        <strong @class(['master-empty-value' => ! $project->customerQuote])>{{ $project->customerQuote?->quote_number ?: 'No quote mapped' }}</strong>
-                    </div>
                     <div class="master-info"><span>Currency</span><strong>{{ $project->currency ?: 'INR' }}</strong></div>
                     <div class="master-info"><span>Created</span>
                         <strong>{{ $project->created_at?->format('d M Y') ?: '—' }}

@@ -26,7 +26,10 @@
      - the quick-create dialog is the shared .master-modal opened through
        MasterModal, and the list's toolkit is MasterList — the module's own
        modal wiring is gone;
-     - every route the screen links to is registered.
+     - every route the screen links to is registered;
+     - every class a module screen names is a class with rules — the shell's,
+       another screen's, or the module's own sheet — so the private vocabulary
+       of a page that no longer exists cannot come back.
    ========================================================================== */
 
 'use strict';
@@ -574,6 +577,78 @@ check('the status form keeps its four facts, in the shared drawer',
 check('the record page is written down',
     /record page/i.test(read('docs/projects-module.md'))
     && /SHOW_TABS/.test(read('docs/projects-module.md')));
+
+/* ------------------------------------- a class the module names is a class with rules */
+
+/* The module rebuilt its screens on the shell, and each rebuild moved the markup
+   off the sheet of the day: the form's root is `.project-form-page` because the
+   sheet scopes the form's own field spacing to that name, the record's thumbs
+   are `.project-thumb` because the sheet draws one, and a health chip is a
+   `.master-list-chip` because the shell owns the chip. A class left behind in
+   the markup is invisible — it renders as nothing, and no reviewer reading the
+   Blade can tell. This guard is exact rather than lexical: a class a module
+   screen names is defined when a sheet declares a rule for it or when another
+   screen names it, and dynamic compositions (`project-health-dot--{{ $key }}`)
+   are not names at all. */
+const moduleScreenFiles = (function walk(dir, out = []) {
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+        const relative = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) walk(relative, out);
+        else if (relative.endsWith('.blade.php')) out.push(relative);
+    }
+    return out;
+})('resources/views/projects');
+
+const everyTemplateFile = moduleScreenFiles.slice();
+(function walk(dir) {
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+        const relative = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) walk(relative);
+        else if (relative.endsWith('.blade.php') && ! everyTemplateFile.includes(relative)) everyTemplateFile.push(relative);
+    }
+})('resources/views');
+
+const moduleOwnedClass = /^(?:project|pd|pmile|fb)-/;
+const classTokens = (text) => text.split(/[^A-Za-z0-9_-]+/)
+    .filter((name) => name && moduleOwnedClass.test(name) && ! name.endsWith('-') && ! /[{}]/.test(name));
+const eachNamedClass = (source, visit) => {
+    for (const match of source.matchAll(/class="([^"]*)"/g)) classTokens(match[1]).forEach(visit);
+    /* In @class([...]) a quoted string is the class — a key with a condition, or
+       a plain list item; an unquoted value (a variable) is not a name. */
+    for (const match of source.matchAll(/@class\(\[([\s\S]*?)\]\)/g)) {
+        for (const literal of match[1].matchAll(/'([^']*)'/g)) classTokens(literal[1]).forEach(visit);
+    }
+};
+
+const classSites = new Map();
+for (const file of everyTemplateFile) {
+    eachNamedClass(plain(read(file)), (name) => {
+        if (! classSites.has(name)) classSites.set(name, new Set());
+        classSites.get(name).add(file);
+    });
+}
+
+const appSheetCorpus = fs.readdirSync(path.join(ROOT, 'public/assets/css'))
+    .filter((file) => file.endsWith('.css'))
+    .map((file) => read(`public/assets/css/${file}`)).join('\n');
+const sheetDeclares = (name) => new RegExp(`\\.${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9_-])`)
+    .test(appSheetCorpus);
+
+const orphanClassSites = [];
+for (const file of moduleScreenFiles) {
+    const spelled = new Set();
+    eachNamedClass(plain(read(file)), (name) => spelled.add(name));
+    for (const name of spelled) {
+        const namedElsewhere = [...(classSites.get(name) || [])].some((other) => other !== file);
+        if (! namedElsewhere && ! sheetDeclares(name)) {
+            orphanClassSites.push(`${file} → .${name}`);
+        }
+    }
+}
+
+check('every class a module screen names is a class with rules',
+    orphanClassSites.length === 0,
+    orphanClassSites.slice(0, 6).join(' | '));
 
 /* ---------------------------------------------------------------- report */
 

@@ -117,6 +117,12 @@ scopes; `.project` carries the one thing they must agree on — the status, heal
 and band tones. Nothing else in the sheet is a page scope, which is why the
 colour vocabulary is the only rule group whose selector is not the page's.
 
+The form is the third: its root is `.project-form-page`, the name the sheet
+scopes the form's own stack (18px between its cards), its required marker and
+its help text to. A root that spells another name leaves those rules unread —
+the form's cards sit flush and the asterisks go grey — so the root class is a
+fact the check reads, not a decoration.
+
 ## One writer per fact
 
 | Fact | Written by | Read by |
@@ -178,7 +184,7 @@ portal's own sheet, and the static preview under `public/_preview/` still render
 
 ## Checks
 
-`tools/checks/projects-check.cjs` (51 checks) pins the composition above: the
+`tools/checks/projects-check.cjs` (52 checks) pins the composition above: the
 root is the master-list, the two cards sit in that order, the gap is not
 declared in the module's sheet, every chip carries its tally, the columns are
 named in the order the table draws them, the figures come from the grouped
@@ -192,3 +198,6 @@ shared facts, tables and empty states, a tone for every state the models offer
 in both themes (the bands come from `FeedbackVocabulary`, the initials from the
 client pages' idiom rather than a `Str::of()` chain), and the feedback tab as a
 record panel that owns its own wrapper and wears no class from another sheet.
+The last check is the vocabulary itself: every class a module screen names is
+defined — by a rule in one of the app's sheets or by another screen — so a tag's
+private vocabulary cannot come back without a rule to render it.

@@ -12,7 +12,7 @@ class Project extends Model
     use HasFactory;
 
     protected $fillable = [
-        'project_number', 'public_token', 'client_id', 'customer_quote_id', 'name', 'status',
+        'project_number', 'public_token', 'client_id', 'name', 'status',
         'stage', 'priority', 'health', 'start_date', 'target_date', 'completed_at', 'currency',
         'estimated_value', 'budget_amount', 'progress_percent', 'scope_summary', 'deliverables',
         'client_notes', 'internal_notes', 'show_client_portal', 'assigned_to', 'created_by',
@@ -40,11 +40,6 @@ class Project extends Model
     public function client()
     {
         return $this->belongsTo(\App\Models\Client::class, 'client_id');
-    }
-
-    public function customerQuote()
-    {
-        return $this->belongsTo(\App\Models\CustomerQuote::class, 'customer_quote_id');
     }
 
     public function products()

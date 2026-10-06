@@ -12,7 +12,7 @@
     <div class="ls-card ls-header">
         <div>
             <h1>Lead Settings</h1>
-            <p>Manage lead and vendor quote dropdown master data.</p>
+            <p>Manage the dropdown master data the lead forms offer.</p>
         </div>
         <div class="ls-actions">
             <a href="{{ route('leads.index') }}" class="master-btn master-btn-light">Back to Leads</a>
@@ -34,7 +34,6 @@
         'finish' => 'fa-brush',
         'printing' => 'fa-print',
         'currency' => 'fa-coins',
-        'quote_status' => 'fa-file-invoice-dollar',
         'incoterm' => 'fa-ship',
         'capacity_unit' => 'fa-ruler-combined',
     ])
@@ -56,7 +55,7 @@
             <div class="ls-panel-title">
                 <div>
                     <h2>{{ $activeLabel }}</h2>
-                    <p>Create, edit and deactivate {{ strtolower($activeLabel) }} options used in lead and vendor quote forms.</p>
+                    <p>Create, edit and deactivate {{ strtolower($activeLabel) }} options used in the lead forms.</p>
                 </div>
             </div>
 

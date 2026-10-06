@@ -98,7 +98,6 @@ const filterDrawerPages = [
     'resources/views/office_services/index.blade.php',
     'resources/views/vendors/index.blade.php',
     'resources/views/leads/index.blade.php',
-    'resources/views/lead_quotes/index.blade.php',
     'resources/views/projects/index.blade.php',
     'resources/views/tasks/index.blade.php',
     'resources/views/products/index.blade.php',
@@ -116,7 +115,6 @@ const filterDrawerPages = [
     'resources/views/client_portal/support/index.blade.php',
     'resources/views/client_portal/statements/index.blade.php',
     'resources/views/client_portal/products/index.blade.php',
-    'resources/views/client_portal/quotes/index.blade.php',
 ];
 const missingFilterDrawers = filterDrawerPages.filter((file) => {
     const source = read(file);

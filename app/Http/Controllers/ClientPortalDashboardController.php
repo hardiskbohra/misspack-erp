@@ -39,19 +39,6 @@ class ClientPortalDashboardController extends ClientPortalBaseController
             $shipments = $shipmentQuery->latest('id')->limit(4)->get();
         }
 
-        $quotes = collect();
-        $quoteTotal = 0;
-        if ($this->quotesAvailable()) {
-            $quoteQuery = \App\Models\CustomerQuote::query()
-                ->where('client_id', $client->id)
-                ->when(Schema::hasColumn('customer_quotes', 'show_client_portal'), function ($query) {
-                    $query->where('show_client_portal', true);
-                })
-                ->where('status', '!=', 'draft');
-            $quoteTotal = (clone $quoteQuery)->count();
-            $quotes = $quoteQuery->latest('id')->limit(3)->get();
-        }
-
         $salesInvoices = collect();
         $salesInvoiceQuery = SalesInvoice::query()
             ->where('client_id', $client->id)
@@ -105,7 +92,6 @@ class ClientPortalDashboardController extends ClientPortalBaseController
         $stats = [
             'projects' => $projectTotal,
             'shipments' => $shipmentTotal,
-            'quotes' => $quoteTotal,
             'invoices' => $salesInvoiceTotal,
             'payments' => $paymentTotal,
             'documents' => ClientPortalDocument::query()
@@ -126,7 +112,6 @@ class ClientPortalDashboardController extends ClientPortalBaseController
             'stats',
             'projects',
             'shipments',
-            'quotes',
             'salesInvoices',
             'notifications',
             'supportConversations'

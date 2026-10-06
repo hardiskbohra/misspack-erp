@@ -213,7 +213,7 @@
                 <div class="master-section-head">
                     <div>
                         <p class="master-eyebrow">Client Mapping</p>
-                        <h2>Client / Project / Quote</h2>
+                        <h2>Client / Project</h2>
                     </div>
                 </div>
 
@@ -243,17 +243,6 @@
                                     {{ $project->project_number }} - {{ $project->name }}</option>
                             @endforeach
                         </select>
-                    </div>
-                    <div class="master-field"><label class="master-label" for="quoteSelect">Quote</label><select
-                            class="master-select" id="quoteSelect" name="customer_quote_id">
-                            <option value="">No Quote</option>
-                            @foreach ($quotes as $quote)
-                                <option value="{{ $quote->id }}"
-                                    {{ (string) old('customer_quote_id', $invoice->customer_quote_id) === (string) $quote->id ? 'selected' : '' }}>
-                                    {{ $quote->quote_number }} - {{ $quote->title }}</option>
-                            @endforeach
-                        </select>
-                        <p class="master-help">The quote this invoice was raised from, when it came from one.</p>
                     </div>
                 </div>
 

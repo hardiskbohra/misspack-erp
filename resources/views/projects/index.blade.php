@@ -109,7 +109,7 @@
 
             <div class="master-list-chips" aria-label="Filter projects by health">
                 @foreach ($healthOptions as $key => $label)
-                    <a class="master-list-chip project-health-chip {{ $health === $key ? 'is-active' : '' }}"
+                    <a class="master-list-chip {{ $health === $key ? 'is-active' : '' }}"
                         href="{{ $healthUrl($key) }}">
                         <i class="fa-solid fa-circle project-health-dot project-health-dot--{{ $key }}" aria-hidden="true"></i>
                         {{ \Illuminate\Support\Str::before($label, ' /') }}
@@ -365,7 +365,7 @@
                                     <p class="master-list-empty-text">
                                         {{ $filtersActive
                                             ? 'Try a different search or clear the filters to see every project.'
-                                            : 'Create a project once a client finalises the quote, and track its products, milestones, payments and feedback from one page.' }}
+                                            : 'Create a project when an order is confirmed, and track its products, milestones, payments and feedback from one page.' }}
                                     </p>
                                     <div class="master-list-empty-actions">
                                         @if ($filtersActive)
@@ -446,16 +446,6 @@
                                     <option value="{{ $client->id }}">{{ $client->company_name }}</option>
                                 @endforeach
                             </select>
-                        </div>
-                        <div class="master-field">
-                            <label class="master-label" for="quick_project_quote">Accepted quote</label>
-                            <select class="master-select" id="quick_project_quote" name="customer_quote_id">
-                                <option value="">No quote mapping</option>
-                                @foreach ($quotes as $quote)
-                                    <option value="{{ $quote->id }}">{{ $quote->quote_number }} — {{ $quote->title }}</option>
-                                @endforeach
-                            </select>
-                            <small class="master-sub">The quote's products are imported when one is chosen.</small>
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="quick_project_name">Project name

@@ -10,7 +10,6 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\VendorController;
-use App\Http\Controllers\VendorQuoteController;
 use App\Http\Controllers\OfficeServiceController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CashflowAttachmentController;
@@ -24,7 +23,6 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PublicLeadController;
 use App\Http\Controllers\LeadSettingController;
 use App\Http\Controllers\LeadCommentController;
-use App\Http\Controllers\LeadQuoteController;
 use App\Http\Controllers\ProjectAttachmentController;
 use App\Http\Controllers\ProjectCommentController;
 use App\Http\Controllers\ProjectController;
@@ -49,7 +47,6 @@ use App\Http\Controllers\ClientPortalNotificationController;
 use App\Http\Controllers\ClientPortalPaymentController;
 use App\Http\Controllers\ClientPortalProductController;
 use App\Http\Controllers\ClientPortalProjectController;
-use App\Http\Controllers\ClientPortalQuoteController;
 use App\Http\Controllers\ClientPortalShipmentController;
 use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\OfficeAlertController;
@@ -73,7 +70,7 @@ Route::get('/track-shipment/{token}', [ShipmentController::class, 'publicTrack']
 Route::get('/client-kyc/{token}', [ClientController::class, 'publicKyc'])->name('clients.publicKyc');
 Route::post('/client-kyc/{token}', [ClientController::class, 'submitKyc'])->name('clients.publicKyc.submit');
 
-// Public product and quote link
+// Public product link
 Route::get('/public-products/{token}', [ProductController::class, 'publicShow'])->name('products.public');
 
 /* Public invoice print/client portal link */
@@ -252,12 +249,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/vendor-comments/{comment}', [VendorController::class, 'destroyComment'])->name('vendors.comments.destroy');
         Route::resource('vendors', VendorController::class);
 
-        Route::post('/vendor-quotes/quick', [VendorQuoteController::class, 'quickStore'])->name('vendor-quotes.quickStore');
-        Route::get('/vendor-quotes/{vendorQuote}/image', [VendorQuoteController::class, 'image'])->name('vendor-quotes.image');
-        Route::resource('vendor-quotes', VendorQuoteController::class)->parameters([
-            'vendor-quotes' => 'vendorQuote',
-        ]);
-
         Route::resource('office-services', OfficeServiceController::class);
     
         // Product Management
@@ -310,12 +301,6 @@ Route::middleware('auth')->group(function () {
         // Lead Comments Management
         Route::post('/leads/{lead}/comments', [LeadCommentController::class, 'store'])->name('leads.comments.store');
         Route::delete('/lead-comments/{comment}', [LeadCommentController::class, 'destroy'])->name('leads.comments.destroy');
-
-        // Lead-Quote Management
-        Route::patch('/lead-quotes/{leadQuote}/status', [LeadQuoteController::class, 'updateStatus'])->name('lead-quotes.status.update');
-        Route::resource('lead-quotes', LeadQuoteController::class)->parameters([
-            'lead-quotes' => 'leadQuote',
-        ]);
 
         // Lead Management
         Route::post('/leads/quick', [LeadController::class, 'quickStore'])->name('leads.quickStore');
@@ -501,10 +486,6 @@ Route::prefix('client-portal')->name('client-portal.')->group(function () {
         Route::get('/shipments/{shipment}/attachments/{attachment}', [ClientPortalShipmentController::class, 'file'])->name('shipments.attachments.file');
         Route::post('/shipments/{shipment}/comments', [ClientPortalShipmentController::class, 'storeComment'])->name('shipments.comments.store');
         Route::post('/shipments/{shipment}/documents', [ClientPortalShipmentController::class, 'upload'])->name('shipments.documents.store');
-
-        Route::get('/quotations', [ClientPortalQuoteController::class, 'index'])->name('quotes.index');
-        Route::get('/quotations/{quote}', [ClientPortalQuoteController::class, 'show'])->name('quotes.show');
-        Route::post('/quotations/{quote}/comments', [ClientPortalQuoteController::class, 'storeComment'])->name('quotes.comments.store');
 
         Route::get('/invoices', [ClientPortalInvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/invoices/sales/{invoice}/print', [ClientPortalInvoiceController::class, 'printSales'])->name('invoices.sales.print');

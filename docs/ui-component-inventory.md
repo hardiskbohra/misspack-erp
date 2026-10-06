@@ -112,7 +112,6 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Component | Status | Current implementation |
 | --- | --- | --- |
 | Price ladder | Shared, domain-specific | Product price ladders and price-calculator grid (`products.css`, `price-calculator.css`) |
-| Quote comparison | Gap | Lead quotes are listed per lead; the vendor-quote module was removed, so no comparison matrix exists |
 | Payables ageing | Partial | Vendor module only: `.vendor-ageing` is one hairline-divided strip of five age cells over the ledger's settled open bills, each late cell badged; there is no shared ageing component for other modules to reuse yet |
 | Bulk row actions | Partial | The shared `.master-list-bulk` bar and the `form` attribute carry vendor status changes; sales invoices uses its own script for the same pattern |
 | Payment summary | Partial | Invoice, portal, and Cashflow payment summaries use separate markup |

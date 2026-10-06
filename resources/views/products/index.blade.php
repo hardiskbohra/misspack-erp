@@ -111,12 +111,6 @@
                                                 : '-' }}
                                         </strong>
                                     </div>
-                                                                    <div class="meta-item">
-                                        <span>Client Quotes</span>
-                                        <strong>
-                                            {{ $product->client_quotes_count ?? 0 }}
-                                        </strong>
-                                    </div>
                                 
                                 </div>
                 
@@ -133,12 +127,6 @@
                                     <i class="fa-solid fa-pen"></i>
                                 </a>
                 
-                
-                                <button
-                                    class="master-btn-light product-quotes-btn"
-                                    data-product-id="{{ $product->id }}">
-                                    <i class="fa-solid fa-file-invoice-dollar"></i>
-                                </button>
                 
                                 <form method="POST"
                                     action="{{ route('products.destroy',$product) }}"

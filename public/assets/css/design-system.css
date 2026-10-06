@@ -1645,9 +1645,6 @@ body[data-ui-module="users"] .emp-record-head {
    modal: those belong to the shared sheets, and a module-local copy of one
    drifts the moment the shared one is fixed (the users sheet learned that
    with its private modal system).
-
-   The vendor_quotes screens still load this file for their price-break rows;
-   those two rules are kept at the foot of the sheet.
    ========================================================================== */
 
 /* ==========================================================================

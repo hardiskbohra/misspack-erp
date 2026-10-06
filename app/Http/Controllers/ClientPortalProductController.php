@@ -62,18 +62,6 @@ class ClientPortalProductController extends ClientPortalBaseController
             $ids = array_merge($ids, $projectProductIds);
         }
 
-        if ($this->quotesAvailable() && Schema::hasTable('customer_quote_items')) {
-            $quoteIds = \App\Models\CustomerQuote::where('client_id', $client->id)
-                ->where('status', '!=', 'draft')
-                ->when(Schema::hasColumn('customer_quotes', 'show_client_portal'), function ($query) {
-                    $query->where('show_client_portal', true);
-                })
-                ->pluck('id');
-
-            $quoteProductIds = \App\Models\CustomerQuoteItem::whereIn('customer_quote_id', $quoteIds)->whereNotNull('product_id')->pluck('product_id')->all();
-            $ids = array_merge($ids, $quoteProductIds);
-        }
-
         $ids = array_values(array_unique(array_map('intval', $ids)));
 
         return $ids;

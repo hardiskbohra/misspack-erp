@@ -37,7 +37,7 @@
                                     @if ($media)
                                         <img class="project-thumb" src="{{ asset('storage/'.$media->file_path) }}" alt="">
                                     @else
-                                        <span class="project-thumb project-thumb--empty" aria-hidden="true"><i class="fa-solid fa-box"></i></span>
+                                        <span class="project-thumb" aria-hidden="true"><i class="fa-solid fa-box"></i></span>
                                     @endif
                                 </td>
                                 <td data-label="Product">

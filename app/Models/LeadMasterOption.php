@@ -33,7 +33,6 @@ class LeadMasterOption extends Model
             'finish' => 'Finish',
             'printing' => 'Printing',
             'currency' => 'Currency',
-            'quote_status' => 'Vendor Quote Status',
             'incoterm' => 'Incoterm',
             'capacity_unit' => 'Capacity Unit',
         ];

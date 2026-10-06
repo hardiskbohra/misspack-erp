@@ -117,10 +117,9 @@
      - the index is a `.master-list`, so its cards, its figures row and its
        two-column grid are already 24px apart, and the grid's own gutter is
        20px — nothing to add;
-     - the client panel is a `.client-detail-tools` column and the project tab
-       is a `.pd-tabs-content` panel, both of which stack their blocks at 16px;
-     - `.fb-side` and `.fb-project-tab` are the module's own nested stacks, and
-       take the same 16px.
+     - the client panel is a `.client-detail-tools` column, which stacks its
+       blocks at 16px;
+     - `.fb-side` is the module's own nested stack, and takes the same 16px.
 
    What the shared `.master-card` deliberately leaves unset is the padding
    *inside* a card, and that is what `.fb-card` is for (the guideline's 20–24px):
@@ -559,23 +558,7 @@ text back on the 16px inset the card's bar uses. */
 .fb-action-new { margin-top: 16px; padding: 16px; background: var(--ui-muted-surface, #f8fbff); border-radius: 14px; }
 .fb-action-new .fb-subhead { margin: 0 0 12px; }
 .fb-action-new .fb-field { margin-bottom: 14px; }
-/* ------------------------------------------------------- project tab + panel */
-
-/* The project tab's own stack: the panel above it insets the tab, and this
-   keeps its cards 16px apart like every other tab's. Each card is the project
-   page's own `.pd-card` (18px, no shadow — a nested card must not cast the
-   page card's shadow into the panel), so the module keeps no padding of its own
-   here. */
-.fb-project-tab { display: flex; flex-direction: column; gap: 16px; }
-.fb-project-tab > * { margin: 0; }
-.fb-project-tab > .pd-card { min-width: 0; }
-
-.fb-inline-ask { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.fb-inline-link { display: flex; gap: 8px; margin: 8px 0; }
-.fb-inline-link input { min-width: 260px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-.fb-inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.fb-issue-form { max-width: 720px; }
-.fb-issue-form .fb-action-grid { margin-bottom: 14px; }
+/* --------------------------------------------------------------- the panel */
 
 .fb-dimension-list { display: flex; flex-direction: column; gap: 14px; }
 .fb-dimension { padding: 16px; background: var(--ui-muted-surface, #f8fbff); border: 1px solid var(--ui-border, #dfe7f3); border-radius: 14px; }

@@ -114,9 +114,6 @@
                 <div>
                     <p class="master-stat-title">Estimated value</p>
                     <p class="master-stat-value">{{ $money($project->estimated_value) }}</p>
-                    <p class="master-sub">
-                        {{ $project->customerQuote ? 'Quote '.$project->customerQuote->quote_number : 'No quote mapped' }}
-                    </p>
                 </div>
             </div>
             <div class="master-stat master-stat--flat green">
