@@ -1,52 +1,8 @@
-.ob-settings .ob-setting-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--mc-border, #e5eaf2);
-}
-
-.ob-settings .ob-setting-row:last-of-type {
-    border-bottom: 0;
-}
-
-.ob-setting-label {
-    margin: 0;
-    font-weight: 600;
-}
-
-.ob-watcher-list {
-    list-style: none;
-    margin: 12px 0 0;
-    padding: 0;
-}
-
-.ob-watcher-list li {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 2px 12px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--mc-border, #e5eaf2);
-    font-size: 13px;
-}
-
-.ob-watcher-list li span {
-    color: var(--mc-muted, #687386);
-    grid-column: 1;
-}
-
-.ob-watcher-list li em {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    align-self: center;
-    font-style: normal;
-    color: var(--mc-muted, #687386);
-}
+/* Briefings reuse the shared overlay (global search), dialog (master-modal)
+   and chips (master-status-chip). This sheet only places the inbox under the
+   top bar and tones the list rows. */
 
 .ob {
-
-
     position: fixed;
     inset: 0;
     z-index: 80;
@@ -55,79 +11,49 @@
 .ob-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(15, 23, 42, .28);
+    background: rgba(23, 35, 59, .4);
 }
 
-.ob-panel {
+.ob-panel.master-modal-card {
     position: absolute;
+    z-index: 1;
     top: 64px;
     right: 18px;
+    margin: 0;
     width: min(420px, calc(100vw - 24px));
     max-height: min(72vh, 640px);
-    display: flex;
-    flex-direction: column;
-    background: var(--mc-surface, #fff);
-    color: var(--mc-text, #1b2a41);
-    border: 1px solid var(--mc-border, #e5eaf2);
-    border-radius: 16px;
-    box-shadow: 0 18px 40px rgba(25, 42, 70, .16);
-    overflow: hidden;
+    box-shadow: var(--mc-shadow, 0 18px 40px rgba(25, 42, 70, .16));
 }
 
-.ob-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 16px 16px 12px;
-    border-bottom: 1px solid var(--mc-border, #e5eaf2);
-}
-
-.ob-eyebrow {
-    margin: 0;
-    font-size: 11px;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--mc-text-3, #667085);
-}
-
-.ob-title {
-    margin: 2px 0 0;
-    font-size: 18px;
-}
-
-.ob-close {
-    border: 0;
-    background: transparent;
-    font-size: 22px;
-    line-height: 1;
-    cursor: pointer;
-    color: var(--mc-text-3, #667085);
-}
-
-.ob-body {
-    overflow: auto;
+.ob-panel .master-modal-body {
     padding: 8px;
 }
 
+.ob-panel .master-modal-footer {
+    justify-content: flex-start;
+    background: var(--mc-card-soft, #f8fbff);
+}
+
 .ob-empty {
-    margin: 24px 12px;
-    color: var(--mc-text-3, #667085);
-    text-align: center;
+    margin: 16px 8px;
+    color: var(--mc-text-3, #687386);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.5;
+    text-align: left;
 }
 
 .ob-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     padding: 12px;
-    border-radius: 12px;
-    margin-bottom: 8px;
-    background: var(--mc-surface-2, #f7f9fc);
+    border-radius: 11px;
+    margin-bottom: 4px;
 }
 
-.ob-item.is-critical {
-    box-shadow: inset 3px 0 0 #ef4770;
-}
-
-.ob-item.is-attention {
-    box-shadow: inset 3px 0 0 #f59e0b;
+.ob-item:hover {
+    background: var(--mc-card-soft, #f8fbff);
 }
 
 .ob-item.is-snoozed {
@@ -136,57 +62,77 @@
 
 .ob-item-head {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     align-items: center;
-    margin-bottom: 6px;
+}
+
+.ob-item .master-status-chip {
+    min-width: 0;
+    padding: 4px 10px;
     font-size: 11px;
 }
 
-.ob-pill {
-    font-weight: 700;
-    letter-spacing: .04em;
-    text-transform: uppercase;
+.ob-item .master-status-chip.warning {
+    background: #fef3c7;
+    color: #b45309;
+    border-color: #fde68a;
 }
 
-.ob-item.is-critical .ob-pill { color: #be123c; }
-.ob-item.is-attention .ob-pill { color: #b45309; }
-.ob-item.is-info .ob-pill { color: #1d4ed8; }
-
-.ob-team,
-.ob-when {
-    color: var(--mc-text-3, #667085);
+.ob-item .master-status-chip.info {
+    background: #eef3ff;
+    color: #2563eb;
+    border-color: #dbe7ff;
 }
 
 .ob-item h3 {
-    margin: 0 0 4px;
-    font-size: 15px;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--mc-text, #17233b);
 }
 
 .ob-item p {
-    margin: 0 0 10px;
-    color: var(--mc-text-2, #344054);
-    font-size: 13px;
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 400;
+    color: var(--mc-text-3, #687386);
+    line-height: 1.45;
 }
 
 .ob-item-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    margin-top: 4px;
 }
 
-.ob-foot {
-    margin: 0;
-    padding: 10px 16px 14px;
-    font-size: 12px;
-    color: var(--mc-text-3, #667085);
-    border-top: 1px solid var(--mc-border, #e5eaf2);
+.ob-when,
+.ob-team {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--mc-text-3, #687386);
 }
 
-.topbar-badge.is-critical {
-    background: var(--danger, #ef4770);
+body.ob-open {
+    overflow: hidden;
 }
 
-[data-theme="dark"] .ob-panel {
-    background: #111827;
-    border-color: #1f2937;
+.ob-settings .master-toggle-group {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--mc-border, #e5eaf2);
+}
+
+.ob-settings .master-toggle-group:last-of-type {
+    border-bottom: 0;
+}
+
+@media (max-width: 640px) {
+    .ob-panel.master-modal-card {
+        top: 12px;
+        right: 12px;
+        left: 12px;
+        width: auto;
+        max-height: calc(100dvh - 24px);
+    }
 }

@@ -1,11 +1,20 @@
 @extends('layouts.app')
 
 @section('title', 'Office briefing settings')
-@section('page-title', 'Office briefings')
+@section('page-title', 'Briefings')
+
+@section('page-actions')
+    <button type="submit" form="officeBriefingSettings" class="master-btn master-btn-primary">Save settings</button>
+@endsection
 
 @section('content')
-<div class="ob-settings master-list">
+@push('styles')
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/users.css') }}">
+@endpush
+
+<div class="ob-settings user-account master-list">
     <div class="master-card master-card--flat account-head">
+        <span class="account-head-avatar" aria-hidden="true"><i class="fas fa-bell"></i></span>
         <div class="account-head-text">
             <h2 class="account-head-name">Briefings for the office</h2>
             <p class="master-sub">
@@ -15,18 +24,11 @@
         </div>
     </div>
 
-    @if (session('success'))
-        <div class="master-alert master-alert-success">{{ session('success') }}</div>
-    @endif
-    @if ($errors->any())
-        <div class="master-alert master-alert-error">{{ $errors->first() }}</div>
-    @endif
-
-    <form method="POST" action="{{ route('office-alerts.settings.update') }}" class="master-grid is-even">
+    <form id="officeBriefingSettings" method="POST" action="{{ route('office-alerts.settings.update') }}">
         @csrf
         @method('PUT')
 
-        <div>
+        <div class="master-grid is-even">
             <div class="master-card master-card--flat master-section">
                 <h3 class="master-section-title">Organisation</h3>
                 <p class="master-sub account-note">Turn the whole desk off without deleting history.</p>
@@ -37,74 +39,84 @@
                     ['emails', 'Email watchers', 'Mail the desk when a new critical item is raised.'],
                     ['chase_emails', 'Hourly chase', 'Re-mail unacked critical items after the wait below.'],
                 ] as [$key, $label, $hint])
-                    <div class="ob-setting-row">
+                    <div class="master-toggle-group">
                         <div>
-                            <p class="ob-setting-label">{{ $label }}</p>
+                            <label class="master-label" for="ob_{{ $key }}">{{ $label }}</label>
                             <p class="master-sub">{{ $hint }}</p>
                         </div>
                         <label class="master-switch">
-                            <input type="checkbox" name="{{ $key }}" value="1" @checked($settings[$key])>
+                            <input type="checkbox" id="ob_{{ $key }}" name="{{ $key }}" value="1" @checked($settings[$key])>
                             <span class="master-slider"></span>
                         </label>
                     </div>
                 @endforeach
 
                 <div class="master-form-grid" style="margin-top:16px">
-                    <div>
+                    <div class="master-field">
                         <label class="master-label" for="chase_hours">Chase after (hours)</label>
                         <input class="master-input" id="chase_hours" type="number" min="1" max="72" name="chase_hours" value="{{ $settings['chase_hours'] }}" required>
                     </div>
-                    <div>
+                    <div class="master-field">
                         <label class="master-label" for="stale_days">Silent file after (days)</label>
                         <input class="master-input" id="stale_days" type="number" min="1" max="14" name="stale_days" value="{{ $settings['stale_days'] }}" required>
                     </div>
-                    <div class="master-field-full">
+                    <div class="master-field master-field-full">
                         <label class="master-label" for="extra_emails">Also email</label>
                         <input class="master-input" id="extra_emails" type="text" name="extra_emails" value="{{ $settings['extra_emails'] }}" placeholder="ops@misspack.com, accounts@…">
                         <p class="master-sub">Extra addresses, comma-separated. Desk watchers still get mail from their user record.</p>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div>
-            <div class="master-card master-card--flat master-section">
-                <h3 class="master-section-title">What to raise</h3>
-                <p class="master-sub account-note">Each source can be off without touching the others.</p>
+            <div>
+                <div class="master-card master-card--flat master-section">
+                    <h3 class="master-section-title">What to raise</h3>
+                    <p class="master-sub account-note">Each source can be off without touching the others.</p>
 
-                @foreach ($sources as $key => $meta)
-                    <div class="ob-setting-row">
-                        <div>
-                            <p class="ob-setting-label">{{ $meta[0] }}</p>
-                            <p class="master-sub">{{ $meta[1] }}</p>
+                    @foreach ($sources as $key => $meta)
+                        <div class="master-toggle-group">
+                            <div>
+                                <label class="master-label" for="ob_src_{{ $key }}">{{ $meta[0] }}</label>
+                                <p class="master-sub">{{ $meta[1] }}</p>
+                            </div>
+                            <label class="master-switch">
+                                <input type="checkbox" id="ob_src_{{ $key }}" name="sources[{{ $key }}]" value="1" @checked($settings['sources'][$key] ?? false)>
+                                <span class="master-slider"></span>
+                            </label>
                         </div>
-                        <label class="master-switch">
-                            <input type="checkbox" name="sources[{{ $key }}]" value="1" @checked($settings['sources'][$key] ?? false)>
-                            <span class="master-slider"></span>
-                        </label>
+                    @endforeach
+                </div>
+
+                <div class="master-card master-card--flat master-section" style="margin-top:16px">
+                    <h3 class="master-section-title">Who is watching</h3>
+                    <p class="master-sub account-note">Administrators, by department. An empty department sees every desk.</p>
+
+                    <div class="master-table-wrap">
+                        <table class="master-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Desk</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($watchers as $watcher)
+                                    <tr>
+                                        <td>{{ $watcher['name'] }}</td>
+                                        <td>{{ $watcher['email'] }}</td>
+                                        <td>{{ $watcher['desk'] }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="3">No office accounts yet.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
-                @endforeach
+                </div>
             </div>
-
-            <div class="master-card master-card--flat master-section" style="margin-top:16px">
-                <h3 class="master-section-title">Who is watching</h3>
-                <p class="master-sub account-note">Administrators, by department. An empty department sees every desk.</p>
-                <ul class="ob-watcher-list">
-                    @forelse ($watchers as $watcher)
-                        <li>
-                            <strong>{{ $watcher['name'] }}</strong>
-                            <span>{{ $watcher['email'] }}</span>
-                            <em>{{ $watcher['desk'] }}</em>
-                        </li>
-                    @empty
-                        <li>No office accounts yet.</li>
-                    @endforelse
-                </ul>
-            </div>
-        </div>
-
-        <div class="master-field-full" style="grid-column:1 / -1">
-            <button class="master-btn master-btn-primary" type="submit">Save briefing settings</button>
         </div>
     </form>
 </div>

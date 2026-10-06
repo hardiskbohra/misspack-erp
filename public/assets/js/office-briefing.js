@@ -59,6 +59,7 @@
             return;
         }
         list.innerHTML = items.map(function (item) {
+            var tone = item.severity === 'critical' ? 'danger' : (item.severity === 'attention' ? 'warning' : 'info');
             var snooze = item.snoozed
                 ? '<span class="ob-when">Snoozed until ' + esc(item.snoozed_until) + '</span>'
                 : '<button type="button" class="master-btn master-btn-ghost master-btn-sm" data-ob-snooze="' + item.id + '" data-until="1h">1h</button>' +
@@ -66,7 +67,7 @@
                     '<button type="button" class="master-btn master-btn-ghost master-btn-sm" data-ob-snooze="' + item.id + '" data-until="tomorrow">Tomorrow 9:00</button>';
             return '<article class="ob-item is-' + item.severity + (item.snoozed ? ' is-snoozed' : '') + '">' +
                 '<div class="ob-item-head">' +
-                    '<span class="ob-pill">' + esc(item.severity_label) + '</span>' +
+                    '<span class="master-status-chip ' + tone + '">' + esc(item.severity_label) + '</span>' +
                     (item.team_label ? '<span class="ob-team">' + esc(item.team_label) + '</span>' : '') +
                     '<span class="ob-when">' + esc(item.when || '') + '</span>' +
                 '</div>' +
@@ -76,7 +77,7 @@
                     (item.action_url ? '<a class="master-btn master-btn-soft master-btn-sm" href="' + esc(item.action_url) + '">' + esc(item.action_label) + '</a>' : '') +
                     '<button type="button" class="master-btn master-btn-primary master-btn-sm" data-ob-' +
                         (item.requires_ack ? 'ack' : 'seen') + '="' + item.id + '">' +
-                        (item.requires_ack ? 'Mark read for the office' : 'Got it') +
+                        (item.requires_ack ? 'Mark read' : 'Got it') +
                     '</button>' +
                     snooze +
                 '</div>' +
@@ -116,7 +117,7 @@
             link.hidden = true;
         }
         var ack = modal.querySelector('[data-ob-modal-ack]');
-        ack.textContent = item.requires_ack ? 'Mark read for the office' : 'Got it';
+        ack.textContent = item.requires_ack ? 'Mark read' : 'Got it';
         if (window.MasterModal) window.MasterModal.open(modal);
         else {
             modal.classList.add('open');

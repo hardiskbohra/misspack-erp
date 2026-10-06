@@ -5,16 +5,24 @@
     data-ob-inbox="{{ route('office-alerts.inbox') }}"
     data-ob-payload='@json($briefing)'>
     <div class="ob-backdrop" data-ob-close></div>
-    <div class="ob-panel" role="dialog" aria-label="Office briefings">
-        <div class="ob-head">
-            <div>
-                <p class="ob-eyebrow">Office</p>
-                <h2 class="ob-title">Briefings</h2>
+    <div class="ob-panel master-modal-card is-narrow" role="dialog" aria-label="Office briefings">
+        <div class="master-modal-header">
+            <div class="master-modal-heading">
+                <span class="master-modal-icon" aria-hidden="true"><i class="fas fa-bell"></i></span>
+                <div>
+                    <p class="master-modal-subtitle">Your desk</p>
+                    <h2 class="master-modal-title">Briefings</h2>
+                </div>
             </div>
-            <button type="button" class="ob-close" data-ob-close aria-label="Close">&times;</button>
+            <button type="button" class="master-modal-close" data-ob-close aria-label="Close">&times;</button>
         </div>
-        <div class="ob-body" data-ob-list></div>
-        <p class="ob-foot">You only see your desk. Critical items clear for the office when one person marks them read. Snooze if you need time. The popup shows once per item until you act. <a href="{{ route('office-alerts.settings') }}">Organisation settings</a></p>
+        <div class="master-modal-body ob-body" data-ob-list></div>
+        <div class="master-modal-footer ob-foot">
+            <p class="master-modal-lead">
+                Critical items clear for the office when one person marks them read.
+                <a href="{{ route('office-alerts.settings') }}">Organisation settings</a>
+            </p>
+        </div>
     </div>
 </div>
 
@@ -22,7 +30,7 @@
     <div class="master-modal-card is-narrow" role="alertdialog" aria-modal="true" aria-labelledby="officeBriefingModalTitle">
         <div class="master-modal-header">
             <div class="master-modal-heading">
-                <span class="master-modal-icon" aria-hidden="true">!</span>
+                <span class="master-modal-icon" aria-hidden="true"><i class="fas fa-bell"></i></span>
                 <div>
                     <p class="master-modal-subtitle" data-ob-modal-team></p>
                     <h3 class="master-modal-title" id="officeBriefingModalTitle" data-ob-modal-title>Briefing</h3>
@@ -30,7 +38,7 @@
             </div>
         </div>
         <div class="master-modal-body">
-            <p data-ob-modal-body></p>
+            <p class="master-sub" data-ob-modal-body></p>
         </div>
         <div class="master-modal-footer">
             <a class="master-btn master-btn-soft" data-ob-modal-link hidden>Open</a>
