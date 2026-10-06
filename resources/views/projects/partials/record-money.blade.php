@@ -1,6 +1,6 @@
 <section class="master-tab-panel" id="project-panel-payments" role="tabpanel" aria-labelledby="project-tab-payments">
     <div class="project-blocks">
-        <section class="master-card master-card--flat">
+        <section class="master-card master-card--flat project-detail-card">
             <div class="master-section-head">
                 <div>
                     <h2 class="master-section-title">Payment entries</h2>
@@ -75,7 +75,7 @@
             </div>
         </section>
 
-        <section class="master-card master-card--flat">
+        <section class="master-card master-card--flat project-detail-card">
             <div class="master-section-head">
                 <div>
                     <h2 class="master-section-title">Ledger entries</h2>

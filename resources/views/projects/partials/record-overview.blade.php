@@ -6,7 +6,7 @@
 <section class="master-tab-panel" id="project-panel-overview" role="tabpanel" aria-labelledby="project-tab-overview">
     <div class="project-blocks">
         <div class="project-detail-grid">
-            <section class="master-card master-card--flat" aria-labelledby="project-snapshot-heading">
+            <section class="master-card master-card--flat project-detail-card" aria-labelledby="project-snapshot-heading">
                 <div class="master-section-head">
                     <div>
                         <h2 class="master-section-title" id="project-snapshot-heading">Snapshot</h2>
@@ -35,7 +35,7 @@
                 </div>
             </section>
 
-            <section class="master-card master-card--flat" aria-labelledby="project-progress-heading">
+            <section class="master-card master-card--flat project-detail-card" aria-labelledby="project-progress-heading">
                 <div class="master-section-head">
                     <div>
                         <h2 class="master-section-title" id="project-progress-heading">Progress</h2>
@@ -67,7 +67,7 @@
                 </div>
             </section>
 
-            <section class="master-card master-card--flat" aria-labelledby="project-money-heading">
+            <section class="master-card master-card--flat project-detail-card" aria-labelledby="project-money-heading">
                 <div class="master-section-head">
                     <div>
                         <h2 class="master-section-title" id="project-money-heading">Money at a glance</h2>
@@ -95,7 +95,7 @@
                 </div>
             </section>
 
-            <section class="master-card master-card--flat" aria-labelledby="project-portal-heading">
+            <section class="master-card master-card--flat project-detail-card" aria-labelledby="project-portal-heading">
                 <div class="master-section-head">
                     <div>
                         <h2 class="master-section-title" id="project-portal-heading">Client portal</h2>
@@ -137,7 +137,7 @@
         </div>
 
         @if ($project->scope_summary || $project->deliverables || $project->client_notes || $project->internal_notes)
-            <section class="master-card master-card--flat" aria-labelledby="project-scope-heading">
+            <section class="master-card master-card--flat project-detail-card" aria-labelledby="project-scope-heading">
                 <div class="master-section-head">
                     <div>
                         <h2 class="master-section-title" id="project-scope-heading">Scope and notes</h2>
@@ -165,7 +165,7 @@
             </section>
         @endif
 
-        <section class="master-card master-card--flat" aria-labelledby="project-record-heading">
+        <section class="master-card master-card--flat project-detail-card" aria-labelledby="project-record-heading">
             <div class="master-section-head">
                 <div>
                     <h2 class="master-section-title" id="project-record-heading">What is on the record</h2>
@@ -183,7 +183,7 @@
             </nav>
         </section>
 
-        <section class="master-card master-card--flat" aria-labelledby="project-activity-heading">
+        <section class="master-card master-card--flat project-detail-card" aria-labelledby="project-activity-heading">
             <div class="master-section-head">
                 <div>
                     <h2 class="master-section-title" id="project-activity-heading">Recent activity</h2>

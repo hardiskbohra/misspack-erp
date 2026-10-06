@@ -1,6 +1,6 @@
 <section class="master-tab-panel" id="project-panel-products" role="tabpanel" aria-labelledby="project-tab-products">
     <div class="project-blocks">
-        <section class="master-card master-card--flat">
+        <section class="master-card master-card--flat project-detail-card">
             <div class="master-section-head">
                 <div>
                     <h2 class="master-section-title">Project products</h2>

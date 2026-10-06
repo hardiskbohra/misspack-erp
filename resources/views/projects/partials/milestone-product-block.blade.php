@@ -3,7 +3,7 @@
     $completed = $productMilestones->where('status', 'completed')->count();
     $progress = $count ? (int) round($productMilestones->avg('progress_percent')) : 0;
 @endphp
-<div class="master-card master-card--flat">
+<div class="master-card master-card--flat project-detail-card">
     <div class="pmile-product-head">
         <div>
             <h3 class="master-section-title">{{ $title }}</h3>

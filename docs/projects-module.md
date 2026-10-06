@@ -159,6 +159,15 @@ the tabbed project page and the milestones tab. It owns:
   thread rows, the progress track, and the feedback tab's
   `.project-feedback-*` (the link row, the score line, the verbatim note, the
   issue form), every one of them built out of shell classes;
+- the panel card itself, `.project-detail-card`. The shared `.master-card` is a
+  surface with **no padding of its own** — the list pages inset their bars
+  instead, which is why a flush list card reads correctly — so a record panel
+  that holds facts, stats or a table directly has to bring the inset, or every
+  row runs into the border and the page reads as one undivided block. The card
+  carries the guideline's 22/24 (16/18 on phones) exactly as
+  `.client-detail-card` and `.vendor-detail-card` do, so the three records sit
+  the same way, and it zeroes `.master-table-wrap`'s list-page `margin-top`
+  because a section head already spaces the table above it;
 - **nothing else.** A rule that names a `master-*` / `core-*` class must also
   name one of this module's scopes — `.project`, `.project-index`,
   `.project-show`, `.project-form-page`, `.pd-page`, a `pmile-*`/`pf-*` class,
@@ -184,7 +193,7 @@ portal's own sheet, and the static preview under `public/_preview/` still render
 
 ## Checks
 
-`tools/checks/projects-check.cjs` (52 checks) pins the composition above: the
+`tools/checks/projects-check.cjs` (53 checks) pins the composition above: the
 root is the master-list, the two cards sit in that order, the gap is not
 declared in the module's sheet, every chip carries its tally, the columns are
 named in the order the table draws them, the figures come from the grouped
@@ -198,6 +207,9 @@ shared facts, tables and empty states, a tone for every state the models offer
 in both themes (the bands come from `FeedbackVocabulary`, the initials from the
 client pages' idiom rather than a `Str::of()` chain), and the feedback tab as a
 record panel that owns its own wrapper and wears no class from another sheet.
-The last check is the vocabulary itself: every class a module screen names is
-defined — by a rule in one of the app's sheets or by another screen — so a tag's
-private vocabulary cannot come back without a rule to render it.
+The last checks are about the markup telling the truth: every class a module
+screen names is defined — by a rule in one of the app's sheets or by another
+screen — so a tag's private vocabulary cannot come back without a rule to render
+it, and every panel the record draws wears `.project-detail-card`, because the
+shared surface carries no padding and a panel that does not bring its own is a
+panel whose rows run into the border.

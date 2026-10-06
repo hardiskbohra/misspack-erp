@@ -21,7 +21,7 @@
 <section class="master-tab-panel" id="project-panel-feedback" role="tabpanel" aria-labelledby="project-tab-feedback">
     <div class="project-blocks">
         @if ($liveAsk)
-            <section class="master-card master-card--flat project-feedback-ask" aria-labelledby="project-feedback-live">
+            <section class="master-card master-card--flat project-detail-card project-feedback-ask" aria-labelledby="project-feedback-live">
                 <div>
                     <p class="master-eyebrow">{{ $liveAsk->title() }} · {{ $liveAsk->stateLabel() }}</p>
                     <h2 class="master-section-title" id="project-feedback-live">The live link</h2>
@@ -54,7 +54,7 @@
             @php
                 $response = $ask->response;
             @endphp
-            <section class="master-card master-card--flat" aria-labelledby="project-feedback-answer-{{ $ask->id }}">
+            <section class="master-card master-card--flat project-detail-card" aria-labelledby="project-feedback-answer-{{ $ask->id }}">
                 <div class="master-section-head">
                     <div>
                         <p class="master-eyebrow">{{ $ask->title() }} · {{ $response->submitted_at?->format('d M Y') }}</p>
@@ -104,7 +104,7 @@
         @endforeach
 
         @if (! $liveAsk)
-            <section class="master-card master-card--flat" aria-labelledby="project-feedback-issue">
+            <section class="master-card master-card--flat project-detail-card" aria-labelledby="project-feedback-issue">
                 <div class="master-section-head">
                     <div>
                         <p class="master-eyebrow">
@@ -158,7 +158,7 @@
         @endif
 
         @if ($asks->isEmpty())
-            <section class="master-card master-card--flat" aria-labelledby="project-feedback-never">
+            <section class="master-card master-card--flat project-detail-card" aria-labelledby="project-feedback-never">
                 <div class="master-empty-state">
                     <i class="fa-regular fa-comment-dots" aria-hidden="true"></i>
                     <h2 id="project-feedback-never">This client has never been asked about this project</h2>

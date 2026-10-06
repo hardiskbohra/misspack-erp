@@ -59,7 +59,7 @@
             </div>
         </div>
 
-        <div class="master-card master-card--flat">
+        <div class="master-card master-card--flat project-detail-card">
             <div class="master-section-head">
                 <div>
                     <h2 class="master-section-title">Project milestone timelines</h2>

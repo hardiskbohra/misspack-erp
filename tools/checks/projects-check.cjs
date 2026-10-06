@@ -29,7 +29,10 @@
      - every route the screen links to is registered;
      - every class a module screen names is a class with rules — the shell's,
        another screen's, or the module's own sheet — so the private vocabulary
-       of a page that no longer exists cannot come back.
+       of a page that no longer exists cannot come back;
+     - every panel the record renders wears the module's own card class, because
+       the shared surface carries no padding and a record panel that does not
+       bring its own runs every row into the border.
    ========================================================================== */
 
 'use strict';
@@ -371,6 +374,33 @@ check('the record page is the shared shell',
     && /<div class="master-tabs-card">/.test(showView)
     && /<nav class="master-tabs" role="tablist" aria-label="Project sections">/.test(showView));
 
+/* The record's panels are the shared surface, and the shared surface carries no
+   padding of its own — the list pages inset their bars instead, which is why a
+   list card can be flush and still read correctly. A record panel holds facts,
+   stats or a table directly, so it must carry the inset itself; round 10 shipped
+   them without it and every row ran into the border. The card class is the
+   module's (`.project-detail-card`, the sibling of the client and vendor
+   records' own card classes) and it is the one place the inset is written. */
+const panelFiles = walk('resources/views/projects')
+    .filter(file => file.endsWith('.blade.php'))
+    .filter(file => file !== 'resources/views/projects/index.blade.php'
+        && file !== 'resources/views/projects/form.blade.php');
+const panelCards = panelFiles.flatMap(file => [...read(file).matchAll(/class="([^"]*)"/g)]
+    .map(match => match[1])
+    .filter(classes => /(^|\s)master-card(\s|$)/.test(classes))
+    .map(classes => ({ file, classes })));
+const uninsetPanels = panelCards
+    .filter(({ classes }) => ! /(^|\s)project-detail-card(\s|$)/.test(classes)
+        && ! /(^|\s)master-header(\s|$)/.test(classes))
+    .map(({ file }) => file);
+
+check('every panel on the record wears the module card, and the card carries its inset',
+    panelCards.length >= 20
+    && uninsetPanels.length === 0
+    && /\.project-detail-card\s*\{[^}]*padding:\s*22px 24px/.test(sheetCode)
+    && /max-width: 767px[\s\S]{0,900}?\.project-detail-card\s*\{[^}]*padding:\s*16px 18px/.test(sheetCode),
+    uninsetPanels.slice(0, 3).join(' | '));
+
 /* The record mark's initials, in the house idiom (the client and vendor pages
    collect the parts and map them). A `Str::of()` chain is a string: the one
    collection method it cannot answer throws BadMethodCallException only when a
@@ -448,7 +478,7 @@ check('the record section declares no shared class',
 check('the cards are the shell\'s, and the rhythm between them is the module\'s',
     /\.project-blocks \{\s*display: grid;\s*gap: 16px/.test(recordSection)
     && !/\.master-card/.test(recordSection)
-    && (recordViews.match(/class="master-card master-card--flat"/g) || []).length >= 10);
+    && (recordViews.match(/class="master-card master-card--flat/g) || []).length >= 10);
 
 /* The framework never reads the markup, so a panel that closes its wrapper one
    line early puts every card after it outside the grid and nothing complains:

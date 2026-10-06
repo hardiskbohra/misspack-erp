@@ -760,6 +760,23 @@
     gap: 16px
 }
 
+/* The panel card. The shared `.master-card` is a surface with no padding of its
+   own — the list pages inset their bars instead — so a record panel that holds
+   facts, stats or a table must carry the inset itself, or every row runs into
+   the border and the panel reads as one undivided block. This is the same
+   22/24 the client and vendor records give their own cards (`.client-detail-card`,
+   `.vendor-detail-card`), so the three records sit the same way. The table
+   wrapper loses the 20px it carries on the list pages, where it sits under a
+   filter card rather than under a section head. */
+.project-detail-card {
+    min-width: 0;
+    padding: 22px 24px
+}
+
+.project-detail-card .master-table-wrap {
+    margin-top: 0
+}
+
 /* ------------------------------------------------------------- the header */
 
 .project-record-header {
@@ -1358,6 +1375,10 @@
 }
 
 @media screen and (max-width: 767px) {
+    .project-detail-card {
+        padding: 16px 18px
+    }
+
     .project-record-header {
         flex-direction: column
     }
