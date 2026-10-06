@@ -8,9 +8,6 @@
             <i class="fa-solid fa-sliders" aria-hidden="true"></i> Scorecard
         </a>
     @endif
-    <a class="master-btn master-btn-soft" href="{{ route('feedback.export', request()->query()) }}">
-        <i class="fa-solid fa-file-csv" aria-hidden="true"></i> Export CSV
-    </a>
 @endsection
 
 @section('content')
@@ -31,6 +28,8 @@
     };
 
     $npsShown = $summary['nps'] !== null;
+    $firstAsk = $requests->firstItem() ?? 0;
+    $lastAsk = $requests->lastItem() ?? 0;
     $attentionCount = $attention->count();
     $filtered = $applied !== [];
 @endphp
@@ -39,9 +38,9 @@
 
     {{-- The figures. The average is beside its denominator on purpose: an NPS of
          62 from four answers is a different claim from 62 out of forty. --}}
-    <div class="master-stats desktop-only">
+    <div class="master-stats desktop-only" aria-label="Feedback overview">
         <div class="master-stat master-stat--flat blue tooltip-container">
-            <span class="icon" aria-hidden="true">✉️</span>
+            <span class="icon" aria-hidden="true"><i class="fa-solid fa-paper-plane"></i></span>
             <div>
                 <p class="master-stat-title">Asked</p>
                 <p class="master-stat-value">{{ number_format($summary['asked']) }}</p>
@@ -56,7 +55,7 @@
         </div>
 
         <div class="master-stat master-stat--flat {{ $summary['average'] !== null && $summary['average'] < 3.5 ? 'orange' : 'green' }} tooltip-container">
-            <span class="icon" aria-hidden="true">⭐</span>
+            <span class="icon" aria-hidden="true"><i class="fa-solid fa-star"></i></span>
             <div>
                 <p class="master-stat-title">Average score</p>
                 <p class="master-stat-value">{{ $summary['average'] !== null ? number_format($summary['average'], 1) : '—' }}<small>/5</small></p>
@@ -66,7 +65,7 @@
         </div>
 
         <div class="master-stat master-stat--flat {{ $npsShown && $summary['nps'] < 0 ? 'red' : 'purple' }} tooltip-container">
-            <span class="icon" aria-hidden="true">📣</span>
+            <span class="icon" aria-hidden="true"><i class="fa-solid fa-bullhorn"></i></span>
             <div>
                 <p class="master-stat-title">NPS</p>
                 <p class="master-stat-value">{{ $npsShown ? $summary['nps'] : '—' }}</p>
@@ -84,7 +83,7 @@
         </div>
 
         <div class="master-stat master-stat--flat {{ $attentionCount > 0 ? 'red' : 'teal' }} tooltip-container">
-            <span class="icon" aria-hidden="true">🚩</span>
+            <span class="icon" aria-hidden="true"><i class="fa-solid fa-flag"></i></span>
             <div>
                 <p class="master-stat-title">Needs attention</p>
                 <p class="master-stat-value">{{ number_format($summary['attention']) }}</p>
@@ -109,12 +108,12 @@
                 <table class="master-table">
                     <thead>
                         <tr>
-                            <th>Client</th>
-                            <th class="desktop-only">Project</th>
-                            <th>Score</th>
-                            <th class="desktop-only">Said</th>
-                            <th class="desktop-only">Waiting</th>
-                            <th class="fb-col-actions"></th>
+                            <th scope="col">Client</th>
+                            <th scope="col" class="desktop-only">Project</th>
+                            <th scope="col">Score</th>
+                            <th scope="col" class="desktop-only">Said</th>
+                            <th scope="col" class="desktop-only">Waiting</th>
+                            <th scope="col" class="fb-col-actions">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -152,11 +151,13 @@
             <div class="master-list-bar">
                 <div class="master-list-chips">
                     <a class="master-list-chip {{ $state === 'all' ? 'is-active' : '' }}"
-                        href="{{ $chipUrl(['state' => 'all']) }}">Everything <span>{{ number_format($stateCounts['all']) }}</span></a>
+                        href="{{ $chipUrl(['state' => 'all']) }}">Everything
+                        <span class="master-list-chip-count">{{ number_format($stateCounts['all']) }}</span></a>
                     @foreach ($stateOptions as $key => $label)
                         <a class="master-list-chip {{ $state === $key ? 'is-active' : '' }}"
                             href="{{ $chipUrl(['state' => $key]) }}">
-                            {{ $label }} <span>{{ number_format($stateCounts[$key] ?? 0) }}</span>
+                            {{ $label }}
+                            <span class="master-list-chip-count">{{ number_format($stateCounts[$key] ?? 0) }}</span>
                         </a>
                     @endforeach
                 </div>
@@ -277,24 +278,40 @@
         @endif
 
         <div class="master-list-toolbar">
-            <p class="master-list-hint">
-                {{ number_format($requests->total()) }} {{ \Illuminate\Support\Str::plural('ask', $requests->total()) }} —
-                every link, whether it came back or not.
+            <p class="master-list-hint"
+                title="Newest ask on top. Every link is listed, whether it came back or not.">
+                {{ $requests->total() === 0
+                    ? 'No matching asks'
+                    : 'Newest first · Showing '.$firstAsk.'–'.$lastAsk.' of '.number_format($requests->total()) }}
             </p>
+
+            <div class="master-list-toolbar-actions">
+                <a class="master-btn master-btn-light master-btn-sm"
+                    href="{{ route('feedback.export', request()->query()) }}"
+                    title="Every answer these filters match, as a spreadsheet">
+                    <i class="fa-solid fa-file-csv" aria-hidden="true"></i> Export CSV
+                </a>
+
+                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
+                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
+                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
+                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
+                </div>
+            </div>
         </div>
 
-        <div class="master-table-wrap">
-            <table class="master-table ui-mobile-cards" data-table-settings data-table-key="feedback-asks">
+        <div class="master-table-wrap ui-mobile-cards">
+            <table class="master-table" data-table-settings data-table-key="feedback-asks">
                 <thead>
                     <tr>
-                        <th>Client</th>
-                        <th class="desktop-only">Project</th>
-                        <th>Ask</th>
-                        <th>State</th>
-                        <th class="desktop-only">Score</th>
-                        <th class="desktop-only">Opens</th>
-                        <th class="desktop-only">Sent</th>
-                        <th class="fb-col-actions"></th>
+                        <th scope="col">Client</th>
+                        <th scope="col" class="desktop-only">Project</th>
+                        <th scope="col">Ask</th>
+                        <th scope="col">State</th>
+                        <th scope="col" class="desktop-only">Score</th>
+                        <th scope="col" class="desktop-only">Opens</th>
+                        <th scope="col" class="desktop-only">Sent</th>
+                        <th scope="col" class="fb-col-actions">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -374,10 +391,10 @@
                 <table class="master-table">
                     <thead>
                         <tr>
-                            <th>Line</th>
-                            <th>Average</th>
-                            <th class="desktop-only">Scored</th>
-                            <th class="desktop-only">Low</th>
+                            <th scope="col">Line</th>
+                            <th scope="col">Average</th>
+                            <th scope="col" class="desktop-only">Scored</th>
+                            <th scope="col" class="desktop-only">Low</th>
                         </tr>
                     </thead>
                     <tbody>

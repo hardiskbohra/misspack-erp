@@ -3,7 +3,7 @@
 **Status: built.** All four parts below shipped together — the ask, the surface,
 the loop and the mid-project pulse. The decisions in §11 are locked and the
 paragraphs that follow describe what the code does, in the present tense. The
-module's guard rails are `tools/checks/feedback-check.cjs` (41 checks) and its
+module's guard rails are `tools/checks/feedback-check.cjs` (46 checks) and its
 rules are held by `tests/Unit/FeedbackRulesTest.php`.
 
 It follows the house rule that a module is a *vocabulary plus one writer per
@@ -290,3 +290,12 @@ office and the portal already load), and re-states the two border longhands the 
 `--mc-*` tokens would have carried, because a public page has no app shell to define
 them. Four checks pin the result: the page rhythm, the card padding, the shared control,
 and the form's own vocabulary.
+
+The list is the same rule on the other surface. It is a list like the ERP's other lists,
+so it wears the shared chrome in the shared places: the order hint on the left, the export
+and the three density presets grouped in the toolbar's right-hand end, the counts in the
+shared count pill, the module's own Font Awesome icons on the four figures, and a named
+action column. Declaring that right-hand group is what keeps the controls in the toolbar
+rather than on a line of their own above the table — and the group needs
+`MasterList.density`, because the shared script binds only the controls it created itself.
+A fifth check pins both halves.
