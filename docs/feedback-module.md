@@ -198,6 +198,10 @@ is a rule a copy-paste would break silently:
    across clients on a public surface; the token page loads by token only.
 8. **The figures on the office page and the CSV are the same query** — one service
    method, two renderings, as the other modules keep it.
+9. **The office list is a list like the ERP's other lists** — the order hint and the
+   toolbar's right-hand group stand where the shared sheet expects them (and the density
+   presets are bound to the shared toolkit), the counts wear the shared pill, the figures
+   wear the module's own icon vocabulary, and the action column is named.
 
 ## 8. Anti-abuse and privacy, briefly
 
