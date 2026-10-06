@@ -147,6 +147,37 @@ body.ob-open {
     resize: vertical;
 }
 
+.ob-popup-card.master-modal-card {
+    width: min(560px, calc(100vw - 32px));
+    overflow: hidden;
+}
+
+.ob-popup-footer.master-modal-footer {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.ob-popup-footer .master-modal-lead {
+    margin: 0 auto 0 0;
+    min-width: 0;
+}
+
+.ob-popup-footer .master-btn {
+    flex: 0 0 auto;
+}
+
+@media (max-width: 560px) {
+    .ob-popup-footer.master-modal-footer {
+        justify-content: stretch;
+    }
+
+    .ob-popup-footer .master-modal-lead,
+    .ob-popup-footer .master-btn {
+        flex: 1 1 calc(50% - 10px);
+    }
+}
+
 @media (max-width: 640px) {
     .ob-panel.master-modal-card {
         top: 12px;
