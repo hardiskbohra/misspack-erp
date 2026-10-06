@@ -54,6 +54,7 @@
          and the statement page did — it wore .master-list without ever loading
          the sheet that spaces and insets it. --}}
     <link rel="stylesheet" href="{{ $assetVer('assets/css/master-list.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/office-briefing.css') }}">
 
     {{-- Compatibility layer for the existing four-module markup; the shared
          core design system follows and remains the canonical component owner. --}}
@@ -196,10 +197,12 @@
                     </button>
                 </form>
 
-                <button type="button" class="topbar-btn desktop-only" aria-label="Notifications">
-                    <i class="fas fa-bell"></i>
-                    <span class="topbar-badge">3</span>
-                </button>
+                @if (auth()->user()?->isAdmin())
+                    <button type="button" class="topbar-btn" data-ob-open aria-label="Office briefings">
+                        <i class="fas fa-bell"></i>
+                        <span class="topbar-badge" data-ob-badge @if (($officeBriefing['unread'] ?? 0) === 0) hidden @endif>{{ ($officeBriefing['unread'] ?? 0) > 9 ? '9+' : ($officeBriefing['unread'] ?? 0) }}</span>
+                    </button>
+                @endif
 
                 {{-- The avatar opens your own account — for both roles. It used
                      to be a link only for an employee and a dead <div> for the
@@ -216,6 +219,7 @@
 
     @if (auth()->user()?->isAdmin())
         @include('layouts.partials.global-search')
+        @include('layouts.partials.office-briefing')
     @endif
 
     {{-- Vendor Scripts --}}
@@ -228,6 +232,7 @@
     <script src="{{ $assetVer('assets/js/money.js') }}"></script>
     <script src="{{ $assetVer('assets/js/app-layout.js') }}"></script>
     <script src="{{ $assetVer('assets/js/global-search.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/office-briefing.js') }}"></script>
     <script src="{{ $assetVer('assets/js/master-list.js') }}"></script>
     <script src="{{ $assetVer('assets/js/master-drawer.js') }}"></script>
 

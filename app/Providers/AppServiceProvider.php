@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\OfficeBriefing;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -37,6 +39,23 @@ class AppServiceProvider extends ServiceProvider
             $stamp = @filemtime(public_path($path));
 
             return $stamp ? $url.'?v='.$stamp : $url;
+        });
+
+        View::composer('layouts.app', function ($view) {
+            $user = Auth::user();
+            $empty = ['unread' => 0, 'critical' => 0, 'items' => [], 'toasts' => [], 'popup' => null];
+
+            if (! $user || ! $user->isAdmin()) {
+                $view->with('officeBriefing', $empty);
+
+                return;
+            }
+
+            try {
+                $view->with('officeBriefing', app(OfficeBriefing::class)->payload($user));
+            } catch (\Throwable $e) {
+                $view->with('officeBriefing', $empty);
+            }
         });
     }
 }

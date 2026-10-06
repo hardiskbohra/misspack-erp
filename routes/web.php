@@ -48,6 +48,7 @@ use App\Http\Controllers\ClientPortalProjectController;
 use App\Http\Controllers\ClientPortalQuoteController;
 use App\Http\Controllers\ClientPortalShipmentController;
 use App\Http\Controllers\GlobalSearchController;
+use App\Http\Controllers\OfficeAlertController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
 
@@ -115,6 +116,9 @@ Route::middleware('auth')->group(function () {
 
         Route::redirect('/dashboard', '/clients');
         Route::get('/search', GlobalSearchController::class)->name('search');
+        Route::get('/office-alerts', [OfficeAlertController::class, 'inbox'])->name('office-alerts.inbox');
+        Route::patch('/office-alerts/{office_alert}/seen', [OfficeAlertController::class, 'seen'])->name('office-alerts.seen');
+        Route::patch('/office-alerts/{office_alert}/ack', [OfficeAlertController::class, 'ack'])->name('office-alerts.ack');
 
         // User Management (CRUD — all handled via modal on index page)
         Route::get('/users',             [UserController::class, 'index'])->name('users.index');

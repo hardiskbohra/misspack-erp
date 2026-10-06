@@ -561,6 +561,8 @@ class ClientController extends Controller
 
         $client->update($data);
 
+        app(\App\Services\OfficeBriefing::class)->kycSubmitted($client->fresh());
+
         return redirect()
             ->route('clients.publicKyc', $client->public_token)
             ->with('success', 'KYC submitted. MissPack has it for review — this link stays open to read, not to edit, until we ask for changes.');
