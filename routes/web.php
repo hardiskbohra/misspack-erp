@@ -10,6 +10,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\VendorQuoteController;
 use App\Http\Controllers\OfficeServiceController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CashflowAttachmentController;
@@ -231,6 +232,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/vendors/{vendor}/comments', [VendorController::class, 'storeComment'])->name('vendors.comments.store');
         Route::delete('/vendor-comments/{comment}', [VendorController::class, 'destroyComment'])->name('vendors.comments.destroy');
         Route::resource('vendors', VendorController::class);
+
+        Route::post('/vendor-quotes/quick', [VendorQuoteController::class, 'quickStore'])->name('vendor-quotes.quickStore');
+        Route::get('/vendor-quotes/{vendorQuote}/image', [VendorQuoteController::class, 'image'])->name('vendor-quotes.image');
+        Route::resource('vendor-quotes', VendorQuoteController::class)->parameters([
+            'vendor-quotes' => 'vendorQuote',
+        ]);
 
         Route::resource('office-services', OfficeServiceController::class);
     
