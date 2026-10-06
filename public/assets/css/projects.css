@@ -1,15 +1,20 @@
 /* ==========================================================================
    PROJECTS.CSS — Projects module (projects/* views, admin side)
    --------------------------------------------------------------------------
-   Module stylesheet for the Projects section: project form, project list,
-   the tabbed project detail page (pd-*) and the milestones partial (pmile-*).
+   Module stylesheet for the Projects section: project form, the office list
+   and record pages (master-* shell markup), the milestones partial (pmile-*),
+   and the legacy pd-* page the static preview still opens.
    Loaded on project screens via @push('styles').
 
    Generic components (master-*, core-*) come from the shared foundations
-   loaded by layouts/app.blade.php. The .master-field base + input styles and
-   .master-status-form below are kept here because the shared foundations
-   only provide grid helpers for .master-field and no such status-form
-   component; they apply only on project screens (file is page-scoped).
+   loaded by layouts/app.blade.php. Every rule here that names one of those
+   classes is scoped to a page or panel of this module, so the sheet cannot
+   restate the shell: `.project` and `.project-index` / `.project-show` for the
+   two office screens, `.project-form-page` for the form, `.pd-page` for the
+   legacy page kept for the static preview. A bare `.master-field input`
+   (`padding: 10px 11px`) used to beat the shell's `.master-input`
+   (`padding: 10px 14px`) on every projects screen, which is how a shared
+   control ends up a different size on one module's pages.
 
    The public client page (projects/public.blade.php) is standalone and has
    its own projects-public.css — do not mix its element-level rules here.
@@ -122,11 +127,11 @@
             grid-column: span 2
         }
 
-        .master-field label span {
+        .project-form-page .master-field label span {
             color: #ef4770
         }
 
-        .master-field small {
+        .project-form-page .master-field small {
             color: #8a94a6
         }
 
@@ -231,7 +236,7 @@
             box-shadow: 0 12px 32px rgba(22, 34, 51, .06)
         }
 
-        .master-field label span {
+        .project-form-page .master-field label span {
             color: #ef4770
         }
 
@@ -554,6 +559,22 @@
     color: #d92d20
 }
 
+/* The band a client put us in — the one word the feedback module is read by. */
+.project .band-promoter {
+    background: #e8fff3;
+    color: #039855
+}
+
+.project .band-passive {
+    background: #eaf2ff;
+    color: #2563eb
+}
+
+.project .band-detractor {
+    background: #fff1f3;
+    color: #d92d20
+}
+
 /* Priority is meta, not a status: it keeps the shared chip and adds only the
    tone, so a row's urgency reads the same on the list and in the record
    header, without a second pill design. */
@@ -591,7 +612,8 @@
 :root[data-theme="dark"] .project .status-started,
 :root[data-theme="dark"] .project .status-picked-up,
 :root[data-theme="dark"] .project .status-in-transit,
-:root[data-theme="dark"] .project .status-out-for-delivery {
+:root[data-theme="dark"] .project .status-out-for-delivery,
+:root[data-theme="dark"] .project .band-passive {
     background: rgba(37, 99, 235, .18);
     color: #93c5fd
 }
@@ -611,7 +633,8 @@
 :root[data-theme="dark"] .project .status-completed,
 :root[data-theme="dark"] .project .status-delivered,
 :root[data-theme="dark"] .project .status-resolved,
-:root[data-theme="dark"] .project .health-green {
+:root[data-theme="dark"] .project .health-green,
+:root[data-theme="dark"] .project .band-promoter {
     background: rgba(16, 185, 129, .18);
     color: #6ee7b7
 }
@@ -620,7 +643,8 @@
 :root[data-theme="dark"] .project .status-blocked,
 :root[data-theme="dark"] .project .status-issue,
 :root[data-theme="dark"] .project .health-red,
-:root[data-theme="dark"] .project .project-priority-chip.is-urgent {
+:root[data-theme="dark"] .project .project-priority-chip.is-urgent,
+:root[data-theme="dark"] .project .band-detractor {
     background: rgba(225, 29, 72, .18);
     color: #fda4af
 }
@@ -1193,6 +1217,147 @@
     color: #fda4af
 }
 
+/* ------------------------------------------------------ the feedback tab */
+
+/* The ask, the answer and the follow-up, drawn with the record's own cards.
+   The module page's sheet (feedback.css, .fb-*) is not loaded here, so this
+   panel speaks the shell: a link to copy, the scores the client gave, the
+   sentence they wrote, and one door into the module's queue. */
+
+.project-feedback-ask,
+.project-feedback-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px
+}
+
+.project-feedback-link {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0 0
+}
+
+.project-feedback-link .master-input {
+    flex: 1 1 240px;
+    min-width: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px
+}
+
+.project-feedback-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px
+}
+
+.project-feedback-meta {
+    margin: 10px 0 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--mc-text-3)
+}
+
+.project-feedback-scores {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 12px;
+    margin: 0 0 16px
+}
+
+.project-feedback-score {
+    padding: 12px 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft)
+}
+
+.project-feedback-score strong {
+    display: block;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--mc-text)
+}
+
+.project-feedback-score strong small {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--mc-text-3)
+}
+
+.project-feedback-score span {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--mc-text-2)
+}
+
+.project-feedback-note {
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--mc-card-soft)
+}
+
+.project-feedback-note-title {
+    margin: 0 0 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--mc-text-3)
+}
+
+.project-feedback-note p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.65
+}
+
+/* What could be better is the sentence the follow-up comes from, so it reads
+   as the loudest thing in the card — the same amber the waiting tone uses. */
+.project-feedback-note--attention {
+    border-left: 3px solid #f0b25a;
+    background: #fff7e6
+}
+
+.project-feedback-note--attention .project-feedback-note-title {
+    color: #b54708
+}
+
+:root[data-theme="dark"] .project-feedback-note--attention {
+    border-left-color: #b45309;
+    background: rgba(217, 119, 6, .16)
+}
+
+:root[data-theme="dark"] .project-feedback-note--attention .project-feedback-note-title {
+    color: #fcd34d
+}
+
+.project-feedback-lede {
+    max-width: 76ch;
+    margin: 0 0 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--mc-text-2)
+}
+
+.project-feedback-form {
+    max-width: 720px
+}
+
+.project-feedback-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0 14px
+}
+
+.project-feedback-fields .master-field {
+    margin-bottom: 16px
+}
+
 /* ---------------------------------------------------------------- phones */
 
 @media screen and (max-width: 991px) {
@@ -1221,16 +1386,28 @@
         grid-template-columns: 1fr
     }
 
+    .project-feedback-ask {
+        flex-direction: column
+    }
+
+    .project-feedback-fields {
+        grid-template-columns: 1fr
+    }
+
     .project-record-progress-track {
         width: 100%
     }
 }
 
 /* ==========================================================================
-   PROJECT DETAIL — resources/views/projects/show.blade.php
-   Tabbed detail page (pd-*). Modal lifecycle is handled by the shared
-   master-* modal system (app-layout.js): markup uses the standard .master-modal +
-   .open state, no module-level display overrides needed.
+   PROJECT DETAIL — the legacy pd-* page, kept for the static preview
+   (public/_preview/project-milestones.html). The office record page is the
+   shell now (PROJECT RECORD above) and renders none of these classes; the
+   client portal's project page carries its own copy of them in
+   client-portal-project-show.css. Nothing here is reached by an office screen.
+   Modal lifecycle is handled by the shared master-* modal system
+   (app-layout.js): markup uses the standard .master-modal + .open state, no
+   module-level display overrides needed.
    ========================================================================== */
 
 .pd-page {
@@ -1290,7 +1467,7 @@
             box-shadow: 0 12px 32px rgba(22, 34, 51, .06)
         }
 
-        .master-status-form{
+        .pd-page .master-status-form{
             display:grid;
             grid-template-columns:repeat(2,minmax(220px,1fr));
             gap:16px 20px;
@@ -1452,9 +1629,9 @@
 
         .pd-status-form select,
         .pd-status-form input,
-        .master-field input,
-        .master-field select,
-        .master-field textarea {
+        .pd-page .master-field input,
+        .pd-page .master-field select,
+        .pd-page .master-field textarea {
             border: 1px solid var(--mc-border);
             border-radius: 13px;
             padding: 10px 11px;
@@ -1466,9 +1643,9 @@
 
         .pd-status-form select:focus,
         .pd-status-form input:focus,
-        .master-field input:focus,
-        .master-field select:focus,
-        .master-field textarea:focus {
+        .pd-page .master-field input:focus,
+        .pd-page .master-field select:focus,
+        .pd-page .master-field textarea:focus {
             border-color: #4f83f1;
             box-shadow: 0 0 0 4px rgba(79, 131, 241, .1)
         }
@@ -1766,7 +1943,7 @@
             grid-column: span 2
         }
 
-        .master-check input {
+        .pd-page .master-check input {
             accent-color: #4f83f1
         }
 

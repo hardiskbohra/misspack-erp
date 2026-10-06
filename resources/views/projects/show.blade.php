@@ -20,8 +20,14 @@
             ? min(100, (int) round($totals['inward'] / (float) $project->estimated_value * 100))
             : 0;
         $progress = max(0, min(100, (int) $project->progress_percent));
-        $initials = \Illuminate\Support\Str::of($project->name)
-            ->squish()->words(2)->map(fn ($word) => mb_strtoupper(mb_substr($word, 0, 1)))->implode('');
+        /* The initials, the way the client and vendor pages compute theirs: a
+           Stringable is a string, not a collection — `Str::of(...)->map()` is a
+           collection method that only fails when the page is opened. */
+        $initials = collect(explode(' ', trim((string) $project->name)))
+            ->filter()
+            ->map(fn ($word) => mb_strtoupper(mb_substr($word, 0, 1)))
+            ->take(2)
+            ->implode('');
         $recordUrl = fn (string $key) => route('projects.show', ['project' => $project, 'tab' => $key]);
     @endphp
 
@@ -174,10 +180,7 @@
                 @elseif ($tab === 'tracking')
                     @include('projects.partials.record-activity')
                 @elseif ($tab === 'feedback')
-                    <section class="master-tab-panel" id="project-panel-feedback" role="tabpanel"
-                        aria-labelledby="project-tab-feedback">
-                        @include('projects.partials.feedback-tab', ['project' => $project])
-                    </section>
+                    @include('projects.partials.feedback-tab')
                 @elseif ($tab === 'logs')
                     @include('projects.partials.record-logs')
                 @else

@@ -470,6 +470,121 @@ check('no directive is glued to a word (Blade would not compile it)',
 check('every directive keeps its (…) on the same line',
     detachedArgs.length === 0, [...new Set(detachedArgs)].slice(0, 3).join(' | '));
 
+/* ------------------------------------------------- a string is not a list */
+
+/* `Str::of(...)` hands back a Stringable: it answers to string methods and to
+   nothing else. A collection method chained onto it — `->map()`, `->filter()`,
+   `->each()` — *compiles*, so every check that reads templates passes, and then
+   throws BadMethodCallException the moment a browser opens the page it is on
+   (the project record's initials did exactly that). The house way to walk the
+   parts of a string is to collect it, as the client and vendor lists do:
+   `collect(explode(' ', $value))->filter()->map(...)->implode('')`.
+
+   Prose is stripped first: this rule is written in a comment next to the code
+   it would otherwise flag. */
+const COLLECTION_ONLY = new Set(['map', 'filter', 'each', 'reduce', 'pluck', 'chunk',
+    'reject', 'values', 'keys', 'merge', 'push', 'sort', 'sortBy', 'groupBy', 'sum', 'avg',
+    'unique', 'flatten', 'collapse', 'partition', 'every', 'first', 'last', 'zip', 'where',
+    'chunkWhile', 'tapEach', 'eachSpread']);
+
+const stringAsList = [];
+const unsaid = text => text
+    .replace(/\{\{--[\s\S]*?--\}\}/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+
+files.forEach(file => {
+    const text = unsaid(fs.readFileSync(file, 'utf8'));
+    const lineOf = index => text.slice(0, index).split('\n').length;
+    const skipCall = (index) => {
+        let depth = 1;
+
+        while (index < text.length && depth > 0) {
+            if (text[index] === '(') depth += 1;
+            else if (text[index] === ')') depth -= 1;
+            index += 1;
+        }
+
+        return index;
+    };
+
+    let cursor = 0;
+    while ((cursor = text.indexOf('Str::of(', cursor)) !== -1) {
+        let at = skipCall(cursor + 'Str::of('.length);
+
+        for (;;) {
+            const link = text.slice(at).match(/^\s*->\s*([a-zA-Z_]\w*)\s*\(/);
+            if (!link) break;
+
+            if (COLLECTION_ONLY.has(link[1])) {
+                stringAsList.push(rel(file) + ':' + lineOf(at) + ' ->' + link[1]
+                    + '() on a Str::of() chain');
+            }
+
+            at = skipCall(at + link[0].length);
+        }
+
+        cursor = Math.max(at, cursor + 1);
+    }
+});
+
+/* The mirror rule: a string has no methods at all, so any `->name()` chained
+   onto a helper that returns one is a fatal error the moment the page renders.
+   `Str::of()` and `Str::from()` are the two statics that hand back an object —
+   that chain is watched below — and every other `Str::*` returns a string. */
+const STRING_HELPERS = /\b(?:str_[a-z_]+|mb_[a-z_]+|number_format|ucfirst|lcfirst|sprintf|trim|explode|implode|nl2br)\s*\(/g;
+const STR_STATIC = /Str::(?!of\s*\(|from\s*\()([a-zA-Z_]\w*)\s*\(/g;
+
+const helperOnString = [];
+const closeCall = (text, open) => {
+    let depth = 0;
+    let at = open;
+    let quote = '';
+
+    while (at < text.length) {
+        const ch = text[at];
+
+        if (quote) {
+            if (ch === '\\') at += 1;
+            else if (ch === quote) quote = '';
+        } else if (ch === "'" || ch === '"') {
+            quote = ch;
+        } else if (ch === '(') {
+            depth += 1;
+        } else if (ch === ')') {
+            depth -= 1;
+            if (depth === 0) return at + 1;
+        }
+
+        at += 1;
+    }
+
+    return at;
+};
+
+files.forEach(file => {
+    const text = unsaid(fs.readFileSync(file, 'utf8'));
+    const lineOf = index => text.slice(0, index).split('\n').length;
+
+    [STR_STATIC, STRING_HELPERS].forEach(pattern => {
+        pattern.lastIndex = 0;
+
+        let m;
+        while ((m = pattern.exec(text)) !== null) {
+            const at = closeCall(text, text.indexOf('(', m.index));
+            const link = text.slice(at).match(/^\s*->\s*([a-zA-Z_]\w*)\s*\(/);
+            if (link) {
+                helperOnString.push(`${rel(file)}:${lineOf(m.index)} ${m[0].trim()} ->${link[1]}()`);
+            }
+        }
+    });
+});
+
+check('no string-returning helper is called as if it were an object',
+    helperOnString.length === 0, [...new Set(helperOnString)].slice(0, 3).join(' | '));
+
+check('no template calls a collection method on a Str::of() chain',
+    stringAsList.length === 0, stringAsList.slice(0, 3).join(' | '));
+
 /* ---------------------------------------------------------------- report */
 
 const failed = out.filter(([, ok]) => !ok);

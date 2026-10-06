@@ -47,8 +47,10 @@ node tools/checks/projects-check.cjs  # the projects list is the shared master-l
                                       # of tab names behind both the strip and the URL, one panel
                                       # per request, the status form in the shared drawer, update
                                       # URLs the server writes, the shell's facts, tables and empty
-                                      # states, well-formed panels, and a tone for every state the
-                                      # models offer — light and dark
+                                      # states, well-formed panels, a tone for every state the
+                                      # models offer — light and dark, the feedback tab drawn as
+                                      # a record panel instead of borrowing another sheet's
+                                      # classes, and the record mark's initials in the house idiom
 node tools/checks/employees-check.cjs # the employee side of the user module: the office door is
                                       # on the whole admin group, no personal route takes a user id,
                                       # a file is ownership-checked before it is served, a draft
@@ -165,3 +167,7 @@ guards actually fail when the behaviour they describe is broken.
 | One vocabulary, two pages | the status and health tones are scoped to `.project` and shared by the list, the record header, a milestone badge and the log — so a status cannot mean one thing on the list and another on the page it opens |
 | The record page speaks the shell | the record page's sheet may place the shell's classes and no more: it composes the header, the two-column grid and the thread rows, while the cards, facts, tables, badges, empty states and dialogs come from the shared sheets. A second card design on the detail page is how the module stopped matching the list next door |
 | A panel closes as it opens | the tag stack is the only reader a Blade panel has: a wrapper closed one line early moves every card after it out of the grid, and the browser silently recovers — so the checks walk the panel's tags instead of trusting the eye |
+| One writer for a control | a module sheet may place a shared class only inside that module's own scopes: a bare `.master-field input` (`padding: 10px 11px`) beat the shell's `.master-input` (`10px 14px`) on every projects screen, so the same control was a different size on one module's pages — the legacy page's field rules and the form's label colours are scoped to their own pages, and the check refuses a new rule that places a shell class on its own |
+| A string is not a list | `Str::of()` hands back a Stringable — a string that answers to string methods and to nothing else — so `->map()`, `->filter()` or `->each()` on that chain compiles, passes every check that reads a template, and throws `BadMethodCallException` the first time a browser opens the page it is on. The record mark's initials did exactly that. The house idiom is to collect the parts (`collect(explode(...))->map(...)->implode('')`), and no `Str::of()` chain may call a collection method |
+| A string is not an object | the mirror rule: every other `Str::*` static returns a string, and so do `str_*`, `mb_*`, `trim`, `explode`, `implode`, `number_format` and friends — a `->method()` chained onto one of those is a fatal error the moment the page renders, not a clever way to compose text |
+| A panel another sheet owns | the feedback tab renders inside the project record, which loads `projects.css` and never `feedback.css`: a class from another module's sheet is a class with no rules at all, so the tab is built from the record's vocabulary, owns its own `master-tab-panel` wrapper, and reads its band tones from the same state table as every other badge on the page |

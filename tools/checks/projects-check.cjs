@@ -258,8 +258,13 @@ const STATE_TONES = [...new Set([
         .map(match => match[1]),
 ])].map(state => state.replace(/_/g, '-'));
 const HEALTH_TONES = optionKeys('app/Models/Project.php', 'healthOptions');
+/* The band a client put us in is the feedback module's vocabulary, not this
+   one's: the words come from `FeedbackVocabulary` and the record page only
+   lends them a tone (`band-promoter` / `band-passive` / `band-detractor`). */
+const BAND_TONES = [...read('app/Services/FeedbackVocabulary.php')
+    .matchAll(/const BAND_[A-Z_]+ = '([a-z_]+)';/g)].map(match => match[1]);
 const darkRules = [...sheetCode.matchAll(/:root\[data-theme="dark"\][^{]*\{[^}]*\}/g)].map(match => match[0]);
-const darkTones = new Set([...darkRules.join('\n').matchAll(/\.(status|health)-([a-z-]+)/g)]
+const darkTones = new Set([...darkRules.join('\n').matchAll(/\.(status|health|band)-([a-z-]+)/g)]
     .map(match => `${match[1]}-${match[2]}`));
 /* The light rules are read with the dark ones taken out: a tone that only
    reached the sheet as a dark-theme selector is a tone the light page has not
@@ -267,6 +272,7 @@ const darkTones = new Set([...darkRules.join('\n').matchAll(/\.(status|health)-(
 const lightCode = darkRules.reduce((text, rule) => text.replace(rule, ''), sheetCode);
 const missingTones = ['status', 'health'].flatMap(prefix => (prefix === 'status' ? STATE_TONES : HEALTH_TONES)
     .map(tone => `${prefix}-${tone}`))
+    .concat(BAND_TONES.map(band => `band-${band}`))
     .filter(name => !new RegExp(`\\.project \\.${name}\\b`).test(lightCode) || !darkTones.has(name));
 
 check('the status and health tones are the module\'s, and both themes have one',
@@ -274,6 +280,33 @@ check('the status and health tones are the module\'s, and both themes have one',
     && /\.project-index \.status-completed/.test(sheetCode) === false
     && /\.project \.project-priority-chip\.is-high/.test(sheetCode),
     missingTones.join(' | '));
+
+/* A module sheet that places a shared class on its own is how a control
+   becomes a different size on one module's screens: `.master-field input`
+   (`padding: 10px 11px`) beat the shell's `.master-input`. Every rule naming a
+   `master-*` / `core-*` class must be scoped to something this module owns —
+   a module class or a module id — so the shell stays the only writer. */
+const bareShell = [];
+sheetCode.split('}').forEach(chunk => {
+    const head = chunk.split('{')[0].split('@')[0].trim();
+
+    head.split(',').forEach(selector => {
+        selector = selector.trim();
+
+        if (!selector) return;
+
+        const classes = [...selector.matchAll(/\.([a-zA-Z][\w-]*)/g)].map(match => match[1]);
+        const shell = classes.filter(name => /^(master|core)-/.test(name));
+        const mine = classes.filter(name => !/^(master|core)-/.test(name));
+
+        if (shell.length && ! mine.length && ! /#[\w-]+/.test(selector)) {
+            bareShell.push(selector);
+        }
+    });
+});
+
+check('the sheet places a shell class only inside this module\'s own scopes',
+    bareShell.length === 0, [...new Set(bareShell)].slice(0, 3).join(' | '));
 
 /* ------------------------------------------------- 6. the dialog and the script */
 
@@ -323,6 +356,9 @@ const recordSource = Object.fromEntries(recordFiles.map(file => [file, read(file
 const recordViews = showView + '\n' + Object.values(recordSource).join('\n');
 const milestoneViews = read('resources/views/projects/partials/milestones-tab.blade.php')
     + read('resources/views/projects/partials/milestone-product-block.blade.php');
+/* The feedback tab is a record panel too: the ask is issued from the project,
+   so its chrome is the record page's, not the feedback sheet's. */
+const feedbackTab = read('resources/views/projects/partials/feedback-tab.blade.php');
 const showIncludes = [...showView.matchAll(/@include\('(projects\.partials\.[a-z-]+)'/g)].map(m => m[1]);
 
 check('the record page is the shared shell',
@@ -331,6 +367,31 @@ check('the record page is the shared shell',
     && /<div class="master-stats desktop-only" aria-label="Project figures">/.test(showView)
     && /<div class="master-tabs-card">/.test(showView)
     && /<nav class="master-tabs" role="tablist" aria-label="Project sections">/.test(showView));
+
+/* The record mark's initials, in the house idiom (the client and vendor pages
+   collect the parts and map them). A `Str::of()` chain is a string: the one
+   collection method it cannot answer throws BadMethodCallException only when a
+   browser opens the page, which is a check no template reader would catch. */
+const viewCode = plain((showView + recordViews + milestoneViews + feedbackTab).replace(/\{\{--[\s\S]*?--\}\}/g, ''));
+
+check('the record mark is built the way the client pages build theirs',
+    /collect\(explode\(' ', trim\(\(string\) \$project->name\)\)\)/.test(showView)
+    && /mb_substr\(\$word, 0, 1\)/.test(showView)
+    && /Str::of\(/.test(viewCode) === false,
+    'the initials are read with the prose stripped: a comment cannot answer it');
+
+/* A panel from a module's own sheet would arrive unstyled: `feedback.css` is
+   loaded by the feedback pages, never by the project record. This tab is the
+   record page's like the other nine — and it owns its wrapper, so the include
+   site cannot wrap it twice or forget to. */
+check('the feedback tab speaks the record page, not the feedback sheet',
+    /<section class="master-tab-panel" id="project-panel-feedback"/.test(feedbackTab)
+    && /@include\('projects\.partials\.feedback-tab'\)/.test(showView)
+    && !/project-panel-feedback/.test(showView)
+    && /master-empty-state/.test(feedbackTab)
+    && /master-badge band-\{\{ \$response->band\(\) \}\}/.test(feedbackTab)
+    && /master-badge status-\{\{/.test(feedbackTab) === false
+    && !/(^|[^-\w])(fb|pd)-[a-z-]+/.test(feedbackTab));
 
 check('the tabs are links drawn from one list, with their counts',
     /@foreach \(\$tabs as \$key => \$label\)/.test(showView)
@@ -443,7 +504,7 @@ check('the card wrapper is the panel\'s own child',
 /* The other direction: a tone the page prints that the sheet does not own is a
    badge with no colour, which is how the record page shipped a page of grey
    pills the first time. */
-const printedTones = new Set([...(showView + recordViews + milestoneViews)
+const printedTones = new Set([...(showView + recordViews + milestoneViews + feedbackTab)
     .matchAll(/[\s"']status-([a-z-]+)/g)].map(match => match[1]));
 
 check('every tone the page prints is one the sheet owns',

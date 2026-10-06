@@ -98,6 +98,12 @@ button. It is now the shared record page:
 - **One colour vocabulary.** The `.status-*` and `.health-*` tones are scoped to
   `.project` and shared by both pages, so a status reads the same in the list, in
   the record header, in a milestone badge and in the log.
+- **The feedback tab is a record panel, not a copy of the feedback module.** The
+  ask is issued from here (one live link per kind, refused while it is open), the
+  answers are read here, and every door leads into `feedback.*` — that is where the
+  queue lives. Its chrome is this page's vocabulary like the other nine panels:
+  `feedback.css` (`.fb-*`) is only loaded by the feedback pages, so a class from
+  that sheet landing here would arrive with no rules at all.
 
 The milestones tab keeps its own `pmile-*` stepper — a genuinely bespoke timeline
 — but its chrome is the shell's now: the five-box stat row is a `master-stats`
@@ -107,8 +113,8 @@ its empty block is the shared one.
 ## How the sheet is scoped
 
 `.project-index` on the list and `.project-show` on the record are the two
-scopes; `.project` carries the one thing they must agree on — the status and
-health tones. Nothing else in the sheet is a page scope, which is why the
+scopes; `.project` carries the one thing they must agree on — the status, health
+and band tones. Nothing else in the sheet is a page scope, which is why the
 colour vocabulary is the only rule group whose selector is not the page's.
 
 ## One writer per fact
@@ -130,8 +136,12 @@ module's size, so a chip click keeps its page context.
 `public/assets/css/projects.css` is loaded by the office list, the project form,
 the tabbed project page and the milestones tab. It owns:
 
-- the domain's colour — `.status-*` and `.health-*` tones, the priority chip,
-  the late date, and their `:root[data-theme="dark"]` counterparts;
+- the domain's colour — `.status-*`, `.health-*` and `.band-*` tones, the
+  priority chip, the late date, and their `:root[data-theme="dark"]`
+  counterparts. The state table is one row per meaning, so a word is the same
+  colour wherever the record prints it: the band words come from
+  `FeedbackVocabulary`, the follow-up badge borrows the table's own *somebody
+  else has to act* (amber) and *stopped* (red) rows rather than inventing two;
 - the list's own cells (`.project-table-name`, `-meta`, `-stage`, `-progress`,
   `-date`, `.project-col-actions`), every one of them scoped under
   `.project-index`;
@@ -139,12 +149,25 @@ the tabbed project page and the milestones tab. It owns:
   `-progress`, `-chip*`, `-top-bar`, `-number`, `-meta-row`, `-footer`), which
   `resources/views/client_portal/projects/index.blade.php` still renders and
   which must not be deleted with the office list.
+- the record page's own compositions — the header, the two-column grid, the
+  thread rows, the progress track, and the feedback tab's
+  `.project-feedback-*` (the link row, the score line, the verbatim note, the
+  issue form), every one of them built out of shell classes;
+- **nothing else.** A rule that names a `master-*` / `core-*` class must also
+  name one of this module's scopes — `.project`, `.project-index`,
+  `.project-show`, `.project-form-page`, `.pd-page`, a `pmile-*`/`pf-*` class,
+  or the milestone modal's id. A bare `.master-field input` (`padding: 10px
+  11px`) used to beat the shell's `.master-input` (`padding: 10px 14px`) on
+  every projects screen, so the same control was a different size here than
+  everywhere else; the legacy page's field geometry and the form's label
+  colours are scoped to their own pages now, and the checks refuse a rule that
+  places a shell class on its own.
 
 Two screens are still outside this file's scope: the form
 (`projects/form.blade.php`, `pf-*`) and the standalone client link
 (`projects/public.blade.php`, which is the client portal's branding, not the
-office's shell). The record page's panels are in scope now — every one of them
-is a `master-tab-panel` of shell cards — and the milestones sheet section keeps
+office's shell). Everything the record page renders is in scope — all ten
+panels are a `master-tab-panel` of shell cards — and the milestones sheet section keeps
 the stepper's own vocabulary (`pmile-step-*`, `pmile-current-*`,
 `pmile-product-head`, `pmile-head-actions`): a timeline drawn as a strip of
 connected steps is something no shared class describes. Those rules stay: the
@@ -155,7 +178,7 @@ portal's own sheet, and the static preview under `public/_preview/` still render
 
 ## Checks
 
-`tools/checks/projects-check.cjs` (47 checks) pins the composition above: the
+`tools/checks/projects-check.cjs` (51 checks) pins the composition above: the
 root is the master-list, the two cards sit in that order, the gap is not
 declared in the module's sheet, every chip carries its tally, the columns are
 named in the order the table draws them, the figures come from the grouped
@@ -164,5 +187,8 @@ the row says it is a link, the module sheet declares no shell class and keeps
 every portal class, the dialog is the shared modal opened through
 `MasterModal`, and every route the screen links to is registered — and the
 record page's half: the shared shell and tab strip, `SHOW_TABS` as the one list,
-one panel per request, the drawer form, the server-emitted update URLs, and the
-shared facts, tables and empty states.
+one panel per request, the drawer form, the server-emitted update URLs, the
+shared facts, tables and empty states, a tone for every state the models offer
+in both themes (the bands come from `FeedbackVocabulary`, the initials from the
+client pages' idiom rather than a `Str::of()` chain), and the feedback tab as a
+record panel that owns its own wrapper and wears no class from another sheet.
