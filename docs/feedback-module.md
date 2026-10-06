@@ -3,7 +3,7 @@
 **Status: built.** All four parts below shipped together — the ask, the surface,
 the loop and the mid-project pulse. The decisions in §11 are locked and the
 paragraphs that follow describe what the code does, in the present tense. The
-module's guard rails are `tools/checks/feedback-check.cjs` (40 checks) and its
+module's guard rails are `tools/checks/feedback-check.cjs` (41 checks) and its
 rules are held by `tests/Unit/FeedbackRulesTest.php`.
 
 It follows the house rule that a module is a *vocabulary plus one writer per
