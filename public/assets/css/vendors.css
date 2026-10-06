@@ -1,0 +1,195 @@
+/*
+ * Vendor-quote-only compatibility styles.
+ * Vendor directory/detail/form styles live in resources/css/pages/vendors.css.
+ * These selectors remain on the separate quote CRUD and image views, which
+ * intentionally sit outside the vendor-profile redesign.
+ */
+
+.vendor-quote-form .master-items {
+    overflow-x: auto;
+}
+
+.vendor-quote-form .master-remove-row {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--mc-border, #dfe7f3);
+    border-radius: 9px;
+    background: var(--mc-card-soft, #f8fbff);
+    color: var(--master-red, #e11d48);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.vendor-quote-form .master-remove-row:hover {
+    border-color: var(--master-red, #e11d48);
+}
+
+.image-view-page {
+    --img-primary: var(--master-primary, #4f83f1);
+    --img-dark: var(--mc-text, #17233b);
+    --img-muted: var(--mc-text-2, #687386);
+    --img-border: var(--mc-border, #dfe7f3);
+    --img-bg: var(--mc-soft, #eef3ff);
+    --img-soft: var(--mc-card-soft, #f8fbff);
+    --img-white: var(--mc-card, #fff);
+    --img-shadow: var(--mc-shadow, 0 14px 35px rgba(25, 42, 70, .08));
+    min-height: calc(100vh - 70px);
+    padding: 28px;
+    background: var(--img-bg);
+    color: var(--img-dark);
+    font-size: 14px;
+}
+
+.image-view-page,
+.image-view-page * {
+    box-sizing: border-box;
+}
+
+.image-card {
+    background: var(--img-white);
+    border: 1px solid var(--img-border);
+    border-radius: 18px;
+    box-shadow: var(--img-shadow);
+}
+
+.image-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 28px;
+    margin-bottom: 24px;
+}
+
+.image-header h1 {
+    margin: 0;
+    color: var(--img-dark);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+}
+
+.image-header p {
+    margin: 5px 0 0;
+    color: var(--img-muted);
+    font-weight: 500;
+}
+
+.image-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.image-stage {
+    display: grid;
+    min-height: 620px;
+    padding: 24px;
+    place-items: center;
+}
+
+.image-frame {
+    display: grid;
+    width: 100%;
+    min-height: 540px;
+    padding: 18px;
+    overflow: auto;
+    border: 1px dashed var(--img-border);
+    border-radius: 18px;
+    background: var(--img-soft);
+    place-items: center;
+}
+
+.image-frame img {
+    max-width: 100%;
+    max-height: 74vh;
+    border-radius: 14px;
+    background: var(--img-white);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, .14);
+    object-fit: contain;
+}
+
+.image-empty {
+    color: var(--img-muted);
+    text-align: center;
+    font-weight: 500;
+}
+
+.image-empty .icon {
+    display: grid;
+    width: 88px;
+    height: 88px;
+    margin: 0 auto 16px;
+    border-radius: 22px;
+    background: var(--img-soft);
+    color: var(--img-primary);
+    font-size: 36px;
+    place-items: center;
+}
+
+.image-meta {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    padding: 0 24px 24px;
+}
+
+.image-meta-item {
+    padding: 14px;
+    border: 1px solid var(--img-border);
+    border-radius: 14px;
+    background: var(--img-soft);
+}
+
+.image-meta-item span {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--mc-text-3, #7d8aa0);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.image-meta-item strong {
+    color: var(--img-dark);
+    overflow-wrap: anywhere;
+    font-weight: 600;
+}
+
+@media (max-width: 900px) {
+    .image-meta {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .image-view-page {
+        padding: 14px;
+    }
+
+    .image-header {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 18px;
+    }
+
+    .image-actions,
+    .image-actions .master-btn {
+        width: 100%;
+    }
+
+    .image-stage {
+        min-height: 420px;
+        padding: 16px;
+    }
+
+    .image-frame {
+        min-height: 360px;
+    }
+
+    .image-meta {
+        grid-template-columns: 1fr;
+        padding: 0 16px 16px;
+    }
+}
