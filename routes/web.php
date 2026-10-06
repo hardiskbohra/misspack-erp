@@ -10,6 +10,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\OfficeServiceController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CashflowAttachmentController;
 use App\Http\Controllers\CashflowController;
@@ -205,6 +206,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/vendors/{vendor}/comments', [VendorController::class, 'storeComment'])->name('vendors.comments.store');
         Route::delete('/vendor-comments/{comment}', [VendorController::class, 'destroyComment'])->name('vendors.comments.destroy');
         Route::resource('vendors', VendorController::class);
+
+        Route::resource('office-services', OfficeServiceController::class);
     
         // Product Management
         Route::resource('products', ProductController::class);

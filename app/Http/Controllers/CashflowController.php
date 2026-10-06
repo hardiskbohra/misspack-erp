@@ -163,6 +163,7 @@ class CashflowController extends Controller
             'client_id' => ['nullable', 'integer'],
             'vendor_id' => ['nullable', 'integer'],
             'employee_id' => ['nullable', 'integer', 'exists:users,id'],
+            'office_service_id' => ['nullable', 'integer', 'exists:office_services,id'],
             'expense_head' => ['nullable', 'string', 'max:255'],
             'related_party_name' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
@@ -393,6 +394,7 @@ class CashflowController extends Controller
             'client_id' => ['nullable', 'integer'],
             'vendor_id' => ['nullable', 'integer'],
             'employee_id' => ['nullable', 'integer', 'exists:users,id'],
+            'office_service_id' => ['nullable', 'integer', 'exists:office_services,id'],
             'expense_head' => ['nullable', 'string', 'max:255'],
             'related_party_type' => ['required', Rule::in($this->masterKeys('related_party_type', array_keys(CashflowEntry::relatedPartyOptions())))],
             'related_party_name' => ['nullable', 'string', 'max:255'],
@@ -621,6 +623,7 @@ class CashflowController extends Controller
             $with[] = 'creator';
             if ($this->clientModelAvailable()) $with[] = 'client';
             if ($this->vendorModelAvailable()) $with[] = 'vendor';
+            if (Schema::hasTable('office_services')) $with[] = 'officeService';
             /* the employee the entry was filed against: one relation, loaded
                with the page rather than looked up per row */
             $with[] = 'employee';
@@ -858,6 +861,7 @@ class CashflowController extends Controller
             'categories' => CashflowCategory::where('is_active', true)->orderBy('type')->orderBy('name')->get(),
             'clients' => $this->clients(),
             'vendors' => $this->vendors(),
+            'officeServices' => $this->officeServices(),
             'employees' => $this->employees(),
             'accountTypeOptions' => $this->masterOptions('account_type', CashflowAccount::typeOptions()),
             'categoryTypeOptions' => $this->masterOptions('category_type', CashflowCategory::typeOptions()),
@@ -901,6 +905,15 @@ class CashflowController extends Controller
     {
         if (! $this->vendorModelAvailable()) return collect();
         return \App\Models\Vendor::query()->orderBy('vendor_name')->get();
+    }
+
+    private function officeServices()
+    {
+        if (! class_exists(\App\Models\OfficeService::class) || ! Schema::hasTable('office_services')) {
+            return collect();
+        }
+
+        return \App\Models\OfficeService::query()->orderBy('name')->get();
     }
 
     /**

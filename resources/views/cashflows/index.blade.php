@@ -663,6 +663,18 @@
                             @error('vendor_id')<p class="master-error">{{ $message }}</p>@enderror
                         </div>
 
+                        <div class="master-field party-picker" data-party-for="office_service"
+                            @if ($quickPartyType !== 'office_service') hidden @endif>
+                            <label class="master-label" for="quickOfficeService">Office service</label>
+                            <select class="master-select" id="quickOfficeService" name="office_service_id">
+                                <option value="">No office service linked</option>
+                                @foreach(($officeServices ?? []) as $officeService)
+                                    <option value="{{ $officeService->id }}" @selected((string) old('office_service_id') === (string) $officeService->id)>{{ $officeService->name }} — {{ $officeService->classLabel() }}</option>
+                                @endforeach
+                            </select>
+                            @error('office_service_id')<p class="master-error">{{ $message }}</p>@enderror
+                        </div>
+
                         <div class="master-field party-picker" data-party-for="expense"
                             @if ($quickPartyType !== 'expense') hidden @endif>
                             <label class="master-label" for="quickExpenseHead">Expense head</label>
