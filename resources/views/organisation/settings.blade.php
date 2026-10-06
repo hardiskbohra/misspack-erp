@@ -7,8 +7,16 @@
     @if ($tab === 'company')
         <button type="submit" form="organisationProfile" class="master-btn master-btn-primary">Save organisation</button>
     @elseif ($tab === 'addresses')
-        <button type="button" class="master-btn master-btn-primary" data-org-address-add>
+        <button type="button" class="master-btn master-btn-primary" data-org-add="orgAddress">
             <i class="fas fa-plus" aria-hidden="true"></i> Add address
+        </button>
+    @elseif ($tab === 'contacts')
+        <button type="button" class="master-btn master-btn-primary" data-org-add="orgContact">
+            <i class="fas fa-plus" aria-hidden="true"></i> Add contact
+        </button>
+    @elseif ($tab === 'socials')
+        <button type="button" class="master-btn master-btn-primary" data-org-add="orgSocial">
+            <i class="fas fa-plus" aria-hidden="true"></i> Add social link
         </button>
     @endif
 @endsection
@@ -69,11 +77,11 @@
             </div>
         </div>
         <div class="master-stat master-stat--flat green">
-            <span class="icon" aria-hidden="true"><i class="fas fa-envelope"></i></span>
+            <span class="icon" aria-hidden="true"><i class="fas fa-user"></i></span>
             <div>
-                <p class="master-stat-title">Contact</p>
-                <p class="master-stat-value">{{ $organisation->mobile ?: '—' }}</p>
-                <p class="master-sub">{{ $organisation->email ?: 'No email on file' }}</p>
+                <p class="master-stat-title">Contacts</p>
+                <p class="master-stat-value">{{ $counts['contacts'] }}</p>
+                <p class="master-sub">{{ $counts['socials'] }} social {{ \Illuminate\Support\Str::plural('link', $counts['socials']) }}</p>
             </div>
         </div>
     </div>
@@ -84,6 +92,14 @@
             <a class="master-tab {{ $tab === 'addresses' ? 'is-active' : '' }}" role="tab" aria-selected="{{ $tab === 'addresses' ? 'true' : 'false' }}" href="{{ $tabUrl('addresses') }}">
                 Addresses &amp; branches
                 @if ($counts['addresses'] > 0)<span class="master-tab-count">{{ $counts['addresses'] }}</span>@endif
+            </a>
+            <a class="master-tab {{ $tab === 'contacts' ? 'is-active' : '' }}" role="tab" aria-selected="{{ $tab === 'contacts' ? 'true' : 'false' }}" href="{{ $tabUrl('contacts') }}">
+                Contacts
+                @if ($counts['contacts'] > 0)<span class="master-tab-count">{{ $counts['contacts'] }}</span>@endif
+            </a>
+            <a class="master-tab {{ $tab === 'socials' ? 'is-active' : '' }}" role="tab" aria-selected="{{ $tab === 'socials' ? 'true' : 'false' }}" href="{{ $tabUrl('socials') }}">
+                Social
+                @if ($counts['socials'] > 0)<span class="master-tab-count">{{ $counts['socials'] }}</span>@endif
             </a>
             <a class="master-tab {{ $tab === 'banks' ? 'is-active' : '' }}" role="tab" aria-selected="{{ $tab === 'banks' ? 'true' : 'false' }}" href="{{ $tabUrl('banks') }}">
                 Bank accounts
@@ -130,14 +146,6 @@
                                     <div class="master-field">
                                         <label class="master-label" for="website_url">Website URL</label>
                                         <input class="master-input" id="website_url" name="website_url" value="{{ old('website_url', $organisation->website_url) }}">
-                                    </div>
-                                    <div class="master-field">
-                                        <label class="master-label" for="instagram">Instagram URL</label>
-                                        <input class="master-input" id="instagram" name="instagram" value="{{ old('instagram', $organisation->instagram) }}">
-                                    </div>
-                                    <div class="master-field">
-                                        <label class="master-label" for="instagram_handle">Instagram handle</label>
-                                        <input class="master-input" id="instagram_handle" name="instagram_handle" value="{{ old('instagram_handle', $organisation->instagram_handle) }}">
                                     </div>
                                 </div>
                             </div>
@@ -247,7 +255,7 @@
                                         <td>{{ $address->label ?: '—' }}</td>
                                         <td>{{ $address->oneLine() ?: '—' }}</td>
                                         <td class="master-list-actions">
-                                            <button type="button" class="master-btn master-btn-soft master-btn-sm" data-org-address-edit='@json($editPayload)'>Edit</button>
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm" data-org-edit="orgAddress" data-org-payload='@json($editPayload)'>Edit</button>
                                             <form method="POST" action="{{ route('organisation.addresses.destroy', $address) }}" class="org-inline-form">
                                                 @csrf
                                                 @method('DELETE')
@@ -263,7 +271,7 @@
                                                 <p class="master-list-empty-title">No addresses yet</p>
                                                 <p class="master-list-empty-text">Add the registered office first. Billing, shipping and branches all live in this list.</p>
                                                 <div class="master-list-empty-actions">
-                                                    <button type="button" class="master-btn master-btn-primary" data-org-address-add>Add address</button>
+                                                    <button type="button" class="master-btn master-btn-primary" data-org-add="orgAddress">Add address</button>
                                                 </div>
                                             </div>
                                         </td>
@@ -274,7 +282,147 @@
                     </div>
                     @include('organisation.partials.address-modal')
                     @if ($errors->any() && $tab === 'addresses')
-                        <div hidden data-open-address-modal="add"></div>
+                        <div hidden data-open-org-modal="orgAddress"></div>
+                    @endif
+                </section>
+            @elseif ($tab === 'contacts')
+                <section class="master-tab-panel" aria-label="Contacts">
+                    <p class="master-sub account-note" style="margin-top:0">
+                        People the office names by desk — sales, accounts, operations, purchase.
+                    </p>
+                    <div class="master-table-wrap">
+                        <table class="master-table">
+                            <thead>
+                                <tr>
+                                    <th>Department</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Mobile</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($organisation->contacts as $contact)
+                                    @php
+                                        $payload = [
+                                            'department' => $contact->department,
+                                            'name' => $contact->name,
+                                            'designation' => $contact->designation,
+                                            'email' => $contact->email,
+                                            'mobile' => $contact->mobile,
+                                            'is_primary' => $contact->is_primary,
+                                            'update_url' => route('organisation.contacts.update', $contact),
+                                            'title' => $contact->name,
+                                        ];
+                                    @endphp
+                                    <tr>
+                                        <td>
+                                            <strong>{{ $contact->departmentLabel() }}</strong>
+                                            @if ($contact->is_primary)
+                                                <div><span class="master-status-chip success">Primary</span></div>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            {{ $contact->name }}
+                                            @if ($contact->designation)
+                                                <div class="master-sub">{{ $contact->designation }}</div>
+                                            @endif
+                                        </td>
+                                        <td>{{ $contact->email ?: '—' }}</td>
+                                        <td>{{ $contact->mobile ?: '—' }}</td>
+                                        <td class="master-list-actions">
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm" data-org-edit="orgContact" data-org-payload='@json($payload)'>Edit</button>
+                                            <form method="POST" action="{{ route('organisation.contacts.destroy', $contact) }}" class="org-inline-form">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="master-btn master-btn-ghost master-btn-sm" type="submit" data-confirm="Remove this contact?">Remove</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5">
+                                            <div class="master-list-empty">
+                                                <span class="master-list-empty-icon" aria-hidden="true"><i class="fas fa-user"></i></span>
+                                                <p class="master-list-empty-title">No department contacts yet</p>
+                                                <p class="master-list-empty-text">Add who sales, accounts and operations should name on a letterhead.</p>
+                                                <div class="master-list-empty-actions">
+                                                    <button type="button" class="master-btn master-btn-primary" data-org-add="orgContact">Add contact</button>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                    @include('organisation.partials.contact-modal')
+                    @if ($errors->any() && $tab === 'contacts')
+                        <div hidden data-open-org-modal="orgContact"></div>
+                    @endif
+                </section>
+            @elseif ($tab === 'socials')
+                <section class="master-tab-panel" aria-label="Social">
+                    <p class="master-sub account-note" style="margin-top:0">
+                        Instagram, Facebook, LinkedIn, Pinterest and any other profile the company keeps.
+                    </p>
+                    <div class="master-table-wrap">
+                        <table class="master-table">
+                            <thead>
+                                <tr>
+                                    <th>Network</th>
+                                    <th>Handle</th>
+                                    <th>URL</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($organisation->socials as $social)
+                                    @php
+                                        $payload = [
+                                            'network' => $social->network,
+                                            'handle' => $social->handle,
+                                            'url' => $social->url,
+                                            'update_url' => route('organisation.socials.update', $social),
+                                            'title' => $social->networkLabel(),
+                                        ];
+                                    @endphp
+                                    <tr>
+                                        <td>
+                                            <i class="{{ $social->networkIcon() }}" aria-hidden="true"></i>
+                                            {{ $social->networkLabel() }}
+                                        </td>
+                                        <td>{{ $social->handle ?: '—' }}</td>
+                                        <td><a href="{{ $social->url }}" target="_blank" rel="noopener">{{ $social->url }}</a></td>
+                                        <td class="master-list-actions">
+                                            <button type="button" class="master-btn master-btn-soft master-btn-sm" data-org-edit="orgSocial" data-org-payload='@json($payload)'>Edit</button>
+                                            <form method="POST" action="{{ route('organisation.socials.destroy', $social) }}" class="org-inline-form">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="master-btn master-btn-ghost master-btn-sm" type="submit" data-confirm="Remove this social link?">Remove</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4">
+                                            <div class="master-list-empty">
+                                                <span class="master-list-empty-icon" aria-hidden="true"><i class="fa-solid fa-share-nodes"></i></span>
+                                                <p class="master-list-empty-title">No social links yet</p>
+                                                <p class="master-list-empty-text">Add Instagram first — stickers still read that profile.</p>
+                                                <div class="master-list-empty-actions">
+                                                    <button type="button" class="master-btn master-btn-primary" data-org-add="orgSocial">Add social link</button>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                    @include('organisation.partials.social-modal')
+                    @if ($errors->any() && $tab === 'socials')
+                        <div hidden data-open-org-modal="orgSocial"></div>
                     @endif
                 </section>
             @else

@@ -25,6 +25,16 @@ class Organisation extends Model
         return $this->hasMany(OrganisationBank::class);
     }
 
+    public function contacts(): HasMany
+    {
+        return $this->hasMany(OrganisationContact::class);
+    }
+
+    public function socials(): HasMany
+    {
+        return $this->hasMany(OrganisationSocial::class);
+    }
+
     public static function current(): self
     {
         static $cached = false;
@@ -42,7 +52,15 @@ class Organisation extends Model
             return $row;
         }
 
-        $row = static::query()->with(['addresses', 'banks'])->first() ?? (new self)->forceFill(self::fallback());
+        $with = ['addresses', 'banks'];
+        if (Schema::hasTable('organisation_contacts')) {
+            $with[] = 'contacts';
+        }
+        if (Schema::hasTable('organisation_socials')) {
+            $with[] = 'socials';
+        }
+
+        $row = static::query()->with($with)->first() ?? (new self)->forceFill(self::fallback());
 
         return $row;
     }
@@ -91,16 +109,29 @@ class Organisation extends Model
         return asset($which === 'print' ? 'images/logo-dark.png' : 'images/logo.png');
     }
 
+    public function social(string $network): ?OrganisationSocial
+    {
+        if (! Schema::hasTable('organisation_socials') || ! $this->exists) {
+            return null;
+        }
+
+        $rows = $this->relationLoaded('socials') ? $this->socials : $this->socials()->get();
+
+        return $rows->firstWhere('network', $network);
+    }
+
     public function brand(): array
     {
+        $instagram = $this->social('instagram');
+
         return [
             'name' => $this->trade_name ?: config('brand.name'),
             'legal_name' => $this->legal_name ?: config('brand.name'),
             'tagline' => $this->tagline ?: config('brand.tagline'),
             'website' => $this->website ?: config('brand.website'),
             'website_url' => $this->website_url ?: config('brand.website_url'),
-            'instagram' => $this->instagram ?: config('brand.instagram'),
-            'instagram_handle' => $this->instagram_handle ?: config('brand.instagram_handle'),
+            'instagram' => $instagram?->url ?: ($this->instagram ?: config('brand.instagram')),
+            'instagram_handle' => $instagram?->handle ?: ($this->instagram_handle ?: config('brand.instagram_handle')),
             'logo_print' => $this->logo_print_path && Storage::disk('public')->exists($this->logo_print_path)
                 ? 'storage/'.$this->logo_print_path
                 : config('brand.logo_print'),

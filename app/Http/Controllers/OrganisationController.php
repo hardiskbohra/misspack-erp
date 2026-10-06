@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Organisation;
 use App\Models\OrganisationAddress;
 use App\Models\OrganisationBank;
+use App\Models\OrganisationContact;
+use App\Models\OrganisationSocial;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -16,7 +18,7 @@ class OrganisationController extends Controller
     public function index(Request $request): View
     {
         $tab = $request->query('tab', 'company');
-        if (! in_array($tab, ['company', 'addresses', 'banks'], true)) {
+        if (! in_array($tab, ['company', 'addresses', 'contacts', 'socials', 'banks'], true)) {
             $tab = 'company';
         }
 
@@ -25,14 +27,18 @@ class OrganisationController extends Controller
             $organisation = Organisation::query()->create(Organisation::fallback());
         }
 
-        $organisation->load(['addresses', 'banks']);
+        $organisation->load(['addresses', 'banks', 'contacts', 'socials']);
 
         return view('organisation.settings', [
             'organisation' => $organisation,
             'tab' => $tab,
             'kinds' => OrganisationAddress::KINDS,
+            'departments' => OrganisationContact::DEPARTMENTS,
+            'networks' => OrganisationSocial::NETWORKS,
             'counts' => [
                 'addresses' => $organisation->addresses->count(),
+                'contacts' => $organisation->contacts->count(),
+                'socials' => $organisation->socials->count(),
                 'banks' => $organisation->banks->count(),
             ],
         ]);
@@ -50,8 +56,6 @@ class OrganisationController extends Controller
             'mobile' => ['nullable', 'string', 'max:40'],
             'website' => ['nullable', 'string', 'max:160'],
             'website_url' => ['nullable', 'string', 'max:255'],
-            'instagram' => ['nullable', 'string', 'max:255'],
-            'instagram_handle' => ['nullable', 'string', 'max:80'],
             'gstin' => ['nullable', 'string', 'max:20'],
             'pan' => ['nullable', 'string', 'max:20'],
             'cin' => ['nullable', 'string', 'max:30'],
@@ -146,6 +150,86 @@ class OrganisationController extends Controller
             ->with('success', 'Address removed.');
     }
 
+    public function storeContact(Request $request): RedirectResponse
+    {
+        $organisation = $this->record();
+        $data = $this->contactData($request);
+        $data['organisation_id'] = $organisation->id;
+        $data['is_primary'] = $request->boolean('is_primary');
+
+        if ($data['is_primary']) {
+            OrganisationContact::query()
+                ->where('organisation_id', $organisation->id)
+                ->where('department', $data['department'])
+                ->update(['is_primary' => false]);
+        }
+
+        OrganisationContact::create($data);
+
+        return redirect()
+            ->route('organisation.settings', ['tab' => 'contacts'])
+            ->with('success', 'Contact added.');
+    }
+
+    public function updateContact(Request $request, OrganisationContact $contact): RedirectResponse
+    {
+        $data = $this->contactData($request);
+        $data['is_primary'] = $request->boolean('is_primary');
+
+        if ($data['is_primary']) {
+            OrganisationContact::query()
+                ->where('organisation_id', $contact->organisation_id)
+                ->where('department', $data['department'])
+                ->where('id', '!=', $contact->id)
+                ->update(['is_primary' => false]);
+        }
+
+        $contact->update($data);
+
+        return redirect()
+            ->route('organisation.settings', ['tab' => 'contacts'])
+            ->with('success', 'Contact saved.');
+    }
+
+    public function destroyContact(OrganisationContact $contact): RedirectResponse
+    {
+        $contact->delete();
+
+        return redirect()
+            ->route('organisation.settings', ['tab' => 'contacts'])
+            ->with('success', 'Contact removed.');
+    }
+
+    public function storeSocial(Request $request): RedirectResponse
+    {
+        $organisation = $this->record();
+        $data = $this->socialData($request);
+        $data['organisation_id'] = $organisation->id;
+        OrganisationSocial::create($data);
+
+        return redirect()
+            ->route('organisation.settings', ['tab' => 'socials'])
+            ->with('success', 'Social link added.');
+    }
+
+    public function updateSocial(Request $request, OrganisationSocial $social): RedirectResponse
+    {
+        $social->update($this->socialData($request));
+
+        return redirect()
+            ->route('organisation.settings', ['tab' => 'socials'])
+            ->with('success', 'Social link saved.');
+    }
+
+    public function destroySocial(OrganisationSocial $social): RedirectResponse
+    {
+        $social->delete();
+
+        return redirect()
+            ->route('organisation.settings', ['tab' => 'socials'])
+            ->with('success', 'Social link removed.');
+    }
+
     public function storeBank(Request $request): RedirectResponse
     {
         $organisation = $this->record();
@@ -215,6 +299,26 @@ class OrganisationController extends Controller
             'state' => ['nullable', 'string', 'max:80'],
             'country' => ['nullable', 'string', 'max:80'],
             'pincode' => ['nullable', 'string', 'max:16'],
+        ]);
+    }
+
+    private function contactData(Request $request): array
+    {
+        return $request->validate([
+            'department' => ['required', Rule::in(array_keys(OrganisationContact::DEPARTMENTS))],
+            'name' => ['required', 'string', 'max:160'],
+            'designation' => ['nullable', 'string', 'max:120'],
+            'email' => ['nullable', 'email', 'max:160'],
+            'mobile' => ['nullable', 'string', 'max:40'],
+        ]);
+    }
+
+    private function socialData(Request $request): array
+    {
+        return $request->validate([
+            'network' => ['required', Rule::in(array_keys(OrganisationSocial::NETWORKS))],
+            'handle' => ['nullable', 'string', 'max:80'],
+            'url' => ['required', 'string', 'max:255'],
         ]);
     }
 

@@ -131,6 +131,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/organisation/addresses', [OrganisationController::class, 'storeAddress'])->name('organisation.addresses.store');
         Route::put('/organisation/addresses/{address}', [OrganisationController::class, 'updateAddress'])->name('organisation.addresses.update');
         Route::delete('/organisation/addresses/{address}', [OrganisationController::class, 'destroyAddress'])->name('organisation.addresses.destroy');
+        Route::post('/organisation/contacts', [OrganisationController::class, 'storeContact'])->name('organisation.contacts.store');
+        Route::put('/organisation/contacts/{contact}', [OrganisationController::class, 'updateContact'])->name('organisation.contacts.update');
+        Route::delete('/organisation/contacts/{contact}', [OrganisationController::class, 'destroyContact'])->name('organisation.contacts.destroy');
+        Route::post('/organisation/socials', [OrganisationController::class, 'storeSocial'])->name('organisation.socials.store');
+        Route::put('/organisation/socials/{social}', [OrganisationController::class, 'updateSocial'])->name('organisation.socials.update');
+        Route::delete('/organisation/socials/{social}', [OrganisationController::class, 'destroySocial'])->name('organisation.socials.destroy');
         Route::post('/organisation/banks', [OrganisationController::class, 'storeBank'])->name('organisation.banks.store');
         Route::put('/organisation/banks/{bank}', [OrganisationController::class, 'updateBank'])->name('organisation.banks.update');
         Route::delete('/organisation/banks/{bank}', [OrganisationController::class, 'destroyBank'])->name('organisation.banks.destroy');

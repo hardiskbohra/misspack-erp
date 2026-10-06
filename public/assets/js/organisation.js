@@ -17,13 +17,61 @@
     }
 
     function fill(form, data) {
-        ['kind', 'label', 'line1', 'line2', 'city', 'state', 'pincode', 'country'].forEach(function (name) {
-            var field = form.elements[name];
-            if (field) field.value = data[name] || '';
+        Array.prototype.forEach.call(form.elements, function (field) {
+            if (!field.name || field.name === '_token' || field.name === '_method') return;
+            if (field.type === 'checkbox') {
+                field.checked = !!data[field.name];
+                return;
+            }
+            if (data[field.name] != null) field.value = data[field.name];
         });
-        if (form.elements.is_default) {
-            form.elements.is_default.checked = !!data.is_default;
+    }
+
+    function bindEditor(prefix, defaults) {
+        var modal = byId(prefix + 'Modal');
+        var form = byId(prefix + 'Form');
+        if (!form || !modal) return;
+
+        var title = modal.querySelector('[data-org-title]');
+        var subtitle = modal.querySelector('[data-org-subtitle]');
+        var method = form.querySelector('[data-org-method]');
+        var storeUrl = form.getAttribute('data-store');
+        var addTitle = form.getAttribute('data-add-title') || 'Add';
+        var editTitle = form.getAttribute('data-edit-title') || 'Edit';
+
+        function openAdd() {
+            form.setAttribute('action', storeUrl);
+            if (method) method.disabled = true;
+            form.reset();
+            fill(form, defaults || {});
+            if (title) title.textContent = addTitle;
+            if (subtitle) subtitle.textContent = form.getAttribute('data-add-sub') || '';
+            openModal(modal);
         }
+
+        function openEdit(data) {
+            form.setAttribute('action', data.update_url);
+            if (method) method.disabled = false;
+            fill(form, data);
+            if (title) title.textContent = data.title || editTitle;
+            if (subtitle) subtitle.textContent = form.getAttribute('data-edit-sub') || '';
+            openModal(modal);
+        }
+
+        document.querySelectorAll('[data-org-add="' + prefix + '"]').forEach(function (button) {
+            button.addEventListener('click', openAdd);
+        });
+
+        document.querySelectorAll('[data-org-edit="' + prefix + '"]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                try {
+                    openEdit(JSON.parse(button.getAttribute('data-org-payload') || '{}'));
+                } catch (e) {}
+            });
+        });
+
+        var reopen = document.querySelector('[data-open-org-modal="' + prefix + '"]');
+        if (reopen) openAdd();
     }
 
     function onReady(fn) {
@@ -35,57 +83,8 @@
     }
 
     onReady(function () {
-        var modal = byId('orgAddressModal');
-        var form = byId('orgAddressForm');
-        if (!form || !modal) return;
-
-        var title = modal.querySelector('[data-org-address-title]');
-        var subtitle = modal.querySelector('[data-org-address-subtitle]');
-        var method = form.querySelector('[data-org-address-method]');
-        var storeUrl = form.getAttribute('data-store');
-
-        function openAdd() {
-            form.setAttribute('action', storeUrl);
-            if (method) method.disabled = true;
-            fill(form, { kind: 'billing', country: 'India', is_default: true });
-            if (title) title.textContent = 'Add an address';
-            if (subtitle) subtitle.textContent = 'Billing, shipping or a branch.';
-            openModal(modal);
-        }
-
-        function openEdit(data) {
-            form.setAttribute('action', data.update_url);
-            if (method) method.disabled = false;
-            fill(form, data);
-            if (title) title.textContent = data.label || 'Edit address';
-            if (subtitle) subtitle.textContent = 'Changes apply to new documents. Issued paperwork keeps its snapshot.';
-            openModal(modal);
-        }
-
-        document.querySelectorAll('[data-org-address-add]').forEach(function (button) {
-            button.addEventListener('click', openAdd);
-        });
-
-        document.querySelectorAll('[data-org-address-edit]').forEach(function (button) {
-            button.addEventListener('click', function () {
-                try {
-                    openEdit(JSON.parse(button.getAttribute('data-org-address-edit') || '{}'));
-                } catch (e) {}
-            });
-        });
-
-        var reopen = document.querySelector('[data-open-address-modal]');
-        if (reopen) {
-            var payload = reopen.getAttribute('data-open-address-modal');
-            if (payload && payload !== 'add') {
-                try {
-                    openEdit(JSON.parse(payload));
-                } catch (e) {
-                    openAdd();
-                }
-            } else {
-                openAdd();
-            }
-        }
+        bindEditor('orgAddress', { kind: 'billing', country: 'India', is_default: true });
+        bindEditor('orgContact', { department: 'office', is_primary: false });
+        bindEditor('orgSocial', { network: 'instagram' });
     });
 })();
