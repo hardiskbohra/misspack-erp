@@ -341,6 +341,23 @@ check('the office list wears the shared list chrome in the shared places',
     && statIcons.length >= 4 && statIcons.every(icon => /<i class="fa-solid fa-/.test(icon)),
     headerCells.length + ' header cells, ' + statIcons.length + ' stat icons');
 
+/* The list is two cards, not one. The shared sheet puts the shell's own 24px
+   between two cards in a `.master-list` and nothing between two blocks inside a
+   single card, so one card holding the filter row and the records ran the search
+   straight into the table. Which blocks are cards is the module's part of that
+   contract; the margin belongs to the shell, and this sheet declares none. */
+const cardSections = indexView.match(/<section class="master-card[^"]*"/g) || [];
+
+check('the search card and the records card are two blocks, in that order',
+    cardSections.length === 2
+    && cardSections[0] === '<section class="master-card master-card--flat"'
+    && cardSections[1] === '<section class="master-card master-table-card master-card--flat"'
+    && /master-list-bar[\s\S]*?core-filter-toolbar[\s\S]*?<\/x-drawer>[\s\S]*?<\/section>/.test(indexView)
+    && /master-list-toolbar[\s\S]*?master-table-wrap[\s\S]*?x-pagination[\s\S]*?<\/section>/.test(indexView)
+    && !/master-table-card[\s\S]*?(master-list-bar|core-filter-toolbar)/.test(indexView)
+    && !/master-table-card/.test(sheet),
+    cardSections.length + ' card sections');
+
 check('every route the module links to is registered',
     [...allViews.matchAll(/route\('(feedback[.a-z-]*|client-portal\.feedback[.a-z-]*)'/g)]
         .map(m => m[1])

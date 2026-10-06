@@ -145,31 +145,31 @@
         </div>
     @endif
 
-    {{-- ───────────────────────────────────────────────────────────── the list --}}
-    <div class="master-card master-card--flat">
-        <form method="GET" action="{{ route('feedback.index') }}">
-            <div class="master-list-bar">
-                <div class="master-list-chips">
-                    <a class="master-list-chip {{ $state === 'all' ? 'is-active' : '' }}"
-                        href="{{ $chipUrl(['state' => 'all']) }}">Everything
-                        <span class="master-list-chip-count">{{ number_format($stateCounts['all']) }}</span></a>
-                    @foreach ($stateOptions as $key => $label)
-                        <a class="master-list-chip {{ $state === $key ? 'is-active' : '' }}"
-                            href="{{ $chipUrl(['state' => $key]) }}">
-                            {{ $label }}
-                            <span class="master-list-chip-count">{{ number_format($stateCounts[$key] ?? 0) }}</span>
-                        </a>
-                    @endforeach
-                </div>
-
-                <div class="master-list-chips">
-                    @foreach ($kindOptions as $key => $label)
-                        <a class="master-list-chip {{ $kind === $key ? 'is-active' : '' }}"
-                            href="{{ $chipUrl(['kind' => $key]) }}">{{ $label }}</a>
-                    @endforeach
-                </div>
+    {{-- ─────────────────────────────────────────────── search and filter --}}
+    <section class="master-card master-card--flat" aria-label="Search and filter feedback asks">
+        <div class="master-list-bar">
+            <div class="master-list-chips">
+                <a class="master-list-chip {{ $state === 'all' ? 'is-active' : '' }}"
+                    href="{{ $chipUrl(['state' => 'all']) }}">Everything
+                    <span class="master-list-chip-count">{{ number_format($stateCounts['all']) }}</span></a>
+                @foreach ($stateOptions as $key => $label)
+                    <a class="master-list-chip {{ $state === $key ? 'is-active' : '' }}"
+                        href="{{ $chipUrl(['state' => $key]) }}">
+                        {{ $label }}
+                        <span class="master-list-chip-count">{{ number_format($stateCounts[$key] ?? 0) }}</span>
+                    </a>
+                @endforeach
             </div>
 
+            <div class="master-list-chips">
+                @foreach ($kindOptions as $key => $label)
+                    <a class="master-list-chip {{ $kind === $key ? 'is-active' : '' }}"
+                        href="{{ $chipUrl(['kind' => $key]) }}">{{ $label }}</a>
+                @endforeach
+            </div>
+        </div>
+
+        <form method="GET" action="{{ route('feedback.index') }}">
             <div class="master-filter-row core-filter-toolbar">
                 <div class="master-search">
                     <span aria-hidden="true">⌕</span>
@@ -276,7 +276,10 @@
                 <a class="master-list-applied-clear" href="{{ route('feedback.index') }}">Clear all</a>
             </div>
         @endif
+    </section>
 
+    {{-- ─────────────────────────────────────────────────────── the asks --}}
+    <section class="master-card master-table-card master-card--flat" aria-label="Feedback asks">
         <div class="master-list-toolbar">
             <p class="master-list-hint"
                 title="Newest ask on top. Every link is listed, whether it came back or not.">
@@ -375,7 +378,7 @@
         </div>
 
         <x-pagination :items="$requests" />
-    </div>
+    </section>
 
     {{-- ─────────────────────────────────────── the lines and the good words --}}
     <div class="master-grid fb-split">

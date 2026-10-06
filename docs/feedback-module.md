@@ -3,7 +3,7 @@
 **Status: built.** All four parts below shipped together — the ask, the surface,
 the loop and the mid-project pulse. The decisions in §11 are locked and the
 paragraphs that follow describe what the code does, in the present tense. The
-module's guard rails are `tools/checks/feedback-check.cjs` (46 checks) and its
+module's guard rails are `tools/checks/feedback-check.cjs` (47 checks) and its
 rules are held by `tests/Unit/FeedbackRulesTest.php`.
 
 It follows the house rule that a module is a *vocabulary plus one writer per
@@ -201,7 +201,9 @@ is a rule a copy-paste would break silently:
 9. **The office list is a list like the ERP's other lists** — the order hint and the
    toolbar's right-hand group stand where the shared sheet expects them (and the density
    presets are bound to the shared toolkit), the counts wear the shared pill, the figures
-   wear the module's own icon vocabulary, and the action column is named.
+   wear the module's own icon vocabulary, the action column is named, and the filter row
+   and the records are two cards — the shell's own 24px is what stands between them, never
+   a margin the module wrote for itself.
 
 ## 8. Anti-abuse and privacy, briefly
 
@@ -302,4 +304,7 @@ shared count pill, the module's own Font Awesome icons on the four figures, and 
 action column. Declaring that right-hand group is what keeps the controls in the toolbar
 rather than on a line of their own above the table — and the group needs
 `MasterList.density`, because the shared script binds only the controls it created itself.
-A fifth check pins both halves.
+It is two cards as well, the search and filter one and then the records one, because the
+shared sheet puts the shell's 24px between two cards and nothing between two blocks inside
+one: as a single card, the search row ran straight into the table. Two more checks pin it:
+the chrome in the shared places, and the two cards with the shell's rhythm between them.
