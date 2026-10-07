@@ -41,6 +41,18 @@ return new class extends Migration
 {
     public function up(): void
     {
+        /* Re-runnable after the failure this file used to cause.
+
+           MySQL created the table and *then* refused the foreign key (see the
+           hand-written names below), so the first version of this migration left
+           behind a table it never recorded: `migrate` stops on it with
+           "Base table or view already exists: 1050". Nothing but that
+           half-applied run can produce an unrecorded table with this name — the
+           migration is the only thing that creates it, and it creates it empty —
+           so clearing it first is the repair rather than a gamble. Delete this
+           line once every database has been migrated past 2026-10-07. */
+        Schema::dropIfExists('cashflow_recurrence_occurrences');
+
         Schema::create('cashflow_recurrence_occurrences', function (Blueprint $table) {
             $table->id();
 

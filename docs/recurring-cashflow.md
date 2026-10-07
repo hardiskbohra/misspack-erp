@@ -304,6 +304,15 @@ name … is too long"* — after the first has already been applied. `php-check`
 computes every migration's names and refuses any that cannot fit, which is the
 guard that would have caught it here rather than on the office's machine.
 
+That refusal is an **after-effects** fact worth knowing: MySQL creates the table
+and then rejects the constraint, and Laravel records nothing for a migration that
+threw — so the database is left holding a table the migrator has never heard of,
+and the next `php artisan migrate` stops on it with *"Base table or view already
+exists: 1050"*. The occurrences migration therefore opens by dropping its own
+table if it exists, which is the only thing that can create an unrecorded table
+of that name (and it creates it empty). Delete that line once every database has
+been migrated past 2026-10-07.
+
 Also touched by this module: `app/Services/OfficeBriefing.php` (the module's one
 notifier), `app/Models/OfficeSetting.php` (the `recurring_due` source),
 `app/Services/CashflowPickers.php` (new — the lists both cashflow forms are

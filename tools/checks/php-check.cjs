@@ -467,9 +467,14 @@ phpFiles.filter(file => /database[\/\\]migrations[\/\\].*\.php$/.test(file)).for
         if (declared) table = declared[1];
         if (! table) return;
 
-        const tooLong = (name, kind) => {
+        /* A name the migration writes itself is used verbatim (`indexCommand()`
+           is `$index ?: createIndexName(...)`), so it has to fit too — the guard
+           would otherwise wave through a hand-written name that is as long as the
+           synthesised one it replaced. */
+        const tooLong = (name, kind, explicit = false) => {
             if (name.length > IDENTIFIER_LIMIT) {
-                overLongIdentifiers.push(`${rel(file)}: ${kind} name would be ${name.length} characters — ${name}`);
+                overLongIdentifiers.push(`${rel(file)}: ${kind} name ${explicit ? 'is' : 'would be'} `
+                    + `${name.length} characters — ${name}`);
             }
         };
 
@@ -481,22 +486,23 @@ phpFiles.filter(file => /database[\/\\]migrations[\/\\].*\.php$/.test(file)).for
             const constrained = /constrained\(([^)]*)\)/.exec(foreignId[2]);
             if (constrained) {
                 const args = constrained[1].split(',').map(a => a.trim()).filter(Boolean);
-                const explicit = args.length > 2 ? args[2] : null;
-                if (! explicit) tooLong(defaultIdentifierName(table, [column], 'foreign'), 'foreign key');
+                const explicit = args.length > 2 ? args[2].replace(/^'|'$/g, '') : null;
+                tooLong(explicit || defaultIdentifierName(table, [column], 'foreign'), 'foreign key', !! explicit);
             }
         }
 
         /* `foreign('x')` / `foreign('x', 'name')` on a column declared above. */
         const foreign = /->foreign\(\s*'([a-z_0-9]+)'\s*(?:,\s*'([a-z_0-9]+)')?\s*\)/.exec(statement);
-        if (foreign && ! foreign[2]) {
-            tooLong(defaultIdentifierName(table, [foreign[1]], 'foreign'), 'foreign key');
+        if (foreign) {
+            tooLong(foreign[2] || defaultIdentifierName(table, [foreign[1]], 'foreign'), 'foreign key', !! foreign[2]);
         }
 
         [['unique', 'unique'], ['index', 'index']].forEach(([method, type]) => {
             const match = new RegExp('->' + method + '\\(\\s*(\\[[^\\]]*\\]|\'[a-z_0-9]+\')\\s*(?:,\\s*\'([a-z_0-9]+)\')?').exec(statement);
-            if (! match || match[2]) return;
+            if (! match) return;
             const columns = [...match[1].matchAll(/'([a-z_0-9]+)'/g)].map(m => m[1]);
-            if (columns.length) tooLong(defaultIdentifierName(table, columns, type), type + ' key');
+            if (! columns.length) return;
+            tooLong(match[2] || defaultIdentifierName(table, columns, type), type + ' key', !! match[2]);
         });
     });
 });
