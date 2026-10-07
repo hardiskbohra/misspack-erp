@@ -173,7 +173,15 @@ class AssetFigures
             $key = $row['category'];
 
             if (! isset($groups[$key])) {
-                $groups[$key] = ['category' => $key, 'rows' => [], 'subtotal' => $this->emptyTotals()];
+                $groups[$key] = [
+                    'category' => $key,
+                    /* What the class hands its assets — the life, the method and the
+                       residual the charge below is made of. An asset with its own
+                       recipe says so on its row. */
+                    'recipe' => $asset->category?->recipeLabel(),
+                    'rows' => [],
+                    'subtotal' => $this->emptyTotals(),
+                ];
             }
 
             $groups[$key]['rows'][] = $row;
@@ -280,6 +288,11 @@ class AssetFigures
             'disposal_gain' => $sold ? (float) $asset->disposalGainLoss() : 0.0,
             'method' => $asset->methodLabel(),
             'life' => $asset->effectiveLifeYears(),
+            /* The screen says the recipe once per class and flags the rows that
+               do not follow it; the file that leaves the building says it on every
+               row, because a CSV is read one line at a time. */
+            'recipe' => $asset->recipeLabel(),
+            'inherits_recipe' => $asset->inheritsRecipe(),
         ];
     }
 

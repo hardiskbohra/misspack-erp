@@ -100,7 +100,10 @@ node tools/checks/assets-check.cjs    # the fixed asset register: the asset stor
                                       # hand-overs and its repairs, the financial year
                                       # and the two formulas ported out of PHP and
                                       # executed, the register's figures/chips/drawer/
-                                      # tabs/dialogs/exports, every view's names,
+                                      # tabs/dialogs/exports, one strip of five on
+                                      # each list page with the readings as chips
+                                      # beside their own doors, the columns each table
+                                      # actually draws, every view's names,
                                       # methods and array keys resolving against the
                                       # module, the classes list being a table whose
                                       # dialog carries every field its validator writes,

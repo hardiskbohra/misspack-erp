@@ -72,8 +72,15 @@
                     {{ number_format($figures['in_use']) }} in use ·
                     {{ number_format($figures['spare']) }} in store ·
                     {{ number_format($figures['disposed']) }} disposed
+                    {{-- What the sold ones fetched rides on the count of them rather
+                         than in a sixth card: it is a fact about that count, and a
+                         family of five cards with a sixth on a row of its own is a
+                         row of page for one number. It appears when there is one. --}}
+                    @if ($figures['disposal_value'] > 0)
+                        · {{ $money($figures['disposal_value']) }} realised on them
+                    @endif
                 </p>
-                <span class="tooltip-text">Every asset this view holds. The states are the same four the chips filter by.</span>
+                <span class="tooltip-text">Every asset this view holds. The states are the same four the chips filter by, and the money beside them is what anything disposed of fetched across all years.</span>
             </div>
         </div>
 
@@ -119,61 +126,6 @@
                 <p class="master-stat-value">{{ $money($figures['charge_this_year']) }}</p>
                 <p class="master-sub">financial year {{ $figures['financial_year'] }}</p>
                 <span class="tooltip-text">The depreciation this view's assets carry for the year now running — pro-rated for anything bought or sold during it, which is why it is not simply a twelfth a month.</span>
-            </div>
-        </div>
-
-        <div class="master-stat master-stat--flat tooltip-container">
-            <span class="icon" aria-hidden="true"><i class="fa-solid fa-hand-holding-dollar"></i></span>
-            <div>
-                <p class="master-stat-title">Disposed, realised</p>
-                <p class="master-stat-value">{{ $money($figures['disposal_value']) }}</p>
-                <p class="master-sub">what sold assets fetched, across all years</p>
-                <span class="tooltip-text">The sale value recorded when an asset left the books. Whether each one made a profit is on the asset's own page and in the year's schedule.</span>
-            </div>
-        </div>
-    </div>
-
-    {{-- ────────────────────────────────────────── what needs doing this week --}}
-    {{-- Three counts and a total: each one is the same query its link opens, so
-         a card that says four opens four rows. --}}
-    <div class="master-stats desktop-only">
-        <div class="master-stat master-stat--flat {{ $figures['warranty_soon'] > 0 ? 'orange' : 'green' }} tooltip-container">
-            <span class="icon" aria-hidden="true"><i class="fa-solid fa-shield-halved"></i></span>
-            <div>
-                <p class="master-stat-title">Warranty running out</p>
-                <p class="master-stat-value">{{ number_format($figures['warranty_soon']) }}</p>
-                <p class="master-sub"><a href="{{ $viewUrl(['warranty' => 'expiring', 'status' => 'everything']) }}">see them</a></p>
-                <span class="tooltip-text">Under cover for sixty days or fewer. Ends in this number, and the same rows the filter opens — a repair inside the window is somebody else's bill.</span>
-            </div>
-        </div>
-
-        <div class="master-stat master-stat--flat {{ $figures['insurance_soon'] > 0 ? 'orange' : 'green' }} tooltip-container">
-            <span class="icon" aria-hidden="true"><i class="fa-solid fa-file-shield"></i></span>
-            <div>
-                <p class="master-stat-title">Insurance expiring</p>
-                <p class="master-stat-value">{{ number_format($figures['insurance_soon']) }}</p>
-                <p class="master-sub">policies ending within sixty days</p>
-                <span class="tooltip-text">Assets whose recorded cover runs out inside two months. A register with an insurance column and no reminder is a register nobody renews from.</span>
-            </div>
-        </div>
-
-        <div class="master-stat master-stat--flat {{ $figures['verify_due'] > 0 ? 'red' : 'green' }} tooltip-container">
-            <span class="icon" aria-hidden="true"><i class="fa-solid fa-clipboard-check"></i></span>
-            <div>
-                <p class="master-stat-title">Verification overdue</p>
-                <p class="master-stat-value">{{ number_format($figures['verify_due']) }}</p>
-                <p class="master-sub"><a href="{{ $viewUrl(['verification' => 'overdue', 'status' => 'everything']) }}">start the round</a></p>
-                <span class="tooltip-text">Assets nobody has physically checked in the last year, or ever. This is the reading an auditor asks for, and the register answers it without a spreadsheet.</span>
-            </div>
-        </div>
-
-        <div class="master-stat master-stat--flat {{ $figures['service_due'] > 0 ? 'orange' : 'green' }} tooltip-container">
-            <span class="icon" aria-hidden="true"><i class="fa-solid fa-screwdriver-wrench"></i></span>
-            <div>
-                <p class="master-stat-title">Service due</p>
-                <p class="master-stat-value">{{ number_format($figures['service_due']) }}</p>
-                <p class="master-sub"><a href="{{ $viewUrl(['service' => 'due', 'status' => 'everything']) }}">the diary</a></p>
-                <span class="tooltip-text">Assets whose last recorded service asked for the next one inside sixty days — including the ones already past their date.</span>
             </div>
         </div>
     </div>
@@ -332,6 +284,43 @@
             </x-drawer>
         </form>
 
+        {{-- The four compliance readings, as chips rather than four stat cards.
+             They were 300px of page to say four numbers — and a second strip,
+             which the register's family does not have: five cards is the shape,
+             and a sixth wraps onto a row of its own. Each chip is the query its
+             number counted, so a chip that says one opens one row. A reading that
+             is not zero carries the tone of the thing it is asking for. --}}
+        <nav class="ast-readings" aria-label="Compliance readings">
+            <span class="ast-readings-label">Readings</span>
+
+            <a class="master-list-chip ast-reading {{ $figures['warranty_soon'] > 0 ? 'is-attention' : '' }}"
+                href="{{ $viewUrl(['warranty' => 'expiring', 'status' => 'everything']) }}">
+                Warranty running out
+                <span class="master-list-chip-count">{{ number_format($figures['warranty_soon']) }}</span>
+            </a>
+
+            {{-- The one reading with no door: the register has no insurance filter
+                 (its warranty filter is about warranty), so this chip is a number
+                 to watch rather than a link. It was a card with no link before —
+                 the difference is that a chip does not pretend to be one. --}}
+            <span class="master-list-chip ast-reading {{ $figures['insurance_soon'] > 0 ? 'is-attention' : '' }}">
+                Insurance expiring
+                <span class="master-list-chip-count">{{ number_format($figures['insurance_soon']) }}</span>
+            </span>
+
+            <a class="master-list-chip ast-reading {{ $figures['verify_due'] > 0 ? 'is-overdue' : '' }}"
+                href="{{ $viewUrl(['verification' => 'overdue', 'status' => 'everything']) }}">
+                Verification overdue
+                <span class="master-list-chip-count">{{ number_format($figures['verify_due']) }}</span>
+            </a>
+
+            <a class="master-list-chip ast-reading {{ $figures['service_due'] > 0 ? 'is-attention' : '' }}"
+                href="{{ $viewUrl(['service' => 'due', 'status' => 'everything']) }}">
+                Service due
+                <span class="master-list-chip-count">{{ number_format($figures['service_due']) }}</span>
+            </a>
+        </nav>
+
         @if ($filtered)
             <div class="master-list-applied">
                 <span class="master-list-applied-title">Filtered by</span>
@@ -387,7 +376,6 @@
                             <th scope="col" class="ast-col-money">Book value</th>
                             <th scope="col">Where it is</th>
                             <th scope="col" class="ast-col-state">State</th>
-                            <th scope="col">Warranty</th>
                             <th scope="col" class="ast-col-actions">Actions</th>
                         </tr>
                     </thead>
@@ -409,10 +397,13 @@
                                     </span>
                                 </td>
 
-                                <td data-label="Class">
-                                    {{ $asset->category?->name ?: 'Unclassified' }}
-                                    <span class="ast-cell-sub">{{ $asset->recipeLabel() }}</span>
-                                </td>
+                                {{-- The class is the name. The recipe under it — "5 years ·
+                                     Straight line (SLM) · 5% left" — was the same three
+                                     words on every row of a class, which is a fact about
+                                     the class: it is on the class's own settings row, on
+                                     the record, and in the depreciation schedule the
+                                     register's own report prints. --}}
+                                <td data-label="Class">{{ $asset->category?->name ?: 'Unclassified' }}</td>
 
                                 <td data-label="Purchased">
                                     {{ $asset->purchase_date?->format('d M Y') ?: '—' }}
@@ -421,7 +412,14 @@
 
                                 <td class="ast-col-money" data-label="Cost">
                                     <span class="ast-money">{{ $money($asset->totalCost()) }}</span>
-                                    <span class="ast-cell-sub">on the books at {{ $money($asset->capitalisedCost()) }}</span>
+                                    {{-- The sub-line is the two figures *differing*: the invoice
+                                         total against the figure the books carry, which is
+                                         the same number unless the GST was taken as a credit.
+                                         A line that repeats the figure above it is a line
+                                         nobody reads. --}}
+                                    @if ($asset->claimsInputCredit())
+                                        <span class="ast-cell-sub">on the books at {{ $money($asset->capitalisedCost()) }}</span>
+                                    @endif
                                 </td>
 
                                 {{-- The two figures the office used to keep on the
@@ -429,7 +427,6 @@
                                      today, from the asset's own life and method. --}}
                                 <td class="ast-col-money" data-label="Book value">
                                     <span class="ast-money">{{ $money($asset->netBookValue()) }}</span>
-                                    <span class="ast-cell-sub">{{ $money($asset->accumulatedDepreciation()) }} written off</span>
                                 </td>
 
                                 <td data-label="Where it is">
@@ -442,14 +439,11 @@
                                     <span class="ast-cell-sub">{{ $asset->conditionLabel() }}</span>
                                 </td>
 
-                                <td data-label="Warranty">
-                                    {{ $asset->warrantyLabel() }}
-                                    @if ($asset->insuranceExpiring() || $asset->insuranceExpired())
-                                        <span class="ast-cell-sub">
-                                            insurance {{ $asset->insuranceExpired() ? 'expired' : 'expiring' }}
-                                        </span>
-                                    @endif
-                                </td>
+                                {{-- Warranty is a reading, not a column: it is the chip
+                                     above the list, the drawer's own filter, the
+                                     record's compliance panel, and a column of the
+                                     export. Its cell here was "Not recorded" on almost
+                                     every row — the most expensive way to say nothing. --}}
 
                                 <td class="ast-col-actions" data-label="Actions">
                                     <div class="master-dropdown">

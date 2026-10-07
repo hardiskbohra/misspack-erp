@@ -210,27 +210,42 @@ allocation tab all read it rather than a copy of it.
 
 ## 5. The register screen
 
-**The figures above the table are the table.** Ten statistic cards and four
-attention cards are computed from the *same builder* the list is read from — so
-standing in the Ahmedabad view, every number on the page describes Ahmedabad.
-The chip counts are the one exception, and for the obvious reason: they are
-counted with the state chip lifted, or each chip would report on the state it is
-standing in rather than the state it offers.
+**The figures above the table are the table.** The strip is computed from the
+*same builder* the list is read from — so standing in the Ahmedabad view, every
+number on the page describes Ahmedabad. The chip counts are the one exception,
+and for the obvious reason: they are counted with the state chip lifted, or each
+chip would report on the state it is standing in rather than the state it offers.
 
-The ten figures are the two groups the office asked for:
+**One strip of five figures**, which is the shape this application's list pages
+have: assets on the register (with the four states, and what disposals realised
+across all years when there are any), total fixed assets capitalised, net book
+value today, depreciation to date, and the year's charge. It was ten cards in two
+strips, and a second strip in a family whose strip is five is a card left over on
+a row of its own — the register shipped one, and so did the schedule.
 
-- **what we own** — assets on the register, total fixed assets (capitalised),
-  net book value today, depreciation to date, the year's charge, and what
-  disposals realised across all years;
-- **what needs doing** — warranty running out, insurance expiring, verification
-  overdue, service due. Each one's count is **the same query its link opens**:
-  the card reads four, the list shows four, because both are the same scope.
+The four readings that were the second strip — warranty running out, insurance
+expiring, verification overdue, service due — live **one line below the search
+box**, as chips beside the counts they open. Each reading is a number and its own
+door in the same block: the chip reads one and opens one row, because both are the
+same scope. Three of them have a filter behind them; the insurance reading does
+not, because the register has no insurance filter (its warranty filter is about
+warranty), and a chip that is not a link does not pretend to be one. A reading
+that is not zero wears the tone of the thing it is asking for; a reading at zero
+is a chip like any other. Unlike the strip — which is a desktop summary — the
+readings are visible on a phone, where a count that needs acting on matters most.
 
 **The list** shows the columns a person reads on a screen: asset (name, code,
-make/model, serial), class, purchase and age, cost and capitalised value, book
-value and what has been written off, where it is and who holds it, state and
-condition, warranty, and the row menu. The other columns are one click away on
-the record, and all of them are in the export.
+make/model, serial), class, purchase and age, cost, book value, where it is and
+who holds it, state, and the row menu. Eight columns was nine: the recipe under
+the class ("5 years · Straight line (SLM) · 5% left") was the same three words on
+every row of a class, the accumulated figure under the book value restated a
+number the same row had already printed, and the warranty column read "Not
+recorded" on nearly every row — a reading, not a column, and its home is the chip
+above the list, the drawer's own filter, the record and the export. The cost keeps
+its second line only when the two figures differ (the invoice total against what
+the books carry, which is the same number unless the GST was taken as a credit).
+Everything the list stopped repeating is on the record, and all of it is in the
+export.
 
 **The filter drawer** carries the class, the place (location, department,
 custodian), and the compliance readings (warranty, physical verification, service
@@ -289,12 +304,27 @@ Five figures, then the schedule **class by class**:
 
 The rows are the assets the year **touched** — still being written down, bought
 during it, or sold during it. A fully depreciated asset contributes nothing and
-is not a row, and the page says that too.
+is not a row, and the page says that too, once, in the note under the year
+picker. (It was said twice: a card in the strip counted the assets, and a
+paragraph under the last table explained them. Both are the header line's
+business and the note's.)
 
-Every class has a subtotal, and the company's own row sits under them all. That
-total is **accumulated from the very rows printed above it** — the report's
-totals are the sum of its own table, not a second query that could disagree with
-the page it sits on.
+**The schedule is five money columns** — asset, opening, additions, charge for the
+year, closing — and the class's recipe is said **once, in the class head**. It was
+eight columns with the method and the life printed on every row of a class whose
+recipes they are, and a "Disposed" column that was an em dash in every year but
+the one an asset left in; the disposal is a line under the asset's name now, where
+it is the whole story of that row, and a row that carries its own recipe says so
+in the same place. The subtotal under each class is accumulated from the rows
+above it.
+
+The **company's roll-up is the strip at the top of the page**, not a table beside
+it. It used to be both: five figures in cards and the same five figures in a
+one-row table under the last class, and the second copy was the one nobody read.
+The strip is fed by the same totals the subtotals add up to (`AssetFigures::
+yearReport()`'s `totals`), so the page still cannot disagree with itself — and the
+file that leaves the building carries every class, every row, the recipe, the
+method and the life, because a CSV is read a line at a time.
 
 Both the register and the schedule export as CSV. The register's export is the
 office's own column order, including the two figures the spreadsheet could never

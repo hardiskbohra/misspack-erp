@@ -428,6 +428,117 @@ check('the register carries the shared drawer, chips, pagination and empty state
     && has(src.index, 'master-list-empty'),
     'the shared list furniture is the list — a module-local copy drifts the day the shared one is fixed');
 
+/* ───────────────────────────────────────── the shape of these two screens ──
+   Both screens shipped a strip of six cards: the family's strip is five, so the
+   sixth wrapped onto a row of its own — a card alone across three quarters of an
+   empty page, twice, on two screens. And both tables printed every field they
+   had: nine columns on the register with a second line under eight of them, eight
+   on the schedule where three were the class's own recipe repeated on every row
+   or an em dash waiting for a disposal that most years does not happen. A list is
+   a list; the fields are on the record, and the file that leaves the building. */
+
+const stripCount = (view) => (view.match(/class="master-stats[^"]*"/g) || []).length;
+const cardCount = (view) => (view.match(/class="master-stat master-stat--flat/g) || []).length;
+const headsIn = (view) => [...view.matchAll(/<th scope="col"[^>]*>\s*([^<]+?)\s*<\/th>/g)].map((m) => m[1]);
+
+check('each of these screens wears one strip of five, not a strip with a card left over',
+    stripCount(src.index) === 1 && cardCount(src.index) === 5
+    && stripCount(src.report) === 1 && cardCount(src.report) === 5,
+    `index: ${stripCount(src.index)} strip(s) of ${cardCount(src.index)} · `
+    + `report: ${stripCount(src.report)} strip(s) of ${cardCount(src.report)}`);
+
+/* The four readings answer themselves, each in the same block as its own count:
+   a count in one place and its filter in another is how a number stops opening
+   the list it counted. Three of the four have a door; the insurance reading has
+   none, because no insurance filter exists, and says so by not being a link. */
+const readingBlocks = src.index.split(/<(?:a|span) class="master-list-chip ast-reading/)
+    .slice(1)
+    .map((chunk) => chunk.slice(0, chunk.indexOf('</')));
+
+/* The count is read off the chip's own number, not off the block: the opening
+   tag already carries the figure in the tone it decides, so a block-wide search
+   would let the tone answer for the number. */
+const countIn = (block) => (block.match(
+    /master-list-chip-count">\s*\{\{ number_format\(\$figures\['([a-z_]+)'\]\)/) || [])[1];
+
+const readingFaults = [
+    ['Warranty running out', 'warranty_soon', "'warranty' => 'expiring'"],
+    ['Insurance expiring', 'insurance_soon', null],
+    ['Verification overdue', 'verify_due', "'verification' => 'overdue'"],
+    ['Service due', 'service_due', "'service' => 'due'"],
+].flatMap(([label, count, door]) => {
+    const block = readingBlocks.find((chunk) => chunk.includes(`>\n                ${label}`));
+
+    if (!block) return [`${label}: missing`];
+    if (countIn(block) !== count) return [`${label}: counts ${countIn(block) || 'nothing'}`];
+    if (door && !block.includes(door)) return [`${label}: opens something else`];
+    if (!door && block.includes('href=')) return [`${label}: links to a filter that does not exist`];
+
+    return [];
+});
+
+check('the four compliance readings are one line of chips, each beside the door it counts',
+    has(src.index, 'class="ast-readings"') && readingBlocks.length === 4
+    && readingFaults.length === 0
+    && !/master-stat-title">(?:Warranty running out|Insurance expiring|Verification overdue|Service due)</.test(src.index),
+    readingFaults.join(', '));
+
+const registerFaults = [
+    JSON.stringify(headsIn(src.index)) !== JSON.stringify(
+        ['Asset', 'Class', 'Purchased', 'Cost', 'Book value', 'Where it is', 'State', 'Actions'])
+        && `columns: ${headsIn(src.index).join(' · ')}`,
+    /data-label="Warranty"/.test(src.index) && 'the warranty column is back',
+    /* The recipe under the class, "written off" under the book value and the
+       capitalised figure under the cost all restated a number the same row had
+       already printed. */
+    has(src.index, 'recipeLabel()') && 'the class recipe is a second line again',
+    has(src.index, 'written off') && 'the book value prints what was written off again',
+    times(src.index, 'on the books at') !== 1 && 'the cost sub-line is not one conditional line',
+    !/@if \(\$asset->claimsInputCredit\(\)\)[\s\S]{0,240}?on the books at/.test(src.index)
+        && 'the cost sub-line no longer waits for the two figures to differ',
+].filter(Boolean);
+
+check('the register lists seven columns and a door, not every field it holds',
+    registerFaults.length === 0,
+    registerFaults.join(' · '));
+
+const scheduleFaults = [
+    JSON.stringify(headsIn(src.report)) !== JSON.stringify(
+        ['Asset', 'Opening', 'Additions', 'Charge for the year', 'Closing'])
+        && `columns: ${headsIn(src.report).join(' · ')}`,
+    /data-label="Disposed"/.test(src.report) && 'the disposal is a column again',
+    !has(src.report, "group['recipe']") && 'the class head lost the recipe',
+    !/@if \(\$group\['recipe'\]\)[\s\S]{0,160}?ast-cell-sub|@if \(\$group\['recipe'\]\)[\s\S]{0,160}?master-sub/.test(src.report)
+        && 'the recipe is not rendered under the class',
+    !/@unless \(\$row\['inherits_recipe'\]\)[\s\S]{0,200}?row\['recipe'\]/.test(src.report)
+        && 'a row no longer says it carries its own recipe',
+    !has(src.figures, "'recipe' => $asset->category?->recipeLabel()")
+        && 'the class head is not fed by the class it names',
+    !has(src.figures, "'recipe' => $asset->recipeLabel()") && 'the service stopped building the recipe',
+    !has(src.figures, "'inherits_recipe' => $asset->inheritsRecipe()")
+        && 'the service stopped saying whether the recipe is the asset\'s own',
+].filter(Boolean);
+
+check('the schedule lists five money columns, and the recipe is said once per class',
+    scheduleFaults.length === 0,
+    scheduleFaults.join(' · '));
+
+check('the year is printed once: the strip is the company\'s roll-up, not a table beside it',
+    !has(src.report, 'ast-company-total')
+    && !has(plain(src.sheet), '.ast-company-total')
+    && has(src.report, "totals['opening']") && has(src.report, "totals['charge']")
+    && has(src.report, "totals['closing']"),
+    'a second copy of the five figures is the copy nobody reads');
+
+/* What the screens stopped printing, the file still carries — the trim is a
+   reading decision, not a smaller register. */
+check('the export keeps the detail the screens stopped repeating',
+    has(code.controller, "$asset['method']")
+    && has(code.controller, "$asset['life']")
+    && has(code.controller, 'Warranty End Date')
+    && has(code.controller, 'Accumulated Depreciation'),
+    'a schedule that leaves the building is read a line at a time');
+
 check('the drawer offers a filter for every criterion the register answers',
     ['category', 'location', 'department', 'custodian', 'condition', 'warranty', 'verification', 'service', 'sort']
         .every((name) => has(src.index, `name="${name}"`))
@@ -1119,7 +1230,7 @@ renderGraph.forEach(({ file, text }) => {
         .matchAll(/([a-z_]+):/g)].map((m) => m[1]));
     const arrays = {
         figures: summaryKeys, totals: totalKeys, year: new Set(['key', 'label', 'from', 'to']),
-        group: new Set(['category', 'rows', 'subtotal']),
+        group: new Set(['category', 'recipe', 'rows', 'subtotal']),
         row: new Set([...reportRowKeys, ...scheduleKeys]),
     };
 
