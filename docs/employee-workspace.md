@@ -60,7 +60,9 @@ routes/web.php
 
 Notes is the one screen that belongs to the **login** rather than to a role. It
 sits outside `office` because an employee keeps notes too, and outside `/my`
-because `/my` is one person's record — the same routes serve both menus. Its own
+because `/my` is one person's record — the same routes serve both menus. The
+topbar carries the same door for both roles, beside the search control (which
+only an administrator's topbar has): an employee's topbar shows it first. Its own
 rule is in `docs/notes-module.md`: a note is read through its owner scope and
 nowhere else, so the employee's menu can name it without naming an office screen.
 

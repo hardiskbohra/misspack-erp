@@ -201,6 +201,21 @@
                     </button>
                 @endif
 
+                {{-- Notes, beside Search: it is the one screen both halves of the
+                     application may open — an employee's menu and the office's
+                     both carry it — and a private note is what you reach for
+                     without leaving the record you are on. The control wears the
+                     shell's own topbar button, so it is the same height, radius
+                     and focus ring as its neighbours, and an icon-only control
+                     names itself in words: the label is the tooltip. It marks
+                     itself as the current page, which is how a reader who came in
+                     from a sidebar label knows where they are. --}}
+                <a class="topbar-btn" href="{{ route('notes.index') }}" aria-label="Notes"
+                    title="Notes — private to this login"
+                    @if (request()->routeIs('notes.*')) aria-current="page" @endif>
+                    <i class="fa-regular fa-note-sticky" aria-hidden="true"></i>
+                </a>
+
                 <form method="POST" action="{{ route('theme.toggle') }}" class="theme-form">
                     @csrf
                     <button type="submit" class="theme-toggle desktop-only">

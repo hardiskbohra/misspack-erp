@@ -2,7 +2,7 @@
 
 **Status: built.** One screen with a board and a table, one note's own page, and
 one rule that everything else is arranged around: **a note belongs to the login
-that wrote it.** Its guard rails are `tools/checks/notes-check.cjs` (52 checks),
+that wrote it.** Its guard rails are `tools/checks/notes-check.cjs` (56 checks),
 and the two rules a source check cannot prove — that a missing owner matches no
 rows, and that a hand-typed filter is the default — are held by
 `tests/Unit/NotesRulesTest.php` (`php artisan test --filter=NotesRulesTest`).
@@ -251,9 +251,31 @@ The sidebar carries it twice: in the employee's own menu (`My Workspace`) and in
 the office's, under a `Personal` section. `layouts/app.blade.php` also maps
 `notes.*` to `data-ui-module="notes"`, like every other module.
 
+**The topbar carries it too, beside the search control.** A note is written in
+the middle of something else — you are reading an invoice and remember a call —
+so the door is one click from any screen rather than a trip through the menu.
+The control is an `<a>` wearing the shell's own `.topbar-btn`: the same height,
+radius, spacing table and focus ring as the search and briefing buttons next to
+it, and nothing module-local, because a page-local style for a shell control is
+how two topbars come to disagree. Three details in it are deliberate:
+
+- it is **outside** the office-only block (the search button is admin-only; an
+  employee keeps notes too, so their topbar carries it first);
+- it is **icon-only, therefore it names itself in words** — `aria-label="Notes"`
+  and the tooltip `Notes — private to this login`, the same contract the search
+  and briefing buttons follow;
+- it wears `aria-current="page"` while `notes.*` is open, and the shell styles
+  that state with the accent chip the sidebar toggle already uses on hover, so
+  the topbar has one "you are here" idiom and not two.
+
+One line in `public/assets/css/app-layout.css` came with it: `.topbar-btn` now
+declares `color: var(--text-primary)`. A `<button>` has never inherited the
+theme's colour, but an `<a>` falls back to the browser's link blue, and the same
+control would have been two colours depending on its tag.
+
 ## 10. The guard rails
 
-`tools/checks/notes-check.cjs` — 52 checks, dependency-free, run with
+`tools/checks/notes-check.cjs` — 56 checks, dependency-free, run with
 `node tools/checks/notes-check.cjs`. It reads source with comments stripped, so
 the prose in these files can explain a rule without answering a check. What it
 holds:
@@ -272,7 +294,10 @@ holds:
 - the page: the shared shell classes, the shared drawer, a criterion asked once,
   the chips carried through a search, a form for every write, the card with no
   control inside it, `nl2br(e(…))`, the empty state's way out, the mobile cards;
-- the shell and the paperwork: both menus, the module mapping, all seven routes,
+- the shell and the paperwork: both menus, the module mapping, the topbar door
+  (a link, outside the office-only block, beside the search control, labelled,
+  and marked as the current page — with the shell's own button required to carry
+  a colour, or an anchor would wear the browser's link blue), all seven routes,
   the drawer contract list, this document, and the README.
 
 `tests/Unit/NotesRulesTest.php` is the other half, and it is the half that

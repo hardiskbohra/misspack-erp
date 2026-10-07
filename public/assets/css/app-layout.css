@@ -550,6 +550,10 @@ html.sidebar-collapsed .main-wrap {
     padding: 10px 16px;
     font-weight: 500;
     text-decoration: none;
+    /* This class is worn by the topbar's buttons and — since Notes — by a link
+       that goes to a section. An <a> without a colour keeps the browser's link
+       blue, so the same control would be two colours depending on the tag. */
+    color: var(--text-primary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -562,6 +566,14 @@ html.sidebar-collapsed .main-wrap {
 .topbar-btn:hover {
     transform: translateY(-1px);
     text-decoration: none
+}
+
+/* Where a topbar control leads to a section, the current one is marked — the
+   same accent chip the sidebar toggle wears on hover, so the topbar keeps one
+   "you are here" idiom rather than inventing a second. */
+.topbar-btn[aria-current="page"] {
+    background: var(--accent-light);
+    color: var(--accent);
 }
 
 .topbar-badge {

@@ -310,6 +310,40 @@ check('and the office has its own, in a section of its own',
 check('the shell tells the stylesheets which module the page is',
     /request\(\)->routeIs\('notes\.\*'\) => 'notes'/.test(shell));
 
+/* The topbar door, beside the search control. Both halves of the application
+   see it — an employee's topbar has no search button at all — so it may not sit
+   inside the office-only block, it must be a link (a control that navigates is
+   a link, or the keyboard and the middle-click both lose), it must name itself
+   in words because it is icon-only, and it must say when it is the current
+   page. */
+const topbar = shell.slice(shell.indexOf('<div class="topbar-actions">'), shell.indexOf('</header>'));
+const topbarLink = topbar.indexOf("route('notes.index')");
+check('the topbar carries a notes door, beside the search control',
+    topbarLink > -1
+    && topbarLink > topbar.indexOf('@endif')
+    && topbarLink < topbar.indexOf("route('theme.toggle')")
+    && /<a class="topbar-btn" href="\{\{ route\('notes\.index'\) \}\}"/.test(topbar),
+    'it must be a link, outside the office-only block, before the theme switch');
+
+check('the icon-only door names itself and marks the current page',
+    /aria-label="Notes"/.test(topbar)
+    && /title="Notes — private to this login"/.test(topbar)
+    && /@if \(request\(\)->routeIs\('notes\.\*'\)\) aria-current="page" @endif/.test(topbar)
+    && /fa-regular fa-note-sticky/.test(topbar));
+
+/* An icon button that is an `<a>` keeps the browser's link blue unless the
+   class it wears sets a colour — the same control would then be two colours
+   depending on its tag. */
+const layoutSheet = plain(read('public/assets/css/app-layout.css'));
+const topbarBtn = layoutSheet.match(/\.topbar-btn \{[\s\S]*?\}/);
+check('the shell\'s topbar button gives an anchor the theme\'s colour, not the browser link blue',
+    !!topbarBtn && /color: var\(--text-primary\)/.test(topbarBtn[0]),
+    topbarBtn ? topbarBtn[0].replace(/\s+/g, ' ').slice(0, 90) : '.topbar-btn not found');
+
+check('and the current page is marked with the shell\'s own accent chip',
+    /\.topbar-btn\[aria-current="page"\] \{[\s\S]*?background: var\(--accent-light\);[\s\S]*?color: var\(--accent\);/.test(layoutSheet));
+
+
 check('all seven doors are registered, with the verbs they claim',
     /Route::get\('\/', \[NoteController::class, 'index'\]\)->name\('index'\)/.test(notesGroup)
     && /Route::post\('\/', \[NoteController::class, 'store'\]\)->name\('store'\)/.test(notesGroup)
