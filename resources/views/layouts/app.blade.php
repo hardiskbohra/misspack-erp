@@ -74,6 +74,10 @@
         request()->routeIs('settings.leads*') => 'leads',
         request()->routeIs('settings.feedback*') => 'feedback',
         request()->routeIs('settings.briefings*') => 'briefings',
+        /* The asset classes are a setting; the register is not, and it has its
+           own module key because its own sheet keys its cards on it. */
+        request()->routeIs('settings.assets*') => 'assets',
+        request()->routeIs('assets.*') => 'assets',
         request()->routeIs('settings.*') => 'settings',
         request()->routeIs('notes.*') => 'notes',
         request()->routeIs('shipments.*') => 'shipments',
@@ -135,6 +139,11 @@
             /* And the other half of what leaves the building: the party's own
                account, in the currency their statement is kept in. */
             ['label' => 'Statements', 'route' => 'cashflows.statements', 'active' => 'cashflows.statements*', 'icon' => 'fa-solid fa-file-invoice'],
+            /* The register: what the company owns, on the other side of the
+               balance sheet from the money the ledger counts. Its classes are a
+               setting and sit in Settings with the other five areas — the assets
+               themselves are records, and records have modules. */
+            ['label' => 'Fixed assets', 'route' => 'assets.index', 'active' => 'assets.*', 'icon' => 'fa-solid fa-industry'],
             ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'icon' => 'fas fa-users-cog'],
             /* One door for every rule in the ERP. The module-wise menu is the
                rail *inside* Settings, where the reader is already looking for a

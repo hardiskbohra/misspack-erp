@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\CashflowEntry;
 use App\Models\Client;
+use App\Models\FixedAsset;
 use App\Models\Lead;
 use App\Models\Product;
 use App\Models\Project;
@@ -224,6 +225,25 @@ class GlobalSearch
                     route('tasks.show', $row),
                     $row->title,
                     $row->statusLabel(),
+                ),
+            ],
+            [
+                'key' => 'assets',
+                'label' => 'Fixed assets',
+                'icon' => 'fa-solid fa-industry',
+                'model' => FixedAsset::class,
+                'table' => 'fixed_assets',
+                'route' => 'assets.show',
+                'map' => fn (FixedAsset $row) => $this->hit(
+                    route('assets.show', $row),
+                    $row->asset_code.' · '.$row->name,
+                    /* Who holds it is the second thing anybody searches an asset
+                       by — "the laptop with Ravi" — so it is the subtitle. */
+                    trim(implode(' · ', array_filter([
+                        $row->holderLabel() !== 'Unassigned' ? $row->holderLabel() : null,
+                        $row->placeLabel() !== '—' ? $row->placeLabel() : null,
+                        $row->stateLabel(),
+                    ]))),
                 ),
             ],
             [

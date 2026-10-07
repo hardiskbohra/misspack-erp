@@ -1,0 +1,549 @@
+/* ==========================================================================
+   FIXED ASSETS — the register, one asset's record, and the company's year.
+
+   Three screens in one sheet:
+
+     - the **register** (`assets/index.blade.php`) — the company's totals, the
+       chips, the filter drawer and the forty-column list, narrowed to the
+       columns a person reads on a screen (the rest are on the record and in the
+       export);
+     - one **asset** (`assets/show.blade.php`) — its facts, its hand-overs, its
+       repairs and its year-by-year schedule, one panel per URL;
+     - the **depreciation report** (`assets/depreciation.blade.php`) — the year,
+       class by class, with the company's own row under it.
+
+   What this sheet owns, per `docs/ui-design-guidelines.md`:
+
+     - **the inset of a card of this module's own** — the shared `.master-card`
+       is a surface with no padding, and the guideline puts 20–22px inside a card
+       that holds prose, figures or controls. A card holding a *table* carries
+       none: its bar and rows carry the shared list's own 16px rhythm and run to
+       the card's edges, which is what keeps the header and the body on one
+       column grid;
+     - the record head (what this asset is, what state it is in, what it
+       depreciates by), the fact lists, the recipe block and the doors;
+     - this module's own cells — the money column, the code, the sub-fact under a
+       value, the open hand-over row, the closed last row of a schedule;
+     - the settings page's class rows, which are a form each.
+     - the domain colours this module keeps to a badge or a hairline (an open
+       hand-over, a disposal, a class subtotal), each with a dark-theme value,
+       because a colour that cannot be seen on the dark surface is not a colour.
+
+   It defines no card, button, field, table, modal, drawer **or badge** of its
+   own: the state, condition and method words and their tones come from
+   `AssetVocabulary` and wear the shared `core-badge`, and a module-local copy of
+   a shared component drifts the day the shared one is fixed.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------- cards */
+
+/* The shared card is a surface — border, radius, shadow — with no padding at all.
+   Everything drawn inside one owes its own inset, and a card of this module's own
+   takes the guideline's 20–22px. (The cards that hold tables deliberately do not
+   wear this class: their rows carry the shared list's rhythm.) */
+.fixed-assets .ast-block,
+.fixed-assets .ast-cat-card {
+    padding: 20px 22px;
+}
+
+.ast-table-card {
+    padding: 0;
+}
+
+.ast-block-head,
+.ast-panel-head,
+.ast-cat-head,
+.ast-group-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+/* The shared title carries a bottom margin for the content under a heading;
+   inside a head that is that margin of nothing before the block's own inset. */
+.fixed-assets :is(.ast-block-head, .ast-panel-head, .ast-cat-head, .ast-group-head) > div > :is(h2, h3, .master-section-title) {
+    margin-bottom: 4px;
+}
+
+.fixed-assets .ast-block-head .master-sub,
+.fixed-assets .ast-panel-head .master-sub,
+.fixed-assets .ast-group-head .master-sub {
+    margin-bottom: 0;
+    max-width: 68ch;
+}
+
+.ast-block-actions,
+.ast-panel-actions,
+.ast-doors {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------------ typography */
+
+/* A sentence of explanation inside a card of its own — an inset block that owes
+   the module's rhythm, not the page's. */
+.ast-lede {
+    margin: 14px 0 0;
+    color: var(--ui-text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.ast-lede strong {
+    color: var(--ui-text);
+    font-weight: 600;
+}
+
+.ast-code {
+    display: inline-block;
+    padding: 1px 7px;
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-radius-pill);
+    background: var(--ui-muted-surface);
+    color: var(--ui-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .02em;
+}
+
+.ast-mono {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+}
+
+.ast-money {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* The one-line fact under a value — a date under a money figure, a person under
+   a place. Two lines at most, and it never wraps a table out of shape. */
+.ast-cell-sub {
+    display: block;
+    margin-top: 2px;
+    color: var(--ui-text-muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.ast-pre {
+    white-space: pre-line;
+}
+
+/* ------------------------------------------------------------------ the list */
+
+.ast-asset-link {
+    color: var(--ui-text);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.ast-asset-link:hover {
+    color: var(--ui-accent);
+}
+
+.ast-col-money {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.ast-col-state {
+    white-space: nowrap;
+}
+
+.ast-col-actions {
+    width: 1%;
+    text-align: right;
+}
+
+.ast-table tbody tr.ast-row-open > td {
+    background: color-mix(in srgb, var(--ui-accent) 5%, transparent);
+}
+
+.ast-schedule-table tfoot .ast-total-row > th,
+.ast-schedule-table tfoot .ast-total-row > td {
+    border-top: 2px solid var(--ui-border);
+    color: var(--ui-text);
+    font-weight: 600;
+}
+
+.ast-row-last > td,
+.ast-row-disposed > td {
+    background: color-mix(in srgb, var(--ui-warning) 6%, transparent);
+}
+
+/* --------------------------------------------------------------- the record */
+
+.ast-record-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.ast-record-identity {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    min-width: 0;
+}
+
+.ast-record-mark {
+    display: inline-flex;
+    flex: 0 0 46px;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-radius-nested);
+    background: var(--ui-muted-surface);
+    color: var(--ui-accent);
+    font-size: 18px;
+}
+
+.ast-record-title {
+    margin: 0 0 4px;
+    font-size: var(--ui-font-page-title);
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.ast-record-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+/* The three facts on the right of the head: purchased, held by, depreciates by.
+   They are the answers to "what is this, then" without opening a panel. */
+.ast-record-facts,
+.ast-recipe {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 14px 22px;
+    margin: 0;
+}
+
+.ast-record-facts > div,
+.ast-recipe > div,
+.ast-mini-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.ast-fact-label {
+    color: var(--ui-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.ast-fact-value {
+    color: var(--ui-text);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.ast-fact-sub {
+    color: var(--ui-text-muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+/* The recipe block sits on the muted surface: it is a reading, not a record —
+   the four numbers the depreciation is computed from. */
+.ast-recipe {
+    margin: 4px 0 0;
+    padding: 16px 18px;
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-radius-nested);
+    background: var(--ui-muted-surface);
+}
+
+/* ------------------------------------------------------------------ panels */
+
+.ast-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px 22px;
+}
+
+.ast-panel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 18px;
+}
+
+.ast-panel-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 14px 22px;
+    padding: 16px 18px;
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-radius-nested);
+    background: var(--ui-muted-surface);
+}
+
+.ast-mini-stat.is-overdue .ast-fact-value {
+    color: var(--ui-danger);
+}
+
+/* A fact list: label above value, two columns inside a block. */
+.ast-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px 22px;
+    margin: 0;
+}
+
+.ast-facts > div.full {
+    grid-column: 1 / -1;
+}
+
+.ast-facts dt {
+    margin-bottom: 3px;
+    color: var(--ui-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.ast-facts dd {
+    margin: 0;
+    color: var(--ui-text);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.ast-facts dd.ast-cell-sub {
+    margin-top: 2px;
+}
+
+.ast-block-links {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--ui-border);
+    font-size: 13px;
+}
+
+.ast-block-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--ui-accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.ast-open-holder {
+    font-size: 13px;
+}
+
+/* ------------------------------------------------------------------ the year */
+
+.ast-report-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.ast-year-picker .master-field {
+    margin: 0;
+    min-width: 190px;
+}
+
+.ast-group-head {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--ui-border);
+}
+
+.ast-group-totals {
+    display: flex;
+    align-items: flex-end;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.ast-group-totals > span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: right;
+}
+
+/* The company's row is the report's own summary: it wears the accent hairline,
+   not a fill, so the two figures above it stay the loudest thing on the page. */
+.ast-company-total {
+    border-top: 2px solid var(--ui-accent);
+}
+
+/* ----------------------------------------------------------- the settings list */
+
+.ast-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ast-cat-list {
+    display: flex;
+    flex-direction: column;
+    margin-top: 6px;
+}
+
+/* A class is a row that is a form: the fields sit on one grid, and the row's
+   fields are what the office changes in place rather than opening a dialog per
+   class. */
+.ast-cat-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.4fr) repeat(2, minmax(120px, .8fr)) minmax(110px, .6fr) minmax(90px, .5fr) minmax(180px, 1fr) auto auto;
+    align-items: end;
+    gap: 12px 16px;
+    padding: 16px 0;
+    border-top: 1px solid var(--ui-border);
+}
+
+.ast-cat-row:first-child {
+    border-top: 0;
+}
+
+.ast-cat-name {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.ast-cat-field,
+.ast-cat-name > .master-input {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.ast-cat-field .master-label {
+    margin: 0;
+}
+
+.ast-cat-state {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
+
+.ast-cat-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* The form's own grid inside the register's dialog: a divider between the blocks
+   of fields, so a long form reads as three subjects rather than one. */
+.ast-form-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0 12px;
+    color: var(--ui-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.ast-form-divider::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 1px;
+    background: var(--ui-border);
+}
+
+/* ----------------------------------------------------------- the stack rhythm */
+
+/* The shared sibling rhythm (`master-list.css`) names card→card and card→stats.
+   This module's screens also stack stats→stats, stats→card, card→info box and
+   stats→tabs-card — shapes the shared rule does not name, which would have left
+   two blocks sharing an edge (the guideline's "two cards with no margin read as
+   one broken card"). The missing pairs are stated here, at the same 24px, scoped
+   to this module's own pages: the settings page is a flex stack of its own and
+   is skipped. */
+@media screen {
+    .fixed-assets:not(.ast-settings) > .master-stats + .master-stats,
+    .fixed-assets:not(.ast-settings) > .master-stats + .master-card,
+    .fixed-assets:not(.ast-settings) > .master-stats + .master-tabs-card,
+    .fixed-assets:not(.ast-settings) > .master-card + .master-tabs-card,
+    .fixed-assets:not(.ast-settings) > .master-card + .master-info-box,
+    .fixed-assets:not(.ast-settings) > .master-info-box + .master-stats,
+    .fixed-assets:not(.ast-settings) > .master-info-box + .master-card {
+        margin-top: 24px;
+    }
+}
+
+/* -------------------------------------------------------------- responsive */
+
+@media (max-width: 1200px) {
+    .ast-cat-row {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+
+    .ast-cat-name,
+    .ast-cat-actions {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 900px) {
+    .ast-panel {
+        padding: 16px;
+    }
+
+    .ast-panel-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ast-record-facts,
+    .ast-recipe,
+    .ast-facts,
+    .ast-panel-stats {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+}
+
+/* ------------------------------------------------------------ dark theme */
+
+/* The two tints this sheet mixes into a table row are the only colours that do
+   not come from a token, so they are stated for both surfaces. */
+:root[data-theme="dark"] .ast-table tbody tr.ast-row-open > td {
+    background: color-mix(in srgb, var(--ui-accent) 12%, transparent);
+}
+
+:root[data-theme="dark"] .ast-row-last > td,
+:root[data-theme="dark"] .ast-row-disposed > td {
+    background: color-mix(in srgb, var(--ui-warning) 12%, transparent);
+}
+
+:root[data-theme="dark"] .ast-record-mark {
+    background: var(--ui-card-surface);
+}

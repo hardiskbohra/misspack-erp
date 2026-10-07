@@ -110,6 +110,7 @@ const filterDrawerPages = [
     'resources/views/cashflows/statements.blade.php',
     'resources/views/cashflows/statement-show.blade.php',
     'resources/views/cashflows/reports.blade.php',
+    'resources/views/assets/index.blade.php',
     'resources/views/clients/partials/statement.blade.php',
     'resources/views/clients/portal-support/index.blade.php',
     'resources/views/client_portal/attachments/index.blade.php',

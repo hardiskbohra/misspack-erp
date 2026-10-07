@@ -17,6 +17,8 @@ use App\Http\Controllers\CashflowAttachmentController;
 use App\Http\Controllers\CashflowController;
 use App\Http\Controllers\CashflowRecurrenceController;
 use App\Http\Controllers\CashflowSettingController;
+use App\Http\Controllers\AssetSettingController;
+use App\Http\Controllers\FixedAssetController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\PartyStatementController;
 use App\Http\Controllers\ClientPortalStatementController;
@@ -185,6 +187,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/settings/feedback/dimensions', [FeedbackController::class, 'storeDimension'])->name('settings.feedback.dimensions.store');
         Route::patch('/settings/feedback/dimensions/{dimension}', [FeedbackController::class, 'updateDimension'])->name('settings.feedback.dimensions.update');
         Route::delete('/settings/feedback/dimensions/{dimension}', [FeedbackController::class, 'destroyDimension'])->name('settings.feedback.dimensions.destroy');
+
+        // Fixed assets — the classes, and the depreciation recipe they hand out.
+        Route::get('/settings/assets', [AssetSettingController::class, 'index'])->name('settings.assets');
+        Route::post('/settings/assets/categories', [AssetSettingController::class, 'store'])->name('settings.assets.store');
+        Route::put('/settings/assets/categories/{category}', [AssetSettingController::class, 'update'])->name('settings.assets.update');
+        Route::delete('/settings/assets/categories/{category}', [AssetSettingController::class, 'destroy'])->name('settings.assets.destroy');
 
         // Cashflow — the accounts, categories and option lists the ledger is kept in.
         Route::get('/settings/cashflow', [CashflowSettingController::class, 'index'])->name('settings.cashflow');
@@ -446,6 +454,29 @@ Route::middleware('auth')->group(function () {
         Route::get('/cashflows/statements/{partyType}/{party}', [PartyStatementController::class, 'show'])
             ->whereIn('partyType', ['client', 'vendor'])
             ->name('cashflows.statements.show');
+
+        // Fixed assets — the register a private limited company has to keep.
+        /* The prefix is `/fixed-assets`, not `/assets`: `public/assets` is the
+           static directory the web server serves itself, and a route at
+           `/assets` would never be reached. The register's own vocabulary
+           routes come before the resource-style ones below, so `/fixed-assets/
+           export` is never read as an asset whose id is "export". */
+        Route::get('/fixed-assets/export', [FixedAssetController::class, 'export'])->name('assets.export');
+        Route::get('/fixed-assets/depreciation', [FixedAssetController::class, 'depreciation'])->name('assets.depreciation');
+        Route::get('/fixed-assets/depreciation/export', [FixedAssetController::class, 'depreciationExport'])->name('assets.depreciation.export');
+        Route::get('/fixed-assets', [FixedAssetController::class, 'index'])->name('assets.index');
+        Route::post('/fixed-assets', [FixedAssetController::class, 'store'])->name('assets.store');
+        Route::get('/fixed-assets/{asset}', [FixedAssetController::class, 'show'])->name('assets.show');
+        Route::put('/fixed-assets/{asset}', [FixedAssetController::class, 'update'])->name('assets.update');
+        Route::delete('/fixed-assets/{asset}', [FixedAssetController::class, 'destroy'])->name('assets.destroy');
+        /* The doors on one asset: hand it over, take it back, log a repair,
+           verify it in person, dispose of it. Each one is a sentence in the
+           register's history, so each one has its own route and its own writer. */
+        Route::post('/fixed-assets/{asset}/allocate', [FixedAssetController::class, 'allocate'])->name('assets.allocate');
+        Route::patch('/fixed-assets/{asset}/take-back', [FixedAssetController::class, 'takeBack'])->name('assets.takeBack');
+        Route::post('/fixed-assets/{asset}/maintenance', [FixedAssetController::class, 'maintain'])->name('assets.maintain');
+        Route::patch('/fixed-assets/{asset}/verify', [FixedAssetController::class, 'verify'])->name('assets.verify');
+        Route::patch('/fixed-assets/{asset}/dispose', [FixedAssetController::class, 'dispose'])->name('assets.dispose');
 
         /* --------------------------------------------------------- recurring
            Standing payments: salary, rent, the monthly suppliers. A rule is

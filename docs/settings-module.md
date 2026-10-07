@@ -52,7 +52,7 @@ has no models of its own, and `SettingsController` writes nothing.
 
 ---
 
-## 2. The five areas
+## 2. The areas
 
 | Area | What it owns | Where the writes already lived |
 | --- | --- | --- |
@@ -61,6 +61,18 @@ has no models of its own, and `SettingsController` writes nothing.
 | **Leads** | the dropdown master data a lead is filed with — status, source, priority, finish, printing, currency, incoterm, capacity unit | `LeadSettingController` |
 | **Feedback** | the scorecard: the lines a client scores, which are also the list the report groups by and the "needs attention" queue scores against | `FeedbackController` |
 | **Cashflow** | the accounts money moves through, the categories rows are filed under, and the option lists the entry forms are filled from | `CashflowSettingController` |
+| **Fixed assets** | the classes the register is grouped by, and the depreciation recipe each class hands to its assets — the useful life, the method and the residual value | `AssetSettingController` |
+
+The sixth area is the one this list was extended for, and it is the sharpest
+test of the boundary rule the module has had, because a fixed asset register is
+*two* things at once: a **recipe** ("furniture depreciates over ten years,
+straight line, 5% residual") and a **record** ("this chair, bought on this date,
+from this vendor, handed to this person"). The recipe is a setting — it changes
+how every asset in the class is written down from now on. **The chairs are not:
+the assets themselves are records**, they live in `/fixed-assets` with their own
+sidebar door, their own histories and their own pages, and this page only links
+to them. A register filed under Settings would have been the largest records
+module in the ERP pretending to be configuration.
 
 Each area's controller is unchanged in what it does: it validates, it writes, it
 redirects. What changed is the **view** it renders and the **route name** it
@@ -111,10 +123,10 @@ rules make them safe:
 
 ## 4. The rail, and the way in
 
-**The rail is the module-wise submenu.** It is the same five links on every
-settings screen — so from Organisation a reader can reach Briefings without
-going back to the hub — and it is rendered from the directory, so it is the same
-five links everywhere by construction. On a wide screen it is a sticky column;
+**The rail is the module-wise submenu.** It is the same links on every settings
+screen — so from Organisation a reader can reach Briefings without going back to
+the hub — and it is rendered from the directory, so it is the same links
+everywhere by construction. On a wide screen it is a sticky column;
 on a phone it is a horizontal strip that scrolls its own current item into view
 (`settings.js`), because a menu that opens three items along looks like it
 starts at Organisation.

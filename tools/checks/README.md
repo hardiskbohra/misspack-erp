@@ -93,6 +93,17 @@ node tools/checks/invoices-check.cjs  # the invoice module: its sheet defines no
                                       # rows grouped by HSN and rate — and the record
                                       # page: the shared composition, five flat
                                       # figures, a sentence where a card is empty
+node tools/checks/assets-check.cjs    # the fixed asset register: the asset stores a
+                                      # recipe and not the answer (no accumulated
+                                      # depreciation or net book value column, one
+                                      # calculator), one writer for the asset, its
+                                      # hand-overs and its repairs, the financial year
+                                      # and the two formulas ported out of PHP and
+                                      # executed, the register's figures/chips/drawer/
+                                      # tabs/dialogs/exports, every view's names,
+                                      # methods and array keys resolving against the
+                                      # module, and the boundary that makes the register
+                                      # a module and the classes a setting
 ```
 
 Every check is dependency-free. `mark-check.cjs` additionally decodes the QR
@@ -203,3 +214,15 @@ guards actually fail when the behaviour they describe is broken.
 | A class a screen names has rules | a class left behind in the markup renders as nothing, and no reviewer reading the Blade can tell: every `project-*`/`pd-*`/`pmile-*`/`fb-*` class a module screen names is defined by a rule in one of the app's sheets or by another screen that names it, with dynamic compositions (`project-health-dot--{{ $key }}`) not counted as names |
 | A panel brings its own padding | the shared `.master-card` is a surface with no inset — a list card can be flush because its bars are padded instead — but a record panel holds facts, stats or a table directly, so every panel the record renders wears `.project-detail-card` and the card writes the guideline's 22/24 (16/18 on phones), the same inset the client and vendor records give their own cards |
 | A door is not left standing | the public project portal (`/project-portal/{token}`) is gone — the client follows a project by signing in — so no route name, column or copy button may survive it, and `projects.show_client_portal` is checked as still read by the login portal, because that flag is the reason the column stayed |
+| A recipe, not the answer | a fixed asset stores *how* it depreciates — useful life, method, residual value — and never the accumulated depreciation or the net book value, which are computed on every read from the asset's own dates. A stored book value is a column somebody has to remember to correct, and the first time somebody forgets, the register prints a figure the arithmetic does not produce |
+| The rate is solved, not typed | written-down-value depreciation divides the cost down to its residual value over the useful life, so the rate is derived from the residual (`1 − (residual ÷ cost) ^ (1 ÷ life)`) rather than a flat percentage. A flat 20% leaves ₹10,737 after ten years on a machine the office said would be worth ₹5,000 — the curve has to land where the recipe said |
+| The last row closes the curve | whichever method ran, the final year is charged `opening − residual` exactly, and the charge is clamped to that. Without it every schedule ends a few rupees away from its own residual value, and the register's total with it |
+| A year is days, not months | the financial year is 1 April – 31 March and each year's charge is pro-rated by the days the asset was on the books in it, so the year of purchase and the year of sale pay their own share. The two formulas are ported out of PHP and executed by the check, because that is the part of the module that can be proved without a runtime |
+| One writer per register | every door — register, change, hand over, take back, log a repair, verify, dispose, delete — posts to one service, and no controller touches a model. The two histories and the asset's own custodian/location/department cannot drift apart, because one method moves all of them together |
+| The state follows the cupboard | an asset in store that is handed to somebody becomes *in use*, and an asset that comes back becomes *spare* — the only two moves the writer makes without being asked, because leaving the status alone would be a lie on the register. Everything else is the office's own word |
+| One open hand-over | the asset's custody is the open hand-over row, so the writer closes whatever is open before it opens anything and refuses to take back what is not out. There is no cached custodian on the asset to go stale, and a partial unique index is avoided because it is not portable |
+| A count and its link are one query | the number on an attention card ("service due: 4") is the same scope its link opens, so a card that says four opens four rows. The register's totals, its table and its CSV are likewise one builder — narrowed to a place, the figures describe that place |
+| A page is never the filtered builder | the paginator writes a `LIMIT` on the builder it is called on, and MySQL refuses that inside the `IN (…)` subquery a later read of the same builder produces (error 1235). So the page comes from a clone, and the figures take a clone too |
+| Two figures the spreadsheet could not keep | the export is the office's own column order plus accumulated depreciation and net book value as at the day the file was taken — a register that exports fewer columns than it holds is a register an auditor cannot use |
+| The register is a module, the classes are a setting | the chairs are records (a module under Accounts, with its own histories and pages); the *recipe* a class hands out is configuration, and lives in Settings with the other five areas. A class still holding assets refuses to be deleted, and the two screens link to each other so neither is a dead end |
+| A door that names its own form | every dialog-opening control carries `data-open-asset-modal="<door>"` and the dialog's form carries `data-asset-form="<door>"`: the script finds the dialog through the form, so no list of dialog ids exists to fall out of date, a shared dialog clears itself before it is filled again, and a failed save reopens the dialog it came from with the typing kept |

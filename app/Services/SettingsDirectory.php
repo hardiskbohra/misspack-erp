@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\CashflowAccount;
 use App\Models\CashflowCategory;
+use App\Models\FixedAssetCategory;
 use App\Models\CashflowMasterOption;
 use App\Models\FeedbackMasterOption;
 use App\Models\LeadMasterOption;
@@ -32,8 +33,8 @@ use Throwable;
  *   - it does not own any setting. Each area's rules, validation and writes stay
  *     in the module that has always owned them (`OrganisationController`,
  *     `CashflowSettingController`, `LeadSettingController`,
- *     `OfficeBriefingSettingController`, `FeedbackController`) — this is a
- *     directory, not a second writer;
+ *     `OfficeBriefingSettingController`, `FeedbackController`,
+ *     `AssetSettingController`) — this is a directory, not a second writer;
  *   - it does not decide who may look. The settings routes live in the office's
  *     half of the application (`office` middleware), as they always did;
  *   - it does not count anything until it is asked. `counts()` is where the hub's
@@ -54,6 +55,7 @@ final class SettingsDirectory
     public const LEADS = 'leads';
     public const FEEDBACK = 'feedback';
     public const BRIEFINGS = 'briefings';
+    public const ASSETS = 'assets';
 
     /**
      * Every area of the settings module, in the order the rail shows them.
@@ -167,6 +169,25 @@ final class SettingsDirectory
                     'Saved lines' => $this->count('feedback_master_options', fn () => FeedbackMasterOption::query()
                         ->where('group', FeedbackMasterOption::GROUP_DIMENSION)
                         ->count()),
+                ],
+            ],
+
+            self::ASSETS => [
+                'key' => self::ASSETS,
+                'label' => 'Fixed assets',
+                'icon' => 'fa-solid fa-calculator',
+                'blurb' => 'The classes the company’s assets are grouped by, and the depreciation recipe each class hands to its assets — the life, the method and the value left at the end.',
+                'holds' => [
+                    'Asset classes: furniture, computers, plant…',
+                    'Useful life and residual value per class',
+                    'The depreciation method each class depreciates by',
+                ],
+                'route' => 'settings.assets',
+                'active' => 'settings.assets*',
+                'links' => [],
+                'keywords' => ['asset', 'fixed asset', 'depreciation', 'useful life', 'slm', 'wdv', 'straight line', 'residual', 'written down', 'class', 'register', 'schedule ii'],
+                'counts' => fn (): array => [
+                    'Classes' => $this->count('fixed_asset_categories', fn () => FixedAssetCategory::query()->count()),
                 ],
             ],
 

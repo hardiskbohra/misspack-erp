@@ -65,7 +65,7 @@ const userMenu = blade(read('resources/views/layouts/partials/user-menu.blade.ph
 const search = plain(read('app/Services/GlobalSearch.php'));
 const docs = read('docs/settings-module.md');
 
-const areas = ['organisation', 'cashflow', 'leads', 'feedback', 'briefings'];
+const areas = ['organisation', 'cashflow', 'leads', 'feedback', 'briefings', 'assets'];
 const areaView = key => `resources/views/settings/${key}.blade.php`;
 
 /* ------------------------------------------------------------- one list */
@@ -112,13 +112,13 @@ check('the page the office opens owns no setting of its own',
 check('every area screen wears the same rail, with its own key',
     areas.filter((key, index) => index >= 0)
         .every(key => has(blade(read(areaView(key))), `@include('settings.partials.nav', ['current' => '${key}'])`))
-    && areas.length === 5);
+    && areas.length === 6);
 
 check('the hub marks no area, because the hub is not one',
     has(hub, "@include('settings.partials.nav', ['current' => null])")
     && has(rail, "$current === $area['key']"));
 
-check('the rail is fed by the shell, not by five screens remembering',
+check('the rail is fed by the shell, not by six screens remembering',
     has(plain(read('app/Providers/AppServiceProvider.php')), "View::composer('settings.*'")
     && has(rail, '$areas ?? app('),
     'a screen that forgets the list must still get the module-wise menu, not an empty one');
@@ -150,7 +150,7 @@ check('the rail is navigation, so it is never hidden on a phone',
     && /@media screen and \(max-width: 991px\)/.test(sheet)
     && has(script, 'set-nav-list'));
 
-check('the area column spaces the five pages, once',
+check('the area column spaces every area page, once',
     /\.set-area\s*>\s*\*\s*\+\s*\*\s*\{/.test(sheet),
     'the rhythm used to live on each page\'s own header, which left with the page');
 
@@ -245,7 +245,7 @@ check('the two moved rows pages wear the shared tab strip, as links with their o
 
 /* ------------------------------------------------------------- the doors in */
 
-check('the sidebar has one settings door, not a second tree of five',
+check('the sidebar has one settings door, not a second tree of areas',
     times(layout, "route' => 'settings.") === 1
     && has(layout, "'label' => 'Settings', 'route' => 'settings.index', 'active' => 'settings.*'")
     && !has(layout, "'route' => 'organisation.settings'")
@@ -257,7 +257,13 @@ check('the account menu points at the same door',
     && !has(userMenu, "route('office-alerts.settings')"));
 
 check('the modules that linked to their own settings page link here now',
-    has(read('resources/views/cashflows/index.blade.php'), "route('settings.cashflow')")
+    /* The register is the sixth module with a settings area, and the round trip
+       matters as much as the first five: a reader in the register who wonders
+       what a class is must land in Settings, and the classes page must land back
+       in the register. */
+    has(read('resources/views/assets/index.blade.php'), "route('settings.assets')")
+    && has(read('resources/views/settings/assets.blade.php'), "route('assets.index')")
+    && has(read('resources/views/cashflows/index.blade.php'), "route('settings.cashflow')")
     && has(read('resources/views/leads/index.blade.php'), "route('settings.leads')")
     && has(read('resources/views/feedback/index.blade.php'), "route('settings.feedback')")
     && has(read('resources/views/layouts/partials/office-briefing.blade.php'), "route('settings.briefings')"));
