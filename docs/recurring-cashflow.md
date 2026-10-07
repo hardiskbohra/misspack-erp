@@ -294,6 +294,16 @@ closed by a count, by a date, by both and by neither, and the day after a pause.
 (No `php` runtime is available in every environment this is developed in, so it
 is parsed by `tools/checks/php-check.cjs` and run wherever a test runner exists.)
 
+One thing the schema itself had to learn: MySQL caps an identifier at 64
+characters, and this table's name is long by nature — so the foreign key to the
+rule, the unique key on `(rule_id, sequence)` and the index on
+`(rule_id, effective_date)` are **named by hand** in the migration. Left to
+Laravel's synthesised names they would be 67, 75 and 80 characters, and
+`php artisan migrate` stops on the second of the two migrations with *"Identifier
+name … is too long"* — after the first has already been applied. `php-check` now
+computes every migration's names and refuses any that cannot fit, which is the
+guard that would have caught it here rather than on the office's machine.
+
 Also touched by this module: `app/Services/OfficeBriefing.php` (the module's one
 notifier), `app/Models/OfficeSetting.php` (the `recurring_due` source),
 `app/Services/CashflowPickers.php` (new — the lists both cashflow forms are

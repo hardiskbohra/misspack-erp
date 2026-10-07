@@ -195,7 +195,11 @@ check('the plan is a window, and the page says so in words',
     'a plan that is not a window is a table that grows for ever');
 
 check('re-planning continues the numbering instead of reusing it',
-    /unique\(\['cashflow_recurrence_rule_id', 'sequence'\]\)/.test(occurrencesMigration)
+    /* Read to the column list and stop: the constraint may carry a name of its
+       own (it must, in fact — see php-check's 64-character guard), and a check
+       that insists on the unnamed form is a check that breaks when the fix
+       lands. */
+    /unique\(\['cashflow_recurrence_rule_id', 'sequence'\]/.test(occurrencesMigration)
     && /\$sequence = \(int\) \$rule->occurrences\(\)->max\('sequence'\);/.test(plan)
     && /\+\+\$sequence/.test(plan),
     'a reused sequence number is a row colliding with its own history');

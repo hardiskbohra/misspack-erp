@@ -21,8 +21,11 @@ node tools/checks/cost-check.cjs      # a cost head's exchange rate: the field i
                                       # screen, and the INR value is amount × rate, never a guess
 node tools/checks/php-check.cjs       # the PHP files the module owns: parsed with php-parser when
                                       # it is reachable, plus name/import guards that a parser
-                                      # cannot answer. PHP_PARSER_PATH=<dir> points at a node_modules
-                                      # that holds php-parser when it is not installed here.
+                                      # cannot answer — including the one that reads a migration the
+                                      # way the schema builder does, so no index or foreign key asks
+                                      # MySQL for an identifier over its 64 characters.
+                                      # PHP_PARSER_PATH=<dir> points at a node_modules that holds
+                                      # php-parser when it is not installed here.
 node tools/checks/docs-check.cjs      # the paperwork behind an entry: one table, the archive route
                                       # before the resource route, one definition of "missing"
 node tools/checks/statement-check.cjs # a party statement: opening + debit − credit = closing, the

@@ -422,6 +422,89 @@ const unbalanced = phpFiles.filter(file => !balance(fs.readFileSync(file, 'utf8'
 check('every PHP file has balanced groups', unbalanced.length === 0,
     unbalanced.slice(0, 3).map(rel).join(' | '));
 
+/* ---------------------------------------------------------- the schema's length
+
+   MySQL caps an identifier at **64 characters**, and Laravel writes a
+   constraint's name for you when you do not give one:
+
+       foreign key   <table>_<column>_foreign
+       unique key    <table>_<columns…>_unique
+       index         <table>_<columns…>_index
+
+   so a table whose own name is long makes `php artisan migrate` stop — on the
+   machine of whoever runs it, not here — with *"Identifier name … is too long"*.
+   That is exactly how the recurring-cashflow module's occurrences table failed:
+   the foreign key to its rule was 67 characters, its unique key 75 and its
+   second index 80. Nothing in the repository could see it, because nothing read
+   the migrations the way the schema builder does; this guard does, and it reads
+   them **dependency-free**, so it works on a machine that never ran npm install.
+
+   It computes the name each declaration *would* get and flags the ones that
+   cannot fit. A migration is free to name its own constraints — that is the
+   fix — and this check only asks that the name fits. */
+const IDENTIFIER_LIMIT = 64;
+
+const defaultIdentifierName = (table, columns, type) =>
+    [table, ...columns, type].join('_').toLowerCase().replace(/[-.]/g, '_');
+
+const overLongIdentifiers = [];
+
+phpFiles.filter(file => /database[\/\\]migrations[\/\\].*\.php$/.test(file)).forEach(file => {
+    const text = stripPhpComments(fs.readFileSync(file, 'utf8'));
+    const start = text.indexOf('function up(');
+    if (start === -1) return;
+
+    const down = text.indexOf('function down(');
+    const up = text.slice(start, down > start ? down : text.length);
+
+    let table = null;
+
+    /* One declaration per statement: everything up to the `;` that ends it. The
+       `Schema::create(…)` header shares its chunk with the first column, which
+       is how the table being declared is picked up. */
+    up.split(';').forEach(statement => {
+        const declared = /Schema::(?:create|table)\(\s*'([a-z_0-9]+)'/.exec(statement);
+        if (declared) table = declared[1];
+        if (! table) return;
+
+        const tooLong = (name, kind) => {
+            if (name.length > IDENTIFIER_LIMIT) {
+                overLongIdentifiers.push(`${rel(file)}: ${kind} name would be ${name.length} characters — ${name}`);
+            }
+        };
+
+        /* `foreignId('x')->constrained('t')` — with the optional third argument
+           to `constrained()` naming the constraint instead. */
+        const foreignId = /foreignId\(\s*'([a-z_0-9]+)'\s*\)([\s\S]*)$/.exec(statement);
+        if (foreignId) {
+            const column = foreignId[1];
+            const constrained = /constrained\(([^)]*)\)/.exec(foreignId[2]);
+            if (constrained) {
+                const args = constrained[1].split(',').map(a => a.trim()).filter(Boolean);
+                const explicit = args.length > 2 ? args[2] : null;
+                if (! explicit) tooLong(defaultIdentifierName(table, [column], 'foreign'), 'foreign key');
+            }
+        }
+
+        /* `foreign('x')` / `foreign('x', 'name')` on a column declared above. */
+        const foreign = /->foreign\(\s*'([a-z_0-9]+)'\s*(?:,\s*'([a-z_0-9]+)')?\s*\)/.exec(statement);
+        if (foreign && ! foreign[2]) {
+            tooLong(defaultIdentifierName(table, [foreign[1]], 'foreign'), 'foreign key');
+        }
+
+        [['unique', 'unique'], ['index', 'index']].forEach(([method, type]) => {
+            const match = new RegExp('->' + method + '\\(\\s*(\\[[^\\]]*\\]|\'[a-z_0-9]+\')\\s*(?:,\\s*\'([a-z_0-9]+)\')?').exec(statement);
+            if (! match || match[2]) return;
+            const columns = [...match[1].matchAll(/'([a-z_0-9]+)'/g)].map(m => m[1]);
+            if (columns.length) tooLong(defaultIdentifierName(table, columns, type), type + ' key');
+        });
+    });
+});
+
+check('every index and foreign key a migration declares fits MySQL\'s 64-character identifier',
+    overLongIdentifiers.length === 0,
+    overLongIdentifiers.slice(0, 3).join(' | '));
+
 /* ---------------------------------------------------------------- report */
 
 const failed = out.filter(([, ok]) => !ok);

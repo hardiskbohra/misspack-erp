@@ -44,8 +44,18 @@ return new class extends Migration
         Schema::create('cashflow_recurrence_occurrences', function (Blueprint $table) {
             $table->id();
 
+            /* The three names below are written out by hand, and that is not
+               decoration: MySQL caps an identifier at 64 characters, and Laravel
+               synthesises one when it is not given — `<table>_<column>_foreign`
+               here is 67 characters, the unique key 75 and the second index 80,
+               so `php artisan migrate` stops on this table with
+               "Identifier name ... is too long". The table's own name is long
+               because the module's name is (the occurrences of a recurrence),
+               so the constraint names carry the short form the rest of the
+               module already uses. `php-check` now refuses any migration whose
+               synthesised name would not fit. */
             $table->foreignId('cashflow_recurrence_rule_id')
-                ->constrained('cashflow_recurrence_rules')
+                ->constrained('cashflow_recurrence_rules', 'id', 'cashflow_recurrence_occurrences_rule_fk')
                 ->cascadeOnDelete();
 
             /* The occurrence's own number in its rule — and with the rule, its
@@ -67,12 +77,12 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->unique(['cashflow_recurrence_rule_id', 'sequence']);
+            $table->unique(['cashflow_recurrence_rule_id', 'sequence'], 'cashflow_recurrence_occurrences_rule_seq_unique');
 
             /* The two questions the screens ask: "what is waiting for approval
                on this date / up to today" and "what is this rule's plan". */
             $table->index(['status', 'effective_date']);
-            $table->index(['cashflow_recurrence_rule_id', 'effective_date']);
+            $table->index(['cashflow_recurrence_rule_id', 'effective_date'], 'cashflow_recurrence_occurrences_rule_date_index');
             $table->index('cashflow_entry_id');
         });
     }
