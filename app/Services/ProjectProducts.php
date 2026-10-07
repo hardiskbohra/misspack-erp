@@ -141,6 +141,14 @@ class ProjectProducts
     /** The client's own facts: what was ordered, how many, at what rate. */
     private function salesFacts(ProjectProduct $row, Model $line, Model $invoice, string $name): array
     {
+        /* The line's description is the specification at the time the product
+           first appears. It is seeded once: the office edits specs on the
+           product from there, and re-saving the invoice must not overwrite what
+           it typed. Read as one value before the array — a `?:` inside the
+           `:` of a `?` is a ternary PHP 8 refuses to parse, and it refuses at
+           load time, so the file stops being a file. */
+        $specification = trim((string) ($line->description ?: ''));
+
         return array_filter([
             'product_id' => $line->product_id ?: null,
             'product_name' => $name ?: null,
@@ -149,11 +157,7 @@ class ProjectProducts
             'unit_price' => $line->unit_price,
             'currency' => $invoice->currency ?: null,
             'sort_order' => $line->sort_order ?: null,
-            /* The line's description is the specification at the time the
-               product first appears. It is seeded once: the office edits specs
-               on the product from there, and re-saving the invoice must not
-               overwrite what it typed. */
-            'notes' => $row->exists ? null : trim((string) ($line->description ?: '')) ?: null,
+            'notes' => $row->exists || $specification === '' ? null : $specification,
         ], fn ($value) => $value !== null);
     }
 

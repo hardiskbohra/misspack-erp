@@ -75,17 +75,20 @@ function phpIslands(text) {
     const lineAt = index => clean.slice(0, index).split('\n').length;
     const islands = [];
 
+    /* `expression` is the island's own PHP, without the `<?php echo ( … );`
+       wrapper the parse uses: a guard that reads operators has to see the
+       expression, not the wrapper's parentheses. */
     for (const m of clean.matchAll(/@php\b(?!\s*\()([\s\S]*?)@endphp/g)) {
-        islands.push({ kind: '@php block', code: '<?php ' + m[1], line: lineAt(m.index) });
+        islands.push({ kind: '@php block', code: '<?php ' + m[1], expression: m[1], line: lineAt(m.index) });
     }
     for (const m of clean.matchAll(/@php\s*\(([\s\S]*?)\)\s*(?=\n|@|<)/g)) {
-        islands.push({ kind: '@php(…)', code: '<?php (' + m[1] + ');', line: lineAt(m.index) });
+        islands.push({ kind: '@php(…)', code: '<?php (' + m[1] + ');', expression: '(' + m[1] + ')', line: lineAt(m.index) });
     }
     for (const m of clean.matchAll(/\{\{([\s\S]*?)\}\}/g)) {
-        islands.push({ kind: 'echo', code: '<?php echo (' + m[1] + ');', line: lineAt(m.index) });
+        islands.push({ kind: 'echo', code: '<?php echo (' + m[1] + ');', expression: m[1], line: lineAt(m.index) });
     }
     for (const m of clean.matchAll(/\{!!([\s\S]*?)!!\}/g)) {
-        islands.push({ kind: 'raw echo', code: '<?php echo (' + m[1] + ');', line: lineAt(m.index) });
+        islands.push({ kind: 'raw echo', code: '<?php echo (' + m[1] + ');', expression: m[1], line: lineAt(m.index) });
     }
 
     return islands;
@@ -185,6 +188,105 @@ const doubledSeparator = phpFiles.filter(file =>
 check('every namespace separator is a single backslash',
     doubledSeparator.length === 0,
     doubledSeparator.slice(0, 3).map(rel).join(' | ') + ' — PHP fatals on these');
+
+/* A nested ternary has to be parenthesised where PHP cannot tell which way it
+   nests. Since 8.0 `a ? b : c ?: d`, `a ? b : c ? d : e` and `a ?: b ? c : d`
+   are compile-time fatals — the file stops being loadable, which is a class of
+   mistake a brace count cannot see and php-parser only catches when it is
+   installed. This guard is dependency-free, and it is deliberately narrow
+   about what it claims:
+     - the then clause is exempt (`cond ? $a ?: $b : $c` is legal, PHP says the
+       then clause is always unambiguous), and so are chains of short ternaries
+       (`$a ?: $b ?: $c`);
+     - it reads one line at a time, at nesting depth zero within that line — so
+       a `?` whose `:` is on another line is left alone rather than guessed at,
+       and a ternary inside brackets *and* on one line is not seen;
+     - strings, comments and docblocks are stripped first: a `?` in prose is
+       not an operator.
+   Written this narrow, it caught the one that shipped: a `?:` in the else of a
+   `?` in `ProjectProducts`, which 500'd the first invoice saved against a
+   project. */
+const barePhpLine = (line) => line
+    .replace(/'(?:\\.|[^'\\])*'/g, "''")
+    .replace(/"(?:\\.|[^"\\])*"/g, '""')
+    .replace(/\/\/.*$/, '')
+    .replace(/#[^\[]*$/, '')
+    .replace(/\/\*.*?\*\//g, '');
+
+const ternaryTokens = (line) => {
+    const text = barePhpLine(line);
+    const tokens = [];
+    let depth = 0;
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if ('([{'.includes(char)) { depth++; continue; }
+        if (')]}'.includes(char)) { depth--; continue; }
+        if (depth !== 0) continue;
+
+        if (char === ':') {
+            if (next === ':') { i++; continue; }
+            tokens.push({ kind: 'colon', at: i });
+            continue;
+        }
+        if (char !== '?') continue;
+        if (next === '?') { i++; continue; }
+        if (next === '-' && text[i + 2] === '>') { i += 2; continue; }
+        if (next === ':') { tokens.push({ kind: 'short', at: i }); i++; continue; }
+        tokens.push({ kind: 'long', at: i });
+    }
+
+    return tokens;
+};
+
+const nestedTernarySites = (text) => {
+    const sites = [];
+
+    text.split('\n').forEach((line, index) => {
+        if (/^\s*(\*|\/\*)/.test(line)) return;
+
+        const tokens = ternaryTokens(line);
+        let flagged = false;
+
+        /* A long ternary whose else operand holds another ternary. */
+        for (const token of tokens.filter((candidate) => candidate.kind === 'long')) {
+            const colon = tokens.find((candidate) => candidate.kind === 'colon' && candidate.at > token.at);
+            if (!colon) continue;
+
+            const after = tokens.find((candidate) => candidate.at > colon.at && candidate.kind !== 'colon');
+            if (!after) continue;
+            if (line.slice(colon.at, after.at).includes(';')) continue;
+
+            flagged = true;
+        }
+
+        /* A long ternary that follows a short one. */
+        tokens.forEach((token, position) => {
+            const next = tokens[position + 1];
+            if (token.kind !== 'short' || !next || next.kind !== 'long') return;
+            if (line.slice(token.at, next.at).includes(';')) return;
+
+            flagged = true;
+        });
+
+        if (flagged) sites.push(`${index + 1}: ${line.trim()}`);
+    });
+
+    return sites;
+};
+
+const ternarySites = [
+    ...phpFiles.flatMap(file => nestedTernarySites(fs.readFileSync(file, 'utf8'))
+        .map(site => `${rel(file)}:${site}`)),
+    ...bladeFiles.flatMap(file => phpIslands(fs.readFileSync(file, 'utf8'))
+        .flatMap(island => nestedTernarySites(island.expression)
+            .map(site => `${rel(file)} near line ${island.line} (${island.kind}) — ${site}`))),
+];
+
+check('no nested ternary is left without its parentheses',
+    ternarySites.length === 0, ternarySites.slice(0, 3).join(' | '));
 
 /* An app class called statically has to be imported (or be in this file's own
    namespace). php-parser checks grammar, not names: a bare `DateRanges::normalise()`
