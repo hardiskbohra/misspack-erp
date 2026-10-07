@@ -9,7 +9,7 @@
         aria-labelledby="assetRegisterTitle">
         <form method="POST" action="{{ route('assets.store') }}" data-asset-form="register">
             @csrf
-            <input type="hidden" name="_dialog" value="assetRegisterModal">
+            <input type="hidden" name="_dialog" value="register">
 
             <div class="master-modal-header">
                 <div class="master-modal-heading">

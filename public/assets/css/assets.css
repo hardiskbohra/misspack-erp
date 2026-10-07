@@ -41,8 +41,7 @@
    Everything drawn inside one owes its own inset, and a card of this module's own
    takes the guideline's 20–22px. (The cards that hold tables deliberately do not
    wear this class: their rows carry the shared list's rhythm.) */
-.fixed-assets .ast-block,
-.fixed-assets .ast-cat-card {
+.fixed-assets .ast-block {
     padding: 20px 22px;
 }
 
@@ -52,7 +51,6 @@
 
 .ast-block-head,
 .ast-panel-head,
-.ast-cat-head,
 .ast-group-head {
     display: flex;
     align-items: flex-start;
@@ -63,7 +61,7 @@
 
 /* The shared title carries a bottom margin for the content under a heading;
    inside a head that is that margin of nothing before the block's own inset. */
-.fixed-assets :is(.ast-block-head, .ast-panel-head, .ast-cat-head, .ast-group-head) > div > :is(h2, h3, .master-section-title) {
+.fixed-assets :is(.ast-block-head, .ast-panel-head, .ast-group-head) > div > :is(h2, h3, .master-section-title) {
     margin-bottom: 4px;
 }
 
@@ -397,66 +395,42 @@
     border-top: 2px solid var(--ui-accent);
 }
 
-/* ----------------------------------------------------------- the settings list */
+/* ------------------------------------------------------ the settings list */
 
+/* The classes are a list like every other list in this application: a comfortable
+   table in a card that carries no padding, with the toolbar's own inset above it.
+   It used to be a grid of in-place forms — one per row — and a form row is not a
+   list row: the fields outgrew the card, the last two fell off its right edge, and
+   every save re-sent fields the record did not have. One dialog, addressed by the
+   row's own door, is smaller than the grid was. */
 .ast-settings {
     display: flex;
     flex-direction: column;
     gap: 16px;
 }
 
-.ast-cat-list {
-    display: flex;
-    flex-direction: column;
-    margin-top: 6px;
+.ast-cat-table {
+    min-width: 1080px;
 }
 
-/* A class is a row that is a form: the fields sit on one grid, and the row's
-   fields are what the office changes in place rather than opening a dialog per
-   class. */
-.ast-cat-row {
-    display: grid;
-    grid-template-columns: minmax(220px, 1.4fr) repeat(2, minmax(120px, .8fr)) minmax(110px, .6fr) minmax(90px, .5fr) minmax(180px, 1fr) auto auto;
-    align-items: end;
-    gap: 12px 16px;
-    padding: 16px 0;
-    border-top: 1px solid var(--ui-border);
-}
-
-.ast-cat-row:first-child {
-    border-top: 0;
-}
-
+/* The class's name under its code, in a table cell: the code's pill is the key,
+   the name is what a person reads. */
 .ast-cat-name {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
+    display: block;
+    margin-top: 3px;
+    font-weight: 600;
 }
 
-.ast-cat-field,
-.ast-cat-name > .master-input {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
+/* A delete form that has to sit beside a button rather than under it. */
+.ast-inline-form {
+    display: inline;
 }
 
-.ast-cat-field .master-label {
-    margin: 0;
-}
-
-.ast-cat-state {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    align-items: flex-start;
-}
-
-.ast-cat-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
+/* The numeric cells: right-aligned, tabular, and never wrapped. */
+.ast-col-num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 /* The form's own grid inside the register's dialog: a divider between the blocks
@@ -502,17 +476,6 @@
 }
 
 /* -------------------------------------------------------------- responsive */
-
-@media (max-width: 1200px) {
-    .ast-cat-row {
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    }
-
-    .ast-cat-name,
-    .ast-cat-actions {
-        grid-column: 1 / -1;
-    }
-}
 
 @media (max-width: 900px) {
     .ast-panel {

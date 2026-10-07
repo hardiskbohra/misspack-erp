@@ -316,6 +316,40 @@ assets in it.
   written down from now on. Assets with their own recipe are untouched, and the
   page says so before the office presses save.
 
+The list itself is a table — a class per row, its actions in the last cell —
+because a class is a record with nine fields, and nine inputs in a grid of eight
+columns is not a row of a list, it is a form that happens to look like one. It
+clipped its own Notes and Save off the right edge of the card, and the corner it
+had was measured in a `notes` input that could never fit. It follows the same
+shape as every other master list in the settings module: `.master-card` holding a
+toolbar, a `.master-table-wrap` (which is also where the horizontal scroll lives
+below the desktop breakpoint) and a `.master-table`, with `data-label` on every
+cell so the same rows re-flow into labelled cards on a phone.
+
+**One dialog, two doors, and every door carries what the write needs.** *Add*
+opens the dialog pointed at the collection; *Change* opens the same dialog pointed
+at that row, and hands it the row's own values — including the `code`, which was
+the actual cause of the validation error ("The code field is required.") that
+appeared when a class was edited. The validator was right: `code` is required, and
+unique ignoring the record being edited. The row was simply never telling the
+form what its code was, so the form sent nothing. The fix is on the form side —
+the door passes a `data-payload` and the script fills the fields from it; the rule
+was not weakened to `sometimes`, and the dialog now carries exactly the keys
+`AssetSettingController::validatedData()` reads, so a dialog that stops offering a
+field its validator requires fails the check instead of the office.
+
+A failed save comes back to **that row's** dialog: the form remembers the row it
+was about in `_record`, and the reopen happens through the row's own door, so the
+typing survives and the second attempt is aimed at the same class rather than at
+whatever the add door meant. For that to work the marker that names the dialog
+(`_dialog`), the word the door carries (`data-open-asset-modal`) and the key the
+form itself answers to (`data-asset-form`) have to be **the same word** —
+`register`, `edit`, `allocate`, `return`, `maintenance`, `verify`, `dispose` for
+the register's dialogs, `category` for this one. They were not: every dialog
+answered to its modal's *id* (`assetCategoryModal`) while every door spoke the
+*action*, so `form[data-asset-form="assetCategoryModal"]` matched nothing and no
+failed save ever reopened anything. A reader cannot see that; `tools/checks/assets-dialog-check.cjs` runs it.
+
 ---
 
 ## 9. What is checked
@@ -332,6 +366,20 @@ proved without a PHP runtime.
 The dialog behaviour is checked too — a marker names the form, the form owns the
 dialog, a shared dialog clears itself before it is filled again, and a failed
 save reopens the dialog it came from with the typing kept.
+
+`tools/checks/assets-dialog-check.cjs` goes further and **runs the dialogs**: it
+puts the module's own `assets.js` on a real DOM (jsdom), renders the doors and the
+forms from the views' own vocabulary, and clicks them. It promises that a change
+door opens addressed at its own row with the row's values in the fields and the
+right verb in `_method`; that an add door posts to the collection again, clears
+the typing and empties `_record`; that a retired class comes back with its
+checkbox clear and the hidden "no" intact; and that a save which failed reopens
+the dialog it came from, still addressed at the same row, with the typing kept.
+The fixtures are not invented: the check re-reads each fixture's field names and
+payload keys out of the views it claims to describe, so a form that stops
+offering a field fails even if the fixture was updated to match. This is the only
+check that can catch the class of bug the reopen marker was — a lookup that
+returns `null` reads exactly like a lookup that works.
 
 Two promises exist because there is **no PHP runtime where this was built**, and a
 page that reads a name that does not exist fails in the reader's face rather than

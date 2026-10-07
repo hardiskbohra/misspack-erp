@@ -94,6 +94,7 @@ const files = {
     report: 'resources/views/assets/depreciation.blade.php',
     settings: 'resources/views/settings/assets.blade.php',
     overview: 'resources/views/assets/partials/tab-overview.blade.php',
+    editDialog: 'resources/views/assets/partials/modal-edit.blade.php',
     dispose: 'resources/views/assets/partials/modal-dispose.blade.php',
     form: 'resources/views/assets/partials/asset-form.blade.php',
     sheet: 'public/assets/css/assets.css',
@@ -580,6 +581,153 @@ check('the two halves point at each other, so neither is a dead end',
     has(src.index, "route('settings.assets')")
     && has(src.settings, "route('assets.index')"),
     'the register says where the recipe comes from; the recipe says where the assets are');
+
+/* ═══════════════════════════════════════ the classes list ═══════════════════ */
+
+/* **The promise that would have caught the reported fatal.** `update()` validates
+   the whole record — the code included — so the dialog that saves a class has to
+   *carry* the whole record. A form that sends part of one is a form whose save
+   fails on the field it left out, which is exactly what happened: the code was a
+   label on the row, the validator asked for it, and clearing a name then saving
+   answered "The code field is required."
+
+   The keys are read from the validator itself, so a field added to the rule set
+   without a field added to the form reddens here rather than in the office. */
+const validatedKeys = (() => {
+    const body = src.settingController.slice(
+        src.settingController.indexOf('$request->validate(['),
+        src.settingController.indexOf('$data[\'code\']'),
+    );
+    /* `is_active` is read outside `validate()` — `$request->boolean('is_active')`
+       — and is no less a field of the form for that. */
+    const keys = new Set([...body.matchAll(/^\s*'([a-z_]+)'\s*=>/gm)].map((m) => m[1]));
+    keys.add('is_active');
+
+    return keys;
+})();
+
+/* Hidden inputs do not count: `name="is_active"` on a hidden field carries the
+   *cleared* answer, and a field the office cannot reach is not a field of the
+   form. What a save needs is a control somebody can type in. */
+const dialogInputs = new Set([
+    ...src.settings
+        .replace(/<input type="hidden"[^>]*>/g, '')
+        .matchAll(/name="([a-z_]+)"/g),
+].map((m) => m[1]));
+
+check('the dialog that saves a class carries every field the class validator writes',
+    validatedKeys.size >= 8
+    && [...validatedKeys].every((key) => dialogInputs.has(key))
+    && ![...validatedKeys].some((key) => !has(src.settings, `name="${key}"`)),
+    'a form that sends part of a record cannot save the record — '
+    + [...validatedKeys].filter((key) => !dialogInputs.has(key)).join(', '));
+
+check('a door that reuses one dialog names its own address and verb',
+    /* The class dialog both creates and changes, so its doors say which. The
+       register's dialogs do one thing each and say nothing, which is why the
+       check is about *this* dialog rather than about every door. */
+    has(src.settings, 'data-open-asset-modal="category"')
+    && has(src.settings, 'data-asset-form="category"')
+    && times(src.settings, 'data-open-asset-modal="category"') === times(src.settings, 'data-action=')
+    && has(src.settings, "data-method=\"PUT\"")
+    && has(src.settings, "data-method=\"POST\"")
+    && has(src.settings, 'data-record='),
+    'one dialog, two doors: the door names where it posts and which verb, or the add posts to the row it meant to change');
+
+/* The row's own values, not a promise that a payload exists somewhere in the
+   file. The payload is read out of the row's own `@php` block and every key the
+   validator writes has to be there **and read off the row**, and the door has to
+   be the one that posts it; the script then has to fill the fields by their own
+   names, or the JSON is a payload nothing consumes. */
+const payloadBlock = (src.settings.match(/\$payload = \[([\s\S]*?)\];/) || [])[1] || '';
+const payloadKeys = [...payloadBlock.matchAll(/'([a-z_]+)'\s*=>/g)].map((m) => m[1]);
+
+check('a row hands the dialog its own values, so nothing is typed twice',
+    has(src.settings, "data-payload='@json($payload)'")
+    && has(src.settings, 'data-action=')
+    && validatedKeys.size >= 8
+    && [...validatedKeys].every((key) => payloadKeys.includes(key))
+    && payloadKeys.length === [...validatedKeys].length
+    && [...validatedKeys].every((key) => new RegExp(`'${key}'\\s*=>\\s*\\$category`).test(payloadBlock))
+    && has(code.script, "JSON.parse(door.getAttribute('data-payload') || '{}')")
+    && /form\.querySelectorAll\('\[name="' \+ name \+ '"\]'\)/.test(code.script)
+    && has(code.script, 'Object.keys(data)'),
+    "a dialog filled from the row is the row's own values; a payload that is not "
+    + "read off the row, or not written back by the field's own name, is a second "
+    + "place to make a mistake — "
+    + [...validatedKeys].filter((key) => !payloadKeys.includes(key)).join(', '));
+
+/* The row the save came from, so a failed change reopens the row it was about —
+   and the reopen path is the one that must not reset the form, because the
+   server has already put the office's typing back into it. */
+check('a save that fails comes back to the row it was about, with the typing kept',
+    has(src.settings, 'name="_record"')
+    && has(src.settings, "old('_record')")
+    && has(code.script, 'data-record=')
+    && has(code.script, 'applyDoor(door, form, true)')
+    && !/form\.reset\(\)[\s\S]{0,200}data-open-dialog/.test(code.script)
+    && has(code.script, 'data-open-asset-modal="\' + reopen + \'"]'),
+    'a shared dialog reopened without its row is a save with nowhere to go');
+
+/* Two rules in the module's script that a small "improvement" would quietly
+   break, both of them about a form that posts somewhere it should not. */
+check('a door that says nothing leaves the form its own method',
+    /* The register's dialogs do one thing each and name no verb; the asset edit
+       dialog posts as a PUT and says so in its own markup. A helper that wrote
+       `_method` unconditionally would strip it and turn that save into a POST —
+       which a PUT route answers with a 405. */
+    has(code.script, 'if (method === null) return;')
+    && has(src.editDialog, "@method('PUT')")
+    && !has(src.overview, 'data-method=')
+    && has(src.overview, 'data-open-asset-modal="edit"'),
+    'a door that says nothing is a door about the form as it was rendered');
+
+check('a payload never writes a hidden field, so the cleared answer still travels',
+    /* `is_active` is a checkbox with a hidden `0` before it: unchecking it has to
+       send "no". If the filler wrote every field by name it would set the hidden
+       one to `1` as well, and the class would come back active however the office
+       left it. */
+    has(code.script, "if (field.type === 'hidden') return;")
+    && has(src.settings, '<input type="hidden" name="is_active" value="0">')
+    && src.settings.indexOf('<input type="hidden" name="is_active" value="0">')
+        < src.settings.indexOf('name="is_active" value="1"'),
+    'a checkbox on its own says nothing when it is cleared');
+
+/* The list is a table, the way every other list in this application is. It was a
+   grid of in-place forms, and a form row is not a list row: the fields outgrew
+   the card and the last columns fell off its right edge. */
+check('the classes are a table in a table card, not a grid of forms',
+    has(src.settings, 'master-card master-table-card master-card--flat')
+    && has(src.settings, 'master-list-toolbar')
+    && has(src.settings, 'master-table-wrap ui-mobile-cards')
+    && has(src.settings, '<table class="master-table')
+    /* A header with no `scope` is a header a screen reader reads as an ordinary
+       cell; a body cell with no `data-label` is a phone card field with no
+       caption. Both are counted, not sampled: one of eight is the whole bug. */
+    && [...src.settings.matchAll(/<th\b[^>]*>/g)].every((m) => /scope="col"/.test(m[0]))
+    && src.settings.match(/<th\b[^>]*>/g).length >= 8
+    && [...src.settings.matchAll(/<td\b[^>]*>/g)].every((m) => /data-label="/.test(m[0]))
+    && src.settings.match(/<td\b[^>]*>/g).length >= 8
+    /* A row does not post: the change is a door into the dialog, and the only
+       form in a row is the delete. */
+    && !/\saction="\{\{ route\('settings\.assets\.update'/.test(src.settings)
+    && times(src.settings, "route('settings.assets.destroy'") === 1
+    && times(src.settings, '<tr>') >= 2,
+    'a card that carries a table carries no padding; the toolbar has its own inset');
+
+check('the module sheet defines no row-form grid of its own',
+    !/\.ast-cat-row\s*\{/.test(plain(src.sheet))
+    && !/grid-template-columns:\s*minmax\(220px/.test(plain(src.sheet))
+    && has(plain(src.sheet), '.ast-cat-table'),
+    'a module grid that has to fit every field in one row is a grid that overflows the card');
+
+check('the percentages in the models go through the one formatter, like the views',
+    has(src.vocabulary, 'public static function percentLabelTrimmed(')
+    && !has(code.asset, 'number_format(')
+    && !has(code.category, 'number_format(')
+    && has(src.asset, 'percentLabelTrimmed(')
+    && has(src.category, 'percentLabelTrimmed('),
+    'a second `number_format()` for a percentage is the one that drifts');
 
 /* The report is asked for a year, and a year belongs to the company. */
 check('the depreciation report is company-wide, and says so on the page',

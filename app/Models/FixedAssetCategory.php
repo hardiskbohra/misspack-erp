@@ -80,6 +80,23 @@ class FixedAssetCategory extends Model
             return 'Not depreciated';
         }
 
-        return $this->lifeLabel().' · '.$this->methodLabel().' · '.rtrim(rtrim(number_format((float) $this->residual_percent, 2, '.', ''), '0'), '.').'% left';
+        return $this->lifeLabel().' · '.$this->methodLabel().' · '.AssetVocabulary::percentLabelTrimmed((float) $this->residual_percent).'% left';
+    }
+
+    /** The residual as the column says it — one formatter, the register's own. */
+    public function residualLabel(): string
+    {
+        return AssetVocabulary::percentLabel((float) $this->residual_percent);
+    }
+
+    /** Whether the class is still offered to new assets. */
+    public function stateLabel(): string
+    {
+        return $this->is_active ? 'In use' : 'Retired';
+    }
+
+    public function stateTone(): string
+    {
+        return $this->is_active ? 'success' : 'neutral';
     }
 }

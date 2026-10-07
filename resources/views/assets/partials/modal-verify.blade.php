@@ -12,7 +12,7 @@
         <form method="POST" action="{{ $action }}" data-asset-form="verify">
             @csrf
             @method('PATCH')
-            <input type="hidden" name="_dialog" value="assetVerifyModal">
+            <input type="hidden" name="_dialog" value="verify">
 
             <div class="master-modal-header">
                 <div class="master-modal-heading">

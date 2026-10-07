@@ -74,6 +74,16 @@ sidebar door, their own histories and their own pages, and this page only links
 to them. A register filed under Settings would have been the largest records
 module in the ERP pretending to be configuration.
 
+The sixth area's list is a list, not a grid: one row per class in a
+`.master-card` table, the actions in the last cell, the same shape as every other
+master list — and **one dialog behind both doors**. The change door hands the
+dialog the row's own values, `code` included, because `code` is required and
+unique-ignoring-this-record: a dialog opened without it answers *"The code field
+is required."* no matter what the reader typed, which is what the round that
+renamed this page fixed. The rule was not loosened to `sometimes`; the form was
+taught what the row already knew. `docs/fixed-assets.md` §8 has the detail and
+`tools/checks/assets-dialog-check.cjs` runs it.
+
 Each area's controller is unchanged in what it does: it validates, it writes, it
 redirects. What changed is the **view** it renders and the **route name** it
 sends the reader back to. A settings module that took over the writes would have

@@ -126,6 +126,19 @@ final class AssetVocabulary
         return number_format($percent, $decimals);
     }
 
+    /**
+     * The same percentage in prose — trailing zeros dropped, because "5% left" is
+     * how a sentence says it and "5.00%" is how a column says it.
+     *
+     * It trims the column form rather than calling `number_format()` again: two
+     * calls would be two definitions, and this one would be the one that drifts.
+     * (`rtrim` stops at the decimal point, so the integer's own zeros survive.)
+     */
+    public static function percentLabelTrimmed(float $percent): string
+    {
+        return rtrim(rtrim(self::percentLabel($percent), '0'), '.');
+    }
+
     /* --------------------------------------------------------------- the readers */
 
     public static function statusLabel(string $status): string

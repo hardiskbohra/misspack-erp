@@ -259,7 +259,7 @@ class FixedAsset extends Model
 
         return ($this->effectiveLifeYears().' '.\Illuminate\Support\Str::plural('year', $this->effectiveLifeYears()))
             .' · '.$this->methodLabel()
-            .' · '.rtrim(rtrim(number_format($this->effectiveResidualPercent(), 2, '.', ''), '0'), '.').'% left';
+            .' · '.AssetVocabulary::percentLabelTrimmed($this->effectiveResidualPercent()).'% left';
     }
 
     /* ------------------------------------------------------- state and labels */

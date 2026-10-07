@@ -12,7 +12,7 @@
 
    so this file never holds a list of dialog ids, never asks which page it is on,
    and never has to be told twice when a dialog is renamed or moved between the
-   register and the record. On top of that one mechanism it does four things:
+   register and the record. On top of that one mechanism it does five things:
 
      1. opens the dialog behind the marker (Escape, the backdrop and the close
         button are the shared `MasterModal` lifecycle in `app-layout.js` — a
@@ -24,13 +24,23 @@
         `form.reset()` puts every field back to what the server rendered, and only
         then does the row's own data go in — which is also why the row's menu
         carries the sentence ("Currently Ravi Patel at Unit 2"), not the dialog;
-     3. points the shared form at the asset the row meant (`data-action`), by
-        writing the URL the server already generated — `route('assets.allocate',
-        $asset)` — into the form's `action`;
-     4. re-opens the dialog a failed save came back from. The server names it in
-        the `_dialog` field, echoes it into the marker below, and the typing is
-        already in `old()`; the reopen path is deliberately separate from the
-        click path because it must **not** reset the form.
+     3. points the shared form at the row the door meant — the URL the server
+        already generated (`route('assets.allocate', $asset)`) into the form's
+        `action`, and the verb into its `_method` when the door names one. A
+        dialog that both creates and changes (the asset classes in Settings) is
+        one dialog with two doors, not two dialogs that drift apart;
+     4. **fills the form from the row** when the door carries one (`data-payload`,
+        a JSON object the row rendered). The add door carries no payload, so the
+        defaults the server rendered stand — which is exactly what "add" means;
+     5. re-opens the dialog a failed save came back from. The server names it in
+        the `_dialog` field — **the same word the door and the form use**, because
+        a marker that speaks one vocabulary on the way out and another on the way
+        back is a dialog nobody ever finds again — echoes it into the marker
+        below, and the typing is already in `old()`; the reopen path is
+        deliberately separate from the click path because it must **not** reset
+        the form. A shared dialog also remembers *which row* it was for
+        (`_record`), so the office comes back to the row they were working in and
+        not to a nameless form.
 
    The list's two shared behaviours — the whole row opening its asset, and the
    pinned header's shadow — are the shell's, called here rather than
@@ -68,14 +78,82 @@
     }
 
     /* The dialog's own sentence-writing elements, if it has them: the subject
-       line (which asset this is about) and the note under it (the state it is
-       in today). A dialog opened from the record has both already correct from
-       the server and carries no data attributes, so nothing is overwritten. */
+       line (which asset this is about), the note under it (the state it is in
+       today) and the footer's own word for the save. A dialog opened from the
+       record has all of them already correct from the server and its door carries
+       no data attributes, so nothing is overwritten. */
     function setText(modal, selector, text) {
         if (!modal || !text) return;
 
         var node = modal.querySelector(selector);
         if (node) node.textContent = text;
+    }
+
+    /* The row a door carries, as the server rendered it. A door with no payload
+       is a door about nothing at all — the add door — and returns nothing, which
+       is why the form's own defaults stand for it. */
+    function payloadOf(door) {
+        try {
+            return JSON.parse(door.getAttribute('data-payload') || '{}');
+        } catch (e) {
+            return {};
+        }
+    }
+
+    /* Write the row's values into the fields that carry those names. Hidden
+       fields are skipped on purpose: a hidden field is the server's own — the
+       verb, the row's identity — and a payload never writes one. */
+    function fill(form, data) {
+        Object.keys(data).forEach(function (name) {
+            form.querySelectorAll('[name="' + name + '"]').forEach(function (field) {
+                var value = data[name];
+
+                if (field.type === 'hidden') return;
+
+                if (field.type === 'checkbox') {
+                    field.checked = !!value && value !== '0';
+                } else if (field.type === 'radio') {
+                    field.checked = String(value) === field.value;
+                } else {
+                    field.value = (value === null || value === undefined) ? '' : value;
+                }
+            });
+        });
+    }
+
+    /* The verb the door means. `attribute()` returns null when the door says
+       nothing, and a door that says nothing leaves the form's own method alone —
+       the register's dialogs post as their server-rendered forms were built. */
+    function setMethod(form, method) {
+        if (method === null) return;
+
+        var field = form.querySelector('[name="_method"]');
+
+        if (!field) {
+            field = document.createElement('input');
+            field.type = 'hidden';
+            field.name = '_method';
+            form.appendChild(field);
+        }
+
+        field.value = method;
+    }
+
+    /* Point the shared form at the row this door means — and fill it from that
+       row, unless the server has already rendered the office's typing (the
+       reopen path, where resetting would throw away what they are fixing). */
+    function applyDoor(door, form, keep) {
+        if (!keep) form.reset();
+
+        var action = door.getAttribute('data-action');
+        if (action) form.setAttribute('action', action);
+
+        setMethod(form, door.getAttribute('data-method'));
+
+        var record = form.querySelector('[name="_record"]');
+        if (record) record.value = door.getAttribute('data-record') || '';
+
+        if (!keep) fill(form, payloadOf(door));
     }
 
     function onReady(fn) {
@@ -109,20 +187,13 @@
 
                 var form = modal.querySelector('form[data-asset-form="' + marker + '"]');
 
-                /* Which asset this door is for. Absent on the record's own
-                   buttons: there the form already posts to the asset it is
-                   about, and a reset is all that is needed. */
-                var action = trigger.getAttribute('data-action');
-
-                if (form && action) {
-                    form.reset();
-                    form.setAttribute('action', action);
-                } else if (form) {
-                    form.reset();
-                }
+                /* Which row this door is for — the address, the verb and the
+                   values, all of them the server's own rendering of the row. */
+                if (form) applyDoor(trigger, form, false);
 
                 setText(modal, '[data-asset-subject]', trigger.getAttribute('data-subject'));
                 setText(modal, '[data-asset-current]', trigger.getAttribute('data-current'));
+                setText(modal, '[data-asset-submit]', trigger.getAttribute('data-submit'));
 
                 openModal(modal);
 
@@ -146,7 +217,22 @@
             if (modal) {
                 /* No reset here: the server has already rendered `old()` into the
                    fields, and clearing them would throw away exactly what the
-                   reader is fixing. */
+                   reader is fixing. What a shared dialog *does* need is the row
+                   it was for: the form remembers it in `_record`, and that row's
+                   own door restores the address and the words — from the same
+                   payload the office's click would have used. */
+                var record = form.querySelector('[name="_record"]');
+                var door = record && record.value
+                    ? document.querySelector('[data-open-asset-modal="' + reopen + '"][data-record="' + record.value + '"]')
+                    : null;
+
+                if (door) {
+                    applyDoor(door, form, true);
+                    setText(modal, '[data-asset-subject]', door.getAttribute('data-subject'));
+                    setText(modal, '[data-asset-current]', door.getAttribute('data-current'));
+                    setText(modal, '[data-asset-submit]', door.getAttribute('data-submit'));
+                }
+
                 openModal(modal);
 
                 var first = modal.querySelector('input:not([type="hidden"]), select, textarea');

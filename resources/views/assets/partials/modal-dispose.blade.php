@@ -16,7 +16,7 @@
         <form method="POST" action="{{ $action }}" data-asset-form="dispose">
             @csrf
             @method('PATCH')
-            <input type="hidden" name="_dialog" value="assetDisposeModal">
+            <input type="hidden" name="_dialog" value="dispose">
 
             <div class="master-modal-header">
                 <div class="master-modal-heading">

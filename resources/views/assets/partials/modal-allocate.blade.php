@@ -19,7 +19,7 @@
     <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="assetAllocateTitle">
         <form method="POST" action="{{ $action }}" data-asset-form="allocate">
             @csrf
-            <input type="hidden" name="_dialog" value="assetAllocateModal">
+            <input type="hidden" name="_dialog" value="allocate">
 
             <div class="master-modal-header">
                 <div class="master-modal-heading">

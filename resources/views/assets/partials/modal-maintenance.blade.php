@@ -15,7 +15,7 @@
     <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="assetMaintainTitle">
         <form method="POST" action="{{ $action }}" data-asset-form="maintenance">
             @csrf
-            <input type="hidden" name="_dialog" value="assetMaintainModal">
+            <input type="hidden" name="_dialog" value="maintenance">
 
             <div class="master-modal-header">
                 <div class="master-modal-heading">

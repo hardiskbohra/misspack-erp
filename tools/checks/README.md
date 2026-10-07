@@ -102,14 +102,28 @@ node tools/checks/assets-check.cjs    # the fixed asset register: the asset stor
                                       # executed, the register's figures/chips/drawer/
                                       # tabs/dialogs/exports, every view's names,
                                       # methods and array keys resolving against the
-                                      # module, and the boundary that makes the register
-                                      # a module and the classes a setting
+                                      # module, the classes list being a table whose
+                                      # dialog carries every field its validator writes,
+                                      # and the boundary that makes the register a module
+                                      # and the classes a setting
+node tools/checks/assets-dialog-check.cjs
+                                      # the dialogs, **run** rather than read: a real DOM,
+                                      # the module's own script, and the promises that a
+                                      # door addresses the row it means, that an add takes
+                                      # the dialog back, and that a save which failed
+                                      # reopens *that row* with the typing kept
 ```
 
-Every check is dependency-free. `mark-check.cjs` additionally decodes the QR
-payloads with [`jsqr`](https://www.npmjs.com/package/jsqr) when it is installed
-(`npm i jsqr`); without it, the geometry checks still run and the decode checks
-report as skipped.
+Every check is dependency-free. Two of them do more when an optional package is
+installed:
+
+- `mark-check.cjs` decodes the QR payloads with
+  [`jsqr`](https://www.npmjs.com/package/jsqr) (`npm i jsqr`); without it the
+  geometry checks still run and the decode checks are skipped;
+- `assets-dialog-check.cjs` runs the module's dialogs against a real DOM with
+  [`jsdom`](https://www.npmjs.com/package/jsdom) (`npm i jsdom`, or point
+  `JSDOM_PATH` at wherever it was installed); without it the static promises still
+  run and the behaviour suite says it was skipped.
 
 The files use the `.cjs` extension because `package.json` declares
 `"type": "module"` for the Vite front end.
@@ -118,7 +132,7 @@ All of them exit non-zero on failure, so they can be wired into CI or a
 pre-push hook:
 
 ```bash
-for c in design blade php mark list ui-components status cost docs statement pdf-documents report projects employees invoices settings; do
+for c in design blade php mark list ui-components status cost docs statement pdf-documents report projects employees invoices settings assets assets-dialog; do
   node "tools/checks/$c-check.cjs" || exit 1
 done
 ```
@@ -139,6 +153,16 @@ There is no CI in this repository and no PHP runtime in the sandbox, so the
 checkers are the gate: they are run by hand before every commit, and each one is
 paired with a mutator (a plausible regression written into the tree) to prove the
 guards actually fail when the behaviour they describe is broken.
+
+One checker does run the product rather than read it. `assets-dialog-check.cjs`
+puts the fixed-asset module's own script on a real DOM and clicks its doors,
+because the interesting failures in a dialog are invisible to a reader: a lookup
+that returns `null` reads exactly like a lookup that works. Three of those shipped
+in one round — a dialog fed by lists only one of its two pages passed, a form that
+carried half the record its validator wrote, and a reopen marker that spoke the
+modal's id while every door spoke the action's word, so no failed save ever
+reopened its dialog. The first two were caught by reading; the third only fell out
+when the dialogs were run.
 
 ## What they cover
 
@@ -161,6 +185,10 @@ guards actually fail when the behaviour they describe is broken.
 | Address fitting | re-derives the character budget per line from the font and the 77 mm line, reads the threshold numbers out of the partial, and fails if a boundary address would be cut — the last line carries the pin code and country |
 | Rule order | the address size-step rules must come after the per-party rules they override, or they silently do nothing (same specificity) |
 | QR payload decode | a code that does not decode is not printable |
+| A door addresses the row it means | one dialog shared by every row of a list has to be pointed at the row, or the second save lands on the first |
+| An add takes the dialog back | after a change, the add door must post to the collection again — the same form, the other verb |
+| A failed save reopens *its* row | the marker has to speak the word the door and the form speak, or the lookup finds nothing and the typing is lost |
+| A payload never writes a hidden field | a cleared checkbox has to travel as "no", and the hidden answer is the server's own |
 | Index-page vocabulary | a list row and a list toolbar have one shape across modules: `scope="col"` headers, money in an `.is-num` cell that lines up with the totals, one primary action on the page, every status/type/label chip with a light **and** dark tone |
 | A list that keeps its context | the header of a long list stays in view with the totals row, and the reader decides how many rows fit — both are checked, not just styled |
 | Row linking | the row opens the record and the inner links/buttons keep their own click; the guard lives in JS and is checked, because a half-linked row is worse than none |

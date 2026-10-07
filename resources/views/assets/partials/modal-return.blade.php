@@ -11,7 +11,7 @@
         <form method="POST" action="{{ $action }}" data-asset-form="return">
             @csrf
             @method('PATCH')
-            <input type="hidden" name="_dialog" value="assetReturnModal">
+            <input type="hidden" name="_dialog" value="return">
 
             <div class="master-modal-header">
                 <div class="master-modal-heading">

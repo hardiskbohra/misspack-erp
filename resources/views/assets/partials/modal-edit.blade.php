@@ -10,7 +10,7 @@
         <form method="POST" action="{{ route('assets.update', $asset) }}" data-asset-form="edit">
             @csrf
             @method('PUT')
-            <input type="hidden" name="_dialog" value="assetEditModal">
+            <input type="hidden" name="_dialog" value="edit">
 
             <div class="master-modal-header">
                 <div class="master-modal-heading">
