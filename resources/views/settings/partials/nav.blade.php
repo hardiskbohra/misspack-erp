@@ -16,7 +16,11 @@
     and navigation is never `desktop-only`.
 --}}
 @php
-    $areas = $settingsAreas ?? [];
+    /* The one list. `AppServiceProvider` shares it with every settings view, so
+       no screen has to remember to pass it; the directory is asked directly as
+       well, because a rail that renders empty because a page forgot an argument
+       is a menu that says the module has no areas. */
+    $areas = $areas ?? app(\App\Services\SettingsDirectory::class)->areas();
     $current = $current ?? null;
 @endphp
 

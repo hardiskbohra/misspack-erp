@@ -1,7 +1,7 @@
 <div class="master-modal" id="orgContactModal" aria-hidden="true">
     <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="orgContactTitle">
-        <form method="POST" action="{{ route('organisation.contacts.store') }}" id="orgContactForm"
-            data-store="{{ route('organisation.contacts.store') }}"
+        <form method="POST" action="{{ route('settings.organisation.contacts.store') }}" id="orgContactForm"
+            data-store="{{ route('settings.organisation.contacts.store') }}"
             data-add-title="Add a contact"
             data-edit-title="Edit contact"
             data-add-sub="One person on a desk — sales, accounts, operations."

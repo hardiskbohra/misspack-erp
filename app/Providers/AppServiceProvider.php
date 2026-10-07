@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Listeners\OfficeBriefingSubscriber;
 use App\Models\Organisation;
 use App\Services\OfficeBriefing;
+use App\Services\SettingsDirectory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\View;
@@ -44,6 +45,15 @@ class AppServiceProvider extends ServiceProvider
             $stamp = @filemtime(public_path($path));
 
             return $stamp ? $url.'?v='.$stamp : $url;
+        });
+
+        /* The settings rail. Six screens wear it and none of them should have to
+           remember to hand it the list of areas: the composer reads the one
+           directory (`App\Services\SettingsDirectory`) every time, so a screen
+           added later gets the same rail as the rest, and an area can never be
+           missing from the menu of one page and present on another. */
+        View::composer('settings.*', function ($view) {
+            $view->with('areas', app(SettingsDirectory::class)->areas());
         });
 
         View::composer('layouts.app', function ($view) {

@@ -118,6 +118,11 @@ check('the hub marks no area, because the hub is not one',
     has(hub, "@include('settings.partials.nav', ['current' => null])")
     && has(rail, "$current === $area['key']"));
 
+check('the rail is fed by the shell, not by five screens remembering',
+    has(plain(read('app/Providers/AppServiceProvider.php')), "View::composer('settings.*'")
+    && has(rail, '$areas ?? app('),
+    'a screen that forgets the list must still get the module-wise menu, not an empty one');
+
 check('the rail says where the reader is, out loud',
     has(rail, 'aria-current="page"')
     && has(rail, 'is-active')
@@ -175,10 +180,39 @@ check('the settings routes sit inside the office door',
     && routes.indexOf("'/settings'") < routes.indexOf("Route::middleware('client.portal')"),
     'a settings screen is the office\'s, as it always was');
 
-check('every route a settings screen names is a route the file declares',
-    [...new Set([...['index', ...areas].flatMap(key =>
-        [...read(areaView(key)).matchAll(/route\('(settings\.[a-z0-9.]+)'/g)].map(m => m[1]))])]
-        .every(name => has(routes, `->name('${name}')`)));
+/* The move renamed routes, and a view that still names the old one throws the
+   first time somebody opens the page it is on — the modal partials of the
+   organisation screen did. So the walk follows what the module renders: the six
+   screens, every partial they include, and every route name in them, against the
+   names the file actually declares (resource routes included). */
+const declared = new Set([...routes.matchAll(/->name\('([^']+)'\)/g)].map(m => m[1]));
+
+[...routes.matchAll(/Route::resource\('([^']+)'/g)].map(m => m[1]).forEach(base =>
+    ['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'].forEach(verb => declared.add(`${base}.${verb}`)));
+
+const rendered = [];
+const walked = new Set();
+const walk = name => {
+    if (walked.has(name)) return;
+    walked.add(name);
+
+    const file = `resources/views/${name.split('.').join('/')}.blade.php`;
+    if (!exists(file)) return;
+    rendered.push(file);
+
+    [...blade(read(file)).matchAll(/@include(?:If)?\('([^']+)'/g)].forEach(m => walk(m[1]));
+};
+
+walk('settings.index');
+areas.forEach(key => walk(`settings.${key}`));
+
+const named = [...new Set(rendered.flatMap(file =>
+    [...read(file).matchAll(/route\('([a-z0-9._-]+)'/g)].map(m => m[1])))];
+const undeclared = named.filter(name => !declared.has(name));
+
+check('every route the settings screens and their partials name exists',
+    rendered.length >= 10 && named.length >= 8 && undeclared.length === 0,
+    undeclared.join(', ') || 'the module renders too few views to have walked the graph');
 
 /* --------------------------------------------------- the pages that moved */
 
