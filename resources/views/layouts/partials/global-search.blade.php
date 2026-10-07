@@ -8,7 +8,7 @@
             <button type="button" class="gs-esc" data-gs-close>Esc</button>
         </div>
         <div class="gs-body" data-gs-results>
-            <p class="gs-empty" id="globalSearchTitle">Clients, vendors, products, projects, leads, invoices, cashflow, shipments, tasks and people.</p>
+            <p class="gs-empty" id="globalSearchTitle">Clients, vendors, products, projects, leads, invoices, cashflow, shipments, tasks, people and settings.</p>
         </div>
         <div class="gs-foot">
             <span><kbd>↑</kbd><kbd>↓</kbd> move</span>

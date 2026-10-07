@@ -247,7 +247,7 @@ purchase module was built.
 ## 11. The decisions, as taken
 
 1. **The dimensions are editable in the app.** `feedback_master_options` holds them,
-   `feedback.settings` edits them, `FeedbackVocabulary` reads them, and the built-in
+   `settings.feedback` edits them, `FeedbackVocabulary` reads them, and the built-in
    six are the fallback so an unseeded table still renders a working form. Retiring
    a line is safe — the answers that scored it keep their numbers and wear the new
    name; deleting is only offered while nothing has ever been scored on it.

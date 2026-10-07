@@ -20,7 +20,7 @@
         <div class="master-modal-footer ob-foot">
             <p class="master-modal-lead">
                 Critical items clear for the office when one person marks them read.
-                <a href="{{ route('office-alerts.settings') }}">Organisation settings</a>
+                <a href="{{ route('settings.briefings') }}">Organisation settings</a>
             </p>
         </div>
     </div>

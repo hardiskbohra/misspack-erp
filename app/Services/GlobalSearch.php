@@ -19,6 +19,10 @@ use Throwable;
 
 class GlobalSearch
 {
+    public function __construct(private SettingsDirectory $settings)
+    {
+    }
+
     public function lookup(string $query, int $perGroup = 4): array
     {
         $query = trim($query);
@@ -60,6 +64,22 @@ class GlobalSearch
                 'label' => $source['label'],
                 'icon' => $source['icon'],
                 'results' => $rows,
+            ];
+        }
+
+        /* Settings are not rows, so they have no model to search and no table to
+           check: an area is found by what it holds and by the words a person
+           uses for it (nobody types "briefings" when they want the emails off).
+           Appended after the records because they are a different kind of
+           answer, and the group only appears when it has something to say. */
+        $settings = $this->settings->searchHits($query, $perGroup);
+
+        if ($settings !== []) {
+            $groups[] = [
+                'key' => 'settings',
+                'label' => 'Settings',
+                'icon' => 'fas fa-sliders',
+                'results' => $settings,
             ];
         }
 

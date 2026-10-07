@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmployeeDocumentController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\CashflowAttachmentController;
 use App\Http\Controllers\CashflowController;
 use App\Http\Controllers\CashflowRecurrenceController;
 use App\Http\Controllers\CashflowSettingController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\PartyStatementController;
 use App\Http\Controllers\ClientPortalStatementController;
 use App\Http\Controllers\PriceCalculatorController;
@@ -131,28 +133,84 @@ Route::middleware('auth')->group(function () {
 
         Route::redirect('/dashboard', '/clients');
         Route::get('/search', GlobalSearchController::class)->name('search');
+
+        /* =====================================================================
+           SETTINGS — the one place every module's settings live.
+
+           One module with a rail of areas. Each area's screen, validation and
+           writes stay with the controller that has always owned them, and
+           `App\Services\SettingsDirectory` is the single list both the hub and
+           the rail are drawn from — an area cannot be in the menu and missing
+           from the hub, or renamed in one and not the other.
+
+           A **setting** here is a rule or a master list that changes how a
+           module behaves for everybody. A module's own records — a product, a
+           service, a user, a note — are that module's work, not its settings,
+           and keep the pages they have. The boundary is written down in
+           `docs/settings-module.md`.
+
+           Every URL these five surfaces ever had keeps working: see the
+           redirects where the old routes were.
+           ===================================================================== */
+        Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+
+        // Organisation — the company record every document prints from.
+        Route::get('/settings/organisation', [OrganisationController::class, 'index'])->name('settings.organisation');
+        Route::put('/settings/organisation', [OrganisationController::class, 'update'])->name('settings.organisation.update');
+        Route::post('/settings/organisation/addresses', [OrganisationController::class, 'storeAddress'])->name('settings.organisation.addresses.store');
+        Route::put('/settings/organisation/addresses/{address}', [OrganisationController::class, 'updateAddress'])->name('settings.organisation.addresses.update');
+        Route::delete('/settings/organisation/addresses/{address}', [OrganisationController::class, 'destroyAddress'])->name('settings.organisation.addresses.destroy');
+        Route::post('/settings/organisation/contacts', [OrganisationController::class, 'storeContact'])->name('settings.organisation.contacts.store');
+        Route::put('/settings/organisation/contacts/{contact}', [OrganisationController::class, 'updateContact'])->name('settings.organisation.contacts.update');
+        Route::delete('/settings/organisation/contacts/{contact}', [OrganisationController::class, 'destroyContact'])->name('settings.organisation.contacts.destroy');
+        Route::post('/settings/organisation/socials', [OrganisationController::class, 'storeSocial'])->name('settings.organisation.socials.store');
+        Route::put('/settings/organisation/socials/{social}', [OrganisationController::class, 'updateSocial'])->name('settings.organisation.socials.update');
+        Route::delete('/settings/organisation/socials/{social}', [OrganisationController::class, 'destroySocial'])->name('settings.organisation.socials.destroy');
+        Route::post('/settings/organisation/banks', [OrganisationController::class, 'storeBank'])->name('settings.organisation.banks.store');
+        Route::put('/settings/organisation/banks/{bank}', [OrganisationController::class, 'updateBank'])->name('settings.organisation.banks.update');
+        Route::delete('/settings/organisation/banks/{bank}', [OrganisationController::class, 'destroyBank'])->name('settings.organisation.banks.destroy');
+
+        // Briefings — what the office is told about, and who is emailed.
+        Route::get('/settings/briefings', [OfficeBriefingSettingController::class, 'index'])->name('settings.briefings');
+        Route::put('/settings/briefings', [OfficeBriefingSettingController::class, 'update'])->name('settings.briefings.update');
+
+        // Leads — the dropdown master data the lead forms offer.
+        Route::get('/settings/leads', [LeadSettingController::class, 'index'])->name('settings.leads');
+        Route::post('/settings/leads/options', [LeadSettingController::class, 'store'])->name('settings.leads.store');
+        Route::put('/settings/leads/options/{option}', [LeadSettingController::class, 'update'])->name('settings.leads.update');
+        Route::delete('/settings/leads/options/{option}', [LeadSettingController::class, 'destroy'])->name('settings.leads.destroy');
+
+        // Feedback — the scorecard lines the client scores.
+        Route::get('/settings/feedback', [FeedbackController::class, 'settings'])->name('settings.feedback');
+        Route::post('/settings/feedback/dimensions', [FeedbackController::class, 'storeDimension'])->name('settings.feedback.dimensions.store');
+        Route::patch('/settings/feedback/dimensions/{dimension}', [FeedbackController::class, 'updateDimension'])->name('settings.feedback.dimensions.update');
+        Route::delete('/settings/feedback/dimensions/{dimension}', [FeedbackController::class, 'destroyDimension'])->name('settings.feedback.dimensions.destroy');
+
+        // Cashflow — the accounts, categories and option lists the ledger is kept in.
+        Route::get('/settings/cashflow', [CashflowSettingController::class, 'index'])->name('settings.cashflow');
+        Route::post('/settings/cashflow/accounts', [CashflowSettingController::class, 'storeAccount'])->name('settings.cashflow.accounts.store');
+        Route::put('/settings/cashflow/accounts/{account}', [CashflowSettingController::class, 'updateAccount'])->name('settings.cashflow.accounts.update');
+        Route::delete('/settings/cashflow/accounts/{account}', [CashflowSettingController::class, 'destroyAccount'])->name('settings.cashflow.accounts.destroy');
+        Route::post('/settings/cashflow/categories', [CashflowSettingController::class, 'storeCategory'])->name('settings.cashflow.categories.store');
+        Route::put('/settings/cashflow/categories/{category}', [CashflowSettingController::class, 'updateCategory'])->name('settings.cashflow.categories.update');
+        Route::delete('/settings/cashflow/categories/{category}', [CashflowSettingController::class, 'destroyCategory'])->name('settings.cashflow.categories.destroy');
+        Route::post('/settings/cashflow/masters', [CashflowSettingController::class, 'storeMaster'])->name('settings.cashflow.masters.store');
+        Route::put('/settings/cashflow/masters/{master}', [CashflowSettingController::class, 'updateMaster'])->name('settings.cashflow.masters.update');
+        Route::delete('/settings/cashflow/masters/{master}', [CashflowSettingController::class, 'destroyMaster'])->name('settings.cashflow.masters.destroy');
         Route::get('/office-alerts', [OfficeAlertController::class, 'inbox'])->name('office-alerts.inbox');
         Route::patch('/office-alerts/{office_alert}/seen', [OfficeAlertController::class, 'seen'])->name('office-alerts.seen');
         Route::patch('/office-alerts/{office_alert}/ack', [OfficeAlertController::class, 'ack'])->name('office-alerts.ack');
         Route::patch('/office-alerts/{office_alert}/snooze', [OfficeAlertController::class, 'snooze'])->name('office-alerts.snooze');
         Route::patch('/office-alerts/{office_alert}/popup', [OfficeAlertController::class, 'popupShown'])->name('office-alerts.popup');
-        Route::get('/office-alerts/settings', [OfficeBriefingSettingController::class, 'index'])->name('office-alerts.settings');
-        Route::put('/office-alerts/settings', [OfficeBriefingSettingController::class, 'update'])->name('office-alerts.settings.update');
+        /* Every URL these five surfaces ever had stays open, and the query
+           string travels with the reader: on these screens the tab *is* the
+           address, and a bookmark of `?tab=categories` that lands on Accounts
+           is a broken link, not a redirect. */
+        // Settings moved to /settings/briefings. The old URL and its ?tab travel across.
+        Route::get('/office-alerts/settings', fn (Request $request) => redirect()->to(route('settings.briefings', $request->query()), 301))->name('office-alerts.settings');
 
-        Route::get('/organisation', [OrganisationController::class, 'index'])->name('organisation.settings');
-        Route::put('/organisation', [OrganisationController::class, 'update'])->name('organisation.update');
-        Route::post('/organisation/addresses', [OrganisationController::class, 'storeAddress'])->name('organisation.addresses.store');
-        Route::put('/organisation/addresses/{address}', [OrganisationController::class, 'updateAddress'])->name('organisation.addresses.update');
-        Route::delete('/organisation/addresses/{address}', [OrganisationController::class, 'destroyAddress'])->name('organisation.addresses.destroy');
-        Route::post('/organisation/contacts', [OrganisationController::class, 'storeContact'])->name('organisation.contacts.store');
-        Route::put('/organisation/contacts/{contact}', [OrganisationController::class, 'updateContact'])->name('organisation.contacts.update');
-        Route::delete('/organisation/contacts/{contact}', [OrganisationController::class, 'destroyContact'])->name('organisation.contacts.destroy');
-        Route::post('/organisation/socials', [OrganisationController::class, 'storeSocial'])->name('organisation.socials.store');
-        Route::put('/organisation/socials/{social}', [OrganisationController::class, 'updateSocial'])->name('organisation.socials.update');
-        Route::delete('/organisation/socials/{social}', [OrganisationController::class, 'destroySocial'])->name('organisation.socials.destroy');
-        Route::post('/organisation/banks', [OrganisationController::class, 'storeBank'])->name('organisation.banks.store');
-        Route::put('/organisation/banks/{bank}', [OrganisationController::class, 'updateBank'])->name('organisation.banks.update');
-        Route::delete('/organisation/banks/{bank}', [OrganisationController::class, 'destroyBank'])->name('organisation.banks.destroy');
+        // Settings moved to /settings/organisation. The old URL and its ?tab travel across.
+        Route::get('/organisation', fn (Request $request) => redirect()->to(route('settings.organisation', $request->query()), 301))->name('organisation.settings');
 
         // User Management (CRUD — all handled via modal on index page)
         Route::get('/users',             [UserController::class, 'index'])->name('users.index');
@@ -287,12 +345,9 @@ Route::middleware('auth')->group(function () {
 
         // Price Calculator
         Route::get('/price-calculator', [PriceCalculatorController::class, 'index'])->name('price-calculator.index');
-    
-        // Lead Settings Management
-        Route::get('/leads/settings', [LeadSettingController::class, 'index'])->name('leads.settings.index');
-        Route::post('/leads/settings/options', [LeadSettingController::class, 'store'])->name('leads.settings.store');
-        Route::put('/leads/settings/options/{option}', [LeadSettingController::class, 'update'])->name('leads.settings.update');
-        Route::delete('/leads/settings/options/{option}', [LeadSettingController::class, 'destroy'])->name('leads.settings.destroy');
+
+        // Settings moved to /settings/leads. The old URL and its ?tab travel across.
+        Route::get('/leads/settings', fn (Request $request) => redirect()->to(route('settings.leads', $request->query()), 301))->name('leads.settings.index');
 
         // Lead Comments Management
         Route::post('/leads/{lead}/comments', [LeadCommentController::class, 'store'])->name('leads.comments.store');
@@ -340,10 +395,8 @@ Route::middleware('auth')->group(function () {
            route name here is `feedback.*` so the sidebar can light one item for
            the whole module. */
         Route::get('/feedback/export', [FeedbackController::class, 'export'])->name('feedback.export');
-        Route::get('/feedback/settings', [FeedbackController::class, 'settings'])->name('feedback.settings');
-        Route::post('/feedback/dimensions', [FeedbackController::class, 'storeDimension'])->name('feedback.dimensions.store');
-        Route::patch('/feedback/dimensions/{dimension}', [FeedbackController::class, 'updateDimension'])->name('feedback.dimensions.update');
-        Route::delete('/feedback/dimensions/{dimension}', [FeedbackController::class, 'destroyDimension'])->name('feedback.dimensions.destroy');
+        // Settings moved to /settings/feedback. The old URL and its ?tab travel across.
+        Route::get('/feedback/settings', fn (Request $request) => redirect()->to(route('settings.feedback', $request->query()), 301))->name('feedback.settings');
         Route::post('/projects/{project}/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
         Route::get('/feedback/asks/{feedbackRequest}', [FeedbackController::class, 'show'])->name('feedback.show');
         Route::patch('/feedback-requests/{feedbackRequest}/revoke', [FeedbackController::class, 'revoke'])->name('feedback.revoke');
@@ -362,16 +415,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/cashflows/reports/pdf', [CashflowController::class, 'downloadPdf'])->name('cashflows.reports.pdf');
         Route::get('/cashflows/reports/export', [CashflowController::class, 'exportReport'])->name('cashflows.reports.export');
 
-        Route::get('/cashflows/settings', [CashflowSettingController::class, 'index'])->name('cashflows.settings.index');
-        Route::post('/cashflows/settings/accounts', [CashflowSettingController::class, 'storeAccount'])->name('cashflows.settings.accounts.store');
-        Route::put('/cashflows/settings/accounts/{account}', [CashflowSettingController::class, 'updateAccount'])->name('cashflows.settings.accounts.update');
-        Route::delete('/cashflows/settings/accounts/{account}', [CashflowSettingController::class, 'destroyAccount'])->name('cashflows.settings.accounts.destroy');
-        Route::post('/cashflows/settings/categories', [CashflowSettingController::class, 'storeCategory'])->name('cashflows.settings.categories.store');
-        Route::put('/cashflows/settings/categories/{category}', [CashflowSettingController::class, 'updateCategory'])->name('cashflows.settings.categories.update');
-        Route::delete('/cashflows/settings/categories/{category}', [CashflowSettingController::class, 'destroyCategory'])->name('cashflows.settings.categories.destroy');
-        Route::post('/cashflows/settings/masters', [CashflowSettingController::class, 'storeMaster'])->name('cashflows.settings.masters.store');
-        Route::put('/cashflows/settings/masters/{master}', [CashflowSettingController::class, 'updateMaster'])->name('cashflows.settings.masters.update');
-        Route::delete('/cashflows/settings/masters/{master}', [CashflowSettingController::class, 'destroyMaster'])->name('cashflows.settings.masters.destroy');
+        // Settings moved to /settings/cashflow. The old URL and its ?tab travel across.
+        Route::get('/cashflows/settings', fn (Request $request) => redirect()->to(route('settings.cashflow', $request->query()), 301))->name('cashflows.settings.index');
 
         /* The bills behind the ledger. Registered before the resource route so
            /cashflows/documents is the archive rather than a missing entry. A

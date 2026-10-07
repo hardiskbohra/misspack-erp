@@ -64,12 +64,22 @@
 </head>
 @php
     $uiModule = match (true) {
+        /* A settings area is still *that module's* settings screen: the module
+           adapters key a page's card and panel treatment on the module it
+           belongs to, so a cashflow settings page that stopped being a cashflow
+           page would lose the treatment its own rows were designed with. The
+           hub, which belongs to no single area, is the settings module. */
+        request()->routeIs('settings.cashflow*') => 'cashflows',
+        request()->routeIs('settings.organisation*') => 'users',
+        request()->routeIs('settings.leads*') => 'leads',
+        request()->routeIs('settings.feedback*') => 'feedback',
+        request()->routeIs('settings.briefings*') => 'briefings',
+        request()->routeIs('settings.*') => 'settings',
         request()->routeIs('notes.*') => 'notes',
         request()->routeIs('shipments.*') => 'shipments',
         request()->routeIs('clients.*') => 'clients',
         request()->routeIs('cashflows.*') => 'cashflows',
         request()->routeIs('users.*') => 'users',
-        request()->routeIs('organisation.*') => 'users',
         request()->routeIs('vendors.*') => 'vendors',
         default => null,
     };
@@ -126,8 +136,12 @@
                account, in the currency their statement is kept in. */
             ['label' => 'Statements', 'route' => 'cashflows.statements', 'active' => 'cashflows.statements*', 'icon' => 'fa-solid fa-file-invoice'],
             ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'icon' => 'fas fa-users-cog'],
-            ['label' => 'Organisation', 'route' => 'organisation.settings', 'active' => 'organisation.*', 'icon' => 'fas fa-building'],
-            ['label' => 'Briefings', 'route' => 'office-alerts.settings', 'active' => 'office-alerts.settings*', 'icon' => 'fas fa-bell'],
+            /* One door for every rule in the ERP. The module-wise menu is the
+               rail *inside* Settings, where the reader is already looking for a
+               setting and the five areas sit next to what they change; a second
+               tree here would be the same five links in two places, and the day
+               the two disagree is the day one of them is wrong. */
+            ['label' => 'Settings', 'route' => 'settings.index', 'active' => 'settings.*', 'icon' => 'fas fa-sliders'],
             /* Personal, not management: the office's own notes are private to
                the office's own login, exactly as an employee's are to theirs. */
             ['section' => 'Personal'],

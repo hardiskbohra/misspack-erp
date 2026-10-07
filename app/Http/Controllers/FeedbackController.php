@@ -288,7 +288,7 @@ class FeedbackController extends Controller
                 ->with('error', 'The scorecard table is not there yet — run the feedback migrations first.');
         }
 
-        return view('feedback.settings', [
+        return view('settings.feedback', [
             'dimensions' => FeedbackMasterOption::query()
                 ->group(FeedbackMasterOption::GROUP_DIMENSION)
                 ->ordered()

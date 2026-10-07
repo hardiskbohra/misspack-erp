@@ -69,6 +69,11 @@ node tools/checks/recurring-check.cjs # standing cashflow rules: a rule is not a
                                       # reconciliation, approval asked for on the effective date and
                                       # never before it, one notifier and one posting, and a rule
                                       # that is never editable once it has posted
+node tools/checks/settings-check.cjs   # the settings module: one list behind the hub and
+                                      # the rail, every module keeping its own rules and
+                                      # writes, the five pages that used to *be* the
+                                      # settings gone, and every old URL still opening with
+                                      # the tab it carried
 node tools/checks/employees-check.cjs # the employee side of the user module: the office door is
                                       # on the whole admin group, no personal route takes a user id,
                                       # a file is ownership-checked before it is served, a draft
@@ -96,7 +101,7 @@ All of them exit non-zero on failure, so they can be wired into CI or a
 pre-push hook:
 
 ```bash
-for c in design blade php mark list ui-components status cost docs statement pdf-documents report projects employees invoices; do
+for c in design blade php mark list ui-components status cost docs statement pdf-documents report projects employees invoices settings; do
   node "tools/checks/$c-check.cjs" || exit 1
 done
 ```

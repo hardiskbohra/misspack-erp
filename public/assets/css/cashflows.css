@@ -3,7 +3,8 @@
    --------------------------------------------------------------------------
    Module stylesheet for the Cashflow section: the ledger list's own cells
    (dates, particular, money columns, settlement tones), the reports dashboard
-   (cf-*), cashflow settings (.cf-setting/.cf-settings*) and the detail badges.
+   (cf-*), the cashflow settings rows (.cf-sub-card/.cf-account-row) and the
+   detail badges.
    The list chrome it sits in — chips, applied strip, density, pinned grid, totals row,
    empty state — is master-list.css, shared with every other list screen.
    Loaded on cashflow screens via @push('styles').
@@ -260,127 +261,17 @@
         }
 
 /* ==========================================================================
-   CASHFLOW SETTINGS — resources/views/cashflows/settings.blade.php
-   Settings page (.cf-setting; .cf-settings remains an alias).
+   CASHFLOW SETTINGS — resources/views/settings/cashflow.blade.php
+
+   The accounts, the categories and the option rows, now inside the settings
+   module. The page's canvas, head, tabs and alerts are gone from this sheet:
+   the module's `.set` chrome frames the page, and the shared `.master-*`
+   components own the head and the tabs on it exactly as on every other
+   settings screen. What is left here is what only these rows have.
    ========================================================================== */
-
-    .cf-settings,
-    .cf-setting,
-    .cf-settings *,
-    .cf-setting * {
-        box-sizing: border-box
-    }
-
-    .cf-settings,
-    .cf-setting {
-        background: var(--cf-bg);
-        min-height: calc(100vh - 70px);
-        padding: 28px;
-        color: var(--cf-dark);
-        font-size: 14px;
-        line-height: 1.45
-    }
-
-    .cf-card {
-        background: var(--mc-card);
-        border: 1px solid var(--cf-border);
-        border-radius: 18px;
-        box-shadow: var(--cf-shadow)
-    }
-
-    .cf-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 16px;
-        padding: 22px 28px;
-        margin-bottom: 24px
-    }
-
-    .cf-header h1 {
-        margin: 0;
-        font-size: 22px;
-        font-weight: 700
-    }
-
-    .cf-header p {
-        margin: 5px 0 0;
-        color: var(--cf-muted);
-        font-weight: 700
-    }
-
-    .cf-actions {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap
-    }
-
-    .cf-alert {
-        padding: 14px 16px;
-        margin-bottom: 18px;
-        border-radius: 14px;
-        font-weight: 700
-    }
-
-    .cf-alert-success {
-        color: #047857;
-        background: #e8fff7;
-        border: 1px solid #a7f3d0
-    }
-
-    .cf-alert-error {
-        color: #be123c;
-        background: #fff0f4;
-        border: 1px solid #fecdd3
-    }
-
-    .cf-tabs {
-        display: flex;
-        gap: 0;
-        border-bottom: 1px solid var(--cf-border);
-        overflow-x: auto
-    }
-
-    .cf-tab {
-        padding: 16px 24px;
-        color: var(--cf-dark);
-        text-decoration: none;
-        font-weight: 500;
-        border-bottom: 2px solid transparent;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        white-space: nowrap
-    }
-
-    .cf-tab.active {
-        color: var(--cf-primary);
-        border-bottom-color: var(--cf-primary);
-        background: var(--mc-card-soft)
-    }
 
     .cf-panel {
         padding: 22px
-    }
-
-    .cf-section-title {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin: 0 0 16px
-    }
-
-    .cf-section-title h2 {
-        margin: 0;
-        font-size: 18px;
-        font-weight: 700
-    }
-
-    .cf-section-title p {
-        margin: 4px 0 0;
-        color: var(--cf-muted);
-        font-weight: 600
     }
 
     .cf-form-grid {
@@ -392,12 +283,6 @@
 
     .cf-form-grid.two {
         grid-template-columns: repeat(2, minmax(0, 1fr))
-    }
-
-    .cf-help {
-        color: var(--cf-muted);
-        font-size: 12px;
-        font-weight: 700
     }
 
     .cf-sub-card {
@@ -488,10 +373,6 @@
     }
 
     @media(max-width:1280px) {
-        .cf-settings,
-        .cf-setting {
-            padding: 22px 18px
-        }
 
         .cf-form-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr))
@@ -512,16 +393,6 @@
     }
 
     @media(max-width:700px) {
-        .cf-settings,
-        .cf-setting {
-            padding: 14px
-        }
-
-        .cf-header {
-            align-items: flex-start;
-            flex-direction: column;
-            padding: 18px
-        }
 
         .cf-actions,
         .cf-actions .master-btn {
@@ -549,13 +420,6 @@
             width: 100%
         }
 
-        .cf-tabs {
-            padding: 0 4px
-        }
-
-        .cf-tab {
-            padding: 14px 16px
-        }
     }
 
 /* ==========================================================================

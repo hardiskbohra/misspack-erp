@@ -408,6 +408,14 @@
     border: 1px solid var(--master-border)
 }
 
+/* A field that needs the whole row of a `master-grid`. It was written on the
+   briefing settings' "also email" box and defined nowhere, so the four-row
+   textarea sat in one column of a two-column grid; this is the rule it was
+   asking for. */
+.master-field-full {
+    grid-column: 1 / -1;
+}
+
 .master-help {
     color: var(--master-muted);
     font-size: 12px;

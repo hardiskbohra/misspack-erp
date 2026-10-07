@@ -267,8 +267,12 @@
         }
 
 /* ==========================================================================
-   LEAD SETTINGS — resources/views/leads/settings.blade.php
-   Settings page (ls-*, --ls-*).
+   LEAD SETTINGS ROWS — resources/views/settings/leads.blade.php
+
+   The option rows of the lead master data, now inside the settings module
+   (ls-*, --ls-*). The page canvas, its header, its tab strip and its alerts
+   belonged to the page and left with it: the settings module's `.set` chrome
+   and the shared `.master-tabs` own those now.
    ========================================================================== */
 
 :root {
@@ -296,68 +300,6 @@
         overflow-x: hidden;
         color: var(--ls-dark);
         font-size: 14px;
-    }
-
-    .ls-card {
-        background: var(--bg-card, var(--ls-white));
-        border: 1px solid var(--border, var(--ls-border));
-        border-radius: 18px;
-        box-shadow: var(--shadow, var(--ls-shadow));
-    }
-
-    .ls-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        padding: 22px 26px;
-        margin-bottom: 22px;
-    }
-
-    .ls-header h1 {
-        margin: 0;
-        font-size: 22px;
-        font-weight: 700;
-        color: var(--text-primary, var(--ls-dark));
-    }
-
-    .ls-header p {
-        margin: 5px 0 0;
-        color: var(--text-muted, var(--ls-muted));
-        font-weight: 700;
-    }
-
-    .ls-actions {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    .ls-tabs {
-        display: flex;
-        gap: 0;
-        overflow-x: auto;
-        border-bottom: 1px solid var(--border, var(--ls-border));
-        background: rgba(79, 131, 241, 0.03);
-    }
-
-    .ls-tab {
-        padding: 16px 20px;
-        color: var(--text-secondary, var(--ls-muted));
-        text-decoration: none;
-        font-weight: 700;
-        border-bottom: 3px solid transparent;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        white-space: nowrap;
-        transition: .2s ease;
-    }
-
-    .ls-tab.active {
-        color: var(--ls-primary);
-        border-bottom-color: var(--ls-primary);
-        background: var(--bg-card, var(--mc-card));
     }
 
     .ls-panel {
@@ -458,25 +400,6 @@
         border-radius: 16px;
     }
 
-    .ls-alert {
-        padding: 14px 16px;
-        margin-bottom: 18px;
-        border-radius: 14px;
-        font-weight: 700;
-    }
-
-    .ls-alert-success {
-        color: #047857;
-        background: #e8fff7;
-        border: 1px solid #a7f3d0;
-    }
-
-    .ls-alert-error {
-        color: #be123c;
-        background: #fff0f4;
-        border: 1px solid #fecdd3;
-    }
-
     @media (max-width: 1199px) {
         .ls-form-grid,
         .ls-row {
@@ -490,25 +413,6 @@
     }
 
     @media (max-width: 767px) {
-        .ls-header {
-            flex-direction: column;
-            align-items: flex-start;
-            padding: 18px;
-        }
-
-        .ls-actions,
-        .ls-actions .master-btn {
-            width: 100%;
-        }
-
-        .ls-tabs {
-            padding: 0 4px;
-        }
-
-        .ls-tab {
-            padding: 14px 15px;
-            font-size: 13px;
-        }
 
         .ls-panel {
             padding: 16px;

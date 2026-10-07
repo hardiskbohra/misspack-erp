@@ -47,7 +47,7 @@
                             id="openQuickLeadModal">+ Quick Lead</button><a href="{{ route('leads.create') }}"
                             class="master-btn master-btn-soft">Detailed Form</a><a href="{{ route('leads.public.create') }}"
                             target="_blank" class="master-btn master-btn-light">Public Link</a><a
-                            href="{{ route('leads.settings.index') }}"
+                            href="{{ route('settings.leads') }}"
                             class="master-btn master-btn-light">Settings</a></div>
                 </div>
                 <x-drawer id="leadFiltersDrawer" title="Filter leads" eyebrow="Lead filters"

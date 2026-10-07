@@ -19,7 +19,7 @@ class LeadSettingController extends Controller
             $activeTab = 'lead_status';
         }
 
-        return view('leads.settings', [
+        return view('settings.leads', [
             'activeTab' => $activeTab,
             'groupOptions' => $groupOptions,
             'options' => LeadMasterOption::query()
@@ -40,7 +40,7 @@ class LeadSettingController extends Controller
         LeadMasterOption::create($data);
 
         return redirect()
-            ->route('leads.settings.index', ['tab' => $data['group']])
+            ->route('settings.leads', ['tab' => $data['group']])
             ->with('success', 'Lead master option created successfully.');
     }
 
@@ -54,7 +54,7 @@ class LeadSettingController extends Controller
         $option->update($data);
 
         return redirect()
-            ->route('leads.settings.index', ['tab' => $data['group']])
+            ->route('settings.leads', ['tab' => $data['group']])
             ->with('success', 'Lead master option updated successfully.');
     }
 
@@ -64,7 +64,7 @@ class LeadSettingController extends Controller
         $option->delete();
 
         return redirect()
-            ->route('leads.settings.index', ['tab' => $group])
+            ->route('settings.leads', ['tab' => $group])
             ->with('success', 'Lead master option deleted successfully.');
     }
 

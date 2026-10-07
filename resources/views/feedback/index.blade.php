@@ -4,7 +4,7 @@
 
 @section('page-actions')
     @if ($can['settings'])
-        <a class="master-btn master-btn-ghost" href="{{ route('feedback.settings') }}">
+        <a class="master-btn master-btn-ghost" href="{{ route('settings.feedback') }}">
             <i class="fa-solid fa-sliders" aria-hidden="true"></i> Scorecard
         </a>
     @endif

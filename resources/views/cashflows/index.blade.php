@@ -15,7 +15,7 @@
     <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.recurring.index') }}">Recurring</a>
     <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.documents') }}">Documents</a>
     <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.reports') }}">Reports</a>
-    <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.settings.index') }}">Settings</a>
+    <a class="master-btn master-btn-ghost desktop-only" href="{{ route('settings.cashflow') }}">Settings</a>
 @endsection
 
 @section('content')

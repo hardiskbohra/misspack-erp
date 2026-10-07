@@ -501,7 +501,7 @@ check('both lists drive the shared list toolkit',
 /* the list is the module's front door: the pages it links to and the dialogs
    it opens must stay reachable from it (a rebuild once shipped a list that
    rendered two modals nobody could open) */
-const moduleRoutes = ['cashflows.create', 'cashflows.reports', 'cashflows.settings.index'];
+const moduleRoutes = ['cashflows.create', 'cashflows.reports', 'settings.cashflow'];
 const missingRoutes = moduleRoutes.filter(name => !cashView.includes("route('" + name + "'"));
 check("the cashflow list keeps the module's destinations", missingRoutes.length === 0,
     missingRoutes.join(', '));
