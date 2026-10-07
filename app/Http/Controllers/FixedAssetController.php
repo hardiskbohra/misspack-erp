@@ -87,18 +87,16 @@ class FixedAssetController extends Controller
             'figures' => $figures,
             'stateCounts' => $stateCounts,
             'stateOptions' => AssetVocabulary::STATE_LABELS,
-            'conditionOptions' => AssetVocabulary::CONDITIONS,
             /* `statusOptions` (the four states, without "Everything") comes from
                `sharedData()` — the chips use `stateOptions` above, which carries
-               the extra "Everything" entry the form must not offer. */
+               the extra "Everything" entry the form must not offer, and the
+               lists every dialog needs come from there too. */
             'warrantyOptions' => AssetFilters::WARRANTY_LABELS,
             'verificationOptions' => AssetFilters::VERIFICATION_LABELS,
             'sortOptions' => AssetFilters::SORT_LABELS,
             'applied' => $applied,
             'filtered' => $applied !== [],
-            'locations' => $this->filters->locations(),
             'departments' => $this->filters->departments(),
-            'nextCode' => $this->intake->suggestCode(),
             ...$filters,
         ]));
     }
@@ -156,8 +154,6 @@ class FixedAssetController extends Controller
                 ->whereNotNull('next_due_on')
                 ->sortBy('next_due_on')
                 ->first(),
-            'conditionOptions' => AssetVocabulary::CONDITIONS,
-            'kindOptions' => AssetVocabulary::KINDS,
         ]));
     }
 
@@ -559,6 +555,15 @@ class FixedAssetController extends Controller
             'peopleOptions' => User::query()->orderBy('name')->get(['id', 'name']),
             'vendorOptions' => Vendor::query()->orderBy('vendor_name')->get(['id', 'vendor_name']),
             'statusOptions' => AssetVocabulary::STATUSES,
+            /* Every list the dialogs are filled from belongs here and not on one
+               screen. The dialogs are shared — the register renders them and the
+               record renders them — so a list that only one of those screens
+               passes is a list the other one fatals on, in whichever dialog
+               nobody opened while it was being built. */
+            'conditionOptions' => AssetVocabulary::CONDITIONS,
+            'kindOptions' => AssetVocabulary::KINDS,
+            'locations' => $this->filters->locations(),
+            'nextCode' => $this->intake->suggestCode(),
         ];
     }
 }

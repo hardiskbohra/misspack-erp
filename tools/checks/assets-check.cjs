@@ -18,9 +18,12 @@
                            lands on the residual, a disposal stops the curve,
                            and the two formulas are proved by porting them
      D. the page         — figures, chips, table, export and tabs read the same
-                           query; the dialogs are shared and the shell owns them;
-                           and every name, method, key, class, tone and font the
-                           views write is one the module and the shell have
+                           query; the dialogs are shared and the shell owns them,
+                           with the lists both screens render them from passed by
+                           both; and every name, method, key, class, tone and font
+                           the views write is one that view's own render will have
+                           (a name in common across the module is not enough — a
+                           partial counts on the intersection of its includers)
      E. the boundary     — the register is a module, the classes are a setting,
                            the report is company-wide by design
    ========================================================================== */
@@ -748,11 +751,18 @@ check('the badge tones and the notice-box modifiers the module writes are the sh
 /* A page that reads `$asset->netBookValued()` dies in the reader's face, and
    neither php-check (which parses) nor blade-check (which balances) can see it.
    There is no PHP in this sandbox to render the page, so the honest substitute
-   is this: every `$name` a module view reads is passed by its controller, bound
-   by a view in the module, or handed to an include; every method it calls on an
-   asset, a class, a hand-over or a repair exists on that model; and every key it
-   reads off a figure, a total, a report row or a year exists where that is
-   built. */
+   is this: every `$name` a module view reads must be **one its own render will
+   have**, computed scope by scope — a name has to be passed by the controller
+   that renders that page, or bound by the file, or handed down by every
+   `@include` that reaches it. A name in common across the module is not enough,
+   and assuming it was is exactly how a fatal in one dialog reached a browser:
+   `@include('modal-maintenance')` from the register read a list the register's
+   controller did not pass, while the record's did.
+
+   On top of the names: every method the views call on an asset, a class, a
+   hand-over or a repair exists on that model, every `AssetVocabulary::` /
+   `AssetFilters::` member exists, and every key read off a figure, a total, a
+   report row, a schedule row or a year exists where that array is built. */
 const modelMethods = (file) => new Set([...read(file).matchAll(/public function ([a-zA-Z_]\w*)\(/g)].map((m) => m[1]));
 const modelMembers = {
     asset: modelMethods(files.asset),
@@ -783,120 +793,188 @@ const bracketBody = (text, from) => {
     return '';
 };
 
-const controllerKeys = new Set();
-
-for (const text of [src.controller, src.settingController]) {
-    for (const m of text.matchAll(/array_merge\(\s*\$this->sharedData\(\)\s*,\s*\[/g)) {
-        for (const key of keysIn(bracketBody(text, m.index))) controllerKeys.add(key);
-    }
-    for (const m of text.matchAll(/view\('settings\.assets',\s*\[/g)) {
-        for (const key of keysIn(bracketBody(text, m.index))) controllerKeys.add(key);
-    }
-    for (const m of text.matchAll(/private function sharedData\(\)[\s\S]*?\n    \}/g)) {
-        for (const key of keysIn(m[0])) controllerKeys.add(key);
-    }
-    if (has(text, '...$filters')) {
-        const defaults = src.filters.split('public const DEFAULTS = [')[1].split('];')[0];
-        for (const key of keysIn(defaults)) controllerKeys.add(key);
-        controllerKeys.add('sort');
-    }
+/* The keys the controller hands one of its pages. `sharedData()` is every
+   screen's floor; a page adds its own. */
+const sharedKeys = new Set();
+for (const m of src.controller.matchAll(/private function sharedData\(\)[\s\S]*?\n    \}/g)) {
+    for (const key of keysIn(m[0])) sharedKeys.add(key);
 }
 
-/* Names a view binds itself — a `$x =`, a `@foreach` binding, a closure
-   parameter. A partial is rendered in its page's scope, so a name bound by any
-   view of the module counts for all of them; so does a name an `@include`
-   hands down. */
-/* Deliberately without `asset`: it is the module's subject and not a generic,
-   and leaving it here would also switch the method check off for the one object
-   most of these calls are made on. It arrives from the controller or an
-   `@include`. */
-const boundNames = new Set(['loop', 'errors', 'assetVer', 'slot', 'attributes', 'component', 'message']);
+const pageKeys = (method) => {
+    const start = src.controller.indexOf(`public function ${method}(`);
+    const rest = start < 0 ? '' : src.controller.slice(start);
+    const end = rest.slice(1).search(/\n    (?:public|private|protected) function /);
+    const body = end < 0 ? rest : rest.slice(0, end + 1);
+    const keys = new Set(sharedKeys);
+    const merge = body.match(/array_merge\(\s*\$this->sharedData\(\)\s*,\s*\[/);
 
-moduleViews.filter((file) => exists(file)).forEach((file) => {
-    const text = plain(read(file));
+    if (merge) for (const key of keysIn(bracketBody(body, merge.index))) keys.add(key);
+    if (has(body, '...$filters')) {
+        const defaults = src.filters.split('public const DEFAULTS = [')[1].split('];')[0];
+        for (const key of keysIn(defaults)) keys.add(key);
+        keys.add('sort');
+    }
 
-    for (const m of text.matchAll(/\$([a-zA-Z_]\w*)\s*=(?!=)/g)) boundNames.add(m[1]);
-    for (const m of text.matchAll(/\bas\s+\$([a-zA-Z_]\w*)/g)) boundNames.add(m[1]);
-    for (const m of text.matchAll(/\bas\s+\$[a-zA-Z_]\w*\s*=>\s*\$([a-zA-Z_]\w*)/g)) boundNames.add(m[1]);
+    return { keys, body };
+};
+
+const pages = {};
+for (const method of ['index', 'show', 'depreciation']) pages[method] = pageKeys(method);
+pages.settings = {
+    keys: keysIn(bracketBody(src.settingController, src.settingController.indexOf("view('settings.assets'"))),
+    body: src.settingController,
+};
+
+/* The names a view binds itself — a `$x =`, a `@foreach` binding, a closure
+   parameter — and the keys an `@include` hands down to another view. */
+const boundNames = (text) => {
+    const names = new Set();
+
+    for (const m of text.matchAll(/\$([a-zA-Z_]\w*)\s*=(?!=)/g)) names.add(m[1]);
+    for (const m of text.matchAll(/\bas\s+\$([a-zA-Z_]\w*)/g)) names.add(m[1]);
+    for (const m of text.matchAll(/\bas\s+\$[a-zA-Z_]\w*\s*=>\s*\$([a-zA-Z_]\w*)/g)) names.add(m[1]);
     for (const m of text.matchAll(/\b(?:fn|function|use)\s*\(([^)]*)\)/g)) {
-        for (const n of m[1].matchAll(/\$([a-zA-Z_]\w*)/g)) boundNames.add(n[1]);
+        for (const n of m[1].matchAll(/\$([a-zA-Z_]\w*)/g)) names.add(n[1]);
     }
-    for (const m of text.matchAll(/@include\(\s*'[^']+'[\s\S]{0,400}?\[/g)) {
-        for (const key of keysIn(bracketBody(text, m.index))) boundNames.add(key);
-    }
+
+    return names;
+};
+
+const includesOf = (text) => [...text.matchAll(/@include\(\s*'assets\.partials\.([a-z0-9-]+)'([^)]*)\)/g)]
+    .map((m) => {
+        const passed = m[2].indexOf('[');
+        return { name: m[1], passed: new Set(passed < 0 ? [] : keysIn(bracketBody(m[2], passed))) };
+    });
+
+/* The module's views, each with the two things the walk needs: what the file
+   reads, and where its `@include`s sit (a partial rendered from inside a
+   `@foreach` may read that loop's own binding). */
+const renderGraph = moduleViews.filter((file) => exists(file)).map((file) => {
+    const text = plain(read(file));
+    return { file, text, bound: boundNames(text), includes: includesOf(text) };
 });
 
-/* What each array actually carries. */
-/* `$figures` is `summary()`'s own array plus `curve()`'s, merged with `+=` in
-   the product — so the promise has to read both, or it would report the curve's
-   keys as missing when they are exactly where they should be. */
-const summaryKeys = new Set([
-    ...keysIn(methodBody(code.figures, 'summary')),
-    ...keysIn(methodBody(code.figures, 'curve')),
-    ...[...src.vocabulary.matchAll(/const STATUS_\w+ = '([a-z_]+)'/g)].map((m) => m[1]),
-    'warranty_soon', 'insurance_soon', 'verify_due', 'service_due',
-]);
-const totalKeys = keysIn(src.figures.split('private function emptyTotals()')[1].split('];')[0]);
-const reportRowKeys = new Set([
-    'id',
-    ...keysIn(src.figures.split("'id' => $asset->id,")[1].split('];')[0]),
-]);
-/* The schedule's rows are a different shape from the report's: read them off the
-   calculator's own `@return` line rather than out of its body. */
-const scheduleKeys = new Set([
-    ...[...src.depreciation.split('@return list<array{')[1].split('}>')[0]
-        .matchAll(/([a-z_]+):/g)].map((m) => m[1]),
-]);
-const yearKeys = new Set(['key', 'label', 'from', 'to']);
-const groupKeys = new Set(['category', 'rows', 'subtotal']);
+const boundIn = (text, name) => boundNames(text).has(name) || new RegExp(`as\\s+\\$${name}\\b`).test(text);
 
-const objectVars = {
-    asset: 'asset',
-    category: 'class',
-    allocation: 'allocation',
-    maintenance: 'maintenance',
+/* Start every partial wide — anything any view in the module binds — and then
+   shrink: a name survives in a partial only if **every** page or partial that
+   renders it can supply it. */
+const anywhere = new Set();
+for (const view of renderGraph) for (const name of view.bound) anywhere.add(name);
+/* …plus everything any page passes and anything any `@include` hands down: a
+   partial may be rendered by the file that has the name, so the walk starts
+   wide and narrows per includer — the widening is what makes `suffix`, which
+   only ever arrives through an include, visible at all. */
+for (const page of Object.values(pages)) for (const name of page.keys) anywhere.add(name);
+for (const view of renderGraph) for (const edge of view.includes) for (const name of edge.passed) anywhere.add(name);
+
+const available = {};
+for (const view of renderGraph) {
+    available[view.file] = view.file.includes('resources/views/assets/partials/')
+        ? new Set(anywhere)
+        : new Set([...pages[view.file === files.index ? 'index' : view.file === files.show ? 'show' : view.file === files.report ? 'depreciation' : 'settings'].keys, ...view.bound]);
+}
+
+/* What an `@include` can hand down beyond its own payload: the names the parent
+   bound **before** the include — a dialog included from inside a `@foreach` sees
+   that loop's row, exactly as it would if the markup were inlined there. Read off
+   the raw text, because the loop may wrap several attributes; false for every
+   include this module writes today, because a door is a marker and not a row. */
+const namesBoundBefore = (text, at) => {
+    const open = text.lastIndexOf('@foreach', at);
+    const close = open < 0 ? -1 : text.indexOf('@endforeach', open);
+    const names = new Set();
+
+    if (open < 0 || close < at) return names;
+
+    for (const m of text.slice(open, at).matchAll(/as\s+\$([a-zA-Z_]\w*)/g)) names.add(m[1]);
+
+    return names;
 };
-const staticMembers = {
-    AssetVocabulary: vocabularyMembers,
-    AssetFilters: filterMembers,
-    AssetDepreciation: depreciationMembers,
-    CommonHelper: helperMembers,
-};
+
+for (let pass = 0; pass < 12; pass++) {
+    let changed = false;
+
+    for (const { file, text, includes } of renderGraph) {
+        for (const { name, passed } of includes) {
+            const child = moduleViews.find((key) => key.endsWith(`/partials/${name}.blade.php`));
+
+            if (!child || !available[child]) continue;
+
+            const held = available[child];
+            const childText = plain(read(child));
+            const own = boundNames(childText);
+            const reads = new Set([...childText.matchAll(/\$([a-zA-Z_]+)/g)].map((m) => m[1]));
+
+            /* What the parent offers a child: its own names, the keys it passes,
+               the names it bound around the include, and the two the shell's
+               wrapper partials always carry — old() and the error bag. */
+            const offer = new Set([...available[file], ...passed, ...namesBoundBefore(text, text.indexOf(`@include('assets.partials.${name}'`)), 'errors', 'old']);
+
+            for (const heldName of [...held]) {
+                if (offer.has(heldName) || own.has(heldName)) continue;
+
+                /* Never reported unless the child actually reads it: the set
+                   starts wide, and a name nobody uses there costs nothing. */
+                if (!reads.has(heldName)) { held.delete(heldName); changed = true; continue; }
+
+                held.delete(heldName);
+                changed = true;
+            }
+        }
+    }
+
+    if (!changed) break;
+}
+
+const globals = new Set(['loop', 'errors', 'assetVer', 'slot', 'attributes', 'component', 'this']);
 
 const viewProblems = [];
 
-moduleViews.filter((file) => exists(file)).forEach((file) => {
-    const text = plain(read(file));
+renderGraph.forEach(({ file, text }) => {
+    const reachable = available[file];
 
-    /* 1. a variable nobody passes and nobody binds */
+    /* 1. a variable this render will not have */
     for (const m of text.matchAll(/\$([a-zA-Z_]\w*)/g)) {
         const name = m[1];
-        if (!controllerKeys.has(name) && !boundNames.has(name)) {
-            viewProblems.push(`${file}: $${name}`);
-        }
+        if (!reachable.has(name) && !globals.has(name)) viewProblems.push(`${file}: $${name}`);
     }
 
     /* 2. a method on a model that does not have it */
+    const objectVars = { asset: 'asset', category: 'class', allocation: 'allocation', maintenance: 'maintenance' };
     for (const m of text.matchAll(/\$([a-zA-Z_]\w*)->([a-zA-Z_]\w*)\(/g)) {
-        /* No scope guard here: `$asset`, `$category`, `$allocation` and
-           `$maintenance` are this module's four objects wherever they appear, and
-           a name like `$keep` or `$row` is simply not one of them. */
         const model = objectVars[m[1]];
-        if (model && !modelMembers[model].has(m[2])) {
-            viewProblems.push(`${file}: $${m[1]}->${m[2]}()`);
-        }
+        if (model && !modelMembers[model].has(m[2])) viewProblems.push(`${file}: $${m[1]}->${m[2]}()`);
     }
 
     /* 3. a static member that is not there */
+    const staticMembers = {
+        AssetVocabulary: vocabularyMembers,
+        AssetFilters: filterMembers,
+        AssetDepreciation: depreciationMembers,
+        CommonHelper: helperMembers,
+    };
     for (const m of text.matchAll(/(AssetVocabulary|AssetFilters|AssetDepreciation|CommonHelper)::([A-Za-z_]\w*)/g)) {
         if (!staticMembers[m[1]].has(m[2])) viewProblems.push(`${file}: ${m[1]}::${m[2]}`);
     }
 
     /* 4. an array key that is not in the array */
+    const summaryKeys = new Set([
+        ...keysIn(methodBody(src.figures, 'summary')),
+        ...keysIn(methodBody(src.figures, 'curve')),
+        ...[...src.vocabulary.matchAll(/const STATUS_\w+ = '([a-z_]+)'/g)].map((m) => m[1]),
+        'warranty_soon', 'insurance_soon', 'verify_due', 'service_due',
+    ]);
+    const totalKeys = keysIn(src.figures.split('private function emptyTotals()')[1].split('];')[0]);
+    const reportRowKeys = new Set(['id', ...keysIn(src.figures.split("'id' => $asset->id,")[1].split('];')[0])]);
+    const scheduleKeys = new Set([...src.depreciation.split('@return list<array{')[1].split('}>')[0]
+        .matchAll(/([a-z_]+):/g)].map((m) => m[1]));
     const arrays = {
-        figures: summaryKeys, totals: totalKeys, year: yearKeys, group: groupKeys,
+        figures: summaryKeys, totals: totalKeys, year: new Set(['key', 'label', 'from', 'to']),
+        group: new Set(['category', 'rows', 'subtotal']),
         row: new Set([...reportRowKeys, ...scheduleKeys]),
     };
+
     for (const m of text.matchAll(/\$([a-zA-Z_]\w*)\['([a-z_]+)'\]/g)) {
         const keys = arrays[m[1]];
         if (keys && !keys.has(m[2])) viewProblems.push(`${file}: $${m[1]}['${m[2]}']`);
@@ -906,6 +984,20 @@ moduleViews.filter((file) => exists(file)).forEach((file) => {
 check('no view reads a name, a method or a key the module does not have',
     viewProblems.length === 0,
     [...new Set(viewProblems)].slice(0, 4).join(' · '));
+
+/* …and the other direction, which is where the fatal above came from: a dialog
+   the register renders and the record renders cannot be filled from lists only
+   one of those two pages passes. */
+const dialogLists = ['categoryOptions', 'methodOptions', 'peopleOptions', 'vendorOptions',
+    'statusOptions', 'conditionOptions', 'kindOptions', 'locations'];
+
+check('the dialogs the register and the record share are filled from the lists both of them pass',
+    dialogLists.every((key) => sharedKeys.has(key))
+    && dialogLists.every((key) => pages.index.keys.has(key) && pages.show.keys.has(key))
+    && has(src.index, "@include('assets.partials.modal-maintenance'")
+    && has(src.show, "@include('assets.partials.modal-maintenance'"),
+    'the same dialog on two screens, fed by two different sets of lists, is one of them fatalling');
+
 
 /* ------------------------------------------------------------ the docs row */
 

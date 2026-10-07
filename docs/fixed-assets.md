@@ -337,8 +337,16 @@ Two promises exist because there is **no PHP runtime where this was built**, and
 page that reads a name that does not exist fails in the reader's face rather than
 in a build:
 
-- **every view resolves.** Each `$name` a module view reads is passed by its
-  controller, bound by a view in the module, or handed down by an `@include`;
+- **every view resolves — per render, not per repository.** Each `$name` a view
+  reads has to be one **its own render will have**: passed by the controller
+  that renders that page, bound by the file itself, handed down by the
+  `@include` that reached it, or inherited from a loop the include sits inside.
+  The walk starts from everything the module knows and **narrows to the
+  intersection of every includer**, because a partial rendered by two pages may
+  only count on what both of them pass. A name in common across the module is
+  not enough, and believing it was is how a dialog reached a browser reading a
+  list only the other page sent — the constant lists the dialogs are filled from
+  therefore live in `FixedAssetController::sharedData()`, not on one screen;
   each `$asset->…()`, `$category->…()`, `AssetVocabulary::…` and
   `$figures[…]/$totals[…]/$row[…]` a view names exists on the model, the
   vocabulary, or in the service that builds the array. This is the honest
