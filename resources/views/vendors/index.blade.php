@@ -268,11 +268,6 @@
                     title="Every bill with a due date these filters match, as a spreadsheet">
                     <i class="fa-solid fa-file-csv" aria-hidden="true"></i> Payables
                 </a>
-                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
-                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
-                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
-                </div>
             </div>
 
             {{-- Own toolbar row, same as sales invoices: count on the left,
@@ -294,7 +289,7 @@
         </div>
 
         <div class="master-table-wrap ui-mobile-cards">
-            <table class="master-table vendor-table" data-table-settings data-table-key="vendors">
+            <table class="master-table vendor-table">
                 <thead>
                     <tr>
                         <th scope="col" class="master-list-pick vendor-pick-cell">

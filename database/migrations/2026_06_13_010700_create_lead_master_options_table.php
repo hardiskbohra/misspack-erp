@@ -11,7 +11,7 @@ return new class extends Migration
     {
         Schema::create('lead_master_options', function (Blueprint $table) {
             $table->id();
-            $table->string('group', 60); // lead_status, lead_source, lead_priority, finish, printing, currency, quote_status, incoterm
+            $table->string('group', 60); // lead_status, lead_source, lead_priority, finish, printing, currency, incoterm
             $table->string('key', 100);
             $table->string('label');
             $table->string('color', 30)->nullable();
@@ -71,14 +71,6 @@ return new class extends Migration
                 ['INR', 'INR', '#4f83f1'],
                 ['USD', 'USD', '#10b981'],
                 ['RMB', 'RMB', '#f59e0b'],
-            ],
-            'quote_status' => [
-                ['requested', 'Requested', '#4f83f1'],
-                ['received', 'Received', '#f59e0b'],
-                ['shortlisted', 'Shortlisted', '#8b5cf6'],
-                ['rejected', 'Rejected', '#ef4770'],
-                ['approved', 'Approved', '#10b981'],
-                ['converted', 'Converted', '#12cbb7'],
             ],
             'incoterm' => [
                 ['EXW', 'EXW', '#687386'],

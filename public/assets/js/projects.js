@@ -2,10 +2,11 @@
    PROJECTS.JS — Projects module (projects/* views, admin side)
    --------------------------------------------------------------------------
    Page behaviour for the Projects section:
-     - project list: quick-create modal (.projects-modal, module-specific
-       design with .is-open state) + SweetAlert delete confirmation
-     - project detail: portal link copy, tab navigation (hash +
-       localStorage restore) and the add/edit modals
+     - project list: the shared quick-create dialog (.master-modal), the
+       shared list toolkit (row navigation and the pinned-header shadow) and
+       delete confirmation
+     - project detail: tab navigation (hash + localStorage restore) and the
+       add/edit modals for products, milestones, attachments and tracking
      - milestones tab: timeline editor modal (pmile-*, module-specific
        design)
    The standard .master-modal dialogs on the detail page use the shared
@@ -25,39 +26,27 @@
     }
 
     /* ------------------------------------------------------------------
-       Project list — quick-create modal (.projects-modal / .is-open)
-       Module-specific modal design: keeps its own open/close wiring
-       (the shared layer only manages .master-modal dialogs).
+       Project list — the shared dialog and the shared list toolkit
+
+       The quick-create dialog is a .master-modal, so close, Escape, the
+       backdrop and the scroll lock are the shared layer's job; this only
+       opens it. Row navigation and the pinned-header shadow come from
+       MasterList, the same toolkit every other list uses.
        ------------------------------------------------------------------ */
-    function initQuickModal() {
-        var modals = document.querySelectorAll('.projects-modal');
-        if (!modals.length) return;
+    function initProjectList() {
+        var dialog = document.getElementById('quickProjectModal');
+        var opener = document.getElementById('openQuickProjectModal');
 
-        document.querySelectorAll('[data-open-modal]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var modal = document.getElementById(btn.getAttribute('data-open-modal'));
-                if (!modal || !modal.classList.contains('projects-modal')) return;
-                modal.classList.add('is-open');
-                modal.setAttribute('aria-hidden', 'false');
+        if (dialog && opener && window.MasterModal) {
+            opener.addEventListener('click', function () {
+                window.MasterModal.open(dialog);
             });
-        });
+        }
 
-        document.querySelectorAll('.projects-modal [data-close-modal]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var modal = btn.closest('.projects-modal');
-                if (!modal) return;
-                modal.classList.remove('is-open');
-                modal.setAttribute('aria-hidden', 'true');
-            });
-        });
+        if (!window.MasterList) return;
 
-        document.addEventListener('keydown', function (event) {
-            if (event.key !== 'Escape') return;
-            document.querySelectorAll('.projects-modal.is-open').forEach(function (modal) {
-                modal.classList.remove('is-open');
-                modal.setAttribute('aria-hidden', 'true');
-            });
-        });
+        window.MasterList.rowNavigation({ root: '.project-index' });
+        window.MasterList.gridShadow({ root: '.project-index' });
     }
 
     /* ------------------------------------------------------------------
@@ -85,98 +74,6 @@
     }
 
     /* ------------------------------------------------------------------
-       Project detail — copy portal link
-       ------------------------------------------------------------------ */
-    function initCopyPortalLink() {
-        var copyBtn = document.getElementById('copyPortalLink');
-        if (!copyBtn) return;
-        var input = document.getElementById('portalLinkInput');
-        if (!input) return;
-
-        copyBtn.addEventListener('click', function () {
-            input.select();
-            input.setSelectionRange(0, 99999);
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(input.value).catch(function () {
-                    document.execCommand('copy');
-                });
-            } else {
-                document.execCommand('copy');
-            }
-            var original = copyBtn.innerHTML;
-            copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
-            setTimeout(function () {
-                copyBtn.innerHTML = original;
-            }, 1800);
-        });
-    }
-
-    /* ------------------------------------------------------------------
-       Project detail — tab navigation
-       Active tab persists per project (localStorage) and in the URL hash.
-       ------------------------------------------------------------------ */
-    function initTabs() {
-        var tabButtons = document.querySelectorAll('.pd-tab-btn');
-        if (!tabButtons.length) return;
-
-        var tabPanels = document.querySelectorAll('.pd-tab-panel');
-        var shell = document.querySelector('.pd-tabs-shell');
-        var projectId = shell ? shell.getAttribute('data-project-id') : '';
-        var storageKey = 'project_show_active_tab_' + (projectId || 'default');
-
-        function openProjectTab(tabName, updateHash) {
-            var found = false;
-            tabButtons.forEach(function (btn) {
-                var isActive = btn.getAttribute('data-tab') === tabName;
-                btn.classList.toggle('active', isActive);
-                btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-                if (isActive) found = true;
-            });
-            if (!found) {
-                openProjectTab('overview', updateHash);
-                return;
-            }
-            tabPanels.forEach(function (panel) {
-                panel.classList.toggle('active', panel.getAttribute('data-tab-panel') === tabName);
-            });
-            try {
-                localStorage.setItem(storageKey, tabName);
-            } catch (e) { /* private mode */ }
-            if (updateHash) {
-                history.replaceState(null, '', '#' + tabName);
-            }
-        }
-
-        tabButtons.forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                openProjectTab(btn.getAttribute('data-tab'), true);
-            });
-        });
-
-        document.querySelectorAll('[data-tab-jump]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                openProjectTab(btn.getAttribute('data-tab-jump'), true);
-                if (shell) {
-                    window.scrollTo({
-                        top: shell.offsetTop - 90,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        });
-
-        var initialTab = window.location.hash ? window.location.hash.replace('#', '') : '';
-        if (!initialTab) {
-            try {
-                initialTab = localStorage.getItem(storageKey) || 'overview';
-            } catch (e) {
-                initialTab = 'overview';
-            }
-        }
-        openProjectTab(initialTab, false);
-    }
-
-    /* ------------------------------------------------------------------
        Project detail — add/edit modals (standard .master-modal dialogs)
        Open triggers + form prefill live here; the shared master-* modal
        layer (app-layout.js) owns open/close state, backdrop, Escape and
@@ -184,6 +81,30 @@
        ------------------------------------------------------------------ */
     function initDetailModals() {
         if (typeof window.MasterModal === 'undefined') return;
+
+        /* The update URL is emitted by the form as a template: a hand-built
+           '/project-products/12' misses an install served from a sub-path. */
+        function bindUpdateUrl(form, id) {
+            var template = form.getAttribute('data-update-url') || '';
+            form.action = template.replace('__ID__', id);
+        }
+
+        /* Any element can open a dialog by naming it. The add buttons keep
+           their own ids for the pages that already bind them; this is the
+           second door into the same dialog — an empty state, a summary tile. */
+        document.querySelectorAll('[data-modal-open]').forEach(function (trigger) {
+            var target = document.getElementById(trigger.getAttribute('data-modal-open'));
+            if (!target) return;
+            trigger.addEventListener('click', function () {
+                window.MasterModal.open(target);
+            });
+        });
+
+        /* `type="date"` wants `YYYY-MM-DD`; a model cast hands over a full ISO
+           timestamp, which the field quietly refuses and shows as empty. */
+        function readyDate(value) {
+            return value ? String(value).substring(0, 10) : '';
+        }
 
         function setValue(form, name, value) {
             var field = form.elements[name];
@@ -195,36 +116,20 @@
             }
         }
 
-        /* Add-product */
-        var addProductModal = document.getElementById('addProductModal');
-        var openAddProduct = document.getElementById('openAddProductModal');
-        if (addProductModal && openAddProduct) {
-            openAddProduct.addEventListener('click', function () {
-                window.MasterModal.open(addProductModal);
-            });
-        }
-
-        /* Edit-product */
+        /* Edit-product — the tab's only dialog: the product, the quantity, the
+           rate and the vendor are the documents', so the form carries the
+           project's own facts. */
         var editProductModal = document.getElementById('editProductModal');
         var editProductForm = document.getElementById('editProductForm');
         if (editProductModal && editProductForm) {
             document.querySelectorAll('.editProductBtn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var product = JSON.parse(this.getAttribute('data-product') || '{}');
-                    editProductForm.action = '/project-products/' + product.id;
-                    setValue(editProductForm, 'product_id', product.product_id);
-                    setValue(editProductForm, 'quantity', product.quantity);
-                    setValue(editProductForm, 'unit_price', product.unit_price);
+                    bindUpdateUrl(editProductForm, product.id);
                     setValue(editProductForm, 'status', product.status);
-                    setValue(editProductForm, 'stage', product.stage);
-                    setValue(editProductForm, 'assigned_to', product.assigned_to);
-                    setValue(editProductForm, 'vendor_id', product.vendor_id);
-                    setValue(editProductForm, 'vendor_invoice_number', product.vendor_invoice_number);
-                    setValue(editProductForm, 'expected_ready_date', product.expected_ready_date);
-                    setValue(editProductForm, 'actual_ready_date', product.actual_ready_date);
+                    setValue(editProductForm, 'expected_ready_date', readyDate(product.expected_ready_date));
+                    setValue(editProductForm, 'actual_ready_date', readyDate(product.actual_ready_date));
                     setValue(editProductForm, 'notes', product.notes);
-                    setValue(editProductForm, 'currency', product.currency);
-                    setValue(editProductForm, 'sort_order', product.sort_order);
                     window.MasterModal.open(editProductModal);
                 });
             });
@@ -246,7 +151,7 @@
             document.querySelectorAll('.editTrackingBtn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var tracking = JSON.parse(this.getAttribute('data-tracking') || '{}');
-                    editTrackingForm.action = '/project-tracking/' + tracking.id;
+                    bindUpdateUrl(editTrackingForm, tracking.id);
                     setValue(editTrackingForm, 'project_product_id', tracking.project_product_id);
                     setValue(editTrackingForm, 'title', tracking.title);
                     setValue(editTrackingForm, 'status', tracking.status);
@@ -278,7 +183,7 @@
             document.querySelectorAll('.editCommentBtn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var comment = JSON.parse(this.getAttribute('data-comment') || '{}');
-                    editCommentForm.action = '/project-comments/' + comment.id;
+                    bindUpdateUrl(editCommentForm, comment.id);
                     setValue(editCommentForm, 'project_product_id', comment.project_product_id);
                     setValue(editCommentForm, 'body', comment.body);
                     setValue(editCommentForm, 'is_pinned', comment.is_pinned);
@@ -294,41 +199,6 @@
         if (addAttachmentModal && openAddAttachment) {
             openAddAttachment.addEventListener('click', function () {
                 window.MasterModal.open(addAttachmentModal);
-            });
-        }
-
-        /* Edit-payment */
-        var editPaymentModal = document.getElementById('editPaymentModal');
-        var editPaymentForm = document.getElementById('editPaymentForm');
-        if (editPaymentModal && editPaymentForm) {
-            document.querySelectorAll('.editPaymentBtn').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    var payment = JSON.parse(this.getAttribute('data-payment') || '{}');
-                    editPaymentForm.action = '/project-payments/' + payment.id;
-                    setValue(editPaymentForm, 'transaction_type', payment.transaction_type);
-                    var paymentDate = payment.payment_date;
-                    if (paymentDate) {
-                        paymentDate = paymentDate.substring(0, 10);
-                    }
-                    setValue(editPaymentForm, 'payment_date', paymentDate);
-                    setValue(editPaymentForm, 'amount', payment.amount);
-                    setValue(editPaymentForm, 'currency', payment.currency);
-                    setValue(editPaymentForm, 'payment_mode', payment.payment_mode);
-                    setValue(editPaymentForm, 'reference_number', payment.reference_number);
-                    setValue(editPaymentForm, 'category', payment.category);
-                    setValue(editPaymentForm, 'notes', payment.notes);
-                    setValue(editPaymentForm, 'is_public', payment.is_public);
-                    window.MasterModal.open(editPaymentModal);
-                });
-            });
-        }
-
-        /* Add-payment */
-        var addPaymentModal = document.getElementById('addPaymentModal');
-        var openAddPayment = document.getElementById('openAddPaymentModal');
-        if (addPaymentModal && openAddPayment) {
-            openAddPayment.addEventListener('click', function () {
-                window.MasterModal.open(addPaymentModal);
             });
         }
     }
@@ -439,10 +309,8 @@
     }
 
     onReady(function () {
-        initQuickModal();
+        initProjectList();
         initDeleteConfirm();
-        initCopyPortalLink();
-        initTabs();
         initDetailModals();
         initMilestoneModal();
     });

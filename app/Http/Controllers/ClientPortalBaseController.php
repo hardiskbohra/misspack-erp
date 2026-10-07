@@ -33,11 +33,6 @@ abstract class ClientPortalBaseController extends Controller
         return $this->classTableAvailable(\App\Models\Shipment::class, 'shipments');
     }
 
-    protected function quotesAvailable(): bool
-    {
-        return $this->classTableAvailable(\App\Models\CustomerQuote::class, 'customer_quotes');
-    }
-
     protected function productsAvailable(): bool
     {
         return $this->classTableAvailable(\App\Models\Product::class, 'products');

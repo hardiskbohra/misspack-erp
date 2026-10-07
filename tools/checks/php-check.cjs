@@ -75,20 +75,170 @@ function phpIslands(text) {
     const lineAt = index => clean.slice(0, index).split('\n').length;
     const islands = [];
 
+    /* `expression` is the island's own PHP, without the `<?php echo ( … );`
+       wrapper the parse uses: a guard that reads operators has to see the
+       expression, not the wrapper's parentheses. */
     for (const m of clean.matchAll(/@php\b(?!\s*\()([\s\S]*?)@endphp/g)) {
-        islands.push({ kind: '@php block', code: '<?php ' + m[1], line: lineAt(m.index) });
+        islands.push({ kind: '@php block', code: '<?php ' + m[1], expression: m[1], line: lineAt(m.index) });
     }
     for (const m of clean.matchAll(/@php\s*\(([\s\S]*?)\)\s*(?=\n|@|<)/g)) {
-        islands.push({ kind: '@php(…)', code: '<?php (' + m[1] + ');', line: lineAt(m.index) });
+        islands.push({ kind: '@php(…)', code: '<?php (' + m[1] + ');', expression: '(' + m[1] + ')', line: lineAt(m.index) });
     }
     for (const m of clean.matchAll(/\{\{([\s\S]*?)\}\}/g)) {
-        islands.push({ kind: 'echo', code: '<?php echo (' + m[1] + ');', line: lineAt(m.index) });
+        islands.push({ kind: 'echo', code: '<?php echo (' + m[1] + ');', expression: m[1], line: lineAt(m.index) });
     }
     for (const m of clean.matchAll(/\{!!([\s\S]*?)!!\}/g)) {
-        islands.push({ kind: 'raw echo', code: '<?php echo (' + m[1] + ');', line: lineAt(m.index) });
+        islands.push({ kind: 'raw echo', code: '<?php echo (' + m[1] + ');', expression: m[1], line: lineAt(m.index) });
     }
 
     return islands;
+}
+
+const SUPERGLOBALS = new Set(['GLOBALS', '_SERVER', '_GET', '_POST', '_FILES', '_COOKIE',
+  '_SESSION', '_REQUEST', '_ENV', 'argv', 'argc', 'http_response_header', 'php_errormsg', 'this']);
+const OPAQUE = new Set(['extract', 'get_defined_vars', 'eval', 'parse_str']);
+const OUTPUT_ARG = { preg_match: [2], settype: [0], exec: [1, 2] };
+
+function childNodes(node) {
+  const out = [];
+  for (const k of Object.keys(node)) {
+    if (k === 'loc' || k === 'kind') continue;
+    const v = node[k];
+    if (Array.isArray(v)) v.forEach(x => { if (x && typeof x === 'object' && x.kind) out.push(x); });
+    else if (v && typeof v === 'object' && v.kind) out.push(v);
+  }
+  return out;
+}
+
+/* Names bound by an assignment/foreach/catch target, incl. list()/[] destructuring. */
+function bindTarget(node, bind) {
+  if (!node) return;
+  if (node.kind === 'variable') {
+    if (typeof node.name === 'string') bind.add(node.name);
+    return;
+  }
+  if (node.kind === 'list' || node.kind === 'array') {
+    (node.items || []).forEach(item => {
+      if (!item) return;
+      bindTarget(item.value !== undefined && item.kind === 'entry' ? item.value : item, bind);
+    });
+    return;
+  }
+  if (node.kind === 'offsetlookup' || node.kind === 'propertylookup' || node.kind === 'staticlookup') {
+    /* `$a['k'] = 1` defines $a; the receiver is written, not read. */
+    bindTarget(node.what, bind);
+  }
+}
+
+const nameOf = n => (typeof n === 'string' ? n : (n && n.kind === 'identifier' ? n.name : null));
+function paramNames(fn) { return (fn.arguments || []).map(a => nameOf(a.name)).filter(Boolean); }
+
+function callName(node) {
+  const what = node.what;
+  return what && what.kind === 'name' ? String(what.name).toLowerCase() : null;
+}
+
+function auditScope(fn, outer, inMethod, report) {
+  const scope = {
+    bound: new Set(),
+    opaque: false,
+    problem: [],
+  };
+  paramNames(fn).forEach(n => scope.bound.add(n));
+  if (fn.kind === 'closure') (fn.uses || []).forEach(u => { const n = nameOf(u.name); if (n) scope.bound.add(n); });
+  if (fn.kind === 'arrowfunc') outer.bound.forEach(n => scope.bound.add(n));
+  if (inMethod && fn.isStatic !== true) scope.bound.add('this');
+
+  const body = fn.body;
+
+  /* pass 1 — every name this scope binds, at any depth inside it but not inside
+     a nested closure/function of its own (those are separate scopes). */
+  (function collect(node) {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) return node.forEach(collect);
+    if (typeof node.kind !== 'string') return;
+    if (node !== fn && (node.kind === 'closure' || node.kind === 'arrowfunc' || node.kind === 'function')) {
+      /* the closure's own `use (...)` captures are bound in *that* scope; its
+         arguments are evaluated here */
+      (node.arguments || []).forEach(a => collect(a));  // defaults: nothing to bind
+      return;
+    }
+    if (node.kind === 'variable' && typeof node.name === 'string' && node.__write) scope.bound.add(node.name);
+    switch (node.kind) {
+      case 'assign':
+      case 'assignref':
+        if (node.operator === undefined || node.operator === '=' || node.operator === '??=') bindTarget(node.left, scope.bound);
+        break;
+      case 'foreach':
+        bindTarget(node.key, scope.bound); bindTarget(node.value, scope.bound);
+        break;
+      case 'catch':
+        bindTarget(node.variable, scope.bound);
+        break;
+      case 'staticvariable':
+        bindTarget(node.variable, scope.bound);
+        break;
+      case 'global':
+        (node.items || []).forEach(i => bindTarget(i, scope.bound));
+        break;
+      default: break;
+    }
+    childNodes(node).forEach(collect);
+  })(body);
+
+  /* pass 2 — every name this scope reads. */
+  const read = (node, skipSanitized) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) return node.forEach(n => read(n, skipSanitized));
+    if (typeof node.kind !== 'string') return;
+    if (node !== fn && (node.kind === 'closure' || node.kind === 'function')) {
+      auditScope(node, scope, inMethod && node.isStatic !== true, report);
+      return;
+    }
+    if (node.kind === 'arrowfunc') {
+      auditScope(node, scope, inMethod, report);
+      return;
+    }
+    if ((node.kind === 'staticlookup' || node.kind === 'propertylookup')
+        && node.offset && node.offset.kind === 'variable' && typeof node.offset.name === 'string') {
+      read(node.what, skipSanitized);   // the receiver is read; the member name is not a variable
+      return;
+    }
+    if (node.kind === 'variable') {
+      if (typeof node.name === 'string' && !skipSanitized
+          && !scope.bound.has(node.name) && !SUPERGLOBALS.has(node.name)) {
+        scope.problem.push([node.name, node.loc ? node.loc.start.line : '?']);
+      }
+      return;
+    }
+    if (node.kind === 'isset' || node.kind === 'empty' || node.kind === 'unset') return;   // sanitizing
+    if (node.kind === 'bin' && node.type === '??') {
+      read(node.right, skipSanitized);
+      return;
+    }
+    if (node.kind === 'call') {
+      const name = callName(node);
+      if (name && OPAQUE.has(name)) { scope.opaque = true; return; }
+      if (name && OUTPUT_ARG[name]) {
+        const args = node.arguments || [];
+        OUTPUT_ARG[name].forEach(i => args[i] && bindTarget(args[i], scope.bound));
+      }
+    }
+    if (node.kind === 'assign' || node.kind === 'assignref') {
+      if (!(node.operator === undefined || node.operator === '=' || node.operator === '??=')) read(node.left, skipSanitized);
+      read(node.right, skipSanitized);
+      return;
+    }
+    if (node.kind === 'foreach') {
+      read(node.source, skipSanitized);
+      read(node.body, skipSanitized);
+      return;
+    }
+    childNodes(node).forEach(n => read(n, skipSanitized));
+  };
+  read(body, false);
+
+  if (!scope.opaque) scope.problem.forEach(p => report.push(p));
 }
 
 /* ------------------------------------------------------------ the parse */
@@ -127,6 +277,49 @@ if (Engine) {
         brokenIslands.length === 0, brokenIslands.slice(0, 3).join(' | '));
 
     console.log(`  (parser: php-parser · ${phpFiles.length} PHP files · ${islands} Blade islands)`);
+
+    /* Every method, closure and arrow function of the app, asked one question:
+       does it read a name nothing in its own scope binds? A scope is the whole
+       function body — a `foreach` target above the read counts — but a closure is
+       a scope of its own, and what it reads from outside must come through its
+       `use (...)`, a parameter, or the enclosing arrow function's share. This is
+       the shape the project has now shipped twice: an asset that only exists
+       inside a chunk callback, and a `$selected` a closure never captured — both
+       parse, both pass every other check, both 500 the moment the line runs. */
+    const scopeEngine = new Engine({ parser: { suppressErrors: true }, ast: { withPositions: true } });
+    const orphans = [];
+    let scopes = 0;
+
+    for (const file of phpFiles) {
+        let ast;
+
+        try {
+            ast = scopeEngine.parseCode(fs.readFileSync(file, 'utf8'), rel(file));
+        } catch (error) {
+            continue;   // unparsable is the parse check's business, not this one's
+        }
+
+        const report = [];
+
+        (function walkScopes(node, inMethod) {
+            if (!node || typeof node !== 'object') return;
+            if (Array.isArray(node)) return node.forEach(child => walkScopes(child, inMethod));
+            if (typeof node.kind !== 'string') return;
+
+            if (node.kind === 'method') { scopes++; return auditScope(node, { bound: new Set() }, true, report); }
+            if (node.kind === 'function') { scopes++; return auditScope(node, { bound: new Set() }, false, report); }
+
+            childNodes(node).forEach(child => walkScopes(child, inMethod || node.kind === 'class'));
+        })(ast, false);
+
+        report.forEach(([name, line]) => orphans.push(`${rel(file)}:${line} reads $${name}`));
+    }
+
+    check('no scope reads a variable it never binds — a closure\'s use, a parameter, a foreach target',
+        orphans.length === 0, orphans.slice(0, 3).join(' | '));
+
+    console.log(`  (scopes: ${scopes} functions asked over ${phpFiles.length} PHP files)`);
+
 } else {
     console.log('  (php-parser not installed — run `npm install`; dependency-free guards only)');
 }
@@ -185,6 +378,105 @@ const doubledSeparator = phpFiles.filter(file =>
 check('every namespace separator is a single backslash',
     doubledSeparator.length === 0,
     doubledSeparator.slice(0, 3).map(rel).join(' | ') + ' — PHP fatals on these');
+
+/* A nested ternary has to be parenthesised where PHP cannot tell which way it
+   nests. Since 8.0 `a ? b : c ?: d`, `a ? b : c ? d : e` and `a ?: b ? c : d`
+   are compile-time fatals — the file stops being loadable, which is a class of
+   mistake a brace count cannot see and php-parser only catches when it is
+   installed. This guard is dependency-free, and it is deliberately narrow
+   about what it claims:
+     - the then clause is exempt (`cond ? $a ?: $b : $c` is legal, PHP says the
+       then clause is always unambiguous), and so are chains of short ternaries
+       (`$a ?: $b ?: $c`);
+     - it reads one line at a time, at nesting depth zero within that line — so
+       a `?` whose `:` is on another line is left alone rather than guessed at,
+       and a ternary inside brackets *and* on one line is not seen;
+     - strings, comments and docblocks are stripped first: a `?` in prose is
+       not an operator.
+   Written this narrow, it caught the one that shipped: a `?:` in the else of a
+   `?` in `ProjectProducts`, which 500'd the first invoice saved against a
+   project. */
+const barePhpLine = (line) => line
+    .replace(/'(?:\\.|[^'\\])*'/g, "''")
+    .replace(/"(?:\\.|[^"\\])*"/g, '""')
+    .replace(/\/\/.*$/, '')
+    .replace(/#[^\[]*$/, '')
+    .replace(/\/\*.*?\*\//g, '');
+
+const ternaryTokens = (line) => {
+    const text = barePhpLine(line);
+    const tokens = [];
+    let depth = 0;
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if ('([{'.includes(char)) { depth++; continue; }
+        if (')]}'.includes(char)) { depth--; continue; }
+        if (depth !== 0) continue;
+
+        if (char === ':') {
+            if (next === ':') { i++; continue; }
+            tokens.push({ kind: 'colon', at: i });
+            continue;
+        }
+        if (char !== '?') continue;
+        if (next === '?') { i++; continue; }
+        if (next === '-' && text[i + 2] === '>') { i += 2; continue; }
+        if (next === ':') { tokens.push({ kind: 'short', at: i }); i++; continue; }
+        tokens.push({ kind: 'long', at: i });
+    }
+
+    return tokens;
+};
+
+const nestedTernarySites = (text) => {
+    const sites = [];
+
+    text.split('\n').forEach((line, index) => {
+        if (/^\s*(\*|\/\*)/.test(line)) return;
+
+        const tokens = ternaryTokens(line);
+        let flagged = false;
+
+        /* A long ternary whose else operand holds another ternary. */
+        for (const token of tokens.filter((candidate) => candidate.kind === 'long')) {
+            const colon = tokens.find((candidate) => candidate.kind === 'colon' && candidate.at > token.at);
+            if (!colon) continue;
+
+            const after = tokens.find((candidate) => candidate.at > colon.at && candidate.kind !== 'colon');
+            if (!after) continue;
+            if (line.slice(colon.at, after.at).includes(';')) continue;
+
+            flagged = true;
+        }
+
+        /* A long ternary that follows a short one. */
+        tokens.forEach((token, position) => {
+            const next = tokens[position + 1];
+            if (token.kind !== 'short' || !next || next.kind !== 'long') return;
+            if (line.slice(token.at, next.at).includes(';')) return;
+
+            flagged = true;
+        });
+
+        if (flagged) sites.push(`${index + 1}: ${line.trim()}`);
+    });
+
+    return sites;
+};
+
+const ternarySites = [
+    ...phpFiles.flatMap(file => nestedTernarySites(fs.readFileSync(file, 'utf8'))
+        .map(site => `${rel(file)}:${site}`)),
+    ...bladeFiles.flatMap(file => phpIslands(fs.readFileSync(file, 'utf8'))
+        .flatMap(island => nestedTernarySites(island.expression)
+            .map(site => `${rel(file)} near line ${island.line} (${island.kind}) — ${site}`))),
+];
+
+check('no nested ternary is left without its parentheses',
+    ternarySites.length === 0, ternarySites.slice(0, 3).join(' | '));
 
 /* An app class called statically has to be imported (or be in this file's own
    namespace). php-parser checks grammar, not names: a bare `DateRanges::normalise()`
@@ -319,6 +611,95 @@ function balance(text) {
 const unbalanced = phpFiles.filter(file => !balance(fs.readFileSync(file, 'utf8')));
 check('every PHP file has balanced groups', unbalanced.length === 0,
     unbalanced.slice(0, 3).map(rel).join(' | '));
+
+/* ---------------------------------------------------------- the schema's length
+
+   MySQL caps an identifier at **64 characters**, and Laravel writes a
+   constraint's name for you when you do not give one:
+
+       foreign key   <table>_<column>_foreign
+       unique key    <table>_<columns…>_unique
+       index         <table>_<columns…>_index
+
+   so a table whose own name is long makes `php artisan migrate` stop — on the
+   machine of whoever runs it, not here — with *"Identifier name … is too long"*.
+   That is exactly how the recurring-cashflow module's occurrences table failed:
+   the foreign key to its rule was 67 characters, its unique key 75 and its
+   second index 80. Nothing in the repository could see it, because nothing read
+   the migrations the way the schema builder does; this guard does, and it reads
+   them **dependency-free**, so it works on a machine that never ran npm install.
+
+   It computes the name each declaration *would* get and flags the ones that
+   cannot fit. A migration is free to name its own constraints — that is the
+   fix — and this check only asks that the name fits. */
+const IDENTIFIER_LIMIT = 64;
+
+const defaultIdentifierName = (table, columns, type) =>
+    [table, ...columns, type].join('_').toLowerCase().replace(/[-.]/g, '_');
+
+const overLongIdentifiers = [];
+
+phpFiles.filter(file => /database[\/\\]migrations[\/\\].*\.php$/.test(file)).forEach(file => {
+    const text = stripPhpComments(fs.readFileSync(file, 'utf8'));
+    const start = text.indexOf('function up(');
+    if (start === -1) return;
+
+    const down = text.indexOf('function down(');
+    const up = text.slice(start, down > start ? down : text.length);
+
+    let table = null;
+
+    /* One declaration per statement: everything up to the `;` that ends it. The
+       `Schema::create(…)` header shares its chunk with the first column, which
+       is how the table being declared is picked up. */
+    up.split(';').forEach(statement => {
+        const declared = /Schema::(?:create|table)\(\s*'([a-z_0-9]+)'/.exec(statement);
+        if (declared) table = declared[1];
+        if (! table) return;
+
+        /* A name the migration writes itself is used verbatim (`indexCommand()`
+           is `$index ?: createIndexName(...)`), so it has to fit too — the guard
+           would otherwise wave through a hand-written name that is as long as the
+           synthesised one it replaced. */
+        const tooLong = (name, kind, explicit = false) => {
+            if (name.length > IDENTIFIER_LIMIT) {
+                overLongIdentifiers.push(`${rel(file)}: ${kind} name ${explicit ? 'is' : 'would be'} `
+                    + `${name.length} characters — ${name}`);
+            }
+        };
+
+        /* `foreignId('x')->constrained('t')` — with the optional third argument
+           to `constrained()` naming the constraint instead. */
+        const foreignId = /foreignId\(\s*'([a-z_0-9]+)'\s*\)([\s\S]*)$/.exec(statement);
+        if (foreignId) {
+            const column = foreignId[1];
+            const constrained = /constrained\(([^)]*)\)/.exec(foreignId[2]);
+            if (constrained) {
+                const args = constrained[1].split(',').map(a => a.trim()).filter(Boolean);
+                const explicit = args.length > 2 ? args[2].replace(/^'|'$/g, '') : null;
+                tooLong(explicit || defaultIdentifierName(table, [column], 'foreign'), 'foreign key', !! explicit);
+            }
+        }
+
+        /* `foreign('x')` / `foreign('x', 'name')` on a column declared above. */
+        const foreign = /->foreign\(\s*'([a-z_0-9]+)'\s*(?:,\s*'([a-z_0-9]+)')?\s*\)/.exec(statement);
+        if (foreign) {
+            tooLong(foreign[2] || defaultIdentifierName(table, [foreign[1]], 'foreign'), 'foreign key', !! foreign[2]);
+        }
+
+        [['unique', 'unique'], ['index', 'index']].forEach(([method, type]) => {
+            const match = new RegExp('->' + method + '\\(\\s*(\\[[^\\]]*\\]|\'[a-z_0-9]+\')\\s*(?:,\\s*\'([a-z_0-9]+)\')?').exec(statement);
+            if (! match) return;
+            const columns = [...match[1].matchAll(/'([a-z_0-9]+)'/g)].map(m => m[1]);
+            if (! columns.length) return;
+            tooLong(match[2] || defaultIdentifierName(table, columns, type), type + ' key', !! match[2]);
+        });
+    });
+});
+
+check('every index and foreign key a migration declares fits MySQL\'s 64-character identifier',
+    overLongIdentifiers.length === 0,
+    overLongIdentifiers.slice(0, 3).join(' | '));
 
 /* ---------------------------------------------------------------- report */
 

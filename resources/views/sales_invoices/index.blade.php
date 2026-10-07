@@ -311,11 +311,6 @@
                     <i class="fas fa-percent" aria-hidden="true"></i> GST summary
                 </a>
 
-                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
-                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
-                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
-                </div>
             </div>
 
             {{-- This form has its own toolbar row. The table checkboxes point to
@@ -343,7 +338,7 @@
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table si-table" data-table-settings data-table-key="sales-invoices">
+            <table class="master-table si-table">
                 {{-- The ten columns, in the order the headings are written: the
                      pick box, the invoice (number, chips, date), the client, the
                      project, the three money columns, the due date, the state

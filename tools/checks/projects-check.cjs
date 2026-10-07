@@ -1,0 +1,993 @@
+/* ==========================================================================
+   PROJECTS CHECK — the list is the shell, and the shell is not ours
+   --------------------------------------------------------------------------
+   Run:  node tools/checks/projects-check.cjs
+   No dependencies. Exits non-zero on failure.
+
+   Projects was the last list in the ERP carrying its own composition: its own
+   page wrapper, its own stat cards, its own filter card, its own dialog and
+   its own money colours. That copy is why the module never looked like the
+   ledger, the vendors or the clients next door, and it is why this file
+   exists. What has to stay true now:
+
+     - the page is the shared master-list: the figures, then two flat cards —
+       the chips, search and the filter drawer in the first, the records in
+       the second — with the gap between them coming from master-list.css and
+       never from the module's sheet;
+     - the figures, the chip tallies and the drawer are one aggregate: two
+       grouped queries, not four COUNT(*) round trips, and the tiles are
+       derived from the grouped rows;
+     - a row asks for what it draws: the relations the row reads are eager
+       loaded, and paymentTotals() reuses that load instead of querying the
+       ledger once per project;
+     - the module's sheet declares no shared class in its list section, and it
+       keeps the eight classes the client portal still renders;
+     - a linked row looks linked (the cursor is the module's to say);
+     - the quick-create dialog is the shared .master-modal opened through
+       MasterModal, and the list's toolkit is MasterList — the module's own
+       modal wiring is gone;
+     - every route the screen links to is registered;
+     - every class a module screen names is a class with rules — the shell's,
+       another screen's, or the module's own sheet — so the private vocabulary
+       of a page that no longer exists cannot come back;
+     - every panel the record renders wears the module's own card class, because
+       the shared surface carries no padding and a record panel that does not
+       bring its own runs every row into the border.
+   ========================================================================== */
+
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.resolve(__dirname, '..', '..');
+const read = relative => fs.readFileSync(path.join(ROOT, relative), 'utf8');
+const exists = relative => fs.existsSync(path.join(ROOT, relative));
+const plain = text => text.replace(/\/\*[\s\S]*?\*\//g, '');
+
+const walk = (dir, out = []) => {
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+        const rel = path.join(dir, entry.name);
+        entry.isDirectory() ? walk(rel, out) : out.push(rel.replaceAll(path.sep, '/'));
+    }
+
+    return out;
+};
+
+let passed = 0;
+let failed = 0;
+const check = (name, ok, detail = '') => {
+    console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${name}${ok || !detail ? '' : ` -> ${detail}`}`);
+    ok ? passed++ : failed++;
+};
+
+/* ----------------------------------------------------------------- sources */
+
+const view = read('resources/views/projects/index.blade.php');
+const sheet = read('public/assets/css/projects.css');
+const sheetCode = plain(sheet);
+const script = read('public/assets/js/projects.js');
+const controller = read('app/Http/Controllers/ProjectController.php');
+const model = read('app/Models/Project.php');
+const routes = read('routes/web.php');
+const portalView = read('resources/views/client_portal/projects/index.blade.php');
+
+const index = controller.slice(
+    controller.indexOf('public function index('),
+    controller.indexOf('public function create('),
+);
+
+/* The sheet is read by section, not by position: every banner is a slice, and
+   the slices are named, so moving a section cannot silently hand a check the
+   wrong rules — a list check reading the record page's sheet is a check that
+   passes for the wrong reason. Prose is never an answer: the slices are read
+   with the comments stripped. */
+const sections = (() => {
+    const marks = [...sheet.matchAll(/\/\* ={10,}\n {3}([A-Z][^\n]*)\n/g)]
+        .map(match => ({ title: match[1].split(' — ')[0], start: match.index }));
+    const out = {};
+
+    marks.forEach((mark, index) => {
+        const from = sheet.indexOf('*/', mark.start) + 2;
+        const to = index + 1 < marks.length ? marks[index + 1].start : sheet.length;
+        out[mark.title] = plain(sheet.slice(from, to));
+    });
+
+    return out;
+})();
+
+const sectionRules = text => text.split('\n').map(line => line.trim())
+    .filter(line => /^[^@\s{}][^{}]*\{\s*$/.test(line));
+
+const listSection = sections['PROJECT LIST'] || '';
+const recordSection = sections['PROJECT RECORD'] || '';
+const listRules = sectionRules(listSection);
+const recordRules = sectionRules(recordSection);
+
+/* ------------------------------------------------- 1. the shared shell */
+
+check('the page is the shared master-list root',
+    /<div class="project project-index master-list">/.test(view));
+
+const filterCard = view.indexOf('aria-label="Search and filter projects"');
+const recordsCard = view.indexOf('aria-label="Project records"');
+
+check('the page is two blocks: what you search with, then what you read',
+    /<section class="master-card master-card--flat" aria-label="Search and filter projects">/.test(view)
+    && /<section class="master-card master-table-card master-card--flat" aria-label="Project records">/.test(view)
+    && filterCard !== -1 && recordsCard > filterCard
+    && (view.match(/<section class="master-card /g) || []).length === 2);
+
+/* The 24px rhythm between two cards is `.master-list > .master-card + .master-card`
+   in the shared sheet. A margin here is a second definition of it, and the two
+   drift the moment one of them is tuned. */
+check('the gap between the cards is the shell\'s, not the module\'s',
+    !/\.master-card/.test(listSection) && !/\.master-list\b/.test(listSection));
+
+check('the module\'s sheet never re-declares a shell class',
+    !/^[ \t]*\.(master|core)-(list|stat|table|modal|card|badge|chip|drawer)(-[a-z-]+)?[\s,:{]/m.test(sheetCode));
+
+check('the four figures are the shared flat tile',
+    (view.match(/<div class="master-stat master-stat--flat [a-z]+">/g) || []).length === 4
+    && /class="master-stat-title"/.test(view) && /class="master-stat-value"/.test(view));
+
+/* ------------------------------------------------- 2. the filter card */
+
+const chipAnchors = [...view.matchAll(/<a class="master-list-chip[^"]*"[\s\S]*?<\/a>/g)].map(m => m[0]);
+check('every chip is the shared chip and carries its own tally',
+    chipAnchors.length === 3
+    && chipAnchors.every(chip => /master-list-chip-count/.test(chip))
+    && /aria-label="Filter projects by status"/.test(view)
+    && /aria-label="Filter projects by health"/.test(view));
+
+check('a chip changes what it owns and carries the rest of the search with it',
+    /\$statusUrl = function \(\$value\) use \(\$keep\)/.test(view)
+    && /\$healthUrl = function \(\$value\) use \(\$keep\)/.test(view)
+    && /\$keep\(\['status'\]\)/.test(view)
+    && /\$keep\(\['health'\]\)/.test(view)
+    && /\$chipUrl = fn \(string \$key\) => route\('projects\.index', \$keep\(\[\$key\]\)->all\(\)\)/.test(view));
+
+check('the search sits in the GET form and the rest of the criteria in the drawer',
+    /<form method="GET" action="\{\{ route\('projects\.index'\) \}\}">/.test(view)
+    && /class="master-search"/.test(view)
+    && /<x-filter-trigger drawer="projectFiltersDrawer" label="Filters" :count="\$activeFilterCount" \/>/.test(view)
+    && /<x-drawer id="projectFiltersDrawer"/.test(view)
+    && /<\/x-drawer>\s*<\/form>/.test(view));
+
+check('one removable chip per active filter, each dropping only its own key',
+    /@if \(\$filtersActive\)/.test(view)
+    && ['search', 'status', 'client_id', 'health']
+        .every(key => view.includes(`$chipUrl('${key}')`))
+    && /class="master-list-applied-clear" href="\{\{ route\('projects\.index'\) \}\}"/.test(view));
+
+/* ------------------------------------------------- 3. the records card */
+
+check('the records card carries the table the toolkit keys on',
+    /class="master-table-wrap ui-mobile-cards"/.test(view)
+    && /<table class="master-table">/.test(view)
+    && /MasterList\.rowNavigation\(\{ root: '\.project-index' \}\)/.test(script)
+    && /MasterList\.gridShadow\(\{ root: '\.project-index' \}\)/.test(script));
+
+/* The density switch and the column chooser were removed ERP-wide: one
+   comfortable rhythm for every table, and the columns the controller sends, so
+   a reader cannot be looking at a different table than the office. The list
+   keeps no hook for either. */
+check('the list offers no density or column switch',
+    !/master-list-density|data-density|data-table-settings|data-table-key/.test(view)
+    && !/MasterList\.density/.test(script)
+    && !/density/.test(listSection));
+
+const headers = [...view.matchAll(/<th scope="col"([^>]*)>\s*([^<]+?)\s*<\/th>/g)]
+    .map(m => ({ attrs: m[1], label: m[2] }));
+
+check('the columns are named in the order the table draws them',
+    headers.map(header => header.label).join(' | ')
+        === 'Project | Client | Stage | Owner | Target | Value | Status | Action'
+    && headers.filter(header => header.attrs.includes('class="is-num"')).length === 1
+    && headers[headers.length - 1].attrs.includes('project-col-actions'));
+
+check('the toolbar says which rows are on screen',
+    /Newest first · Showing '\.\$firstProject\.'–'\.\$lastProject\.' of '\."\$projectCount'|Newest first · Showing/.test(view)
+    && /\$firstProject = \$projects->firstItem\(\) \?\? 0;/.test(view)
+    && /\$lastProject = \$projects->lastItem\(\) \?\? 0;/.test(view));
+
+check('a linked row says it is one',
+    /<tr class="project-row is-clickable" data-href="\{\{ route\('projects\.show', \$project\) \}\}">/.test(view)
+    && /\.project-index \.project-row\.is-clickable \{\s*cursor: pointer/.test(sheetCode));
+
+check('the empty state keeps a way out and names the real one',
+    /@forelse \(\$projects as \$project\)/.test(view)
+    && /class="master-list-empty"/.test(view)
+    && /@if \(\$filtersActive\)[\s\S]*?Clear filters[\s\S]*?@else[\s\S]*?Add first project/.test(view));
+
+/* ------------------------------------------------- 4. one number, one query */
+
+check('the tiles, the chip tallies and the drawer read the same grouped rows',
+    (index.match(/selectRaw\('[a-z]+, COUNT\(\*\) as aggregate'\)/g) || []).length === 2
+    && (index.match(/groupBy\('[a-z]+'\)/g) || []).length === 2
+    && /->pluck\('aggregate', 'status'\)/.test(index)
+    && /->pluck\('aggregate', 'health'\)/.test(index));
+
+check('the four figures are derived, not counted again',
+    /'total' => \(int\) \$statusCounts->sum\(\)/.test(index)
+    && /'waiting' => \(int\) \(\$statusCounts\['waiting_client'\] \?\? 0\) \+ \(int\) \(\$statusCounts\['waiting_vendor'\] \?\? 0\)/.test(index)
+    && /compact\(\s*'projects', 'stats', 'statusCounts', 'healthCounts'/.test(index)
+    && !/Project::(where|query\(\)->where)\(/.test(index));
+
+check('the list is a page of rows, and the module agreed on the size',
+    /paginate\(25\)/.test(index) && /->withQueryString\(\)/.test(index));
+
+check('the row\'s relations are loaded, and the totals reuse them',
+    /'cashflowEntries'/.test(index)
+    && /'assignedUser'/.test(index)
+    && /relationLoaded\('cashflowEntries'\)/.test(model)
+    && /\? \$this->cashflowEntries\b/.test(model)
+    && /\$this->cashflowEntries\(\)->get\(\)/.test(model)
+    && !/function cashflows\(/.test(model));
+
+/* ------------------------------------------------- 5. the module's own sheet */
+
+const portalClasses = ['projects-project-card', 'projects-mini-grid', 'projects-progress',
+    'projects-chip', 'projects-top-bar', 'projects-number', 'projects-meta-row',
+    'projects-project-footer', 'projects-project-top', 'projects-footer-actions'];
+
+check('the sheet keeps every class the client portal still renders',
+    portalClasses.every(name => sheetCode.includes('.' + name)),
+    portalClasses.filter(name => !sheetCode.includes('.' + name)).join(', '));
+
+const deadClasses = ['projects-page', 'projects-hero', 'projects-stat-card', 'projects-filter-card',
+    'projects-filter-form', 'projects-two-col', 'projects-search-field', 'projects-tag',
+    'projects-pagination', 'projects-money-green', 'projects-modal'];
+
+check('the copy of the pattern is gone from the sheet',
+    deadClasses.every(name => !sheetCode.includes('.' + name)),
+    deadClasses.filter(name => sheetCode.includes('.' + name)).join(', '));
+
+check('the list section is scoped to the page it styles',
+    listRules.length > 12
+    && listRules.every(rule => rule.includes('.project-index'))
+    && listRules.some(rule => rule.includes('.project-table-name'))
+    && listRules.some(rule => rule.includes('.project-health-dot'))
+    && !listRules.some(rule => rule.includes('.status-')),
+    listRules.filter(rule => !rule.includes('.project-index')).join(' | '));
+
+/* One vocabulary for the two pages: the same tone answers for a status on the
+   list and on the record, so a badge cannot mean one thing in one place. Every
+   state the record can print — a project's status, a milestone's stage, an
+   activity's state, a shipment's leg — has a tone, and a tone for the dark
+   theme, because a badge with no tone is a state the reader cannot scan. */
+const optionKeys = (file, method) => {
+    const body = read(file).match(new RegExp(`function ${method}\\(\\): array\\s*\\{([\\s\\S]*?)\\n    \\}`));
+
+    return body ? [...body[1].matchAll(/'([a-z_]+)'\s*=>/g)].map(match => match[1]) : [];
+};
+const STATE_TONES = [...new Set([
+    ...optionKeys('app/Models/Project.php', 'statusOptions'),
+    ...optionKeys('app/Models/ProjectMilestone.php', 'statusOptions'),
+    ...optionKeys('app/Models/ProjectTrackingUpdate.php', 'statusOptions'),
+    ...[...read('app/Models/Shipment.php').matchAll(/const STATUS_[A-Z_]+ = '([a-z_]+)';/g)]
+        .map(match => match[1]),
+])].map(state => state.replace(/_/g, '-'));
+const HEALTH_TONES = optionKeys('app/Models/Project.php', 'healthOptions');
+/* The band a client put us in is the feedback module's vocabulary, not this
+   one's: the words come from `FeedbackVocabulary` and the record page only
+   lends them a tone (`band-promoter` / `band-passive` / `band-detractor`). */
+const BAND_TONES = [...read('app/Services/FeedbackVocabulary.php')
+    .matchAll(/const BAND_[A-Z_]+ = '([a-z_]+)';/g)].map(match => match[1]);
+const darkRules = [...sheetCode.matchAll(/:root\[data-theme="dark"\][^{]*\{[^}]*\}/g)].map(match => match[0]);
+const darkTones = new Set([...darkRules.join('\n').matchAll(/\.(status|health|band)-([a-z-]+)/g)]
+    .map(match => `${match[1]}-${match[2]}`));
+/* The light rules are read with the dark ones taken out: a tone that only
+   reached the sheet as a dark-theme selector is a tone the light page has not
+   got, and reading the sheet whole hides exactly that. */
+const lightCode = darkRules.reduce((text, rule) => text.replace(rule, ''), sheetCode);
+const missingTones = ['status', 'health'].flatMap(prefix => (prefix === 'status' ? STATE_TONES : HEALTH_TONES)
+    .map(tone => `${prefix}-${tone}`))
+    .concat(BAND_TONES.map(band => `band-${band}`))
+    .filter(name => !new RegExp(`\\.project \\.${name}\\b`).test(lightCode) || !darkTones.has(name));
+
+check('the status and health tones are the module\'s, and both themes have one',
+    missingTones.length === 0
+    && /\.project-index \.status-completed/.test(sheetCode) === false
+    && /\.project \.project-priority-chip\.is-high/.test(sheetCode),
+    missingTones.join(' | '));
+
+/* A module sheet that places a shared class on its own is how a control
+   becomes a different size on one module's screens: `.master-field input`
+   (`padding: 10px 11px`) beat the shell's `.master-input`. Every rule naming a
+   `master-*` / `core-*` class must be scoped to something this module owns —
+   a module class or a module id — so the shell stays the only writer. */
+const bareShell = [];
+sheetCode.split('}').forEach(chunk => {
+    const head = chunk.split('{')[0].split('@')[0].trim();
+
+    head.split(',').forEach(selector => {
+        selector = selector.trim();
+
+        if (!selector) return;
+
+        const classes = [...selector.matchAll(/\.([a-zA-Z][\w-]*)/g)].map(match => match[1]);
+        const shell = classes.filter(name => /^(master|core)-/.test(name));
+        const mine = classes.filter(name => !/^(master|core)-/.test(name));
+
+        if (shell.length && ! mine.length && ! /#[\w-]+/.test(selector)) {
+            bareShell.push(selector);
+        }
+    });
+});
+
+check('the sheet places a shell class only inside this module\'s own scopes',
+    bareShell.length === 0, [...new Set(bareShell)].slice(0, 3).join(' | '));
+
+/* ------------------------------------------------- 6. the dialog and the script */
+
+check('the quick-create dialog is the shared modal, opened the shared way',
+    (view.match(/class="master-modal"/g) || []).length === 1
+    && /id="quickProjectModal"/.test(view)
+    && /id="openQuickProjectModal"/.test(view)
+    && /window\.MasterModal\.open\(dialog\)/.test(script)
+    && !/projects-modal/.test(script)
+    && !/projects-modal/.test(view));
+
+check('the list drives the shared toolkit, and the page scripts are wired',
+    /MasterList\.rowNavigation\(\{ root: '\.project-index' \}\)/.test(script)
+    && /MasterList\.gridShadow\(\{ root: '\.project-index' \}\)/.test(script)
+    && /initProjectList\(\);/.test(script)
+    && /assets\/js\/projects\.js/.test(view));
+
+/* ------------------------------------------------- 7. the doors it opens */
+
+const restNames = ['projects.index', 'projects.create', 'projects.store', 'projects.show',
+    'projects.edit', 'projects.update', 'projects.destroy'];
+const usedRoutes = [...new Set([...view.matchAll(/route\('(projects\.[A-Za-z.]+)'/g)].map(m => m[1]))];
+const unregistered = usedRoutes.filter(name => (restNames.includes(name)
+    ? !/Route::resource\('projects',/.test(routes)
+    : !new RegExp(`->name\\('${name.replace(/\./g, '\\.')}'\\)`).test(routes)));
+
+check('every route the screen links to is registered',
+    usedRoutes.length > 0 && unregistered.length === 0, unregistered.join(', '));
+
+check('the module is written down',
+    exists('docs/projects-module.md')
+    && /tools\/checks\/projects-check\.cjs/.test(read('docs/projects-module.md'))
+    && /master-list\.css/.test(read('docs/projects-module.md')));
+
+check('the check itself is listed with its siblings',
+    /projects-check\.cjs/.test(read('tools/checks/README.md')));
+
+check('the portal page this rule protects still exists',
+    /project-index|projects-project-card/.test(portalView));
+
+/* ------------------------------------------------- 8. the record page */
+
+const showView = read('resources/views/projects/show.blade.php');
+const recordFiles = walk('resources/views/projects/partials')
+    .filter(file => /record-[a-z-]+\.blade\.php$/.test(file));
+const recordSource = Object.fromEntries(recordFiles.map(file => [file, read(file)]));
+const recordViews = showView + '\n' + Object.values(recordSource).join('\n');
+const milestoneViews = read('resources/views/projects/partials/milestones-tab.blade.php')
+    + read('resources/views/projects/partials/milestone-product-block.blade.php');
+/* The feedback tab is a record panel too: the ask is issued from the project,
+   so its chrome is the record page's, not the feedback sheet's. */
+const feedbackTab = read('resources/views/projects/partials/feedback-tab.blade.php');
+const showIncludes = [...showView.matchAll(/@include\('(projects\.partials\.[a-z-]+)'/g)].map(m => m[1]);
+
+check('the record page is the shared shell',
+    /<div class="project project-show master-list" data-project-id=/.test(showView)
+    && /<header class="master-card master-header project-record-header">/.test(showView)
+    && /<div class="master-stats desktop-only" aria-label="Project figures">/.test(showView)
+    && /<div class="master-tabs-card">/.test(showView)
+    && /<nav class="master-tabs" role="tablist" aria-label="Project sections">/.test(showView));
+
+/* The record's panels are the shared surface, and the shared surface carries no
+   padding of its own — the list pages inset their bars instead, which is why a
+   list card can be flush and still read correctly. A record panel holds facts,
+   stats or a table directly, so it must carry the inset itself; round 10 shipped
+   them without it and every row ran into the border. The card class is the
+   module's (`.project-detail-card`, the sibling of the client and vendor
+   records' own card classes) and it is the one place the inset is written. */
+const panelFiles = walk('resources/views/projects')
+    .filter(file => file.endsWith('.blade.php'))
+    .filter(file => file !== 'resources/views/projects/index.blade.php'
+        && file !== 'resources/views/projects/form.blade.php');
+const panelCards = panelFiles.flatMap(file => [...read(file).matchAll(/class="([^"]*)"/g)]
+    .map(match => match[1])
+    .filter(classes => /(^|\s)master-card(\s|$)/.test(classes))
+    .map(classes => ({ file, classes })));
+const uninsetPanels = panelCards
+    .filter(({ classes }) => ! /(^|\s)project-detail-card(\s|$)/.test(classes)
+        && ! /(^|\s)master-header(\s|$)/.test(classes))
+    .map(({ file }) => file);
+
+check('every panel on the record wears the module card, and the card carries its inset',
+    panelCards.length >= 20
+    && uninsetPanels.length === 0
+    && /\.project-detail-card\s*\{[^}]*padding:\s*22px 24px/.test(sheetCode)
+    && /max-width: 767px[\s\S]{0,900}?\.project-detail-card\s*\{[^}]*padding:\s*16px 18px/.test(sheetCode),
+    uninsetPanels.slice(0, 3).join(' | '));
+
+/* The record mark's initials, in the house idiom (the client and vendor pages
+   collect the parts and map them). A `Str::of()` chain is a string: the one
+   collection method it cannot answer throws BadMethodCallException only when a
+   browser opens the page, which is a check no template reader would catch. */
+const viewCode = plain((showView + recordViews + milestoneViews + feedbackTab).replace(/\{\{--[\s\S]*?--\}\}/g, ''));
+
+check('the record mark is built the way the client pages build theirs',
+    /collect\(explode\(' ', trim\(\(string\) \$project->name\)\)\)/.test(showView)
+    && /mb_substr\(\$word, 0, 1\)/.test(showView)
+    && /Str::of\(/.test(viewCode) === false,
+    'the initials are read with the prose stripped: a comment cannot answer it');
+
+/* A panel from a module's own sheet would arrive unstyled: `feedback.css` is
+   loaded by the feedback pages, never by the project record. This tab is the
+   record page's like the other nine — and it owns its wrapper, so the include
+   site cannot wrap it twice or forget to. */
+check('the feedback tab speaks the record page, not the feedback sheet',
+    /<section class="master-tab-panel" id="project-panel-feedback"/.test(feedbackTab)
+    && /@include\('projects\.partials\.feedback-tab'\)/.test(showView)
+    && !/project-panel-feedback/.test(showView)
+    && /master-empty-state/.test(feedbackTab)
+    && /master-badge band-\{\{ \$response->band\(\) \}\}/.test(feedbackTab)
+    && /master-badge status-\{\{/.test(feedbackTab) === false
+    && !/(^|[^-\w])(fb|pd)-[a-z-]+/.test(feedbackTab));
+
+check('the tabs are links drawn from one list, with their counts',
+    /@foreach \(\$tabs as \$key => \$label\)/.test(showView)
+    && /<a class="master-tab \{\{ \$tab === \$key/.test(showView)
+    && !/<button[^>]*class="master-tab/.test(showView)
+    && /href="\{\{ \$recordUrl\(\$key\) \}\}"/.test(showView)
+    && /is-active/.test(showView)
+    && /<span class="master-tab-count">/.test(showView)
+    && /'tabs' => self::SHOW_TABS/.test(controller)
+    && /'recordUrl' => fn \(string \$key\) => route\('projects\.show'/.test(controller)
+    && /'tabCounts' => \[/.test(controller));
+
+check('a tab the URL invented lands on the overview',
+    /array_key_exists\(\$tab, self::SHOW_TABS\) \? \$tab : 'overview'/.test(controller));
+
+/* The strip is drawn from `SHOW_TABS` and the panels from the `@if`/`@elseif`
+   chain below it, so the two lists have to hold the same tabs: a key added to
+   one and not the other is either a tab that opens nothing or a panel nobody
+   can reach — and neither throws. `overview` is the chain's `@else`, which is
+   also what an unknown tab lands on, so it is the one key with no branch. */
+const stripKeys = [...(controller.match(/private const SHOW_TABS = \[([\s\S]*?)\n    \];/)?.[1] || '')
+    .matchAll(/'([a-z_]+)' =>/g)].map(match => match[1]);
+const branchKeys = [...showView.matchAll(/@(?:if|elseif) \(\$tab === '([a-z_]+)'\)/g)].map(match => match[1]);
+
+const tallyBlock = controller.match(/'tabCounts' => \[([\s\S]*?)\n            \],/)?.[1] || '';
+
+check('every tab in the strip has a panel, and every panel a tab',
+    stripKeys.length === 11
+    && branchKeys.length === 10
+    && stripKeys.filter(key => key !== 'overview').every(key => branchKeys.includes(key))
+    && branchKeys.every(key => stripKeys.includes(key))
+    /* The Invoices chip counts the four sections it opens — the same four
+       relations the tab draws, so the chip cannot disagree with the panel. */
+    && /'invoices' => collect\(\['taxInvoices', 'proformaInvoices', 'purchaseOrders', 'bills'\]\)/
+        .test(tallyBlock)
+    && stripKeys.filter(key => key !== 'overview')
+        .every(key => new RegExp(`'${key}' =>`).test(tallyBlock)));
+
+/* The button strip rendered all ten panels on every request and pushed the
+   active one into localStorage. A panel is a URL now: one per response, each
+   shareable, and a form posted from a tab returns to it through `back()`. */
+check('one panel is rendered per request',
+    !/data-tab-panel=/.test(showView)
+    && !/pd-tab-(panel|btn)/.test(showView + recordViews + milestoneViews)
+    && !/function initTabs/.test(script)
+    && showIncludes.length === 11
+    && ['record-overview', 'record-products', 'record-money', 'record-shipments', 'record-documents',
+        'record-invoices', 'record-comments', 'record-activity', 'record-logs', 'milestones-tab',
+        'feedback-tab']
+        .every(name => showIncludes.includes('projects.partials.' + name))
+    && (showView.match(/@elseif \(\$tab === '/g) || []).length === 9);
+
+check('every panel is a panel of the shared kind',
+    recordFiles.length === 9
+    && Object.values(recordSource).every(text => /class="master-tab-panel"/.test(text))
+    && Object.values(recordSource).every(text => /id="project-panel-[a-z]+"/.test(text))
+    && Object.values(recordSource).every(text => /role="tabpanel"/.test(text))
+    && /<section class="master-tab-panel" id="project-panel-milestones"/.test(milestoneViews));
+
+check('the record page declares no copy of the shell',
+    !/pd-[a-z]/.test(showView + recordViews)
+    && !/\bpd-[a-z]/.test(milestoneViews)
+    && !/pmile-page|pmile-stats|pmile-actions-card|pmile-product-block|pmile-empty|pmile-status/.test(milestoneViews)
+    && !/class="master-empty"/.test(recordViews + milestoneViews));
+
+/* The shell owns the shape of every card, badge and button; the record
+   section may place them (a phone breakpoint flexing an action row) but never
+   restyle them from the top. */
+check('the record section declares no shared class',
+    recordRules.length > 20
+    && !recordRules.some(rule => /^\.(master|core)-/.test(rule))
+    && recordRules.some(rule => rule.includes('.project-record-header'))
+    && recordRules.some(rule => rule.includes('.project-blocks')));
+
+check('the cards are the shell\'s, and the rhythm between them is the module\'s',
+    /\.project-blocks \{\s*display: grid;\s*gap: 16px/.test(recordSection)
+    && !/\.master-card/.test(recordSection)
+    && (recordViews.match(/class="master-card master-card--flat/g) || []).length >= 10);
+
+/* A timeline is wider than any card: five 285px steps and their connectors do
+   not fit a laptop, let alone the panel they sit in. The strip is meant to
+   scroll inside itself — but a bare `auto` grid track may not shrink below
+   its content, so the strip's max-content width walked up through the card
+   and widened the page. The reader then got a page-wide horizontal scrollbar
+   and cropped panels (the figures row included) instead of a scrolling
+   timeline. The fix is structural, so all four parts of it are checked: the
+   explicit zero track, the zero minimums down the chain, the scroll container
+   and the scrollbar it draws. */
+check('a timeline wider than its card scrolls inside the card',
+    /\.project-blocks \{[\s\S]{0,200}grid-template-columns: minmax\(0, 1fr\)/.test(sheet)
+    && /\.project-blocks > \*,[\s\S]{0,200}\.pmile-step-scroll \{\s*min-width: 0/.test(sheet)
+    && /\.pmile-step-scroll \{[\s\S]{0,140}overflow-x: auto/.test(sheet)
+    && /\.pmile-step-scroll::-webkit-scrollbar \{[\s\S]{0,80}height: 6px/.test(sheet));
+
+/* The framework never reads the markup, so a panel that closes its wrapper one
+   line early puts every card after it outside the grid and nothing complains:
+   the tag stack is the only reader that can see it. */
+const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link',
+    'meta', 'param', 'source', 'track', 'wbr']);
+const TAGS = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:"[^"]*"|'[^']*'|[^>"'])*?)(\/?)>/gs;
+
+const nestingErrors = (file, source) => {
+    const text = plain(source.replace(/\{\{--[\s\S]*?--\}\}/g, '').replace(/@php[\s\S]*?@endphp/g, ''));
+    const stack = [];
+    const errors = [];
+
+    [...text.matchAll(TAGS)].forEach(match => {
+        const [, closing, rawName, , selfClosing] = match;
+        const name = rawName.toLowerCase();
+        const line = text.slice(0, match.index).split('\n').length;
+
+        if (VOID_TAGS.has(name) || selfClosing) return;
+
+        if (!closing) {
+            stack.push({ name, line });
+            return;
+        }
+
+        const open = stack.pop();
+        if (!open || open.name !== name) {
+            errors.push(`${file}:${line} closes ${open ? `<${open.name}>` : 'nothing'}`);
+        }
+    });
+
+    return errors.concat(stack.map(open => `${file}:${open.line} <${open.name}> is never closed`));
+};
+
+const nesting = recordFiles.concat(['resources/views/projects/partials/milestones-tab.blade.php',
+    'resources/views/projects/partials/milestone-product-block.blade.php'])
+    .flatMap(file => nestingErrors(file, read(file)));
+
+check('every panel is well formed',
+    recordFiles.length === 9 && nesting.length === 0,
+    nesting.slice(0, 3).join(' | '));
+
+/* The wrapper is the panel's only child: the cards inside it stack on the
+   module's 16px. A card left outside it is a card with no rhythm. */
+check('the card wrapper is the panel\'s own child',
+    recordFiles.every(file => {
+        const lines = read(file).split('\n');
+        const panel = lines.findIndex(line => line.includes('<section class="master-tab-panel"'));
+
+        return panel !== -1
+            && lines[panel] === lines[panel].trimStart()
+            && lines[panel + 1] === '    <div class="project-blocks">'
+            && lines.some((line, index) => line === '    </div>' && lines[index + 1] === '</section>');
+    }));
+
+/* The other direction: a tone the page prints that the sheet does not own is a
+   badge with no colour, which is how the record page shipped a page of grey
+   pills the first time. */
+/* The tone's own class — `status-draft`, `band-promoter`. `\b` would let
+   `status-overdue` be owned by a rule for `status-overdue-x`, so the boundary
+   has to exclude a dash and a digit too. */
+const toneOwned = (tone, code = sheetCode) => new RegExp(`\\.project \\.${tone}(?![A-Za-z0-9_-])`).test(code);
+const printedTones = new Set([...(showView + recordViews + milestoneViews + feedbackTab)
+    .matchAll(/[\s"']status-([a-z-]+)/g)].map(match => match[1]));
+
+check('every tone the page prints is one the sheet owns',
+    printedTones.size >= 3
+    && [...printedTones].every(tone => toneOwned(`status-${tone}`)),
+    [...printedTones].filter(tone => ! toneOwned(`status-${tone}`)).join(' | '));
+
+/* The Invoices tab prints a tone per document state, and that state is a method
+   call — `$invoice->stateKey()`, `$invoice->status` — so the literal scan above
+   cannot see the words. They come from the models, and every one of them has to
+   keep a tone in both themes: a document whose badge lost its colour is a row
+   nobody can scan. The tab is the reader that decides which sets are printed,
+   so it is checked, then the whole vocabulary it can reach. */
+const invoiceTab = read('resources/views/projects/partials/record-invoices.blade.php');
+const salesStateBody = read('app/Models/SalesInvoice.php').match(/public function stateLabel\([\s\S]*?\n    \}/);
+const DOCUMENT_TONES = [...new Set([
+    ...(salesStateBody ? [...salesStateBody[0].matchAll(/'([a-z_]+)' => /g)].map(match => match[1]) : []),
+    ...optionKeys('app/Models/PurchaseInvoice.php', 'statusOptions'),
+])].map(state => `status-${state.replace(/_/g, '-')}`);
+
+check('the invoices tab wears a tone for every state a document can be in',
+    /status-\{\{ \$invoice->stateKey\(\) \}\}/.test(invoiceTab)
+    && /status-\{\{ \$invoice->status \}\}/.test(invoiceTab)
+    && DOCUMENT_TONES.length >= 11
+    && DOCUMENT_TONES.every(tone => toneOwned(tone, lightCode) && darkTones.has(tone)),
+    DOCUMENT_TONES.filter(tone => ! toneOwned(tone, lightCode) || ! darkTones.has(tone)).join(' | '));
+
+/* The tab's four sections are four relations, and the whole point of the
+   design is that none of them is a copy: the tag `project_id` is the link, the
+   type word is the model's, and the money on a row is the model's own reader of
+   the ledger. Every one of those is the sort of sentence that stays true in a
+   comment and stops being true in the code, so each is read. */
+const documentRelationsUsed = [...new Set([...invoiceTab
+    .matchAll(/\$project->([a-zA-Z]+)->(?:count|isEmpty|first|sum)\(/g)].map(match => match[1]))];
+const declaredRelations = new Set([...read('app/Models/Project.php')
+    .matchAll(/public function ([a-zA-Z]+)\(/g)].map(match => match[1]));
+
+check('the invoices tab draws each document from its own relation',
+    documentRelationsUsed.length === 4
+    && documentRelationsUsed.every(name => declaredRelations.has(name))
+    && ['taxInvoices', 'proformaInvoices', 'purchaseOrders', 'bills']
+        .every(name => documentRelationsUsed.includes(name))
+    /* Each family reads its own type off the model, not a word this module
+       invented: the tax invoices are `tax`, the proformas `proforma`, and the
+       two purchase documents are the model's own type constants. */
+    && /public function taxInvoices\(\)[\s\S]{0,220}?where\('invoice_type', 'tax'\)/.test(read('app/Models/Project.php'))
+    && /public function proformaInvoices\(\)[\s\S]{0,220}?where\('invoice_type', 'proforma'\)/.test(read('app/Models/Project.php'))
+    && /public function purchaseOrders\(\)[\s\S]{0,260}?TYPE_ORDER/.test(read('app/Models/Project.php'))
+    && /public function bills\(\)[\s\S]{0,260}?TYPE_BILL/.test(read('app/Models/Project.php'))
+    /* The money on a row is the document's own reading of the ledger — the
+       stored `amount_paid` is the opening figure the ledger rows are added to. */
+    && /\$invoice->receivedAmount\(\)/.test(invoiceTab)
+    && /\$invoice->paidAmount\(\)/.test(invoiceTab)
+    && ! /\$invoice->amount_paid/.test(invoiceTab)
+    /* One query per relation for a page of documents: the ledger rows and, on
+       a purchase document, the vendor it was raised from. */
+    && /\$with\[\] = \$relation\.'\.payments';/.test(controller)
+    && (controller.match(/'purchase_invoices', \['vendor'\]\]/g) || []).length === 2
+    /* The guard: a document table without the tag cannot be read, and a table
+       that is absent is not queried at all. */
+    && /Schema::hasColumn\(\$table, 'project_id'\)/.test(controller));
+
+/* ------------------------------------------------------- where products come from */
+
+/* The products tab used to be the writer: the office typed a product onto the
+   project, and the sales invoice form pre-filled its lines from that list — so
+   the same product was entered twice, and an invoice raised before anyone
+   filled the tab left the project looking empty. The lines the office already
+   raises are the facts, so the documents write the products now. Two modules
+   hand their lines to one service; the two things that would rot first are the
+   call sites (a call on `store` alone would miss every edit) and the field
+   ownership (both kinds writing the quantity is what a second writer looks
+   like), so both are read. */
+const salesControllerCode = read('app/Http/Controllers/SalesInvoiceController.php');
+const purchaseControllerCode = read('app/Http/Controllers/PurchaseInvoiceController.php');
+const productService = read('app/Services/ProjectProducts.php');
+/* The service's code without its prose. The docblocks explain the rules this
+   guard reads — one of them says "`load()`, never `loadMissing()`" — and a
+   comment must not be able to answer a check in either direction. */
+const productServiceCode = productService
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '');
+const productTab = read('resources/views/projects/partials/record-products.blade.php');
+
+check('the project products are written by the documents that mention them',
+    /^class ProjectProducts$/m.test(productServiceCode)
+    && /public function fromSalesInvoice\(SalesInvoice \$invoice\): int/.test(productServiceCode)
+    && /public function fromPurchaseInvoice\(PurchaseInvoice \$invoice\): int/.test(productServiceCode)
+    && /Schema::hasTable\('project_products'\)/.test(productServiceCode)
+    /* Every path that writes lines materialises them: the sales one is inside
+       the line writer both `store` and `update` go through, and again in
+       `copyInvoice()`, which is what a duplicate and a proforma-to-tax-invoice
+       conversion hand their lines to — a document nobody edits afterwards
+       still has to reach the project. */
+    && (salesControllerCode.match(/->fromSalesInvoice\(/g) || []).length === 2
+    && /private function syncItemsAndTotals\(SalesInvoice \$invoice[\s\S]*?fromSalesInvoice\(\$invoice\);/.test(salesControllerCode)
+    && /private function copyInvoice\(SalesInvoice \$source[\s\S]*?fromSalesInvoice\(\$copy\);/.test(salesControllerCode)
+    && (purchaseControllerCode.match(/->fromPurchaseInvoice\(/g) || []).length === 1
+    && /private function afterSave\(PurchaseInvoice \$invoice\): void[\s\S]*?fromPurchaseInvoice\(\$invoice\);/.test(purchaseControllerCode)
+    /* One field, one writer: the client's document owns the quantity, the rate
+       and the currency; a purchase line owns the vendor and their document
+       number, and only seeds the ordered quantity on a row it creates. */
+    && /'quantity' => \$line->quantity \?: null,\s*\n\s*'unit' => \$line->unit \?: null,\s*\n\s*'unit_price' => \$line->unit_price,\s*\n\s*'currency' => \$invoice->currency \?: null,/.test(productServiceCode)
+    && /if \(! \$row->exists\) \{[\s\S]{0,220}\$facts\['quantity'\] = \$line->quantity \?: null;/.test(productServiceCode)
+    && /'vendor_id' => \$invoice->vendor_id \?: null/.test(productServiceCode)
+    && /'vendor_invoice_number' => \$invoice->vendor_bill_number \?: null/.test(productServiceCode)
+    /* The specification is the line's, and it is written on every save — read
+       once into a local (a `?:` inside the `:` of a `?` is the parse error this
+       project already shipped once). */
+    && /private function salesFacts\(Model \$line, Model \$invoice, string \$name\): array/.test(productServiceCode)
+    && /'notes' => \$specification === '' \? null : \$specification,/.test(productServiceCode)
+    /* The reader reads the rows, not a relation the caller may have loaded
+       before rewriting them: `loadMissing` is how an update silently keeps
+       writing the previous lines' facts. */
+    && /\$invoice->load\('items\.product'\);/.test(productServiceCode)
+    && ! /loadMissing\(/.test(productServiceCode)
+    /* A line is matched to its row before anything is written — by the row it
+       already points at, then the product, then the name — so re-saving an
+       invoice updates the product instead of adding a second one, and nothing
+       here deletes a row that carries milestones, comments and attachments. */
+    && /\$line->project_product_id && \(\$match = \(clone \$query\)->whereKey\(\$line->project_product_id\)/.test(productServiceCode)
+    && /\$line->product_id && \(\$match = \(clone \$query\)->where\('product_id', \$line->product_id\)/.test(productServiceCode)
+    && /whereRaw\('LOWER\(product_name\) = \?', \[mb_strtolower\(\$name\)\]\)/.test(productServiceCode)
+    && ! /->delete\(\)/.test(productServiceCode)
+    /* The arithmetic stays the model's: quantity × rate, written once.
+       Neither a facts key nor an assignment on the row may set it here. */
+    && ! /['"]total_amount['"]\s*=>/.test(productServiceCode)
+    && ! /total_amount\s*=[^=]/.test(productServiceCode)
+    && /total_amount = round\(\$qty \* \$price, 2\)/.test(read('app/Models/ProjectProduct.php'))
+    /* There is no add door and no delete door. A project product is made by
+       the document that mentions it, and the row carries milestones, comments
+       and attachments — so the tab may not offer either, the router may not
+       declare either, and the controller answers one verb. */
+    && ! /addProductModal|openAddProductModal|projects\.products\.store/.test(productTab)
+    && ! /projects\.products\.destroy/.test(productTab)
+    && ! /addProductModal|openAddProductModal/.test(script)
+    && /projects\.products\.update/.test(read('routes/web.php'))
+    && ! /projects\.products\.store|products\.destroy/.test(read('routes/web.php'))
+    && ! /function (store|destroy)\(/.test(read('app/Http/Controllers/ProjectProductController.php'))
+    /* The controller edits the project's own half of the row and nothing else:
+       a crafted POST cannot overwrite the facts an invoice owns. */
+    && (read('app/Http/Controllers/ProjectProductController.php')
+        .match(/\$request->validate\(\[/g) || []).length === 1
+    && /'status' => \['required', Rule::in\(array_keys\(ProjectProduct::statusOptions\(\)\)\)\]/.test(read('app/Http/Controllers/ProjectProductController.php'))
+    && ! /'quantity'|'unit_price'|'vendor_invoice_number'|'product_id'|'currency'/.test(read('app/Http/Controllers/ProjectProductController.php'))
+    /* The tab says where its rows come from, and keeps a door to each document
+       that fills it — the empty state's two buttons. */
+    && /written by the invoices and purchase documents raised for it/.test(productTab)
+    && /appear here on their own/.test(productTab)
+    && /route\('sales-invoices\.create', \['project_id' => \$project->id\]\)/.test(productTab)
+    && /route\('purchase-invoices\.create', \['project_id' => \$project->id\]\)/.test(productTab)
+    /* And the specification reads as it does on the invoice: its own line
+       breaks, escaped first. */
+    && /\{!! nl2br\(e\(\$projectProduct->notes\)\) !!\}/.test(productTab));
+
+/* ------------------------------------------- what a project is worth, and may spend */
+
+/* The project's value and its budget were typed on the project form while the
+   documents that decide both were raised elsewhere — a project could claim a
+   value no invoice agreed with. Both are derived now: the value sums the tax
+   invoices and the proformas no tax invoice has carried, the budget sums the
+   purchase orders and the bills, and each document's own model owns the word
+   for whether it counts at all. The columns are gone, so nothing may write one
+   back. */
+const projectModel = read('app/Models/Project.php');
+check('the value and the budget are the documents\', not columns on the project',
+    /public function estimatedValue\(\): float\s*\{\s*return \$this->documentsValue\('taxInvoices', 'proformaInvoices'\);/.test(projectModel)
+    && /public function budgetAmount\(\): float\s*\{\s*return \$this->documentsValue\('purchaseOrders', 'bills'\);/.test(projectModel)
+    && /\$document->countsTowardsProject\(\)/.test(projectModel)
+    && /\$this->relationLoaded\(\$relation\) \? \$this->\{\$relation\} : \$this->\{\$relation\}\(\)->get\(\)/.test(projectModel)
+    /* The value a document contributes is the document's own total, in the
+       project's currency. */
+    && /\$value = \(float\) \$document->total_amount;/.test(projectModel)
+    && /\$value \* \(float\) \(\$document->exchange_rate \?: 1\)/.test(projectModel)
+    /* One predicate per side, on the model that owns the document. */
+    && /public function countsTowardsProject\(\): bool\s*\{\s*return \$this->status !== 'cancelled' && ! \$this->isSuperseded\(\);/.test(read('app/Models/SalesInvoice.php'))
+    && /public function countsTowardsProject\(\): bool\s*\{\s*return \$this->status !== 'cancelled' && ! \$this->converted_invoice_id;/.test(read('app/Models/PurchaseInvoice.php'))
+    /* Outstanding is the value minus what came in, so it reads the accessor. */
+    && /'outstanding' => max\(\$this->estimatedValue\(\) - \$inward, 0\)/.test(projectModel)
+    /* The stored columns have no writer and no reader left: not in the fillable
+       or the casts, not on the form, not summed by the dashboard, not in the
+       migrations that make the table — which is why the guarded one drops them
+       instead of adding them. */
+    /* The word survives as the dashboard payload's key — it names the figure,
+       it is not a column — so the rule is read as "nothing writes or sums the
+       column", not as "the word never appears". */
+    && ! /estimated_value|budget_amount/.test(projectModel)
+    && ! /estimated_value|budget_amount/.test(read('app/Http/Controllers/ProjectController.php') + read('routes/web.php'))
+    && ! /SUM\(estimated_value\)|sum\([^)]*['"]estimated_value['"]/.test(read('app/Http/Controllers/AdminDashboardController.php'))
+    && ! /budget_amount/.test(read('app/Http/Controllers/AdminDashboardController.php'))
+    && ! /estimated_value|budget_amount/.test(read('resources/views/projects/form.blade.php'))
+    && ! /estimated_value|budget_amount/.test(read('database/migrations/2026_07_18_010000_create_projects_table.php'))
+    && exists('database/migrations/2026_10_06_100000_drop_the_project_value_columns.php')
+    /* Every screen that prints the value reads the accessor — including the two
+       figures on the record page's stat row and the list's Value cell. */
+    && (read('resources/views/projects/index.blade.php').match(/\$project->estimatedValue\(\)/g) || []).length === 2
+    /* The budget is the drawer's and the record page's; the list's own columns
+       carry the value and what is outstanding. */
+    && (read('resources/views/projects/index.blade.php').match(/\$project->budgetAmount\(\)/g) || []).length === 1
+    && /data-drawer-budget=/.test(read('resources/views/projects/index.blade.php'))
+    && /\$estimatedValue = \$project->estimatedValue\(\);/.test(read('resources/views/projects/show.blade.php'))
+    && /\$project->estimatedValue\(\)/.test(read('resources/views/projects/partials/record-overview.blade.php'))
+    && /\$project->budgetAmount\(\)/.test(read('resources/views/projects/partials/record-overview.blade.php'))
+    /* A page of rows costs four queries, not four per row: the list eager-loads
+       the same four relations `documentRelations()` names. */
+    && /foreach \(array_keys\(\$this->documentRelations\(\)\) as \$relation\) \{\s*\n\s*\$with\[\] = \$relation;/.test(read('app/Http/Controllers/ProjectController.php'))
+);
+
+check('the facts, the notes and the empty blocks are the shell\'s',
+    (recordViews.match(/class="master-facts"/g) || []).length >= 4
+    && (recordViews.match(/class="master-info"/g) || []).length >= 18
+    && (recordViews.match(/class="master-empty-state"/g) || []).length >= 8
+    && !/master-info-list|pd-info-list/.test(recordViews));
+
+check('every table on the record is the shared table in a wrapper',
+    (recordViews.match(/<table class="master-table">/g) || []).length === 8
+    && (recordViews.match(/class="master-table-wrap"/g) || []).length === 8
+    && (recordViews.match(/<th scope="col"/g) || []).length === (recordViews.match(/<th[\s>]/g) || []).length
+    && !/style="color:(green|red)"/.test(recordViews));
+
+check('the update path is the server\'s, not the script\'s',
+    ['products', 'tracking', 'comments']
+        .every(name => new RegExp(`data-update-url="\\{\\{ route\\('projects\\.${name}\\.update'`).test(recordViews))
+    && /__ID__/.test(recordViews)
+    && /function bindUpdateUrl/.test(script)
+    && !/'\/project-/.test(plain(script)));
+
+/* A project payment used to be its own row (`project_payments`): a copy of
+   money the ledger already carried, with its own publish flag, and therefore a
+   second thing to keep in step with the ledger entry beside it. The ledger is
+   the only source of truth for project-level payments now — the Payments panel
+   reads `cashflowEntries`, and every client-facing read goes through
+   `ProjectReceipts` (ledger entries tagged to a published project, money in,
+   booked or reconciled). A model, controller, route or view that still names
+   the dropped table is a door into nothing. */
+const paymentCorpus = [
+    read('routes/web.php'),
+    read('app/Models/Project.php'),
+    read('app/Http/Controllers/ProjectController.php'),
+    recordViews,
+    script,
+].join('\n');
+
+check('project payments are the ledger\'s rows, not a table of their own',
+    ! /project_payments|ProjectPayment|projects\.payments/.test(paymentCorpus)
+    && ! exists('app/Models/ProjectPayment.php')
+    && ! exists('app/Http/Controllers/ProjectPaymentController.php')
+    && ! exists('database/migrations/2026_07_18_010400_create_project_payments_table.php')
+    && /projectReceipts/.test(read('app/Models/Project.php'))
+    && /\$project->cashflowEntries/.test(read('resources/views/projects/partials/record-money.blade.php'))
+    && /'payments' => \$cashflowCount/.test(read('app/Http/Controllers/ProjectController.php'))
+    && /ProjectReceipts::query\(/.test(read('app/Http/Controllers/ClientPortalPaymentController.php'))
+    && /ProjectReceipts::available\(/.test(read('app/Http/Controllers/ClientPortalPaymentController.php'))
+    && (read('app/Services/PartyStatement.php').match(/ProjectReceipts::forClient\(/g) || []).length === 3);
+
+check('the second door into a dialog exists',
+    /querySelectorAll\('\[data-modal-open\]'\)/.test(script)
+    && [...recordViews.matchAll(/data-modal-open="([A-Za-z]+)"/g)]
+        .every(match => recordViews.includes(`id="${match[1]}"`)));
+
+/* The record page is a hub: it opens the product dialogs, the money dialogs,
+   the shipment record, the portal and the PDFs. A name typo is a 500 here, and
+   a panel is only rendered when its tab is asked for — so the routes the views
+   name are checked against the routes the file declares, not against a request
+   someone happened to make. */
+const webRoutes = read('routes/web.php');
+const declaredRoutes = new Set([...webRoutes.matchAll(/name\('([a-z0-9_.-]+)'\)/g)].map(m => m[1]));
+/* A route written inside a `Route::prefix(…)->name('group.')` group is declared
+   with the short name and referenced with the full one — `client-portal.login`
+   for a `->name('login')` inside that group — so the group's prefix is opened
+   against every name the file declares. Only a name built from a real prefix
+   and a real name is accepted; a typo matches nothing. */
+const routeNamePrefixes = [...webRoutes.matchAll(/->name\('([a-z0-9_.-]+\.)'\)/g)].map(m => m[1]);
+routeNamePrefixes.forEach(prefix => [...declaredRoutes].forEach(name => declaredRoutes.add(prefix + name)));
+const resourceBases = [...webRoutes.matchAll(/Route::resource\('([a-z-]+)'/g)].map(m => m[1]);
+const doorsUsed = [...(recordViews + milestoneViews).matchAll(/route\('([a-z0-9_.-]+)'/g)]
+    .map(m => m[1].replace(/['\s)]+$/, ''));
+
+check('every door a panel opens exists',
+    doorsUsed.length >= 25
+    && doorsUsed.every(name => declaredRoutes.has(name) || resourceBases.includes(name.split('.')[0])),
+    [...new Set(doorsUsed)].filter(name => !declaredRoutes.has(name) && !resourceBases.includes(name.split('.')[0])).join(' | '));
+
+/* A record page is a place where things are removed. The shared confirm layer
+   is `data-confirm` on the form; a form that already sits in its own modal
+   footer has asked the question, and asking twice is how people learn to click
+   through the question. */
+const deleteForms = [...(recordViews + milestoneViews).matchAll(/<form[\s\S]*?<\/form>/g)]
+    .map(form => form[0])
+    .filter(form => /@method\('DELETE'\)/.test(form));
+
+check('a destructive action asks first',
+    deleteForms.length >= 4
+    && deleteForms.every(form => /data-confirm=/.test(form) || /master-modal-footer/.test(form)));
+
+/* The public project portal is gone — the client follows a project by signing
+   in, and `projects.show_client_portal` is the door the login portal reads. A
+   token link left anywhere (a route name, a column, a copy button) is a door
+   that 404s, so the removal is checked rather than assumed, and the flag is
+   checked as still read where the portal decides what to show. */
+const portalCorpus = [
+    read('routes/web.php'),
+    read('app/Models/Project.php'),
+    read('app/Http/Controllers/ProjectController.php'),
+    showView,
+    read('resources/views/projects/partials/record-overview.blade.php'),
+    read('public/assets/js/projects.js'),
+].join('\n');
+
+check('the client follows a project in the login portal, not through a token link',
+    ! /project-portal|projects\.public|public_token|publicPayments/.test(portalCorpus)
+    && ! exists('app/Http/Controllers/PublicProjectController.php')
+    && ! exists('resources/views/projects/public.blade.php')
+    && /show_client_portal/.test(portalCorpus + read('resources/views/projects/form.blade.php'))
+    && /route\('client-portal\.login'\)/.test(recordViews)
+    && /where\('show_client_portal', true\)/.test(read('app/Http/Controllers/ClientPortalProjectController.php')));
+
+check('the status form keeps its four facts, in the shared drawer',
+    /<x-drawer id="projectStatusDrawer"/.test(showView)
+    && /action="\{\{ route\('projects\.status\.update', \$project\) \}\}"/.test(showView)
+    && /@method\('PATCH'\)/.test(showView)
+    && ['status', 'stage', 'health', 'progress_percent']
+        .every(name => new RegExp(`name="${name}"`).test(showView)));
+
+check('the record page is written down',
+    /record page/i.test(read('docs/projects-module.md'))
+    && /SHOW_TABS/.test(read('docs/projects-module.md')));
+
+/* ------------------------------------- a class the module names is a class with rules */
+
+/* The module rebuilt its screens on the shell, and each rebuild moved the markup
+   off the sheet of the day: the form's root is `.project-form-page` because the
+   sheet scopes the form's own field spacing to that name, the record's thumbs
+   are `.project-thumb` because the sheet draws one, and a health chip is a
+   `.master-list-chip` because the shell owns the chip. A class left behind in
+   the markup is invisible — it renders as nothing, and no reviewer reading the
+   Blade can tell. This guard is exact rather than lexical: a class a module
+   screen names is defined when a sheet declares a rule for it or when another
+   screen names it, and dynamic compositions (`project-health-dot--{{ $key }}`)
+   are not names at all. */
+const moduleScreenFiles = (function walk(dir, out = []) {
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+        const relative = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) walk(relative, out);
+        else if (relative.endsWith('.blade.php')) out.push(relative);
+    }
+    return out;
+})('resources/views/projects');
+
+const everyTemplateFile = moduleScreenFiles.slice();
+(function walk(dir) {
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+        const relative = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) walk(relative);
+        else if (relative.endsWith('.blade.php') && ! everyTemplateFile.includes(relative)) everyTemplateFile.push(relative);
+    }
+})('resources/views');
+
+const moduleOwnedClass = /^(?:project|pd|pmile|fb)-/;
+const classTokens = (text) => text.split(/[^A-Za-z0-9_-]+/)
+    .filter((name) => name && moduleOwnedClass.test(name) && ! name.endsWith('-') && ! /[{}]/.test(name));
+const eachNamedClass = (source, visit) => {
+    for (const match of source.matchAll(/class="([^"]*)"/g)) classTokens(match[1]).forEach(visit);
+    /* In @class([...]) a quoted string is the class — a key with a condition, or
+       a plain list item; an unquoted value (a variable) is not a name. */
+    for (const match of source.matchAll(/@class\(\[([\s\S]*?)\]\)/g)) {
+        for (const literal of match[1].matchAll(/'([^']*)'/g)) classTokens(literal[1]).forEach(visit);
+    }
+};
+
+const classSites = new Map();
+for (const file of everyTemplateFile) {
+    eachNamedClass(plain(read(file)), (name) => {
+        if (! classSites.has(name)) classSites.set(name, new Set());
+        classSites.get(name).add(file);
+    });
+}
+
+const appSheetCorpus = fs.readdirSync(path.join(ROOT, 'public/assets/css'))
+    .filter((file) => file.endsWith('.css'))
+    .map((file) => read(`public/assets/css/${file}`)).join('\n');
+const sheetDeclares = (name) => new RegExp(`\\.${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9_-])`)
+    .test(appSheetCorpus);
+
+const orphanClassSites = [];
+for (const file of moduleScreenFiles) {
+    const spelled = new Set();
+    eachNamedClass(plain(read(file)), (name) => spelled.add(name));
+    for (const name of spelled) {
+        const namedElsewhere = [...(classSites.get(name) || [])].some((other) => other !== file);
+        if (! namedElsewhere && ! sheetDeclares(name)) {
+            orphanClassSites.push(`${file} → .${name}`);
+        }
+    }
+}
+
+check('every class a module screen names is a class with rules',
+    orphanClassSites.length === 0,
+    orphanClassSites.slice(0, 6).join(' | '));
+
+/* ---------------------------------------------------------------- report */
+
+const failedChecks = failed;
+console.log(`\nprojects: ${passed} passed, ${failedChecks} failed`);
+process.exit(failedChecks ? 1 : 0);

@@ -228,10 +228,10 @@
 
     <section class="master-panel" data-panel="sales">
         <div class="master-metrics-grid four">
-            <div class="master-metric-card blue"><div class="master-metric-icon"><i class="fa-solid fa-arrow-trend-up"></i></div><div><span>Period Sales</span><strong>{{ $short($metrics['period_sales']) }}</strong><small>Customer quotes shared/accepted</small></div></div>
-            <div class="master-metric-card orange"><div class="master-metric-icon"><i class="fa-solid fa-cart-shopping"></i></div><div><span>Period Purchase</span><strong>{{ $short($metrics['period_purchase']) }}</strong><small>Vendor quotes / purchase cost</small></div></div>
+            <div class="master-metric-card blue"><div class="master-metric-icon"><i class="fa-solid fa-arrow-trend-up"></i></div><div><span>Period Sales</span><strong>{{ $short($metrics['period_sales']) }}</strong><small>Tax invoices raised</small></div></div>
+            <div class="master-metric-card orange"><div class="master-metric-icon"><i class="fa-solid fa-cart-shopping"></i></div><div><span>Period Purchase</span><strong>{{ $short($metrics['period_purchase']) }}</strong><small>Vendor bills received</small></div></div>
             <div class="master-metric-card green"><div class="master-metric-icon"><i class="fa-solid fa-percent"></i></div><div><span>Gross Margin</span><strong>{{ $short($metrics['period_gross_margin']) }}</strong><small>{{ $metrics['period_margin_percent'] }}% margin</small></div></div>
-            <div class="master-metric-card purple"><div class="master-metric-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div><div><span>Accepted Quotes</span><strong>{{ $metrics['quotes_accepted'] }}</strong><small>{{ $metrics['quotes_total'] }} total quotations</small></div></div>
+            <div class="master-metric-card purple"><div class="master-metric-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div><div><span>Project Receipts</span><strong>{{ $short($metrics['period_project_inward']) }}</strong><small>Received on projects this period</small></div></div>
         </div>
         <div class="master-grid-2">
             <div class="master-card"><div class="master-section-head"><div><p class="master-eyebrow">Sales vs Purchase</p><h2>Month/Period Wise Sales & Purchase</h2></div></div><canvas id="salesPurchaseChart" height="320"></canvas></div>
@@ -243,7 +243,7 @@
         </div>
         <div class="master-grid-3" style="margin-top:18px;">
             <div class="master-card"><div class="master-section-head"><div><p class="master-eyebrow">Leads</p><h2>Lead Funnel</h2></div></div><div class="master-status-list">@include('dashboard.partials.status-list', ['items' => $charts['status']['leads']])</div></div>
-            <div class="master-card"><div class="master-section-head"><div><p class="master-eyebrow">Quotes</p><h2>Quote Status</h2></div></div><div class="master-status-list">@include('dashboard.partials.status-list', ['items' => $charts['status']['quotes']])</div></div>
+            <div class="master-card"><div class="master-section-head"><div><p class="master-eyebrow">Clients</p><h2>Client Status</h2></div></div><div class="master-status-list">@include('dashboard.partials.status-list', ['items' => $charts['status']['clients']])</div></div>
             <div class="master-card"><div class="master-section-head"><div><p class="master-eyebrow">Purchase</p><h2>Purchase by Vendor</h2></div></div><canvas id="purchaseByVendorChart" height="270"></canvas></div>
         </div>
     </section>
@@ -271,7 +271,7 @@
             <a class="master-metric-card pink" href="{{ $routes['projects'] }}"><div class="master-metric-icon"><i class="fa-solid fa-briefcase"></i></div><div><span>Total Projects</span><strong>{{ $metrics['projects_total'] }}</strong><small>{{ $metrics['projects_completed'] }} completed</small></div></a>
             <a class="master-metric-card green" href="{{ $routes['shipments'] }}"><div class="master-metric-icon"><i class="fa-solid fa-plane-departure"></i></div><div><span>In Transit</span><strong>{{ $metrics['shipments_in_transit'] }}</strong><small>{{ $metrics['shipments_delivered'] }} delivered</small></div></a>
             <a class="master-metric-card dark" href="{{ $routes['tasks'] }}"><div class="master-metric-icon"><i class="fa-solid fa-list-check"></i></div><div><span>Tasks</span><strong>{{ $metrics['tasks_total'] }}</strong><small>{{ $metrics['tasks_completed'] }} completed</small></div></a>
-            <a class="master-metric-card orange" href="{{ $routes['vendors'] }}"><div class="master-metric-icon"><i class="fa-solid fa-user-gear"></i></div><div><span>Vendors</span><strong>{{ $metrics['vendors_total'] }}</strong><small>{{ $metrics['vendor_quotes_total'] }} vendor quotes</small></div></a>
+            <a class="master-metric-card orange" href="{{ $routes['vendors'] }}"><div class="master-metric-icon"><i class="fa-solid fa-user-gear"></i></div><div><span>Vendors</span><strong>{{ $metrics['vendors_total'] }}</strong><small>in the vendor ledger</small></div></a>
         </div>
         <div class="master-grid-3">
             <div class="master-card"><div class="master-section-head"><div><p class="master-eyebrow">Project Status</p><h2>Project Workload</h2></div></div><div class="master-status-list">@include('dashboard.partials.status-list', ['items' => $charts['status']['projects']])</div></div>

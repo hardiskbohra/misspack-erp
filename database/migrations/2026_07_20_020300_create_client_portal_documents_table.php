@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
             $table->foreignId('client_portal_user_id')->nullable()->constrained('client_portal_users')->nullOnDelete();
-            $table->string('related_type', 80)->nullable(); // project, shipment, quote, invoice, kyc, general
+            $table->string('related_type', 80)->nullable(); // project, shipment, invoice, kyc, general
             $table->unsignedBigInteger('related_id')->nullable();
             $table->string('category', 60)->default('general');
             $table->string('title')->nullable();

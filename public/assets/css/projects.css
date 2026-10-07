@@ -1,18 +1,24 @@
 /* ==========================================================================
    PROJECTS.CSS — Projects module (projects/* views, admin side)
    --------------------------------------------------------------------------
-   Module stylesheet for the Projects section: project form, project list,
-   the tabbed project detail page (pd-*) and the milestones partial (pmile-*).
+   Module stylesheet for the Projects section: project form, the office list
+   and record pages (master-* shell markup), the milestones partial (pmile-*),
+   and the legacy pd-* page the static preview still opens.
    Loaded on project screens via @push('styles').
 
    Generic components (master-*, core-*) come from the shared foundations
-   loaded by layouts/app.blade.php. The .master-field base + input styles and
-   .master-status-form below are kept here because the shared foundations
-   only provide grid helpers for .master-field and no such status-form
-   component; they apply only on project screens (file is page-scoped).
+   loaded by layouts/app.blade.php. Every rule here that names one of those
+   classes is scoped to a page or panel of this module, so the sheet cannot
+   restate the shell: `.project` and `.project-index` / `.project-show` for the
+   two office screens, `.project-form-page` for the form, `.pd-page` for the
+   legacy page kept for the static preview. A bare `.master-field input`
+   (`padding: 10px 11px`) used to beat the shell's `.master-input`
+   (`padding: 10px 14px`) on every projects screen, which is how a shared
+   control ends up a different size on one module's pages.
 
-   The public client page (projects/public.blade.php) is standalone and has
-   its own projects-public.css — do not mix its element-level rules here.
+   The client's own view of a project is the login portal's screen
+   (client_portal/projects/show.blade.php), which loads the portal's sheets —
+   nothing here is shared with it.
    ========================================================================== */
 
 /* ==========================================================================
@@ -94,16 +100,6 @@
             margin-top: 28px
         }
 
-        .pf-quote-badge {
-            background: #fff7e6;
-            color: #b54708;
-            border: 1px solid #fedf89;
-            border-radius: 999px;
-            padding: 8px 12px;
-            font-weight: 600;
-            font-size: 12px
-        }
-
         .pf-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -122,11 +118,11 @@
             grid-column: span 2
         }
 
-        .master-field label span {
+        .project-form-page .master-field label span {
             color: #ef4770
         }
 
-        .master-field small {
+        .project-form-page .master-field small {
             color: #8a94a6
         }
 
@@ -217,98 +213,12 @@
         }
 
 /* ==========================================================================
-   PROJECT LIST — resources/views/projects/index.blade.php
-   List, filters, stats, cards and the quick-create modal (projects-*).
+   PROJECT CARDS — resources/views/client_portal/projects/index.blade.php
+   The portal's own card list: one card per project, with its number, progress,
+   status chips and mini-grid. The office list next door is the shared
+   master-list; these classes are the portal's, and only the portal renders
+   them.
    ========================================================================== */
-
-.projects-page {
-            display: flex;
-            flex-direction: column;
-            gap: 18px
-        }
-
-        .projects-hero {
-            background: linear-gradient(135deg, #4f83f1, #7b61ff);
-            border-radius: 24px;
-            padding: 24px;
-            color: #fff;
-            display: flex;
-            justify-content: space-between;
-            gap: 18px;
-            box-shadow: 0 18px 45px rgba(79, 131, 241, .22)
-        }
-
-        .projects-eyebrow {
-            margin: 0 0 6px;
-            text-transform: uppercase;
-            letter-spacing: .12em;
-            font-size: 11px;
-            font-weight: 500;
-            opacity: .82
-        }
-
-        .projects-hero h1 {
-            margin: 0;
-            font-size: 30px;
-            font-weight: 600
-        }
-
-        .projects-hero p {
-            margin: 8px 0 0;
-            max-width: 760px;
-            opacity: .9
-        }
-
-        .projects-hero-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap
-        }
-
-        .projects-stats {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 14px
-        }
-
-        .projects-stat-card {
-            background: var(--mc-card);
-            border-radius: 20px;
-            padding: 18px;
-            border: 1px solid var(--mc-border);
-            box-shadow: 0 10px 30px rgba(22, 34, 51, .06)
-        }
-
-        .projects-stat-card span {
-            font-size: 12px;
-            color: #768197;
-            font-weight: 500;
-            text-transform: uppercase
-        }
-
-        .projects-stat-card strong {
-            display: block;
-            font-size: 30px;
-            margin: 8px 0;
-            color: #1e2a3b
-        }
-
-        .projects-stat-card small {
-            color: var(--mc-text-3)
-        }
-
-        .projects-stat-blue strong {
-            color: #4f83f1
-        }
-
-        .projects-stat-amber strong {
-            color: #f59e0b
-        }
-
-        .projects-stat-green strong {
-            color: #12b76a
-        }
 
         .projects-card {
             background: var(--mc-card);
@@ -317,24 +227,8 @@
             box-shadow: 0 12px 32px rgba(22, 34, 51, .06)
         }
 
-        .projects-filter-card {
-            padding: 16px
-        }
-
-        .projects-filter-form {
-            display: grid;
-            grid-template-columns: 1.5fr .8fr 1fr .8fr auto;
-            gap: 12px;
-            align-items: end
-        }
-
-        .master-field label span {
+        .project-form-page .master-field label span {
             color: #ef4770
-        }
-
-        .projects-filter-actions {
-            display: flex;
-            gap: 8px
         }
 
         .projects-list {
@@ -408,14 +302,6 @@
 
         .projects-meta-row i {
             color: #9aa4b6
-        }
-
-        .projects-card-actions {
-            display: flex;
-            gap: 8px;
-            align-items: flex-start;
-            flex-wrap: wrap;
-            justify-content: flex-end
         }
 
         .projects-chip {
@@ -520,14 +406,6 @@
             color: #1e2a3b
         }
 
-        .projects-money-green {
-            color: #039855 !important
-        }
-
-        .projects-money-red {
-            color: #d92d20 !important
-        }
-
         .projects-project-footer {
             margin-top: 16px;
             padding-top: 14px;
@@ -543,21 +421,6 @@
             display: flex;
             gap: 8px;
             flex-wrap: wrap
-        }
-
-        .projects-tag {
-            background: var(--mc-hover);
-            border: 1px solid var(--mc-border);
-            color: var(--mc-text-2);
-            border-radius: 999px;
-            padding: 7px 10px;
-            font-size: 12px;
-            font-weight: 500
-        }
-
-        .projects-tag-public {
-            background: #eef9ff;
-            color: #0b72b9
         }
 
         .projects-empty {
@@ -580,128 +443,30 @@
             font-size: 28px
         }
 
-        .projects-pagination {
-            display: flex;
-            justify-content: flex-end
-        }
-
-        .projects-modal {
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            display: none
-        }
-
-        .projects-modal.is-open {
-            display: block
-        }
-
-        .projects-modal-backdrop {
-            position: absolute;
-            inset: 0;
-            background: rgba(15, 23, 42, .55);
-            backdrop-filter: blur(5px)
-        }
-
-        .projects-modal-panel {
-            position: relative;
-            background: var(--mc-card);
-            width: min(620px, calc(100% - 24px));
-            margin: 6vh auto;
-            border-radius: 24px;
-            box-shadow: 0 24px 80px rgba(15, 23, 42, .28);
-            overflow: hidden
-        }
-
-        .projects-modal-head {
-            padding: 18px 20px;
-            border-bottom: 1px solid var(--mc-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center
-        }
-
-        .projects-modal-head h3 {
-            margin: 0;
-            color: var(--mc-text)
-        }
-
-        .projects-modal-body {
-            padding: 18px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 14px
-        }
-
-        .projects-two-col {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px
-        }
-
-        .projects-modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            padding-top: 6px
-        }
-
         @media(max-width:1199px) {
-            .projects-filter-form {
-                grid-template-columns: 1fr 1fr
-            }
-
-            .projects-search-field {
-                grid-column: 1/-1
-            }
-
-            .projects-filter-actions {
-                grid-column: 1/-1
-            }
-
             .projects-mini-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr))
             }
 
-            .projects-stats {
-                grid-template-columns: repeat(2, minmax(0, 1fr))
-            }
         }
 
         @media(max-width:767px) {
 
-            .projects-hero,
             .projects-project-top,
             .projects-project-footer {
                 flex-direction: column
             }
 
-            .projects-hero-actions,
             .projects-footer-actions {
                 width: 100%
             }
 
-            .projects-hero-actions .master-btn,
             .projects-footer-actions .master-btn {
                 flex: 1
             }
 
-            .projects-filter-form,
-            .projects-two-col {
-                grid-template-columns: 1fr
-            }
-
-            .projects-stats,
             .projects-mini-grid {
                 grid-template-columns: 1fr
-            }
-
-            .projects-modal-panel {
-                margin: 12px auto
-            }
-
-            .projects-card-actions {
-                justify-content: flex-start
             }
 
             .projects-project-card {
@@ -710,10 +475,990 @@
         }
 
 /* ==========================================================================
-   PROJECT DETAIL — resources/views/projects/show.blade.php
-   Tabbed detail page (pd-*). Modal lifecycle is handled by the shared
-   master-* modal system (app-layout.js): markup uses the standard .master-modal +
-   .open state, no module-level display overrides needed.
+   PROJECT STATE — the state colours, shared by the list and the record page.
+   The shell owns the badge's shape; the module owns what each state means.
+   One row per meaning: a project's status, a milestone's stage, an activity's
+   state and a shipment's leg all read from this table, so the same word is the
+   same colour wherever the record prints it.
+   ========================================================================== */
+
+/* Nothing has happened yet. */
+.project .status-draft,
+.project .status-not-started,
+.project .status-skipped,
+.project .status-planning,
+.project .status-info {
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2)
+}
+
+/* Planned, agreed, not started — or handed on: a converted proforma and a
+   billed order are documents a later one carries, not failures. */
+.project .status-planned,
+.project .status-converted,
+.project .status-billed {
+    background: #ece7ff;
+    color: #6d28d9
+}
+
+/* Moving. A document sent to the client or accepted on a purchase order is
+   under way the same way a shipment is. */
+.project .status-in-progress,
+.project .status-started,
+.project .status-picked-up,
+.project .status-in-transit,
+.project .status-out-for-delivery,
+.project .status-sent,
+.project .status-accepted {
+    background: #eaf2ff;
+    color: #2563eb
+}
+
+/* Somebody else has to act, or the date is slipping: a part-paid invoice is
+   waiting for the rest, and goods received are waiting for the bill. */
+.project .status-waiting,
+.project .status-waiting-client,
+.project .status-waiting-vendor,
+.project .status-on-hold,
+.project .status-custom-hold,
+.project .status-delayed,
+.project .status-partial,
+.project .status-received {
+    background: #fff7e6;
+    color: #b54708
+}
+
+/* Done. A paid invoice and an approved order are as finished as a delivered
+   milestone — the same green the invoices listing gives them. */
+.project .status-completed,
+.project .status-delivered,
+.project .status-resolved,
+.project .status-paid,
+.project .status-approved {
+    background: #e8fff3;
+    color: #039855
+}
+
+/* Stopped. An overdue invoice is stopped in the way a cancelled one is: the
+   reader has to do something before the row moves again. */
+.project .status-cancelled,
+.project .status-blocked,
+.project .status-issue,
+.project .status-overdue {
+    background: #fff1f3;
+    color: #d92d20
+}
+
+.project .health-green {
+    background: #e8fff3;
+    color: #039855
+}
+
+.project .health-amber {
+    background: #fff7e6;
+    color: #b54708
+}
+
+.project .health-red {
+    background: #fff1f3;
+    color: #d92d20
+}
+
+/* The band a client put us in — the one word the feedback module is read by. */
+.project .band-promoter {
+    background: #e8fff3;
+    color: #039855
+}
+
+.project .band-passive {
+    background: #eaf2ff;
+    color: #2563eb
+}
+
+.project .band-detractor {
+    background: #fff1f3;
+    color: #d92d20
+}
+
+/* Priority is meta, not a status: it keeps the shared chip and adds only the
+   tone, so a row's urgency reads the same on the list and in the record
+   header, without a second pill design. */
+.project .project-priority-chip.is-high {
+    border-color: #fde3b8;
+    background: #fff7e6;
+    color: #b54708
+}
+
+.project .project-priority-chip.is-urgent {
+    border-color: #ffd7de;
+    background: #fff1f3;
+    color: #d92d20
+}
+
+.project-index .project-priority-chip {
+    margin-top: 6px
+}
+
+:root[data-theme="dark"] .project .status-draft,
+:root[data-theme="dark"] .project .status-not-started,
+:root[data-theme="dark"] .project .status-skipped,
+:root[data-theme="dark"] .project .status-planning,
+:root[data-theme="dark"] .project .status-info {
+    background: rgba(148, 163, 184, .16);
+    color: #cbd5e1
+}
+
+:root[data-theme="dark"] .project .status-planned,
+:root[data-theme="dark"] .project .status-converted,
+:root[data-theme="dark"] .project .status-billed {
+    background: rgba(139, 92, 246, .2);
+    color: #c4b5fd
+}
+
+:root[data-theme="dark"] .project .status-in-progress,
+:root[data-theme="dark"] .project .status-started,
+:root[data-theme="dark"] .project .status-picked-up,
+:root[data-theme="dark"] .project .status-in-transit,
+:root[data-theme="dark"] .project .status-out-for-delivery,
+:root[data-theme="dark"] .project .status-sent,
+:root[data-theme="dark"] .project .status-accepted,
+:root[data-theme="dark"] .project .band-passive {
+    background: rgba(37, 99, 235, .18);
+    color: #93c5fd
+}
+
+:root[data-theme="dark"] .project .status-waiting,
+:root[data-theme="dark"] .project .status-waiting-client,
+:root[data-theme="dark"] .project .status-waiting-vendor,
+:root[data-theme="dark"] .project .status-on-hold,
+:root[data-theme="dark"] .project .status-custom-hold,
+:root[data-theme="dark"] .project .status-delayed,
+:root[data-theme="dark"] .project .status-partial,
+:root[data-theme="dark"] .project .status-received,
+:root[data-theme="dark"] .project .health-amber,
+:root[data-theme="dark"] .project .project-priority-chip.is-high {
+    background: rgba(217, 119, 6, .2);
+    color: #fcd34d
+}
+
+:root[data-theme="dark"] .project .status-completed,
+:root[data-theme="dark"] .project .status-delivered,
+:root[data-theme="dark"] .project .status-resolved,
+:root[data-theme="dark"] .project .status-paid,
+:root[data-theme="dark"] .project .status-approved,
+:root[data-theme="dark"] .project .health-green,
+:root[data-theme="dark"] .project .band-promoter {
+    background: rgba(16, 185, 129, .18);
+    color: #6ee7b7
+}
+
+:root[data-theme="dark"] .project .status-cancelled,
+:root[data-theme="dark"] .project .status-blocked,
+:root[data-theme="dark"] .project .status-issue,
+:root[data-theme="dark"] .project .status-overdue,
+:root[data-theme="dark"] .project .health-red,
+:root[data-theme="dark"] .project .project-priority-chip.is-urgent,
+:root[data-theme="dark"] .project .band-detractor {
+    background: rgba(225, 29, 72, .18);
+    color: #fda4af
+}
+
+/* ==========================================================================
+   PROJECT LIST — resources/views/projects/index.blade.php
+   The list is the shared master-list: the chips and the filter drawer in the
+   first card, the records in the second, the shell's own rhythm between them,
+   and the shared table (density, column chooser, stacked cards on a phone).
+   Everything here is composition and status colour — surfaces, borders, type
+   and controls come from the shared sheets.
+   ========================================================================== */
+
+/* The whole row is the door: the module that links a row says so with the
+   cursor, and the hover lifts the row off the grid without redrawing it. */
+.project-index .project-row.is-clickable {
+    cursor: pointer
+}
+
+.project-index .project-row.is-clickable:hover {
+    background: var(--mc-hover)
+}
+
+.project-index .project-table-name {
+    display: block;
+    color: var(--mc-text);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none
+}
+
+.project-index .project-table-name:hover,
+.project-index .project-table-name:focus-visible {
+    color: var(--master-primary);
+    text-decoration: underline
+}
+
+.project-index .project-table-meta {
+    display: block;
+    margin-top: 2px;
+    color: var(--mc-text-3);
+    font-size: 12px
+}
+
+.project-index .project-table-stage {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--mc-text-2);
+    font-size: 12.5px
+}
+
+.project-index .project-table-stage strong {
+    color: var(--mc-text);
+    font-size: 12.5px
+}
+
+.project-index .project-table-progress {
+    display: block;
+    height: 6px;
+    margin-top: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--mc-card-soft)
+}
+
+.project-index .project-table-progress > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--master-primary)
+}
+
+.project-index .project-table-date {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 500
+}
+
+.project-index .project-table-date.is-late {
+    color: var(--master-red)
+}
+
+.project-index .project-col-actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right
+}
+
+.project-index .project-health-dot {
+    font-size: 7px
+}
+
+.project-index .project-health-dot--green {
+    color: #039855
+}
+
+.project-index .project-health-dot--amber {
+    color: #b54708
+}
+
+.project-index .project-health-dot--red {
+    color: #d92d20
+}
+
+
+:root[data-theme="dark"] .project-index .project-table-date.is-late {
+    color: #fda4af
+}
+
+/* ==========================================================================
+   PROJECT RECORD — resources/views/projects/show.blade.php
+   The shell's header, cards, facts and tabs do the work; this section only
+   composes them: the identity header, the attention strip, the two-column
+   detail grid, and the thread / document / log rows the panels render.
+   ========================================================================== */
+
+/* The panels stack their cards with the guideline's 16px, the same rhythm the
+   list shows between its own two, and one explicit `minmax(0, 1fr)` column:
+   a bare `auto` track may not shrink below its content, which is how the
+   milestone strip's max-content width (one 285px step per milestone) once
+   walked up through the card and widened the whole page instead of scrolling
+   inside its own container. */
+.project-blocks {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1fr)
+}
+
+/* Every link in the strip's chain takes a zero minimum, so the overflow rule
+   on `.pmile-step-scroll` is what decides the width and the timeline scrolls
+   inside the card. The same guard keeps a long product name or a wide date
+   range from stretching a product card in the flex column below. */
+.project-blocks > *,
+.pmile-product-list > *,
+.pmile-step-wrapper,
+.pmile-step-scroll {
+    min-width: 0
+}
+
+/* The panel card. The shared `.master-card` is a surface with no padding of its
+   own — the list pages inset their bars instead — so a record panel that holds
+   facts, stats or a table must carry the inset itself, or every row runs into
+   the border and the panel reads as one undivided block. This is the same
+   22/24 the client and vendor records give their own cards (`.client-detail-card`,
+   `.vendor-detail-card`), so the three records sit the same way. The table
+   wrapper loses the 20px it carries on the list pages, where it sits under a
+   filter card rather than under a section head. */
+.project-detail-card {
+    min-width: 0;
+    padding: 22px 24px
+}
+
+.project-detail-card .master-table-wrap {
+    margin-top: 0
+}
+
+/* ------------------------------------------------------------- the header */
+
+.project-record-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap
+}
+
+.project-record-identity {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    min-width: 0
+}
+
+.project-record-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 54px;
+    height: 54px;
+    border: 1px solid var(--mc-border);
+    border-radius: 16px;
+    background: var(--mc-card-soft);
+    color: var(--master-primary);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    flex: 0 0 auto
+}
+
+.project-record-copy {
+    min-width: 0
+}
+
+.project-record-copy h1 {
+    margin: 0;
+    color: var(--mc-text);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3
+}
+
+.project-record-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    color: var(--mc-text-2);
+    font-size: 13px
+}
+
+.project-record-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap
+}
+
+.project-record-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px
+}
+
+.project-record-progress-track {
+    display: block;
+    width: 180px;
+    max-width: 100%;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--mc-card-soft)
+}
+
+.project-record-progress-track > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--master-primary)
+}
+
+.project-record-progress-value {
+    color: var(--mc-text);
+    font-size: 12.5px;
+    font-weight: 600
+}
+
+.project-record-progress-note {
+    color: var(--mc-text-3);
+    font-size: 12px
+}
+
+/* The one thing on the page that says “do something today”. */
+.project-attention {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border: 1px solid var(--mc-border);
+    border-left: 3px solid #d97706;
+    border-radius: 16px;
+    background: var(--mc-card)
+}
+
+.project-attention-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: #fff7e6;
+    color: #b54708;
+    flex: 0 0 auto
+}
+
+.project-attention-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1
+}
+
+.project-attention-copy strong {
+    color: var(--mc-text);
+    font-size: 14px;
+    font-weight: 600
+}
+
+.project-attention-copy span {
+    color: var(--mc-text-2);
+    font-size: 12.5px
+}
+
+/* --------------------------------------------------------------- the panels */
+
+.project-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px
+}
+
+.project-progress-block {
+    margin-bottom: 4px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--mc-border)
+}
+
+.project-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 10px
+}
+
+.project-progress-row .project-record-progress-track {
+    flex: 1;
+    width: auto
+}
+
+.project-progress-row strong {
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600
+}
+
+.project-fact-note {
+    display: block;
+    margin-top: 2px;
+    color: var(--mc-text-3);
+    font-size: 12px;
+    font-weight: 400
+}
+
+.project-note-text {
+    font-weight: 400;
+    white-space: pre-line
+}
+
+.project-money-in {
+    color: #039855
+}
+
+.project-money-out {
+    color: #d92d20
+}
+
+.project-money-late {
+    color: #d92d20
+}
+
+/* One link per tab, with its count: the overview's answer to “what is on the
+   record”, without a second tab strip. */
+.project-jump {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px
+}
+
+.project-jump a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none
+}
+
+.project-jump a:hover,
+.project-jump a:focus-visible {
+    border-color: var(--master-primary);
+    color: var(--master-primary)
+}
+
+.project-jump-count {
+    min-width: 24px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--mc-card);
+    color: var(--mc-text-2);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center
+}
+
+.project-timeline-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 0;
+    border-top: 1px solid var(--mc-border)
+}
+
+.project-timeline-row:first-of-type {
+    border-top: 0
+}
+
+.project-timeline-row strong {
+    display: block;
+    color: var(--mc-text);
+    font-size: 13.5px;
+    font-weight: 600
+}
+
+/* ------------------------------------------------------------ the panels' lists */
+
+.project-thumb {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+    object-fit: cover;
+    color: var(--mc-text-3)
+}
+
+.project-col-thumb {
+    width: 84px
+}
+
+.project-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 14px
+}
+
+.project-comment {
+    padding: 16px;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-card-soft)
+}
+
+.project-comment.is-pinned {
+    border-left: 3px solid var(--master-primary)
+}
+
+.project-comment-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap
+}
+
+.project-comment-head strong {
+    color: var(--mc-text);
+    font-size: 13.5px;
+    font-weight: 600
+}
+
+.project-comment-badges,
+.project-log-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap
+}
+
+.project-comment-meta {
+    margin: 4px 0 0;
+    color: var(--mc-text-3);
+    font-size: 12px
+}
+
+.project-comment-body {
+    margin: 8px 0 0;
+    color: var(--mc-text);
+    font-size: 13.5px;
+    font-weight: 400;
+    line-height: 1.55;
+    white-space: pre-line
+}
+
+.project-comment-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px
+}
+
+.project-doc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px
+}
+
+.project-doc {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    background: var(--mc-card-soft)
+}
+
+.project-doc-thumb {
+    width: 100%;
+    height: 132px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: var(--mc-card)
+}
+
+.project-doc-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--mc-card);
+    color: var(--mc-text-3);
+    font-size: 16px
+}
+
+.project-doc-body {
+    min-width: 0
+}
+
+.project-doc-body strong {
+    display: block;
+    color: var(--mc-text);
+    font-size: 13.5px;
+    font-weight: 600
+}
+
+.project-doc-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px
+}
+
+.project-log {
+    padding: 12px 0;
+    border-top: 1px solid var(--mc-border)
+}
+
+.project-log:first-of-type {
+    border-top: 0
+}
+
+.project-log-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap
+}
+
+.project-log-head strong {
+    color: var(--mc-text);
+    font-size: 13.5px;
+    font-weight: 600
+}
+
+/* ------------------------------------------------------- the status drawer */
+
+.project-status-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 14px
+}
+
+.project-client-portal-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap
+}
+
+/* ------------------------------------------------------------- dark theme */
+
+:root[data-theme="dark"] .project-attention-icon {
+    background: rgba(217, 119, 6, .2);
+    color: #fcd34d
+}
+
+:root[data-theme="dark"] .project .project-money-in {
+    color: #6ee7b7
+}
+
+:root[data-theme="dark"] .project .project-money-out,
+:root[data-theme="dark"] .project .project-money-late {
+    color: #fda4af
+}
+
+/* ------------------------------------------------------ the feedback tab */
+
+/* The ask, the answer and the follow-up, drawn with the record's own cards.
+   The module page's sheet (feedback.css, .fb-*) is not loaded here, so this
+   panel speaks the shell: a link to copy, the scores the client gave, the
+   sentence they wrote, and one door into the module's queue. */
+
+.project-feedback-ask,
+.project-feedback-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px
+}
+
+.project-feedback-link {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0 0
+}
+
+.project-feedback-link .master-input {
+    flex: 1 1 240px;
+    min-width: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px
+}
+
+.project-feedback-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px
+}
+
+.project-feedback-meta {
+    margin: 10px 0 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--mc-text-3)
+}
+
+.project-feedback-scores {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 12px;
+    margin: 0 0 16px
+}
+
+.project-feedback-score {
+    padding: 12px 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft)
+}
+
+.project-feedback-score strong {
+    display: block;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--mc-text)
+}
+
+.project-feedback-score strong small {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--mc-text-3)
+}
+
+.project-feedback-score span {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--mc-text-2)
+}
+
+.project-feedback-note {
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--mc-card-soft)
+}
+
+.project-feedback-note-title {
+    margin: 0 0 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--mc-text-3)
+}
+
+.project-feedback-note p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.65
+}
+
+/* What could be better is the sentence the follow-up comes from, so it reads
+   as the loudest thing in the card — the same amber the waiting tone uses. */
+.project-feedback-note--attention {
+    border-left: 3px solid #f0b25a;
+    background: #fff7e6
+}
+
+.project-feedback-note--attention .project-feedback-note-title {
+    color: #b54708
+}
+
+:root[data-theme="dark"] .project-feedback-note--attention {
+    border-left-color: #b45309;
+    background: rgba(217, 119, 6, .16)
+}
+
+:root[data-theme="dark"] .project-feedback-note--attention .project-feedback-note-title {
+    color: #fcd34d
+}
+
+.project-feedback-lede {
+    max-width: 76ch;
+    margin: 0 0 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--mc-text-2)
+}
+
+.project-feedback-form {
+    max-width: 720px
+}
+
+.project-feedback-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0 14px
+}
+
+.project-feedback-fields .master-field {
+    margin-bottom: 16px
+}
+
+/* ---------------------------------------------------------------- phones */
+
+@media screen and (max-width: 991px) {
+    .project-detail-grid,
+    .project-jump {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+}
+
+@media screen and (max-width: 767px) {
+    .project-detail-card {
+        padding: 16px 18px
+    }
+
+    .project-record-header {
+        flex-direction: column
+    }
+
+    .project-record-actions {
+        width: 100%
+    }
+
+    .project-record-actions .master-btn {
+        flex: 1
+    }
+
+    .project-detail-grid,
+    .project-jump,
+    .project-status-form {
+        grid-template-columns: 1fr
+    }
+
+    .project-feedback-ask {
+        flex-direction: column
+    }
+
+    .project-feedback-fields {
+        grid-template-columns: 1fr
+    }
+
+    .project-record-progress-track {
+        width: 100%
+    }
+}
+
+/* ==========================================================================
+   PROJECT DETAIL — the legacy pd-* page, kept for the static preview
+   (public/_preview/project-milestones.html). The office record page is the
+   shell now (PROJECT RECORD above) and renders none of these classes; the
+   client portal's project page carries its own copy of them in
+   client-portal-project-show.css. Nothing here is reached by an office screen.
+   Modal lifecycle is handled by the shared master-* modal system
+   (app-layout.js): markup uses the standard .master-modal + .open state, no
+   module-level display overrides needed.
    ========================================================================== */
 
 .pd-page {
@@ -773,7 +1518,7 @@
             box-shadow: 0 12px 32px rgba(22, 34, 51, .06)
         }
 
-        .master-status-form{
+        .pd-page .master-status-form{
             display:grid;
             grid-template-columns:repeat(2,minmax(220px,1fr));
             gap:16px 20px;
@@ -935,9 +1680,9 @@
 
         .pd-status-form select,
         .pd-status-form input,
-        .master-field input,
-        .master-field select,
-        .master-field textarea {
+        .pd-page .master-field input,
+        .pd-page .master-field select,
+        .pd-page .master-field textarea {
             border: 1px solid var(--mc-border);
             border-radius: 13px;
             padding: 10px 11px;
@@ -949,9 +1694,9 @@
 
         .pd-status-form select:focus,
         .pd-status-form input:focus,
-        .master-field input:focus,
-        .master-field select:focus,
-        .master-field textarea:focus {
+        .pd-page .master-field input:focus,
+        .pd-page .master-field select:focus,
+        .pd-page .master-field textarea:focus {
             border-color: #4f83f1;
             box-shadow: 0 0 0 4px rgba(79, 131, 241, .1)
         }
@@ -1249,7 +1994,7 @@
             grid-column: span 2
         }
 
-        .master-check input {
+        .pd-page .master-check input {
             accent-color: #4f83f1
         }
 

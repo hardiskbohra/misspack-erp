@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmployeeDocumentController;
@@ -10,12 +11,15 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\VendorController;
-use App\Http\Controllers\VendorQuoteController;
 use App\Http\Controllers\OfficeServiceController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CashflowAttachmentController;
 use App\Http\Controllers\CashflowController;
+use App\Http\Controllers\CashflowRecurrenceController;
 use App\Http\Controllers\CashflowSettingController;
+use App\Http\Controllers\AssetSettingController;
+use App\Http\Controllers\FixedAssetController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\PartyStatementController;
 use App\Http\Controllers\ClientPortalStatementController;
 use App\Http\Controllers\PriceCalculatorController;
@@ -24,15 +28,15 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PublicLeadController;
 use App\Http\Controllers\LeadSettingController;
 use App\Http\Controllers\LeadCommentController;
-use App\Http\Controllers\LeadQuoteController;
 use App\Http\Controllers\ProjectAttachmentController;
 use App\Http\Controllers\ProjectCommentController;
 use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\ProjectPaymentController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectTrackingController;
 use App\Http\Controllers\ProjectMilestoneController;
-use App\Http\Controllers\PublicProjectController;
+use App\Http\Controllers\PublicFeedbackController;
+use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\ClientPortalFeedbackController;
 use App\Http\Controllers\ClientPortalAuthController;
 use App\Http\Controllers\ClientPortalAccountController;
 use App\Http\Controllers\ClientPortalSupportController;
@@ -46,9 +50,9 @@ use App\Http\Controllers\ClientPortalNotificationController;
 use App\Http\Controllers\ClientPortalPaymentController;
 use App\Http\Controllers\ClientPortalProductController;
 use App\Http\Controllers\ClientPortalProjectController;
-use App\Http\Controllers\ClientPortalQuoteController;
 use App\Http\Controllers\ClientPortalShipmentController;
 use App\Http\Controllers\GlobalSearchController;
+use App\Http\Controllers\NoteController;
 use App\Http\Controllers\OfficeAlertController;
 use App\Http\Controllers\OfficeBriefingSettingController;
 use App\Http\Controllers\OrganisationController;
@@ -70,7 +74,7 @@ Route::get('/track-shipment/{token}', [ShipmentController::class, 'publicTrack']
 Route::get('/client-kyc/{token}', [ClientController::class, 'publicKyc'])->name('clients.publicKyc');
 Route::post('/client-kyc/{token}', [ClientController::class, 'submitKyc'])->name('clients.publicKyc.submit');
 
-// Public product and quote link
+// Public product link
 Route::get('/public-products/{token}', [ProductController::class, 'publicShow'])->name('products.public');
 
 /* Public invoice print/client portal link */
@@ -83,8 +87,6 @@ Route::get('/lead-enquiry', [PublicLeadController::class, 'create'])->name('lead
 Route::get('/lead-public/{token}', [PublicLeadController::class, 'show'])->name('leads.public.show');
 Route::post('/lead-enquiry', [PublicLeadController::class, 'store'])->name('leads.public.store');
 
-Route::get('/project-portal/{token}', [PublicProjectController::class, 'show'])->name('projects.public.show');
-
 /* A statement of account, sent as a link. Outside auth on purpose: the
    accountant, the vendor's office and the client's finance person are not users
    of this ERP. The token is the whole of the authentication — long, revocable,
@@ -92,8 +94,22 @@ Route::get('/project-portal/{token}', [PublicProjectController::class, 'show'])-
 Route::get('/statement/{token}', [PartyStatementController::class, 'publicShow'])
     ->where('token', '[A-Za-z0-9]{20,80}')
     ->name('statements.public');
-Route::post('/project-portal/{token}/comments', [PublicProjectController::class, 'storeComment'])->name('projects.public.comments.store');
-Route::post('/project-portal/{token}/attachments', [PublicProjectController::class, 'storeAttachment'])->name('projects.public.attachments.store');
+
+/* The feedback link. Outside auth for the same reason a statement link is: the
+   person answering is a client, not a user of this ERP. The token is the whole
+   of the authentication — 48 characters, expiring, revocable, every open
+   counted — and the constraint keeps `/feedback/export` reading as an office
+   page rather than as somebody's token. */
+Route::get('/feedback/{token}', [PublicFeedbackController::class, 'show'])
+    ->where('token', '[A-Za-z0-9]{20,80}')
+    ->name('feedback.public.show');
+Route::post('/feedback/{token}', [PublicFeedbackController::class, 'store'])
+    ->where('token', '[A-Za-z0-9]{20,80}')
+    ->middleware('throttle:10,1')
+    ->name('feedback.public.store');
+Route::get('/feedback/{token}/thanks', [PublicFeedbackController::class, 'thanks'])
+    ->where('token', '[A-Za-z0-9]{20,80}')
+    ->name('feedback.public.thanks');
 
 // ── Protected ────────────────────────────────────────────────
 Route::middleware('auth')->group(function () {
@@ -119,28 +135,90 @@ Route::middleware('auth')->group(function () {
 
         Route::redirect('/dashboard', '/clients');
         Route::get('/search', GlobalSearchController::class)->name('search');
+
+        /* =====================================================================
+           SETTINGS — the one place every module's settings live.
+
+           One module with a rail of areas. Each area's screen, validation and
+           writes stay with the controller that has always owned them, and
+           `App\Services\SettingsDirectory` is the single list both the hub and
+           the rail are drawn from — an area cannot be in the menu and missing
+           from the hub, or renamed in one and not the other.
+
+           A **setting** here is a rule or a master list that changes how a
+           module behaves for everybody. A module's own records — a product, a
+           service, a user, a note — are that module's work, not its settings,
+           and keep the pages they have. The boundary is written down in
+           `docs/settings-module.md`.
+
+           Every URL these five surfaces ever had keeps working: see the
+           redirects where the old routes were.
+           ===================================================================== */
+        Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+
+        // Organisation — the company record every document prints from.
+        Route::get('/settings/organisation', [OrganisationController::class, 'index'])->name('settings.organisation');
+        Route::put('/settings/organisation', [OrganisationController::class, 'update'])->name('settings.organisation.update');
+        Route::post('/settings/organisation/addresses', [OrganisationController::class, 'storeAddress'])->name('settings.organisation.addresses.store');
+        Route::put('/settings/organisation/addresses/{address}', [OrganisationController::class, 'updateAddress'])->name('settings.organisation.addresses.update');
+        Route::delete('/settings/organisation/addresses/{address}', [OrganisationController::class, 'destroyAddress'])->name('settings.organisation.addresses.destroy');
+        Route::post('/settings/organisation/contacts', [OrganisationController::class, 'storeContact'])->name('settings.organisation.contacts.store');
+        Route::put('/settings/organisation/contacts/{contact}', [OrganisationController::class, 'updateContact'])->name('settings.organisation.contacts.update');
+        Route::delete('/settings/organisation/contacts/{contact}', [OrganisationController::class, 'destroyContact'])->name('settings.organisation.contacts.destroy');
+        Route::post('/settings/organisation/socials', [OrganisationController::class, 'storeSocial'])->name('settings.organisation.socials.store');
+        Route::put('/settings/organisation/socials/{social}', [OrganisationController::class, 'updateSocial'])->name('settings.organisation.socials.update');
+        Route::delete('/settings/organisation/socials/{social}', [OrganisationController::class, 'destroySocial'])->name('settings.organisation.socials.destroy');
+        Route::post('/settings/organisation/banks', [OrganisationController::class, 'storeBank'])->name('settings.organisation.banks.store');
+        Route::put('/settings/organisation/banks/{bank}', [OrganisationController::class, 'updateBank'])->name('settings.organisation.banks.update');
+        Route::delete('/settings/organisation/banks/{bank}', [OrganisationController::class, 'destroyBank'])->name('settings.organisation.banks.destroy');
+
+        // Briefings — what the office is told about, and who is emailed.
+        Route::get('/settings/briefings', [OfficeBriefingSettingController::class, 'index'])->name('settings.briefings');
+        Route::put('/settings/briefings', [OfficeBriefingSettingController::class, 'update'])->name('settings.briefings.update');
+
+        // Leads — the dropdown master data the lead forms offer.
+        Route::get('/settings/leads', [LeadSettingController::class, 'index'])->name('settings.leads');
+        Route::post('/settings/leads/options', [LeadSettingController::class, 'store'])->name('settings.leads.store');
+        Route::put('/settings/leads/options/{option}', [LeadSettingController::class, 'update'])->name('settings.leads.update');
+        Route::delete('/settings/leads/options/{option}', [LeadSettingController::class, 'destroy'])->name('settings.leads.destroy');
+
+        // Feedback — the scorecard lines the client scores.
+        Route::get('/settings/feedback', [FeedbackController::class, 'settings'])->name('settings.feedback');
+        Route::post('/settings/feedback/dimensions', [FeedbackController::class, 'storeDimension'])->name('settings.feedback.dimensions.store');
+        Route::patch('/settings/feedback/dimensions/{dimension}', [FeedbackController::class, 'updateDimension'])->name('settings.feedback.dimensions.update');
+        Route::delete('/settings/feedback/dimensions/{dimension}', [FeedbackController::class, 'destroyDimension'])->name('settings.feedback.dimensions.destroy');
+
+        // Fixed assets — the classes, and the depreciation recipe they hand out.
+        Route::get('/settings/assets', [AssetSettingController::class, 'index'])->name('settings.assets');
+        Route::post('/settings/assets/categories', [AssetSettingController::class, 'store'])->name('settings.assets.store');
+        Route::put('/settings/assets/categories/{category}', [AssetSettingController::class, 'update'])->name('settings.assets.update');
+        Route::delete('/settings/assets/categories/{category}', [AssetSettingController::class, 'destroy'])->name('settings.assets.destroy');
+
+        // Cashflow — the accounts, categories and option lists the ledger is kept in.
+        Route::get('/settings/cashflow', [CashflowSettingController::class, 'index'])->name('settings.cashflow');
+        Route::post('/settings/cashflow/accounts', [CashflowSettingController::class, 'storeAccount'])->name('settings.cashflow.accounts.store');
+        Route::put('/settings/cashflow/accounts/{account}', [CashflowSettingController::class, 'updateAccount'])->name('settings.cashflow.accounts.update');
+        Route::delete('/settings/cashflow/accounts/{account}', [CashflowSettingController::class, 'destroyAccount'])->name('settings.cashflow.accounts.destroy');
+        Route::post('/settings/cashflow/categories', [CashflowSettingController::class, 'storeCategory'])->name('settings.cashflow.categories.store');
+        Route::put('/settings/cashflow/categories/{category}', [CashflowSettingController::class, 'updateCategory'])->name('settings.cashflow.categories.update');
+        Route::delete('/settings/cashflow/categories/{category}', [CashflowSettingController::class, 'destroyCategory'])->name('settings.cashflow.categories.destroy');
+        Route::post('/settings/cashflow/masters', [CashflowSettingController::class, 'storeMaster'])->name('settings.cashflow.masters.store');
+        Route::put('/settings/cashflow/masters/{master}', [CashflowSettingController::class, 'updateMaster'])->name('settings.cashflow.masters.update');
+        Route::delete('/settings/cashflow/masters/{master}', [CashflowSettingController::class, 'destroyMaster'])->name('settings.cashflow.masters.destroy');
         Route::get('/office-alerts', [OfficeAlertController::class, 'inbox'])->name('office-alerts.inbox');
         Route::patch('/office-alerts/{office_alert}/seen', [OfficeAlertController::class, 'seen'])->name('office-alerts.seen');
         Route::patch('/office-alerts/{office_alert}/ack', [OfficeAlertController::class, 'ack'])->name('office-alerts.ack');
         Route::patch('/office-alerts/{office_alert}/snooze', [OfficeAlertController::class, 'snooze'])->name('office-alerts.snooze');
         Route::patch('/office-alerts/{office_alert}/popup', [OfficeAlertController::class, 'popupShown'])->name('office-alerts.popup');
-        Route::get('/office-alerts/settings', [OfficeBriefingSettingController::class, 'index'])->name('office-alerts.settings');
-        Route::put('/office-alerts/settings', [OfficeBriefingSettingController::class, 'update'])->name('office-alerts.settings.update');
+        /* Every URL these five surfaces ever had stays open, and the query
+           string travels with the reader: on these screens the tab *is* the
+           address, and a bookmark of `?tab=categories` that lands on Accounts
+           is a broken link, not a redirect. */
+        // Settings moved to /settings/briefings. The old URL and its ?tab travel across.
+        Route::get('/office-alerts/settings', fn (Request $request) => redirect()->to(route('settings.briefings', $request->query()), 301))->name('office-alerts.settings');
 
-        Route::get('/organisation', [OrganisationController::class, 'index'])->name('organisation.settings');
-        Route::put('/organisation', [OrganisationController::class, 'update'])->name('organisation.update');
-        Route::post('/organisation/addresses', [OrganisationController::class, 'storeAddress'])->name('organisation.addresses.store');
-        Route::put('/organisation/addresses/{address}', [OrganisationController::class, 'updateAddress'])->name('organisation.addresses.update');
-        Route::delete('/organisation/addresses/{address}', [OrganisationController::class, 'destroyAddress'])->name('organisation.addresses.destroy');
-        Route::post('/organisation/contacts', [OrganisationController::class, 'storeContact'])->name('organisation.contacts.store');
-        Route::put('/organisation/contacts/{contact}', [OrganisationController::class, 'updateContact'])->name('organisation.contacts.update');
-        Route::delete('/organisation/contacts/{contact}', [OrganisationController::class, 'destroyContact'])->name('organisation.contacts.destroy');
-        Route::post('/organisation/socials', [OrganisationController::class, 'storeSocial'])->name('organisation.socials.store');
-        Route::put('/organisation/socials/{social}', [OrganisationController::class, 'updateSocial'])->name('organisation.socials.update');
-        Route::delete('/organisation/socials/{social}', [OrganisationController::class, 'destroySocial'])->name('organisation.socials.destroy');
-        Route::post('/organisation/banks', [OrganisationController::class, 'storeBank'])->name('organisation.banks.store');
-        Route::put('/organisation/banks/{bank}', [OrganisationController::class, 'updateBank'])->name('organisation.banks.update');
-        Route::delete('/organisation/banks/{bank}', [OrganisationController::class, 'destroyBank'])->name('organisation.banks.destroy');
+        // Settings moved to /settings/organisation. The old URL and its ?tab travel across.
+        Route::get('/organisation', fn (Request $request) => redirect()->to(route('settings.organisation', $request->query()), 301))->name('organisation.settings');
 
         // User Management (CRUD — all handled via modal on index page)
         Route::get('/users',             [UserController::class, 'index'])->name('users.index');
@@ -233,12 +311,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/vendor-comments/{comment}', [VendorController::class, 'destroyComment'])->name('vendors.comments.destroy');
         Route::resource('vendors', VendorController::class);
 
-        Route::post('/vendor-quotes/quick', [VendorQuoteController::class, 'quickStore'])->name('vendor-quotes.quickStore');
-        Route::get('/vendor-quotes/{vendorQuote}/image', [VendorQuoteController::class, 'image'])->name('vendor-quotes.image');
-        Route::resource('vendor-quotes', VendorQuoteController::class)->parameters([
-            'vendor-quotes' => 'vendorQuote',
-        ]);
-
         Route::resource('office-services', OfficeServiceController::class);
     
         // Product Management
@@ -281,22 +353,13 @@ Route::middleware('auth')->group(function () {
 
         // Price Calculator
         Route::get('/price-calculator', [PriceCalculatorController::class, 'index'])->name('price-calculator.index');
-    
-        // Lead Settings Management
-        Route::get('/leads/settings', [LeadSettingController::class, 'index'])->name('leads.settings.index');
-        Route::post('/leads/settings/options', [LeadSettingController::class, 'store'])->name('leads.settings.store');
-        Route::put('/leads/settings/options/{option}', [LeadSettingController::class, 'update'])->name('leads.settings.update');
-        Route::delete('/leads/settings/options/{option}', [LeadSettingController::class, 'destroy'])->name('leads.settings.destroy');
+
+        // Settings moved to /settings/leads. The old URL and its ?tab travel across.
+        Route::get('/leads/settings', fn (Request $request) => redirect()->to(route('settings.leads', $request->query()), 301))->name('leads.settings.index');
 
         // Lead Comments Management
         Route::post('/leads/{lead}/comments', [LeadCommentController::class, 'store'])->name('leads.comments.store');
         Route::delete('/lead-comments/{comment}', [LeadCommentController::class, 'destroy'])->name('leads.comments.destroy');
-
-        // Lead-Quote Management
-        Route::patch('/lead-quotes/{leadQuote}/status', [LeadQuoteController::class, 'updateStatus'])->name('lead-quotes.status.update');
-        Route::resource('lead-quotes', LeadQuoteController::class)->parameters([
-            'lead-quotes' => 'leadQuote',
-        ]);
 
         // Lead Management
         Route::post('/leads/quick', [LeadController::class, 'quickStore'])->name('leads.quickStore');
@@ -308,9 +371,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/projects/quick', [ProjectController::class, 'quickStore'])->name('projects.quickStore');
         Route::patch('/projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.status.update');
 
-        Route::post('/projects/{project}/products', [ProjectProductController::class, 'store'])->name('projects.products.store');
+        /* One route: a project product is created by the invoice or purchase
+           document that mentions it (`App\Services\ProjectProducts`) and is not
+           deleted from the project — the row carries milestones, comments and
+           attachments, and the office edits only what the project owns. */
         Route::put('/project-products/{projectProduct}', [ProjectProductController::class, 'update'])->name('projects.products.update');
-        Route::delete('/project-products/{projectProduct}', [ProjectProductController::class, 'destroy'])->name('projects.products.destroy');
 
         Route::post('/projects/{project}/comments', [ProjectCommentController::class, 'store'])->name('projects.comments.store');
         Route::put('/project-comments/{projectComment}', [ProjectCommentController::class, 'update'])->name('projects.comments.update');
@@ -324,15 +389,33 @@ Route::middleware('auth')->group(function () {
         Route::put('/project-tracking/{trackingUpdate}', [ProjectTrackingController::class, 'update'])->name('projects.tracking.update');
         Route::delete('/project-tracking/{trackingUpdate}', [ProjectTrackingController::class, 'destroy'])->name('projects.tracking.destroy');
 
-        Route::post('/projects/{project}/payments', [ProjectPaymentController::class, 'store'])->name('projects.payments.store');
-        Route::put('/project-payments/{projectPayment}', [ProjectPaymentController::class, 'update'])->name('projects.payments.update');
-        Route::delete('/project-payments/{projectPayment}', [ProjectPaymentController::class, 'destroy'])->name('projects.payments.destroy');
     
         Route::post('/projects/{project}/milestones', [ProjectMilestoneController::class, 'store'])->name('projects.milestones.store');
         Route::post('/projects/{project}/milestones/defaults', [ProjectMilestoneController::class, 'generateDefaults'])->name('projects.milestones.defaults');
         Route::patch('/project-milestones/{milestone}', [ProjectMilestoneController::class, 'update'])->name('projects.milestones.update');
         Route::delete('/project-milestones/{milestone}', [ProjectMilestoneController::class, 'destroy'])->name('projects.milestones.destroy');
     
+        /* Feedback Management.
+
+           The link and the answer are two rows, so they are two resources: an
+           ask is issued, reminded and revoked; an answer is read, consented and
+           acted on. The vocabulary routes come before the wildcards, and every
+           route name here is `feedback.*` so the sidebar can light one item for
+           the whole module. */
+        Route::get('/feedback/export', [FeedbackController::class, 'export'])->name('feedback.export');
+        // Settings moved to /settings/feedback. The old URL and its ?tab travel across.
+        Route::get('/feedback/settings', fn (Request $request) => redirect()->to(route('settings.feedback', $request->query()), 301))->name('feedback.settings');
+        Route::post('/projects/{project}/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
+        Route::get('/feedback/asks/{feedbackRequest}', [FeedbackController::class, 'show'])->name('feedback.show');
+        Route::patch('/feedback-requests/{feedbackRequest}/revoke', [FeedbackController::class, 'revoke'])->name('feedback.revoke');
+        Route::patch('/feedback-requests/{feedbackRequest}/shared', [FeedbackController::class, 'markShared'])->name('feedback.shared');
+        Route::post('/feedback-requests/{feedbackRequest}/remind', [FeedbackController::class, 'remind'])->name('feedback.remind');
+        Route::delete('/feedback-requests/{feedbackRequest}', [FeedbackController::class, 'destroy'])->name('feedback.destroy');
+        Route::patch('/feedback-responses/{feedbackResponse}/consent', [FeedbackController::class, 'updateConsent'])->name('feedback.consent');
+        Route::post('/feedback-responses/{feedbackResponse}/actions', [FeedbackController::class, 'storeAction'])->name('feedback.actions.store');
+        Route::patch('/feedback-actions/{feedbackAction}', [FeedbackController::class, 'updateAction'])->name('feedback.actions.update');
+        Route::get('/feedback', [FeedbackController::class, 'index'])->name('feedback.index');
+
         Route::resource('projects', ProjectController::class);
 
         // Cashflow Management
@@ -340,16 +423,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/cashflows/reports/pdf', [CashflowController::class, 'downloadPdf'])->name('cashflows.reports.pdf');
         Route::get('/cashflows/reports/export', [CashflowController::class, 'exportReport'])->name('cashflows.reports.export');
 
-        Route::get('/cashflows/settings', [CashflowSettingController::class, 'index'])->name('cashflows.settings.index');
-        Route::post('/cashflows/settings/accounts', [CashflowSettingController::class, 'storeAccount'])->name('cashflows.settings.accounts.store');
-        Route::put('/cashflows/settings/accounts/{account}', [CashflowSettingController::class, 'updateAccount'])->name('cashflows.settings.accounts.update');
-        Route::delete('/cashflows/settings/accounts/{account}', [CashflowSettingController::class, 'destroyAccount'])->name('cashflows.settings.accounts.destroy');
-        Route::post('/cashflows/settings/categories', [CashflowSettingController::class, 'storeCategory'])->name('cashflows.settings.categories.store');
-        Route::put('/cashflows/settings/categories/{category}', [CashflowSettingController::class, 'updateCategory'])->name('cashflows.settings.categories.update');
-        Route::delete('/cashflows/settings/categories/{category}', [CashflowSettingController::class, 'destroyCategory'])->name('cashflows.settings.categories.destroy');
-        Route::post('/cashflows/settings/masters', [CashflowSettingController::class, 'storeMaster'])->name('cashflows.settings.masters.store');
-        Route::put('/cashflows/settings/masters/{master}', [CashflowSettingController::class, 'updateMaster'])->name('cashflows.settings.masters.update');
-        Route::delete('/cashflows/settings/masters/{master}', [CashflowSettingController::class, 'destroyMaster'])->name('cashflows.settings.masters.destroy');
+        // Settings moved to /settings/cashflow. The old URL and its ?tab travel across.
+        Route::get('/cashflows/settings', fn (Request $request) => redirect()->to(route('settings.cashflow', $request->query()), 301))->name('cashflows.settings.index');
 
         /* The bills behind the ledger. Registered before the resource route so
            /cashflows/documents is the archive rather than a missing entry. A
@@ -379,6 +454,63 @@ Route::middleware('auth')->group(function () {
         Route::get('/cashflows/statements/{partyType}/{party}', [PartyStatementController::class, 'show'])
             ->whereIn('partyType', ['client', 'vendor'])
             ->name('cashflows.statements.show');
+
+        // Fixed assets — the register a private limited company has to keep.
+        /* The prefix is `/fixed-assets`, not `/assets`: `public/assets` is the
+           static directory the web server serves itself, and a route at
+           `/assets` would never be reached. The register's own vocabulary
+           routes come before the resource-style ones below, so `/fixed-assets/
+           export` is never read as an asset whose id is "export". */
+        Route::get('/fixed-assets/export', [FixedAssetController::class, 'export'])->name('assets.export');
+        Route::get('/fixed-assets/depreciation', [FixedAssetController::class, 'depreciation'])->name('assets.depreciation');
+        Route::get('/fixed-assets/depreciation/export', [FixedAssetController::class, 'depreciationExport'])->name('assets.depreciation.export');
+        Route::get('/fixed-assets', [FixedAssetController::class, 'index'])->name('assets.index');
+        Route::post('/fixed-assets', [FixedAssetController::class, 'store'])->name('assets.store');
+        Route::get('/fixed-assets/{asset}', [FixedAssetController::class, 'show'])->name('assets.show');
+        Route::put('/fixed-assets/{asset}', [FixedAssetController::class, 'update'])->name('assets.update');
+        Route::delete('/fixed-assets/{asset}', [FixedAssetController::class, 'destroy'])->name('assets.destroy');
+        /* The doors on one asset: hand it over, take it back, log a repair,
+           verify it in person, dispose of it. Each one is a sentence in the
+           register's history, so each one has its own route and its own writer. */
+        Route::post('/fixed-assets/{asset}/allocate', [FixedAssetController::class, 'allocate'])->name('assets.allocate');
+        Route::patch('/fixed-assets/{asset}/take-back', [FixedAssetController::class, 'takeBack'])->name('assets.takeBack');
+        Route::post('/fixed-assets/{asset}/maintenance', [FixedAssetController::class, 'maintain'])->name('assets.maintain');
+        Route::patch('/fixed-assets/{asset}/verify', [FixedAssetController::class, 'verify'])->name('assets.verify');
+        Route::patch('/fixed-assets/{asset}/dispose', [FixedAssetController::class, 'dispose'])->name('assets.dispose');
+
+        /* --------------------------------------------------------- recurring
+           Standing payments: salary, rent, the monthly suppliers. A rule is
+           written as a draft, approved once, and from then on it asks for each
+           date on the day the money is due — see
+           `docs/recurring-cashflow.md`.
+
+           These routes are declared **before** `Route::resource('cashflows')`
+           below, and that is load-bearing: `/cashflows/recurring` would
+           otherwise be read as `/cashflows/{cashflow}` with an id of
+           "recurring", and the module's front page would be a 404. The documents
+           and statements blocks above sit here for the same reason.
+        */
+        Route::prefix('cashflows/recurring')->name('cashflows.recurring.')->group(function () {
+            Route::get('/', [CashflowRecurrenceController::class, 'index'])->name('index');
+            Route::post('/', [CashflowRecurrenceController::class, 'store'])->name('store');
+            Route::get('/{recurrence}', [CashflowRecurrenceController::class, 'show'])->whereNumber('recurrence')->name('show');
+            Route::put('/{recurrence}', [CashflowRecurrenceController::class, 'update'])->whereNumber('recurrence')->name('update');
+            Route::delete('/{recurrence}', [CashflowRecurrenceController::class, 'destroy'])->whereNumber('recurrence')->name('destroy');
+
+            /* The rule's own doors: ask, decide, hold, stop. */
+            Route::patch('/{recurrence}/request', [CashflowRecurrenceController::class, 'requestApproval'])->whereNumber('recurrence')->name('request');
+            Route::patch('/{recurrence}/approve', [CashflowRecurrenceController::class, 'approve'])->whereNumber('recurrence')->name('approve');
+            Route::patch('/{recurrence}/send-back', [CashflowRecurrenceController::class, 'sendBack'])->whereNumber('recurrence')->name('sendBack');
+            Route::patch('/{recurrence}/pause', [CashflowRecurrenceController::class, 'pause'])->whereNumber('recurrence')->name('pause');
+            Route::patch('/{recurrence}/resume', [CashflowRecurrenceController::class, 'resume'])->whereNumber('recurrence')->name('resume');
+            Route::patch('/{recurrence}/end', [CashflowRecurrenceController::class, 'end'])->whereNumber('recurrence')->name('end');
+
+            /* And the two answers to one date's ask. */
+            Route::patch('/{recurrence}/occurrences/{occurrence}/approve', [CashflowRecurrenceController::class, 'approveOccurrence'])
+                ->whereNumber('recurrence')->whereNumber('occurrence')->name('occurrences.approve');
+            Route::patch('/{recurrence}/occurrences/{occurrence}/skip', [CashflowRecurrenceController::class, 'skipOccurrence'])
+                ->whereNumber('recurrence')->whereNumber('occurrence')->name('occurrences.skip');
+        });
 
         Route::post('/cashflows/saved-views', [CashflowController::class, 'storeSavedView'])->name('cashflows.saved-views.store');
         Route::delete('/cashflows/saved-views/{savedView}', [CashflowController::class, 'destroySavedView'])->name('cashflows.saved-views.destroy');
@@ -431,6 +563,27 @@ Route::middleware('auth')->group(function () {
     Route::put('/account/profile', [AccountController::class, 'updateProfile'])->name('account.profile.update');
     Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password.update');
 
+    /* Notes — the sticky notes off your desk, and the one page in this file
+       that belongs to the *login* rather than to a role. It sits outside the
+       `office` group, because an employee keeps notes too and the middleware
+       would turn them around at the door; and outside `/my`, because `/my` is
+       one person's record and this is whoever is signed in. So it is the only
+       screen both halves of the application may open — which is exactly why
+       the note routes take a note id and never a user id: the person is the
+       session, and `NoteController::mine()` looks the row up inside their own
+       notes. */
+    Route::prefix('notes')->name('notes.')->group(function () {
+        Route::get('/', [NoteController::class, 'index'])->name('index');
+        Route::post('/', [NoteController::class, 'store'])->name('store');
+        Route::get('/{note}/edit', [NoteController::class, 'edit'])->name('edit');
+        Route::put('/{note}', [NoteController::class, 'update'])->name('update');
+        /* The two toggles are one URL each: the button's label and the note's
+           own state decide the direction, so there is nothing to keep in step. */
+        Route::patch('/{note}/pin', [NoteController::class, 'pin'])->name('pin');
+        Route::patch('/{note}/archive', [NoteController::class, 'archive'])->name('archive');
+        Route::delete('/{note}', [NoteController::class, 'destroy'])->name('destroy');
+    });
+
 });
 
 Route::prefix('client-portal')->name('client-portal.')->group(function () {
@@ -460,10 +613,6 @@ Route::prefix('client-portal')->name('client-portal.')->group(function () {
         Route::post('/shipments/{shipment}/comments', [ClientPortalShipmentController::class, 'storeComment'])->name('shipments.comments.store');
         Route::post('/shipments/{shipment}/documents', [ClientPortalShipmentController::class, 'upload'])->name('shipments.documents.store');
 
-        Route::get('/quotations', [ClientPortalQuoteController::class, 'index'])->name('quotes.index');
-        Route::get('/quotations/{quote}', [ClientPortalQuoteController::class, 'show'])->name('quotes.show');
-        Route::post('/quotations/{quote}/comments', [ClientPortalQuoteController::class, 'storeComment'])->name('quotes.comments.store');
-
         Route::get('/invoices', [ClientPortalInvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/invoices/sales/{invoice}/print', [ClientPortalInvoiceController::class, 'printSales'])->name('invoices.sales.print');
         Route::get('/invoices/sales/{invoice}/attachments/{attachment}', [ClientPortalInvoiceController::class, 'salesAttachmentFile'])->name('invoices.sales.attachments.file');
@@ -489,6 +638,13 @@ Route::prefix('client-portal')->name('client-portal.')->group(function () {
         /* Their own statement of account, without needing a link: the same
            document the Share button produces, from the same service. */
         Route::get('/statement', [ClientPortalStatementController::class, 'index'])->name('statement.index');
+        /* The same ask, answered from inside their own workspace: the office
+           issues it either way, and both doors write the same row. */
+        Route::get('/feedback', [ClientPortalFeedbackController::class, 'index'])->name('feedback.index');
+        Route::get('/feedback/{feedbackRequest}', [ClientPortalFeedbackController::class, 'show'])->name('feedback.show');
+        Route::post('/feedback/{feedbackRequest}', [ClientPortalFeedbackController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('feedback.store');
         Route::get('/kyc', [ClientPortalKycController::class, 'show'])->name('kyc.show');
 
         Route::get('/notifications', [ClientPortalNotificationController::class, 'index'])->name('notifications.index');

@@ -17,6 +17,27 @@ use Illuminate\View\View;
 
 class ProjectController extends Controller
 {
+    /**
+     * Every question the record page answers, in the order the office asks it:
+     * what is being made, how far it has got, what it is worth, what it
+     * carried, what was said, what happened. Each is a URL, not a button — so
+     * a panel can be shared, bookmarked, opened in a window, and a form posted
+     * from one tab returns to that tab (the sub-actions all redirect `back()`).
+     */
+    private const SHOW_TABS = [
+        'overview' => 'Overview',
+        'products' => 'Products',
+        'milestones' => 'Milestones',
+        'payments' => 'Payments',
+        'shipments' => 'Shipments',
+        'attachments' => 'Documents',
+        'invoices' => 'Invoices',
+        'comments' => 'Comments',
+        'tracking' => 'Activities',
+        'feedback' => 'Feedback',
+        'logs' => 'Logs',
+    ];
+
     public function index(Request $request): View
     {
         $search = $request->query('search');
@@ -24,7 +45,15 @@ class ProjectController extends Controller
         $clientId = $request->query('client_id', 'all');
         $health = $request->query('health', 'all');
 
-        $with = ['products', 'products.milestones', 'payments', 'assignedUser'];
+        /* The row's money is two reads: the ledger is the source of truth for
+           what has been received and spent, the documents for what the project
+           is worth and may spend — so the list loads the cashflow entries and
+           the four document relations, one query each instead of a query per
+           project per figure. The row's quick view reads the same totals. */
+        $with = ['products', 'products.milestones', 'cashflowEntries', 'assignedUser'];
+        foreach (array_keys($this->documentRelations()) as $relation) {
+            $with[] = $relation;
+        }
         if ($this->clientModelAvailable()) {
             $with[] = 'client';
         }
@@ -36,47 +65,52 @@ class ProjectController extends Controller
             ->when($clientId !== 'all', function ($q) use ($clientId) { $q->where('client_id', $clientId); })
             ->when($health !== 'all', function ($q) use ($health) { $q->where('health', $health); })
             ->latest('id')
-            ->paginate(10)
+            ->paginate(25)
             ->withQueryString();
 
+        /* One grouped query answers the chips, the figures and the drawer. The
+           four figures used to be four separate COUNT(*) round trips, and a chip
+           with a count beside it needs the same numbers per status anyway. */
+        $statusCounts = Project::query()
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+        $healthCounts = Project::query()
+            ->selectRaw('health, COUNT(*) as aggregate')
+            ->groupBy('health')
+            ->pluck('aggregate', 'health');
+
         $stats = [
-            'total' => Project::count(),
-            'in_progress' => Project::where('status', 'in_progress')->count(),
-            'waiting' => Project::whereIn('status', ['waiting_client', 'waiting_vendor'])->count(),
-            'completed' => Project::where('status', 'completed')->count(),
+            'total' => (int) $statusCounts->sum(),
+            'in_progress' => (int) ($statusCounts['in_progress'] ?? 0),
+            'waiting' => (int) ($statusCounts['waiting_client'] ?? 0) + (int) ($statusCounts['waiting_vendor'] ?? 0),
+            'completed' => (int) ($statusCounts['completed'] ?? 0),
         ];
 
-        return view('projects.index', array_merge($this->sharedData(), compact('projects', 'stats', 'search', 'status', 'clientId', 'health')));
+        return view('projects.index', array_merge($this->sharedData(), compact(
+            'projects', 'stats', 'statusCounts', 'healthCounts', 'search', 'status', 'clientId', 'health'
+        )));
     }
 
-    public function create(Request $request): View
+    public function create(): View
     {
-        $quote = $this->customerQuoteFromRequest($request);
-
         $project = new Project([
             'project_number' => $this->makeProjectNumber(),
-            'customer_quote_id' => $quote ? $quote->id : null,
-            'client_id' => $quote ? ($quote->client_id ?? null) : null,
-            'name' => $quote ? ($quote->title ?? 'New Project') : 'New Project',
+            'client_id' => null,
+            'name' => 'New Project',
             'status' => 'planned',
-            'stage' => 'quote_finalised',
+            'stage' => 'kickoff',
             'priority' => 'normal',
             'health' => 'green',
             'start_date' => now()->toDateString(),
             'target_date' => now()->addDays(30)->toDateString(),
-            'currency' => $quote ? ($quote->currency ?? 'INR') : 'INR',
-            'estimated_value' => $quote ? ($quote->total_amount ?? 0) : 0,
-            'budget_amount' => 0,
+            'currency' => 'INR',
             'progress_percent' => 0,
             'show_client_portal' => true,
-            'scope_summary' => $quote ? ($quote->notes ?? null) : null,
-            'deliverables' => $quote ? ($quote->delivery_terms ?? null) : null,
-            'client_notes' => $quote ? ($quote->delivery_time ?? null) : null,
         ]);
 
         return view('projects.form', array_merge($this->sharedData(), [
             'project' => $project,
-            'quote' => $quote,
             'isEdit' => false,
         ]));
     }
@@ -93,16 +127,10 @@ class ProjectController extends Controller
             $data['progress_percent'] = 100;
         }
 
-        $quote = $this->customerQuoteFromId($data['customer_quote_id'] ?? null);
-
-        $project = DB::transaction(function () use ($data, $quote, $request) {
+        $project = DB::transaction(function () use ($data) {
             $project = Project::create($data);
 
             $this->writeLog($project, 'created', 'Project created', 'Project was created from the deal/project form.', null, $project->toArray(), false);
-
-            if ($quote && $request->has('import_quote_items')) {
-                $this->importQuoteItems($project, $quote);
-            }
 
             return $project;
         });
@@ -114,7 +142,6 @@ class ProjectController extends Controller
     {
         $data = $request->validate([
             'client_id' => ['required', 'integer'],
-            'customer_quote_id' => ['nullable', 'integer'],
             'name' => ['required', 'string', 'max:255'],
             'start_date' => ['nullable', 'date'],
             'target_date' => ['nullable', 'date'],
@@ -122,22 +149,18 @@ class ProjectController extends Controller
             'priority' => ['nullable', Rule::in(array_keys(Project::priorityOptions()))],
         ]);
 
-        $quote = $this->customerQuoteFromId($data['customer_quote_id'] ?? null);
-
-        $project = DB::transaction(function () use ($data, $quote) {
+        $project = DB::transaction(function () use ($data) {
             $project = Project::create([
                 'project_number' => $this->makeProjectNumber(),
                 'client_id' => $data['client_id'],
-                'customer_quote_id' => $data['customer_quote_id'] ?? null,
                 'name' => $data['name'],
                 'status' => 'planned',
-                'stage' => 'quote_finalised',
+                'stage' => 'kickoff',
                 'priority' => $data['priority'] ?? 'normal',
                 'health' => 'green',
                 'start_date' => $data['start_date'] ?? now()->toDateString(),
                 'target_date' => $data['target_date'] ?? now()->addDays(30)->toDateString(),
-                'currency' => $quote ? ($quote->currency ?? 'INR') : 'INR',
-                'estimated_value' => $quote ? ($quote->total_amount ?? 0) : 0,
+                'currency' => 'INR',
                 'progress_percent' => 0,
                 'show_client_portal' => true,
                 'assigned_to' => $data['assigned_to'] ?? null,
@@ -146,24 +169,23 @@ class ProjectController extends Controller
 
             $this->writeLog($project, 'created', 'Quick project created', 'Project was created from quick create modal.', null, $project->toArray(), false);
 
-            if ($quote) {
-                $this->importQuoteItems($project, $quote);
-            }
-
             return $project;
         });
 
         return redirect()->route('projects.show', $project)->with('success', 'Quick project created successfully.');
     }
 
-    public function show(Project $project): View
+    public function show(Request $request, Project $project): View
     {
+        $tab = (string) $request->query('tab', 'overview');
+        $tab = array_key_exists($tab, self::SHOW_TABS) ? $tab : 'overview';
+
         $with = [
-            'products.assignee', 'products.attachments', 'products.comments',
+            'products.assignee', 'products.attachments', 'products.comments', 'products.vendor',
             'comments.user', 'comments.product',
             'attachments.product', 'attachments.uploader',
             'trackingUpdates.product', 'trackingUpdates.creator',
-            'payments.creator', 'logs.user', 'logs.product', 'assignedUser', 'creator',
+            'logs.user', 'logs.product', 'assignedUser', 'creator',
         ];
         if (class_exists(\App\Models\ProjectMilestone::class) && Schema::hasTable('project_milestones')) {
             $with[] = 'milestones.product';
@@ -173,9 +195,6 @@ class ProjectController extends Controller
 
         if ($this->clientModelAvailable()) {
             $with[] = 'client';
-        }
-        if ($this->customerQuoteModelAvailable()) {
-            $with[] = 'customerQuote';
         }
         if ($this->productModelAvailable()) {
             $with[] = 'products.product';
@@ -188,6 +207,29 @@ class ProjectController extends Controller
             $with[] = 'shipments';
         }
 
+        /* The Invoices tab: the money documents the modules raised against this
+           project. A project does not raise one itself — the tag `project_id`
+           is the whole link — so the tab reads the same rows the invoices
+           listings do, and each family arrives with its ledger rows loaded
+           (a document's received amount is the ledger's, not a second column). */
+        foreach ($this->documentRelations() as $relation => [$table, $deeper]) {
+            if ($this->documentTableAvailable($table)) {
+                $with[] = $relation;
+                $with[] = $relation.'.payments';
+                foreach ($deeper as $path) {
+                    $with[] = $relation.'.'.$path;
+                }
+            }
+        }
+
+        /* The feedback tab: the asks and what came back. Guarded like every other
+           optional module on this page, so a deployment without the migrations
+           renders the project instead of failing on a missing table. */
+        if (class_exists(\App\Models\FeedbackRequest::class) && Schema::hasTable('feedback_requests')) {
+            $with[] = 'feedbackRequests.response.answers';
+            $with[] = 'feedbackRequests.response.actions';
+        }
+
         $project->load($with);
         if (! $project->relationLoaded('milestones')) {
             $project->setRelation('milestones', collect());
@@ -195,8 +237,36 @@ class ProjectController extends Controller
         if (! $project->relationLoaded('shipments')) {
             $project->setRelation('shipments', collect());
         }
+        if (! $project->relationLoaded('feedbackRequests')) {
+            $project->setRelation('feedbackRequests', collect());
+        }
+        foreach (array_keys($this->documentRelations()) as $relation) {
+            if (! $project->relationLoaded($relation)) {
+                $project->setRelation($relation, collect());
+            }
+        }
 
-        return view('projects.show', array_merge($this->sharedData(), ['project' => $project]));
+        $cashflowCount = $project->relationLoaded('cashflowEntries') ? $project->cashflowEntries->count() : 0;
+
+        return view('projects.show', array_merge($this->sharedData(), [
+            'project' => $project,
+            'tabs' => self::SHOW_TABS,
+            'tab' => $tab,
+            'tabCounts' => [
+                'products' => $project->products->count(),
+                'milestones' => $project->milestones->count(),
+                'payments' => $cashflowCount,
+                'shipments' => $project->shipments->count(),
+                'attachments' => $project->attachments->count(),
+                'comments' => $project->comments->count(),
+                'tracking' => $project->trackingUpdates->count(),
+                'invoices' => collect(['taxInvoices', 'proformaInvoices', 'purchaseOrders', 'bills'])
+                    ->sum(fn (string $relation) => $project->{$relation}->count()),
+                'feedback' => $project->relationLoaded('feedbackRequests') ? $project->feedbackRequests->count() : 0,
+                'logs' => $project->logs->count(),
+            ],
+            'recordUrl' => fn (string $key) => route('projects.show', ['project' => $project, 'tab' => $key]),
+        ]));
     }
 
     public function edit(Project $project): View
@@ -205,14 +275,10 @@ class ProjectController extends Controller
         if ($this->clientModelAvailable()) {
             $with[] = 'client';
         }
-        if ($this->customerQuoteModelAvailable()) {
-            $with[] = 'customerQuote';
-        }
         $project->load($with);
 
         return view('projects.form', array_merge($this->sharedData(), [
             'project' => $project,
-            'quote' => $project->relationLoaded('customerQuote') ? $project->customerQuote : null,
             'isEdit' => true,
         ]));
     }
@@ -259,6 +325,16 @@ class ProjectController extends Controller
         $project->update($data);
         $this->writeLog($project, 'status_updated', 'Project status updated', 'Status/stage/progress was updated.', $old, $data, true);
 
+        /* Marking a project complete is the moment the feedback ask is worth
+           making, so the message says where it is. An offer, never automatic: a
+           project can be closed before the client has the goods in hand. */
+        if ($data['status'] === 'completed'
+            && class_exists(\App\Models\FeedbackRequest::class)
+            && Schema::hasTable('feedback_requests')
+            && ! \App\Models\FeedbackRequest::query()->forProject($project->id)->live()->exists()) {
+            return back()->with('success', 'Project completed. Ask for feedback while it is fresh — the Feedback tab on this project has the link.');
+        }
+
         return back()->with('success', 'Project status updated successfully.');
     }
 
@@ -270,7 +346,6 @@ class ProjectController extends Controller
             $project->comments()->delete();
             $project->attachments()->delete();
             $project->trackingUpdates()->delete();
-            $project->payments()->delete();
             $project->logs()->delete();
     
             // If cashflow relation exists
@@ -299,7 +374,6 @@ class ProjectController extends Controller
         return $request->validate([
             'project_number' => ['nullable', 'string', 'max:255', $uniqueProjectNumber],
             'client_id' => ['required', 'integer'],
-            'customer_quote_id' => ['nullable', 'integer'],
             'name' => ['required', 'string', 'max:255'],
             'status' => ['required', Rule::in(array_keys(Project::statusOptions()))],
             'stage' => ['required', Rule::in(array_keys(Project::stageOptions()))],
@@ -308,8 +382,9 @@ class ProjectController extends Controller
             'start_date' => ['nullable', 'date'],
             'target_date' => ['nullable', 'date'],
             'currency' => ['required', Rule::in(array_keys(Project::currencyOptions()))],
-            'estimated_value' => ['nullable', 'numeric', 'min:0'],
-            'budget_amount' => ['nullable', 'numeric', 'min:0'],
+            /* The value and the budget are the documents' — see
+               `Project::estimatedValue()` and `Project::budgetAmount()`. The
+               form has no field for either, so neither is validated here. */
             'progress_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
             'scope_summary' => ['nullable', 'string'],
             'deliverables' => ['nullable', 'string'],
@@ -323,10 +398,7 @@ class ProjectController extends Controller
     {
         return [
             'clients' => $this->clients(),
-            'vendors' => $this->vendors(),
-            'products' => $this->products(),
             'users' => User::query()->orderBy('name')->get(),
-            'quotes' => $this->customerQuotes(),
             'cashflowEntries' => $this->cashflowEntries(),
             'cashflowAccounts' => $this->cashflowAccounts(),
             'cashflowCategories' => $this->cashflowCategories(),
@@ -336,12 +408,8 @@ class ProjectController extends Controller
             'healthOptions' => Project::healthOptions(),
             'currencyOptions' => Project::currencyOptions(),
             'productStatusOptions' => \App\Models\ProjectProduct::statusOptions(),
-            'productStageOptions' => \App\Models\ProjectProduct::stageOptions(),
             'attachmentCategoryOptions' => \App\Models\ProjectAttachment::categoryOptions(),
             'trackingStatusOptions' => \App\Models\ProjectTrackingUpdate::statusOptions(),
-            'paymentTypeOptions' => \App\Models\ProjectPayment::transactionTypeOptions(),
-            'paymentStatusOptions' => \App\Models\ProjectPayment::statusOptions(),
-            'paymentModeOptions' => \App\Models\ProjectPayment::paymentModeOptions(),
             'milestoneOptions' => class_exists(\App\Models\ProjectMilestone::class) ? \App\Models\ProjectMilestone::milestoneOptions() : [],
             'milestoneStatusOptions' => class_exists(\App\Models\ProjectMilestone::class) ? \App\Models\ProjectMilestone::statusOptions() : [],
         ];
@@ -361,33 +429,6 @@ class ProjectController extends Controller
         return $number;
     }
 
-    private function importQuoteItems(Project $project, $quote): void
-    {
-        if (! method_exists($quote, 'items')) {
-            return;
-        }
-
-        $quote->load('items');
-        foreach ($quote->items as $index => $item) {
-            ProjectProduct::create([
-                'project_id' => $project->id,
-                'product_id' => $item->product_id ?? null,
-                'product_name' => $item->product_name ?: 'Product',
-                'sku' => null,
-                'quantity' => $item->quantity ?: 1,
-                'unit' => $item->unit ?: 'pcs',
-                'unit_price' => $item->unit_price ?: 0,
-                'currency' => $project->currency,
-                'status' => 'planned',
-                'stage' => 'pending',
-                'notes' => trim(($item->description ? $item->description."\n" : '').($item->remarks ?: '')),
-                'sort_order' => $index + 1,
-            ]);
-        }
-
-        $this->writeLog($project, 'quote_imported', 'Quote products imported', 'Accepted quote products were imported into this project.', null, ['quote_id' => $quote->id], false);
-    }
-
     private function writeLog(Project $project, string $eventType, string $title, ?string $description = null, ?array $oldValues = null, ?array $newValues = null, bool $isPublic = false): void
     {
         ProjectLog::create([
@@ -404,21 +445,6 @@ class ProjectController extends Controller
         ]);
     }
 
-    private function customerQuoteFromRequest(Request $request)
-    {
-        $id = $request->query('customer_quote_id', $request->query('quote_id'));
-        return $this->customerQuoteFromId($id);
-    }
-
-    private function customerQuoteFromId($id)
-    {
-        if (! $id || ! $this->customerQuoteModelAvailable()) {
-            return null;
-        }
-
-        return \App\Models\CustomerQuote::with('items')->find($id);
-    }
-
     private function clients()
     {
         if (! $this->clientModelAvailable()) {
@@ -426,33 +452,6 @@ class ProjectController extends Controller
         }
 
         return \App\Models\Client::query()->orderBy('company_name')->get();
-    }
-
-    private function vendors()
-    {
-        if (! $this->vendorModelAvailable()) {
-            return collect();
-        }
-
-        return \App\Models\Vendor::query()->orderBy('contact_person_name')->get();
-    }
-
-    private function products()
-    {
-        if (! $this->productModelAvailable()) {
-            return collect();
-        }
-
-        return \App\Models\Product::query()->where('status', 'active')->orderBy('name')->get();
-    }
-
-    private function customerQuotes()
-    {
-        if (! $this->customerQuoteModelAvailable()) {
-            return collect();
-        }
-
-        return \App\Models\CustomerQuote::query()->where('status', 'accepted')->latest('id')->get();
     }
 
     private function cashflowEntries()
@@ -487,24 +486,44 @@ class ProjectController extends Controller
         return class_exists(\App\Models\Client::class) && Schema::hasTable('clients');
     }
 
-    private function vendorModelAvailable(): bool
-    {
-        return class_exists(\App\Models\Vendor::class) && Schema::hasTable('vendors');
-    }
-
     private function productModelAvailable(): bool
     {
         return class_exists(\App\Models\Product::class) && Schema::hasTable('products');
     }
 
-    private function customerQuoteModelAvailable(): bool
-    {
-        return class_exists(\App\Models\CustomerQuote::class) && Schema::hasTable('customer_quotes');
-    }
-
     private function cashflowEntryModelAvailable(): bool
     {
         return class_exists(\App\Models\CashflowEntry::class) && Schema::hasTable('cashflow_entries');
+    }
+
+    /**
+     * The four documents the Invoices tab reads, relation => table.
+     *
+     * One list, so the eager load, the empty-collection fallback and the tab's
+     * tally cannot disagree about what the tab holds. The type words live on
+     * the models (`SalesInvoice::typeOptions()`, `PurchaseInvoice::DOC_LABELS`)
+     * and the relations carry them; this list only names the relations, the
+     * table each reads and the row reads the tab makes beyond the ledger
+     * (a purchase document names its vendor).
+     */
+    private function documentRelations(): array
+    {
+        return [
+            'taxInvoices' => ['sales_invoices', []],
+            'proformaInvoices' => ['sales_invoices', []],
+            'purchaseOrders' => ['purchase_invoices', ['vendor']],
+            'bills' => ['purchase_invoices', ['vendor']],
+        ];
+    }
+
+    /** A document module is readable when its model is installed and its rows carry the project tag. */
+    private function documentTableAvailable(string $table): bool
+    {
+        $model = $table === 'sales_invoices' ? \App\Models\SalesInvoice::class : \App\Models\PurchaseInvoice::class;
+
+        return class_exists($model)
+            && Schema::hasTable($table)
+            && Schema::hasColumn($table, 'project_id');
     }
 
     private function shipmentModelAvailable(): bool

@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Helpers\DateRanges;
 use App\Models\CashflowEntry;
 use App\Models\Client;
-use App\Models\ProjectPayment;
 use App\Models\SalesInvoice;
 use App\Models\Vendor;
 use App\Models\VendorPaymentEntry;
@@ -144,17 +143,21 @@ class PartyStatement
             $client = $this->findParty('client', $id);
             if ($client instanceof Client) {
                 $invoices = $this->clientPortalInvoices($client);
-                $payments = $this->clientPortalProjectPayments($id);
-                $excludedCashflowIds = $this->projectPaymentCashflowIds($payments);
+                /* Project receipts are ledger entries now, and the two reads
+                   overlap on purpose: an entry tagged to a published project may
+                   also be tagged to a published invoice, so the invoice read
+                   excludes what the project read already found — one row, one
+                   credit, whichever door it arrived by. */
+                $projectReceipts = ProjectReceipts::forClient($id);
                 $receipts = $this->clientPortalInvoiceCashflowEntries(
                     $id,
                     $invoices->modelKeys(),
-                    $excludedCashflowIds
+                    $projectReceipts->modelKeys()
                 );
 
                 $found = array_merge(
                     $invoices->pluck('currency')->all(),
-                    $payments->pluck('currency')->all(),
+                    $projectReceipts->pluck('currency')->all(),
                     $receipts->pluck('currency')->all()
                 );
             }
@@ -542,15 +545,15 @@ class PartyStatement
     private function clientStatementRows(Client $client, string $currency, bool $clientPortal = false): array
     {
         $rows = [];
-        $projectPayments = collect();
+        $projectReceipts = collect();
 
         if ($clientPortal) {
             $invoices = $this->clientPortalInvoices($client);
-            $projectPayments = $this->clientPortalProjectPayments($client->id);
+            $projectReceipts = ProjectReceipts::forClient($client->id);
             $entries = $this->clientPortalInvoiceCashflowEntries(
                 $client->id,
                 $invoices->modelKeys(),
-                $this->projectPaymentCashflowIds($projectPayments)
+                $projectReceipts->modelKeys()
             );
         } else {
             $invoices = Schema::hasTable('sales_invoices')
@@ -614,19 +617,19 @@ class PartyStatement
             ];
         }
 
-        foreach ($projectPayments as $payment) {
-            if (strtoupper((string) ($payment->currency ?: 'INR')) !== $currency) {
+        foreach ($projectReceipts as $receipt) {
+            if (strtoupper((string) ($receipt->currency ?: 'INR')) !== $currency) {
                 continue;
             }
 
-            $projectName = $payment->project?->name;
+            $projectName = $receipt->project?->name;
             $rows[] = [
-                'date' => $payment->payment_date,
+                'date' => $receipt->entry_date,
                 'particular' => $projectName ? 'Project receipt · '.$projectName : 'Project receipt',
-                'reference' => $payment->reference_number,
-                'status' => $payment->statusLabel(),
+                'reference' => $receipt->bank_reference_number ?: $receipt->invoice_bill_number,
+                'status' => method_exists($receipt, 'statusLabel') ? $receipt->statusLabel() : null,
                 'debit' => 0.0,
-                'credit' => (float) $payment->amount,
+                'credit' => (float) $receipt->credit_amount,
                 'kind' => 'receipt',
             ];
         }
@@ -653,26 +656,6 @@ class PartyStatement
             ->get();
     }
 
-    /** Receipts explicitly published against projects visible to this client. */
-    private function clientPortalProjectPayments(int $clientId): Collection
-    {
-        if (! Schema::hasTable('project_payments')
-            || ! Schema::hasTable('projects')
-            || ! Schema::hasColumn('projects', 'client_id')
-            || ! Schema::hasColumn('projects', 'show_client_portal')) {
-            return collect();
-        }
-
-        return ProjectPayment::query()
-            ->with('project')
-            ->whereHas('project', fn ($projects) => $projects
-                ->where('client_id', $clientId)
-                ->where('show_client_portal', true))
-            ->visibleToClient()
-            ->orderBy('payment_date')->orderBy('id')
-            ->get();
-    }
-
     /** Ledger receipts linked to a published invoice and fully booked. */
     private function clientPortalInvoiceCashflowEntries(int $clientId, array $invoiceIds, array $excludeIds = []): Collection
     {
@@ -693,17 +676,6 @@ class PartyStatement
             ->when($excludeIds !== [], fn ($query) => $query->whereNotIn('id', $excludeIds))
             ->orderBy('entry_date')->orderBy('id')
             ->get();
-    }
-
-    /** Cashflow IDs already represented by visible project receipt rows. */
-    private function projectPaymentCashflowIds(Collection $payments): array
-    {
-        return $payments->pluck('cashflow_entry_id')
-            ->filter()
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values()
-            ->all();
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -883,11 +855,11 @@ class PartyStatement
             }
         } elseif ($clientPortal) {
             $invoices = $this->clientPortalInvoices($party);
-            $payments = $this->clientPortalProjectPayments((int) $party->id);
+            $receipts = ProjectReceipts::forClient((int) $party->id);
             $entries = $this->clientPortalInvoiceCashflowEntries(
                 (int) $party->id,
                 $invoices->modelKeys(),
-                $this->projectPaymentCashflowIds($payments)
+                $receipts->modelKeys()
             );
 
             $collect($invoices->map(fn ($invoice) => [
@@ -912,11 +884,11 @@ class PartyStatement
                 'credit' => (float) $entry->credit_amount,
             ])->all());
 
-            $collect($payments->map(fn ($payment) => [
-                'currency' => strtoupper((string) ($payment->currency ?: 'INR')),
-                'date' => $payment->payment_date,
+            $collect($receipts->map(fn ($receipt) => [
+                'currency' => strtoupper((string) ($receipt->currency ?: 'INR')),
+                'date' => $receipt->entry_date,
                 'debit' => 0.0,
-                'credit' => (float) $payment->amount,
+                'credit' => (float) $receipt->credit_amount,
             ])->all());
         } else {
             if (Schema::hasTable('sales_invoices')) {

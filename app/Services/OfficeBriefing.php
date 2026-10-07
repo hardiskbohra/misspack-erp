@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Mail\OfficeBriefingMail;
 use App\Models\CashflowEntry;
+use App\Models\CashflowRecurrenceOccurrence;
+use App\Models\CashflowRecurrenceRule;
 use App\Models\Client;
 use App\Models\OfficeAlert;
 use App\Models\OfficeAlertState;
@@ -67,6 +69,80 @@ class OfficeBriefing
         }
 
         return null;
+    }
+
+    /**
+     * A recurring payment has reached its effective date: the office asked for
+     * it to be approved, so this is the ask.
+     *
+     * One alert per occurrence, fingerprinted on the occurrence's id, which is
+     * what makes "the notification goes out once" true in two places at once:
+     * the plan stamps `notified_at` so it does not ask again, and this
+     * `firstOrCreate` means even a second call cannot raise a second alert.
+     * The email is the loud half (the office asked to be told *when the approval
+     * is required*, which is a push, not a page to remember to open); the alert
+     * stays in the briefing list until somebody acknowledges it.
+     *
+     * Severity is `attention` and not `critical`: money falling due is the
+     * system working, and a desk that treats every standing payment as an
+     * emergency learns to ignore the colour that means emergency.
+     */
+    public function recurringNeedsApproval(CashflowRecurrenceOccurrence $occurrence): ?OfficeAlert
+    {
+        if (! $this->sourceOn('recurring_due')) {
+            return null;
+        }
+
+        $rule = $occurrence->rule ?: CashflowRecurrenceRule::find($occurrence->cashflow_recurrence_rule_id);
+
+        if (! $rule) {
+            return null;
+        }
+
+        $amount = \App\Helpers\CommonHelper::amount((float) $rule->amount, $rule->currency ?: 'INR');
+        $date = $occurrence->effective_date?->format('d M Y') ?: '—';
+        $number = (int) $occurrence->sequence;
+
+        return $this->raise([
+            'event_key' => 'cashflow.recurring_due',
+            'fingerprint' => 'cashflow.recurring_due:'.$occurrence->id,
+            'title' => $rule->title.' — approval required',
+            'body' => $amount.' ('.$rule->transaction_type.', '.$rule->frequencyLabel().') is due '
+                .$date.', occurrence #'.$number.'. Approve it to post the entry, or skip this date.',
+            'severity' => OfficeAlert::SEVERITY_ATTENTION,
+            'requires_ack' => true,
+            'team' => 'accounts',
+            'action_url' => Route::has('cashflows.recurring.show') ? route('cashflows.recurring.show', $rule) : null,
+            'action_label' => 'Review and approve',
+            'subject_type' => CashflowRecurrenceRule::class,
+            'subject_id' => $rule->id,
+        ], email: true);
+    }
+
+    /**
+     * Take back the asks a rule raised: the other half of deleting one.
+     *
+     * The alert is the office being told that a date needs an answer. When the
+     * rule goes, the date goes with it — and an alert whose "Review and approve"
+     * button opens a rule nobody can open is worse than no alert at all, because
+     * a bell that cannot be answered is a bell people stop reading. Alerts are
+     * this class's fact (it raises every one of them), so this class is where
+     * they are withdrawn; the per-user seen/acknowledged rows cascade with them.
+     *
+     * Guarded like every other writer here: the briefing is installed by a
+     * migration of its own, and a rule is deletable on a database where it has
+     * not run yet.
+     */
+    public function withdrawRecurringRule(CashflowRecurrenceRule $rule): int
+    {
+        if (! class_exists(OfficeAlert::class) || ! Schema::hasTable('office_alerts')) {
+            return 0;
+        }
+
+        return OfficeAlert::query()
+            ->where('subject_type', CashflowRecurrenceRule::class)
+            ->where('subject_id', $rule->id)
+            ->delete();
     }
 
     public function runScheduled(): array

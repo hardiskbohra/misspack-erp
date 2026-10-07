@@ -127,7 +127,7 @@ class LeadController extends Controller
 
     public function show(Lead $lead): View
     {
-        $with = ['attachments', 'customerQuotes.items', 'comments.creator', 'assignee', 'creator'];
+        $with = ['attachments', 'comments.creator', 'assignee', 'creator'];
         if ($this->clientModelAvailable()) $with[] = 'client';
         $lead->load($with);
 

@@ -47,8 +47,8 @@
 
     @stack('styles')
 
-    {{-- The shared list chrome — chips, applied strip, density, pinned grid,
-         mobile cards, totals row, empty state, the modal sheet, and the rhythm
+    {{-- The shared list chrome — chips, applied strip, pinned grid, mobile
+         cards, totals row, empty state, the modal sheet, and the rhythm
          between two stacked cards. Loaded by the shell, after the module's own
          sheet so the chrome keeps its own properties: a page cannot forget it,
          and the statement page did — it wore .master-list without ever loading
@@ -64,11 +64,26 @@
 </head>
 @php
     $uiModule = match (true) {
+        /* A settings area is still *that module's* settings screen: the module
+           adapters key a page's card and panel treatment on the module it
+           belongs to, so a cashflow settings page that stopped being a cashflow
+           page would lose the treatment its own rows were designed with. The
+           hub, which belongs to no single area, is the settings module. */
+        request()->routeIs('settings.cashflow*') => 'cashflows',
+        request()->routeIs('settings.organisation*') => 'users',
+        request()->routeIs('settings.leads*') => 'leads',
+        request()->routeIs('settings.feedback*') => 'feedback',
+        request()->routeIs('settings.briefings*') => 'briefings',
+        /* The asset classes are a setting; the register is not, and it has its
+           own module key because its own sheet keys its cards on it. */
+        request()->routeIs('settings.assets*') => 'assets',
+        request()->routeIs('assets.*') => 'assets',
+        request()->routeIs('settings.*') => 'settings',
+        request()->routeIs('notes.*') => 'notes',
         request()->routeIs('shipments.*') => 'shipments',
         request()->routeIs('clients.*') => 'clients',
         request()->routeIs('cashflows.*') => 'cashflows',
         request()->routeIs('users.*') => 'users',
-        request()->routeIs('organisation.*') => 'users',
         request()->routeIs('vendors.*') => 'vendors',
         default => null,
     };
@@ -86,6 +101,9 @@
             ['label' => 'My Salary', 'route' => 'my.salary', 'active' => 'my.salary', 'icon' => 'fa-solid fa-indian-rupee-sign'],
             ['label' => 'My Documents', 'route' => 'my.documents', 'active' => 'my.documents*', 'icon' => 'fa-regular fa-folder-open'],
             ['label' => 'My Profile', 'route' => 'my.profile', 'active' => 'my.profile*', 'icon' => 'fa-regular fa-id-card'],
+            /* The one item here that is neither their record nor the office's:
+               notes are private to the login, whoever is holding it. */
+            ['label' => 'Notes', 'route' => 'notes.index', 'active' => 'notes.*', 'icon' => 'fa-regular fa-note-sticky'],
         ];
 
         $sidebarItems = Auth::user() && Auth::user()->isEmployee() ? $employeeItems : [
@@ -93,6 +111,11 @@
             ['label' => 'Tasks', 'route' => 'tasks.index', 'active' => 'tasks.*', 'icon' => 'fa-solid fa-layer-group'],
             ['label' => 'Products', 'route' => 'products.index', 'active' => 'products.*', 'icon' => 'fas fa-box-open'],
             ['label' => 'Shipments', 'route' => 'shipments.index', 'active' => 'shipments.*', 'icon' => 'fas fa-truck'],
+            /* What clients said when the project closed. Management, not Sales:
+               the queue is a thing to work, and the person who works it is not
+               always the person who sold it. The public form is excluded so a
+               user testing a link does not light the office item. */
+            ['label' => 'Feedback', 'route' => 'feedback.index', 'active' => 'feedback.*', 'except' => ['feedback.public.*'], 'icon' => 'fa-regular fa-comment-dots'],
             ['section' => 'Sales'],
             ['label' => 'Clients', 'route' => 'clients.index', 'active' => 'clients.*', 'icon' => 'fa-solid fa-users'],
             ['label' => 'Projects', 'route' => 'projects.index', 'active' => 'projects.*', 'icon' => 'fa-solid fa-briefcase'],
@@ -104,7 +127,11 @@
                becomes — the same way Invoices holds a proforma and a tax invoice. */
             ['label' => 'Purchases', 'route' => 'purchase-invoices.index', 'active' => 'purchase-invoices.*', 'icon' => 'fas fa-file-invoice'],
             ['section' => 'Accounts'],
-            ['label' => 'Cashflow', 'route' => 'cashflows.index', 'active' => 'cashflows.*', 'except' => ['cashflows.documents', 'cashflows.statements', 'cashflows.statements.*'], 'icon' => 'fa-solid fa-scale-balanced'],
+            ['label' => 'Cashflow', 'route' => 'cashflows.index', 'active' => 'cashflows.*', 'except' => ['cashflows.documents', 'cashflows.statements', 'cashflows.statements.*', 'cashflows.recurring', 'cashflows.recurring.*'], 'icon' => 'fa-solid fa-scale-balanced'],
+            /* The standing payments. Next to Cashflow and not inside it: this is
+               a list you work from (today's approvals), not a page you visit to
+               look at the ledger. */
+            ['label' => 'Recurring', 'route' => 'cashflows.recurring.index', 'active' => 'cashflows.recurring.*', 'icon' => 'fa-solid fa-arrows-rotate'],
             /* The archive is a page of the module, not a second module: it sits
                here so a month's paperwork is one click from anywhere, and the
                Cashflow item above stays dark while it is open. */
@@ -112,15 +139,27 @@
             /* And the other half of what leaves the building: the party's own
                account, in the currency their statement is kept in. */
             ['label' => 'Statements', 'route' => 'cashflows.statements', 'active' => 'cashflows.statements*', 'icon' => 'fa-solid fa-file-invoice'],
+            /* The register: what the company owns, on the other side of the
+               balance sheet from the money the ledger counts. Its classes are a
+               setting and sit in Settings with the other five areas — the assets
+               themselves are records, and records have modules. */
+            ['label' => 'Fixed assets', 'route' => 'assets.index', 'active' => 'assets.*', 'icon' => 'fa-solid fa-industry'],
             ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'icon' => 'fas fa-users-cog'],
-            ['label' => 'Organisation', 'route' => 'organisation.settings', 'active' => 'organisation.*', 'icon' => 'fas fa-building'],
-            ['label' => 'Briefings', 'route' => 'office-alerts.settings', 'active' => 'office-alerts.settings*', 'icon' => 'fas fa-bell'],
+            /* One door for every rule in the ERP. The module-wise menu is the
+               rail *inside* Settings, where the reader is already looking for a
+               setting and the five areas sit next to what they change; a second
+               tree here would be the same five links in two places, and the day
+               the two disagree is the day one of them is wrong. */
+            ['label' => 'Settings', 'route' => 'settings.index', 'active' => 'settings.*', 'icon' => 'fas fa-sliders'],
+            /* Personal, not management: the office's own notes are private to
+               the office's own login, exactly as an employee's are to theirs. */
+            ['section' => 'Personal'],
+            ['label' => 'Notes', 'route' => 'notes.index', 'active' => 'notes.*', 'icon' => 'fa-regular fa-note-sticky'],
         ];
     @endphp
     
     
             <!--['label' => 'Leads', 'route' => 'leads.index', 'active' => 'leads.*', 'icon' => 'fa-solid fa-people-group'],-->
-            <!--['label' => 'Lead Quotes', 'route' => 'lead-quotes.index', 'active' => 'lead-quotes.*', 'icon' => 'fa-solid fa-file-invoice-dollar'],-->
             <!--['label' => 'Price Calculator', 'route' => 'price-calculator.index', 'active' => 'price-calculator.*', 'icon' => 'fa-solid fa-calculator'],-->
 
     {{-- Sidebar --}}
@@ -188,6 +227,21 @@
                         <i class="fas fa-search"></i>
                     </button>
                 @endif
+
+                {{-- Notes, beside Search: it is the one screen both halves of the
+                     application may open — an employee's menu and the office's
+                     both carry it — and a private note is what you reach for
+                     without leaving the record you are on. The control wears the
+                     shell's own topbar button, so it is the same height, radius
+                     and focus ring as its neighbours, and an icon-only control
+                     names itself in words: the label is the tooltip. It marks
+                     itself as the current page, which is how a reader who came in
+                     from a sidebar label knows where they are. --}}
+                <a class="topbar-btn" href="{{ route('notes.index') }}" aria-label="Notes"
+                    title="Notes — private to this login"
+                    @if (request()->routeIs('notes.*')) aria-current="page" @endif>
+                    <i class="fa-regular fa-note-sticky" aria-hidden="true"></i>
+                </a>
 
                 <form method="POST" action="{{ route('theme.toggle') }}" class="theme-form">
                     @csrf

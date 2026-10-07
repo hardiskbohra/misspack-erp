@@ -21,6 +21,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Services\ProjectProducts;
 use App\Services\SalesInvoiceFilters;
 use App\Services\SavedViews;
 
@@ -196,7 +197,7 @@ class SalesInvoiceController extends Controller
         $labels = app(SalesInvoiceFilters::class)->labels($filters);
         $applied = app(SalesInvoiceFilters::class)->applied($filters);
 
-        return response()->streamDownload(function () use ($rows, $applied, $labels) {
+        return response()->streamDownload(function () use ($rows, $applied, $labels, $selected) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
 
@@ -439,6 +440,13 @@ class SalesInvoiceController extends Controller
             $line->save();
         }
 
+        /* A copy is a document like any other: a proforma that becomes a tax
+           invoice, and a duplicate the office is about to edit, both carry
+           lines the project's products follow. Materialised here rather than
+           left to the copy's first save, because the office may never make
+           one — the document already exists. */
+        app(ProjectProducts::class)->fromSalesInvoice($copy);
+
         return $copy;
     }
 
@@ -565,13 +573,9 @@ class SalesInvoiceController extends Controller
 
         $client = $this->clientFromRequest($request);
         $project = $this->projectFromRequest($request);
-        $quote = $this->quoteFromRequest($request);
 
         if (! $client && $project && isset($project->client_id)) {
             $client = $this->clientById($project->client_id);
-        }
-        if (! $client && $quote && isset($quote->client_id)) {
-            $client = $this->clientById($quote->client_id);
         }
 
         $invoice = new SalesInvoice(array_merge(SalesInvoice::defaultSellerDetails(), [
@@ -580,7 +584,6 @@ class SalesInvoiceController extends Controller
             'status' => 'draft',
             'client_id' => $client ? $client->id : null,
             'project_id' => $project ? $project->id : null,
-            'customer_quote_id' => $quote ? $quote->id : null,
             'invoice_date' => now()->toDateString(),
             'due_date' => now()->addDays(7)->toDateString(),
             'valid_until' => now()->addDays(10)->toDateString(),
@@ -597,7 +600,7 @@ class SalesInvoiceController extends Controller
             $invoice->fill($this->clientSnapshot($client));
         }
 
-        $items = $this->itemsFromSource($project, $quote);
+        $items = $this->itemsFromSource($project);
         $invoice->setRelation('items', collect($items));
         $invoice->setRelation('attachments', collect());
 
@@ -713,7 +716,6 @@ class SalesInvoiceController extends Controller
             'status' => ['required', Rule::in(array_keys(SalesInvoice::statusOptions()))],
             'client_id' => ['nullable', 'integer'],
             'project_id' => ['nullable', 'integer'],
-            'customer_quote_id' => ['nullable', 'integer'],
             'invoice_date' => ['nullable', 'date'],
             'due_date' => ['nullable', 'date'],
             'valid_until' => ['nullable', 'date'],
@@ -925,6 +927,13 @@ class SalesInvoiceController extends Controller
             'balance_amount' => $balance,
             'amount_in_words' => $this->amountInWords($total, $invoice->currency),
         ]);
+
+        /* The lines are the client's own facts, so they are what the project is
+           making: the products tab reads them from here rather than from a
+           second entry the office has to keep in step. A row the office edits
+           later is updated, never duplicated — the service matches the line to
+           its product row before it writes. */
+        app(ProjectProducts::class)->fromSalesInvoice($invoice);
     }
 
     private function storeAttachments(Request $request, SalesInvoice $invoice): void
@@ -982,7 +991,7 @@ class SalesInvoiceController extends Controller
         ];
     }
 
-    private function itemsFromSource($project = null, $quote = null): array
+    private function itemsFromSource($project = null): array
     {
         $items = [];
 
@@ -994,22 +1003,6 @@ class SalesInvoiceController extends Controller
                     'product_id' => $row->product_id,
                     'product_name' => $row->product_name,
                     'description' => $row->notes,
-                    'quantity' => $row->quantity ?: 1,
-                    'unit' => $row->unit ?: 'pcs',
-                    'unit_price' => $row->unit_price ?: 0,
-                    'gst_percent' => 18,
-                    'discount_percent' => 0,
-                ];
-            }
-        }
-
-        if (! $items && $quote && method_exists($quote, 'items')) {
-            $quote->load('items');
-            foreach ($quote->items as $row) {
-                $items[] = [
-                    'product_id' => $row->product_id,
-                    'product_name' => $row->product_name,
-                    'description' => $row->description,
                     'quantity' => $row->quantity ?: 1,
                     'unit' => $row->unit ?: 'pcs',
                     'unit_price' => $row->unit_price ?: 0,
@@ -1376,7 +1369,6 @@ class SalesInvoiceController extends Controller
                 : [],
             'projects' => $this->projects(),
             'products' => $this->products(),
-            'quotes' => $this->quotes(),
             'typeOptions' => SalesInvoice::typeOptions(),
             'statusOptions' => SalesInvoice::statusOptions(),
             'currencyOptions' => SalesInvoice::currencyOptions(),
@@ -1401,11 +1393,6 @@ class SalesInvoiceController extends Controller
         return $this->productAvailable() ? \App\Models\Product::query()->where('status', 'active')->orderBy('name')->get() : collect();
     }
 
-    private function quotes()
-    {
-        return $this->quoteAvailable() ? \App\Models\CustomerQuote::query()->whereIn('status', ['sent', 'accepted', 'revised'])->latest('id')->get() : collect();
-    }
-
     private function clientFromRequest(Request $request)
     {
         return $request->query('client_id') ? $this->clientById($request->query('client_id')) : null;
@@ -1421,11 +1408,6 @@ class SalesInvoiceController extends Controller
         return ($request->query('project_id') && $this->projectAvailable()) ? \App\Models\Project::find($request->query('project_id')) : null;
     }
 
-    private function quoteFromRequest(Request $request)
-    {
-        return ($request->query('customer_quote_id') && $this->quoteAvailable()) ? \App\Models\CustomerQuote::find($request->query('customer_quote_id')) : null;
-    }
-
     private function clientAvailable(): bool
     {
         return class_exists(\App\Models\Client::class) && Schema::hasTable('clients');
@@ -1439,10 +1421,5 @@ class SalesInvoiceController extends Controller
     private function productAvailable(): bool
     {
         return class_exists(\App\Models\Product::class) && Schema::hasTable('products');
-    }
-
-    private function quoteAvailable(): bool
-    {
-        return class_exists(\App\Models\CustomerQuote::class) && Schema::hasTable('customer_quotes');
     }
 }

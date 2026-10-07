@@ -16,7 +16,7 @@ the order the questions actually get asked.
 | --- | --- | --- |
 | Sees | every screen built so far: ledger, clients, vendors, shipments, projects, paperwork, users | their own workspace and nothing else |
 | Lands on after login | `/dashboard` | `/my` |
-| Menu | the full sidebar | four items: Dashboard, My Salary, My Documents, My Profile |
+| Menu | the full sidebar | five items: Dashboard, My Salary, My Documents, My Profile, Notes |
 | Created from | Users → Add user → role "Administrator" | Users → Add user → role "Employee" |
 | Required to create | name, email, password | + designation, joining date, mobile |
 
@@ -42,16 +42,31 @@ routes/web.php
     │    the whole ERP as it was before: cashflows, clients, vendors, shipments,
     │    projects, tasks, sales invoices, documents, statements, users…
     │
-    └─ Route::prefix('my')           ← the employee's own record
-         /            dashboard
-         /profile     GET, PUT      — and POST /password
-         /salary      GET           — the ledger months *and* the payslips
-         /payslips    GET           — a redirect to /salary?focus=payslips#payslips
-         /payslips/{payslip}/file | /pdf
-         /documents   GET, POST     — and /documents/{document}, /{document}/file
+    ├─ Route::prefix('my')           ← the employee's own record
+    │    /            dashboard
+    │    /profile     GET, PUT      — and POST /password
+    │    /salary      GET           — the ledger months *and* the payslips
+    │    /payslips    GET           — a redirect to /salary?focus=payslips#payslips
+    │    /payslips/{payslip}/file | /pdf
+    │    /documents   GET, POST     — and /documents/{document}, /{document}/file
+    │
+    └─ Route::prefix('notes')        ← neither half: whoever is signed in
+         /                 GET, POST — the desk, and the composer
+         /{note}/edit      GET
+         /{note}           PUT, DELETE
+         /{note}/pin       PATCH
+         /{note}/archive   PATCH      — two directions, from the note's own state
 ```
 
-Two properties of that list are load-bearing:
+Notes is the one screen that belongs to the **login** rather than to a role. It
+sits outside `office` because an employee keeps notes too, and outside `/my`
+because `/my` is one person's record — the same routes serve both menus. The
+topbar carries the same door for both roles, beside the search control (which
+only an administrator's topbar has): an employee's topbar shows it first. Its own
+rule is in `docs/notes-module.md`: a note is read through its owner scope and
+nowhere else, so the employee's menu can name it without naming an office screen.
+
+Three properties of that list are load-bearing:
 
 1. **no personal route takes a user id.** The person is the session. There is no
    number to change, so there is no record to reach for.
@@ -60,6 +75,9 @@ Two properties of that list are load-bearing:
    before a byte is served, and the office side re-checks that the row belongs to the person in
    its own URL (`abort_unless($document->user_id === $user->id, 404)`). A wrong
    id is a 404, never somebody else's salary.
+3. The notes routes are the same rule for the one screen both halves share: the
+   id in `/notes/{note}` is resolved inside the caller's own notes
+   (`NoteController::mine()`), so the row does not exist unless it is theirs.
 
 An employee who follows an old bookmark into the office's half is **redirected
 to their own workspace with a sentence**, not shown a 403 — the person holding

@@ -15,7 +15,7 @@ class SalesInvoice extends Model
 
     protected $fillable = [
         'invoice_number', 'invoice_type', 'status', 'public_token', 'client_id', 'project_id',
-        'customer_quote_id', 'invoice_date', 'due_date', 'valid_until', 'currency', 'exchange_rate',
+        'invoice_date', 'due_date', 'valid_until', 'currency', 'exchange_rate',
         'gst_type', 'place_of_supply', 'po_number', 'po_date',
         'seller_company_name', 'seller_address', 'seller_city', 'seller_state', 'seller_country',
         'seller_pincode', 'seller_gstin', 'seller_pan', 'seller_email', 'seller_mobile',
@@ -161,11 +161,6 @@ class SalesInvoice extends Model
     public function project()
     {
         return $this->belongsTo(\App\Models\Project::class, 'project_id');
-    }
-
-    public function customerQuote()
-    {
-        return $this->belongsTo(\App\Models\CustomerQuote::class, 'customer_quote_id');
     }
 
     public function creator()
@@ -450,6 +445,19 @@ class SalesInvoice extends Model
             'accepted' => 'Accepted',
             'sent' => 'Awaiting payment',
         ][$this->stateKey($today)] ?? Str::headline($this->stateKey($today));
+    }
+
+    /**
+     * Whether this document counts towards the project it is tagged to.
+     *
+     * A cancelled invoice is not owed, and a proforma a tax invoice has already
+     * carried (`isSuperseded()`) is history: it keeps its row on the project's
+     * Invoices tab and is not counted a second time. The project's estimated
+     * value reads this predicate and nothing else.
+     */
+    public function countsTowardsProject(): bool
+    {
+        return $this->status !== 'cancelled' && ! $this->isSuperseded();
     }
 
     /**

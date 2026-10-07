@@ -13,7 +13,7 @@ class ProjectAttachment extends Model
 
     protected $fillable = [
         'project_id', 'project_product_id', 'project_comment_id', 'project_tracking_update_id',
-        'project_payment_id', 'category', 'title', 'file_path', 'original_name', 'mime_type',
+        'category', 'title', 'file_path', 'original_name', 'mime_type',
         'file_size', 'extension', 'is_photo', 'is_public', 'uploaded_by', 'uploaded_by_type',
         'client_name', 'notes',
     ];
@@ -41,11 +41,6 @@ class ProjectAttachment extends Model
     public function trackingUpdate()
     {
         return $this->belongsTo(ProjectTrackingUpdate::class, 'project_tracking_update_id');
-    }
-
-    public function payment()
-    {
-        return $this->belongsTo(ProjectPayment::class, 'project_payment_id');
     }
 
     public function uploader()

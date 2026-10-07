@@ -15,8 +15,8 @@
      | Expects: $shipment. Optional: $markCopy (e.g. "3 of 8").
      */
     $markCopy = $markCopy ?? '—';
-    $brand = class_exists(\\App\\Models\\Organisation::class)
-        ? \\App\\Models\\Organisation::current()->brand()
+    $brand = class_exists(\App\Models\Organisation::class)
+        ? \App\Models\Organisation::current()->brand()
         : config('brand');
 
     /* Scanning the sticker lands on the public tracking page when the shipment

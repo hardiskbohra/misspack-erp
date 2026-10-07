@@ -307,6 +307,10 @@
                 <section class="master-tab-panel" id="client-panel-statement" role="tabpanel" aria-labelledby="client-tab-statement">
                     @include('clients.partials.statement')
                 </section>
+            @elseif($tab === 'feedback')
+                <section class="master-tab-panel" id="client-panel-feedback" role="tabpanel" aria-labelledby="client-tab-feedback">
+                    @include('clients.partials.feedback')
+                </section>
             @endif
         </div>
     </div>

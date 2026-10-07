@@ -12,6 +12,7 @@ use App\Models\SavedView;
 use App\Models\User;
 use App\Services\CashflowAnalysis;
 use App\Services\CashflowFilters;
+use App\Services\CashflowPickers;
 use App\Services\CashflowLedger;
 use App\Services\SavedViews;
 use App\Services\VendorPaymentCashflowSync;
@@ -26,6 +27,16 @@ use Illuminate\View\View;
 
 class CashflowController extends Controller
 {
+    /**
+     * The lists every cashflow form is filled from live in one service
+     * (`CashflowPickers`), shared with the recurring-rules screens: the rule
+     * form and the entry form must offer the same accounts and the same people,
+     * or a payment lands somewhere the other one cannot see.
+     */
+    public function __construct(private CashflowPickers $pickers)
+    {
+    }
+
     private const BULK_ACTIONS = [
         'mark_booked' => 'Mark booked',
         'mark_pending' => 'Mark pending',
@@ -210,6 +221,10 @@ class CashflowController extends Controller
         if ($this->clientModelAvailable()) $with[] = 'client';
         if ($this->vendorModelAvailable()) $with[] = 'vendor';
         if (Schema::hasTable('office_services')) $with[] = 'officeService';
+        /* And where the row came from, when the recurring module is installed:
+           an entry that appeared overnight has to be able to say which rule
+           wrote it. */
+        if (Schema::hasTable('cashflow_recurrence_occurrences')) $with[] = 'recurrenceOccurrence.rule';
         $cashflow->load($with);
 
         $tabs = [
@@ -1042,90 +1057,46 @@ class CashflowController extends Controller
 
     private function sharedData(): array
     {
-        return [
-            'accounts' => CashflowAccount::where('is_active', true)->orderBy('account_type')->orderBy('account_name')->get(),
-            'categories' => CashflowCategory::where('is_active', true)->orderBy('type')->orderBy('name')->get(),
-            'clients' => $this->clients(),
-            'vendors' => $this->vendors(),
-            'officeServices' => $this->officeServices(),
-            'employees' => $this->employees(),
-            'accountTypeOptions' => $this->masterOptions('account_type', CashflowAccount::typeOptions()),
-            'categoryTypeOptions' => $this->masterOptions('category_type', CashflowCategory::typeOptions()),
-            'transactionTypeOptions' => CashflowEntry::transactionTypeOptions(),
-            'accountingStatusOptions' => $this->masterOptions('accounting_status', CashflowEntry::accountingStatusOptions()),
-            'paymentModeOptions' => $this->masterOptions('payment_mode', CashflowEntry::paymentModeOptions()),
-            'relatedPartyOptions' => $this->masterOptions('related_party_type', CashflowEntry::relatedPartyOptions()),
-            'currencyOptions' => $this->masterOptions('currency', CashflowEntry::currencyOptions()),
-        ];
+        return $this->pickers->shared();
     }
-
 
     private function masterOptions(string $group, array $fallback = [], bool $activeOnly = true): array
     {
-        if (! Schema::hasTable('cashflow_master_options')) {
-            return $fallback;
-        }
-
-        $query = CashflowMasterOption::query()->where('group', $group);
-        if ($activeOnly) {
-            $query->where('is_active', true);
-        }
-
-        $options = $query->orderBy('sort_order')->orderBy('label')->pluck('label', 'key')->toArray();
-
-        return $options ?: $fallback;
+        return $this->pickers->masterOptions($group, $fallback, $activeOnly);
     }
 
     private function masterKeys(string $group, array $fallback): array
     {
-        return array_keys($this->masterOptions($group, array_combine($fallback, $fallback), true));
+        return $this->pickers->masterKeys($group, $fallback);
     }
 
     private function clients()
     {
-        if (! $this->clientModelAvailable()) return collect();
-        return \App\Models\Client::query()->orderBy('company_name')->get();
+        return $this->pickers->clients();
     }
 
     private function vendors()
     {
-        if (! $this->vendorModelAvailable()) return collect();
-        return \App\Models\Vendor::query()->orderBy('vendor_name')->get();
+        return $this->pickers->vendors();
     }
 
     private function officeServices()
     {
-        if (! class_exists(\App\Models\OfficeService::class) || ! Schema::hasTable('office_services')) {
-            return collect();
-        }
-
-        return \App\Models\OfficeService::query()->orderBy('name')->get();
+        return $this->pickers->officeServices();
     }
 
-    /**
-     * The people an entry can be filed against. The app keeps one user table, so
-     * this is the user list; department and designation come along for the
-     * report's grouping and for the label on the row.
-     */
     private function employees()
     {
-        if (! class_exists(User::class) || ! Schema::hasTable('users')) {
-            return collect();
-        }
-
-        /* Employees first, the office underneath — the ledger's Employee field
-           is about somebody being paid, and the order is the model's answer
-           (`User::employeePicker`), not this page's. */
-        return User::employeePicker();
+        return $this->pickers->employees();
     }
 
     private function clientModelAvailable(): bool
     {
-        return class_exists(\App\Models\Client::class) && Schema::hasTable('clients');
+        return $this->pickers->clientModelAvailable();
     }
 
     private function vendorModelAvailable(): bool
     {
-        return class_exists(\App\Models\Vendor::class) && Schema::hasTable('vendors');
+        return $this->pickers->vendorModelAvailable();
     }
 }

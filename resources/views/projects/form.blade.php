@@ -21,7 +21,7 @@
                 : '',
         );
     @endphp
-    <div class="project-form">
+    <div class="project-form-page">
         
         <div class="master-card master-header">
             <h1>{{ $isEdit ? 'Edit Project' : 'Create Project' }}</h1>
@@ -43,10 +43,6 @@
                 <div>
                     <h3 class="master-section-title">Project Basics</h3>
                 </div>
-                @if ($quote)
-                    <span class="pf-quote-badge"><i class="fa-solid fa-file-signature"></i> From Quote:
-                        {{ $quote->quote_number ?? '#' . $quote->id }}</span>
-                @endif
             </div>
 
             <div class="pf-grid">
@@ -66,22 +62,6 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="master-field">
-                    <label class="master-label">Accepted Customer Quote</label>
-                    <select class="master-select" name="customer_quote_id">
-                        <option value="">No quote mapping</option>
-                        @foreach ($quotes as $customerQuote)
-                            <option value="{{ $customerQuote->id }}"
-                                {{ (string) old('customer_quote_id', $project->customer_quote_id) === (string) $customerQuote->id ? 'selected' : '' }}>
-                                {{ $customerQuote->quote_number }} - {{ $customerQuote->title }}</option>
-                        @endforeach
-                        @if ($quote && !$quotes->contains('id', $quote->id))
-                            <option value="{{ $quote->id }}" selected>
-                                {{ $quote->quote_number ?? 'Quote #' . $quote->id }} - {{ $quote->title }}</option>
-                        @endif
-                    </select>
-                    <small>Use this when project is created after quote finalisation.</small>
-                </div>
                 <div class="master-field pf-span-2">
                     <label class="master-label">Project Name <span>*</span></label>
                     <input class="master-input" type="text" name="name" value="{{ old('name', $project->name) }}" required
@@ -99,16 +79,6 @@
                     </select>
                 </div>
             </div>
-
-            @if ($quote && !$isEdit)
-                <label class="pf-checkbox-card">
-                    <input type="checkbox" name="import_quote_items" value="1" checked>
-                    <span>
-                        <strong>Import quote products into this project</strong>
-                        <small>All accepted quote items will become project products with quantity and price.</small>
-                    </span>
-                </label>
-            @endif
 
             <div class="pf-section-head pf-section-gap" style="padding-top:15px;">
                 <div>
@@ -180,22 +150,17 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="master-field">
-                    <label class="master-label">Estimated Deal Value</label>
-                    <input class="master-input" type="number" step="0.01" min="0" name="estimated_value"
-                        value="{{ old('estimated_value', $project->estimated_value) }}">
-                </div>
-                <div class="master-field">
-                    <label class="master-label">Project Budget</label>
-                    <input class="master-input" type="number" step="0.01" min="0" name="budget_amount"
-                        value="{{ old('budget_amount', $project->budget_amount) }}">
-                </div>
+                {{-- The value and the budget have no input: they are the
+                     documents'. The Estimated value is what the tax invoices
+                     and the un-converted proformas say, and the Budget is what
+                     the purchase orders and bills say — both read on the
+                     project's record page, both derived where they are read. --}}
                 <label class="pf-toggle-card">
                     <input type="checkbox" name="show_client_portal" value="1"
                         {{ old('show_client_portal', $project->show_client_portal) ? 'checked' : '' }}>
                     <span>
-                        <strong>Client Portal</strong>
-                        <small>Allow client to view project.</small>
+                        <strong>Client login portal</strong>
+                        <small>The client sees this project after signing in to the portal.</small>
                     </span>
                 </label>
             </div>

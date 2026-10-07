@@ -23,9 +23,6 @@
    modal: those belong to the shared sheets, and a module-local copy of one
    drifts the moment the shared one is fixed (the users sheet learned that
    with its private modal system).
-
-   The vendor_quotes screens still load this file for their price-break rows;
-   those two rules are kept at the foot of the sheet.
    ========================================================================== */
 
 /* ==========================================================================
@@ -74,6 +71,13 @@
 :root[data-theme="dark"] .vendor-show .status-blacklisted {
     background: rgba(239, 71, 112, .2);
     color: #fda4af;
+}
+
+.vendor-type-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
 }
 
 .vendor-type-chip {
@@ -177,10 +181,10 @@
    2. THE LIST — resources/views/vendors/index.blade.php
    ========================================================================== */
 
-.vendor-index .vendor-table th:nth-child(1) { width: 260px; }
-.vendor-index .vendor-table th:nth-child(2) { width: 170px; }
-.vendor-index .vendor-table th:nth-child(3) { width: 220px; }
-.vendor-index .vendor-table th:nth-child(4) { width: 160px; }
+.vendor-index .vendor-table th:nth-child(1) { width: 44px; }
+.vendor-index .vendor-table th:nth-child(2) { width: 260px; }
+.vendor-index .vendor-table th:nth-child(3) { width: 140px; }
+.vendor-index .vendor-table th:nth-child(4) { width: 220px; }
 .vendor-index .vendor-table th:nth-child(5) { width: 160px; }
 .vendor-index .vendor-table th:nth-child(6) { width: 130px; }
 .vendor-index .vendor-table th:nth-child(7) { width: 90px; }

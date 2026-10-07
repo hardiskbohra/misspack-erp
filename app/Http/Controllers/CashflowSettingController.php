@@ -26,7 +26,7 @@ class CashflowSettingController extends Controller
 
         $masterGroup = array_key_exists($activeTab, $groupOptions) ? $activeTab : 'currency';
 
-        return view('cashflows.settings', [
+        return view('settings.cashflow', [
             'activeTab' => $activeTab,
             'masterGroup' => $masterGroup,
             'accounts' => CashflowAccount::query()->withCount('entries')->orderBy('account_type')->orderBy('account_name')->get(),
@@ -48,7 +48,7 @@ class CashflowSettingController extends Controller
 
         CashflowAccount::create($data);
 
-        return redirect()->route('cashflows.settings.index', ['tab' => 'accounts'])->with('success', 'Cashflow account created successfully.');
+        return redirect()->route('settings.cashflow', ['tab' => 'accounts'])->with('success', 'Cashflow account created successfully.');
     }
 
     public function updateAccount(Request $request, CashflowAccount $account): RedirectResponse
@@ -60,7 +60,7 @@ class CashflowSettingController extends Controller
         $account->update($data);
         $this->recalculateAccountLedger($account->id);
 
-        return redirect()->route('cashflows.settings.index', ['tab' => 'accounts'])->with('success', 'Cashflow account updated successfully.');
+        return redirect()->route('settings.cashflow', ['tab' => 'accounts'])->with('success', 'Cashflow account updated successfully.');
     }
 
     public function destroyAccount(CashflowAccount $account): RedirectResponse
@@ -71,7 +71,7 @@ class CashflowSettingController extends Controller
 
         $account->delete();
 
-        return redirect()->route('cashflows.settings.index', ['tab' => 'accounts'])->with('success', 'Cashflow account deleted successfully.');
+        return redirect()->route('settings.cashflow', ['tab' => 'accounts'])->with('success', 'Cashflow account deleted successfully.');
     }
 
     public function storeCategory(Request $request): RedirectResponse
@@ -81,7 +81,7 @@ class CashflowSettingController extends Controller
 
         CashflowCategory::create($data);
 
-        return redirect()->route('cashflows.settings.index', ['tab' => 'categories'])->with('success', 'Cashflow category created successfully.');
+        return redirect()->route('settings.cashflow', ['tab' => 'categories'])->with('success', 'Cashflow category created successfully.');
     }
 
     public function updateCategory(Request $request, CashflowCategory $category): RedirectResponse
@@ -91,14 +91,14 @@ class CashflowSettingController extends Controller
 
         $category->update($data);
 
-        return redirect()->route('cashflows.settings.index', ['tab' => 'categories'])->with('success', 'Cashflow category updated successfully.');
+        return redirect()->route('settings.cashflow', ['tab' => 'categories'])->with('success', 'Cashflow category updated successfully.');
     }
 
     public function destroyCategory(CashflowCategory $category): RedirectResponse
     {
         $category->delete();
 
-        return redirect()->route('cashflows.settings.index', ['tab' => 'categories'])->with('success', 'Cashflow category deleted successfully.');
+        return redirect()->route('settings.cashflow', ['tab' => 'categories'])->with('success', 'Cashflow category deleted successfully.');
     }
 
     public function storeMaster(Request $request): RedirectResponse
@@ -109,7 +109,7 @@ class CashflowSettingController extends Controller
 
         CashflowMasterOption::create($data);
 
-        return redirect()->route('cashflows.settings.index', ['tab' => $data['group']])->with('success', 'Master option created successfully.');
+        return redirect()->route('settings.cashflow', ['tab' => $data['group']])->with('success', 'Master option created successfully.');
     }
 
     public function updateMaster(Request $request, CashflowMasterOption $master): RedirectResponse
@@ -121,7 +121,7 @@ class CashflowSettingController extends Controller
         $oldGroup = $master->group;
         $master->update($data);
 
-        return redirect()->route('cashflows.settings.index', ['tab' => $data['group'] ?: $oldGroup])->with('success', 'Master option updated successfully.');
+        return redirect()->route('settings.cashflow', ['tab' => $data['group'] ?: $oldGroup])->with('success', 'Master option updated successfully.');
     }
 
     public function destroyMaster(CashflowMasterOption $master): RedirectResponse
@@ -129,7 +129,7 @@ class CashflowSettingController extends Controller
         $group = $master->group;
         $master->delete();
 
-        return redirect()->route('cashflows.settings.index', ['tab' => $group])->with('success', 'Master option deleted successfully.');
+        return redirect()->route('settings.cashflow', ['tab' => $group])->with('success', 'Master option deleted successfully.');
     }
 
 

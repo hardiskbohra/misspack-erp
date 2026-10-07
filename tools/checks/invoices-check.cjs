@@ -303,7 +303,6 @@ const chrome = [
     'class="master-list-applied"',
     'class="master-card master-table-card master-card--flat"',
     'class="master-list-toolbar"',
-    'class="master-list-density desktop-only"',
     'class="master-list-total"',
     'class="master-list-empty"',
 ];
@@ -354,9 +353,10 @@ check('the listing sizes its own columns',
     && colClasses.length === headCount
     && colClasses.every(name => new RegExp('\\.si-index \\.' + name + ' \\{\\s*\\n\\s*width:').test(sheet))
     && /\.si-index \.si-table \{\s*\n\s*table-layout: fixed;\s*\n\s*min-width: 1080px/.test(sheet)
-    && /\.si-index \.si-table th,\s*\n\.si-index \.si-table td \{\s*\n\s*padding: 14px 12px/.test(sheet),
+    && !/\.si-index \.si-table th,[\s\S]{0,60}padding/.test(sheet),
     'a column with no width of its own is the browser reading the longest cell in '
-    + 'it as content — and the widest cell in this table is a sentence');
+    + 'it as content — and the widest cell in this table is a sentence. The cell '
+    + 'rhythm is not this table\'s to declare: the shared contract owns it');
 
 check('an invoice number, a date and a figure never break in the middle',
     /\.si-index \.si-table \.si-number,\s*\n\.si-index \.si-table \.si-date,\s*\n\.si-index \.si-table td\.is-num strong \{\s*\n\s*white-space: nowrap/.test(sheet)

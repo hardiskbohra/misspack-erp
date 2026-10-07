@@ -1,7 +1,7 @@
 <div class="master-modal" id="orgSocialModal" aria-hidden="true">
     <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="orgSocialTitle">
-        <form method="POST" action="{{ route('organisation.socials.store') }}" id="orgSocialForm"
-            data-store="{{ route('organisation.socials.store') }}"
+        <form method="POST" action="{{ route('settings.organisation.socials.store') }}" id="orgSocialForm"
+            data-store="{{ route('settings.organisation.socials.store') }}"
             data-add-title="Add a social link"
             data-edit-title="Edit social link"
             data-add-sub="Instagram, Facebook, LinkedIn, Pinterest and the rest."

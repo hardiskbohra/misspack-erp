@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class Project extends Model
@@ -12,9 +13,9 @@ class Project extends Model
     use HasFactory;
 
     protected $fillable = [
-        'project_number', 'public_token', 'client_id', 'customer_quote_id', 'name', 'status',
+        'project_number', 'client_id', 'name', 'status',
         'stage', 'priority', 'health', 'start_date', 'target_date', 'completed_at', 'currency',
-        'estimated_value', 'budget_amount', 'progress_percent', 'scope_summary', 'deliverables',
+        'progress_percent', 'scope_summary', 'deliverables',
         'client_notes', 'internal_notes', 'show_client_portal', 'assigned_to', 'created_by',
     ];
 
@@ -22,29 +23,13 @@ class Project extends Model
         'start_date' => 'date',
         'target_date' => 'date',
         'completed_at' => 'datetime',
-        'estimated_value' => 'decimal:2',
-        'budget_amount' => 'decimal:2',
         'progress_percent' => 'integer',
         'show_client_portal' => 'boolean',
     ];
 
-    protected static function booted(): void
-    {
-        static::creating(function (Project $project) {
-            if (! $project->public_token) {
-                $project->public_token = Str::random(48);
-            }
-        });
-    }
-
     public function client()
     {
         return $this->belongsTo(\App\Models\Client::class, 'client_id');
-    }
-
-    public function customerQuote()
-    {
-        return $this->belongsTo(\App\Models\CustomerQuote::class, 'customer_quote_id');
     }
 
     public function products()
@@ -103,11 +88,6 @@ class Project extends Model
         return $this->hasMany(ProjectTrackingUpdate::class)->where('is_public', true)->latest('occurred_at')->latest('id');
     }
 
-    public function payments()
-    {
-        return $this->hasMany(ProjectPayment::class)->latest('payment_date')->latest('id');
-    }
-
     public function cashflowEntries()
     {
         return $this->hasMany(\App\Models\CashflowEntry::class, 'project_id')->latest('entry_date')->latest('id');
@@ -118,16 +98,69 @@ class Project extends Model
         return $this->hasMany(\App\Models\Shipment::class, 'project_id')->latest('id');
     }
 
-    public function publicPayments()
+    /**
+     * The receipts the client portal shows for this project. A project payment
+     * used to be its own row; the cashflow ledger is the source of truth now,
+     * so a receipt is a ledger entry tagged to the project — money in, and
+     * booked or reconciled, so a tentative row never reaches a client. The
+     * office's own ledger panel reads `cashflowEntries`, every status, on
+     * purpose: the office may see what is not confirmed yet.
+     */
+    public function projectReceipts()
     {
-        return $this->hasMany(ProjectPayment::class)->where('is_public', true)->latest('payment_date')->latest('id');
+        return $this->hasMany(\App\Models\CashflowEntry::class, 'project_id')
+            ->moneyIn()
+            ->whereIn('accounting_status', ['booked', 'reconciled'])
+            ->latest('entry_date')
+            ->latest('id');
     }
 
-    public function clientVisiblePayments()
+    /**
+     * The money documents this project generated.
+     *
+     * A project does not raise an invoice here — the invoices module does, and
+     * the row is tagged with `project_id` — so the record page reads the tag
+     * instead of keeping a list of its own. The four relations are the four
+     * documents the office asks for, each written once, in the order the
+     * record's Invoices tab reads them: the tax invoices the client owes, the
+     * proformas that asked for the money first, the purchase orders placed for
+     * the job, and the bills the vendors raised against them. A proforma is
+     * history once a tax invoice carries it; the section says so rather than
+     * the relation hiding it.
+     *
+     * `payments` is eager-loaded by the reader so a page of documents costs one
+     * query per relation instead of one per row: `receivedAmount()` and
+     * `paidAmount()` both read the ledger rows through that relation.
+     */
+    public function taxInvoices()
     {
-        return $this->hasMany(ProjectPayment::class)
-            ->visibleToClient()
-            ->latest('payment_date')
+        return $this->hasMany(\App\Models\SalesInvoice::class, 'project_id')
+            ->where('invoice_type', 'tax')
+            ->latest('invoice_date')
+            ->latest('id');
+    }
+
+    public function proformaInvoices()
+    {
+        return $this->hasMany(\App\Models\SalesInvoice::class, 'project_id')
+            ->where('invoice_type', 'proforma')
+            ->latest('invoice_date')
+            ->latest('id');
+    }
+
+    public function purchaseOrders()
+    {
+        return $this->hasMany(\App\Models\PurchaseInvoice::class, 'project_id')
+            ->where('invoice_type', \App\Models\PurchaseInvoice::TYPE_ORDER)
+            ->latest('invoice_date')
+            ->latest('id');
+    }
+
+    public function bills()
+    {
+        return $this->hasMany(\App\Models\PurchaseInvoice::class, 'project_id')
+            ->where('invoice_type', \App\Models\PurchaseInvoice::TYPE_BILL)
+            ->latest('invoice_date')
             ->latest('id');
     }
 
@@ -142,6 +175,24 @@ class Project extends Model
     public function logs()
     {
         return $this->hasMany(ProjectLog::class)->latest('id');
+    }
+
+    /**
+     * What the client has been asked, and what they said.
+     *
+     * Read-only relations: nothing here creates or deletes a feedback row, and
+     * `destroy()` deliberately does not touch them — an answer is the client's
+     * words about us and outlives the project it was about (the foreign key
+     * nulls `project_id` instead of cascading).
+     */
+    public function feedbackRequests()
+    {
+        return $this->hasMany(FeedbackRequest::class)->latest('id');
+    }
+
+    public function feedbackResponses()
+    {
+        return $this->hasMany(FeedbackResponse::class)->latest('submitted_at');
     }
 
     public function assignedUser()
@@ -196,35 +247,102 @@ class Project extends Model
         return 'Client #'.$this->client_id;
     }
 
+    /**
+     * What the project is worth: the documents raised on it, not a figure typed
+     * on the project. That is the tax invoices the client owes plus the
+     * proformas no tax invoice has carried yet — `SalesInvoice::
+     * countsTowardsProject()` is the one rule, so a cancelled invoice and a
+     * converted proforma are both off, and neither is counted twice.
+     */
+    public function estimatedValue(): float
+    {
+        return $this->documentsValue('taxInvoices', 'proformaInvoices');
+    }
+
+    /**
+     * What the project may spend: the purchase orders placed for it plus the
+     * bills recorded against it, read by `PurchaseInvoice::countsTowardsProject()`
+     * — an order that became a bill is carried by that bill, and a cancelled
+     * document is on neither figure.
+     */
+    public function budgetAmount(): float
+    {
+        return $this->documentsValue('purchaseOrders', 'bills');
+    }
+
+    /**
+     * The documents a side of the money is read from, summed in the project's
+     * currency. The relations are eager-loaded by every screen that lists
+     * projects, so a page of rows costs four queries and not four per row.
+     */
+    private function documentsValue(string ...$relations): float
+    {
+        $total = 0.0;
+
+        foreach ($relations as $relation) {
+            if (! $this->documentRelationAvailable($relation)) {
+                continue;
+            }
+
+            $documents = $this->relationLoaded($relation) ? $this->{$relation} : $this->{$relation}()->get();
+
+            foreach ($documents as $document) {
+                if ($document->countsTowardsProject()) {
+                    $total += $this->documentValue($document);
+                }
+            }
+        }
+
+        return round($total, 2);
+    }
+
+    /**
+     * A document counts in the project's currency. A project's documents are
+     * normally raised in its own currency; when one is not, it counts at the
+     * rate it was raised at, and a document with no rate counts at face value —
+     * the same reading the rest of the app gives a missing rate.
+     */
+    private function documentValue(Model $document): float
+    {
+        $value = (float) $document->total_amount;
+
+        return (string) $document->currency === (string) $this->currency
+            ? $value
+            : $value * (float) ($document->exchange_rate ?: 1);
+    }
+
+    /** A document module may not be installed on a deployment that predates it. */
+    private function documentRelationAvailable(string $relation): bool
+    {
+        [$model, $table] = in_array($relation, ['taxInvoices', 'proformaInvoices'], true)
+            ? [\App\Models\SalesInvoice::class, 'sales_invoices']
+            : [\App\Models\PurchaseInvoice::class, 'purchase_invoices'];
+
+        return class_exists($model) && Schema::hasTable($table) && Schema::hasColumn($table, 'project_id');
+    }
+
+    /**
+     * What the project is worth and what has moved against it: the value comes
+     * from the documents (`estimatedValue()`), the movement from the ledger —
+     * a credit is money in, a debit is money out, and the separate payment
+     * entries that used to be added on top are gone.
+     */
     public function paymentTotals(): array
     {
-        $payments = $this->relationLoaded('payments')
-            ? $this->payments
-            : $this->payments()->get();
-    
-        $cashflows = $this->relationLoaded('cashflows')
-            ? $this->cashflows
+        /* One name for the ledger relation: it is `cashflowEntries`, here and
+           in every eager load, so the loaded rows are the ones counted. */
+        $cashflows = $this->relationLoaded('cashflowEntries')
+            ? $this->cashflowEntries
             : $this->cashflowEntries()->get();
     
-        // Payments
-        $paymentInward = (float) $payments->where('transaction_type', 'inward')->sum('amount');
-        $paymentOutward = (float) $payments->where('transaction_type', 'outward')->sum('amount');
-    
-        // Cashflows
-        $cashflowCredit = (float) $cashflows->where('transaction_type', 'credit')->sum('credit_amount');
-        $cashflowDebit = (float) $cashflows->where('transaction_type', 'debit')->sum('debit_amount');
-    
-        // Combined totals
-        $inward = $paymentInward + $cashflowCredit;
-        $outward = $paymentOutward + $cashflowDebit;
-    
-        $estimated = (float) ($this->estimated_value ?: 0);
+        $inward = (float) $cashflows->where('transaction_type', 'credit')->sum('credit_amount');
+        $outward = (float) $cashflows->where('transaction_type', 'debit')->sum('debit_amount');
     
         return [
             'inward' => $inward,
             'outward' => $outward,
             'net' => $inward - $outward,
-            'outstanding' => max($estimated - $inward, 0),
+            'outstanding' => max($this->estimatedValue() - $inward, 0),
         ];
     }
 

@@ -12,9 +12,10 @@
         + Quick Entry
     </button>
     <a class="master-btn master-btn-soft" href="{{ route('cashflows.create') }}">Detailed Form</a>
+    <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.recurring.index') }}">Recurring</a>
     <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.documents') }}">Documents</a>
     <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.reports') }}">Reports</a>
-    <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.settings.index') }}">Settings</a>
+    <a class="master-btn master-btn-ghost desktop-only" href="{{ route('settings.cashflow') }}">Settings</a>
 @endsection
 
 @section('content')
@@ -328,19 +329,13 @@
                 Newest first &middot; grouped by day
             </p>
 
-            {{-- The right-hand end of the toolbar is the shared slot: a
-                 module's own destinations first, then the density switch every
-                 list has in the same place. --}}
+            {{-- The right-hand end of the toolbar is the shared slot every
+                 list uses for its own destinations. --}}
             <div class="master-list-toolbar-actions">
                 <a class="master-btn master-btn-ghost master-btn-sm" href="{{ route('cashflows.documents') }}">
                     <i class="fa-regular fa-folder-open" aria-hidden="true"></i> Document archive
                 </a>
 
-                <div class="master-list-density desktop-only" role="group" aria-label="Table density">
-                    <button type="button" class="master-list-density-btn" data-density="standard" aria-pressed="true">Standard</button>
-                    <button type="button" class="master-list-density-btn" data-density="comfortable" aria-pressed="false">Comfortable</button>
-                    <button type="button" class="master-list-density-btn" data-density="compact" aria-pressed="false">Compact</button>
-                </div>
             </div>
 
             <form id="cashflowBulkForm" method="POST" action="{{ route('cashflows.bulk') }}"
@@ -358,7 +353,7 @@
         </div>
 
         <div class="master-table-wrap">
-            <table class="master-table" data-table-settings data-table-key="cashflows">
+            <table class="master-table">
                 <thead>
                     <tr>
                         <th scope="col" class="master-list-pick">

@@ -683,14 +683,6 @@
     overflow-x: hidden;
 }
 
-/* A listing's cell rhythm is its own: the shared 18/20 is sized for reading a
-   page of text, and these are ten short columns. Scoped to this table, so the
-   tables next door keep the shared padding. */
-.si-index .si-table th,
-.si-index .si-table td {
-    padding: 14px 12px
-}
-
 .si-index .si-table .si-number,
 .si-index .si-table .si-date,
 .si-index .si-table td.is-num strong {

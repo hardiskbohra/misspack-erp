@@ -24,8 +24,6 @@
                     <a href="{{ route('leads.public.show', $lead->public_token) }}" target="_blank"
                         class="master-btn master-btn-soft">Public Product Link</a>
                 @endif
-                <a href="{{ route('lead-quotes.create', ['lead_id' => $lead->id]) }}" class="master-btn master-btn-primary">
-                    Create Lead Quote</a>
             </div>
         </div>
         <div class="master-grid">
@@ -75,38 +73,6 @@
                                 class="master-sub">{{ $lead->custom_color_specification ?: '-' }}</span></div>
                     </div>
                     <p style="font-weight:700;color:#536079;line-height:1.6;">{{ $lead->product_description }}</p>
-                </div>
-                <div class="master-card master-section">
-                    <div class="master-section-head">
-                        <h3>Lead Quotes Given</h3><a href="{{ route('lead-quotes.create', ['lead_id' => $lead->id]) }}"
-                            class="master-btn master-btn-primary">+ New Lead Quote</a>
-                    </div>
-                    <div class="master-table-wrap">
-                        <table class="master-table">
-                            <thead>
-                                <tr>
-                                    <th>Quote</th>
-                                    <th>Status</th>
-                                    <th>Expiry Date</th>
-                                    <th>Total</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($lead->customerQuotes as $quote)
-                                    <tr>
-                                        <td>{{ $quote->quote_number }}<span class="master-sub">{{ $quote->title }}</span></td>
-                                        <td>{{ $quote->statusLabel() }}</td>
-                                        <td>{{ $quote->expiry_date ? $quote->expiry_date->format('d M Y') : '-' }}</td>
-                                        <td>{{ \App\Helpers\CommonHelper::amount($quote->total_amount, $quote->currency) }}</td>
-                                        <td><a href="{{ route('lead-quotes.show', $quote) }}">View</a></td>
-                                </tr>@empty<tr>
-                                        <td colspan="5">No lead quotes given yet.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
             </div>
             <div>

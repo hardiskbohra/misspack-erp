@@ -1,0 +1,351 @@
+/* ==========================================================================
+   NOTES — the sticky notes that used to live on the desk.
+
+   One module, two screens: the desk (`notes/index.blade.php`, a board of cards
+   over a table of the same notes) and one note's page (`notes/edit.blade.php`).
+
+   What this sheet owns, per `docs/ui-design-guidelines.md`:
+
+     - **the inset of a card of this module's own** — the shared `.master-card`
+       is a surface with no padding, and the guideline puts 20–24px inside a
+       card that holds prose, figures or controls. A card holding a *table*
+       carries none: its chrome insets itself (master-list.css) and the rows run
+       to the card's edges, which is what the shared lists do;
+     - the board's grid and the note card's own composition;
+     - the six note colours — a domain colour, kept to the card's hairline, its
+       dot and its badges, never a pastel wash over a whole card — plus a
+       dark-theme value for each, because a colour that cannot be seen on the
+       dark surface is not a colour;
+     - the list's own cells: the dot-and-title cell, the one-line excerpt, the
+       state badge and the "edited" column that reads as a short fact.
+
+   It defines no button, card, field, table, tab, badge or modal of its own:
+   those belong to the shared sheets, and a module-local copy drifts the day the
+   shared one is fixed.
+   ========================================================================== */
+
+/* ------------------------------------------------------------------ accents */
+
+.nt-note--yellow, .nt-dot--yellow { --nt-accent: #d9a404; }
+.nt-note--blue,   .nt-dot--blue   { --nt-accent: #2563eb; }
+.nt-note--green,  .nt-dot--green  { --nt-accent: #059669; }
+.nt-note--pink,   .nt-dot--pink   { --nt-accent: #db2777; }
+.nt-note--purple, .nt-dot--purple { --nt-accent: #7c3aed; }
+.nt-note--grey,   .nt-dot--grey   { --nt-accent: #64748b; }
+
+:root[data-theme="dark"] .nt-note--yellow, :root[data-theme="dark"] .nt-dot--yellow { --nt-accent: #f0c14b; }
+:root[data-theme="dark"] .nt-note--blue,   :root[data-theme="dark"] .nt-dot--blue   { --nt-accent: #7aa2f7; }
+:root[data-theme="dark"] .nt-note--green,  :root[data-theme="dark"] .nt-dot--green  { --nt-accent: #4ade80; }
+:root[data-theme="dark"] .nt-note--pink,   :root[data-theme="dark"] .nt-dot--pink   { --nt-accent: #f472b6; }
+:root[data-theme="dark"] .nt-note--purple, :root[data-theme="dark"] .nt-dot--purple { --nt-accent: #c084fc; }
+:root[data-theme="dark"] .nt-note--grey,   :root[data-theme="dark"] .nt-dot--grey   { --nt-accent: #94a3b8; }
+
+/* --------------------------------------------------------------------- cards */
+
+/* The shared card is a surface: it has a border, a radius and a shadow, and no
+   padding at all. Everything drawn inside one therefore owes its own inset, and
+   a card of this module's own takes the guideline's 20–24px. (The card that
+   holds the table deliberately does not wear this class: its bar and rows carry
+   the shared list's own 16px rhythm and run to the edges.) */
+.nt .nt-card {
+    padding: 20px 22px;
+}
+
+.nt .nt-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.nt .nt-card-head .master-help {
+    margin: 0;
+    max-width: 46ch;
+}
+
+/* The shared title carries a 14px bottom margin for the content under a
+   heading; inside a head that is 14px of nothing before the card's own inset. */
+.nt .nt-card-head > :is(h2, h3, .master-section-title) {
+    margin-bottom: 4px;
+}
+
+/* ------------------------------------------------------------ the composer */
+
+/* One field the dialog's grid would otherwise squeeze into half a row: a
+   checkbox label is a sentence, not a column. */
+.nt .nt-modal-pin .master-check {
+    margin: 0;
+}
+
+/* --------------------------------------------------------------------- board */
+
+.nt .nt-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+    margin-top: 14px;
+}
+
+/* One sticky. The surface is the shared card; the colour is a hairline on the
+   left edge, its dot, and the badge — not the whole card. */
+.nt .nt-note {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px 18px 14px;
+    border: 1px solid var(--ui-border);
+    border-left: 4px solid var(--nt-accent, var(--ui-border));
+    border-radius: var(--ui-radius-card);
+    background: var(--ui-card-surface);
+    color: var(--ui-text);
+    text-decoration: none;
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+
+.nt .nt-note:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--ui-shadow-card);
+}
+
+.nt .nt-note:focus-visible {
+    outline: 2px solid var(--ui-info);
+    outline-offset: 2px;
+}
+
+/* A filed note is still readable, and says so quietly. */
+.nt .nt-note.is-filed {
+    background: var(--ui-nested-surface);
+    border-left-style: dashed;
+}
+
+.nt .nt-note-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.nt .nt-note-colour {
+    color: var(--ui-text-secondary);
+    font-size: 11px;
+    font-weight: var(--ui-weight-semibold, 600);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.nt .nt-note-pinned {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    color: var(--ui-warning);
+    font-size: 11px;
+    font-weight: var(--ui-weight-semibold, 600);
+}
+
+.nt .nt-note-title {
+    color: var(--ui-text);
+    font-size: 15px;
+    font-weight: var(--ui-weight-semibold, 600);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+/* The words, with their line breaks kept. Six lines is a sticky note; the
+   seventh is what the note's own page is for. */
+.nt .nt-note-body {
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--ui-text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.nt .nt-note-foot {
+    margin-top: auto;
+    color: var(--ui-text-secondary);
+    font-size: 11px;
+}
+
+/* --------------------------------------------------------------------- dots */
+
+.nt .nt-dot {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--nt-accent, var(--ui-text-secondary));
+    vertical-align: middle;
+}
+
+/* ------------------------------------------------------------------- badges */
+
+.nt .nt-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border: 1px solid var(--ui-border);
+    border-radius: 999px;
+    background: var(--ui-nested-surface);
+    color: var(--ui-text-secondary);
+    font-size: 11px;
+    font-weight: var(--ui-weight-semibold, 600);
+    white-space: nowrap;
+}
+
+.nt .nt-badge--desk {
+    border-color: rgba(16, 185, 129, .35);
+    background: rgba(16, 185, 129, .10);
+    color: var(--ui-success);
+}
+
+.nt .nt-badge--pinned {
+    border-color: rgba(245, 158, 11, .35);
+    background: rgba(245, 158, 11, .12);
+    color: var(--ui-warning);
+}
+
+/* ------------------------------------------------------------------- the list
+   Four columns, one line of the note under its title, and a row menu instead
+   of three buttons. The class on the table is this list's own: the shared
+   `.master-table` is built for the eight-to-ten-column ledgers (it carries a
+   1280px floor, which on a four-column list is a scrollbar for empty space). */
+
+.nt-index .nt-table {
+    min-width: 0;
+}
+
+.nt-index .nt-table th:nth-child(2) {
+    width: 132px;
+}
+
+.nt-index .nt-table th:nth-child(3) {
+    width: 120px;
+}
+
+.nt-index .nt-table th:nth-child(4) {
+    width: 64px;
+}
+
+/* The row is one note; clicking anywhere on it opens that note. The menu and
+   every link inside stay clickable — master-list.js skips them. */
+.nt-index .nt-row.is-clickable {
+    cursor: pointer;
+}
+
+.nt-index .nt-row.is-clickable:hover {
+    background: var(--ui-nested-surface);
+}
+
+/* The dot leads the cell and needs the gap a chip's flex would have given it. */
+.nt-index .nt-table td:first-child .nt-dot {
+    margin-right: 8px;
+}
+
+.nt-index .nt-note-link {
+    color: var(--ui-text);
+    font-size: 13.5px;
+    font-weight: var(--ui-weight-medium, 500);
+    text-decoration: none;
+}
+
+.nt-index .nt-note-link:hover {
+    color: var(--ui-info);
+    text-decoration: underline;
+}
+
+/* The pinned mark rides beside the title, not in a column of its own: it is
+   one glyph, and a column for one glyph is a column of white. */
+.nt-index .nt-pin-mark {
+    margin-right: 4px;
+    color: var(--ui-warning);
+    font-size: 11px;
+}
+
+/* One line of the note. The table is where you find a note, not where you read
+   it: the full sentence is a click away, and the cell says so in its tooltip. */
+.nt-index .nt-cell-sub {
+    display: block;
+    max-width: 72ch;
+    margin-top: 2px;
+    overflow: hidden;
+    color: var(--ui-text-secondary);
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.nt-index .nt-when {
+    color: var(--ui-text-secondary);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.nt-index .nt-col-state,
+.nt-index .nt-col-actions {
+    white-space: nowrap;
+}
+
+.nt-index .nt-col-actions {
+    text-align: right;
+}
+
+/* The row menu opens against the viewport (master-index.css); all this adds is
+   the cell's own alignment, so the toggle sits on the column's right edge. */
+.nt-index .nt-col-actions .master-dropdown {
+    display: inline-flex;
+    justify-content: flex-end;
+}
+
+/* ---------------------------------------------------------------- the page */
+
+.nt-edit .nt-edit-grid {
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+}
+
+.nt .nt-edit-pin {
+    align-self: end;
+    margin: 0 0 6px;
+}
+
+.nt .nt-edit-actions {
+    display: grid;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.nt .nt-edit-actions .master-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+/* ---------------------------------------------------------------- responsive */
+
+@media (max-width: 991px) {
+    .nt-edit .nt-edit-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 767px) {
+    /* Two cards in one column still owe the guideline's inset, at the small end
+       of its range. */
+    .nt .nt-card {
+        padding: 18px 16px;
+    }
+
+    .nt .nt-board {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .nt-index .nt-cell-sub {
+        max-width: none;
+    }
+}

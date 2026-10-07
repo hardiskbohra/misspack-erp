@@ -121,7 +121,7 @@ Capability, all from the listing:
 - **figures** — invoiced / received / outstanding / overdue for the *filtered* set, one
   `selectRaw` aggregate, plus a module-wide draft count. Never a loop over the fetched
   page;
-- **density switch**, clickable rows, one row menu of real routes (View · Edit ·
+- clickable rows, one row menu of real routes (View · Edit ·
   Record payment · Print · Copy client link · Mark sent · Hide/Show in portal ·
   Convert to tax invoice · Duplicate as draft · Delete);
 - **CSV export** of the same rows, honouring every filter, with a BOM so Excel reads
@@ -179,6 +179,26 @@ listing and the payment filter read it from there.
 One dialog serves the whole listing. The row that opens it says which invoice it is
 for; the form action is filled in from the `data-action-template` the route rendered
 (`__INVOICE__`), and the amount opens prefilled with what is still owed.
+
+**Saving an invoice also writes the project's products.** When the invoice is tagged to a
+project, its lines are materialised into `project_products` by
+`App\Services\ProjectProducts` — called from the one place the lines are written, so
+`store`, `update` and every later edit agree, and again from `copyInvoice()`, so a duplicate
+and a proforma-turned-tax-invoice reach the project without waiting for a save nobody makes.
+The line owns the product, the quantity, the unit, the rate, the currency and the
+specification (its description), and writes them every time; the service reads the lines from
+the rows rather than from a relation the caller may have loaded first, because a stale
+collection is how an edit stops showing. The project's products tab then shows what the
+client was invoiced without anyone typing it there, and the invoice form's own pre-fill (a new
+invoice for a project starts from that list) reads what the last document wrote. The service
+owns the matching (a line updates its row instead of adding a second one) and nothing else:
+the quantity × rate arithmetic stays `ProjectProduct::saving`'s.
+
+The invoice is also what a **project's estimated value** is made of:
+`SalesInvoice::countsTowardsProject()` — not cancelled, and not a proforma a tax invoice has
+already carried — is the one rule `Project::estimatedValue()` sums, so the project's figure is
+read from its documents rather than typed beside them. A proforma counts while it is waiting
+for the money and stops counting the moment the tax invoice it asked for exists.
 
 ## Chasing the money
 
@@ -249,7 +269,7 @@ module's own names live here (`.si-*`, the line-items table, `.si-total-box`,
 every page that loads the sheet.
 
 `public/assets/js/sales-invoices.js` boots the form's line-item builder **and** the
-list's chrome (density, saved-view toggle, clickable rows, the receipt dialog, the
+list's chrome (saved-view toggle, clickable rows, the receipt dialog, the
 client link). Every piece is guarded: the same file loads on the form, which has none
 of it.
 

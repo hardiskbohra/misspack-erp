@@ -2,7 +2,7 @@
    MASTER LIST — the one list surface
    --------------------------------------------------------------------------
    Every listing screen is the same surface: quick-view chips, saved views, an
-   applied-filters strip, a table bar with the density switch, a pinned grid
+   applied-filters strip, a table bar with the list's own actions, a pinned grid
    with a totals row, and an empty state that offers a way out. Those rules
    live here once and each list opts in with `class="… master-list"`.
 
@@ -11,8 +11,8 @@
    second module would need belongs here instead of being copied into it.
 
    Rule order is the cascade: the first block is the base chrome, the blocks
-   after it are the tone and density passes that tuned it on the shipment list,
-   kept in the order they were written so the same declaration always wins.
+   after it are the tone passes that tuned it on the shipment list, kept in the
+   order they were written so the same declaration always wins.
    ========================================================================== */
 
 /* ---------------- table shell (tablet and up) ----------------
@@ -404,8 +404,8 @@
     padding: 12px 16px 0;
 }
 
-/* The right-hand end of the toolbar: the destinations and the density switch,
-   so a list can offer a link without pushing the density switch around. */
+/* The right-hand end of the toolbar: the destinations a list adds beside its
+   own ordering hint. */
 .master-list .master-list-toolbar-actions {
     display: inline-flex;
     align-items: center;
@@ -430,44 +430,6 @@
     font-size: 12px;
     line-height: 1;
     opacity: .8;
-}
-
-.master-list .master-list-density {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px;
-    border: 1px solid var(--mc-border);
-    border-radius: 10px;
-    background: var(--mc-card-soft);
-}
-
-.master-list .master-list-density-btn {
-    display: inline-flex;
-    min-height: 40px;
-    align-items: center;
-    justify-content: center;
-    padding: 9px 12px;
-    border: 0;
-    border-radius: 8px;
-    background: none;
-    color: var(--mc-text-3);
-    font: inherit;
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 1.2;
-    letter-spacing: .01em;
-    cursor: pointer;
-}
-
-.master-list .master-list-density-btn.is-active {
-    background: var(--mc-card);
-    color: var(--mc-text);
-    box-shadow: 0 1px 2px rgba(15, 23, 42, .14);
-}
-
-.master-list .master-list-density-btn:focus-visible {
-    outline: 2px solid var(--master-primary);
-    outline-offset: 2px;
 }
 
 /* The bulk bar: one action for many ticked rows. It is in the toolbar, hidden
@@ -788,11 +750,3 @@
     }
 }
 
-@media (min-width: 768px) {
-    .master-list[data-density="compact"] .master-table th, .master-list[data-density="compact"] .master-table td {
-        padding: 7px 14px;
-    }
-    .master-list[data-density="compact"] .master-table td {
-        font-size: 13px;
-    }
-}

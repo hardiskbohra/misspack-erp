@@ -29,7 +29,7 @@ class OrganisationController extends Controller
 
         $organisation->load(['addresses', 'banks', 'contacts', 'socials']);
 
-        return view('organisation.settings', [
+        return view('settings.organisation', [
             'organisation' => $organisation,
             'tab' => $tab,
             'kinds' => OrganisationAddress::KINDS,
@@ -96,7 +96,7 @@ class OrganisationController extends Controller
         $organisation->update($data);
 
         return redirect()
-            ->route('organisation.settings', ['tab' => 'company'])
+            ->route('settings.organisation', ['tab' => 'company'])
             ->with('success', 'Organisation profile saved.');
     }
 
@@ -117,7 +117,7 @@ class OrganisationController extends Controller
         OrganisationAddress::create($data);
 
         return redirect()
-            ->route('organisation.settings', ['tab' => 'addresses'])
+            ->route('settings.organisation', ['tab' => 'addresses'])
             ->with('success', 'Address added.');
     }
 
@@ -137,7 +137,7 @@ class OrganisationController extends Controller
         $address->update($data);
 
         return redirect()
-            ->route('organisation.settings', ['tab' => 'addresses'])
+            ->route('settings.organisation', ['tab' => 'addresses'])
             ->with('success', 'Address saved.');
     }
 
@@ -146,7 +146,7 @@ class OrganisationController extends Controller
         $address->delete();
 
         return redirect()
-            ->route('organisation.settings', ['tab' => 'addresses'])
+            ->route('settings.organisation', ['tab' => 'addresses'])
             ->with('success', 'Address removed.');
     }
 
@@ -167,7 +167,7 @@ class OrganisationController extends Controller
         OrganisationContact::create($data);
 
         return redirect()
-            ->route('organisation.settings', ['tab' => 'contacts'])
+            ->route('settings.organisation', ['tab' => 'contacts'])
             ->with('success', 'Contact added.');
     }
 
@@ -187,7 +187,7 @@ class OrganisationController extends Controller
         $contact->update($data);
 
         return redirect()
-            ->route('organisation.settings', ['tab' => 'contacts'])
+            ->route('settings.organisation', ['tab' => 'contacts'])
             ->with('success', 'Contact saved.');
     }
 
@@ -196,7 +196,7 @@ class OrganisationController extends Controller
         $contact->delete();
 
         return redirect()
-            ->route('organisation.settings', ['tab' => 'contacts'])
+            ->route('settings.organisation', ['tab' => 'contacts'])
             ->with('success', 'Contact removed.');
     }
 
@@ -208,7 +208,7 @@ class OrganisationController extends Controller
         OrganisationSocial::create($data);
 
         return redirect()
-            ->route('organisation.settings', ['tab' => 'socials'])
+            ->route('settings.organisation', ['tab' => 'socials'])
             ->with('success', 'Social link added.');
     }
 
@@ -217,7 +217,7 @@ class OrganisationController extends Controller
         $social->update($this->socialData($request));
 
         return redirect()
-            ->route('organisation.settings', ['tab' => 'socials'])
+            ->route('settings.organisation', ['tab' => 'socials'])
             ->with('success', 'Social link saved.');
     }
 
@@ -226,7 +226,7 @@ class OrganisationController extends Controller
         $social->delete();
 
         return redirect()
-            ->route('organisation.settings', ['tab' => 'socials'])
+            ->route('settings.organisation', ['tab' => 'socials'])
             ->with('success', 'Social link removed.');
     }
 
@@ -246,7 +246,7 @@ class OrganisationController extends Controller
         OrganisationBank::create($data);
 
         return redirect()
-            ->route('organisation.settings', ['tab' => 'banks'])
+            ->route('settings.organisation', ['tab' => 'banks'])
             ->with('success', 'Bank account added.');
     }
 
@@ -265,7 +265,7 @@ class OrganisationController extends Controller
         $bank->update($data);
 
         return redirect()
-            ->route('organisation.settings', ['tab' => 'banks'])
+            ->route('settings.organisation', ['tab' => 'banks'])
             ->with('success', 'Bank account saved.');
     }
 
@@ -274,7 +274,7 @@ class OrganisationController extends Controller
         $bank->delete();
 
         return redirect()
-            ->route('organisation.settings', ['tab' => 'banks'])
+            ->route('settings.organisation', ['tab' => 'banks'])
             ->with('success', 'Bank account removed.');
     }
 

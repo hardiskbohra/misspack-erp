@@ -13,7 +13,7 @@ node tools/checks/design-check.cjs    # stylesheets, cascade, design rules
 node tools/checks/blade-check.cjs     # templates parse: directives, includes, components
 node tools/checks/mark-check.cjs      # shipping-mark geometry + QR payloads
 node tools/checks/list-check.cjs      # one index page: chips, columns, toolbar, row actions,
-                                      # applied filters, density, the pinned grid
+                                      # applied filters, the pinned grid
 node tools/checks/ui-components-check.cjs # shared Drawer/DataTable API, persistence, a11y, and inventory
 node tools/checks/status-check.cjs    # the rules a shipment status change keeps: the delivery
                                       # date it fills in, the hold/delay reason it still refuses
@@ -21,8 +21,19 @@ node tools/checks/cost-check.cjs      # a cost head's exchange rate: the field i
                                       # screen, and the INR value is amount × rate, never a guess
 node tools/checks/php-check.cjs       # the PHP files the module owns: parsed with php-parser when
                                       # it is reachable, plus name/import guards that a parser
-                                      # cannot answer. PHP_PARSER_PATH=<dir> points at a node_modules
-                                      # that holds php-parser when it is not installed here.
+                                      # cannot answer — including the one that reads a migration the
+                                      # way the schema builder does, so no index or foreign key asks
+                                      # MySQL for an identifier over its 64 characters, and the one
+                                      # that asks every scope which names it binds before it reads
+                                      # them (a closure's `use`, a parameter, a foreach target).
+                                      # PHP_PARSER_PATH=<dir> points at a node_modules that holds
+                                      # php-parser when it is not installed here.
+node tools/checks/sql-check.cjs       # the SQL MySQL can actually run: the tests use SQLite and
+                                      # the office uses MySQL, so a LIMIT inside an IN subquery —
+                                      # which is what paginating the builder a page's other reads
+                                      # borrow produces — is a 500 no test can see. A builder is
+                                      # either a filter or a page, never both: borrow a clone,
+                                      # page a clone.
 node tools/checks/docs-check.cjs      # the paperwork behind an entry: one table, the archive route
                                       # before the resource route, one definition of "missing"
 node tools/checks/statement-check.cjs # a party statement: opening + debit − credit = closing, the
@@ -32,6 +43,45 @@ node tools/checks/pdf-documents-check.cjs # shared PDF paper/actions, A4 typogra
 node tools/checks/report-check.cjs    # the report builder: a cell sums the same rows it opens,
                                       # a bucket is dates and not a dialect, a comparison is the
                                       # axis shifted, and "not set" is a row you can drill
+node tools/checks/feedback-check.cjs  # the feedback module: the link is the whole of the
+                                      # authentication, one ask has one answer, the band is
+                                      # computed rather than stored, a detractor is never a dead
+                                      # end, consent is checked where the words are used, a score
+                                      # gates nothing, and the screen and the CSV are one query
+node tools/checks/projects-check.cjs  # the projects list is the shared master-list: two flat
+                                      # cards with the shell's own gap, chips and a drawer for
+                                      # the criteria, one grouped query behind the figures and
+                                      # the chip tallies, the row's relations eager-loaded, and
+                                      # the module sheet owning colour and columns — not the
+                                      # shell — while the client portal's classes stay put — and
+                                      # the record page: the shared shell and tab links, one list
+                                      # of tab names behind both the strip and the URL, one panel
+                                      # per request, the status form in the shared drawer, update
+                                      # URLs the server writes, the shell's facts, tables and empty
+                                      # states, well-formed panels, a tone for every state the
+                                      # models offer — light and dark, the feedback tab drawn as
+                                      # a record panel instead of borrowing another sheet's
+                                      # classes, the record mark's initials in the house idiom,
+                                      # every class a screen names carried by a rule, and the
+                                      # client following a project through the login portal
+                                      # rather than the removed token link
+node tools/checks/notes-check.cjs     # the notes module: a note is private to the login that wrote
+                                      # it — one owner scope and one row door (a 404 for anybody
+                                      # else), one writer, one colour vocabulary with a rule and
+                                      # a dark-theme value per colour, one query read twice (the
+                                      # board and the table), chip counts with the chip lifted,
+                                      # a capped board that says it is capped, and the module
+                                      # sheet owning no shared class
+node tools/checks/recurring-check.cjs # standing cashflow rules: a rule is not a payment — one
+                                      # calculator with the anchor carried, a window planned as a
+                                      # reconciliation, approval asked for on the effective date and
+                                      # never before it, one notifier and one posting, and a rule
+                                      # that is never editable once it has posted
+node tools/checks/settings-check.cjs   # the settings module: one list behind the hub and
+                                      # the rail, every module keeping its own rules and
+                                      # writes, the five pages that used to *be* the
+                                      # settings gone, and every old URL still opening with
+                                      # the tab it carried
 node tools/checks/employees-check.cjs # the employee side of the user module: the office door is
                                       # on the whole admin group, no personal route takes a user id,
                                       # a file is ownership-checked before it is served, a draft
@@ -45,12 +95,41 @@ node tools/checks/invoices-check.cjs  # the invoice module: its sheet defines no
                                       # rows grouped by HSN and rate — and the record
                                       # page: the shared composition, five flat
                                       # figures, a sentence where a card is empty
+node tools/checks/assets-check.cjs    # the fixed asset register: the asset stores a
+                                      # recipe and not the answer (no accumulated
+                                      # depreciation or net book value column, one
+                                      # calculator), one writer for the asset, its
+                                      # hand-overs and its repairs, the financial year
+                                      # and the two formulas ported out of PHP and
+                                      # executed, the register's figures/chips/drawer/
+                                      # tabs/dialogs/exports, one strip of five on
+                                      # each list page with the readings as chips
+                                      # beside their own doors, the columns each table
+                                      # actually draws, the record's panels drawing
+                                      # every block as a card, every view's names,
+                                      # methods and array keys resolving against the
+                                      # module, the classes list being a table whose
+                                      # dialog carries every field its validator writes,
+                                      # and the boundary that makes the register a module
+                                      # and the classes a setting
+node tools/checks/assets-dialog-check.cjs
+                                      # the dialogs, **run** rather than read: a real DOM,
+                                      # the module's own script, and the promises that a
+                                      # door addresses the row it means, that an add takes
+                                      # the dialog back, and that a save which failed
+                                      # reopens *that row* with the typing kept
 ```
 
-Every check is dependency-free. `mark-check.cjs` additionally decodes the QR
-payloads with [`jsqr`](https://www.npmjs.com/package/jsqr) when it is installed
-(`npm i jsqr`); without it, the geometry checks still run and the decode checks
-report as skipped.
+Every check is dependency-free. Two of them do more when an optional package is
+installed:
+
+- `mark-check.cjs` decodes the QR payloads with
+  [`jsqr`](https://www.npmjs.com/package/jsqr) (`npm i jsqr`); without it the
+  geometry checks still run and the decode checks are skipped;
+- `assets-dialog-check.cjs` runs the module's dialogs against a real DOM with
+  [`jsdom`](https://www.npmjs.com/package/jsdom) (`npm i jsdom`, or point
+  `JSDOM_PATH` at wherever it was installed); without it the static promises still
+  run and the behaviour suite says it was skipped.
 
 The files use the `.cjs` extension because `package.json` declares
 `"type": "module"` for the Vite front end.
@@ -59,7 +138,7 @@ All of them exit non-zero on failure, so they can be wired into CI or a
 pre-push hook:
 
 ```bash
-for c in design blade php mark list ui-components status cost docs statement pdf-documents report employees invoices; do
+for c in design blade php mark list ui-components status cost docs statement pdf-documents report projects employees invoices settings assets assets-dialog; do
   node "tools/checks/$c-check.cjs" || exit 1
 done
 ```
@@ -80,6 +159,16 @@ There is no CI in this repository and no PHP runtime in the sandbox, so the
 checkers are the gate: they are run by hand before every commit, and each one is
 paired with a mutator (a plausible regression written into the tree) to prove the
 guards actually fail when the behaviour they describe is broken.
+
+One checker does run the product rather than read it. `assets-dialog-check.cjs`
+puts the fixed-asset module's own script on a real DOM and clicks its doors,
+because the interesting failures in a dialog are invisible to a reader: a lookup
+that returns `null` reads exactly like a lookup that works. Three of those shipped
+in one round — a dialog fed by lists only one of its two pages passed, a form that
+carried half the record its validator wrote, and a reopen marker that spoke the
+modal's id while every door spoke the action's word, so no failed save ever
+reopened its dialog. The first two were caught by reading; the third only fell out
+when the dialogs were run.
 
 ## What they cover
 
@@ -102,12 +191,16 @@ guards actually fail when the behaviour they describe is broken.
 | Address fitting | re-derives the character budget per line from the font and the 77 mm line, reads the threshold numbers out of the partial, and fails if a boundary address would be cut — the last line carries the pin code and country |
 | Rule order | the address size-step rules must come after the per-party rules they override, or they silently do nothing (same specificity) |
 | QR payload decode | a code that does not decode is not printable |
+| A door addresses the row it means | one dialog shared by every row of a list has to be pointed at the row, or the second save lands on the first |
+| An add takes the dialog back | after a change, the add door must post to the collection again — the same form, the other verb |
+| A failed save reopens *its* row | the marker has to speak the word the door and the form speak, or the lookup finds nothing and the typing is lost |
+| A payload never writes a hidden field | a cleared checkbox has to travel as "no", and the hidden answer is the server's own |
 | Index-page vocabulary | a list row and a list toolbar have one shape across modules: `scope="col"` headers, money in an `.is-num` cell that lines up with the totals, one primary action on the page, every status/type/label chip with a light **and** dark tone |
 | A list that keeps its context | the header of a long list stays in view with the totals row, and the reader decides how many rows fit — both are checked, not just styled |
 | Row linking | the row opens the record and the inner links/buttons keep their own click; the guard lives in JS and is checked, because a half-linked row is worse than none |
 | Toolbar honesty | a Reset appears only when a filter is set, the empty state offers a way out, and the closed block says how many rows it holds |
 | Applied filters | one removable chip per active filter, each removing only its own key — a filter you cannot see is a filter you cannot undo |
-| Row density | the list remembers how tight the rows are, and both densities are checked to really change the row geometry |
+| One row rhythm | every table keeps the comfortable geometry from the shared contract, and no sheet, screen or script carries a density or column switch |
 | A pinned grid | above 1200px the header and the totals row stay put while the rows scroll, and the borders are separated so a sticky header keeps its hairline |
 | Stacked-row labels | on a phone the row becomes a card and every value keeps the column name it had |
 | One row rhythm | every first line and every second line shares a line box, so a row reads as a row instead of a pile of boxes |
@@ -143,3 +236,27 @@ guards actually fail when the behaviour they describe is broken.
 | Two owners for one profile | the employee keeps their mobile, address, date of birth and emergency contact current; designation, joining date, pay and the salary bank account are the office's record, and the list of who may edit what is written once in `EmployeeAccess` |
 | Roles read as "not an employee" | any unknown or missing role keeps the account able to work, because an office locked out of its own ledger by a missing value is the worse failure — and the last administrator cannot be demoted or deleted |
 | One payroll list | the ledger's Employee field offers employees first and office accounts underneath, from one method on the model — entries filed before roles existed still point at people the picker contains |
+| A tab is a URL | the project record rendered all ten panels on every request and kept the active one in `localStorage`, so no panel could be linked, bookmarked, opened in a second window, or reached with the back button. One panel is rendered per request now, `?tab=` is validated against the controller's own list of names, and a form posted from a tab returns to that tab because every sub-action redirects `back()` |
+| The server writes the URL | each edit dialog carries `data-update-url="{{ route(...) }}"` with an `__ID__` placeholder, bound by one script helper: a hand-built `/project-products/12` misses an install served from a sub-path, and a renamed route is a 404 in whichever of the two places was forgotten |
+| One vocabulary, two pages | the status and health tones are scoped to `.project` and shared by the list, the record header, a milestone badge and the log — so a status cannot mean one thing on the list and another on the page it opens |
+| The record page speaks the shell | the record page's sheet may place the shell's classes and no more: it composes the header, the two-column grid and the thread rows, while the cards, facts, tables, badges, empty states and dialogs come from the shared sheets. A second card design on the detail page is how the module stopped matching the list next door |
+| A panel closes as it opens | the tag stack is the only reader a Blade panel has: a wrapper closed one line early moves every card after it out of the grid, and the browser silently recovers — so the checks walk the panel's tags instead of trusting the eye |
+| One writer for a control | a module sheet may place a shared class only inside that module's own scopes: a bare `.master-field input` (`padding: 10px 11px`) beat the shell's `.master-input` (`10px 14px`) on every projects screen, so the same control was a different size on one module's pages — the legacy page's field rules and the form's label colours are scoped to their own pages, and the check refuses a new rule that places a shell class on its own |
+| A string is not a list | `Str::of()` hands back a Stringable — a string that answers to string methods and to nothing else — so `->map()`, `->filter()` or `->each()` on that chain compiles, passes every check that reads a template, and throws `BadMethodCallException` the first time a browser opens the page it is on. The record mark's initials did exactly that. The house idiom is to collect the parts (`collect(explode(...))->map(...)->implode('')`), and no `Str::of()` chain may call a collection method |
+| A string is not an object | the mirror rule: every other `Str::*` static returns a string, and so do `str_*`, `mb_*`, `trim`, `explode`, `implode`, `number_format` and friends — a `->method()` chained onto one of those is a fatal error the moment the page renders, not a clever way to compose text |
+| A panel another sheet owns | the feedback tab renders inside the project record, which loads `projects.css` and never `feedback.css`: a class from another module's sheet is a class with no rules at all, so the tab is built from the record's vocabulary, owns its own `master-tab-panel` wrapper, and reads its band tones from the same state table as every other badge on the page |
+| A class a screen names has rules | a class left behind in the markup renders as nothing, and no reviewer reading the Blade can tell: every `project-*`/`pd-*`/`pmile-*`/`fb-*` class a module screen names is defined by a rule in one of the app's sheets or by another screen that names it, with dynamic compositions (`project-health-dot--{{ $key }}`) not counted as names |
+| A panel brings its own padding | the shared `.master-card` is a surface with no inset — a list card can be flush because its bars are padded instead — but a record panel holds facts, stats or a table directly, so every panel the record renders wears `.project-detail-card` and the card writes the guideline's 22/24 (16/18 on phones), the same inset the client and vendor records give their own cards |
+| A door is not left standing | the public project portal (`/project-portal/{token}`) is gone — the client follows a project by signing in — so no route name, column or copy button may survive it, and `projects.show_client_portal` is checked as still read by the login portal, because that flag is the reason the column stayed |
+| A recipe, not the answer | a fixed asset stores *how* it depreciates — useful life, method, residual value — and never the accumulated depreciation or the net book value, which are computed on every read from the asset's own dates. A stored book value is a column somebody has to remember to correct, and the first time somebody forgets, the register prints a figure the arithmetic does not produce |
+| The rate is solved, not typed | written-down-value depreciation divides the cost down to its residual value over the useful life, so the rate is derived from the residual (`1 − (residual ÷ cost) ^ (1 ÷ life)`) rather than a flat percentage. A flat 20% leaves ₹10,737 after ten years on a machine the office said would be worth ₹5,000 — the curve has to land where the recipe said |
+| The last row closes the curve | whichever method ran, the final year is charged `opening − residual` exactly, and the charge is clamped to that. Without it every schedule ends a few rupees away from its own residual value, and the register's total with it |
+| A year is days, not months | the financial year is 1 April – 31 March and each year's charge is pro-rated by the days the asset was on the books in it, so the year of purchase and the year of sale pay their own share. The two formulas are ported out of PHP and executed by the check, because that is the part of the module that can be proved without a runtime |
+| One writer per register | every door — register, change, hand over, take back, log a repair, verify, dispose, delete — posts to one service, and no controller touches a model. The two histories and the asset's own custodian/location/department cannot drift apart, because one method moves all of them together |
+| The state follows the cupboard | an asset in store that is handed to somebody becomes *in use*, and an asset that comes back becomes *spare* — the only two moves the writer makes without being asked, because leaving the status alone would be a lie on the register. Everything else is the office's own word |
+| One open hand-over | the asset's custody is the open hand-over row, so the writer closes whatever is open before it opens anything and refuses to take back what is not out. There is no cached custodian on the asset to go stale, and a partial unique index is avoided because it is not portable |
+| A count and its link are one query | the number on an attention card ("service due: 4") is the same scope its link opens, so a card that says four opens four rows. The register's totals, its table and its CSV are likewise one builder — narrowed to a place, the figures describe that place |
+| A page is never the filtered builder | the paginator writes a `LIMIT` on the builder it is called on, and MySQL refuses that inside the `IN (…)` subquery a later read of the same builder produces (error 1235). So the page comes from a clone, and the figures take a clone too |
+| Two figures the spreadsheet could not keep | the export is the office's own column order plus accumulated depreciation and net book value as at the day the file was taken — a register that exports fewer columns than it holds is a register an auditor cannot use |
+| The register is a module, the classes are a setting | the chairs are records (a module under Accounts, with its own histories and pages); the *recipe* a class hands out is configuration, and lives in Settings with the other five areas. A class still holding assets refuses to be deleted, and the two screens link to each other so neither is a dead end |
+| A door that names its own form | every dialog-opening control carries `data-open-asset-modal="<door>"` and the dialog's form carries `data-asset-form="<door>"`: the script finds the dialog through the form, so no list of dialog ids exists to fall out of date, a shared dialog clears itself before it is filled again, and a failed save reopens the dialog it came from with the typing kept |

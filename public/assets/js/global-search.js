@@ -57,7 +57,7 @@
             if (!results) return;
 
             if (!data.q || data.q.length < 2) {
-                results.innerHTML = '<p class="gs-empty">Clients, vendors, products, projects, leads, invoices, cashflow, shipments, tasks and people.</p>';
+                results.innerHTML = '<p class="gs-empty">Clients, vendors, products, projects, leads, invoices, cashflow, shipments, tasks, people and settings.</p>';
                 return;
             }
 

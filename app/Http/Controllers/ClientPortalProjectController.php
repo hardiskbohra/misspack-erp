@@ -56,7 +56,7 @@ class ClientPortalProjectController extends ClientPortalBaseController
             'publicComments.user',
             'publicComments.product',
             'publicMilestones',
-            'clientVisiblePayments',
+            'projectReceipts',
         ];
 
         if (class_exists(\App\Models\Shipment::class)

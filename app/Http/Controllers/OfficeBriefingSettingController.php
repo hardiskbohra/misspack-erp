@@ -30,7 +30,7 @@ class OfficeBriefingSettingController extends Controller
             })
             ->values();
 
-        return view('office_briefings.settings', [
+        return view('settings.briefings', [
             'settings' => $settings,
             'sources' => OfficeSetting::sourceLabels(),
             'desks' => OfficeSetting::deskOptions(),
@@ -91,7 +91,7 @@ class OfficeBriefingSettingController extends Controller
         ]);
 
         return redirect()
-            ->route('office-alerts.settings')
+            ->route('settings.briefings')
             ->with('success', 'Office briefing settings saved.');
     }
 }

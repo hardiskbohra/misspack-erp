@@ -47,8 +47,7 @@
                             id="openQuickLeadModal">+ Quick Lead</button><a href="{{ route('leads.create') }}"
                             class="master-btn master-btn-soft">Detailed Form</a><a href="{{ route('leads.public.create') }}"
                             target="_blank" class="master-btn master-btn-light">Public Link</a><a
-                            href="{{ route('lead-quotes.index') }}" class="master-btn master-btn-light">Lead
-                            Quotes</a><a href="{{ route('leads.settings.index') }}"
+                            href="{{ route('settings.leads') }}"
                             class="master-btn master-btn-light">Settings</a></div>
                 </div>
                 <x-drawer id="leadFiltersDrawer" title="Filter leads" eyebrow="Lead filters"
@@ -105,7 +104,7 @@
 
         <div class="master-card master-table-card">
             <div class="master-table-wrap ui-mobile-cards">
-                <table class="master-table" data-table-settings data-table-key="leads">
+                <table class="master-table">
                     <thead>
                         <tr>
                             <th>Lead / Product</th>
@@ -179,18 +178,6 @@
                                                     Edit Lead
                                                 </a>
                                                 
-                                                <a href="{{ route('lead-quotes.create', ['lead_id' => $lead->id]) }}">
-                                                    <i class="fas fa-pen"></i>
-                                                    Quick Lead Quote
-                                                </a>
-                                                                                    <button
-                                                    type="button"
-                                                    class="lead-quotes-btn"
-                                                    data-lead-id="{{ $lead->id }}">
-                                                    <i class="fas fa-file-invoice-dollar"></i>
-                                                    View Quotes
-                                                </button>
-                                    
                                                 <form method="POST"
                                                       action="{{ route('leads.destroy', $lead) }}"
                                                       data-confirm="Delete this lead?">

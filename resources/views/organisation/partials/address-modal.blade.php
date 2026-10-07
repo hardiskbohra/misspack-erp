@@ -1,7 +1,7 @@
 <div class="master-modal" id="orgAddressModal" aria-hidden="true">
     <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="orgAddressTitle">
-        <form method="POST" action="{{ route('organisation.addresses.store') }}" id="orgAddressForm"
-            data-store="{{ route('organisation.addresses.store') }}"
+        <form method="POST" action="{{ route('settings.organisation.addresses.store') }}" id="orgAddressForm"
+            data-store="{{ route('settings.organisation.addresses.store') }}"
             data-add-title="Add an address"
             data-edit-title="Edit address"
             data-add-sub="Billing, shipping or a branch."

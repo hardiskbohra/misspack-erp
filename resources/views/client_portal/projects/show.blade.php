@@ -39,7 +39,7 @@
     <div class="pd-metric"><span>Stage</span><strong>{{ $project->stageLabel() }}</strong></div>
     <div class="pd-metric"><span>Target date</span><strong>{{ optional($project->target_date)->format('d M Y') ?: 'Not set' }}</strong></div>
     <div class="pd-metric"><span>Products</span><strong>{{ $project->products->count() }}</strong></div>
-    <div class="pd-metric"><span>Shared receipts</span><strong>{{ $project->clientVisiblePayments->count() }}</strong></div>
+    <div class="pd-metric"><span>Receipts</span><strong>{{ $project->projectReceipts->count() }}</strong></div>
 </div>
 
 <div class="pd-tabs-shell">
@@ -54,7 +54,7 @@
         <button type="button" class="pd-tab-btn" data-tab="attachments" role="tab" aria-selected="false">Attachments
             <span>{{ $project->clientPortalAttachments->count() + $portalDocuments->count() }}</span></button>
         <button type="button" class="pd-tab-btn" data-tab="payments" role="tab" aria-selected="false">Payments
-            <span>{{ $project->clientVisiblePayments->count() }}</span></button>
+            <span>{{ $project->projectReceipts->count() }}</span></button>
         <button type="button" class="pd-tab-btn" data-tab="shipments" role="tab" aria-selected="false">Shipments
             <span>{{ $project->publicShipments->count() }}</span></button>
         <button type="button" class="pd-tab-btn" data-tab="tracking" role="tab" aria-selected="false">Activities
@@ -129,7 +129,7 @@
                         </button>
                         <button type="button" class="pd-summary-item" data-tab-jump="payments" style="background:#fff1f3">
                             <i class="fa-solid fa-indian-rupee-sign"></i>
-                            <span><strong>{{ $project->clientVisiblePayments->count() }} shared receipts</strong><small>Confirmed client payments</small></span>
+                            <span><strong>{{ $project->projectReceipts->count() }} receipts</strong><small>Money received against this project</small></span>
                         </button>
                     </div>
                 </div>
@@ -554,10 +554,10 @@
                 <div class="pd-section-head" style="padding:5px;">
                     <div>
                         <p class="pd-eyebrow">Finance</p>
-                        <h2>Published receipts</h2>
-                        <p class="cp-muted">Only receipts explicitly shared after confirmation are shown.</p>
+                        <h2>Receipts</h2>
+                        <p class="cp-muted">Money received against this project, booked in the ledger.</p>
                     </div>
-                    <span class="pd-count">{{ $project->clientVisiblePayments->count() }} receipts</span>
+                    <span class="pd-count">{{ $project->projectReceipts->count() }} receipts</span>
                 </div>
                 <div class="master-table-wrap master-card" style="padding:0px;box-shadow:none;">
                     <table class="master-table">
@@ -570,15 +570,15 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($project->clientVisiblePayments as $payment)
+                            @forelse ($project->projectReceipts as $receipt)
                                 <tr>
-                                    <td>{{ optional($payment->payment_date)->format('d M Y') ?: '—' }}</td>
-                                    <td>{{ $payment->reference_number ?: 'Client receipt' }}</td>
-                                    <td>{{ $payment->payment_mode ? strtoupper($payment->payment_mode) : '—' }}</td>
-                                    <td><strong>{{ \App\Helpers\CommonHelper::amount($payment->amount, $payment->currency) }}</strong></td>
+                                    <td>{{ optional($receipt->entry_date)->format('d M Y') ?: '—' }}</td>
+                                    <td>{{ $receipt->bank_reference_number ?: ($receipt->particular ?: 'Receipt') }}</td>
+                                    <td>{{ $receipt->payment_mode ? strtoupper($receipt->payment_mode) : '—' }}</td>
+                                    <td><strong>{{ \App\Helpers\CommonHelper::amount($receipt->credit_amount, $receipt->currency) }}</strong></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4"><div class="pd-empty">No confirmed receipts have been shared yet.</div></td></tr>
+                                <tr><td colspan="4"><div class="pd-empty">No receipt has been booked against this project yet.</div></td></tr>
                             @endforelse
                         </tbody>
                     </table>

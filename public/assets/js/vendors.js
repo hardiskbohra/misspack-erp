@@ -113,7 +113,6 @@
         if (window.MasterList) {
             window.MasterList.rowNavigation({ root: '.vendor-index' });
             window.MasterList.gridShadow({ root: '.vendor-index' });
-            window.MasterList.density({ root: '.vendor-index', key: 'misspack.vendors.density' });
             window.MasterList.saveViewToggle();
         }
 

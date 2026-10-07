@@ -176,7 +176,7 @@ body[data-ui-module] .master-table th,
 body[data-ui-module] .master-items-table th,
 body[data-ui-module] .cf-table th,
 body[data-ui-module] .cpa-table th {
-    padding: 10px 12px;
+    padding: 14px 16px;
     border-bottom: 1px solid var(--ui-border);
     background: var(--mc-table-head, var(--ui-card-surface));
     color: var(--mc-text-3);
@@ -191,7 +191,7 @@ body[data-ui-module] .master-table td,
 body[data-ui-module] .master-items-table td,
 body[data-ui-module] .cf-table td,
 body[data-ui-module] .cpa-table td {
-    padding: 10px 12px;
+    padding: 14px 16px;
     border-bottom: 1px solid var(--ui-border);
     background: transparent;
     color: var(--mc-text-2);
@@ -217,7 +217,7 @@ body[data-ui-module] .master-list .master-table thead th {
 body[data-ui-module="clients"] .client-show .client-entry-table-wrap .master-table th,
 body[data-ui-module="clients"] .client-show .client-statement-table th,
 body[data-ui-module="clients"] .client-show .client-detail-tools .cpa-table th {
-    padding: 10px 12px;
+    padding: 14px 16px;
     font-size: 11px;
     font-weight: 600;
 }
@@ -225,7 +225,7 @@ body[data-ui-module="clients"] .client-show .client-detail-tools .cpa-table th {
 body[data-ui-module="clients"] .client-show .client-entry-table-wrap .master-table td,
 body[data-ui-module="clients"] .client-show .client-statement-table td,
 body[data-ui-module="clients"] .client-show .client-detail-tools .cpa-table td {
-    padding: 10px 12px;
+    padding: 14px 16px;
     color: var(--mc-text-2);
     font-size: 13px;
     font-weight: 400;

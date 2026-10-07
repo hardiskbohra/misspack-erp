@@ -35,6 +35,7 @@ class ClientController extends Controller
         'invoices' => 'Invoices',
         'payments' => 'Payments',
         'statement' => 'Statement',
+        'feedback' => 'Feedback',
     ];
 
     public function index(Request $request): View|RedirectResponse
@@ -283,7 +284,45 @@ class ClientController extends Controller
             ...$invoiceData,
             ...$paymentData,
             ...$statementData,
+            ...$this->clientFeedbackData($client, $tab),
         ]);
+    }
+
+    /**
+     * What this client has said, when the Feedback tab is open.
+     *
+     * Read-only and guarded: the panel is a view of the module's rows, not a
+     * second place that writes them.
+     */
+    private function clientFeedbackData(Client $client, string $tab): array
+    {
+        $available = $tab === 'feedback'
+            && class_exists(\App\Models\FeedbackRequest::class)
+            && Schema::hasTable('feedback_requests');
+
+        if (! $available) {
+            return ['feedbackAvailable' => false, 'feedbackAsks' => collect(), 'feedbackHistory' => collect(), 'feedbackSummary' => null];
+        }
+
+        $filters = new \App\Services\FeedbackFilters();
+        $query = ['client' => $client->id] + \App\Services\FeedbackFilters::DEFAULTS;
+
+        $asks = \App\Models\FeedbackRequest::query()
+            ->where('client_id', $client->id)
+            ->with(['project', 'response'])
+            ->latest('id')
+            ->get();
+
+        return [
+            'feedbackAvailable' => true,
+            'feedbackAsks' => $asks,
+            'feedbackHistory' => \App\Models\FeedbackResponse::query()
+                ->forClient($client->id)
+                ->with(['project', 'answers', 'actions'])
+                ->latest('submitted_at')
+                ->get(),
+            'feedbackSummary' => (new \App\Services\FeedbackFigures($filters))->summary($query),
+        ];
     }
 
     /** Client-scoped ERP invoices for the invoices tab. */

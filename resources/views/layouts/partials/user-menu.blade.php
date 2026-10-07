@@ -65,11 +65,8 @@
         @endif
 
         @if (! $menuEmployee)
-            <a href="{{ route('organisation.settings') }}" role="menuitem">
-                <i class="fas fa-building" aria-hidden="true"></i> Organisation
-            </a>
-            <a href="{{ route('office-alerts.settings') }}" role="menuitem">
-                <i class="fas fa-bell" aria-hidden="true"></i> Briefing settings
+            <a href="{{ route('settings.index') }}" role="menuitem">
+                <i class="fas fa-sliders" aria-hidden="true"></i> Settings
             </a>
         @endif
 

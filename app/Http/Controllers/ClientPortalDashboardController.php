@@ -6,7 +6,6 @@ use App\Models\ClientPortalConversation;
 use App\Models\ClientPortalDocument;
 use App\Models\ClientPortalNotification;
 use App\Models\Project;
-use App\Models\ProjectPayment;
 use App\Models\SalesInvoice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -39,19 +38,6 @@ class ClientPortalDashboardController extends ClientPortalBaseController
             $shipments = $shipmentQuery->latest('id')->limit(4)->get();
         }
 
-        $quotes = collect();
-        $quoteTotal = 0;
-        if ($this->quotesAvailable()) {
-            $quoteQuery = \App\Models\CustomerQuote::query()
-                ->where('client_id', $client->id)
-                ->when(Schema::hasColumn('customer_quotes', 'show_client_portal'), function ($query) {
-                    $query->where('show_client_portal', true);
-                })
-                ->where('status', '!=', 'draft');
-            $quoteTotal = (clone $quoteQuery)->count();
-            $quotes = $quoteQuery->latest('id')->limit(3)->get();
-        }
-
         $salesInvoices = collect();
         $salesInvoiceQuery = SalesInvoice::query()
             ->where('client_id', $client->id)
@@ -65,17 +51,10 @@ class ClientPortalDashboardController extends ClientPortalBaseController
             ->limit(4)
             ->get();
 
-        $paymentTotal = 0;
-        if (class_exists(ProjectPayment::class) && Schema::hasTable('project_payments')) {
-            $publishedProjectIds = Project::query()
-                ->where('client_id', $client->id)
-                ->where('show_client_portal', true)
-                ->pluck('id');
-            $paymentTotal = ProjectPayment::query()
-                ->whereIn('project_id', $publishedProjectIds)
-                ->visibleToClient()
-                ->count();
-        }
+        /* Receipts are ledger entries on this client's published projects, read
+           through the one service that defines them, so the dashboard's count
+           and the payments page can never disagree. */
+        $paymentTotal = \App\Services\ProjectReceipts::countForClient($client->id);
 
         $notificationScope = fn ($query) => $query
             ->where('client_id', $client->id)
@@ -105,7 +84,6 @@ class ClientPortalDashboardController extends ClientPortalBaseController
         $stats = [
             'projects' => $projectTotal,
             'shipments' => $shipmentTotal,
-            'quotes' => $quoteTotal,
             'invoices' => $salesInvoiceTotal,
             'payments' => $paymentTotal,
             'documents' => ClientPortalDocument::query()
@@ -126,7 +104,6 @@ class ClientPortalDashboardController extends ClientPortalBaseController
             'stats',
             'projects',
             'shipments',
-            'quotes',
             'salesInvoices',
             'notifications',
             'supportConversations'

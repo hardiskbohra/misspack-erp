@@ -10,8 +10,8 @@ or an upgrade**, not a rebuild. File references are to this repo.
 | Area | Today |
 | --- | --- |
 | Ledger row | date, particular, invoice/bill no, bank reference, credit/debit, running balance, currency, account, category, payment mode, related party (client/vendor/expense/owner/employee/other) + name, project, linked sales invoice, notes, created-by |
-| Accounts & masters | current/saving/cash accounts, categories, and master options (payment mode, expense head, related party…) — `cashflows/settings.blade.php` |
-| Working surface | quick-view chips, saved views (private/shared), applied-filters strip, density switch, day-grouped rows, totals row, mobile cards, pinned header — the shared `master-list.css` layer |
+| Accounts & masters | current/saving/cash accounts, categories, and master options (payment mode, expense head, related party…) — `settings/cashflow.blade.php`, in the settings module |
+| Working surface | quick-view chips, saved views (private/shared), applied-filters strip, day-grouped rows, totals row, mobile cards, pinned header — the shared `master-list.css` layer |
 | Period chips | This month · Last month · This year · Last year, with counts (`app/Helpers/DateRanges.php`) |
 | Reports | period + report type (overall / client / vendor / cash expense), account summary, category summary, statement entries with bill + reference, **PDF export** — `CashflowController::reportData()` |
 | Status | pending → booked → reconciled → disputed / ignored (manual only) |
@@ -64,6 +64,17 @@ its tax split and be paid later, which is what makes a purchase register trustwo
 subscriptions: a rule (amount, category, party, day, account) that drafts the entry
 on its date and waits for confirmation. Also "expected but not recorded" reminders
 for bills falling due.
+
+*Shipped (`docs/recurring-cashflow.md`), with one deliberate reading of "drafts
+the entry on its date":* the entry is drafted **when it is approved, on or after
+its effective date** — never ahead of it. A rule is written as a draft, approved
+once (from an ask, so every live rule records who wanted it), and the plan then
+**asks** for each date separately on the morning it falls due, through the office
+briefing system's own alert (`recurring_due`, switches off with the other
+sources). The date arithmetic is one class (`RecurrenceSchedule`), the plan is a
+window rather than the whole promise, and both the planner (`RecurrencePlan`) and
+the posting (`RecurrencePosting`) have one writer each, so a double-click cannot
+pay a salary twice.
 
 ## Wave 2 — reporting and sharing
 

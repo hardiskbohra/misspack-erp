@@ -542,12 +542,10 @@ check('the export is registered before the record wildcard',
 check('the export does not put a full account number in a spreadsheet',
     /->mask\(\$person->bank_account_number\)/.test(userController));
 
-check('the list is dense enough and clickable, through the shared toolkit',
-    /data-density="comfortable"/.test(userIndex)
-    && /data-density="compact"/.test(userIndex)
-    && /data-href="\{\{ route\('users\.show', \$user\) \}\}"/.test(userIndex)
+check('the list is clickable, through the shared toolkit',
+    /data-href="\{\{ route\('users\.show', \$user\) \}\}"/.test(userIndex)
     && /MasterList\.rowNavigation\(\{ root: '\.user-index' \}\)/.test(read('public/assets/js/users.js'))
-    && /MasterList\.density\(\{ root: '\.user-index', key: 'misspack\.users\.density' \}\)/.test(read('public/assets/js/users.js')));
+    && !/density|data-table-settings/.test(userIndex));
 
 check('the row menu carries an icon on every item',
     (() => {
@@ -593,6 +591,7 @@ check('the seed never overwrites an employment record somebody edited',
 const declaredColumns = (() => {
     const columns = new Set();
     const types = 'string|text|longText|mediumText|integer|bigInteger|unsignedBigInteger|unsignedInteger|tinyInteger|smallInteger|'
+        + 'unsignedTinyInteger|unsignedSmallInteger|'
         + 'boolean|date|dateTime|timestamp|decimal|double|float|json|enum|foreignId|foreignUuid|uuid|binary|ipAddress|rememberToken';
 
     fs.readdirSync(path.join(ROOT, 'database/migrations')).forEach(file => {
