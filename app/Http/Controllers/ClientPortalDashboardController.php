@@ -51,6 +51,29 @@ class ClientPortalDashboardController extends ClientPortalBaseController
             ->limit(4)
             ->get();
 
+        // Keep finance actionable without collapsing different currencies into a
+        // misleading grand total. These rows are already limited to invoices the
+        // client is allowed to see.
+        $financialInvoices = (clone $salesInvoiceQuery)
+            ->withClientPortalReceived()
+            ->get();
+        $outstandingByCurrency = $financialInvoices
+            ->filter(fn (SalesInvoice $invoice) => $invoice->status !== 'cancelled'
+                && $invoice->clientPortalBalanceDue() > 0)
+            ->groupBy(fn (SalesInvoice $invoice) => $invoice->currency ?: 'INR')
+            ->map(fn ($invoices, $currency) => [
+                'currency' => $currency,
+                'amount' => $invoices->sum(fn (SalesInvoice $invoice) => $invoice->clientPortalBalanceDue()),
+                'count' => $invoices->count(),
+            ])
+            ->values();
+        $overdueInvoiceCount = $financialInvoices
+            ->filter(fn (SalesInvoice $invoice) => $invoice->status !== 'cancelled'
+                && $invoice->clientPortalBalanceDue() > 0
+                && $invoice->due_date
+                && $invoice->due_date->isPast())
+            ->count();
+
         /* Receipts are ledger entries on this client's published projects, read
            through the one service that defines them, so the dashboard's count
            and the payments page can never disagree. */
@@ -96,12 +119,39 @@ class ClientPortalDashboardController extends ClientPortalBaseController
                 ->count(),
             'support_open' => $openSupportCount,
             'support_unread' => $unreadSupportCount,
+            'overdue_invoices' => $overdueInvoiceCount,
         ];
+
+        $attentionItems = collect([
+            [
+                'label' => 'Unread workspace updates',
+                'detail' => 'Review notices from the MissPack team',
+                'count' => $stats['unread_notifications'],
+                'icon' => 'fa-regular fa-bell',
+                'url' => route('client-portal.notifications.index'),
+            ],
+            [
+                'label' => 'New support replies',
+                'detail' => 'Continue conversations with our team',
+                'count' => $unreadSupportCount,
+                'icon' => 'fa-regular fa-comments',
+                'url' => route('client-portal.support.index'),
+            ],
+            [
+                'label' => 'Invoices past due',
+                'detail' => 'View balances and due dates',
+                'count' => $overdueInvoiceCount,
+                'icon' => 'fa-solid fa-file-circle-exclamation',
+                'url' => route('client-portal.invoices.index'),
+            ],
+        ])->filter(fn (array $item) => $item['count'] > 0)->values();
 
         return view('client_portal.dashboard.index', compact(
             'client',
             'portalUser',
             'stats',
+            'attentionItems',
+            'outstandingByCurrency',
             'projects',
             'shipments',
             'salesInvoices',
