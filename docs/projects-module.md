@@ -169,15 +169,27 @@ entered twice, and an invoice raised before anyone filled the tab left the proje
 empty. It runs the other way now: the lines the office already raises are the facts, and
 `App\Services\ProjectProducts` materialises them into `project_products`. The sales
 controller calls it where its lines are written (`syncItemsAndTotals`, which both `store` and
-`update` go through — a call on `store` alone would miss every edit), and the purchase
-controller calls it from `afterSave()`, the module's own post-save hook, so a PO and a bill
-write here too.
+`update` go through — a call on `store` alone would miss every edit) **and again in
+`copyInvoice()`**, which is what a duplicate and a proforma-turned-tax-invoice hand their
+lines to; the purchase controller calls it from `afterSave()`, the module's own post-save
+hook, so a PO and a bill write here too.
+
+The reader inside the service reads the **rows**, not the relation as it stands: `load()`,
+never `loadMissing()`. The callers rewrite their lines and this writer runs at the end of
+that write, so a relation already loaded — `copyInvoice()` walks `$source->items` — would
+hand it the lines the document no longer has. That failure is silent and shaped exactly like
+the bug it caused: the invoice saves, the ledger moves, and the project's product keeps the
+values from the edit before.
 
 Whichever document mentions the product first creates the row; after that the two kinds own
 different facts and never write over each other. A **sales line** owns what the client sees —
-the product, the quantity, the unit, the rate, the currency, and the line's description as
-the specification, seeded once so re-saving an invoice cannot overwrite what the office typed
-on the product. A **purchase line** owns what we buy — the vendor, and the supplier's own
+the product, the quantity, the unit, the rate, the currency, and the specification, which is
+the line's description — and it writes all of them **on every save**, which is what makes an
+edit to an invoice or a proforma show up on the project. One exception, and it is deliberate:
+an empty description writes nothing, so clearing the words on the invoice leaves the project
+the last specification it had rather than blanking it. The tab prints that specification as
+the invoice does — `{!! nl2br(e($projectProduct->notes)) !!}` — so its own line breaks
+survive instead of folding into one long line. A **purchase line** owns what we buy — the vendor, and the supplier's own
 `vendor_bill_number` (our number is not a vendor invoice number, which is why the tab can
 still say "No vendor invoice"), and it seeds the ordered quantity only on a row it is the
 first to mention, because the client's invoice owns that figure once it exists. A line is

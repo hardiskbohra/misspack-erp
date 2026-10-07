@@ -662,38 +662,58 @@ check('the invoices tab draws each document from its own relation',
 const salesControllerCode = read('app/Http/Controllers/SalesInvoiceController.php');
 const purchaseControllerCode = read('app/Http/Controllers/PurchaseInvoiceController.php');
 const productService = read('app/Services/ProjectProducts.php');
+/* The service's code without its prose. The docblocks explain the rules this
+   guard reads — one of them says "`load()`, never `loadMissing()`" — and a
+   comment must not be able to answer a check in either direction. */
+const productServiceCode = productService
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '');
 const productTab = read('resources/views/projects/partials/record-products.blade.php');
 
 check('the project products are written by the documents that mention them',
-    /^class ProjectProducts$/m.test(productService)
-    && /public function fromSalesInvoice\(SalesInvoice \$invoice\): int/.test(productService)
-    && /public function fromPurchaseInvoice\(PurchaseInvoice \$invoice\): int/.test(productService)
-    && /Schema::hasTable\('project_products'\)/.test(productService)
-    /* Exactly one call site per module, and the sales one is inside the line
-       writer both `store` and `update` go through. */
-    && (salesControllerCode.match(/->fromSalesInvoice\(/g) || []).length === 1
+    /^class ProjectProducts$/m.test(productServiceCode)
+    && /public function fromSalesInvoice\(SalesInvoice \$invoice\): int/.test(productServiceCode)
+    && /public function fromPurchaseInvoice\(PurchaseInvoice \$invoice\): int/.test(productServiceCode)
+    && /Schema::hasTable\('project_products'\)/.test(productServiceCode)
+    /* Every path that writes lines materialises them: the sales one is inside
+       the line writer both `store` and `update` go through, and again in
+       `copyInvoice()`, which is what a duplicate and a proforma-to-tax-invoice
+       conversion hand their lines to — a document nobody edits afterwards
+       still has to reach the project. */
+    && (salesControllerCode.match(/->fromSalesInvoice\(/g) || []).length === 2
     && /private function syncItemsAndTotals\(SalesInvoice \$invoice[\s\S]*?fromSalesInvoice\(\$invoice\);/.test(salesControllerCode)
+    && /private function copyInvoice\(SalesInvoice \$source[\s\S]*?fromSalesInvoice\(\$copy\);/.test(salesControllerCode)
     && (purchaseControllerCode.match(/->fromPurchaseInvoice\(/g) || []).length === 1
     && /private function afterSave\(PurchaseInvoice \$invoice\): void[\s\S]*?fromPurchaseInvoice\(\$invoice\);/.test(purchaseControllerCode)
     /* One field, one writer: the client's document owns the quantity, the rate
        and the currency; a purchase line owns the vendor and their document
        number, and only seeds the ordered quantity on a row it creates. */
-    && /'quantity' => \$line->quantity \?: null,\s*\n\s*'unit' => \$line->unit \?: null,\s*\n\s*'unit_price' => \$line->unit_price,\s*\n\s*'currency' => \$invoice->currency \?: null,/.test(productService)
-    && /if \(! \$row->exists\) \{[\s\S]{0,220}\$facts\['quantity'\] = \$line->quantity \?: null;/.test(productService)
-    && /'vendor_id' => \$invoice->vendor_id \?: null/.test(productService)
-    && /'vendor_invoice_number' => \$invoice->vendor_bill_number \?: null/.test(productService)
+    && /'quantity' => \$line->quantity \?: null,\s*\n\s*'unit' => \$line->unit \?: null,\s*\n\s*'unit_price' => \$line->unit_price,\s*\n\s*'currency' => \$invoice->currency \?: null,/.test(productServiceCode)
+    && /if \(! \$row->exists\) \{[\s\S]{0,220}\$facts\['quantity'\] = \$line->quantity \?: null;/.test(productServiceCode)
+    && /'vendor_id' => \$invoice->vendor_id \?: null/.test(productServiceCode)
+    && /'vendor_invoice_number' => \$invoice->vendor_bill_number \?: null/.test(productServiceCode)
+    /* The specification is the line's, and it is written on every save — read
+       once into a local (a `?:` inside the `:` of a `?` is the parse error this
+       project already shipped once). */
+    && /private function salesFacts\(Model \$line, Model \$invoice, string \$name\): array/.test(productServiceCode)
+    && /'notes' => \$specification === '' \? null : \$specification,/.test(productServiceCode)
+    /* The reader reads the rows, not a relation the caller may have loaded
+       before rewriting them: `loadMissing` is how an update silently keeps
+       writing the previous lines' facts. */
+    && /\$invoice->load\('items\.product'\);/.test(productServiceCode)
+    && ! /loadMissing\(/.test(productServiceCode)
     /* A line is matched to its row before anything is written — by the row it
        already points at, then the product, then the name — so re-saving an
        invoice updates the product instead of adding a second one, and nothing
        here deletes a row that carries milestones, comments and attachments. */
-    && /\$line->project_product_id && \(\$match = \(clone \$query\)->whereKey\(\$line->project_product_id\)/.test(productService)
-    && /\$line->product_id && \(\$match = \(clone \$query\)->where\('product_id', \$line->product_id\)/.test(productService)
-    && /whereRaw\('LOWER\(product_name\) = \?', \[mb_strtolower\(\$name\)\]\)/.test(productService)
-    && ! /->delete\(\)/.test(productService)
+    && /\$line->project_product_id && \(\$match = \(clone \$query\)->whereKey\(\$line->project_product_id\)/.test(productServiceCode)
+    && /\$line->product_id && \(\$match = \(clone \$query\)->where\('product_id', \$line->product_id\)/.test(productServiceCode)
+    && /whereRaw\('LOWER\(product_name\) = \?', \[mb_strtolower\(\$name\)\]\)/.test(productServiceCode)
+    && ! /->delete\(\)/.test(productServiceCode)
     /* The arithmetic stays the model's: quantity × rate, written once.
        Neither a facts key nor an assignment on the row may set it here. */
-    && ! /['"]total_amount['"]\s*=>/.test(productService)
-    && ! /total_amount\s*=[^=]/.test(productService)
+    && ! /['"]total_amount['"]\s*=>/.test(productServiceCode)
+    && ! /total_amount\s*=[^=]/.test(productServiceCode)
     && /total_amount = round\(\$qty \* \$price, 2\)/.test(read('app/Models/ProjectProduct.php'))
     /* There is no add door and no delete door. A project product is made by
        the document that mentions it, and the row carries milestones, comments
@@ -716,7 +736,10 @@ check('the project products are written by the documents that mention them',
     && /written by the invoices and purchase documents raised for it/.test(productTab)
     && /appear here on their own/.test(productTab)
     && /route\('sales-invoices\.create', \['project_id' => \$project->id\]\)/.test(productTab)
-    && /route\('purchase-invoices\.create', \['project_id' => \$project->id\]\)/.test(productTab));
+    && /route\('purchase-invoices\.create', \['project_id' => \$project->id\]\)/.test(productTab)
+    /* And the specification reads as it does on the invoice: its own line
+       breaks, escaped first. */
+    && /\{!! nl2br\(e\(\$projectProduct->notes\)\) !!\}/.test(productTab));
 
 /* ------------------------------------------- what a project is worth, and may spend */
 

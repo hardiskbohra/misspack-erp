@@ -24,7 +24,9 @@ use Illuminate\Support\Facades\Schema;
  * two kinds own different facts and never write over each other:
  *
  * - a **sales invoice line** (the client's own document) owns what the client
- *   sees: the product, the quantity, the unit, the rate and the currency;
+ *   sees: the product, the quantity, the unit, the rate, the currency and the
+ *   specification — the line's description — written on every save, so editing
+ *   an invoice or a proforma moves the project's row with it;
  * - a **purchase line** owns what we buy: the vendor, and the supplier's own
  *   document number. On a row it is the first to mention it, a purchase line
  *   seeds the quantity, unit and currency from its own line but not the rate —
@@ -35,7 +37,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * - it never deletes. A project product carries milestones, comments and
  *   attachments; a line removed from a draft invoice must not take the job's
- *   work with it. The products tab's own remove button is the door for that;
+ *   work with it — and the products tab has no remove door either, on purpose;
  * - it never writes `total_amount`. The quantity × rate rule is
  *   `ProjectProduct::saving`'s, on the model, and a second arithmetic here is
  *   how the two start disagreeing.
@@ -70,10 +72,18 @@ class ProjectProducts
      * A document's lines, in the order the document draws them, with the
      * product's own name loaded for a line that was written before the product
      * was renamed.
+     *
+     * `load()`, never `loadMissing()`: the callers rewrite their lines and this
+     * service runs at the end of that write, so a relation already loaded —
+     * the conversion helper walks `$source->items`, and any future caller may
+     * preload the same relation — would hand this writer the lines the document
+     * no longer has. That is a silent failure with a nasty shape: the invoice
+     * saves, the ledger moves, and the project's product keeps the values of
+     * the edit before.
      */
     private function lines(Model $invoice)
     {
-        $invoice->loadMissing('items.product');
+        $invoice->load('items.product');
 
         return $invoice->items;
     }
@@ -100,7 +110,7 @@ class ProjectProducts
             $row = $this->resolve($projectId, $line, $name);
 
             $row->fill($source === 'sales'
-                ? $this->salesFacts($row, $line, $invoice, $name)
+                ? $this->salesFacts($line, $invoice, $name)
                 : $this->purchaseFacts($row, $line, $invoice, $name));
 
             /* A row this service creates gets no `status`/`stage` of its own:
@@ -138,15 +148,21 @@ class ProjectProducts
         return new ProjectProduct(['project_id' => $projectId]);
     }
 
-    /** The client's own facts: what was ordered, how many, at what rate. */
-    private function salesFacts(ProjectProduct $row, Model $line, Model $invoice, string $name): array
+    /**
+     * The client's own facts: what was ordered, how many, at what rate — and
+     * the specification, because the description on the line is where the
+     * office writes it.
+     *
+     * Every one of these is written on every save, which is what makes an edit
+     * to the invoice show up on the project. The one exception is an empty
+     * description: it writes nothing, so clearing the words on the invoice
+     * leaves the project the last specification it had rather than blanking it.
+     */
+    private function salesFacts(Model $line, Model $invoice, string $name): array
     {
-        /* The line's description is the specification at the time the product
-           first appears. It is seeded once: the office edits specs on the
-           product from there, and re-saving the invoice must not overwrite what
-           it typed. Read as one value before the array — a `?:` inside the
-           `:` of a `?` is a ternary PHP 8 refuses to parse, and it refuses at
-           load time, so the file stops being a file. */
+        /* Read as one value before the array — a `?:` inside the `:` of a `?`
+           is a ternary PHP 8 refuses to parse, and it refuses at load time, so
+           the file stops being a file. */
         $specification = trim((string) ($line->description ?: ''));
 
         return array_filter([
@@ -157,7 +173,7 @@ class ProjectProducts
             'unit_price' => $line->unit_price,
             'currency' => $invoice->currency ?: null,
             'sort_order' => $line->sort_order ?: null,
-            'notes' => $row->exists || $specification === '' ? null : $specification,
+            'notes' => $specification === '' ? null : $specification,
         ], fn ($value) => $value !== null);
     }
 

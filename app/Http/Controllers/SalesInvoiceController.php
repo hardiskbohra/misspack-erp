@@ -440,6 +440,13 @@ class SalesInvoiceController extends Controller
             $line->save();
         }
 
+        /* A copy is a document like any other: a proforma that becomes a tax
+           invoice, and a duplicate the office is about to edit, both carry
+           lines the project's products follow. Materialised here rather than
+           left to the copy's first save, because the office may never make
+           one — the document already exists. */
+        app(ProjectProducts::class)->fromSalesInvoice($copy);
+
         return $copy;
     }
 

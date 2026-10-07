@@ -51,7 +51,16 @@
                                 <td data-label="Amount" class="is-num">
                                     <strong>{{ \App\Helpers\CommonHelper::amount($projectProduct->total_amount, $projectProduct->currency) }}</strong>
                                 </td>
-                                <td data-label="Specifications">{{ $projectProduct->notes ?: '—' }}</td>
+                                <td data-label="Specifications">
+                                    @if ($projectProduct->notes)
+                                        {{-- The invoice writes the specification as a paragraph —
+                                             its line breaks included — so the project shows the same
+                                             words the same way rather than folding them into one line. --}}
+                                        {!! nl2br(e($projectProduct->notes)) !!}
+                                    @else
+                                        —
+                                    @endif
+                                </td>
                                 <td data-label="Vendor">
                                     {{ optional($projectProduct->vendor)->contact_person_name ?: '—' }}
                                     <span class="project-fact-note">{{ $projectProduct->vendor_invoice_number ?: 'No vendor invoice' }}</span>
