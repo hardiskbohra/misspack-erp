@@ -34,7 +34,8 @@ use RuntimeException;
  * The three decisions a person can make (approve, skip, withdraw) are here too,
  * because they are all facts about an occurrence row; the *rule's* own state is
  * never touched from this class — that belongs to `RecurrenceIntake`, which
- * calls in here for the plan half of a state change.
+ * calls in here for the plan half of a state change **and** for the other half
+ * of an edit (`reconcile()`, the recipe changing under a live plan).
  */
 class RecurrencePlan
 {
@@ -186,6 +187,103 @@ class RecurrencePlan
                 'status' => RecurrenceVocabulary::OCCURRENCE_CANCELLED,
                 'updated_at' => now(),
             ]);
+    }
+
+    /**
+     * Bring the plan in line with the recipe after an edit — the reconciliation
+     * the class docblock promises, run for the one reason that is not a state
+     * change.
+     *
+     * The rule is the source of truth for its own schedule, so when the schedule
+     * changes the dates it has **not** decided have to be re-read from it: a
+     * monthly rule changed to quarterly must not go on asking for the dates it
+     * promised an hour ago. Three rules make that safe:
+     *
+     *   - **a decision is never touched.** An approval posted money and a skip is
+     *     an answer; neither moves because the recipe did, and neither is even
+     *     read as something to withdraw. They do keep their rung of the ladder —
+     *     the walk below consumes the rungs they occupy, so the dates that follow
+     *     them still follow *them*;
+     *   - **an undecided date stays on if it is still a rung.** Matching is by
+     *     date, so a rule whose amount, wording or party changed keeps every
+     *     date — and its notification, which is why this is a reconciliation and
+     *     not a rebuild. Only a change to the rhythm, the anchor day, the window
+     *     or the count moves dates;
+     *   - **the rest are withdrawn, never deleted.** `cancel()` writes the same
+     *     `cancelled` a pause writes, so "we had promised the 5th and withdrew
+     *     it" stays readable.
+     *
+     * Rungs nobody holds are gaps rather than errors: a pause and a resume leave
+     * the ladder with a hole in it, and the sweep picks the next rung on or after
+     * today. The walk is measured against the recipe's own start — the one thing
+     * that does not move when the office edits nothing — and it assumes the one
+     * thing it cannot check from inside the loop: the rows arrive in
+     * `planOrder()`, date order with the sequence as the tie-break.
+     *
+     * @return int how many dates the top-up wrote — 0 when the window was full
+     */
+    public function reconcile(CashflowRecurrenceRule $rule, ?CarbonInterface $today = null): int
+    {
+        if (! $rule->isActive() || ! $rule->starts_on) {
+            return 0;
+        }
+
+        $anchor = (int) $rule->starts_on->day;
+        $cursor = $rule->starts_on->copy()->startOfDay();
+        $end = $rule->ends_on;
+        $committed = 0;
+
+        /* One read of the rule's own ladder: every row that still counts as a
+           promise, in the order the promise was made. */
+        foreach ($rule->occurrences()->whereIn('status', self::COMMITTED)->planOrder()->get() as $row) {
+            $date = $row->effective_date?->copy()->startOfDay();
+
+            if ($date === null) {
+                continue;
+            }
+
+            while ($cursor->toDateString() < $date->toDateString()) {
+                $cursor = $this->schedule->step($cursor, $rule->frequency, $anchor);
+            }
+
+            $onLadder = $cursor->toDateString() === $date->toDateString();
+            $pastEnd = $end !== null && $date->toDateString() > $end->toDateString();
+            $overCount = $rule->occurrence_limit !== null && $committed >= $rule->occurrence_limit;
+
+            if ($row->status === RecurrenceVocabulary::OCCURRENCE_PENDING
+                && (! $onLadder || $pastEnd || $overCount)) {
+                $this->cancel($row);
+
+                continue;
+            }
+
+            if ($onLadder && ! $pastEnd) {
+                $cursor = $this->schedule->step($cursor, $rule->frequency, $anchor);
+            }
+
+            $committed++;
+        }
+
+        /* The window is topped back up on the new ladder — and if every date was
+           already a rung, this writes nothing at all. */
+        return $this->plan($rule, $today);
+    }
+
+    /**
+     * Withdraw one undecided date. The single-row arm of `withdraw()`, for the
+     * one caller that reconciles a plan row by row.
+     *
+     * A decision can never arrive here: the caller filters to pending rows, and
+     * the status is the guard under that filter.
+     */
+    private function cancel(CashflowRecurrenceOccurrence $occurrence): void
+    {
+        if (! $occurrence->isPending()) {
+            return;
+        }
+
+        $occurrence->status = RecurrenceVocabulary::OCCURRENCE_CANCELLED;
+        $occurrence->save();
     }
 
     /* ---------------------------------------------------------------- decisions */

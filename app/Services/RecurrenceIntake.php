@@ -8,25 +8,30 @@ use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
  * The only thing that changes a recurring rule's state.
  *
- * Six doors — write it, change it, ask for approval, approve it, send it back,
- * pause / resume / end it — and every one of them is here. The controller
- * validates and hands over facts; it never sets `status`, never touches
- * `approved_by` and never decides whether a rule may be edited. That matters
+ * Seven doors — write it, change it, ask for approval, approve it, send it back,
+ * pause / resume / end it, throw it away — and every one of them is here. The
+ * controller validates and hands over facts; it never sets `status`, never
+ * touches `approved_by` and never decides whether a rule may be edited. That matters
  * more in this module than in most, because the state machine is the promise:
  * a rule that reached `active` without a decision, or a draft that quietly
  * started posting, are failures nobody would notice until the money moved.
  *
  * The transitions, and the reasons they are these and not others:
  *
- *   - **a draft is the only editable rule.** Approving fixes the recipe; from
- *     then on the plan asks about dates, not about wording. Changing a live rule
- *     means ending it and writing the next one, which keeps every posted entry's
- *     story intact — you approved *this* rule, not one that has since changed;
+ *   - **any rule is editable, and an edit re-plans only what nobody has
+ *     answered.** The office asked for this, and it is the right ask: a wrong
+ *     amount used to mean ending a live salary rule and writing the next one,
+ *     which loses the run that is still running. So an edit follows the recipe —
+ *     `RecurrencePlan::reconcile()` keeps every undecided date that is still on
+ *     the ladder, withdraws the ones that are not, and never touches a decision.
+ *     The record says when the recipe moved under an answer (`revised_at`),
+ *     because the office agreed to a rule that read a certain way;
  *   - **approving is provisional.** It says "yes, this pattern of payment is
  *     approved"; it does not pay anything. The payments ask again, one date at a
  *     time, in `RecurrencePlan`;
@@ -43,8 +48,10 @@ use RuntimeException;
  */
 class RecurrenceIntake
 {
-    public function __construct(private RecurrencePlan $plan)
-    {
+    public function __construct(
+        private RecurrencePlan $plan,
+        private OfficeBriefing $briefing,
+    ) {
     }
 
     /* --------------------------------------------------------------- the author */
@@ -64,21 +71,45 @@ class RecurrenceIntake
     }
 
     /**
-     * Change a draft. Nothing else is editable — see the class docblock.
+     * Change a rule — a draft, a rule waiting on the office, a running one, a
+     * paused one, or one that has ended.
      *
-     * The guard is here and not only in the controller because a controller is
-     * one caller away from being replaced by a command or a test, and "an
-     * approved rule is not edited" is a rule about the record, not about a
-     * screen.
+     * Two halves, and the order matters. The rule is filled and saved first, so
+     * the plan reconciles against what the record now says rather than against
+     * what the form meant; then, if it is running, `RecurrencePlan::reconcile()`
+     * re-reads the dates nobody has decided from the new recipe — the dates that
+     * are still promised keep their rows and their notifications, the rest are
+     * withdrawn, and every approval and skip stays exactly where it was.
+     *
+     * A rule that has already been answered and then changes gets one more
+     * fact written down: `revised_at`. It is not a warning and it does not stop
+     * anything — it is the honest half of allowing the edit at all. The office
+     * said yes to a rule that read a certain way, and the next date asks with a
+     * figure nobody has seen unless the record can say the rule has moved.
+     *
+     * Nothing is reconciled for a draft (it has a preview, not a plan), for a
+     * paused rule (its tail was withdrawn on pause — resuming plans the new
+     * recipe from today), or for an ended one (its plan is closed; the edit
+     * corrects the record). `reconcile()` is also cheap when the schedule did
+     * not change: the dates are already rungs, so it writes nothing.
      */
     public function update(CashflowRecurrenceRule $rule, array $facts): CashflowRecurrenceRule
     {
-        if (! $rule->isDraft()) {
-            throw new RuntimeException('A rule that has been approved is not edited: end it and write the next one.');
+        $this->fill($rule, $facts);
+
+        $changed = $rule->isDirty();
+
+        if ($changed && $rule->decided_at !== null) {
+            $rule->revised_at = now();
         }
 
-        $this->fill($rule, $facts);
-        $rule->save();
+        if ($changed) {
+            $rule->save();
+        }
+
+        if ($changed && $rule->isActive()) {
+            $this->plan->reconcile($rule);
+        }
 
         return $rule;
     }
@@ -99,6 +130,10 @@ class RecurrenceIntake
         $rule->decided_at = null;
         $rule->decided_by = null;
         $rule->decision_note = null;
+        /* The revision clears with the answer it was about: this ask is a new
+           question, and the old answer — and the fact that the rule had moved
+           under it — no longer describes what is on the table. */
+        $rule->revised_at = null;
         $rule->save();
 
         return $rule;
@@ -113,6 +148,13 @@ class RecurrenceIntake
      */
     public function approve(User $user, CashflowRecurrenceRule $rule, ?string $note = null): CashflowRecurrenceRule
     {
+        /* The guard under the controller's: a controller is one caller away from
+           being replaced, and "active without a decision" is the failure this
+           module exists to make impossible. */
+        if (! $rule->isDraft() || $rule->requested_at === null) {
+            throw new RuntimeException('Only a rule that has been sent for approval can be approved.');
+        }
+
         $rule->status = RecurrenceVocabulary::STATUS_ACTIVE;
         $rule->decided_at = now();
         $rule->decided_by = $user->id;
@@ -181,24 +223,37 @@ class RecurrenceIntake
     }
 
     /**
-     * Throw a draft away. A rule that has decided anything is not deleted: the
-     * occurrences are the story of standing payments, and the office's records
-     * do not lose a payment because a rule was tidied up.
+     * Throw a rule away — any rule, in any state.
+     *
+     * This used to be a draft's privilege, on the argument that the occurrences
+     * are the story of standing payments and a record does not lose a payment
+     * because a rule was tidied up. The office asked for the delete and the
+     * argument is answerable, because **the ledger is not in this method**:
+     *
+     *   - the entries the rule posted are money that moved. They keep their
+     *     amount, their date, their account and their narration — the entry says
+     *     which rule wrote it, in words, and its balance is untouched. What goes
+     *     is the *plan*, which is the thing a person is deliberately deleting;
+     *   - the occurrences go by cascade, decisions included. Their answers
+     *     survive where it matters: the entry carries who approved it
+     *     (`created_by`) and the occurrence's number in its narration, and the
+     *     rule's decisions are what the reader asked to be rid of;
+     *   - **the asks go too.** The office was told these dates needed an answer,
+     *     and an alert whose button opens a rule that no longer exists is worse
+     *     than no alert: it is a bell that cannot be answered. `OfficeBriefing`
+     *     owns alerts, so it takes them back.
+     *
+     * In a transaction, because a half-deleted rule — its asks gone, its dates
+     * standing — would go on asking for money nobody can approve.
      */
     public function delete(CashflowRecurrenceRule $rule): void
     {
-        $decided = $rule->occurrences()
-            ->whereIn('status', [
-                RecurrenceVocabulary::OCCURRENCE_APPROVED,
-                RecurrenceVocabulary::OCCURRENCE_SKIPPED,
-            ])
-            ->exists();
+        DB::transaction(function () use ($rule) {
+            $this->briefing->withdrawRecurringRule($rule);
 
-        if ($decided) {
-            throw new RuntimeException('A rule with decided occurrences is ended, not deleted.');
-        }
-
-        $rule->delete();
+            $rule->occurrences()->delete();
+            $rule->delete();
+        });
     }
 
     /**

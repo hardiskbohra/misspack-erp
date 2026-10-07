@@ -2,13 +2,13 @@
    RECURRING CASHFLOW — the module's own behaviour, and only that.
 
    Two dialogs, one form. A rule is written from the list (`#recurrenceRuleModal`)
-   and edited from its own page (`#recurrenceRuleEditModal`), and both are the
-   same partial on the server — so this file does three things and invents
-   nothing:
+   and changed from its own page (`#recurrenceRuleEditModal`) — in any state, so
+   the dialog is always on that page — and both are the same partial on the
+   server: this file does three things and invents nothing:
 
      1. opens the dialog the page offers, from every control that offers it —
         the header action, the empty state, the toolbar and the record's own
-        "Edit the draft" all carry their own marker attribute;
+        change door all carry their own marker attribute;
      2. reopens the dialog the server came back from. A save that failed
         validation redirects to the page with the typing kept in `old()` and
         `_dialog` naming the dialog it came from; without this the reader lands

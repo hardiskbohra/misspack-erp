@@ -52,6 +52,7 @@ class CashflowRecurrenceRule extends Model
         'occurrence_limit' => 'integer',
         'requested_at' => 'datetime',
         'decided_at' => 'datetime',
+        'revised_at' => 'datetime',
         'paused_at' => 'datetime',
         'ended_at' => 'datetime',
     ];
@@ -226,6 +227,26 @@ class CashflowRecurrenceRule extends Model
      * how many the plan currently holds. Both are counts of the log — the rule
      * stores neither.
      */
+    /**
+     * What deleting this rule does, in one sentence — for the confirmation the
+     * office reads before it commits.
+     *
+     * The sentence is here rather than in each of the two views because it is
+     * the rule's own behaviour being described, and because the two doors (the
+     * list's row menu and the record page) must warn the same way. It reads the
+     * state and nothing else: a count of posted entries per row would be a query
+     * per row on the list, and the case it would sharpen — a rule that has posted
+     * nothing at all — is already the draft sentence.
+     */
+    public function deleteWarning(): string
+    {
+        if ($this->isDraft()) {
+            return 'Delete this draft? Nothing was ever planned or posted from it.';
+        }
+
+        return 'Delete this rule? Its dates and its decisions go with it — ledger entries it already posted stay, because that money moved.';
+    }
+
     public function releasedCount(): int
     {
         return (int) ($this->relationLoaded('occurrences')

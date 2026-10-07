@@ -149,17 +149,26 @@ class CashflowRecurrenceController extends Controller
             ->with('success', 'Draft saved. It posts nothing at all until the office approves it.');
     }
 
+    /**
+     * Change a rule — any rule, in any state.
+     *
+     * The plan half of this (what happens to the dates nobody has answered) is
+     * the intake's, and so is the rule that a decision is never touched. The
+     * controller's job is the sentence: an edit to a running rule is a different
+     * act from an edit to a draft, and the office should read which one it just
+     * did.
+     */
     public function update(Request $request, CashflowRecurrenceRule $recurrence): RedirectResponse
     {
-        try {
-            $this->intake->update($recurrence, $this->facts($request));
-        } catch (RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
-        }
+        $wasRunning = $recurrence->isActive();
+
+        $this->intake->update($recurrence, $this->facts($request));
 
         return redirect()
             ->route('cashflows.recurring.show', $recurrence)
-            ->with('success', 'Draft updated.');
+            ->with('success', $wasRunning
+                ? 'Rule changed — the dates nobody had answered were re-planned around it, and what was approved or skipped stayed as it was.'
+                : 'Rule changed.');
     }
 
     /**
@@ -243,20 +252,25 @@ class CashflowRecurrenceController extends Controller
         return back()->with('success', 'Ended. What it asked and what was decided stays on the record.');
     }
 
+    /**
+     * Delete a rule — any rule. The ledger is not part of this.
+     *
+     * The confirmation the office reads before it commits is the model's own
+     * sentence (`deleteWarning()`), so the list's row menu and this page warn the
+     * same way. What the controller adds afterwards is the count that actually
+     * happened: how many entries stay in the ledger because they are money.
+     */
     public function destroy(CashflowRecurrenceRule $recurrence): RedirectResponse
     {
-        /* A draft that never decided anything is disposable; anything else is
-           history. The check is here to produce a sentence, and the same rule is
-           enforced in the intake where the delete actually happens. */
-        if (! $recurrence->isDraft() || $recurrence->releasedCount() > 0) {
-            return back()->with('error', 'A rule that has posted anything is ended, not deleted.');
-        }
+        $posted = $recurrence->releasedCount();
 
         $this->intake->delete($recurrence);
 
         return redirect()
             ->route('cashflows.recurring.index')
-            ->with('success', 'Draft deleted. Nothing was ever paid from it.');
+            ->with('success', $posted > 0
+                ? 'Rule deleted — its dates, decisions and asks went with it. The entries it posted stay in the ledger: that money moved.'
+                : 'Rule deleted. Nothing was ever posted from it.');
     }
 
     /* -------------------------------------------------------------- one date */

@@ -119,6 +119,32 @@ class OfficeBriefing
         ], email: true);
     }
 
+    /**
+     * Take back the asks a rule raised: the other half of deleting one.
+     *
+     * The alert is the office being told that a date needs an answer. When the
+     * rule goes, the date goes with it — and an alert whose "Review and approve"
+     * button opens a rule nobody can open is worse than no alert at all, because
+     * a bell that cannot be answered is a bell people stop reading. Alerts are
+     * this class's fact (it raises every one of them), so this class is where
+     * they are withdrawn; the per-user seen/acknowledged rows cascade with them.
+     *
+     * Guarded like every other writer here: the briefing is installed by a
+     * migration of its own, and a rule is deletable on a database where it has
+     * not run yet.
+     */
+    public function withdrawRecurringRule(CashflowRecurrenceRule $rule): int
+    {
+        if (! class_exists(OfficeAlert::class) || ! Schema::hasTable('office_alerts')) {
+            return 0;
+        }
+
+        return OfficeAlert::query()
+            ->where('subject_type', CashflowRecurrenceRule::class)
+            ->where('subject_id', $rule->id)
+            ->delete();
+    }
+
     public function runScheduled(): array
     {
         $raised = [];

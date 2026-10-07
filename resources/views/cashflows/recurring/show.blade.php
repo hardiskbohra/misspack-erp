@@ -6,11 +6,13 @@
 @section('page-actions')
     <a class="master-btn master-btn-ghost" href="{{ route('cashflows.recurring.index') }}">All rules</a>
 
-    @if ($rule->isDraft())
-        <button type="button" class="master-btn master-btn-soft" data-open-rule-edit-modal>
-            <i class="fa-solid fa-pen" aria-hidden="true"></i> Edit the draft
-        </button>
-    @endif
+    {{-- Any rule can be changed now. What an edit does to a running one — the
+         dates nobody has answered are re-planned around it, and a decision is
+         never touched — is the plan's business, and the modal says so. --}}
+    <button type="button" class="master-btn master-btn-soft" data-open-rule-edit-modal>
+        <i class="fa-solid fa-pen" aria-hidden="true"></i>
+        {{ $rule->isDraft() ? 'Edit the draft' : 'Change the rule' }}
+    </button>
 
     {{-- The header carries the one door the state is actually asking for —
          the same door the card below explains. --}}
@@ -190,6 +192,18 @@
             <div class="cfr-decision-fact">
                 <p class="cfr-decision-label">And what was said</p>
                 <p class="cfr-decision-value">{{ $rule->decision_note ?: '—' }}</p>
+                {{-- The honest half of allowing an edit on a rule the office has
+                     already answered: the record says the recipe moved, so nobody
+                     reads "approved" and assumes it was approved as it stands. --}}
+                @if ($rule->revised_at)
+                    <p class="master-help">
+                        <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                        Changed {{ $rule->revised_at->format('d M Y, H:i') }} — after that answer.
+                        {{ $rule->isEnded()
+                            ? 'The rule has ended, so the change is on the record only.'
+                            : 'The next dates ask with what it says now.' }}
+                    </p>
+                @endif
                 @if ($rule->paused_at)
                     <p class="master-help">Paused since {{ $rule->paused_at->format('d M Y, H:i') }}</p>
                 @elseif ($rule->ended_at)
@@ -222,16 +236,28 @@
                 </form>
             @endif
 
-            @if ($rule->isDraft() && $released === 0)
-                <form method="POST" action="{{ route('cashflows.recurring.destroy', $rule) }}" class="cfr-decision-form"
-                    data-confirm="Delete this draft? Nothing was ever paid from it.">
-                    @csrf
-                    @method('DELETE')
-                    <label class="master-label" for="cfrDelete">Delete the draft</label>
-                    <p class="master-help">Only a draft nothing has been decided on can be removed.</p>
-                    <button type="submit" class="master-btn master-btn-light master-btn-sm">Delete it</button>
-                </form>
-            @endif
+            {{-- Deleting is not the ledger's business, and the door says so in
+                 as many words: the entries the rule posted are money that moved
+                 and they stay, with their narration naming the rule that wrote
+                 them. What goes is the plan — which is what the reader is
+                 deliberately throwing away. --}}
+            <form method="POST" action="{{ route('cashflows.recurring.destroy', $rule) }}" class="cfr-decision-form"
+                data-confirm="{{ $rule->deleteWarning() }}"
+                data-confirm-title="Delete the rule"
+                data-confirm-text="Delete it">
+                @csrf
+                @method('DELETE')
+                <p class="master-label">Delete the rule</p>
+                <p class="master-help">
+                    @if ($released > 0)
+                        Its plan and its decisions go; the {{ number_format($released) }}
+                        {{ $released === 1 ? 'entry' : 'entries' }} it posted stay in the ledger — that money moved.
+                    @else
+                        Nothing was ever posted from this rule, so nothing leaves the ledger.
+                    @endif
+                </p>
+                <button type="submit" class="master-btn master-btn-light master-btn-sm">Delete it</button>
+            </form>
         </div>
     </section>
 
@@ -415,51 +441,66 @@
     </section>
 </div>
 
-{{-- ──────────────────────────────────────────────────────── editing a draft --}}
-{{-- Only drafts open here, and the modal is the same form the list uses — one
-     definition of a rule's fields, two doors to it. --}}
-@if ($rule->isDraft())
-    <span hidden data-open-dialog="{{ $errors->any() ? old('_dialog') : '' }}"></span>
+{{-- ────────────────────────────────────────────────────────── changing a rule --}}
+{{-- Every state opens here, and the modal is the same form the list uses — one
+     definition of a rule's fields, two doors to it. The subtitle is the one
+     thing that changes with the state, because that is the one thing the reader
+     needs to know before saving: what this will do to the dates. --}}
+<span hidden data-open-dialog="{{ $errors->any() ? old('_dialog') : '' }}"></span>
 
-    <div class="master-modal" id="recurrenceRuleEditModal" aria-hidden="true">
-        <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="recurrenceRuleEditTitle">
-            <form method="POST" action="{{ route('cashflows.recurring.update', $rule) }}">
-                @csrf
-                @method('PUT')
-                <input type="hidden" name="_dialog" value="recurrenceRuleEditModal">
+<div class="master-modal" id="recurrenceRuleEditModal" aria-hidden="true">
+    <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="recurrenceRuleEditTitle">
+        <form method="POST" action="{{ route('cashflows.recurring.update', $rule) }}">
+            @csrf
+            @method('PUT')
+            <input type="hidden" name="_dialog" value="recurrenceRuleEditModal">
 
-                <div class="master-modal-header">
-                    <div class="master-modal-heading">
-                        <span class="master-modal-icon" aria-hidden="true"><i class="fa-solid fa-pen"></i></span>
-                        <div>
-                            <h3 class="master-modal-title" id="recurrenceRuleEditTitle">Edit the draft</h3>
-                            <p class="master-modal-subtitle">A rule is editable until it is approved — after that it is ended and written again.</p>
-                        </div>
+            <div class="master-modal-header">
+                <div class="master-modal-heading">
+                    <span class="master-modal-icon" aria-hidden="true"><i class="fa-solid fa-pen"></i></span>
+                    <div>
+                        <h3 class="master-modal-title" id="recurrenceRuleEditTitle">
+                            {{ $rule->isDraft() ? 'Edit the draft' : 'Change the rule' }}
+                        </h3>
+                        <p class="master-modal-subtitle">
+                            @if ($rule->isDraft())
+                                A draft posts nothing. Approval writes the plan from what you save here.
+                            @elseif ($rule->isActive())
+                                The dates nobody has answered are re-planned around what you save: the ones still
+                                promised keep their day, the rest are withdrawn, and every approval and skip stays.
+                            @elseif ($rule->isPaused())
+                                A paused rule asks nothing, so there are no dates to re-plan — resuming will plan
+                                the next ones from today, on this rule's own day.
+                            @else
+                                This rule has ended. Saving changes the record only, not the dates.
+                            @endif
+                        </p>
                     </div>
-                    <button type="button" class="master-modal-close" data-close-modal="recurrenceRuleEditModal" aria-label="Close">&times;</button>
                 </div>
+                <button type="button" class="master-modal-close" data-close-modal="recurrenceRuleEditModal" aria-label="Close">&times;</button>
+            </div>
 
-                <div class="master-modal-body">
-                    @if ($errors->any())
-                        <div class="master-info-box is-danger" role="alert">
-                            <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
-                            {{ $errors->first() }}
-                        </div>
-                    @endif
+            <div class="master-modal-body">
+                @if ($errors->any())
+                    <div class="master-info-box is-danger" role="alert">
+                        <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                        {{ $errors->first() }}
+                    </div>
+                @endif
 
-                    @include('cashflows.recurring.partials.rule-form', ['rule' => $rule, 'dialogId' => 'recurrenceRuleEdit'])
-                </div>
+                @include('cashflows.recurring.partials.rule-form', ['rule' => $rule, 'dialogId' => 'recurrenceRuleEdit'])
+            </div>
 
-                <div class="master-modal-footer">
-                    <button type="button" class="master-btn master-btn-light" data-close-modal="recurrenceRuleEditModal">Cancel</button>
-                    <button class="master-btn master-btn-primary" type="submit">
-                        <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Save the draft
-                    </button>
-                </div>
-            </form>
-        </div>
+            <div class="master-modal-footer">
+                <button type="button" class="master-btn master-btn-light" data-close-modal="recurrenceRuleEditModal">Cancel</button>
+                <button class="master-btn master-btn-primary" type="submit">
+                    <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                    {{ $rule->isDraft() ? 'Save the draft' : 'Save the rule' }}
+                </button>
+            </div>
+        </form>
     </div>
-@endif
+</div>
 
 @push('scripts')
     <script src="{{ $assetVer('assets/js/cashflow-recurring.js') }}" defer></script>

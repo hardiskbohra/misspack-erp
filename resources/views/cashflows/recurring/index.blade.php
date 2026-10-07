@@ -390,19 +390,21 @@
                                                 </form>
                                             @endif
 
-                                            {{-- A draft nobody has decided is disposable; anything
-                                                 else is ended instead, and the page says why. --}}
-                                            @if ($rule->isDraft() && $rule->releasedCount() === 0)
-                                                <form method="POST" action="{{ route('cashflows.recurring.destroy', $rule) }}"
-                                                    data-confirm="Delete this draft? Nothing was ever paid from it.">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="is-danger">
-                                                        <i class="fa-regular fa-trash-can" aria-hidden="true"></i>
-                                                        Delete the draft
-                                                    </button>
-                                                </form>
-                                            @endif
+                                            {{-- Any rule can be deleted, and the sentence the
+                                                 confirmation shows is the model's own — so this
+                                                 menu and the record page warn identically. Deleting
+                                                 never touches the ledger; it takes the plan. --}}
+                                            <form method="POST" action="{{ route('cashflows.recurring.destroy', $rule) }}"
+                                                data-confirm="{{ $rule->deleteWarning() }}"
+                                                data-confirm-title="Delete the rule"
+                                                data-confirm-text="Delete it">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="is-danger">
+                                                    <i class="fa-regular fa-trash-can" aria-hidden="true"></i>
+                                                    Delete the rule
+                                                </button>
+                                            </form>
                                         </div>
                                     </div>
                                 </td>

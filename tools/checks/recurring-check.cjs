@@ -80,6 +80,7 @@ const coreSheet = plain(read('public/assets/css/core.css'));
 const migration = plain(read('database/migrations/2026_10_07_130000_create_cashflow_recurrence_rules_table.php'));
 const occurrencesMigration = plain(read('database/migrations/2026_10_07_130100_create_cashflow_recurrence_occurrences_table.php'));
 const command = plain(read('app/Console/Commands/ReleaseRecurringCashflows.php'));
+const revisionMigration = plain(read('database/migrations/2026_10_07_140000_add_revised_at_to_cashflow_recurrence_rules.php'));
 
 /* ------------------------------------------------------------ 1. the calendar */
 
@@ -158,17 +159,34 @@ check('the four states are the vocabulary\'s, not strings in the code',
 check('a rule is approved from the ask, not from nowhere',
     /isWaitingApproval\(\)/.test(ruleModel)
     && /if \(! \$recurrence->isWaitingApproval\(\)\)/.test(controller)
-    && /if \(! \$rule->isDraft\(\)\)/.test(intake),
+    && /if \(! \$rule->isDraft\(\) \|\| \$rule->requested_at === null\)/.test(intake),
     'approval must require that somebody asked');
 
 check('approving writes the plan in the same call — no active rule without dates',
     /public function approve\([\s\S]*?\$this->plan->plan\(\$rule\);/.test(intake),
     'an active rule with no plan is a promise nobody can see');
 
-check('only a draft is editable, and the refusal is a sentence',
-    /if \(! \$rule->isDraft\(\)\) \{\s*throw new RuntimeException/.test(intake)
-    && has(controller, 'catch (RuntimeException $e)'),
-    'an approved rule edited in place would rewrite history');
+/* Editing used to be a draft's privilege: approving fixed the recipe, and a
+   wrong amount meant ending a live rule and writing the next one — which loses
+   the run that is still running. The office asked for the edit, so it is allowed
+   for every state, and these three checks are what makes that safe. */
+check('any rule is edited, and a running one has its plan reconciled around it',
+    ! /if \(! \$rule->isDraft\(\)\) \{\s*throw/.test(intake)
+    && /public function update\(CashflowRecurrenceRule \$rule, array \$facts\)[\s\S]*?if \(\$changed && \$rule->isActive\(\)\) \{\s*\$this->plan->reconcile\(\$rule\);/.test(intake),
+    'an edit that leaves the promised dates on the page is a rule that says two things');
+
+check('and the reconciliation withdraws undecided dates only — never a decision',
+    /public function reconcile\(CashflowRecurrenceRule \$rule[\s\S]*?whereIn\('status', self::COMMITTED\)/.test(plan)
+    && /OCCURRENCE_PENDING\s*&& \(! \$onLadder \|\| \$pastEnd \|\| \$overCount\)[\s\S]{0,200}?\$this->cancel\(\$row\);/.test(plan)
+    && /private function cancel\(CashflowRecurrenceOccurrence \$occurrence\): void[\s\S]*?if \(! \$occurrence->isPending\(\)\) \{\s*return;\s*\}[\s\S]*?OCCURRENCE_CANCELLED/.test(plan),
+    'a decision re-planned is an answer that un-happened');
+
+check('an edit to a rule the office already answered says so on the record',
+    /dateTime\('revised_at'\)/.test(revisionMigration)
+    && /if \(\$changed && \$rule->decided_at !== null\) \{\s*\$rule->revised_at = now\(\);/.test(intake)
+    && has(ruleModel, "'revised_at' => 'datetime'")
+    && has(showView, '$rule->revised_at'),
+    'the office agreed to a rule that read a certain way');
 
 check('pausing and ending withdraw the tail; resuming plans again',
     /public function pause\([\s\S]*?\$this->plan->withdraw\(\$rule\);/.test(intake)
@@ -176,9 +194,27 @@ check('pausing and ending withdraw the tail; resuming plans again',
     && /public function resume\([\s\S]*?\$this->plan->plan\(\$rule\);/.test(intake),
     'a paused rule that keeps its tail keeps asking');
 
-check('a rule that has decided something is ended, never deleted',
-    /throw new RuntimeException\('A rule with decided occurrences is ended, not deleted\.'\)/.test(intake)
-    && /releasedCount\(\) > 0/.test(controller));
+check('a rule is deleted with its plan, and never with the ledger',
+    /public function delete\(CashflowRecurrenceRule \$rule\): void[\s\S]*?withdrawRecurringRule[\s\S]*?occurrences\(\)->delete\(\)[\s\S]*?\$rule->delete\(\);/.test(intake)
+    && ! /CashflowEntry/.test(intake)
+    && ! /A rule with decided occurrences is ended/.test(intake),
+    'money that moved is not a rule deletion\'s business');
+
+check('the asks the rule raised go with it, and both doors warn in the model\'s words',
+    /public function withdrawRecurringRule\(CashflowRecurrenceRule \$rule\): int/.test(briefing)
+    && /where\('subject_type', CashflowRecurrenceRule::class\)[\s\S]{0,90}?where\('subject_id', \$rule->id\)/.test(briefing)
+    && /public function deleteWarning\(\): string/.test(ruleModel)
+    && times(indexView, '$rule->deleteWarning()') >= 1
+    && times(showView, '$rule->deleteWarning()') >= 1,
+    'an alert whose button opens a deleted rule is a bell nobody can answer');
+
+check('the two doors are open in every state: change it, or delete it',
+    /data-open-rule-edit-modal/.test(showView)
+    && ! /@if \(\$rule->isDraft\(\)\)[\s\S]{0,80}?data-open-rule-edit-modal/.test(showView)
+    && times(indexView, "route('cashflows.recurring.destroy'") >= 1
+    && times(showView, "route('cashflows.recurring.destroy'") >= 1
+    && ! /isDraft\(\) && \$rule->releasedCount\(\) === 0/.test(indexView),
+    'a rule that can only be edited or deleted in one state is a rule that cannot be');
 
 /* ------------------------------------------------------- 3. the plan (one writer) */
 

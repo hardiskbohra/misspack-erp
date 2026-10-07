@@ -209,8 +209,15 @@ the colour that means emergency.
 
 `cashflows/recurring/show.blade.php` — one rule: the record head with the next
 date, four figures, the **decision panel** (who wrote it, who asked, who
-answered, and what they said), the **plan** — every date, its state, its decider
-and a link to the entry it posted — and the rule's facts.
+answered, and what they said — plus, if the recipe has moved since that answer,
+when it moved), the **plan** — every date, its state, its decider and a link to
+the entry it posted — and the rule's facts.
+
+Two doors on this page work in **every** state, because the office asked for them
+to: **Change the rule** (the same form the list writes one with, so there is one
+definition of a rule's fields) and **Delete the rule**. The list's row menu
+carries the delete too, and both doors show the model's own warning
+(`deleteWarning()`), so the two places cannot warn differently.
 
 A **draft** shows its plan as a *preview*: the same table, the same calculator,
 marked "not written yet", so approving a draft does not change the shape of the
@@ -225,10 +232,37 @@ notes composer does.
 
 ## 8. What was deliberately not built
 
-- **No editing of an approved rule.** Approving fixes the recipe — the plan is
-  built from it, and the entries it posts are its consequences. Changing a live
-  rule means ending it and writing the next one, which keeps every posted entry's
-  story intact: you approved *this* rule, not one that has since changed.
+- ~~No editing of an approved rule~~ — **now allowed, and re-planned instead.**
+  Approving used to fix the recipe, and a wrong amount meant ending a live rule
+  and writing the next one: the run that was still running lost its story, and
+  the office retyped a rule it had already described once. So the intake edits
+  any rule in any state, and the promise that used to be kept by refusing is kept
+  by `RecurrencePlan::reconcile()` instead:
+  - the **dates nobody has answered** are re-read from the new recipe. A date
+    that is still a rung of the ladder keeps its row, its sequence and its
+    notification; one that is not is **withdrawn**, exactly as a pause withdraws
+    it; the window is then topped back up. Change the amount, the particular or
+    the party and every date survives; change the rhythm, the effective day, the
+    window or the count and only the dates that still fit do;
+  - a **decision is never touched** — an approval posted money and a skip is an
+    answer, and the walk consumes the rung each one occupies so the dates that
+    follow still follow them;
+  - a rule that is **edited after the office answered it says so**:
+    `revised_at` is stamped (only by an edit, only when something actually
+    changed), the record shows it beside the decision, and a fresh ask clears it
+    with the answer it belonged to. The office said yes to a rule that read a
+    certain way; the rule admits when it no longer reads that way. It does not
+    re-open the approval, because every payment still asks for its own yes on the
+    day it is due — which is the control that made this edit safe to allow.
+- ~~A rule that decided something is ended, never deleted~~ — **the delete is the
+  office's, in any state, and the ledger is not part of it.** What goes is the
+  plan: the occurrences (decisions included) and the asks the rule raised —
+  `OfficeBriefing::withdrawRecurringRule()`, because an alert whose button opens
+  a deleted rule is a bell that cannot be answered. What stays is the money: the
+  entries the rule posted keep their amount, their date, their account and their
+  narration, which names the rule in words — the entry page's badge simply has
+  nothing to point at any more, because the rule is gone. The confirmation on
+  both doors says exactly that before the reader commits.
 - **No "approve all".** Every date is its own decision, which is the entire point
   of the ask. A bulk approve is a button that turns a loop back into an
   auto-payment.
@@ -244,7 +278,7 @@ notes composer does.
 
 ## 9. Verification
 
-`tools/checks/recurring-check.cjs` — **79 checks**, dependency-free, run with
+`tools/checks/recurring-check.cjs` — **83 checks**, dependency-free, run with
 `node tools/checks/recurring-check.cjs`. It reads source with comments stripped,
 so the prose in these files can explain a rule without answering a check. What it
 holds:
@@ -256,9 +290,13 @@ holds:
   defaulting;
 - **the state machine** — draft is the column's default, the intake is the only
   thing that saves a rule, the controller hands over every state change, approval
-  requires the ask, approving writes the plan in the same call, only a draft is
-  editable, pausing and ending withdraw the tail, and a rule that decided
-  something is ended rather than deleted;
+  requires the ask (twice: the controller's guard and the intake's own),
+  approving writes the plan in the same call, pausing and ending withdraw the
+  tail, and a rule's two later doors: **any rule is edited** and a running one
+  has its plan reconciled, the reconciliation withdraws undecided dates and never
+  a decision, an edit to a rule already answered stamps `revised_at`, **any rule
+  is deleted** with its plan and never with the ledger, the asks go with it, and
+  both doors are open in every state;
 - **the plan** — one writer, a window rather than the whole promise, sequences
   that continue instead of being reused, withdrawals that cancel rather than
   delete, no counter, no stored next date, no amount copied onto a date, and
@@ -291,6 +329,17 @@ holds:
   document, the roadmap's 1E marked shipped, the check in `tools/checks/README.md`,
   the drawer page on the shared-drawer contract list, and the calendar held by
   `tests/Unit/RecurrenceScheduleTest.php`.
+
+The reconciliation's decision table was also walked outside PHP before it
+shipped — a line-by-line port of the loop run against the cases an edit actually
+produces: an amount-only change keeps every date; monthly → quarterly keeps every
+third rung; an end date pulled in or a count cut down cancels the tail; a start
+moved forward cancels only the dates before it; a gap left by a pause is a hole
+the ladder tolerates; a skip made in advance does not disturb a pending date
+before it; and a stray date is withdrawn without taking its neighbours with it.
+That harness proves the decision table, not the PHP — `php-check` parses the real
+file, and the loop's one assumption (rows in `planOrder()`) is written down where
+it is made.
 
 `tests/Unit/RecurrenceScheduleTest.php` is the half a source check cannot read:
 it asks the calculator itself about the 31st of January, 29 February, a window
@@ -371,6 +420,7 @@ app/Services/RecurrenceSchedule.php
 app/Services/RecurrenceVocabulary.php
 database/migrations/2026_10_07_130000_create_cashflow_recurrence_rules_table.php
 database/migrations/2026_10_07_130100_create_cashflow_recurrence_occurrences_table.php
+database/migrations/2026_10_07_140000_add_revised_at_to_cashflow_recurrence_rules.php
 docs/recurring-cashflow.md
 public/assets/css/cashflow-recurring.css
 public/assets/js/cashflow-recurring.js
