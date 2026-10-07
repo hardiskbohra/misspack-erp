@@ -94,6 +94,153 @@ function phpIslands(text) {
     return islands;
 }
 
+const SUPERGLOBALS = new Set(['GLOBALS', '_SERVER', '_GET', '_POST', '_FILES', '_COOKIE',
+  '_SESSION', '_REQUEST', '_ENV', 'argv', 'argc', 'http_response_header', 'php_errormsg', 'this']);
+const OPAQUE = new Set(['extract', 'get_defined_vars', 'eval', 'parse_str']);
+const OUTPUT_ARG = { preg_match: [2], settype: [0], exec: [1, 2] };
+
+function childNodes(node) {
+  const out = [];
+  for (const k of Object.keys(node)) {
+    if (k === 'loc' || k === 'kind') continue;
+    const v = node[k];
+    if (Array.isArray(v)) v.forEach(x => { if (x && typeof x === 'object' && x.kind) out.push(x); });
+    else if (v && typeof v === 'object' && v.kind) out.push(v);
+  }
+  return out;
+}
+
+/* Names bound by an assignment/foreach/catch target, incl. list()/[] destructuring. */
+function bindTarget(node, bind) {
+  if (!node) return;
+  if (node.kind === 'variable') {
+    if (typeof node.name === 'string') bind.add(node.name);
+    return;
+  }
+  if (node.kind === 'list' || node.kind === 'array') {
+    (node.items || []).forEach(item => {
+      if (!item) return;
+      bindTarget(item.value !== undefined && item.kind === 'entry' ? item.value : item, bind);
+    });
+    return;
+  }
+  if (node.kind === 'offsetlookup' || node.kind === 'propertylookup' || node.kind === 'staticlookup') {
+    /* `$a['k'] = 1` defines $a; the receiver is written, not read. */
+    bindTarget(node.what, bind);
+  }
+}
+
+const nameOf = n => (typeof n === 'string' ? n : (n && n.kind === 'identifier' ? n.name : null));
+function paramNames(fn) { return (fn.arguments || []).map(a => nameOf(a.name)).filter(Boolean); }
+
+function callName(node) {
+  const what = node.what;
+  return what && what.kind === 'name' ? String(what.name).toLowerCase() : null;
+}
+
+function auditScope(fn, outer, inMethod, report) {
+  const scope = {
+    bound: new Set(),
+    opaque: false,
+    problem: [],
+  };
+  paramNames(fn).forEach(n => scope.bound.add(n));
+  if (fn.kind === 'closure') (fn.uses || []).forEach(u => { const n = nameOf(u.name); if (n) scope.bound.add(n); });
+  if (fn.kind === 'arrowfunc') outer.bound.forEach(n => scope.bound.add(n));
+  if (inMethod && fn.isStatic !== true) scope.bound.add('this');
+
+  const body = fn.body;
+
+  /* pass 1 — every name this scope binds, at any depth inside it but not inside
+     a nested closure/function of its own (those are separate scopes). */
+  (function collect(node) {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) return node.forEach(collect);
+    if (typeof node.kind !== 'string') return;
+    if (node !== fn && (node.kind === 'closure' || node.kind === 'arrowfunc' || node.kind === 'function')) {
+      /* the closure's own `use (...)` captures are bound in *that* scope; its
+         arguments are evaluated here */
+      (node.arguments || []).forEach(a => collect(a));  // defaults: nothing to bind
+      return;
+    }
+    if (node.kind === 'variable' && typeof node.name === 'string' && node.__write) scope.bound.add(node.name);
+    switch (node.kind) {
+      case 'assign':
+      case 'assignref':
+        if (node.operator === undefined || node.operator === '=' || node.operator === '??=') bindTarget(node.left, scope.bound);
+        break;
+      case 'foreach':
+        bindTarget(node.key, scope.bound); bindTarget(node.value, scope.bound);
+        break;
+      case 'catch':
+        bindTarget(node.variable, scope.bound);
+        break;
+      case 'staticvariable':
+        bindTarget(node.variable, scope.bound);
+        break;
+      case 'global':
+        (node.items || []).forEach(i => bindTarget(i, scope.bound));
+        break;
+      default: break;
+    }
+    childNodes(node).forEach(collect);
+  })(body);
+
+  /* pass 2 — every name this scope reads. */
+  const read = (node, skipSanitized) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) return node.forEach(n => read(n, skipSanitized));
+    if (typeof node.kind !== 'string') return;
+    if (node !== fn && (node.kind === 'closure' || node.kind === 'function')) {
+      auditScope(node, scope, inMethod && node.isStatic !== true, report);
+      return;
+    }
+    if (node.kind === 'arrowfunc') {
+      auditScope(node, scope, inMethod, report);
+      return;
+    }
+    if ((node.kind === 'staticlookup' || node.kind === 'propertylookup')
+        && node.offset && node.offset.kind === 'variable' && typeof node.offset.name === 'string') {
+      read(node.what, skipSanitized);   // the receiver is read; the member name is not a variable
+      return;
+    }
+    if (node.kind === 'variable') {
+      if (typeof node.name === 'string' && !skipSanitized
+          && !scope.bound.has(node.name) && !SUPERGLOBALS.has(node.name)) {
+        scope.problem.push([node.name, node.loc ? node.loc.start.line : '?']);
+      }
+      return;
+    }
+    if (node.kind === 'isset' || node.kind === 'empty' || node.kind === 'unset') return;   // sanitizing
+    if (node.kind === 'bin' && node.type === '??') {
+      read(node.right, skipSanitized);
+      return;
+    }
+    if (node.kind === 'call') {
+      const name = callName(node);
+      if (name && OPAQUE.has(name)) { scope.opaque = true; return; }
+      if (name && OUTPUT_ARG[name]) {
+        const args = node.arguments || [];
+        OUTPUT_ARG[name].forEach(i => args[i] && bindTarget(args[i], scope.bound));
+      }
+    }
+    if (node.kind === 'assign' || node.kind === 'assignref') {
+      if (!(node.operator === undefined || node.operator === '=' || node.operator === '??=')) read(node.left, skipSanitized);
+      read(node.right, skipSanitized);
+      return;
+    }
+    if (node.kind === 'foreach') {
+      read(node.source, skipSanitized);
+      read(node.body, skipSanitized);
+      return;
+    }
+    childNodes(node).forEach(n => read(n, skipSanitized));
+  };
+  read(body, false);
+
+  if (!scope.opaque) scope.problem.forEach(p => report.push(p));
+}
+
 /* ------------------------------------------------------------ the parse */
 
 if (Engine) {
@@ -130,6 +277,49 @@ if (Engine) {
         brokenIslands.length === 0, brokenIslands.slice(0, 3).join(' | '));
 
     console.log(`  (parser: php-parser · ${phpFiles.length} PHP files · ${islands} Blade islands)`);
+
+    /* Every method, closure and arrow function of the app, asked one question:
+       does it read a name nothing in its own scope binds? A scope is the whole
+       function body — a `foreach` target above the read counts — but a closure is
+       a scope of its own, and what it reads from outside must come through its
+       `use (...)`, a parameter, or the enclosing arrow function's share. This is
+       the shape the project has now shipped twice: an asset that only exists
+       inside a chunk callback, and a `$selected` a closure never captured — both
+       parse, both pass every other check, both 500 the moment the line runs. */
+    const scopeEngine = new Engine({ parser: { suppressErrors: true }, ast: { withPositions: true } });
+    const orphans = [];
+    let scopes = 0;
+
+    for (const file of phpFiles) {
+        let ast;
+
+        try {
+            ast = scopeEngine.parseCode(fs.readFileSync(file, 'utf8'), rel(file));
+        } catch (error) {
+            continue;   // unparsable is the parse check's business, not this one's
+        }
+
+        const report = [];
+
+        (function walkScopes(node, inMethod) {
+            if (!node || typeof node !== 'object') return;
+            if (Array.isArray(node)) return node.forEach(child => walkScopes(child, inMethod));
+            if (typeof node.kind !== 'string') return;
+
+            if (node.kind === 'method') { scopes++; return auditScope(node, { bound: new Set() }, true, report); }
+            if (node.kind === 'function') { scopes++; return auditScope(node, { bound: new Set() }, false, report); }
+
+            childNodes(node).forEach(child => walkScopes(child, inMethod || node.kind === 'class'));
+        })(ast, false);
+
+        report.forEach(([name, line]) => orphans.push(`${rel(file)}:${line} reads $${name}`));
+    }
+
+    check('no scope reads a variable it never binds — a closure\'s use, a parameter, a foreach target',
+        orphans.length === 0, orphans.slice(0, 3).join(' | '));
+
+    console.log(`  (scopes: ${scopes} functions asked over ${phpFiles.length} PHP files)`);
+
 } else {
     console.log('  (php-parser not installed — run `npm install`; dependency-free guards only)');
 }

@@ -197,7 +197,7 @@ class SalesInvoiceController extends Controller
         $labels = app(SalesInvoiceFilters::class)->labels($filters);
         $applied = app(SalesInvoiceFilters::class)->applied($filters);
 
-        return response()->streamDownload(function () use ($rows, $applied, $labels) {
+        return response()->streamDownload(function () use ($rows, $applied, $labels, $selected) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
 

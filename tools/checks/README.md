@@ -23,7 +23,9 @@ node tools/checks/php-check.cjs       # the PHP files the module owns: parsed wi
                                       # it is reachable, plus name/import guards that a parser
                                       # cannot answer — including the one that reads a migration the
                                       # way the schema builder does, so no index or foreign key asks
-                                      # MySQL for an identifier over its 64 characters.
+                                      # MySQL for an identifier over its 64 characters, and the one
+                                      # that asks every scope which names it binds before it reads
+                                      # them (a closure's `use`, a parameter, a foreach target).
                                       # PHP_PARSER_PATH=<dir> points at a node_modules that holds
                                       # php-parser when it is not installed here.
 node tools/checks/sql-check.cjs       # the SQL MySQL can actually run: the tests use SQLite and

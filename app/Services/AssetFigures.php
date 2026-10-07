@@ -176,9 +176,10 @@ class AssetFigures
                 $groups[$key] = [
                     'category' => $key,
                     /* What the class hands its assets — the life, the method and the
-                       residual the charge below is made of. An asset with its own
-                       recipe says so on its row. */
-                    'recipe' => $asset->category?->recipeLabel(),
+                       residual the charge below is made of. It is read off the class
+                       itself, because the row that opened the group may be one that
+                       carries its own recipe; the row that does says so on its row. */
+                    'recipe' => $row['class_recipe'],
                     'rows' => [],
                     'subtotal' => $this->emptyTotals(),
                 ];
@@ -288,9 +289,10 @@ class AssetFigures
             'disposal_gain' => $sold ? (float) $asset->disposalGainLoss() : 0.0,
             'method' => $asset->methodLabel(),
             'life' => $asset->effectiveLifeYears(),
-            /* The screen says the recipe once per class and flags the rows that
-               do not follow it; the file that leaves the building says it on every
-               row, because a CSV is read one line at a time. */
+            /* The class's own recipe, so the group head can say it once without
+               reaching for an asset that is no longer in scope — and the asset's
+               effective one, which the row prints only where the two differ. */
+            'class_recipe' => $asset->category?->recipeLabel(),
             'recipe' => $asset->recipeLabel(),
             'inherits_recipe' => $asset->inheritsRecipe(),
         ];

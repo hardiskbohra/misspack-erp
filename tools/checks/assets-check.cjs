@@ -505,6 +505,17 @@ check('the register lists seven columns and a door, not every field it holds',
     registerFaults.length === 0,
     registerFaults.join(' · '));
 
+/* The array the group builder opens for a class — from its opening bracket to the
+   `];` that closes it. Read by index, not by regex: an indentation the file does
+   not have would make a regex quietly never match, and a promise that never runs
+   is worse than no promise. */
+const groupBlock = (source) => {
+    const open = source.indexOf('$groups[$key] = [');
+    const close = source.indexOf('];', open);
+
+    return open === -1 || close === -1 ? '' : source.slice(open, close);
+};
+
 const scheduleFaults = [
     JSON.stringify(headsIn(src.report)) !== JSON.stringify(
         ['Asset', 'Opening', 'Additions', 'Charge for the year', 'Closing'])
@@ -515,8 +526,18 @@ const scheduleFaults = [
         && 'the recipe is not rendered under the class',
     !/@unless \(\$row\['inherits_recipe'\]\)[\s\S]{0,200}?row\['recipe'\]/.test(src.report)
         && 'a row no longer says it carries its own recipe',
-    !has(src.figures, "'recipe' => $asset->category?->recipeLabel()")
+    /* The class head's recipe is read off the class, in the loop that has an
+       asset in hand, and carried on the row as `class_recipe`; the group builder
+       — which runs after that loop, with no asset in scope — reads it back off
+       the row it is grouping. Reaching for `$asset` there is the 500 this page
+       has already shipped once. */
+    !has(src.figures, "'class_recipe' => $asset->category?->recipeLabel()")
         && 'the class head is not fed by the class it names',
+    !has(src.figures, "'recipe' => $row['class_recipe']")
+        && 'the class head does not read the recipe it was handed',
+    groupBlock(src.figures).includes('$asset')
+        && 'the group builder reaches for an asset that is not in its scope',
+    groupBlock(src.figures) === '' && 'the group builder could not be found to audit',
     !has(src.figures, "'recipe' => $asset->recipeLabel()") && 'the service stopped building the recipe',
     !has(src.figures, "'inherits_recipe' => $asset->inheritsRecipe()")
         && 'the service stopped saying whether the recipe is the asset\'s own',

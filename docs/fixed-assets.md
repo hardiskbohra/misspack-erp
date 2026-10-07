@@ -320,6 +320,12 @@ carries. It answers the question a CA asks, so it is **company-wide by design**:
 the page says out loud that it ignores the register's filters, because reading a
 year through a location filter answers a question nobody asked.
 
+Each group also carries **the recipe of the class itself**, read off the class
+rather than off whichever asset happened to open the group — a row that follows a
+recipe of its own says so under its own name, and the group head must not borrow
+it. (It did: the head read the recipe through the chunk callback's last asset, a
+name that does not exist outside that callback, and the whole report answered 500.)
+
 Five figures, then the schedule **class by class**:
 
 | | |
