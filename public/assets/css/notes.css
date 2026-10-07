@@ -1,0 +1,288 @@
+/* ==========================================================================
+   NOTES — the sticky notes that used to live on the desk.
+
+   One module, two screens: the desk (`notes/index.blade.php`, a board of cards
+   over a table of the same notes) and one note's page (`notes/edit.blade.php`).
+
+   What this sheet owns, per `docs/ui-design-guidelines.md`: the board's grid,
+   the note card's own composition, the six note colours (a domain colour, kept
+   to the card's hairline, its dot and its chips — never a pastel wash over the
+   whole card), and the composer's field layout. Everything a note *wears* —
+   the card surface, its border, its radius, the buttons, the fields, the chips,
+   the table, the empty state, the drawer — is the shared vocabulary.
+
+   The note colours are the only literal colours in the file: a yellow note is
+   the point of a yellow note, and there is no token for "the colour the reader
+   chose". Each one declares `--nt-accent`, and every rule below reads that
+   variable rather than naming a colour twice — plus a dark-theme value, because
+   a note colour that cannot be seen on the dark surface is not a colour.
+   ========================================================================== */
+
+/* ------------------------------------------------------------------ accents */
+
+.nt-note--yellow, .nt-dot--yellow { --nt-accent: #d9a404; }
+.nt-note--blue,   .nt-dot--blue   { --nt-accent: #2563eb; }
+.nt-note--green,  .nt-dot--green  { --nt-accent: #059669; }
+.nt-note--pink,   .nt-dot--pink   { --nt-accent: #db2777; }
+.nt-note--purple, .nt-dot--purple { --nt-accent: #7c3aed; }
+.nt-note--grey,   .nt-dot--grey   { --nt-accent: #64748b; }
+
+:root[data-theme="dark"] .nt-note--yellow, :root[data-theme="dark"] .nt-dot--yellow { --nt-accent: #f0c14b; }
+:root[data-theme="dark"] .nt-note--blue,   :root[data-theme="dark"] .nt-dot--blue   { --nt-accent: #7aa2f7; }
+:root[data-theme="dark"] .nt-note--green,  :root[data-theme="dark"] .nt-dot--green  { --nt-accent: #4ade80; }
+:root[data-theme="dark"] .nt-note--pink,   :root[data-theme="dark"] .nt-dot--pink   { --nt-accent: #f472b6; }
+:root[data-theme="dark"] .nt-note--purple, :root[data-theme="dark"] .nt-dot--purple { --nt-accent: #c084fc; }
+:root[data-theme="dark"] .nt-note--grey,   :root[data-theme="dark"] .nt-dot--grey   { --nt-accent: #94a3b8; }
+
+/* ------------------------------------------------------------------ card head */
+
+.nt .nt-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.nt .nt-card-head .master-help {
+    margin: 0;
+    max-width: 46ch;
+}
+
+/* ------------------------------------------------------------------ composer */
+
+.nt .nt-compose-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 180px;
+    gap: 14px;
+    margin-top: 12px;
+}
+
+.nt .nt-compose-body,
+.nt .nt-compose-foot {
+    grid-column: 1 / -1;
+}
+
+.nt .nt-compose-foot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.nt .nt-compose-foot > .master-btn {
+    margin-left: auto;
+}
+
+.nt .nt-compose-pin {
+    margin: 0;
+}
+
+/* --------------------------------------------------------------------- board */
+
+.nt .nt-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+/* One sticky. The surface is the shared card; the colour is a hairline on the
+   left edge, its dot, and the badge — not the whole card. */
+.nt .nt-note {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px 18px 14px;
+    border: 1px solid var(--ui-border);
+    border-left: 4px solid var(--nt-accent, var(--ui-border));
+    border-radius: var(--ui-radius-card);
+    background: var(--ui-card-surface);
+    color: var(--ui-text);
+    text-decoration: none;
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+
+.nt .nt-note:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--ui-shadow-card);
+}
+
+.nt .nt-note:focus-visible {
+    outline: 2px solid var(--ui-info);
+    outline-offset: 2px;
+}
+
+/* A filed note is still readable, and says so quietly. */
+.nt .nt-note.is-filed {
+    background: var(--ui-nested-surface);
+    border-left-style: dashed;
+}
+
+.nt .nt-note-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.nt .nt-note-colour {
+    color: var(--ui-text-secondary);
+    font-size: 11px;
+    font-weight: var(--ui-weight-semibold, 600);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.nt .nt-note-pinned {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    color: var(--ui-warning);
+    font-size: 11px;
+    font-weight: var(--ui-weight-semibold, 600);
+}
+
+.nt .nt-note-title {
+    color: var(--ui-text);
+    font-size: 15px;
+    font-weight: var(--ui-weight-semibold, 600);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+/* The words, with their line breaks kept. Six lines is a sticky note; the
+   seventh is what the note's own page is for. */
+.nt .nt-note-body {
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--ui-text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.nt .nt-note-foot {
+    margin-top: auto;
+    color: var(--ui-text-secondary);
+    font-size: 11px;
+}
+
+/* --------------------------------------------------------------------- dots */
+
+.nt .nt-dot {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--nt-accent, var(--ui-text-secondary));
+    vertical-align: middle;
+}
+
+/* ------------------------------------------------------------------- badges */
+
+.nt .nt-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border: 1px solid var(--ui-border);
+    border-radius: 999px;
+    background: var(--ui-nested-surface);
+    color: var(--ui-text-secondary);
+    font-size: 11px;
+    font-weight: var(--ui-weight-semibold, 600);
+    white-space: nowrap;
+}
+
+.nt .nt-badge--desk {
+    border-color: rgba(16, 185, 129, .35);
+    background: rgba(16, 185, 129, .10);
+    color: var(--ui-success);
+}
+
+.nt .nt-badge--pinned {
+    border-color: rgba(245, 158, 11, .35);
+    background: rgba(245, 158, 11, .12);
+    color: var(--ui-warning);
+}
+
+/* ------------------------------------------------------------------- tables */
+
+.nt .nt-cell-sub {
+    display: block;
+    margin-top: 2px;
+    color: var(--ui-text-secondary);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.nt .nt-col-actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.nt .nt-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------------- the page */
+
+.nt-edit .nt-edit-grid {
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+}
+
+/* The full-width field: the shared grid is two columns, and a title or a body
+   that shares a row with anything is a field that reads as a sidebar. */
+.nt .master-field.full {
+    grid-column: 1 / -1;
+}
+
+.nt .nt-edit-pin {
+    align-self: end;
+    margin: 0 0 6px;
+}
+
+.nt .nt-edit-actions {
+    display: grid;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.nt .nt-edit-actions .master-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+/* ---------------------------------------------------------------- responsive */
+
+@media (max-width: 991px) {
+    .nt-edit .nt-edit-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 767px) {
+    .nt .nt-board {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .nt .nt-compose-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .nt .nt-compose-foot > .master-btn {
+        margin-left: 0;
+        width: 100%;
+        justify-content: center;
+    }
+}

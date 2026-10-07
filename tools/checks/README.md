@@ -54,6 +54,13 @@ node tools/checks/projects-check.cjs  # the projects list is the shared master-l
                                       # every class a screen names carried by a rule, and the
                                       # client following a project through the login portal
                                       # rather than the removed token link
+node tools/checks/notes-check.cjs     # the notes module: a note is private to the login that wrote
+                                      # it — one owner scope and one row door (a 404 for anybody
+                                      # else), one writer, one colour vocabulary with a rule and
+                                      # a dark-theme value per colour, one query read twice (the
+                                      # board and the table), chip counts with the chip lifted,
+                                      # a capped board that says it is capped, and the module
+                                      # sheet owning no shared class
 node tools/checks/employees-check.cjs # the employee side of the user module: the office door is
                                       # on the whole admin group, no personal route takes a user id,
                                       # a file is ownership-checked before it is served, a draft

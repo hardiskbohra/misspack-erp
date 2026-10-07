@@ -93,6 +93,7 @@ check('vendor and project indexes provide a quick-detail drawer example',
     && /<x-drawer id="projectQuickDetails"/.test(projectView));
 
 const filterDrawerPages = [
+    'resources/views/notes/index.blade.php',
     'resources/views/clients/index.blade.php',
     'resources/views/users/index.blade.php',
     'resources/views/office_services/index.blade.php',

@@ -47,6 +47,7 @@ use App\Http\Controllers\ClientPortalProductController;
 use App\Http\Controllers\ClientPortalProjectController;
 use App\Http\Controllers\ClientPortalShipmentController;
 use App\Http\Controllers\GlobalSearchController;
+use App\Http\Controllers\NoteController;
 use App\Http\Controllers\OfficeAlertController;
 use App\Http\Controllers\OfficeBriefingSettingController;
 use App\Http\Controllers\OrganisationController;
@@ -450,6 +451,27 @@ Route::middleware('auth')->group(function () {
     Route::get('/account', [AccountController::class, 'index'])->name('account.index');
     Route::put('/account/profile', [AccountController::class, 'updateProfile'])->name('account.profile.update');
     Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password.update');
+
+    /* Notes — the sticky notes off your desk, and the one page in this file
+       that belongs to the *login* rather than to a role. It sits outside the
+       `office` group, because an employee keeps notes too and the middleware
+       would turn them around at the door; and outside `/my`, because `/my` is
+       one person's record and this is whoever is signed in. So it is the only
+       screen both halves of the application may open — which is exactly why
+       the note routes take a note id and never a user id: the person is the
+       session, and `NoteController::mine()` looks the row up inside their own
+       notes. */
+    Route::prefix('notes')->name('notes.')->group(function () {
+        Route::get('/', [NoteController::class, 'index'])->name('index');
+        Route::post('/', [NoteController::class, 'store'])->name('store');
+        Route::get('/{note}/edit', [NoteController::class, 'edit'])->name('edit');
+        Route::put('/{note}', [NoteController::class, 'update'])->name('update');
+        /* The two toggles are one URL each: the button's label and the note's
+           own state decide the direction, so there is nothing to keep in step. */
+        Route::patch('/{note}/pin', [NoteController::class, 'pin'])->name('pin');
+        Route::patch('/{note}/archive', [NoteController::class, 'archive'])->name('archive');
+        Route::delete('/{note}', [NoteController::class, 'destroy'])->name('destroy');
+    });
 
 });
 

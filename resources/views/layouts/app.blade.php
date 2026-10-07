@@ -64,6 +64,7 @@
 </head>
 @php
     $uiModule = match (true) {
+        request()->routeIs('notes.*') => 'notes',
         request()->routeIs('shipments.*') => 'shipments',
         request()->routeIs('clients.*') => 'clients',
         request()->routeIs('cashflows.*') => 'cashflows',
@@ -86,6 +87,9 @@
             ['label' => 'My Salary', 'route' => 'my.salary', 'active' => 'my.salary', 'icon' => 'fa-solid fa-indian-rupee-sign'],
             ['label' => 'My Documents', 'route' => 'my.documents', 'active' => 'my.documents*', 'icon' => 'fa-regular fa-folder-open'],
             ['label' => 'My Profile', 'route' => 'my.profile', 'active' => 'my.profile*', 'icon' => 'fa-regular fa-id-card'],
+            /* The one item here that is neither their record nor the office's:
+               notes are private to the login, whoever is holding it. */
+            ['label' => 'Notes', 'route' => 'notes.index', 'active' => 'notes.*', 'icon' => 'fa-regular fa-note-sticky'],
         ];
 
         $sidebarItems = Auth::user() && Auth::user()->isEmployee() ? $employeeItems : [
@@ -120,6 +124,10 @@
             ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'icon' => 'fas fa-users-cog'],
             ['label' => 'Organisation', 'route' => 'organisation.settings', 'active' => 'organisation.*', 'icon' => 'fas fa-building'],
             ['label' => 'Briefings', 'route' => 'office-alerts.settings', 'active' => 'office-alerts.settings*', 'icon' => 'fas fa-bell'],
+            /* Personal, not management: the office's own notes are private to
+               the office's own login, exactly as an employee's are to theirs. */
+            ['section' => 'Personal'],
+            ['label' => 'Notes', 'route' => 'notes.index', 'active' => 'notes.*', 'icon' => 'fa-regular fa-note-sticky'],
         ];
     @endphp
     
