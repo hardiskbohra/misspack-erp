@@ -317,8 +317,10 @@ check('the share dialog has a trigger and an owner',
 check('the nav reaches the new surface',
     /'label' => 'Statements'/.test(read('resources/views/layouts/app.blade.php'))
     && /cashflows\.statements/.test(read('resources/views/layouts/app.blade.php')));
+/* The three exclusions, in that order — the array may hold more (the recurring
+   pages have their own item), so the guard reads the entries, not the literal. */
 check('the ledger item no longer lights up while a statement is open',
-    /'except' => \['cashflows\.documents', 'cashflows\.statements', 'cashflows\.statements\.\*'\]/.test(read('resources/views/layouts/app.blade.php')));
+    /'except' => \[[^\]]*'cashflows\.documents', 'cashflows\.statements', 'cashflows\.statements\.\*'/.test(read('resources/views/layouts/app.blade.php')));
 check('a party page offers its own statement',
     /partyType' => 'client', 'party' => \$client->id/.test(read('resources/views/clients/show.blade.php'))
     && /partyType' => 'vendor', 'party' => \$vendor->id/.test(read('resources/views/vendors/show.blade.php')));

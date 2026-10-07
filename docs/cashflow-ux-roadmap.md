@@ -65,6 +65,17 @@ subscriptions: a rule (amount, category, party, day, account) that drafts the en
 on its date and waits for confirmation. Also "expected but not recorded" reminders
 for bills falling due.
 
+*Shipped (`docs/recurring-cashflow.md`), with one deliberate reading of "drafts
+the entry on its date":* the entry is drafted **when it is approved, on or after
+its effective date** — never ahead of it. A rule is written as a draft, approved
+once (from an ask, so every live rule records who wanted it), and the plan then
+**asks** for each date separately on the morning it falls due, through the office
+briefing system's own alert (`recurring_due`, switches off with the other
+sources). The date arithmetic is one class (`RecurrenceSchedule`), the plan is a
+window rather than the whole promise, and both the planner (`RecurrencePlan`) and
+the posting (`RecurrencePosting`) have one writer each, so a double-click cannot
+pay a salary twice.
+
 ## Wave 2 — reporting and sharing
 
 **2A. Dimensions and the report builder.** Promote `employee` from free text to a

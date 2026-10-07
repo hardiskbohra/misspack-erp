@@ -14,6 +14,7 @@ use App\Http\Controllers\OfficeServiceController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CashflowAttachmentController;
 use App\Http\Controllers\CashflowController;
+use App\Http\Controllers\CashflowRecurrenceController;
 use App\Http\Controllers\CashflowSettingController;
 use App\Http\Controllers\PartyStatementController;
 use App\Http\Controllers\ClientPortalStatementController;
@@ -400,6 +401,40 @@ Route::middleware('auth')->group(function () {
         Route::get('/cashflows/statements/{partyType}/{party}', [PartyStatementController::class, 'show'])
             ->whereIn('partyType', ['client', 'vendor'])
             ->name('cashflows.statements.show');
+
+        /* --------------------------------------------------------- recurring
+           Standing payments: salary, rent, the monthly suppliers. A rule is
+           written as a draft, approved once, and from then on it asks for each
+           date on the day the money is due — see
+           `docs/recurring-cashflow.md`.
+
+           These routes are declared **before** `Route::resource('cashflows')`
+           below, and that is load-bearing: `/cashflows/recurring` would
+           otherwise be read as `/cashflows/{cashflow}` with an id of
+           "recurring", and the module's front page would be a 404. The documents
+           and statements blocks above sit here for the same reason.
+        */
+        Route::prefix('cashflows/recurring')->name('cashflows.recurring.')->group(function () {
+            Route::get('/', [CashflowRecurrenceController::class, 'index'])->name('index');
+            Route::post('/', [CashflowRecurrenceController::class, 'store'])->name('store');
+            Route::get('/{recurrence}', [CashflowRecurrenceController::class, 'show'])->whereNumber('recurrence')->name('show');
+            Route::put('/{recurrence}', [CashflowRecurrenceController::class, 'update'])->whereNumber('recurrence')->name('update');
+            Route::delete('/{recurrence}', [CashflowRecurrenceController::class, 'destroy'])->whereNumber('recurrence')->name('destroy');
+
+            /* The rule's own doors: ask, decide, hold, stop. */
+            Route::patch('/{recurrence}/request', [CashflowRecurrenceController::class, 'requestApproval'])->whereNumber('recurrence')->name('request');
+            Route::patch('/{recurrence}/approve', [CashflowRecurrenceController::class, 'approve'])->whereNumber('recurrence')->name('approve');
+            Route::patch('/{recurrence}/send-back', [CashflowRecurrenceController::class, 'sendBack'])->whereNumber('recurrence')->name('sendBack');
+            Route::patch('/{recurrence}/pause', [CashflowRecurrenceController::class, 'pause'])->whereNumber('recurrence')->name('pause');
+            Route::patch('/{recurrence}/resume', [CashflowRecurrenceController::class, 'resume'])->whereNumber('recurrence')->name('resume');
+            Route::patch('/{recurrence}/end', [CashflowRecurrenceController::class, 'end'])->whereNumber('recurrence')->name('end');
+
+            /* And the two answers to one date's ask. */
+            Route::patch('/{recurrence}/occurrences/{occurrence}/approve', [CashflowRecurrenceController::class, 'approveOccurrence'])
+                ->whereNumber('recurrence')->whereNumber('occurrence')->name('occurrences.approve');
+            Route::patch('/{recurrence}/occurrences/{occurrence}/skip', [CashflowRecurrenceController::class, 'skipOccurrence'])
+                ->whereNumber('recurrence')->whereNumber('occurrence')->name('occurrences.skip');
+        });
 
         Route::post('/cashflows/saved-views', [CashflowController::class, 'storeSavedView'])->name('cashflows.saved-views.store');
         Route::delete('/cashflows/saved-views/{savedView}', [CashflowController::class, 'destroySavedView'])->name('cashflows.saved-views.destroy');

@@ -12,6 +12,7 @@
         + Quick Entry
     </button>
     <a class="master-btn master-btn-soft" href="{{ route('cashflows.create') }}">Detailed Form</a>
+    <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.recurring.index') }}">Recurring</a>
     <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.documents') }}">Documents</a>
     <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.reports') }}">Reports</a>
     <a class="master-btn master-btn-ghost desktop-only" href="{{ route('cashflows.settings.index') }}">Settings</a>

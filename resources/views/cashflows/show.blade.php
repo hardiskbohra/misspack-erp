@@ -45,6 +45,10 @@
                     <span class="emp-pill {{ $entry->accounting_status === 'reconciled' ? 'is-ok' : ($entry->accounting_status === 'pending' ? 'is-warn' : 'is-off') }}">{{ $entry->statusLabel() }}</span>
                     @if ($entry->category)<span class="emp-pill is-off">{{ $entry->category->name }}</span>@endif
                     @if ($entry->partyLabel())<span class="emp-pill is-off">{{ $entry->partyLabel() }}</span>@endif
+                    @if ($entry->recurrenceOccurrence?->rule)
+                        <a class="emp-pill is-info" href="{{ route('cashflows.recurring.show', $entry->recurrenceOccurrence->rule) }}"
+                            title="Posted by the recurring rule {{ $entry->recurrenceOccurrence->rule->title }}">↻ Recurring rule</a>
+                    @endif
                 </p>
             </div>
         </div>

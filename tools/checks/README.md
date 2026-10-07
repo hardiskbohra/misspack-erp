@@ -61,6 +61,11 @@ node tools/checks/notes-check.cjs     # the notes module: a note is private to t
                                       # board and the table), chip counts with the chip lifted,
                                       # a capped board that says it is capped, and the module
                                       # sheet owning no shared class
+node tools/checks/recurring-check.cjs # standing cashflow rules: a rule is not a payment — one
+                                      # calculator with the anchor carried, a window planned as a
+                                      # reconciliation, approval asked for on the effective date and
+                                      # never before it, one notifier and one posting, and a rule
+                                      # that is never editable once it has posted
 node tools/checks/employees-check.cjs # the employee side of the user module: the office door is
                                       # on the whole admin group, no personal route takes a user id,
                                       # a file is ownership-checked before it is served, a draft

@@ -41,6 +41,7 @@ class OfficeSetting extends Model
                 'digest_in_transit' => true,
                 'digest_hold' => true,
                 'digest_cashflow' => true,
+                'recurring_due' => true,
             ],
         ];
     }
@@ -55,6 +56,7 @@ class OfficeSetting extends Model
             'digest_in_transit' => ['In-transit digest', 'Daily follow-up list (attention, not critical).'],
             'digest_hold' => ['Hold digest', 'Daily count of files on hold or delayed (attention).'],
             'digest_cashflow' => ['Pending cashflow', 'Daily count of pending ledger rows — Accounts.'],
+            'recurring_due' => ['Recurring payment due', 'When a recurring rule reaches its effective date and needs approval — Accounts.'],
         ];
     }
 

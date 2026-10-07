@@ -105,6 +105,7 @@ const filterDrawerPages = [
     'resources/views/shipments/index.blade.php',
     'resources/views/sales_invoices/index.blade.php',
     'resources/views/cashflows/index.blade.php',
+    'resources/views/cashflows/recurring/index.blade.php',
     'resources/views/cashflows/documents.blade.php',
     'resources/views/cashflows/statements.blade.php',
     'resources/views/cashflows/statement-show.blade.php',

@@ -113,7 +113,11 @@
                becomes — the same way Invoices holds a proforma and a tax invoice. */
             ['label' => 'Purchases', 'route' => 'purchase-invoices.index', 'active' => 'purchase-invoices.*', 'icon' => 'fas fa-file-invoice'],
             ['section' => 'Accounts'],
-            ['label' => 'Cashflow', 'route' => 'cashflows.index', 'active' => 'cashflows.*', 'except' => ['cashflows.documents', 'cashflows.statements', 'cashflows.statements.*'], 'icon' => 'fa-solid fa-scale-balanced'],
+            ['label' => 'Cashflow', 'route' => 'cashflows.index', 'active' => 'cashflows.*', 'except' => ['cashflows.documents', 'cashflows.statements', 'cashflows.statements.*', 'cashflows.recurring', 'cashflows.recurring.*'], 'icon' => 'fa-solid fa-scale-balanced'],
+            /* The standing payments. Next to Cashflow and not inside it: this is
+               a list you work from (today's approvals), not a page you visit to
+               look at the ledger. */
+            ['label' => 'Recurring', 'route' => 'cashflows.recurring.index', 'active' => 'cashflows.recurring.*', 'icon' => 'fa-solid fa-arrows-rotate'],
             /* The archive is a page of the module, not a second module: it sits
                here so a month's paperwork is one click from anywhere, and the
                Cashflow item above stays dark while it is open. */

@@ -45,6 +45,19 @@ class CashflowEntry extends Model
         return $this->hasMany(CashflowAttachment::class, 'cashflow_entry_id');
     }
 
+    /**
+     * The recurring date this entry was posted from, if it was.
+     *
+     * One-way and optional: an entry written by hand has none, and a recurring
+     * entry reads back through it to the rule and its ask. The link lives on the
+     * occurrence rather than a column here, so nothing on the ledger has to be
+     * kept in step with a rule.
+     */
+    public function recurrenceOccurrence()
+    {
+        return $this->hasOne(CashflowRecurrenceOccurrence::class, 'cashflow_entry_id');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
