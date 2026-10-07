@@ -94,6 +94,9 @@ const files = {
     report: 'resources/views/assets/depreciation.blade.php',
     settings: 'resources/views/settings/assets.blade.php',
     overview: 'resources/views/assets/partials/tab-overview.blade.php',
+    tabAllocation: 'resources/views/assets/partials/tab-allocation.blade.php',
+    tabMaintenance: 'resources/views/assets/partials/tab-maintenance.blade.php',
+    tabDepreciation: 'resources/views/assets/partials/tab-depreciation.blade.php',
     editDialog: 'resources/views/assets/partials/modal-edit.blade.php',
     dispose: 'resources/views/assets/partials/modal-dispose.blade.php',
     form: 'resources/views/assets/partials/asset-form.blade.php',
@@ -538,6 +541,106 @@ check('the export keeps the detail the screens stopped repeating',
     && has(code.controller, 'Warranty End Date')
     && has(code.controller, 'Accumulated Depreciation'),
     'a schedule that leaves the building is read a line at a time');
+
+/* ─────────────────────────────────────────── the record's panels, carded ──
+   A tab panel is the soft surface (`.master-tabs-panels`), and the guideline is
+   explicit about what lives on it: cards are the card surface. The overview tab
+   always did that; the three data tabs drew their head, their table and their
+   empty state straight onto the tint — which is why the schedule read as a table
+   floating on a panel. Every block of these three panels is a card now, and the
+   schedule is the four columns a single asset's curve is read in. */
+
+const panelViews = {
+    allocation: src.tabAllocation,
+    maintenance: src.tabMaintenance,
+    depreciation: src.tabDepreciation,
+};
+
+const cardFaults = Object.entries(panelViews).flatMap(([name, view]) => {
+    const faults = [];
+
+    /* The head is the first block of the panel and it opens the card, so the two
+       are one section: a `ast-panel-head` a screen away from the card it opened
+       can also be the head of nothing. */
+    if (!/<section class="master-card master-card--flat ast-block">\s*\n\s*<div class="ast-panel-head">/.test(view)) {
+        faults.push(`${name}: the head is not a card`);
+    }
+
+    /* And the list is the card the table draws its rows in. A wrapper's own card
+       is the `ast-table-card` opening within the 220 characters before it — so a
+       second bare table riding along behind the first is caught, and the card
+       that holds the empty state instead is not counted against it. */
+    const wrappers = [...view.matchAll(/<div class="master-table-wrap/g)].map((m) => m.index);
+    const bare = wrappers.filter(
+        (at) => !view.slice(Math.max(0, at - 220), at).includes('ast-table-card')
+    ).length;
+
+    if (wrappers.length === 0) faults.push(`${name}: no table`);
+    if (bare > 0) faults.push(`${name}: ${bare} table(s) not in a card`);
+
+    /* The empty state is a block too: 44px of its own padding on a bare panel is
+       a message with no surface under it. */
+    if (!/<section class="master-card master-card--flat ast-table-card">\s*\n\s*<div class="master-list-empty">/.test(view)) {
+        faults.push(`${name}: the empty state is not a card`);
+    }
+
+    return faults;
+});
+
+check('the record\'s data tabs draw every block as a card',
+    Object.keys(panelViews).length === 3 && cardFaults.length === 0,
+    cardFaults.join(' · '));
+
+/* The schedule is read in four columns: the year, what it opened at, what the
+   year charged, what it closed at. "Charged from" and "Charged to" carried the
+   same 1 April – 31 March on every full year; the pro-rated window is a line
+   under the year it belongs to, on the only rows where it differs. */
+const scheduleHeads = headsIn(src.tabDepreciation);
+
+check('the year-by-year schedule is four columns, with the pro-rated window under its year',
+    JSON.stringify(scheduleHeads) === JSON.stringify(
+        ['Financial year', 'Opening', 'Charge for the year', 'Closing'])
+    && !/data-label="Charged (?:from|to)"/.test(src.tabDepreciation)
+    && /\$row\['days'\] < \$row\['days_in_year'\][\s\S]{0,220}?row\['from'\]->format\([\s\S]{0,120}?row\['to'\]->format\(/.test(src.tabDepreciation)
+    && /\$row\['days'\] < \$row\['days_in_year'\][\s\S]{0,240}?days_in_year'\]\) }} days/.test(src.tabDepreciation)
+    && !has(src.tabDepreciation, '<tfoot>')
+    && [...src.tabDepreciation.matchAll(/<td\b[^>]*>/g)].every((m) => /data-label="/.test(m[0])),
+    `${scheduleHeads.join(' · ')}`);
+
+/* The two figures the footer used to print — written off to date and net book
+   value today — are facts in the card above, once. The footer printed them
+   again under "Charge for the year" and "Closing", which are not the totals of
+   those columns: the charges add up to the depreciable value, not to what has
+   been charged so far. */
+const recipeBlock = (src.tabDepreciation.match(/<div class="ast-recipe">([\s\S]*?)<\/section>/) || [])[1] || '';
+
+check('where the curve stands today is a fact above the table, not a footer under it',
+    recipeBlock.includes('$accumulated') && recipeBlock.includes('$netBookValue')
+    && !/<tfoot>/.test(src.tabDepreciation),
+    'a footer that is not the sum of the column above it is a figure the reader adds up twice');
+
+check('the fact grid is counted, not fitted, so six facts leave no stray one',
+    /* One declaration block at a time: `[^}]` cannot cross the closing brace, so
+       the `.ast-record-facts` rule beside it — which is a fitted grid of three
+       facts in a header, and stays one — cannot answer for the recipe. */
+    !/\.ast-recipe\s*\{[^}]*auto-fit/.test(plain(src.sheet))
+    && /\.ast-recipe\s*\{[^}]*repeat\(3,/.test(plain(src.sheet))
+    && /\.ast-recipe\s*\{[^}]*repeat\(2,/.test(plain(src.sheet))
+    /* …and the count the grid is built for: three columns of a fixed six are two
+       full rows, and a seventh fact would sit on a third row alone. */
+    && (src.tabDepreciation.match(/ast-fact-label/g) || []).length === 6,
+    `facts: ${(src.tabDepreciation.match(/ast-fact-label/g) || []).length}`);
+
+const footAt = src.tabDepreciation.indexOf('<p class="ast-table-foot">');
+const wrapAt = src.tabDepreciation.indexOf('<div class="master-table-wrap');
+
+check('the method\'s own footnote sits on the table card, with its own inset',
+    footAt > wrapAt && wrapAt > -1
+    /* …on the same card as the table: no `</section>` between the two closes it
+       first, which is what a footnote moved out to the panel would look like. */
+    && !src.tabDepreciation.slice(wrapAt, footAt).includes('</section>')
+    && /\.ast-table-foot\s*\{[^}]*padding:\s*14px 16px/.test(plain(src.sheet)),
+    'a block inside a card owes its own inset, the way the applied-filter strip does');
 
 check('the drawer offers a filter for every criterion the register answers',
     ['category', 'location', 'department', 'custodian', 'condition', 'warranty', 'verification', 'service', 'sort']

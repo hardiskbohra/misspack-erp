@@ -227,9 +227,12 @@
 .ast-record-facts,
 .ast-recipe {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     gap: 14px 22px;
     margin: 0;
+}
+
+.ast-record-facts {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 }
 
 .ast-record-facts > div,
@@ -264,13 +267,34 @@
 }
 
 /* The recipe block sits on the muted surface: it is a reading, not a record —
-   the four numbers the depreciation is computed from. */
+   the numbers the depreciation is computed from, and where the curve stands
+   today. Inside a card it owes the distance from the head above it as well as
+   its own inset, which the panel's flex gap used to provide.
+
+   Three columns, counted rather than fitted: an `auto-fit` grid lays down as
+   many tracks as the window allows, so six facts rendered as five and a stray
+   one on every width where the arithmetic came out that way — the same
+   leftover-card shape the list pages had. Six facts are two tidy rows of three;
+   the overview's three are one row. */
 .ast-recipe {
-    margin: 4px 0 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 16px 0 0;
     padding: 16px 18px;
     border: 1px solid var(--ui-border);
     border-radius: var(--ui-radius-nested);
     background: var(--ui-muted-surface);
+}
+
+/* The footnote on a table card: a block inside a card whose rows run edge to
+   edge owes its own inset and a hairline above it — the same shape the list
+   surface gives an applied-filter strip under a toolbar. */
+.ast-table-foot {
+    margin: 0;
+    padding: 14px 16px 16px;
+    border-top: 1px solid var(--ui-border);
+    color: var(--ui-text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
 }
 
 /* ------------------------------------------------------------------ panels */
@@ -523,10 +547,15 @@
     }
 
     .ast-record-facts,
-    .ast-recipe,
     .ast-facts,
     .ast-panel-stats {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    /* Six facts, two up: the two-up metrics the guideline asks for below the
+       desktop bands, and still a grid of its own rather than a fitted one. */
+    .ast-recipe {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 

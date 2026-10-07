@@ -283,6 +283,34 @@ tab. An unknown `?tab=` is the overview, not an error.
   value. Where the method is WDV the page says why the first year is the biggest;
   where it is SLM it says why the first and last rows are the smallest.
 
+**Every block of these panels is a card.** The panel itself is the soft surface
+(`.master-tabs-panels`), and the guideline is explicit about what lives on it:
+cards are the card surface. The overview always did that; the three data tabs
+drew their head, their table and their empty state straight onto the tint, so the
+schedule read as a table floating on a panel. Each one is now a head card (the
+title, the sentence and the doors) over a table card, or — when there is nothing
+to list — an empty state in a table card, which is the shape the register's own
+empty state has.
+
+**The schedule is four columns**, because a single asset's curve is read in four:
+the year, what it opened at, what the year charged, what it closed at. *Charged
+from* and *Charged to* carried the same 1 April – 31 March on every full year;
+the pro-rated window is a line under the year it belongs to, on the only rows
+where it differs from the year, beside the day count that explains the arithmetic.
+And **where the curve stands today is a fact above the table, not a footer under
+it**: the footer printed the asset's written-off-to-date and net-book-value-today
+under *Charge for the year* and *Closing* — the columns those numbers are not the
+sums of (the year's charges add up to the depreciable value, not to what has been
+charged so far). Both figures are facts in the card above, once.
+
+The facts are six, laid out **three across** — counted, not fitted. With
+`auto-fit` the browser lays down as many tracks as the window allows, which is how
+six facts rendered as five and a stray one on every desktop width where the
+arithmetic came out that way: the same leftover-card shape the list strips had.
+The recipe box's block (and its own inset) is the module's, and the method's
+footnote sits under its table as a block on the table card, with its own inset
+and a hairline above it — the shape the list surface gives an applied-filter strip.
+
 ---
 
 ## 7. The year — the company's depreciation schedule
