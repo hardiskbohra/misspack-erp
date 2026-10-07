@@ -89,7 +89,7 @@
              destructive one is here and not on the board on purpose: a delete
              button beside every sticky is a delete button one mis-click away
              from a note you were only reading. --}}
-        <aside class="master-card master-card--flat nt-card nt-edit-side" aria-labelledby="ntNoteFactsTitle">
+        <aside class="master-card master-card--flat nt-card" aria-labelledby="ntNoteFactsTitle">
             <p class="master-eyebrow">This note</p>
             <h2 class="master-section-title" id="ntNoteFactsTitle">{{ $note->title }}</h2>
 

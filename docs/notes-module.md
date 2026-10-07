@@ -2,7 +2,7 @@
 
 **Status: built.** One screen with a board and a table, one note's own page, and
 one rule that everything else is arranged around: **a note belongs to the login
-that wrote it.** Its guard rails are `tools/checks/notes-check.cjs` (56 checks),
+that wrote it.** Its guard rails are `tools/checks/notes-check.cjs` (67 checks),
 and the two rules a source check cannot prove — that a missing owner matches no
 rows, and that a hand-typed filter is the default — are held by
 `tests/Unit/NotesRulesTest.php` (`php artisan test --filter=NotesRulesTest`).
@@ -197,26 +197,83 @@ paginated and shows its range.
 `resources/views/notes/index.blade.php`:
 
 1. **four figures** (the shared `.master-stats`);
-2. **the composer** — title, colour, the words, a pin box, one button. Quick
-   capture is the first thing on the page because that is the moment a note is
-   worth writing;
-3. **search and filter** — the chips, the search box, the filter drawer, the
+2. **search and filter** — the chips, the search box, the filter drawer, the
    applied strip. The chips are links, so the search form carries the chips it
    does not own as hidden fields: without them, typing a search silently drops
    the state and the colour the reader had chosen;
-4. **the board** — sticky cards, 240px minimum, auto-filled. Each card is one
+3. **the board** — sticky cards, 240px minimum, auto-filled. Each card is one
    link to the note's page and holds **no control**: a button inside a link is
    two controls for one click, and the board is the place you *read* your desk.
    The card prints the body with its line breaks kept (`nl2br` after `e()`), the
    way the invoice record prints a line's description;
-5. **the table** — the same rows with the colour, the state, when it was last
-   edited, and the working controls: Open, Pin/Unpin, File away/Restore. Rows
-   become labelled cards on a phone (`.ui-mobile-cards` + `data-label`).
+4. **the list** — the same rows, built to fit as many notes on one screen as the
+   words allow.
+
+### The composer is a dialog
+
+Writing a note is a thing you stop and do; the page it leaves behind is the desk
+you read. So the composer is not a card at the top of the page any more: it is
+`#noteCreateModal`, opened from three controls — the topbar action, the empty
+state and the list's own toolbar — and it wears the shared modal vocabulary
+(`.master-modal-card`, `.master-modal-header/heading/icon/title/subtitle/close`,
+`.master-modal-body`, `.master-modal-grid`, `.master-modal-footer`) with the four
+things a note has: title, colour, where it goes (the pin box) and the words.
+
+It also **comes back**. A save that fails validation redirects here with the
+typing kept in `old()`, a hidden `_dialog` field names the dialog it came from,
+and the marker at the foot of the page hands that name to `notes.js`, which
+reopens the dialog and puts the cursor in the title. Nobody retypes a note, and
+no error is left pointing at a form that is not on the screen.
+
+### The list is four columns, on purpose
+
+A column is the most expensive thing a table spends, so the list spends four —
+Note, State, Edited, Actions — and nothing else:
+
+- the **colour** is not a column: it is the dot at the head of the title cell,
+  which names itself for a screen reader (`role="img"` + `aria-label="Blue
+  note"`) and costs no white space of its own;
+- the **pinned** mark is one glyph beside the title, for the same reason — a
+  column for one glyph is a column of white;
+- the **note** cell is the title and, under it, **one line** of the body, cut
+  with an ellipsis and naming the whole sentence in its tooltip. The table is
+  where a note is found, not where it is read: the note itself is a click away,
+  and the whole row is that click (`data-href` + the shared
+  `MasterList.rowNavigation`, which skips clicks landing on a link, a button, a
+  form or the row menu);
+- **Edited** says "3 hours", not "3 hours ago" (`Note::editedShortLabel()`), the
+  exact moment in the cell's tooltip;
+- every action lives in the shared **row menu** (`.master-dropdown`): Open, and
+  the two toggles — Pin/Unpin and File away/Restore. Three buttons per row became
+  one, and each item gets room for its label, which a row of small buttons never
+  had.
+
+The table wears its own class (`nt-table`) for one reason: to drop the shared
+`.master-table`'s `min-width: 1280px` floor. That floor is for the eight-to-ten
+column ledgers — on a four-column list it is a horizontal scrollbar for empty
+space.
 
 Both `pin` and `archive` are **one URL with two directions**: the button's label
 and the note's own state decide which way it goes, so there is nothing to keep in
 step. Deleting is not on the page at all — it is on the note's own page, where
 the button is not a mis-click away from a sticky you were only reading.
+
+### Cards and their inset
+
+The shared `.master-card` is a surface — a border, a radius, a shadow — and it
+has **no padding at all**: everything drawn inside one owes its own inset. A card
+that holds prose, figures or controls takes the guideline's 20–24px
+(`.nt .nt-card { padding: 20px 22px }`), at `18px 16px` on a phone. The card that
+holds the *table* deliberately wears no such class: its bar and its rows carry
+the shared list's own 16px rhythm and run to the card's edges, which is what
+keeps the header and the body on one column grid.
+
+`notes.css` owns that inset and the module's own cells, and nothing else's: the
+card, the button, the field, the table, the tab, the badge and the modal all
+belong to the shared sheets. `notes-check` enforces that from the other side —
+every `nt-*` class a notes view wears has to be declared in the sheet or toggled
+by `notes.js`, which is the module-local half of design-check's
+shared-vocabulary rule.
 
 `resources/views/notes/edit.blade.php` is the note's page: the words in a form,
 a facts card (colour, state, written, last edited) and the three things that can
@@ -275,7 +332,7 @@ control would have been two colours depending on its tag.
 
 ## 10. The guard rails
 
-`tools/checks/notes-check.cjs` — 56 checks, dependency-free, run with
+`tools/checks/notes-check.cjs` — 67 checks, dependency-free, run with
 `node tools/checks/notes-check.cjs`. It reads source with comments stripped, so
 the prose in these files can explain a rule without answering a check. What it
 holds:
@@ -294,6 +351,18 @@ holds:
 - the page: the shared shell classes, the shared drawer, a criterion asked once,
   the chips carried through a search, a form for every write, the card with no
   control inside it, `nl2br(e(…))`, the empty state's way out, the mobile cards;
+- the inset: `.nt .nt-card` carrying 20–22px, and the table's card **not** being
+  one of those cards (it takes the shared list's own rhythm instead);
+- the dialog: the composer is `.master-modal` + the store route + `_dialog`, it
+  is opened from at least three controls by `notes.js` through `MasterModal`,
+  it reopens from `[data-open-dialog]` when the server sent errors back, it
+  keeps `old()` on every field, it wears the shared modal vocabulary, and the
+  page has no inline composer left;
+- the list: exactly four `<th>`s, the colour as a dot instead of a column, the
+  one-line excerpt with its tooltip, `editedShortLabel()`, the actions inside the
+  shared row menu (one pin form, one archive form, no button markup at all), the
+  row opening its note through the shared row navigation, and the module's own
+  `nt-*` vocabulary declared by its sheet;
 - the shell and the paperwork: both menus, the module mapping, the topbar door
   (a link, outside the office-only block, beside the search control, labelled,
   and marked as the current page — with the shell's own button required to carry
@@ -325,6 +394,7 @@ app/Http/Controllers/NoteController.php
 resources/views/notes/index.blade.php
 resources/views/notes/edit.blade.php
 resources/views/notes/partials/note-card.blade.php
+public/assets/js/notes.js
 public/assets/css/notes.css
 tools/checks/notes-check.cjs
 tests/Unit/NotesRulesTest.php

@@ -3,9 +3,12 @@
 @section('page-title', 'Notes')
 
 @section('page-actions')
-    <a class="master-btn master-btn-primary" href="#noteComposer">
+    {{-- The one action on this page opens the composer. It is a button and not a
+         link because it opens a dialog — and it is here, in the topbar, so a note
+         is two clicks from anywhere rather than a trip to the top of the page. --}}
+    <button type="button" class="master-btn master-btn-primary" data-open-note-modal>
         <i class="fa-solid fa-plus" aria-hidden="true"></i> New note
-    </a>
+    </button>
 @endsection
 
 @section('content')
@@ -72,61 +75,6 @@
             </div>
         </div>
     </div>
-
-    {{-- ────────────────────────────────────────────────────────── a new note --}}
-    <section class="master-card master-card--flat nt-card" id="noteComposer" aria-labelledby="ntComposerTitle">
-        <div class="nt-card-head">
-            <div>
-                <p class="master-eyebrow">Quick capture</p>
-                <h2 class="master-section-title" id="ntComposerTitle">A new note</h2>
-            </div>
-            <p class="master-help">Private to this login — nobody else, not even the office, reads your notes.</p>
-        </div>
-
-        <form method="POST" action="{{ route('notes.store') }}" class="nt-compose-form">
-            @csrf
-
-            <div class="nt-compose-grid">
-                <label class="master-field nt-compose-title">
-                    <span class="master-label">Title</span>
-                    <input class="master-input @error('title') is-invalid @enderror" type="text" name="title"
-                        value="{{ old('title') }}" maxlength="{{ \App\Services\NoteVocabulary::TITLE_LIMIT }}"
-                        placeholder="What is this about?" autocomplete="off" required>
-                    @error('title')
-                        <span class="master-field-error">{{ $message }}</span>
-                    @enderror
-                </label>
-
-                <label class="master-field nt-compose-colour">
-                    <span class="master-label">Colour</span>
-                    <select class="master-select" name="colour">
-                        @foreach ($colourOptions as $key => $label)
-                            <option value="{{ $key }}" @selected(old('colour', \App\Services\NoteVocabulary::DEFAULT_COLOUR) === $key)>
-                                {{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
-                </label>
-
-                <label class="master-field nt-compose-body">
-                    <span class="master-label">The note</span>
-                    <textarea class="master-textarea" name="body" rows="3"
-                        placeholder="Write it as it comes — a list keeps its line breaks.">{{ old('body') }}</textarea>
-                </label>
-
-                <div class="nt-compose-foot">
-                    <label class="master-check nt-compose-pin">
-                        <input type="checkbox" name="is_pinned" value="1" @checked(old('is_pinned'))>
-                        <span>Pin it to the front</span>
-                    </label>
-
-                    <button class="master-btn master-btn-primary" type="submit">
-                        <i class="fa-solid fa-thumbtack" aria-hidden="true"></i> Stick it on the desk
-                    </button>
-                </div>
-            </div>
-        </form>
-    </section>
 
     {{-- ─────────────────────────────────────────────── search and filter --}}
     <section class="master-card master-card--flat" aria-label="Search and filter notes">
@@ -260,7 +208,7 @@
                 </h3>
                 <p class="master-list-empty-text">
                     @if ($filtered)
-                        Nothing left after the chips and filters above. Widen them, or start a fresh note below.
+                        Nothing left after the chips and filters above. Widen them, or start a fresh note.
                     @else
                         Everything you would have written on a sticky note lives here instead — private to this
                         login, searchable, and it never falls behind the keyboard.
@@ -270,9 +218,9 @@
                     @if ($filtered)
                         <a class="master-btn master-btn-soft" href="{{ route('notes.index') }}">Clear the filters</a>
                     @endif
-                    <a class="master-btn master-btn-primary" href="#noteComposer">
+                    <button type="button" class="master-btn master-btn-primary" data-open-note-modal>
                         <i class="fa-solid fa-plus" aria-hidden="true"></i> Write a note
-                    </a>
+                    </button>
                 </div>
             </div>
         @else
@@ -294,72 +242,94 @@
                 </p>
 
                 <div class="master-list-toolbar-actions">
-                    <a class="master-btn master-btn-light master-btn-sm" href="#noteComposer">
+                    <button type="button" class="master-btn master-btn-light master-btn-sm" data-open-note-modal>
                         <i class="fa-solid fa-plus" aria-hidden="true"></i> New note
-                    </a>
+                    </button>
                 </div>
             </div>
 
+            {{-- The list is the working half of the page, so it is built to fit
+                 as many notes on one screen as the words allow: four columns
+                 and no more — the colour rides on the dot beside the title, the
+                 pinned mark rides beside it — one line of the note under the
+                 title, and every action inside a row menu instead of three
+                 buttons per row. --}}
             <div class="master-table-wrap ui-mobile-cards">
-                <table class="master-table">
+                <table class="master-table nt-table">
                     <thead>
                         <tr>
                             <th scope="col">Note</th>
-                            <th scope="col" class="desktop-only">Colour</th>
-                            <th scope="col">State</th>
+                            <th scope="col" class="nt-col-state">State</th>
                             <th scope="col" class="desktop-only">Edited</th>
                             <th scope="col" class="nt-col-actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($notes as $note)
-                            <tr>
+                            <tr class="nt-row is-clickable" data-href="{{ route('notes.edit', $note) }}">
                                 <td data-label="Note">
-                                    <a href="{{ route('notes.edit', $note) }}"><strong>{{ $note->title }}</strong></a>
+                                    <span class="nt-dot nt-dot--{{ $note->colourKey() }}" role="img"
+                                        aria-label="{{ $note->colourLabel() }} note"></span>
+
+                                    @if ($note->is_pinned)
+                                        <span class="nt-pin-mark" role="img" aria-label="Pinned"
+                                            title="Pinned to the front">
+                                            <i class="fa-solid fa-thumbtack" aria-hidden="true"></i>
+                                        </span>
+                                    @endif
+
+                                    <a class="nt-note-link" href="{{ route('notes.edit', $note) }}"
+                                        title="{{ $note->title }}">{{ $note->title }}</a>
+
                                     @if ($note->excerpt() !== '')
-                                        <span class="nt-cell-sub">{{ $note->excerpt() }}</span>
+                                        <span class="nt-cell-sub" title="{{ $note->excerpt(600) }}">{{ $note->excerpt() }}</span>
                                     @endif
                                 </td>
-                                <td class="desktop-only" data-label="Colour">
-                                    <span class="nt-dot nt-dot--{{ $note->colourKey() }}" aria-hidden="true"></span>
-                                    {{ $note->colourLabel() }}
-                                </td>
-                                <td data-label="State">
+
+                                <td class="nt-col-state" data-label="State">
                                     @if ($note->isArchived())
                                         <span class="nt-badge">Filed away</span>
                                     @else
                                         <span class="nt-badge nt-badge--desk">On the desk</span>
                                     @endif
-                                    @if ($note->is_pinned)
-                                        <span class="nt-badge nt-badge--pinned">Pinned</span>
-                                    @endif
                                 </td>
-                                <td class="desktop-only" data-label="Edited">{{ $note->editedLabel() }}</td>
+
+                                <td class="desktop-only nt-when" data-label="Edited">
+                                    <span title="{{ $note->updated_at?->format('d M Y, H:i') }}">{{ $note->editedShortLabel() }}</span>
+                                </td>
+
                                 <td class="nt-col-actions" data-label="">
-                                    <div class="nt-row-actions">
-                                        <a class="master-btn master-btn-soft master-btn-sm"
-                                            href="{{ route('notes.edit', $note) }}">Open</a>
+                                    <div class="master-dropdown">
+                                        <button type="button" class="master-dropdown-toggle"
+                                            aria-label="Actions for {{ $note->title }}" aria-haspopup="true"
+                                            aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="master-dropdown-menu">
+                                            <a href="{{ route('notes.edit', $note) }}">
+                                                <i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i>
+                                                Open the note
+                                            </a>
 
-                                        <form method="POST" action="{{ route('notes.pin', $note) }}">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="pinned" value="{{ $note->is_pinned ? 0 : 1 }}">
-                                            <button class="master-btn master-btn-soft master-btn-sm" type="submit"
-                                                title="{{ $note->is_pinned ? 'Let it fall back into the pile' : 'Stick it to the front' }}">
-                                                <i class="fa-solid fa-thumbtack" aria-hidden="true"></i>
-                                                {{ $note->is_pinned ? 'Unpin' : 'Pin' }}
-                                            </button>
-                                        </form>
+                                            <form method="POST" action="{{ route('notes.pin', $note) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="pinned" value="{{ $note->is_pinned ? 0 : 1 }}">
+                                                <button type="submit">
+                                                    <i class="fa-solid fa-thumbtack" aria-hidden="true"></i>
+                                                    {{ $note->is_pinned ? 'Let it fall back into the pile' : 'Pin to the front' }}
+                                                </button>
+                                            </form>
 
-                                        <form method="POST" action="{{ route('notes.archive', $note) }}">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button class="master-btn master-btn-soft master-btn-sm" type="submit"
-                                                title="{{ $note->isArchived() ? 'Put it back on the desk' : 'File it away — it stays here, under “Filed away”' }}">
-                                                <i class="fa-regular fa-box-archive" aria-hidden="true"></i>
-                                                {{ $note->isArchived() ? 'Restore' : 'File away' }}
-                                            </button>
-                                        </form>
+                                            <form method="POST" action="{{ route('notes.archive', $note) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit">
+                                                    <i class="fa-regular fa-box-archive" aria-hidden="true"></i>
+                                                    {{ $note->isArchived() ? 'Put it back on the desk' : 'File it away' }}
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -372,4 +342,91 @@
         </section>
     @endif
 </div>
+
+{{-- ────────────────────────────────────────────────────────── a new note --}}
+{{-- The composer is a dialog, not a card at the top of the page: writing a note
+     is a thing you stop and do, and the page it leaves behind is the desk you
+     read. `_dialog` is how this one comes back — a validation failure redirects
+     here with the typing kept, the marker below names the dialog, and
+     `notes.js` reopens it. Nobody retypes a note. --}}
+<span hidden data-open-dialog="{{ $errors->any() ? old('_dialog') : '' }}"></span>
+
+<div class="master-modal" id="noteCreateModal" aria-hidden="true">
+    <div class="master-modal-card" role="dialog" aria-modal="true" aria-labelledby="noteCreateTitle">
+        <form method="POST" action="{{ route('notes.store') }}">
+            @csrf
+            <input type="hidden" name="_dialog" value="noteCreateModal">
+
+            <div class="master-modal-header">
+                <div class="master-modal-heading">
+                    <span class="master-modal-icon" aria-hidden="true"><i class="fa-regular fa-note-sticky"></i></span>
+                    <div>
+                        <h3 class="master-modal-title" id="noteCreateTitle">A new note</h3>
+                        <p class="master-modal-subtitle">Private to this login — nobody else reads it, not even the office.</p>
+                    </div>
+                </div>
+                <button type="button" class="master-modal-close" data-close-modal="noteCreateModal"
+                    aria-label="Close">&times;</button>
+            </div>
+
+            <div class="master-modal-body">
+                @if ($errors->any())
+                    <div class="master-info-box is-danger" role="alert">
+                        <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                        {{ $errors->first() }}
+                    </div>
+                @endif
+
+                <div class="master-modal-grid">
+                    <div class="master-field full">
+                        <label class="master-label" for="noteTitle">Title
+                            <span class="master-required" aria-hidden="true">*</span></label>
+                        <input class="master-input" id="noteTitle" type="text" name="title"
+                            value="{{ old('title') }}" maxlength="{{ \App\Services\NoteVocabulary::TITLE_LIMIT }}"
+                            placeholder="What is this about?" autocomplete="off" required>
+                        @error('title')<p class="master-error">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="master-field">
+                        <label class="master-label" for="noteColour">Colour</label>
+                        <select class="master-select" id="noteColour" name="colour">
+                            @foreach ($colourOptions as $key => $label)
+                                <option value="{{ $key }}"
+                                    @selected(old('colour', \App\Services\NoteVocabulary::DEFAULT_COLOUR) === $key)>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="master-field nt-modal-pin">
+                        <label class="master-label" for="notePinned">Where it goes</label>
+                        <label class="master-check">
+                            <input type="checkbox" id="notePinned" name="is_pinned" value="1" @checked(old('is_pinned'))>
+                            <span>Pin it to the front of the board</span>
+                        </label>
+                    </div>
+
+                    <div class="master-field full">
+                        <label class="master-label" for="noteBody">The note</label>
+                        <textarea class="master-textarea" id="noteBody" name="body" rows="6"
+                            placeholder="Write it as it comes — a list keeps its line breaks.">{{ old('body') }}</textarea>
+                        <p class="master-help">Line breaks are kept: what you type is what the board shows.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="master-modal-footer">
+                <button type="button" class="master-btn master-btn-light" data-close-modal="noteCreateModal">Cancel</button>
+                <button class="master-btn master-btn-primary" type="submit">
+                    <i class="fa-solid fa-thumbtack" aria-hidden="true"></i> Stick it on the desk
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@push('scripts')
+    <script src="{{ $assetVer('assets/js/notes.js') }}" defer></script>
+@endpush
 @endsection

@@ -4,18 +4,24 @@
    One module, two screens: the desk (`notes/index.blade.php`, a board of cards
    over a table of the same notes) and one note's page (`notes/edit.blade.php`).
 
-   What this sheet owns, per `docs/ui-design-guidelines.md`: the board's grid,
-   the note card's own composition, the six note colours (a domain colour, kept
-   to the card's hairline, its dot and its chips — never a pastel wash over the
-   whole card), and the composer's field layout. Everything a note *wears* —
-   the card surface, its border, its radius, the buttons, the fields, the chips,
-   the table, the empty state, the drawer — is the shared vocabulary.
+   What this sheet owns, per `docs/ui-design-guidelines.md`:
 
-   The note colours are the only literal colours in the file: a yellow note is
-   the point of a yellow note, and there is no token for "the colour the reader
-   chose". Each one declares `--nt-accent`, and every rule below reads that
-   variable rather than naming a colour twice — plus a dark-theme value, because
-   a note colour that cannot be seen on the dark surface is not a colour.
+     - **the inset of a card of this module's own** — the shared `.master-card`
+       is a surface with no padding, and the guideline puts 20–24px inside a
+       card that holds prose, figures or controls. A card holding a *table*
+       carries none: its chrome insets itself (master-list.css) and the rows run
+       to the card's edges, which is what the shared lists do;
+     - the board's grid and the note card's own composition;
+     - the six note colours — a domain colour, kept to the card's hairline, its
+       dot and its badges, never a pastel wash over a whole card — plus a
+       dark-theme value for each, because a colour that cannot be seen on the
+       dark surface is not a colour;
+     - the list's own cells: the dot-and-title cell, the one-line excerpt, the
+       state badge and the "edited" column that reads as a short fact.
+
+   It defines no button, card, field, table, tab, badge or modal of its own:
+   those belong to the shared sheets, and a module-local copy drifts the day the
+   shared one is fixed.
    ========================================================================== */
 
 /* ------------------------------------------------------------------ accents */
@@ -34,7 +40,16 @@
 :root[data-theme="dark"] .nt-note--purple, :root[data-theme="dark"] .nt-dot--purple { --nt-accent: #c084fc; }
 :root[data-theme="dark"] .nt-note--grey,   :root[data-theme="dark"] .nt-dot--grey   { --nt-accent: #94a3b8; }
 
-/* ------------------------------------------------------------------ card head */
+/* --------------------------------------------------------------------- cards */
+
+/* The shared card is a surface: it has a border, a radius and a shadow, and no
+   padding at all. Everything drawn inside one therefore owes its own inset, and
+   a card of this module's own takes the guideline's 20–24px. (The card that
+   holds the table deliberately does not wear this class: its bar and rows carry
+   the shared list's own 16px rhythm and run to the edges.) */
+.nt .nt-card {
+    padding: 20px 22px;
+}
 
 .nt .nt-card-head {
     display: flex;
@@ -49,32 +64,17 @@
     max-width: 46ch;
 }
 
-/* ------------------------------------------------------------------ composer */
-
-.nt .nt-compose-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 180px;
-    gap: 14px;
-    margin-top: 12px;
+/* The shared title carries a 14px bottom margin for the content under a
+   heading; inside a head that is 14px of nothing before the card's own inset. */
+.nt .nt-card-head > :is(h2, h3, .master-section-title) {
+    margin-bottom: 4px;
 }
 
-.nt .nt-compose-body,
-.nt .nt-compose-foot {
-    grid-column: 1 / -1;
-}
+/* ------------------------------------------------------------ the composer */
 
-.nt .nt-compose-foot {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.nt .nt-compose-foot > .master-btn {
-    margin-left: auto;
-}
-
-.nt .nt-compose-pin {
+/* One field the dialog's grid would otherwise squeeze into half a row: a
+   checkbox label is a sentence, not a column. */
+.nt .nt-modal-pin .master-check {
     margin: 0;
 }
 
@@ -84,7 +84,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 16px;
-    margin-top: 16px;
+    margin-top: 14px;
 }
 
 /* One sticky. The surface is the shared card; the colour is a hairline on the
@@ -211,40 +211,103 @@
     color: var(--ui-warning);
 }
 
-/* ------------------------------------------------------------------- tables */
+/* ------------------------------------------------------------------- the list
+   Four columns, one line of the note under its title, and a row menu instead
+   of three buttons. The class on the table is this list's own: the shared
+   `.master-table` is built for the eight-to-ten-column ledgers (it carries a
+   1280px floor, which on a four-column list is a scrollbar for empty space). */
 
-.nt .nt-cell-sub {
+.nt-index .nt-table {
+    min-width: 0;
+}
+
+.nt-index .nt-table th:nth-child(2) {
+    width: 132px;
+}
+
+.nt-index .nt-table th:nth-child(3) {
+    width: 120px;
+}
+
+.nt-index .nt-table th:nth-child(4) {
+    width: 64px;
+}
+
+/* The row is one note; clicking anywhere on it opens that note. The menu and
+   every link inside stay clickable — master-list.js skips them. */
+.nt-index .nt-row.is-clickable {
+    cursor: pointer;
+}
+
+.nt-index .nt-row.is-clickable:hover {
+    background: var(--ui-nested-surface);
+}
+
+/* The dot leads the cell and needs the gap a chip's flex would have given it. */
+.nt-index .nt-table td:first-child .nt-dot {
+    margin-right: 8px;
+}
+
+.nt-index .nt-note-link {
+    color: var(--ui-text);
+    font-size: 13.5px;
+    font-weight: var(--ui-weight-medium, 500);
+    text-decoration: none;
+}
+
+.nt-index .nt-note-link:hover {
+    color: var(--ui-info);
+    text-decoration: underline;
+}
+
+/* The pinned mark rides beside the title, not in a column of its own: it is
+   one glyph, and a column for one glyph is a column of white. */
+.nt-index .nt-pin-mark {
+    margin-right: 4px;
+    color: var(--ui-warning);
+    font-size: 11px;
+}
+
+/* One line of the note. The table is where you find a note, not where you read
+   it: the full sentence is a click away, and the cell says so in its tooltip. */
+.nt-index .nt-cell-sub {
     display: block;
+    max-width: 72ch;
     margin-top: 2px;
+    overflow: hidden;
     color: var(--ui-text-secondary);
     font-size: 12px;
     line-height: 1.45;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
-.nt .nt-col-actions {
-    width: 1%;
+.nt-index .nt-when {
+    color: var(--ui-text-secondary);
+    font-size: 12px;
     white-space: nowrap;
+}
+
+.nt-index .nt-col-state,
+.nt-index .nt-col-actions {
+    white-space: nowrap;
+}
+
+.nt-index .nt-col-actions {
     text-align: right;
 }
 
-.nt .nt-row-actions {
-    display: flex;
-    align-items: center;
+/* The row menu opens against the viewport (master-index.css); all this adds is
+   the cell's own alignment, so the toggle sits on the column's right edge. */
+.nt-index .nt-col-actions .master-dropdown {
+    display: inline-flex;
     justify-content: flex-end;
-    gap: 6px;
-    flex-wrap: wrap;
 }
 
 /* ---------------------------------------------------------------- the page */
 
 .nt-edit .nt-edit-grid {
     grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
-}
-
-/* The full-width field: the shared grid is two columns, and a title or a body
-   that shares a row with anything is a field that reads as a sidebar. */
-.nt .master-field.full {
-    grid-column: 1 / -1;
 }
 
 .nt .nt-edit-pin {
@@ -272,17 +335,17 @@
 }
 
 @media (max-width: 767px) {
+    /* Two cards in one column still owe the guideline's inset, at the small end
+       of its range. */
+    .nt .nt-card {
+        padding: 18px 16px;
+    }
+
     .nt .nt-board {
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .nt .nt-compose-grid {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .nt .nt-compose-foot > .master-btn {
-        margin-left: 0;
-        width: 100%;
-        justify-content: center;
+    .nt-index .nt-cell-sub {
+        max-width: none;
     }
 }

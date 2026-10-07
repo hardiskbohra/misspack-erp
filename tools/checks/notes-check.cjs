@@ -64,6 +64,7 @@ const indexView = plain(read('resources/views/notes/index.blade.php'));
 const editView = plain(read('resources/views/notes/edit.blade.php'));
 const card = plain(read('resources/views/notes/partials/note-card.blade.php'));
 const sheet = plain(read('public/assets/css/notes.css'));
+const script = plain(read('public/assets/js/notes.js'));
 const routes = plain(read('routes/web.php'));
 const shell = plain(read('resources/views/layouts/app.blade.php'));
 const migration = plain(read('database/migrations/2026_10_07_120000_create_notes_table.php'));
@@ -256,8 +257,8 @@ check('the secondary criteria open in the shared right drawer',
 
 check('a criterion is asked once: the chips carry state and colour, the drawer the rest',
     has(indexView, 'name="period"') && has(indexView, 'name="sort"')
-    && ! /name="state"/.test(indexView.slice(indexView.indexOf('<x-drawer')))
-    && ! /name="colour"/.test(indexView.slice(indexView.indexOf('<x-drawer'))),
+    && ! /name="state"/.test(indexView.slice(indexView.indexOf('<x-drawer'), indexView.indexOf('</x-drawer>')))
+    && ! /name="colour"/.test(indexView.slice(indexView.indexOf('<x-drawer'), indexView.indexOf('</x-drawer>'))),
     'the drawer repeats a chip the reader can already see');
 
 check('a search keeps the chips the form does not own',
@@ -279,7 +280,7 @@ check('the card keeps the words\' line breaks, escaped first',
 
 check('the empty state offers a way out',
     has(indexView, 'master-list-empty-actions')
-    && has(indexView, 'href="#noteComposer"')
+    && has(indexView, 'data-open-note-modal')
     && has(indexView, 'Clear the filters'));
 
 check('the table becomes labelled cards on a phone',
@@ -293,8 +294,114 @@ check('the module sheet is loaded by both notes screens, and owns no shared clas
     && ! /\.master-list-(?:bar|chip|applied|toolbar|hint|empty)/.test(sheet),
     'a module-local copy of a shared class drifts the day the shared one is fixed');
 
+/* ------------------------------------------------------------------ the inset
+   The shared `.master-card` is a surface with a border and a shadow and no
+   padding at all, so every card of this module's own owes its own inset — and
+   the guideline's number for a card of prose or controls is 20–24px. The card
+   that holds the table is the one exception, and it is an exception on purpose:
+   its bar and its rows carry the shared list's 16px rhythm and run to the edges
+   so the table keeps its column alignment. Getting this wrong is what a reader
+   sees as "the cards have no padding". */
+const inset = sheet.match(/\.nt \.nt-card \{([^}]*)\}/);
+check('a card of this module\'s own carries the guideline\'s inset',
+    !!inset && /padding:\s*20px 22px/.test(inset[1]),
+    inset ? inset[1].replace(/\s+/g, ' ').trim() : '.nt .nt-card not found');
+
+check('and the card holding the table does not, so the rows keep the list rhythm',
+    sheet.includes('.nt-index .nt-table')
+    && ! /class="[^"]*nt-card[^"]*master-table-card/.test(indexView)
+    && ! /master-table-card[^"]*nt-card/.test(indexView));
+
 check('the composer, the board and the table each sit on the shell\'s own rhythm',
-    has(sheet, '.nt .nt-board') && has(sheet, '.nt .nt-compose-grid') && has(sheet, '.nt-edit .nt-edit-grid'));
+    has(sheet, '.nt .nt-board') && has(sheet, '.nt .nt-card') && has(sheet, '.nt-edit .nt-edit-grid'));
+
+/* ----------------------------------------------------------------- the dialog
+   Writing a note is a thing you stop and do; the page it leaves behind is the
+   desk you read. So the composer is a dialog, opened from the topbar action,
+   the empty state and the list's own toolbar — and it comes back with the
+   typing in it when the server rejects a save. */
+const modal = indexView.slice(indexView.indexOf('id="noteCreateModal"'));
+check('the composer is a dialog, and the page has no inline composer left',
+    /<div class="master-modal" id="noteCreateModal"/.test(indexView)
+    && /<form method="POST" action="\{\{ route\('notes\.store'\) \}\}">/.test(indexView)
+    && ! /noteComposer/.test(indexView)
+    && ! /nt-compose/.test(indexView + sheet));
+
+check('and it is opened from every control that offers to write one',
+    times(indexView, 'data-open-note-modal') >= 3
+    && has(script, "querySelectorAll('[data-open-note-modal]')")
+    && has(script, 'window.MasterModal')
+    && /assets\/js\/notes\.js/.test(indexView),
+    `${times(indexView, 'data-open-note-modal')} opener(s)`);
+
+check('a save that came back with errors reopens it, with the typing kept',
+    has(indexView, '<input type="hidden" name="_dialog" value="noteCreateModal">')
+    && /data-open-dialog="\{\{ \$errors->any\(\) \? old\('_dialog'\) : '' \}\}"/.test(indexView)
+    && /var marker = document\.querySelector\('\[data-open-dialog\]'\);/.test(script)
+    && has(script, "reopen === 'noteCreateModal'")
+    && ["old('title')", "old('body')", "old('colour'", "old('is_pinned')"].every(kept => indexView.includes(kept)));
+
+/* The dialog wears the shared modal vocabulary — header, heading, close, body,
+   footer — rather than a module-local imitation of it. */
+check('the dialog wears the shared modal vocabulary',
+    ['master-modal-card', 'master-modal-header', 'master-modal-heading', 'master-modal-icon',
+        'master-modal-title', 'master-modal-subtitle', 'master-modal-close', 'master-modal-body',
+        'master-modal-grid', 'master-modal-footer'].every(className => indexView.includes(className))
+    && has(indexView, 'data-close-modal="noteCreateModal"'));
+
+/* ------------------------------------------------------------------- the list
+   The table is the working half of the page: it is built to fit as many notes
+   on one screen as the words allow. Four columns and no more, one line of the
+   note, the pinned mark beside the title, and every action inside a row menu
+   instead of three buttons per row. */
+const tableStart = indexView.indexOf('<table class="master-table nt-table">');
+const table = indexView.slice(tableStart, indexView.indexOf('</table>', tableStart));
+const heads = (table.slice(0, table.indexOf('</thead>')).match(/<th /g) || []).length;
+check('the list is four columns, and the colour rides on the dot instead of its own column',
+    heads === 4
+    && /<span class="nt-dot nt-dot--\{\{ \$note->colourKey\(\) \}\}" role="img"/.test(table)
+    && ! /<th[^>]*>Colour<\/th>/.test(table),
+    `${heads} column(s)`);
+
+check('each row carries one line of the note and nothing more',
+    has(sheet, 'white-space: nowrap') && has(sheet, 'text-overflow: ellipsis')
+    && /class="nt-cell-sub" title="\{\{ \$note->excerpt\(600\) \}\}"/.test(table)
+    && /\{\{ \$note->editedShortLabel\(\) \}\}/.test(table)
+    && /public function editedShortLabel\(\)/.test(model));
+
+check('and its actions live in the shared row menu, not three buttons per row',
+    heads === 4
+    && has(table, '<div class="master-dropdown">')
+    && has(table, '<button type="button" class="master-dropdown-toggle"')
+    && has(table, '<div class="master-dropdown-menu">')
+    && times(table, "route('notes.pin'") === 1
+    && times(table, "route('notes.archive'") === 1
+    && ! /master-btn/.test(table),
+    'the panel is the shared component — never a module-local copy of it');
+
+check('the whole row opens its note, and the controls inside it still work',
+    /<tr class="nt-row is-clickable" data-href="\{\{ route\('notes\.edit', \$note\) \}\}">/.test(table)
+    && has(sheet, '.nt-index .nt-row.is-clickable')
+    && has(script, 'MasterList.rowNavigation')
+    && has(script, 'MasterList.gridShadow')
+    && times(script, "root: '.nt-index'") === 2);
+
+/* Every class this module's own views wear has to be one its sheet declares —
+   the module-local half of design-check's shared-vocabulary rule. The colour
+   classes are generated from the vocabulary, so they are checked per key
+   above; a class a script toggles is legitimate too. */
+const worn = new Set();
+for (const match of (indexView + editView + card).matchAll(/class="([^"]*)"/g)) {
+    for (const token of match[1].split(/\s+/)) {
+        if (/^nt-[a-z0-9-]+$/.test(token)) worn.add(token);
+    }
+}
+const jsClasses = new Set([...script.matchAll(/['"`](nt-[a-z0-9-]+)/g)].map(m => m[1]));
+const undressed = [...worn]
+    .filter(token => ! new RegExp(`\\.${token}\\b`).test(sheet) && ! jsClasses.has(token))
+    .sort();
+check('every nt-* class a notes view wears is declared by the notes sheet',
+    undressed.length === 0, undressed.join(', '));
 
 /* --------------------------------------------------------------- 6. the shell */
 

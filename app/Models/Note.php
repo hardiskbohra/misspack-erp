@@ -181,4 +181,16 @@ class Note extends Model
     {
         return $this->updated_at ? $this->updated_at->diffForHumans() : '—';
     }
+
+    /**
+     * The same fact, as short as it can be said — "3 hours", not "3 hours ago".
+     *
+     * The list's Edited column is one short fact per row: the table is where a
+     * note is found, not where its history is read, and the exact moment is in
+     * the cell's tooltip.
+     */
+    public function editedShortLabel(): string
+    {
+        return $this->updated_at ? $this->updated_at->diffForHumans(null, true) : '—';
+    }
 }
