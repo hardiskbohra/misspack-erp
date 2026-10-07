@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Helpers\DateRanges;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -196,6 +197,27 @@ class RecurrenceFilters
         $scope = self::SORT_SCOPES[$filters['sort'] ?? 'recent'] ?? self::SORT_SCOPES['recent'];
 
         return $query->{$scope}();
+    }
+
+    /**
+     * A page of the list — taken from a **clone**, never from the builder the
+     * page's other reads borrow.
+     *
+     * `paginate()` writes its LIMIT on the builder it is called on, and this
+     * builder is the one the figures, the chip counts and the day's asks are
+     * read from. A page taken in place hands every later read a
+     * `limit 20 offset 0` — and MySQL refuses a LIMIT inside an IN subquery
+     * (error 1235, "This version of MySQL doesn't yet support 'LIMIT &
+     * IN/ALL/ANY/SOME subquery'"), which is a 500 the SQLite tests cannot see,
+     * because SQLite allows it. One word is the difference between a filter and
+     * a page, so the page is a method: the only place the list is cut into
+     * pages is the only place the clone has to be remembered.
+     */
+    public function page(Builder $query, array $filters, int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->order(clone $query, $filters)
+            ->paginate($perPage)
+            ->withQueryString();
     }
 
     /**

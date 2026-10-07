@@ -197,7 +197,9 @@ the colour that means emergency.
 2. **Waiting on your approval** — every date that has reached its effective date,
    with **Approve** and **Skip this date** right there. A queue you cannot answer
    from is a queue you have to go and find. It obeys the filters below it, like
-   everything else on the page;
+   everything else on the page — the same `RecurrenceFilters` object applied to
+   the rule each ask belongs to (`whereHas('rule', …)`), not a subquery of the
+   list's builder. That distinction is not academic: see §9 on MySQL error 1235;
 3. **search, chips and the shared drawer** — the chips carry the rule's state
    (including the two piles that matter: *Waiting for approval* and *Drafts*);
    the drawer carries the rhythm, the plan's window and the order;
@@ -242,7 +244,7 @@ notes composer does.
 
 ## 9. Verification
 
-`tools/checks/recurring-check.cjs` — **77 checks**, dependency-free, run with
+`tools/checks/recurring-check.cjs` — **79 checks**, dependency-free, run with
 `node tools/checks/recurring-check.cjs`. It reads source with comments stripped,
 so the prose in these files can explain a rule without answering a check. What it
 holds:
@@ -279,8 +281,10 @@ holds:
   vocabulary, and the `_dialog` reopen with `old()` kept;
 - **the reading** — one row of sums per figure set, the plan-side figures cut
   from the same rules the page shows, chip counts with the chip lifted, filters
-  through the model's scopes, every order choice a real scope, and every
-  hand-typed filter falling back to a default;
+  through the model's scopes, every order choice a real scope, every hand-typed
+  filter falling back to a default, the page taken by the filters from a clone,
+  and the day's asks read from their own side rather than as a subquery of the
+  builder the page is taken from;
 - **the shell and the paperwork** — the routes declared before the ledger's
   resource route, every door registered, an occurrence reached inside its rule, a
   sidebar item the ledger item steps aside for, a door from the ledger, this
@@ -304,6 +308,30 @@ name … is too long"* — after the first has already been applied. `php-check`
 computes every migration's names and refuses any that cannot fit, which is the
 guard that would have caught it here rather than on the office's machine.
 
+The second thing MySQL taught this module is a **shape** rather than a length.
+The desk's day's-work list was written as `rule_id in (select id from rules…)` —
+the same rules the filters leave, borrowed from the builder the page reads — and
+`paginate()` writes its LIMIT on the builder it is called on, so the subquery
+arrived at the server as `… in (select id … limit 20 offset 0)`:
+
+```
+SQLSTATE[42000]: Syntax error or access violation: 1235 This version of MySQL
+doesn't yet support 'LIMIT & IN/ALL/ANY/SOME subquery'
+```
+
+SQLite — the database `phpunit.xml` points the tests at — runs it happily, so
+every test passed while the first real install 500'd. The repair is two changes
+and one rule: the page is taken by `RecurrenceFilters::page()`, which paginates a
+**clone**, so the shared builder is a filter and never a page; and the to-do list
+narrows through the same filter object applied to the rule each ask belongs to,
+so it does not borrow a builder at all. The rule — *a builder is either a filter
+or a page, never both; borrow a clone, page a clone* — is held by
+`tools/checks/recurring-check.cjs` for this page and by
+`tools/checks/sql-check.cjs` for every page: three shapes (a LIMIT written inside
+an IN subquery, a borrowed builder that is later paginated in the same function,
+and a service that pages a builder it was handed without cloning), plus a
+four-run sample test that proves each needle reads the shape it claims to.
+
 That refusal is an **after-effects** fact worth knowing: MySQL creates the table
 and then rejects the constraint, and Laravel records nothing for a migration that
 threw — so the database is left holding a table the migrator has never heard of,
@@ -320,7 +348,9 @@ filled from, extracted so the entry form and the rule form cannot offer differen
 accounts), `routes/console.php` (the 08:45 sweep), `resources/views/layouts/app.blade.php`
 (the sidebar item), `resources/views/cashflows/index.blade.php` (the door),
 `resources/views/cashflows/show.blade.php` and `app/Models/CashflowEntry.php`
-(an entry that came from a rule says so), and `tools/checks/ui-components-check.cjs`.
+(an entry that came from a rule says so), and `tools/checks/ui-components-check.cjs`. This round also added
+`tools/checks/sql-check.cjs` — the guard for the MySQL shape above, which the
+whole application shares.
 
 ---
 

@@ -448,6 +448,23 @@ check('the plan-side figures are the same rules, not the whole table',
     && has(figures, "select('id')"),
     'a figure that counts something the page is not showing is a second scoreboard');
 
+/* The page used to be taken from the builder the figures and the to-do list
+   borrow, and `paginate()` writes its LIMIT on the builder it is called on — so
+   the desk's day's-work list asked MySQL for `rule_id in (select … limit 20
+   offset 0)` and got error 1235. The two halves of the repair are contracts
+   now: the page comes from the filters (which clone), and the asks are the
+   filtered rules read from their own side rather than as a subquery of a
+   builder that is also a page. `sql-check` holds the general rule. */
+check('the page is taken by the filters, from a clone',
+    has(controller, '$rules = $this->filters->page($query, $filters);')
+    && /function page\(Builder \$query, array \$filters[\s\S]{0,400}?clone \$query/.test(filters),
+    'a LIMIT written on the shared builder is inherited by every read that borrows it');
+
+check('the day\'s asks are the filtered rules, not a subquery of the table\'s builder',
+    /whereHas\('rule', fn \(Builder \$rule\) => \$this->filters->apply\(\$rule, \$filters\)\)/.test(controller)
+    && ! has(controller, "whereIn('cashflow_recurrence_rule_id'"),
+    'MySQL refuses a LIMIT inside an IN subquery — a read that cannot borrow cannot inherit one');
+
 check('the filters narrow through the model\'s own scopes, not raw columns',
     ['->search($search)', '->inState($filters[\'state\'])', '->inFrequency($filters[\'frequency\'])', '->askingBetween(DateRanges::today(), $end)']
         .every(needle => has(filters, needle)),

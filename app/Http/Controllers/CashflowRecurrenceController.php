@@ -11,6 +11,7 @@ use App\Services\RecurrenceFilters;
 use App\Services\RecurrenceIntake;
 use App\Services\RecurrencePlan;
 use App\Services\RecurrenceVocabulary;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -59,8 +60,11 @@ class CashflowRecurrenceController extends Controller
 
         $filters = $this->filters->fromRequest($request);
 
-        /* **One query.** The figures, the chip counts, the to-do list and the
-           rules table are this builder or a clone of it. */
+        /* **One query.** The figures, the chip counts and the rules table are
+           this builder or a clone of it; the to-do list below is the same
+           *filter object* applied to the rule each ask belongs to. One
+           definition of the filters, four readouts, and a builder that is
+           never a page — the page is taken by the filters themselves. */
         $query = $this->filters->apply(
             CashflowRecurrenceRule::query()->with(['account', 'client', 'vendor', 'employee', 'officeService']),
             $filters
@@ -75,14 +79,21 @@ class CashflowRecurrenceController extends Controller
             $this->filters->apply(CashflowRecurrenceRule::query(), $this->filters->withoutState($filters))
         );
 
-        $rules = $this->filters->order($query, $filters)->paginate(20)->withQueryString();
+        $rules = $this->filters->page($query, $filters);
 
         /* The day's asks. These are the same rules the filters leave — a to-do
            list that ignored the chips would be a second page inside this one —
-           read from their plans rather than from the rules table. */
+           read from their plans rather than from the rules table, with the
+           filters applied to the rule each ask belongs to.
+           Not as `rule_id in (select … from the rules query)`: the rules query
+           is this page's builder, `paginate()` writes its LIMIT on the builder
+           it is called on, and MySQL refuses a LIMIT inside an IN subquery
+           (error 1235) — which the SQLite the tests run on allows and the
+           office's MySQL does not, so that shape is a 500 no test can see. A
+           read that cannot borrow a builder cannot inherit its LIMIT. */
         $due = CashflowRecurrenceOccurrence::query()
             ->dueBy(now())
-            ->whereIn('cashflow_recurrence_rule_id', (clone $query)->reorder()->select('id'))
+            ->whereHas('rule', fn (Builder $rule) => $this->filters->apply($rule, $filters))
             ->with(['rule.account', 'rule.client', 'rule.vendor', 'rule.employee', 'rule.officeService', 'decider'])
             ->planOrder()
             ->limit(RecurrenceVocabulary::DUE_LIMIT)

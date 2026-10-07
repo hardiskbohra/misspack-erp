@@ -26,6 +26,12 @@ node tools/checks/php-check.cjs       # the PHP files the module owns: parsed wi
                                       # MySQL for an identifier over its 64 characters.
                                       # PHP_PARSER_PATH=<dir> points at a node_modules that holds
                                       # php-parser when it is not installed here.
+node tools/checks/sql-check.cjs       # the SQL MySQL can actually run: the tests use SQLite and
+                                      # the office uses MySQL, so a LIMIT inside an IN subquery —
+                                      # which is what paginating the builder a page's other reads
+                                      # borrow produces — is a 500 no test can see. A builder is
+                                      # either a filter or a page, never both: borrow a clone,
+                                      # page a clone.
 node tools/checks/docs-check.cjs      # the paperwork behind an entry: one table, the archive route
                                       # before the resource route, one definition of "missing"
 node tools/checks/statement-check.cjs # a party statement: opening + debit − credit = closing, the
