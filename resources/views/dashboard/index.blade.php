@@ -122,6 +122,18 @@
     </div>
 
     <section class="master-panel active" id="dashboardPanelOverview" data-panel="overview" role="tabpanel" aria-labelledby="dashboardTabOverview">
+        @if(count($alerts))
+            <section class="master-critical-strip" role="alert" aria-labelledby="criticalAlertTitle">
+                <div class="master-critical-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div class="master-critical-copy">
+                    <span>Critical alerts</span>
+                    <strong id="criticalAlertTitle">{{ count($alerts) }} {{ count($alerts) === 1 ? 'item needs' : 'items need' }} immediate attention</strong>
+                    <div>@foreach(array_slice($alerts, 0, 3) as $alert)<a href="{{ $alert['url'] }}">{{ $alert['title'] }}: {{ $alert['message'] }}</a>@endforeach</div>
+                </div>
+                <a class="master-btn master-critical-action" href="#immediateAttention">Review attention</a>
+            </section>
+        @endif
+
         <div class="master-metrics-grid six">
             <a class="master-metric-card blue" href="{{ $routes['clients'] }}"><div class="master-metric-icon"><i class="fa-solid fa-building-user"></i></div><div><span>Total Clients</span><strong>{{ $metrics['clients_total'] }}</strong><small>{{ $metrics['clients_approved'] }} approved · {{ $metrics['clients_under_review'] }} under review</small></div></a>
             <a class="master-metric-card purple" href="{{ $routes['leads'] }}"><div class="master-metric-icon"><i class="fa-solid fa-people-group"></i></div><div><span>Lead Pipeline</span><strong>{{ $metrics['leads_total'] }}</strong><small>{{ $metrics['leads_range'] }} new in this period</small></div></a>
@@ -131,17 +143,6 @@
             <a class="master-metric-card dark" href="{{ $routes['tasks'] }}"><div class="master-metric-icon"><i class="fa-solid fa-list-check"></i></div><div><span>Open Tasks</span><strong>{{ $metrics['tasks_open'] }}</strong><small>{{ $metrics['tasks_due_today'] }} due today · {{ $metrics['tasks_overdue'] }} overdue</small></div></a>
         </div>
 
-        @if(count($alerts))
-            <section class="master-critical-strip" aria-labelledby="criticalAlertTitle">
-                <div class="master-critical-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                <div class="master-critical-copy">
-                    <span>Critical alerts</span>
-                    <strong id="criticalAlertTitle">{{ count($alerts) }} item{{ count($alerts) === 1 ? '' : 's' }} need immediate attention</strong>
-                    <div>@foreach(array_slice($alerts, 0, 3) as $alert)<a href="{{ $alert['url'] }}">{{ $alert['title'] }}: {{ $alert['message'] }}</a>@endforeach</div>
-                </div>
-                <a class="master-btn master-btn-soft" href="#immediateAttention">Review attention</a>
-            </section>
-        @endif
 
         <div class="master-card master-comparison-card">
             <div class="master-section-head">

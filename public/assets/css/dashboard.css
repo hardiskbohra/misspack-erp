@@ -1089,3 +1089,67 @@ body[data-ui-module="dashboard"] .master-metric-card {
     .dashboard-period-mobile strong { color:var(--mc-text); font-size:11px; }
     .dashboard-period-mobile small { margin-top:2px; color:var(--mc-text-3); font-size:9px; white-space:nowrap; }
 }
+
+/* Critical conditions lead the overview and use an unmistakable danger
+   treatment; the action belongs to the alert rather than looking like a normal
+   navigation link. */
+body[data-ui-module="dashboard"] .master-critical-strip {
+    border-color:#ed9caf;
+    border-left:5px solid #d92d4f;
+    background:#fff4f6;
+}
+body[data-ui-module="dashboard"] .master-critical-icon {
+    color:#fff;
+    background:#d92d4f;
+    box-shadow:0 0 0 4px rgba(217,45,79,.1);
+}
+body[data-ui-module="dashboard"] .master-critical-copy > span,
+body[data-ui-module="dashboard"] .master-critical-copy > strong,
+body[data-ui-module="dashboard"] .master-critical-copy a { color:#941c38; }
+body[data-ui-module="dashboard"] .master-critical-copy > strong { font-size:15px; }
+body[data-ui-module="dashboard"] .master-critical-copy a {
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+}
+body[data-ui-module="dashboard"] .master-critical-copy a::before {
+    content:"";
+    width:5px;
+    height:5px;
+    flex:0 0 5px;
+    border-radius:50%;
+    background:#d92d4f;
+}
+body[data-ui-module="dashboard"] .master-critical-action {
+    min-height:38px;
+    padding:0 14px;
+    color:#fff;
+    border:1px solid #bf2342;
+    border-radius:8px;
+    background:#d92d4f;
+    text-decoration:none;
+    white-space:nowrap;
+}
+body[data-ui-module="dashboard"] .master-critical-action:hover {
+    color:#fff;
+    background:#bf2342;
+}
+:root[data-theme="dark"] body[data-ui-module="dashboard"] .master-critical-strip {
+    border-color:#713247;
+    background:rgba(217,45,79,.1);
+}
+:root[data-theme="dark"] body[data-ui-module="dashboard"] .master-critical-copy > span,
+:root[data-theme="dark"] body[data-ui-module="dashboard"] .master-critical-copy > strong,
+:root[data-theme="dark"] body[data-ui-module="dashboard"] .master-critical-copy a { color:#f3a4b7; }
+body[data-ui-module="dashboard"] .master-attention-block.overdue {
+    border-color:#ed9caf;
+    background:#fff8f9;
+}
+body[data-ui-module="dashboard"] .master-attention-block.overdue .master-attention-title > span {
+    color:#d92d4f;
+    background:#ffe8ed;
+}
+:root[data-theme="dark"] body[data-ui-module="dashboard"] .master-attention-block.overdue {
+    border-color:#713247;
+    background:rgba(217,45,79,.07);
+}
