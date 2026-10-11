@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('page-title', 'Admin Dashboard')
+@section('page-title', 'ERP Overview Dashboard')
 
 @section('content')
 @php
@@ -19,8 +19,8 @@
     <div class="master-hero">
         <div>
             <p class="master-eyebrow">ERP Command Center</p>
-            <h1>MissPack Admin Dashboard</h1>
-            <p>Detailed bird-eye analytics for sales, purchase, finance, operations, client activity, projects, shipments, products and module health.</p>
+            <h1>ERP Overview Dashboard</h1>
+            <p>Detailed bird’s-eye analytics for sales, purchases, finance, operations, client activity, projects, shipments, products and module health.</p>
         </div>
         <form method="GET" action="{{ route('dashboard') }}" id="dashPeriodForm">
             <div class="core-filter-toolbar">
@@ -36,6 +36,7 @@
                             <label class="master-label" for="periodType">View</label>
                             <select class="master-select" name="period_type" id="periodType">
                                 <option value="range" @selected($period['type'] === 'range')>Rolling days</option>
+                                <option value="month" @selected($period['type'] === 'month')>Month</option>
                                 <option value="quarter" @selected($period['type'] === 'quarter')>Quarter</option>
                                 <option value="half" @selected($period['type'] === 'half')>Half year</option>
                                 <option value="year" @selected($period['type'] === 'year')>Single year</option>
@@ -52,11 +53,19 @@
                                 <option value="365" @selected((int) ($period['range'] ?? 30) === 365)>365 days</option>
                             </select>
                         </div>
-                        <div class="master-field period-control period-year period-quarter period-half">
+                        <div class="master-field period-control period-year period-month period-quarter period-half">
                             <label class="master-label" for="periodYear">Year</label>
                             <select class="master-select" id="periodYear" name="year">
                                 @foreach($availableYears as $year)
                                     <option value="{{ $year }}" @selected((int) ($period['year'] ?? now()->year) === (int) $year)>{{ $year }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="master-field period-control period-month">
+                            <label class="master-label" for="periodMonth">Month</label>
+                            <select class="master-select" id="periodMonth" name="month">
+                                @foreach(range(1, 12) as $month)
+                                    <option value="{{ $month }}" @selected((int) ($period['month'] ?? now()->month) === $month)>{{ \Carbon\Carbon::create(null, $month)->format('F') }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -108,7 +117,7 @@
         <button class="master-tab" data-tab="sales" type="button"><i class="fa-solid fa-chart-line"></i> Sales & Purchase</button>
         <button class="master-tab" data-tab="finance" type="button"><i class="fa-solid fa-indian-rupee-sign"></i> Finance</button>
         <button class="master-tab" data-tab="operations" type="button"><i class="fa-solid fa-diagram-project"></i> Operations</button>
-        <button class="master-tab" data-tab="modules" type="button"><i class="fa-solid fa-layer-group"></i> Modules</button>
+        <button class="master-tab" data-tab="modules" type="button"><i class="fa-solid fa-layer-group"></i> All Modules</button>
     </div>
 
     <section class="master-panel active" data-panel="overview">
@@ -119,6 +128,44 @@
             <a class="master-metric-card green" href="{{ $routes['shipments'] }}"><div class="master-metric-icon"><i class="fa-solid fa-truck-fast"></i></div><div><span>Shipments</span><strong>{{ $metrics['shipments_total'] }}</strong><small>{{ $metrics['shipments_in_transit'] }} in transit · {{ $metrics['shipments_delayed'] }} delayed</small></div></a>
             <a class="master-metric-card orange" href="{{ $routes['products'] }}"><div class="master-metric-icon"><i class="fa-solid fa-box-open"></i></div><div><span>Products</span><strong>{{ $metrics['products_total'] }}</strong><small>{{ $metrics['products_ready_stock'] }} ready stock</small></div></a>
             <a class="master-metric-card dark" href="{{ $routes['tasks'] }}"><div class="master-metric-icon"><i class="fa-solid fa-list-check"></i></div><div><span>Open Tasks</span><strong>{{ $metrics['tasks_open'] }}</strong><small>{{ $metrics['tasks_due_today'] }} due today · {{ $metrics['tasks_overdue'] }} overdue</small></div></a>
+        </div>
+
+        @if(count($alerts))
+            <section class="master-critical-strip" aria-labelledby="criticalAlertTitle">
+                <div class="master-critical-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div class="master-critical-copy">
+                    <span>Critical alerts</span>
+                    <strong id="criticalAlertTitle">{{ count($alerts) }} item{{ count($alerts) === 1 ? '' : 's' }} need immediate attention</strong>
+                    <div>@foreach(array_slice($alerts, 0, 3) as $alert)<a href="{{ $alert['url'] }}">{{ $alert['title'] }}: {{ $alert['message'] }}</a>@endforeach</div>
+                </div>
+                <a class="master-btn master-btn-soft" href="#criticalAlerts">Review alerts</a>
+            </section>
+        @endif
+
+        <div class="master-card master-comparison-card">
+            <div class="master-section-head">
+                <div><p class="master-eyebrow">Performance Comparison</p><h2>Current performance against prior periods</h2></div>
+                <span class="master-pill">Like-for-like dates</span>
+            </div>
+            <div class="master-comparison-grid">
+                @foreach($comparisons as $comparison)
+                    <section class="master-comparison-group">
+                        <div class="master-comparison-head"><strong>{{ $comparison['label'] }}</strong><small>Current · Previous · Change</small></div>
+                        @foreach(['sales' => ['Sales', true], 'margin' => ['Gross margin', true], 'net' => ['Net cashflow', true], 'projects' => ['New projects', false]] as $key => $definition)
+                            @php($comparisonMetric = $comparison['metrics'][$key])
+                            <div class="master-comparison-row">
+                                <span>{{ $definition[0] }}</span>
+                                <strong>{{ $definition[1] ? $short($comparisonMetric['current']) : number_format($comparisonMetric['current']) }}</strong>
+                                <small>vs {{ $definition[1] ? $short($comparisonMetric['previous']) : number_format($comparisonMetric['previous']) }}</small>
+                                <em class="{{ $comparisonMetric['change'] > 0 ? 'up' : ($comparisonMetric['change'] < 0 ? 'down' : 'flat') }}">
+                                    <i class="fa-solid {{ $comparisonMetric['change'] > 0 ? 'fa-arrow-trend-up' : ($comparisonMetric['change'] < 0 ? 'fa-arrow-trend-down' : 'fa-minus') }}"></i>
+                                    {{ abs($comparisonMetric['change']) }}%
+                                </em>
+                            </div>
+                        @endforeach
+                    </section>
+                @endforeach
+            </div>
         </div>
 
         <div class="master-card master-attention-card">
@@ -215,7 +262,7 @@
 
         <div class="master-grid-main">
             <div class="master-card"><div class="master-section-head"><div><p class="master-eyebrow">Business Movement</p><h2>Sales, Purchase, Income & Expense Trend</h2></div><span class="master-pill">{{ $period['label'] }}</span></div><canvas id="overviewComboChart" height="310"></canvas></div>
-            <div class="master-card"><div class="master-section-head"><div><p class="master-eyebrow">Attention</p><h2>Critical Alerts</h2></div><span class="master-pill danger">{{ count($alerts) }}</span></div><div class="master-alert-list">@forelse($alerts as $alert)<a href="{{ $alert['url'] }}" class="master-alert-item {{ $alert['level'] }}"><span class="master-alert-dot"></span><div><strong>{{ $alert['title'] }}</strong><small>{{ $alert['message'] }}</small></div></a>@empty<div class="master-empty small">No critical alerts right now.</div>@endforelse</div></div>
+            <div class="master-card" id="criticalAlerts"><div class="master-section-head"><div><p class="master-eyebrow">Attention</p><h2>Critical Alerts</h2></div><span class="master-pill danger">{{ count($alerts) }}</span></div><div class="master-alert-list">@forelse($alerts as $alert)<a href="{{ $alert['url'] }}" class="master-alert-item {{ $alert['level'] }}"><span class="master-alert-dot"></span><div><strong>{{ $alert['title'] }}</strong><small>{{ $alert['message'] }}</small></div></a>@empty<div class="master-empty small">No critical alerts right now.</div>@endforelse</div></div>
         </div>
 
         <div class="master-grid-4">
@@ -289,12 +336,12 @@
 
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('assets/css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/dashboard.css') }}">
 @endpush
 <div class="master-tooltip" id="dashTooltip"></div>
 
 
 @push('scripts')
-    <script src="{{ asset('assets/js/dashboard.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/dashboard.js') }}"></script>
 @endpush
 @endsection

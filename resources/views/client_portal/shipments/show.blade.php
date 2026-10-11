@@ -8,11 +8,14 @@
     <link rel="stylesheet" href="{{ asset('assets/css/master-media.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/shipments.css') }}">
 @endpush
-<div class="master-card master-header" style="margin-bottom:15px;line-height:1.4;">
+<div class="cp-page-head cp-record-head">
     <div>
-        <p style="font-size:16px;font-weight:500;">{{ $shipment->shipment_number }}</p>
+        <a class="cp-back-link" href="{{ route('client-portal.shipments.index') }}"><i class="fa-solid fa-arrow-left"></i> Shipments</a>
+        <p class="cp-eyebrow">{{ $shipment->shipment_number }}</p>
         <h1>{{ $shipment->identity_name }}</h1>
+        <p>{{ $shipment->from_name ?: 'Origin' }} → {{ $shipment->to_name ?: 'Destination' }} · {{ $shipment->statusLabel() }}</p>
     </div>
+    @if($shipment->tracking_number)<span class="cp-status-pill"><i class="fa-solid fa-location-dot"></i>&nbsp; {{ $shipment->tracking_number }}</span>@endif
 </div>
 
 @php($statusClass = str_replace('_', '-', $shipment->status))
@@ -91,13 +94,13 @@
             @forelse($shipment->items as $item)
                 <tr>
                     <td>
-                        <strong style="font-weight:500;">{{ $item->product_name }}</strong>
+                        <strong>{{ $item->product_name }}</strong>
                         <span class="master-sub">{{ $item->description }}</span>
                     </td>
 
-                    <td style="font-weight:500;">{{ $item->hs_code ?: '-' }}</td>
+                    <td>{{ $item->hs_code ?: '-' }}</td>
 
-                    <td style="font-weight:500;">{{ (int)$item->quantity }} {{ $item->unit }}</td>
+                    <td>{{ (int)$item->quantity }} {{ $item->unit }}</td>
                 </tr>
             @empty
                 <tr>
@@ -179,7 +182,7 @@
                             @endif
                         </a>
                     @empty
-                        <p style="color:var(--master-muted);font-weight:600;">
+                        <p class="cp-muted">
                             No shipment photos uploaded yet.
                         </p>
                     @endforelse
@@ -216,14 +219,21 @@
                             @if($history->remarks)<div class="timeline-remarks">{{ $history->remarks }}</div>@endif
                         </div>
                     @empty
-                        <p style="color:var(--master-muted);font-weight:600;">No tracking history added yet.</p>
+                        <p class="cp-muted">No tracking history added yet.</p>
                     @endforelse
                 </div>
             </div>
         </div>
     </div>
-    <div class="cp-grid-2" style="margin-top:18px;">
-        <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Comments</p><h2 style="margin-top:0;">Shipment Discussion</h2><form method="POST" action="{{ route('client-portal.shipments.comments.store', $shipment->id) }}" style="margin-bottom:15px;">@csrf<div class="master-field"><label class="master-label">Comment</label><textarea class="master-textarea" name="body" maxlength="4000" required></textarea></div><button class="master-btn master-btn-primary" style="margin-top:10px;">Submit Comment</button></form>@forelse($comments as $comment)<div class="cp-comment"><div class="cp-comment-head"><strong>{{ $comment->authorName() }}</strong><span>{{ $comment->created_at->format('d M Y, h:i A') }}</span></div><p>{{ $comment->body }}</p></div>@empty<div class="cp-empty">No comments yet.</div>@endforelse</div>
-        <div class="cp-card" style="padding:20px;"><p class="cp-eyebrow">Upload</p><h2 style="margin-top:0;">Upload Shipment Document</h2><form method="POST" action="{{ route('client-portal.shipments.documents.store', $shipment->id) }}" enctype="multipart/form-data" class="cp-form-grid">@csrf<div class="master-field"><label class="master-label">Category</label><select class="master-select" name="category"><option value="shipment">Shipment Document</option><option value="payment_proof">Payment Proof</option><option value="other">Other</option></select></div><div class="master-field"><label class="master-label">Title</label><input class="master-input" name="title"></div><div class="master-field" style="grid-column:1/-1;"><label class="master-label">Files</label><input class="master-input" type="file" name="attachments[]" multiple required></div><div class="master-field" style="grid-column:1/-1;"><label class="master-label">Notes</label><textarea class="master-textarea" name="notes"></textarea></div><button class="master-btn master-btn-primary" style="grid-column:1/-1;">Upload</button></form></div>
+    <div class="cp-grid-2 cp-content-grid">
+        <section class="cp-card cp-section-card">
+            <div class="cp-section-heading"><div><p class="cp-eyebrow">Comments</p><h2>Shipment discussion</h2></div></div>
+            <form method="POST" action="{{ route('client-portal.shipments.comments.store', $shipment->id) }}" class="cp-inline-form">@csrf<div class="master-field"><label class="master-label" for="shipment-comment">Comment</label><textarea class="master-textarea" id="shipment-comment" name="body" rows="4" maxlength="4000" required></textarea></div><button class="master-btn master-btn-primary" type="submit">Submit comment</button></form>
+            <div class="cp-comment-list">@forelse($comments as $comment)<article class="cp-comment"><div class="cp-comment-head"><strong>{{ $comment->authorName() }}</strong><time>{{ $comment->created_at->format('d M Y, h:i A') }}</time></div><p>{{ $comment->body }}</p></article>@empty<div class="cp-empty">No comments yet.</div>@endforelse</div>
+        </section>
+        <section class="cp-card cp-section-card">
+            <div class="cp-section-heading"><div><p class="cp-eyebrow">Documents</p><h2>Upload shipment file</h2></div><span class="cp-support-icon"><i class="fa-solid fa-cloud-arrow-up"></i></span></div>
+            <form method="POST" action="{{ route('client-portal.shipments.documents.store', $shipment->id) }}" enctype="multipart/form-data" class="cp-form-grid">@csrf<div class="master-field"><label class="master-label" for="shipment-category">Category</label><select class="master-select" id="shipment-category" name="category"><option value="shipment">Shipment document</option><option value="payment_proof">Payment proof</option><option value="other">Other</option></select></div><div class="master-field"><label class="master-label" for="shipment-file-title">Title</label><input class="master-input" id="shipment-file-title" name="title"></div><div class="master-field cp-field-full"><label class="master-label" for="shipment-files">Files</label><input class="master-input" id="shipment-files" type="file" name="attachments[]" multiple required></div><div class="master-field cp-field-full"><label class="master-label" for="shipment-file-notes">Notes</label><textarea class="master-textarea" id="shipment-file-notes" name="notes"></textarea></div><div class="cp-card-actions cp-field-full"><button class="master-btn master-btn-primary" type="submit">Upload files</button></div></form>
+        </section>
     </div>
 @endsection

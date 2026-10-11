@@ -4,96 +4,39 @@
 @section('page-title', 'Projects')
 
 @section('content')
-<div class="master-header" style="padding:5px;">
-    <div>
-        <h1>Projects</h1>
-        <p style="font-size:16px;font-weight:500;">Only projects published by MissPack are visible here.</p>
-    </div>
+<div class="cp-page-head">
+    <div><p class="cp-eyebrow">Delivery workspace</p><h1>Projects</h1><p>Follow the progress, products, approvals, files and activity for projects shared with your team.</p></div>
 </div>
-<div class="projects-list">
+
+<section class="cp-card cp-filter-card">
+    <form method="GET" action="{{ route('client-portal.projects.index') }}">
+        <div class="core-filter-toolbar">
+            <div class="master-field"><label class="master-label" for="project-search">Search projects</label><input class="master-input" id="project-search" name="search" value="{{ $search }}" placeholder="Project number, name or stage"></div>
+            <x-filter-trigger drawer="portalProjectFiltersDrawer" :count="(filled($search) ? 1 : 0) + ($status !== 'all' ? 1 : 0)" />
+        </div>
+        <x-drawer id="portalProjectFiltersDrawer" title="Filter projects" eyebrow="Project filters" subtitle="Narrow published projects by status." size="medium">
+            <section class="core-drawer-section"><h3 class="core-drawer-section-title">Project status</h3><div class="core-drawer-fields"><div class="master-field"><label class="master-label" for="project-status">Status</label><select class="master-select" id="project-status" name="status"><option value="all">All statuses</option>@foreach($statusOptions as $key => $label)<option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>@endforeach</select></div></div></section>
+            <x-slot:footer><a class="master-btn master-btn-soft" href="{{ route('client-portal.projects.index') }}">Reset</a><button class="master-btn master-btn-primary" type="submit">Apply filters</button></x-slot:footer>
+        </x-drawer>
+    </form>
+</section>
+
+<div class="cp-project-list">
     @forelse($projects as $project)
-        @php
-            $statusClass = 'projects-chip-status-' . $project->status;
-        @endphp
-        <div class="projects-card projects-project-card" style="{{ $project->progress_percent == 100 ? 'background:#10b98150' : '' }}; line-height:1.1;">
-            <div class="projects-top-bar">
-                <a href="{{ route('client-portal.projects.show', $project->id) }}" style="text-decoration:none;">
-                
-                    <div class="projects-project-top">
-                        <div>
-                            <div class="projects-number">{{ $project->project_number }}</div>
-                
-                            <h3>{{ $project->name }}</h3>
-                
-                            <div class="projects-meta-row">
-                                <span>
-                                    <i class="fa-solid fa-user-check"></i>
-                                    MissPack team
-                                </span>
-                                <span>
-                                    <i class="fa-solid fa-calendar-days"></i>
-                                    Start: {{ optional($project->start_date)->format('d M Y') ?: 'No Start' }}
-                                </span>
-                                <!--<span>-->
-                                <!--    <i class="fa-solid fa-calendar-days"></i>-->
-                                <!--    Target: {{ optional($project->target_date)->format('d M Y') ?: 'No target' }}-->
-                                <!--</span>-->
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            
-                <div class="projects-progress-wrap">
-                    <div class="projects-progress-text">
-                        <span>{{ $project->stageLabel() }}</span>
-                        <strong>{{ $project->progress_percent }}%</strong>
-                    </div>
-            
-                    <div class="projects-progress">
-                        <span style="width: {{ $project->progress_percent }}%"></span>
-                    </div>
-                </div>
-            
-            </div>
-
-            <div class="projects-mini-grid cp-project-safe-metrics">
-                <div>
-                    <span>Started</span>
-                    <h3>{{ optional($project->start_date)->format('d M Y') ?: 'Not set' }}</h3>
-                </div>
-                <div>
-                    <span>Target</span>
-                    <h3>{{ optional($project->target_date)->format('d M Y') ?: 'Not set' }}</h3>
-                </div>
-                <div>
-                    <span>Current stage</span>
-                    <h3>{{ $project->stageLabel() }}</h3>
+        <article class="cp-card cp-project-card {{ (int)$project->progress_percent === 100 ? 'is-complete' : '' }}">
+            <div class="cp-project-card-main">
+                <span class="cp-project-icon"><i class="fa-solid fa-briefcase"></i></span>
+                <div class="cp-project-card-copy">
+                    <div class="cp-project-card-top"><div><span class="cp-product-number">{{ $project->project_number }}</span><h2><a href="{{ route('client-portal.projects.show', $project) }}">{{ $project->name }}</a></h2></div></div>
+                    <div class="cp-project-meta"><span><i class="fa-regular fa-calendar"></i> Started {{ optional($project->start_date)->format('d M Y') ?: 'not set' }}</span><span><i class="fa-solid fa-bullseye"></i> Target {{ optional($project->target_date)->format('d M Y') ?: 'not set' }}</span><span><i class="fa-solid fa-layer-group"></i> {{ $project->stageLabel() }}</span></div>
+                    <div class="cp-project-progress"><div><span>{{ $project->stageLabel() }}</span><strong>{{ (int)$project->progress_percent }}%</strong></div><div class="cp-progress-track"><span style="width:{{ (int)$project->progress_percent }}%"></span></div></div>
                 </div>
             </div>
-
-            <div class="projects-project-footer">
-                <div class="projects-footer-tags">
-                    <span class="projects-chip {{ $statusClass }}">{{ $project->statusLabel() }}</span>
-                </div>
-                <div class="projects-footer-actions">
-                    <a href="{{ route('client-portal.projects.show', $project->id) }}"
-                        class="master-btn master-btn-primary master-btn-sm">Open</a>
-                </div>
-            </div>
-        </div>
+            <div class="cp-project-card-action"><span class="cp-badge status-{{ $project->status }}">{{ $project->statusLabel() }}</span><a class="master-btn master-btn-soft" href="{{ route('client-portal.projects.show', $project) }}">Open project <i class="fa-solid fa-arrow-right"></i></a></div>
+        </article>
     @empty
-        <div class="projects-empty" style="line-height:1.5;">
-            <div class="projects-empty-icon"><i class="fa-solid fa-briefcase"></i></div>
-            <h3>No shared projects yet</h3>
-            <p>Projects published by MissPack will appear here. If you expected to see one, our support team can help.</p>
-            <a class="master-btn master-btn-primary" href="{{ route('client-portal.support.index') }}">Contact support</a>
-        </div>
+        <div class="cp-card cp-empty cp-empty-spacious"><i class="fa-solid fa-briefcase"></i><strong>No shared projects found</strong><span>Published projects will appear here. Try changing your filters or ask the MissPack team for help.</span><a class="master-btn master-btn-primary" href="{{ route('client-portal.support.index') }}">Contact support</a></div>
     @endforelse
 </div>
 <x-pagination :items="$projects" />
-
-
-@push('styles')
-    <link rel="stylesheet" href="{{ asset('assets/css/client-portal-projects.css') }}">
-@endpush
 @endsection
