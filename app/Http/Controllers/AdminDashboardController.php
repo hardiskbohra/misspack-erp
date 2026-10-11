@@ -804,11 +804,16 @@ class AdminDashboardController extends Controller
 
         $this->invoiceFilter($query, 'purchase_invoices', 'bill');
 
-        if (Schema::hasTable('vendors') && Schema::hasColumn('purchase_invoices', 'vendor_id')) {
+        $hasInvoiceVendorName = Schema::hasColumn('purchase_invoices', 'vendor_company_name');
+        $invoiceVendorName = $hasInvoiceVendorName ? 'purchase_invoices.vendor_company_name' : "'Vendor'";
+
+        if (Schema::hasTable('vendors')
+            && Schema::hasColumn('vendors', 'vendor_name')
+            && Schema::hasColumn('purchase_invoices', 'vendor_id')) {
             $query->leftJoin('vendors', 'purchase_invoices.vendor_id', '=', 'vendors.id')
-                ->selectRaw("COALESCE(vendors.company_name, purchase_invoices.vendor_company_name, 'Vendor') as label, SUM(purchase_invoices.total_amount) as total");
+                ->selectRaw("COALESCE(vendors.vendor_name, {$invoiceVendorName}, 'Vendor') as label, SUM(purchase_invoices.total_amount) as total");
         } else {
-            $query->selectRaw("COALESCE(vendor_company_name, 'Vendor') as label, SUM(total_amount) as total");
+            $query->selectRaw("COALESCE({$invoiceVendorName}, 'Vendor') as label, SUM(purchase_invoices.total_amount) as total");
         }
 
         return $query->groupBy('label')->orderByDesc('total')->limit(8)->pluck('total', 'label')
