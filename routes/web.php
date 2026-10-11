@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\EmployeeDocumentController;
 use App\Http\Controllers\EmployeePayslipController;
 use App\Http\Controllers\EmployeeWorkspaceController;
@@ -133,7 +134,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/clients/{client}/portal/support/{conversation}/status', [ClientPortalSupportManagementController::class, 'updateStatus'])->name('clients.portal.support.status');
         Route::get('/clients/{client}/portal/documents/{document}/file', [ClientPortalManagementController::class, 'downloadDocument'])->name('clients.portal.documents.file');
 
-        Route::redirect('/dashboard', '/clients');
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::get('/search', GlobalSearchController::class)->name('search');
 
         /* =====================================================================

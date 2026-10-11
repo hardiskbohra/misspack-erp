@@ -80,6 +80,7 @@ class AdminDashboardController extends Controller
         $moduleHealth = $this->moduleHealth();
         $routes = $this->routes();
         $availableYears = $this->availableYears();
+        $comparisons = $this->comparisons($period);
 
         return view('dashboard.index', compact(
             'range',
@@ -94,14 +95,15 @@ class AdminDashboardController extends Controller
             'attention',
             'moduleHealth',
             'routes',
-            'availableYears'
+            'availableYears',
+            'comparisons'
         ));
     }
 
     private function periodContext(Request $request): array
     {
         $type = (string) $request->query('period_type', 'year');
-        if (! in_array($type, ['range', 'quarter', 'half', 'year', 'multi_year'], true)) {
+        if (! in_array($type, ['range', 'month', 'quarter', 'half', 'year', 'multi_year'], true)) {
             $type = 'year';
         }
 
@@ -123,6 +125,29 @@ class AdminDashboardController extends Controller
                 'type' => $type,
                 'label' => 'Last '.$range.' Days',
                 'year' => $year,
+                'quarter' => null,
+                'half' => null,
+                'range' => $range,
+                'start' => $start,
+                'end' => $end,
+                'group' => 'day',
+                'labels' => $this->dateLabels($start, $end),
+            ];
+        }
+
+        if ($type === 'month') {
+            $month = (int) $request->query('month', now()->month);
+            if ($month < 1 || $month > 12) {
+                $month = now()->month;
+            }
+            $start = Carbon::create($year, $month, 1)->startOfDay();
+            $end = $start->copy()->endOfMonth()->endOfDay();
+
+            return [
+                'type' => $type,
+                'label' => $start->format('F Y'),
+                'year' => $year,
+                'month' => $month,
                 'quarter' => null,
                 'half' => null,
                 'range' => $range,
@@ -220,6 +245,114 @@ class AdminDashboardController extends Controller
             'group' => 'month',
             'labels' => $this->monthLabels($start, $end),
         ];
+    }
+
+    /**
+     * Side-by-side performance context. Month-to-date and year-to-date use the
+     * same elapsed number of days in the prior period, so an unfinished October
+     * is never compared with all of September or a partial year with a full one.
+     */
+    private function comparisons(array $period): array
+    {
+        $today = now()->endOfDay();
+        $monthStart = $today->copy()->startOfMonth();
+        $previousMonthStart = $monthStart->copy()->subMonthNoOverflow();
+        $previousMonthEnd = $previousMonthStart->copy()
+            ->addDays(min($today->day, $previousMonthStart->daysInMonth) - 1)
+            ->endOfDay();
+
+        $yearStart = $today->copy()->startOfYear();
+        $previousYearStart = $yearStart->copy()->subYear();
+        $previousYearEnd = $today->copy()->subYear()->endOfDay();
+
+        $selectedDays = max(1, (int) $period['start']->diffInDays($period['end']) + 1);
+        $selectedPreviousEnd = $period['start']->copy()->subSecond();
+        $selectedPreviousStart = $selectedPreviousEnd->copy()->subDays($selectedDays - 1)->startOfDay();
+
+        return [
+            'month' => $this->comparisonBlock(
+                'This month vs last month',
+                $this->periodTotals($monthStart, $today),
+                $this->periodTotals($previousMonthStart, $previousMonthEnd)
+            ),
+            'year' => $this->comparisonBlock(
+                'This year vs last year',
+                $this->periodTotals($yearStart, $today),
+                $this->periodTotals($previousYearStart, $previousYearEnd)
+            ),
+            'selected' => $this->comparisonBlock(
+                $period['label'].' vs previous period',
+                $this->periodTotals($period['start'], $period['end']),
+                $this->periodTotals($selectedPreviousStart, $selectedPreviousEnd)
+            ),
+        ];
+    }
+
+    private function comparisonBlock(string $label, array $current, array $previous): array
+    {
+        $metrics = [];
+        foreach ($current as $key => $value) {
+            $prior = (float) ($previous[$key] ?? 0);
+            $change = $prior == 0.0 ? ($value == 0.0 ? 0.0 : 100.0) : (($value - $prior) / abs($prior)) * 100;
+            $metrics[$key] = [
+                'current' => round((float) $value, 2),
+                'previous' => round($prior, 2),
+                'change' => round($change, 1),
+            ];
+        }
+
+        return ['label' => $label, 'metrics' => $metrics];
+    }
+
+    private function periodTotals(Carbon $start, Carbon $end): array
+    {
+        $sales = $this->rangeSum('sales_invoices', ['invoice_date', 'created_at'], 'total_amount', $start, $end, 'tax');
+        $purchase = $this->rangeSum('purchase_invoices', ['invoice_date', 'created_at'], 'total_amount', $start, $end, 'bill');
+        $income = $this->rangeSum('cashflow_entries', ['entry_date', 'created_at'], 'credit_amount', $start, $end);
+        $expense = $this->rangeSum('cashflow_entries', ['entry_date', 'created_at'], 'debit_amount', $start, $end);
+
+        return [
+            'sales' => $sales,
+            'purchase' => $purchase,
+            'margin' => $sales - $purchase,
+            'income' => $income,
+            'expense' => $expense,
+            'net' => $income - $expense,
+            'leads' => $this->rangeCount('leads', ['created_at'], $start, $end),
+            'projects' => $this->rangeCount('projects', ['start_date', 'created_at'], $start, $end),
+            'shipments' => $this->rangeCount('shipments', ['pickup_date', 'created_at'], $start, $end),
+        ];
+    }
+
+    private function rangeSum(string $table, array $dateColumns, string $amountColumn, Carbon $start, Carbon $end, ?string $moneyType = null): float
+    {
+        $dateColumn = $this->dateColumn($table, $dateColumns);
+        if (! $dateColumn || ! $this->tableColumn($table, $amountColumn)) {
+            return 0;
+        }
+
+        $query = DB::table($table)->whereBetween($table.'.'.$dateColumn, [
+            $this->dateBoundary($start, $dateColumn),
+            $this->dateBoundary($end, $dateColumn, true),
+        ]);
+        if ($moneyType !== null) {
+            $this->invoiceFilter($query, $table, $moneyType);
+        }
+
+        return (float) $query->sum($table.'.'.$amountColumn);
+    }
+
+    private function rangeCount(string $table, array $dateColumns, Carbon $start, Carbon $end): int
+    {
+        $dateColumn = $this->dateColumn($table, $dateColumns);
+        if (! $dateColumn) {
+            return 0;
+        }
+
+        return (int) DB::table($table)->whereBetween($dateColumn, [
+            $this->dateBoundary($start, $dateColumn),
+            $this->dateBoundary($end, $dateColumn, true),
+        ])->count();
     }
 
     private function metrics(array $period, array $charts): array
