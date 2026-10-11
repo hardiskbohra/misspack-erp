@@ -27,12 +27,12 @@
             <div class="cp-project-card-main">
                 <span class="cp-project-icon"><i class="fa-solid fa-briefcase"></i></span>
                 <div class="cp-project-card-copy">
-                    <div class="cp-project-card-top"><div><span class="cp-product-number">{{ $project->project_number }}</span><h2><a href="{{ route('client-portal.projects.show', $project) }}">{{ $project->name }}</a></h2></div><span class="cp-badge status-{{ $project->status }}">{{ $project->statusLabel() }}</span></div>
+                    <div class="cp-project-card-top"><div><span class="cp-product-number">{{ $project->project_number }}</span><h2><a href="{{ route('client-portal.projects.show', $project) }}">{{ $project->name }}</a></h2></div></div>
                     <div class="cp-project-meta"><span><i class="fa-regular fa-calendar"></i> Started {{ optional($project->start_date)->format('d M Y') ?: 'not set' }}</span><span><i class="fa-solid fa-bullseye"></i> Target {{ optional($project->target_date)->format('d M Y') ?: 'not set' }}</span><span><i class="fa-solid fa-layer-group"></i> {{ $project->stageLabel() }}</span></div>
                     <div class="cp-project-progress"><div><span>{{ $project->stageLabel() }}</span><strong>{{ (int)$project->progress_percent }}%</strong></div><div class="cp-progress-track"><span style="width:{{ (int)$project->progress_percent }}%"></span></div></div>
                 </div>
             </div>
-            <div class="cp-project-card-action"><a class="master-btn master-btn-soft" href="{{ route('client-portal.projects.show', $project) }}">Open project <i class="fa-solid fa-arrow-right"></i></a></div>
+            <div class="cp-project-card-action"><span class="cp-badge status-{{ $project->status }}">{{ $project->statusLabel() }}</span><a class="master-btn master-btn-soft" href="{{ route('client-portal.projects.show', $project) }}">Open project <i class="fa-solid fa-arrow-right"></i></a></div>
         </article>
     @empty
         <div class="cp-card cp-empty cp-empty-spacious"><i class="fa-solid fa-briefcase"></i><strong>No shared projects found</strong><span>Published projects will appear here. Try changing your filters or ask the MissPack team for help.</span><a class="master-btn master-btn-primary" href="{{ route('client-portal.support.index') }}">Contact support</a></div>

@@ -16,6 +16,20 @@
         var commandInput = document.getElementById('cpCommandInput');
         var previousFocus = null;
 
+        function dismissToast(toast) {
+            if (!toast || toast.classList.contains('is-leaving')) return;
+            toast.classList.add('is-leaving');
+            window.setTimeout(function () { toast.remove(); }, 180);
+        }
+
+        document.querySelectorAll('[data-portal-toast]').forEach(function (toast) {
+            var close = toast.querySelector('[data-toast-close]');
+            if (close) close.addEventListener('click', function () { dismissToast(toast); });
+            if (toast.getAttribute('role') !== 'alert') {
+                window.setTimeout(function () { dismissToast(toast); }, 5000);
+            }
+        });
+
         function setSidebar(open) {
             if (!shell) return;
             shell.classList.toggle('sidebar-open', open);

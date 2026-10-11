@@ -3801,6 +3801,184 @@ a.vendor-timeline-item:focus-visible {
 }
 .client-portal-login .cp-login-submit:hover { background: #3f73da; }
 
+/* Client workspace refinements: align the navigation rail with the internal
+   application shell while retaining client-specific destinations and context. */
+.client-workspace-body .cp-sidebar {
+    width: 280px;
+    background: #1a2540;
+    box-shadow: 2px 0 20px rgba(0, 0, 0, .22);
+}
+.client-workspace-body .cp-main { width: calc(100% - 280px); margin-left: 280px; }
+.client-workspace-body .cp-logo {
+    min-height: 92px;
+    padding: 24px 20px;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+.client-workspace-body .cp-logo-copy strong { color: #fff; font-size: 20px; letter-spacing: .4px; }
+.client-workspace-body .cp-logo-copy small { color: rgba(255,255,255,.5); font-size: 10px; letter-spacing: 1px; }
+.client-workspace-body .cp-client-switcher {
+    min-height: 56px;
+    margin: 16px 16px 2px;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(255,255,255,.06);
+}
+.client-workspace-body .cp-client-switcher > i { display: block; color: rgba(255,255,255,.42); }
+.client-workspace-body .cp-nav { padding: 0 0 20px; }
+.client-workspace-body .cp-nav-section {
+    padding: 20px 16px 8px;
+    color: rgba(255,255,255,.4);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+}
+.client-workspace-body .cp-nav-link {
+    min-height: 46px;
+    gap: 14px;
+    margin: 2px 8px;
+    padding: 11px 18px;
+    color: rgba(255,255,255,.85);
+    font-size: 14px;
+    font-weight: 500;
+}
+.client-workspace-body .cp-nav-link > i { width: 22px; color: inherit; font-size: 15px; text-align: center; }
+.client-workspace-body .cp-nav-link:hover { color: #fff; background: rgba(255,255,255,.08); }
+.client-workspace-body .cp-nav-link.active {
+    color: #fff;
+    border-color: transparent;
+    background: #4f8ef7;
+    box-shadow: none;
+}
+.client-workspace-body .cp-nav-link.active > i { color: #fff; }
+.client-workspace-body .cp-sidebar-footer { padding: 16px; border-top: 1px solid rgba(255,255,255,.08); }
+.client-workspace-body .cp-sidebar-user { padding: 10px; border-radius: 10px; background: rgba(255,255,255,.06); }
+.client-workspace-body .cp-user-avatar { width: 36px; height: 36px; flex-basis: 36px; border-radius: 50%; background: #4f8ef7; }
+.client-workspace-body .cp-user-copy strong { color: #fff; font-size: 13px; }
+.client-workspace-body .cp-user-copy small { color: rgba(255,255,255,.45); font-size: 11px; }
+
+/* Global portal feedback stays visible without displacing page content. */
+.client-workspace-body .cp-toast-stack {
+    position: fixed;
+    z-index: 1200;
+    top: 18px;
+    right: 20px;
+    width: min(390px, calc(100vw - 32px));
+    display: grid;
+    gap: 10px;
+    pointer-events: none;
+}
+.client-workspace-body .cp-toast {
+    position: relative;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) 28px;
+    align-items: start;
+    gap: 10px;
+    min-height: 62px;
+    padding: 13px 12px;
+    overflow: hidden;
+    color: var(--ui-text);
+    border: 1px solid var(--ui-border);
+    border-left: 4px solid var(--ui-accent);
+    border-radius: var(--ui-radius-card);
+    background: var(--ui-card-surface);
+    box-shadow: 0 16px 38px rgba(23,35,59,.16);
+    pointer-events: auto;
+    animation: cp-toast-enter .2s ease-out both;
+}
+.client-workspace-body .cp-toast::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background: currentColor;
+    opacity: .32;
+    transform-origin: left;
+    animation: cp-toast-life 5s linear both;
+}
+.client-workspace-body .cp-toast[role="alert"]::after { animation: none; }
+.client-workspace-body .cp-toast-icon {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    color: var(--ui-accent);
+    background: color-mix(in srgb, var(--ui-accent) 12%, var(--ui-card-surface));
+}
+.client-workspace-body .cp-toast-copy { min-width: 0; padding-top: 1px; }
+.client-workspace-body .cp-toast-copy strong { display: block; margin-bottom: 2px; font-size: 12px; font-weight: 700; }
+.client-workspace-body .cp-toast-copy p { margin: 0; color: var(--ui-text-secondary); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.client-workspace-body .cp-toast-close {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    color: var(--ui-text-muted);
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    cursor: pointer;
+}
+.client-workspace-body .cp-toast-close:hover { color: var(--ui-text); background: var(--ui-muted-surface); }
+.client-workspace-body .cp-toast-success { border-left-color: var(--ui-success); }
+.client-workspace-body .cp-toast-success .cp-toast-icon { color: #168367; background: color-mix(in srgb, var(--ui-success) 14%, var(--ui-card-surface)); }
+.client-workspace-body .cp-toast-error { border-left-color: var(--ui-danger); }
+.client-workspace-body .cp-toast-error .cp-toast-icon { color: var(--ui-danger); background: color-mix(in srgb, var(--ui-danger) 12%, var(--ui-card-surface)); }
+.client-workspace-body .cp-toast-warning { border-left-color: var(--ui-warning); }
+.client-workspace-body .cp-toast-warning .cp-toast-icon { color: #a9680c; background: color-mix(in srgb, var(--ui-warning) 14%, var(--ui-card-surface)); }
+.client-workspace-body .cp-toast.is-leaving { animation: cp-toast-leave .18s ease-in both; }
+@keyframes cp-toast-enter { from { opacity: 0; transform: translate3d(24px,0,0); } }
+@keyframes cp-toast-leave { to { opacity: 0; transform: translate3d(20px,0,0); } }
+@keyframes cp-toast-life { to { transform: scaleX(0); } }
+
+/* Project rows use a deliberate, stable action column. */
+.client-workspace-body .cp-project-card { grid-template-columns: minmax(0,1fr) 150px; align-items: stretch; }
+.client-workspace-body .cp-project-card-action {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    padding-left: 20px;
+    border-left: 1px solid var(--ui-border);
+}
+.client-workspace-body .cp-project-card-action .cp-badge { align-self: flex-end; }
+.client-workspace-body .cp-project-card-action .master-btn { width: 100%; justify-content: center; white-space: nowrap; }
+.client-workspace-body .cp-project-progress { max-width: none; }
+
+/* Tab detail surfaces should be defined by spacing and borders, not elevation. */
+.client-workspace-body .pd-tabs-shell,
+.client-workspace-body .pd-tabs-content,
+.client-workspace-body .pd-tab-panel,
+.client-workspace-body .pd-tab-panel :is(.master-card, .master-section, .cp-card, .pd-card, .cp-table-card) {
+    box-shadow: none !important;
+}
+
+@media (max-width: 767px) {
+    .client-workspace-body .cp-toast-stack { top: 12px; right: 12px; width: calc(100vw - 24px); }
+    .client-workspace-body .cp-project-card { grid-template-columns: 1fr; }
+    .client-workspace-body .cp-project-card-action {
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        padding: 14px 0 0 56px;
+        border-top: 1px solid var(--ui-border);
+        border-left: 0;
+    }
+    .client-workspace-body .cp-project-card-action .master-btn { width: auto; margin-left: auto; }
+}
+@media (max-width: 479px) {
+    .client-workspace-body .cp-project-card-action { padding-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .client-workspace-body .cp-toast,
+    .client-workspace-body .cp-toast::after { animation: none; }
+}
+
 
 
 /* --- resources/css/layout/responsive.css --- */

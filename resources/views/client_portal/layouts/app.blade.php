@@ -69,7 +69,6 @@
     <button class="cp-overlay" id="cpOverlay" type="button" aria-label="Close navigation"></button>
     <aside class="cp-sidebar" id="cpSidebar" aria-label="Primary navigation">
         <a class="cp-logo" href="{{ route('client-portal.dashboard') }}" aria-label="MissPack Client Workspace home">
-            <span class="cp-logo-mark"><i class="fa-solid fa-cubes-stacked"></i></span>
             <span class="cp-logo-copy"><strong>MissPack</strong><small>CLIENT WORKSPACE</small></span>
         </a>
         <div class="cp-client-switcher">
@@ -111,11 +110,37 @@
                 <form method="POST" action="{{ route('client-portal.logout') }}" class="cp-logout-form">@csrf<button class="cp-top-icon cp-logout" type="submit" aria-label="Log out"><i class="fa-solid fa-arrow-right-from-bracket"></i></button></form>
             </div>
         </header>
+        <div class="cp-toast-stack" aria-live="polite" aria-atomic="false">
+            @if(session('success'))
+                <div class="cp-toast cp-toast-success" role="status" data-portal-toast>
+                    <span class="cp-toast-icon"><i class="fa-solid fa-circle-check"></i></span>
+                    <div class="cp-toast-copy"><strong>Success</strong><p>{{ session('success') }}</p></div>
+                    <button class="cp-toast-close" type="button" data-toast-close aria-label="Dismiss message"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            @endif
+            @if(session('error'))
+                <div class="cp-toast cp-toast-error" role="alert" data-portal-toast>
+                    <span class="cp-toast-icon"><i class="fa-solid fa-circle-exclamation"></i></span>
+                    <div class="cp-toast-copy"><strong>Action needed</strong><p>{{ session('error') }}</p></div>
+                    <button class="cp-toast-close" type="button" data-toast-close aria-label="Dismiss message"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            @endif
+            @if(session('warning'))
+                <div class="cp-toast cp-toast-warning" role="status" data-portal-toast>
+                    <span class="cp-toast-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                    <div class="cp-toast-copy"><strong>Please note</strong><p>{{ session('warning') }}</p></div>
+                    <button class="cp-toast-close" type="button" data-toast-close aria-label="Dismiss message"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            @endif
+            @if($errors->any())
+                <div class="cp-toast cp-toast-error" role="alert" data-portal-toast>
+                    <span class="cp-toast-icon"><i class="fa-solid fa-circle-exclamation"></i></span>
+                    <div class="cp-toast-copy"><strong>Check this form</strong><p>{{ $errors->first() }}</p></div>
+                    <button class="cp-toast-close" type="button" data-toast-close aria-label="Dismiss message"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            @endif
+        </div>
         <div class="cp-content" id="portalContent" tabindex="-1">
-            @if(session('success'))<div class="cp-flash cp-flash-success" role="status"><i class="fa-solid fa-circle-check"></i><span>{{ session('success') }}</span></div>@endif
-            @if(session('error'))<div class="cp-flash cp-flash-error" role="alert"><i class="fa-solid fa-circle-exclamation"></i><span>{{ session('error') }}</span></div>@endif
-            @if(session('warning'))<div class="cp-flash cp-flash-warning" role="status"><i class="fa-solid fa-triangle-exclamation"></i><span>{{ session('warning') }}</span></div>@endif
-            @if($errors->any())<div class="cp-flash cp-flash-error" role="alert"><i class="fa-solid fa-circle-exclamation"></i><span>{{ $errors->first() }}</span></div>@endif
             @yield('content')
         </div>
     </main>
