@@ -693,9 +693,11 @@
     opacity:.86;
 }
 
-canvas {
+.master-page canvas {
     width:100%;
     max-width:100%;
+    height:280px;
+    display:block;
 }
 
 /* High-priority operational failures stay above analytical content. */
