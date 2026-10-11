@@ -1046,3 +1046,46 @@ body[data-ui-module="dashboard"] .master-page .master-metrics-grid.four { grid-t
 @media (max-width:479px) {
     body[data-ui-module="dashboard"] .master-page .master-metrics-grid.four { grid-template-columns:1fr; }
 }
+
+/* The reporting range belongs to the persistent app bar, not to a second page
+   title card. The mobile row keeps the same control reachable when topbar page
+   actions collapse. */
+body[data-ui-module="dashboard"] .topbar-page-actions #dashPeriodForm .core-filter-toolbar {
+    gap:8px;
+    flex-wrap:nowrap;
+}
+body[data-ui-module="dashboard"] .topbar-page-actions .master-period-badge {
+    min-width:150px;
+    height:42px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:5px 10px;
+}
+body[data-ui-module="dashboard"] .master-metric-card {
+    background:#fff;
+}
+.dashboard-period-mobile { display:none; }
+:root[data-theme="dark"] body[data-ui-module="dashboard"] .master-metric-card {
+    background:var(--mc-card);
+}
+@media (max-width:600px) {
+    body[data-ui-module="dashboard"] .topbar-page-actions { display:block; margin:0; }
+    body[data-ui-module="dashboard"] .topbar-page-actions #dashPeriodForm > .core-filter-toolbar { display:none; }
+    .dashboard-period-mobile {
+        min-height:52px;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        padding:7px 9px;
+        border:1px solid var(--mc-border);
+        border-radius:10px;
+        background:var(--mc-card);
+    }
+    .dashboard-period-mobile > div { min-width:0; text-align:right; }
+    .dashboard-period-mobile strong,
+    .dashboard-period-mobile small { display:block; }
+    .dashboard-period-mobile strong { color:var(--mc-text); font-size:11px; }
+    .dashboard-period-mobile small { margin-top:2px; color:var(--mc-text-3); font-size:9px; white-space:nowrap; }
+}
