@@ -1036,3 +1036,13 @@
 :root[data-theme="dark"] .master-tab.active { color:#8db5ff; background:rgba(79,131,241,.16); }
 :root[data-theme="dark"] .master-critical-strip { color:#f2a0b4; }
 :root[data-theme="dark"] .master-critical-copy a { color:#f2a0b4; }
+
+/* Module scorecards stay scannable: one row on workspace/tablet widths,
+   two-up on small screens, and a single column only on narrow phones. */
+body[data-ui-module="dashboard"] .master-page .master-metrics-grid.four { grid-template-columns:repeat(4,minmax(0,1fr)); }
+@media (max-width:767px) {
+    body[data-ui-module="dashboard"] .master-page .master-metrics-grid.four { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:479px) {
+    body[data-ui-module="dashboard"] .master-page .master-metrics-grid.four { grid-template-columns:1fr; }
+}
