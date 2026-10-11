@@ -536,7 +536,6 @@ for (const file of walk(VIEWS).filter(f => f.endsWith('.blade.php'))) {
 /* Where a `master-*` name is worn but no sheet owns it, today. Modules already
    shipped keep their own naming until their turn; nothing new may join them. */
 const KNOWN = [
-    'master-attention-card',
     'master-calc-input', 'master-delete-btn',
     'master-form-group',
     'master-save', 'master-text',
