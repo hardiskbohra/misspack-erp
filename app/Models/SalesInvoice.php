@@ -207,6 +207,7 @@ class SalesInvoice extends Model
         }
 
         return round((float) ($this->payments()
+            ->reorder()
             ->selectRaw('coalesce(sum(credit_amount - debit_amount), 0) as received')
             ->first()?->received ?? 0), 2);
     }
@@ -244,6 +245,7 @@ class SalesInvoice extends Model
 
         $ledger = $this->payments()
             ->whereIn('accounting_status', ['booked', 'reconciled'])
+            ->reorder()
             ->selectRaw('coalesce(sum(credit_amount - debit_amount), 0) as received')
             ->value('received');
 
