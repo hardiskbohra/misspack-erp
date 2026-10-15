@@ -109,9 +109,16 @@ document.addEventListener('DOMContentLoaded', function () {
             : 'Leave blank when it is the same as the cash amount.';
     }
     function openModal() {
-        modal.classList.add('is-open');
-        modal.setAttribute('aria-hidden', 'false');
-        document.body.classList.add('master-modal-open');
+        /* Use the shared dialog lifecycle. The modal stylesheet displays
+           `.master-modal.open`; `is-open` belongs to no shared dialog rule and
+           left this detail-page modal hidden behind the backdrop. */
+        if (window.MasterModal) {
+            window.MasterModal.open(modal);
+        } else {
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('master-modal-open');
+        }
         stats(); currencyHint();
         window.setTimeout(function () { amount.focus(); }, 40);
     }
