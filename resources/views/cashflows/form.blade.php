@@ -4,6 +4,10 @@
 
 @section('content')
 
+@push('styles')
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/cashflows.css') }}">
+@endpush
+
 @php
     $isEdit = $entry->exists;
     $allocationRows = old('allocations');

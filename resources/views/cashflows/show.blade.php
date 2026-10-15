@@ -210,12 +210,13 @@
                             <div class="master-section-head">
                                 <div>
                                     <h3 class="master-section-title">Allocation breakdown</h3>
-                                    <p class="master-sub">{{ $allocations->count() }} monetary {{ \Illuminate\Support\Str::plural('slice', $allocations->count()) }} across projects and documents</p>
+                                    <p class="master-sub">{{ $allocations->count() }} monetary {{ \Illuminate\Support\Str::plural('slice', $allocations->count()) }}</p>
                                 </div>
-                                <div class="master-section-meta">
-                                    <span class="master-chip">{{ $money($entry->allocatedAmount()) }} allocated</span>
-                                    @if ($entry->unallocatedAmount() > 0.009)<span class="master-chip">{{ $money($entry->unallocatedAmount()) }} unapplied</span>@endif
-                                </div>
+                            </div>
+                            <div class="master-stats cf-allocation-stats cf-allocation-record-stats">
+                                <div class="master-stat master-stat--flat blue"><div><p class="master-stat-title">Entry amount</p><p class="master-stat-value">{{ $money($entry->amountMoved()) }}</p></div></div>
+                                <div class="master-stat master-stat--flat green"><div><p class="master-stat-title">Allocated</p><p class="master-stat-value">{{ $money($entry->allocatedAmount()) }}</p></div></div>
+                                <div class="master-stat master-stat--flat purple"><div><p class="master-stat-title">Unallocated</p><p class="master-stat-value">{{ $money($entry->unallocatedAmount()) }}</p></div></div>
                             </div>
                             <div class="master-table-wrap">
                                 <table class="master-table">

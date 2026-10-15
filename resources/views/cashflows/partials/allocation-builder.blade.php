@@ -7,24 +7,26 @@
 <section class="master-section cf-allocation-section" data-allocation-builder>
     <div class="master-section-head">
         <div>
-            <p class="master-eyebrow">Project and document mapping</p>
             <h3 class="master-section-title">Allocation breakdown</h3>
-            <p class="master-sub">Divide this bank entry into monetary slices. Each slice can carry one project and one sales or purchase document.</p>
         </div>
         <button type="button" class="master-btn master-btn-soft master-btn-sm" data-add-allocation>
             <i class="fa-solid fa-plus" aria-hidden="true"></i> Add allocation
         </button>
     </div>
 
-    <div class="cf-allocation-summary" aria-live="polite">
-        <div><span>Entry amount</span><strong data-allocation-entry>0.00</strong></div>
-        <div><span>Allocated</span><strong data-allocation-total>0.00</strong></div>
-        <div><span>Available / advance</span><strong data-allocation-remaining>0.00</strong></div>
-    </div>
-
-    <div class="master-help cf-allocation-help">
-        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-        <span>Allocations may total less than the entry, leaving an unapplied advance. They cannot exceed the bank entry, but a document allocation may exceed that document’s open amount.</span>
+    <div class="master-stats cf-allocation-stats" aria-live="polite">
+        <div class="master-stat master-stat--flat blue">
+            <span class="icon"><i class="fa-solid fa-wallet" aria-hidden="true"></i></span>
+            <div><p class="master-stat-title">Entry amount</p><p class="master-stat-value" data-allocation-entry>0.00</p></div>
+        </div>
+        <div class="master-stat master-stat--flat green">
+            <span class="icon"><i class="fa-solid fa-code-branch" aria-hidden="true"></i></span>
+            <div><p class="master-stat-title">Allocated</p><p class="master-stat-value" data-allocation-total>0.00</p></div>
+        </div>
+        <div class="master-stat master-stat--flat purple">
+            <span class="icon"><i class="fa-solid fa-coins" aria-hidden="true"></i></span>
+            <div><p class="master-stat-title">Unallocated</p><p class="master-stat-value" data-allocation-remaining>0.00</p></div>
+        </div>
     </div>
     @error('allocations')<div class="master-error">{{ $message }}</div>@enderror
 
@@ -102,13 +104,17 @@
                 <span class="master-modal-icon"><i class="fa-solid fa-code-branch" aria-hidden="true"></i></span>
                 <div>
                     <h3 class="master-modal-title" id="allocationModalTitle" data-allocation-modal-title>Add allocation</h3>
-                    <p class="master-modal-subtitle">Map one part of this cashflow entry without changing the bank amount.</p>
                 </div>
             </div>
         </div>
         <div class="master-modal-body">
+            <div class="master-stats cf-allocation-modal-stats" aria-live="polite">
+                <div class="master-stat master-stat--flat blue"><div><p class="master-stat-title">Entry amount</p><p class="master-stat-value" data-modal-entry-total>0.00</p></div></div>
+                <div class="master-stat master-stat--flat green"><div><p class="master-stat-title">Other allocations</p><p class="master-stat-value" data-modal-allocated-total>0.00</p></div></div>
+                <div class="master-stat master-stat--flat purple"><div><p class="master-stat-title">Available for this line</p><p class="master-stat-value" data-modal-available-total>0.00</p></div></div>
+            </div>
             <div class="cf-allocation-modal-grid">
-                <div class="master-field full">
+                <div class="master-field">
                     <label class="master-label" for="allocationProject">Project</label>
                     <select class="master-select" id="allocationProject" data-modal-value="project_id">
                         <option value="">No project</option>
@@ -138,7 +144,7 @@
                     <input class="master-input" id="allocationDocumentAmount" type="number" min="0.01" step="0.01" data-modal-value="document_amount" placeholder="Required when currencies differ">
                     <p class="master-field-hint" data-document-currency-hint>Leave blank when it is the same as the cash amount.</p>
                 </div>
-                <div class="master-field full">
+                <div class="master-field">
                     <label class="master-label" for="allocationNote">Allocation note</label>
                     <input class="master-input" id="allocationNote" data-modal-value="note" maxlength="500" placeholder="Duty for Project A, advance against PI-003…">
                 </div>
@@ -192,6 +198,20 @@ document.addEventListener('DOMContentLoaded', function () {
         var remaining = entry - allocated;
         builder.querySelector('[data-allocation-remaining]').textContent = money(remaining, currency);
         builder.classList.toggle('has-allocation-error', remaining < -0.009);
+        modalTotals();
+    }
+
+    function modalTotals() {
+        var entry = parseFloat(amountInput ? amountInput.value : 0) || 0;
+        var otherAllocated = rows().reduce(function (sum, row) {
+            return row === activeRow ? sum : sum + (parseFloat(value(row, 'amount')) || 0);
+        }, 0);
+        var available = entry - otherAllocated;
+        var currency = currencyInput ? currencyInput.value : 'INR';
+        modal.querySelector('[data-modal-entry-total]').textContent = money(entry, currency);
+        modal.querySelector('[data-modal-allocated-total]').textContent = money(otherAllocated, currency);
+        modal.querySelector('[data-modal-available-total]').textContent = money(available, currency);
+        return available;
     }
 
     function clearModal() {
@@ -210,6 +230,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
         updateCurrencyHint();
+        modalTotals();
         if (window.MasterModal) window.MasterModal.open(modal);
     }
 
@@ -298,6 +319,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var message = '';
         if (!values.project_id && !values.sales_invoice_id && !values.purchase_invoice_id) message = 'Choose a project or a document.';
         else if (!(parseFloat(values.amount) > 0)) message = 'Enter a cash allocation amount greater than zero.';
+        else if (parseFloat(values.amount) > modalTotals() + 0.009) message = 'This allocation exceeds the unallocated cash amount.';
         else if (values.sales_invoice_id && values.purchase_invoice_id) message = 'Choose either a sales document or a purchase document, not both.';
         else if (documentCurrency && documentCurrency !== entryCurrency && !(parseFloat(values.document_amount) > 0)) message = 'Enter the amount applied in ' + documentCurrency + '.';
         if (message) { error.textContent = message; error.hidden = false; return; }

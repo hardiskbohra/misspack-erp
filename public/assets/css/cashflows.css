@@ -1478,25 +1478,45 @@ a.cf-report-value:hover {
 }
 
 /* Multi-project/document allocation builder -------------------------------- */
-.cf-allocation-section { display:grid; gap:14px; }
-.cf-allocation-section .master-section-head { margin:0; }
-.cf-allocation-summary {
+.cf-allocation-section {
     display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    border-block:1px solid var(--mc-border);
+    gap:16px;
+    margin:10px 0 24px;
+    padding:20px;
+    border:1px solid var(--mc-border);
+    border-radius:12px;
+    background:var(--mc-card);
 }
-.cf-allocation-summary > div { padding:10px 14px; border-right:1px solid var(--mc-border); }
-.cf-allocation-summary > div:first-child { padding-left:0; }
-.cf-allocation-summary > div:last-child { border-right:0; }
-.cf-allocation-summary span,.cf-allocation-summary strong { display:block; }
-.cf-allocation-summary span { color:var(--mc-text-3); font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
-.cf-allocation-summary strong { margin-top:3px; color:var(--mc-text); font-size:15px; font-variant-numeric:tabular-nums; }
+.cf-allocation-section .master-section-head { margin:0; }
+.cf-allocation-section .master-section-title { margin:0; font-size:15px; letter-spacing:0; text-transform:none; }
+.cf-allocation-section .master-section-title:after { display:none; }
+.cf-allocation-stats,.cf-allocation-modal-stats {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px;
+    margin:0;
+}
+.cf-allocation-stats .master-stat,.cf-allocation-modal-stats .master-stat {
+    min-height:76px;
+    padding:13px 14px;
+    border:1px solid var(--mc-border);
+    border-radius:10px;
+    background:var(--mc-card);
+}
+.cf-allocation-stats .master-stat .icon {
+    width:38px;
+    height:38px;
+    flex-basis:38px;
+    border-radius:9px;
+    font-size:15px;
+}
+.cf-allocation-stats .master-stat-title,.cf-allocation-modal-stats .master-stat-title { font-size:12px; font-weight:600; }
+.cf-allocation-stats .master-stat-value,.cf-allocation-modal-stats .master-stat-value { font-size:18px; font-weight:700; }
 .cf-allocation-section.has-allocation-error [data-allocation-remaining] { color:var(--cf-red); }
-.cf-allocation-help { display:flex; align-items:flex-start; gap:8px; margin:0; color:var(--mc-text-2); font-size:11px; line-height:1.5; }
-.cf-allocation-help i { margin-top:2px; color:var(--cf-blue); }
 .cf-allocation-table-wrap { border:1px solid var(--mc-border); border-radius:10px; }
 .cf-allocation-table { min-width:900px; }
-.cf-allocation-table td { vertical-align:middle; }
+.cf-allocation-table th { font-size:10.5px; }
+.cf-allocation-table td { vertical-align:middle; font-size:13.5px; }
+.cf-allocation-table td strong { font-size:13.5px; font-weight:600; }
 .cf-allocation-table td:nth-child(1) { min-width:170px; }
 .cf-allocation-table td:nth-child(2) { min-width:190px; }
 .cf-allocation-table td:nth-child(3) { min-width:160px; }
@@ -1504,14 +1524,14 @@ a.cf-report-value:hover {
 .cf-allocation-actions { justify-content:flex-end; gap:4px; }
 .cf-allocation-actions .is-danger { color:var(--cf-red); }
 .cf-allocation-empty { min-height:150px; padding:22px; }
+.cf-allocation-modal .master-modal-body { display:grid; gap:18px; padding:20px 22px; }
 .cf-allocation-modal-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 20px; }
-.cf-allocation-modal-grid .full { grid-column:1 / -1; }
-.cf-allocation-modal .master-modal-body { display:grid; gap:14px; }
-.cf-allocation-modal .master-field-hint { margin:5px 0 0; color:var(--mc-text-3); font-size:10.5px; line-height:1.4; }
-@media (max-width:640px) {
-    .cf-allocation-summary { grid-template-columns:1fr; }
-    .cf-allocation-summary > div { padding:9px 0; border-right:0; border-bottom:1px solid var(--mc-border); }
-    .cf-allocation-summary > div:last-child { border-bottom:0; }
+.cf-allocation-modal-grid > .master-field { grid-column:auto; }
+.cf-allocation-modal-stats .master-stat { min-height:66px; }
+.cf-allocation-record-stats { padding:0 20px 16px; }
+.cf-allocation-modal .master-field-hint { margin:5px 0 0; color:var(--mc-text-3); font-size:11.5px; line-height:1.45; }
+@media (max-width:767px) {
+    .cf-allocation-section { padding:16px; }
+    .cf-allocation-stats,.cf-allocation-modal-stats { grid-template-columns:1fr; }
     .cf-allocation-modal-grid { grid-template-columns:1fr; gap:12px; }
-    .cf-allocation-modal-grid .full { grid-column:auto; }
 }
