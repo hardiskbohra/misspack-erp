@@ -1479,35 +1479,39 @@ a.cf-report-value:hover {
 
 /* Multi-project/document allocation builder -------------------------------- */
 .cf-allocation-section { display:grid; gap:14px; }
+.cf-allocation-section .master-section-head { margin:0; }
 .cf-allocation-summary {
     display:grid;
     grid-template-columns:repeat(3,minmax(0,1fr));
-    border:1px solid var(--mc-border);
-    border-radius:10px;
-    background:var(--mc-card-soft);
+    border-block:1px solid var(--mc-border);
 }
-.cf-allocation-summary > div { padding:11px 14px; border-right:1px solid var(--mc-border); }
+.cf-allocation-summary > div { padding:10px 14px; border-right:1px solid var(--mc-border); }
+.cf-allocation-summary > div:first-child { padding-left:0; }
 .cf-allocation-summary > div:last-child { border-right:0; }
 .cf-allocation-summary span,.cf-allocation-summary strong { display:block; }
-.cf-allocation-summary span { color:var(--mc-text-3); font-size:10px; font-weight:700; text-transform:uppercase; }
+.cf-allocation-summary span { color:var(--mc-text-3); font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
 .cf-allocation-summary strong { margin-top:3px; color:var(--mc-text); font-size:15px; font-variant-numeric:tabular-nums; }
 .cf-allocation-section.has-allocation-error [data-allocation-remaining] { color:var(--cf-red); }
-.cf-allocation-list { display:grid; gap:12px; }
-.cf-allocation-row {
-    position:relative;
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:12px 16px;
-    padding:14px 48px 14px 14px;
-    border:1px solid var(--mc-border);
-    border-radius:10px;
-    background:var(--mc-card-soft);
-}
-.cf-allocation-note { grid-column:span 1; }
-.cf-allocation-remove { position:absolute; top:12px; right:10px; color:var(--cf-red); }
-@media (max-width:900px) { .cf-allocation-row { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.cf-allocation-help { display:flex; align-items:flex-start; gap:8px; margin:0; color:var(--mc-text-2); font-size:11px; line-height:1.5; }
+.cf-allocation-help i { margin-top:2px; color:var(--cf-blue); }
+.cf-allocation-table-wrap { border:1px solid var(--mc-border); border-radius:10px; }
+.cf-allocation-table { min-width:900px; }
+.cf-allocation-table td { vertical-align:middle; }
+.cf-allocation-table td:nth-child(1) { min-width:170px; }
+.cf-allocation-table td:nth-child(2) { min-width:190px; }
+.cf-allocation-table td:nth-child(3) { min-width:160px; }
+.cf-allocation-table tr.has-error { background:rgba(217,45,32,.05); }
+.cf-allocation-actions { justify-content:flex-end; gap:4px; }
+.cf-allocation-actions .is-danger { color:var(--cf-red); }
+.cf-allocation-empty { min-height:150px; padding:22px; }
+.cf-allocation-modal-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 20px; }
+.cf-allocation-modal-grid .full { grid-column:1 / -1; }
+.cf-allocation-modal .master-modal-body { display:grid; gap:14px; }
+.cf-allocation-modal .master-field-hint { margin:5px 0 0; color:var(--mc-text-3); font-size:10.5px; line-height:1.4; }
 @media (max-width:640px) {
-    .cf-allocation-summary,.cf-allocation-row { grid-template-columns:1fr; }
-    .cf-allocation-summary > div { border-right:0; border-bottom:1px solid var(--mc-border); }
+    .cf-allocation-summary { grid-template-columns:1fr; }
+    .cf-allocation-summary > div { padding:9px 0; border-right:0; border-bottom:1px solid var(--mc-border); }
     .cf-allocation-summary > div:last-child { border-bottom:0; }
+    .cf-allocation-modal-grid { grid-template-columns:1fr; gap:12px; }
+    .cf-allocation-modal-grid .full { grid-column:auto; }
 }
