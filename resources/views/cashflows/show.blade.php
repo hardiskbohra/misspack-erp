@@ -206,7 +206,7 @@
                     </div>
 
                     @if ($allocations->isNotEmpty())
-                        <div class="master-card master-table-card master-card--flat">
+                        <div class="master-card master-table-card master-card--flat cf-allocation-record-card">
                             <div class="master-section-head">
                                 <div>
                                     <h3 class="master-section-title">Allocation breakdown</h3>
