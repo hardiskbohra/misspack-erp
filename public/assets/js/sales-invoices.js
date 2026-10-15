@@ -565,29 +565,94 @@
         var template = form.getAttribute('data-action-template') || '';
         var subtitle = modal.querySelector('[data-payment-subtitle]');
         var amount = modal.querySelector('input[name="amount"]');
+        var account = modal.querySelector('select[name="account_id"]');
+        var balancePanel = modal.querySelector('[data-account-balance]');
+        var currentBalance = modal.querySelector('[data-account-current]');
+        var projectedBalance = modal.querySelector('[data-account-projected]');
+        var invoiceLabel = modal.querySelector('[data-payment-invoice]');
+        var clientLabel = modal.querySelector('[data-payment-client]');
+        var outstandingLabel = modal.querySelector('[data-payment-outstanding]');
+        var currencyLabel = modal.querySelector('[data-payment-currency]');
+        var contextId = modal.querySelector('[data-payment-context-id]');
+        var contextNumber = modal.querySelector('[data-payment-context-number]');
+        var contextClient = modal.querySelector('[data-payment-context-client]');
+        var contextBalance = modal.querySelector('[data-payment-context-balance]');
+        var contextCurrency = modal.querySelector('[data-payment-context-currency]');
+        var activeCurrency = contextCurrency ? (contextCurrency.value || 'INR') : 'INR';
+
+        function receiptMoney(value, currency) {
+            return (currency || 'INR') + ' ' + (Number(value) || 0).toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function refreshAccountProjection() {
+            if (!account || !balancePanel) return;
+            var option = account.options[account.selectedIndex];
+            var hasAccount = option && option.value;
+            balancePanel.hidden = !hasAccount;
+            if (!hasAccount) return;
+
+            var opening = parseFloat(option.getAttribute('data-balance')) || 0;
+            var received = parseFloat(amount ? amount.value : 0) || 0;
+            var currency = option.getAttribute('data-currency') || activeCurrency;
+            if (currentBalance) currentBalance.textContent = receiptMoney(opening, currency);
+            if (projectedBalance) projectedBalance.textContent = receiptMoney(opening + received, currency);
+        }
+
+        if (account) {
+            account.addEventListener('change', refreshAccountProjection);
+            if (window.jQuery) window.jQuery(account).on('change', refreshAccountProjection);
+        }
+        if (amount) amount.addEventListener('input', refreshAccountProjection);
 
         triggers.forEach(function (trigger) {
             trigger.addEventListener('click', function () {
                 var id = trigger.getAttribute('data-invoice-id');
                 var number = trigger.getAttribute('data-invoice-number') || 'this invoice';
                 var balance = trigger.getAttribute('data-invoice-balance') || '';
+                var client = trigger.getAttribute('data-invoice-client') || 'Client not recorded';
+                activeCurrency = trigger.getAttribute('data-invoice-currency') || 'INR';
 
+                form.reset();
                 form.setAttribute('action', template.replace('__INVOICE__', id));
+                if (contextId) contextId.value = id;
+                if (contextNumber) contextNumber.value = number;
+                if (contextClient) contextClient.value = client;
+                if (contextBalance) contextBalance.value = balance;
+                if (contextCurrency) contextCurrency.value = activeCurrency;
 
-                if (subtitle) {
-                    subtitle.textContent = 'Against ' + number + (balance ? ' · ' + balance + ' still owed' : '');
-                }
+                if (window.jQuery && account) window.jQuery(account).val('').trigger('change');
+                if (subtitle) subtitle.textContent = 'Post this receipt to the cashflow ledger and selected account';
+                if (invoiceLabel) invoiceLabel.textContent = number;
+                if (clientLabel) clientLabel.textContent = client;
+                if (outstandingLabel) outstandingLabel.textContent = balance || '—';
+                if (currencyLabel) currencyLabel.textContent = activeCurrency;
 
                 /* What is owed is opened ready to be confirmed, not retyped. */
                 if (amount) {
                     amount.value = trigger.getAttribute('data-invoice-amount') || balance.replace(/[^0-9.]/g, '');
                 }
+                refreshAccountProjection();
 
                 if (window.MasterModal) {
                     window.MasterModal.open(modal);
                 }
             });
         });
+
+        /* Validation returns with the same invoice and fields, so the reopened
+           dialog remains submit-ready instead of pointing at the route template. */
+        if (contextId && contextId.value) {
+            form.setAttribute('action', template.replace('__INVOICE__', contextId.value));
+            activeCurrency = contextCurrency ? (contextCurrency.value || 'INR') : 'INR';
+            if (invoiceLabel) invoiceLabel.textContent = contextNumber ? contextNumber.value : '—';
+            if (clientLabel) clientLabel.textContent = contextClient ? contextClient.value : '—';
+            if (outstandingLabel) outstandingLabel.textContent = contextBalance ? contextBalance.value : '—';
+            if (currencyLabel) currencyLabel.textContent = activeCurrency;
+            refreshAccountProjection();
+        }
     });
 
     /* ----------------------------------------------------------- clipboard

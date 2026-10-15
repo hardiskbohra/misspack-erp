@@ -110,7 +110,9 @@
                         data-invoice-id="{{ $invoice->id }}"
                         data-invoice-number="{{ $invoice->invoice_number }}"
                         data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
-                        data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}">
+                        data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}"
+                        data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
+                        data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
                         <i class="fas fa-indian-rupee-sign" aria-hidden="true"></i> Record payment
                     </button>
                 @endif
@@ -541,7 +543,9 @@
                                     data-invoice-id="{{ $invoice->id }}"
                                     data-invoice-number="{{ $invoice->invoice_number }}"
                                     data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
-                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}">
+                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}"
+                                    data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
+                                    data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
                                     <i class="fas fa-plus" aria-hidden="true"></i> Record
                                 </button>
                             </div>
@@ -564,7 +568,9 @@
                                     data-invoice-id="{{ $invoice->id }}"
                                     data-invoice-number="{{ $invoice->invoice_number }}"
                                     data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
-                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}">
+                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}"
+                                    data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
+                                    data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
                                     Record payment
                                 </button>
                             @endif
