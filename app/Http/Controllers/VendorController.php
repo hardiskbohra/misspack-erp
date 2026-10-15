@@ -317,6 +317,7 @@ class VendorController extends Controller
         return view('vendors.show', array_merge($this->formData($vendor), $data, [
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
+            'unallocatedCash' => app(\App\Services\UnallocatedCashflows::class)->forVendor($vendor->id),
             'tabCounts' => [
                 'contacts' => $vendor->relationLoaded('contacts') ? $vendor->contacts->count() : 0,
                 'procurement' => (int) ($data['summary']['project_products_count'] ?? 0) + (int) ($data['summary']['shipments_count'] ?? 0),

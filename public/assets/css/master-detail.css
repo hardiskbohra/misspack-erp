@@ -57,6 +57,61 @@
     margin-bottom: 0
 }
 
+/* Cash that has reached a party but has not yet been assigned is operationally
+   important, not an error. This shared callout keeps it visible on client,
+   vendor and project records without pretending it is another balance card. */
+.master-unallocated-alert {
+    margin-bottom: 16px;
+    overflow: hidden;
+    border: 1px solid var(--mc-border);
+    border-left: 4px solid #f59e0b;
+    border-radius: 14px;
+    background: var(--mc-card);
+}
+
+.master-unallocated-alert-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    background: color-mix(in srgb, #f59e0b 8%, var(--mc-card));
+}
+
+.master-unallocated-alert-icon {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    place-items: center;
+    border-radius: 10px;
+    background: color-mix(in srgb, #f59e0b 18%, var(--mc-card));
+    color: #b45309;
+}
+
+.master-unallocated-alert-copy { min-width: 0; flex: 1; }
+.master-unallocated-alert-copy h2 { margin: 0; color: var(--mc-text); font-size: 15px; font-weight: 700; }
+.master-unallocated-alert-copy p { margin: 3px 0 0; color: var(--mc-text-2); font-size: 12.5px; line-height: 1.45; }
+.master-unallocated-alert-totals { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; white-space: nowrap; }
+.master-unallocated-alert-totals strong { color: #b45309; font-size: 18px; line-height: 1.2; }
+.master-unallocated-alert-totals span { color: var(--mc-text-3); font-size: 11.5px; }
+.master-unallocated-alert-rows { border-top: 1px solid var(--mc-border); }
+.master-unallocated-alert-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 18px; color: inherit; text-decoration: none; }
+.master-unallocated-alert-row + .master-unallocated-alert-row { border-top: 1px solid var(--mc-border); }
+.master-unallocated-alert-row:hover { background: var(--mc-soft); }
+.master-unallocated-alert-row > span:first-child { min-width: 0; }
+.master-unallocated-alert-row strong { display: block; color: var(--mc-text); font-size: 13px; }
+.master-unallocated-alert-row small { display: block; margin-top: 3px; color: var(--mc-text-3); font-size: 11.5px; }
+.master-unallocated-alert-amount { flex: 0 0 auto; text-align: right; }
+.master-unallocated-alert-amount > strong { color: #b45309; }
+.master-unallocated-alert-more { margin: 0; padding: 10px 18px; border-top: 1px solid var(--mc-border); color: var(--mc-text-3); font-size: 11.5px; }
+
+@media (max-width: 767px) {
+    .master-unallocated-alert-head { align-items: flex-start; flex-wrap: wrap; }
+    .master-unallocated-alert-totals { width: 100%; align-items: flex-start; padding-left: 52px; }
+    .master-unallocated-alert-row { align-items: flex-start; flex-direction: column; gap: 8px; }
+    .master-unallocated-alert-amount { text-align: left; }
+}
+
 /* --------------------------------------------------------------------------
    Card headers
    A card title is a title: sentence case, readable size, no letter-spaced

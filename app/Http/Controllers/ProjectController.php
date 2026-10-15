@@ -259,6 +259,7 @@ class ProjectController extends Controller
 
         return view('projects.show', array_merge($this->sharedData(), [
             'project' => $project,
+            'unallocatedCash' => app(\App\Services\UnallocatedCashflows::class)->forProject($project->id),
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
             'tabCounts' => [

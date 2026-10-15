@@ -67,6 +67,11 @@
         </nav>
     </header>
 
+    @include('cashflows.partials.unallocated-party-alert', [
+        'unallocatedTitle' => 'Unallocated vendor advance',
+        'unallocatedDescription' => 'Cash has been paid to this vendor but is still available to assign to purchase orders, bills or projects.',
+    ])
+
     <div class="master-stats desktop-only" aria-label="Vendor figures">
         <div class="master-stat master-stat--flat blue">
             <span class="icon" aria-hidden="true"><i class="fa-solid fa-diagram-project"></i></span>

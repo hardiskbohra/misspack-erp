@@ -164,6 +164,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if ((Number(amount.value) || 0) > available + 0.009) { event.preventDefault(); window.alert('This allocation exceeds the available ' + money(available) + '.'); }
     });
 
+    @if(!old('allocation_form'))
+        if (new URLSearchParams(window.location.search).get('allocation') === 'add') addMode();
+    @endif
     @if(old('allocation_form'))
         activeAmount = Number(@json(old('allocation_original_amount', 0))) || 0;
         if (@json((bool) old('allocation_update_url'))) {
