@@ -131,6 +131,7 @@ class SalesInvoiceController extends Controller
         $invoices = $this->filteredQuery($filters)
             ->withReceived()
             ->withCount('payments')
+            ->when(Schema::hasTable('cashflow_allocations'), fn ($query) => $query->withCount('cashflowAllocations'))
             ->withReminders()
             ->latest('invoice_date')
             ->latest('id')
@@ -430,6 +431,15 @@ class SalesInvoiceController extends Controller
                 ->where('sales_invoice_id', $proforma->id)
                 ->update(['sales_invoice_id' => $tax->id]);
         }
+        if (Schema::hasTable('cashflow_allocations')) {
+            DB::table('cashflow_allocations')
+                ->where('sales_invoice_id', $proforma->id)
+                ->update([
+                    'sales_invoice_id' => $tax->id,
+                    'document_currency' => $tax->currency,
+                    'updated_at' => now(),
+                ]);
+        }
 
         $this->refreshInvoiceMoney($tax);
         $this->refreshInvoiceMoney($proforma);
@@ -655,6 +665,9 @@ class SalesInvoiceController extends Controller
     public function show(SalesInvoice $salesInvoice): View
     {
         $salesInvoice->load(['items.product', 'attachments', 'creator', 'reminders.creator']);
+        if (Schema::hasTable('cashflow_allocations')) {
+            $salesInvoice->load('cashflowAllocations.cashflowEntry');
+        }
         if ($this->clientAvailable()) { $salesInvoice->load('client'); }
         if ($this->projectAvailable()) { $salesInvoice->load('project'); }
 
@@ -696,6 +709,9 @@ class SalesInvoiceController extends Controller
             if ($attachment->file_path) {
                 Storage::disk('public')->delete($attachment->file_path);
             }
+        }
+        if (Schema::hasTable('cashflow_allocations')) {
+            DB::table('cashflow_allocations')->where('sales_invoice_id', $salesInvoice->id)->update(['sales_invoice_id' => null]);
         }
         $salesInvoice->delete();
 

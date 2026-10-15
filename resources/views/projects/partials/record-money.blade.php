@@ -1,3 +1,20 @@
+@php
+    $paymentRows = $project->cashflowEntries->map(fn ($entry) => [
+        'entry' => $entry,
+        'amount' => $entry->amountMoved(),
+        'note' => null,
+    ]);
+    if ($project->relationLoaded('cashflowAllocations')) {
+        $paymentRows = $paymentRows->concat($project->cashflowAllocations
+            ->filter(fn ($allocation) => $allocation->cashflowEntry)
+            ->map(fn ($allocation) => [
+                'entry' => $allocation->cashflowEntry,
+                'amount' => (float) $allocation->amount,
+                'note' => $allocation->note,
+            ]));
+    }
+    $paymentRows = $paymentRows->sortByDesc(fn ($row) => ($row['entry']->entry_date?->format('Y-m-d') ?? '').'-'.str_pad((string) $row['entry']->id, 12, '0', STR_PAD_LEFT));
+@endphp
 <section class="master-tab-panel" id="project-panel-payments" role="tabpanel" aria-labelledby="project-tab-payments">
     <div class="project-blocks">
         <section class="master-card master-card--flat project-detail-card">
@@ -26,23 +43,27 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($project->cashflowEntries as $entry)
+                        @forelse($paymentRows as $paymentRow)
+                            @php($entry = $paymentRow['entry'])
                             <tr>
                                 <td data-label="Date">
                                     {{ optional($entry->entry_date)->format('d M Y') ?: '—' }}
                                 </td>
-                                <td data-label="Particular">{{ $entry->particular ?: '—' }}</td>
+                                <td data-label="Particular">
+                                    {{ $entry->particular ?: '—' }}
+                                    @if($paymentRow['note'])<span class="project-fact-note">{{ $paymentRow['note'] }}</span>@endif
+                                </td>
                                 <td data-label="Bank reference">{{ $entry->bank_reference_number ?: '—' }}</td>
                                 <td data-label="Inward" class="is-num">
                                     @if ($entry->credit_amount > 0)
-                                        <strong class="project-money-in">{{ \App\Helpers\CommonHelper::amount($entry->credit_amount, $entry->currency ?? $project->currency) }}</strong>
+                                        <strong class="project-money-in">{{ \App\Helpers\CommonHelper::amount($paymentRow['amount'], $entry->currency ?? $project->currency) }}</strong>
                                     @else
                                         <span class="master-empty-value">—</span>
                                     @endif
                                 </td>
                                 <td data-label="Outward" class="is-num">
                                     @if ($entry->debit_amount > 0)
-                                        <strong class="project-money-out">{{ \App\Helpers\CommonHelper::amount($entry->debit_amount, $entry->currency ?? $project->currency) }}</strong>
+                                        <strong class="project-money-out">{{ \App\Helpers\CommonHelper::amount($paymentRow['amount'], $entry->currency ?? $project->currency) }}</strong>
                                     @else
                                         <span class="master-empty-value">—</span>
                                     @endif

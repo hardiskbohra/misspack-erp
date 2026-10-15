@@ -4,7 +4,37 @@
 
 @section('content')
 
-@php($isEdit = $entry->exists)
+@php
+    $isEdit = $entry->exists;
+    $allocationRows = old('allocations');
+    if ($allocationRows === null) {
+        $allocationRows = $entry->relationLoaded('allocations')
+            ? $entry->allocations->map(fn ($allocation) => [
+                'project_id' => $allocation->project_id,
+                'sales_invoice_id' => $allocation->sales_invoice_id,
+                'purchase_invoice_id' => $allocation->purchase_invoice_id,
+                'amount' => $allocation->amount,
+                'document_amount' => $allocation->document_amount,
+                'note' => $allocation->note,
+            ])->all()
+            : [];
+
+        /* An untouched legacy entry still has its single project/invoice
+           columns. Present it as one allocation so the first edit upgrades it
+           without losing the link. */
+        if ($allocationRows === [] && ($entry->project_id || $entry->sales_invoice_id)) {
+            $allocationRows[] = [
+                'project_id' => $entry->project_id,
+                'sales_invoice_id' => $entry->sales_invoice_id,
+                'purchase_invoice_id' => null,
+                'amount' => $entry->amountMoved(),
+                'document_amount' => $entry->sales_invoice_id ? $entry->amountMoved() : null,
+                'note' => null,
+            ];
+        }
+    }
+    $allocationRows = array_values($allocationRows ?: []);
+@endphp
 
 <div class="master-form">
     <div class="master-card master-header">
@@ -76,17 +106,6 @@
                         name="currency">@foreach($currencyOptions as $key => $label)<option value="{{ $key }}"
                             @selected(old('currency', $entry->currency) === $key)>{{ $label }}</option>
                         @endforeach</select></div>
-                <div class="master-field">
-                    <label class="master-label">Project / Deal</label>
-                    <select name="project_id" class="master-select">
-                        <option value="">No project mapping</option>
-                        @foreach(\App\Models\Project::query()->latest('id')->get() as $project)
-                            <option value="{{ $project->id }}" {{ (string) old('project_id', $entry->project_id ?? '') === (string) $project->id ? 'selected' : '' }}>
-                                {{ $project->project_number }} - {{ $project->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
                 <div class="master-field"><label class="master-label">Particular <span
                             class="master-required">*</span></label><input class="master-input" name="particular"
                         value="{{ old('particular', $entry->particular) }}" required
@@ -112,17 +131,6 @@
                     @enderror
                 </div>
                 
-                <div class="master-field">
-                    <label class="master-label">Invoice</label>
-                    <select name="sales_invoice_id" class="master-select">
-                        <option value="">No invoice mapping</option>
-                        @foreach(\App\Models\SalesInvoice::query()->latest('id')->get() as $invoice)
-                            <option value="{{ $invoice->id }}" {{ (string) old('sales_invoice_id', $entry->sales_invoice_id ?? '') === (string) $invoice->id ? 'selected' : '' }}>
-                                {{ $invoice->invoice_number }} - {{ $invoice->client->company_name ?? '-' }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
                 
                 <div class="master-field"><label class="master-label">Paid / Received Account <span
                             class="master-required">*</span></label><select class="master-select" name="account_id" required>
@@ -137,6 +145,90 @@
                         balance + credit entries - debit entries in date order.</div>
                 </div>
             </div>
+        </div>
+
+        <div class="master-section cf-allocation-section" data-allocation-builder>
+            <div class="master-section-head">
+                <div>
+                    <h3 class="master-section-title">Allocation breakdown</h3>
+                    <p class="master-sub">Split this entry across projects and documents. A line is one monetary slice and may carry both its project and one sales or purchase document.</p>
+                </div>
+                <button type="button" class="master-btn master-btn-soft master-btn-sm" data-add-allocation>
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Add allocation
+                </button>
+            </div>
+
+            <div class="cf-allocation-summary" aria-live="polite">
+                <div><span>Entry amount</span><strong data-allocation-entry>0.00</strong></div>
+                <div><span>Allocated</span><strong data-allocation-total>0.00</strong></div>
+                <div><span>Unallocated / advance</span><strong data-allocation-remaining>0.00</strong></div>
+            </div>
+            <p class="master-help">The total allocated amount cannot exceed the cash entry. It may be lower, leaving an unapplied advance. An allocation may exceed a document’s outstanding amount; the document will then show an advance/overpayment.</p>
+            @error('allocations')<div class="master-error">{{ $message }}</div>@enderror
+
+            <div class="cf-allocation-list" data-allocation-list>
+                @foreach($allocationRows as $index => $allocation)
+                    <div class="cf-allocation-row" data-allocation-row>
+                        <div class="master-field">
+                            <label class="master-label">Project</label>
+                            <select class="master-select" name="allocations[{{ $index }}][project_id]">
+                                <option value="">No project</option>
+                                @foreach($projects as $project)
+                                    <option value="{{ $project->id }}" @selected((string) ($allocation['project_id'] ?? '') === (string) $project->id)>{{ $project->project_number }} · {{ $project->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('allocations.'.$index.'.project_id')<div class="master-error">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label">Sales invoice / proforma</label>
+                            <select class="master-select" name="allocations[{{ $index }}][sales_invoice_id]" data-allocation-sales>
+                                <option value="">No sales document</option>
+                                @foreach($salesInvoices as $invoice)
+                                    <option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}" @selected((string) ($allocation['sales_invoice_id'] ?? '') === (string) $invoice->id)>{{ $invoice->invoice_number }} · {{ $invoice->currency }} {{ number_format((float) $invoice->total_amount, 2) }}</option>
+                                @endforeach
+                            </select>
+                            @error('allocations.'.$index.'.sales_invoice_id')<div class="master-error">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label">Purchase order / bill</label>
+                            <select class="master-select" name="allocations[{{ $index }}][purchase_invoice_id]" data-allocation-purchase>
+                                <option value="">No purchase document</option>
+                                @foreach($purchaseInvoices as $invoice)
+                                    <option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}" @selected((string) ($allocation['purchase_invoice_id'] ?? '') === (string) $invoice->id)>{{ $invoice->invoice_number }} · {{ $invoice->typeLabel() }} · {{ $invoice->currency }} {{ number_format((float) $invoice->total_amount, 2) }}</option>
+                                @endforeach
+                            </select>
+                            @error('allocations.'.$index.'.purchase_invoice_id')<div class="master-error">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label">Cash amount</label>
+                            <input class="master-input" type="number" min="0.01" step="0.01" name="allocations[{{ $index }}][amount]" value="{{ $allocation['amount'] ?? '' }}" data-allocation-amount>
+                            @error('allocations.'.$index.'.amount')<div class="master-error">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="master-field">
+                            <label class="master-label">Document amount</label>
+                            <input class="master-input" type="number" min="0.01" step="0.01" name="allocations[{{ $index }}][document_amount]" value="{{ $allocation['document_amount'] ?? '' }}" data-document-amount placeholder="Same as cash amount">
+                            @error('allocations.'.$index.'.document_amount')<div class="master-error">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="master-field cf-allocation-note">
+                            <label class="master-label">Allocation note</label>
+                            <input class="master-input" name="allocations[{{ $index }}][note]" value="{{ $allocation['note'] ?? '' }}" maxlength="500" placeholder="Duty, freight, advance…">
+                        </div>
+                        <button type="button" class="master-btn master-btn-ghost master-btn-sm cf-allocation-remove" data-remove-allocation aria-label="Remove allocation"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                    </div>
+                @endforeach
+            </div>
+
+            <template data-allocation-template>
+                <div class="cf-allocation-row" data-allocation-row>
+                    <div class="master-field"><label class="master-label">Project</label><select class="master-select" name="allocations[__INDEX__][project_id]"><option value="">No project</option>@foreach($projects as $project)<option value="{{ $project->id }}">{{ $project->project_number }} · {{ $project->name }}</option>@endforeach</select></div>
+                    <div class="master-field"><label class="master-label">Sales invoice / proforma</label><select class="master-select" name="allocations[__INDEX__][sales_invoice_id]" data-allocation-sales><option value="">No sales document</option>@foreach($salesInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}">{{ $invoice->invoice_number }} · {{ $invoice->currency }} {{ number_format((float) $invoice->total_amount, 2) }}</option>@endforeach</select></div>
+                    <div class="master-field"><label class="master-label">Purchase order / bill</label><select class="master-select" name="allocations[__INDEX__][purchase_invoice_id]" data-allocation-purchase><option value="">No purchase document</option>@foreach($purchaseInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}">{{ $invoice->invoice_number }} · {{ $invoice->typeLabel() }} · {{ $invoice->currency }} {{ number_format((float) $invoice->total_amount, 2) }}</option>@endforeach</select></div>
+                    <div class="master-field"><label class="master-label">Cash amount</label><input class="master-input" type="number" min="0.01" step="0.01" name="allocations[__INDEX__][amount]" data-allocation-amount></div>
+                    <div class="master-field"><label class="master-label">Document amount</label><input class="master-input" type="number" min="0.01" step="0.01" name="allocations[__INDEX__][document_amount]" data-document-amount placeholder="Same as cash amount"></div>
+                    <div class="master-field cf-allocation-note"><label class="master-label">Allocation note</label><input class="master-input" name="allocations[__INDEX__][note]" maxlength="500" placeholder="Duty, freight, advance…"></div>
+                    <button type="button" class="master-btn master-btn-ghost master-btn-sm cf-allocation-remove" data-remove-allocation aria-label="Remove allocation"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                </div>
+            </template>
         </div>
 
         <div class="master-section">
@@ -214,4 +306,76 @@
                 class="master-btn master-btn-primary">{{ $isEdit ? 'Update Entry' : 'Create Entry' }}</button></div>
     </form>
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var builder = document.querySelector('[data-allocation-builder]');
+    if (!builder) return;
+
+    var list = builder.querySelector('[data-allocation-list]');
+    var template = builder.querySelector('[data-allocation-template]');
+    var add = builder.querySelector('[data-add-allocation]');
+    var amountInput = document.querySelector('input[name="amount"]');
+    var nextIndex = list.querySelectorAll('[data-allocation-row]').length;
+
+    function money(value) {
+        return (Number(value) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function totals() {
+        var entry = parseFloat(amountInput ? amountInput.value : 0) || 0;
+        var allocated = 0;
+        list.querySelectorAll('[data-allocation-amount]').forEach(function (input) {
+            allocated += parseFloat(input.value) || 0;
+        });
+        builder.querySelector('[data-allocation-entry]').textContent = money(entry);
+        builder.querySelector('[data-allocation-total]').textContent = money(allocated);
+        var remaining = entry - allocated;
+        var remainingNode = builder.querySelector('[data-allocation-remaining]');
+        remainingNode.textContent = money(remaining);
+        builder.classList.toggle('has-allocation-error', remaining < -0.009);
+    }
+
+    function addRow() {
+        list.insertAdjacentHTML('beforeend', template.innerHTML.replaceAll('__INDEX__', nextIndex++));
+        totals();
+    }
+
+    add.addEventListener('click', addRow);
+    if (!list.querySelector('[data-allocation-row]')) addRow();
+    if (amountInput) amountInput.addEventListener('input', totals);
+
+    builder.addEventListener('input', function (event) {
+        if (event.target.matches('[data-allocation-amount]')) totals();
+    });
+    builder.addEventListener('click', function (event) {
+        var remove = event.target.closest('[data-remove-allocation]');
+        if (!remove) return;
+        remove.closest('[data-allocation-row]').remove();
+        totals();
+    });
+    builder.addEventListener('change', function (event) {
+        if (!event.target.matches('[data-allocation-sales], [data-allocation-purchase]')) return;
+        var row = event.target.closest('[data-allocation-row]');
+        var opposite = event.target.matches('[data-allocation-sales]')
+            ? row.querySelector('[data-allocation-purchase]')
+            : row.querySelector('[data-allocation-sales]');
+        if (event.target.value && opposite && opposite.value) {
+            opposite.value = '';
+            if (window.jQuery) window.jQuery(opposite).trigger('change');
+        }
+        var option = event.target.options[event.target.selectedIndex];
+        var projectId = option ? option.getAttribute('data-project') : '';
+        var project = row.querySelector('select[name$="[project_id]"]');
+        if (projectId && project && !project.value) {
+            project.value = projectId;
+            if (window.jQuery) window.jQuery(project).trigger('change');
+        }
+    });
+
+    totals();
+});
+</script>
+@endpush
 @endsection

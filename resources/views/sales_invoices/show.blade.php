@@ -9,11 +9,25 @@
        different balances on two screens (`SalesInvoice::receivedAmount()`). */
     $receivedAmount = $invoice->receivedAmount();
     $balanceAmount = $invoice->balanceDue();
+    $advanceAmount = $invoice->advanceAmount();
     $taxAmount = (float) $invoice->cgst_amount + (float) $invoice->sgst_amount + (float) $invoice->igst_amount;
     $chargesAmount = (float) $invoice->freight_amount + (float) $invoice->packing_amount + (float) $invoice->other_charges;
 
-    /* Newest receipt first: the one that just landed is the one being read for. */
-    $receipts = $invoice->payments->sortByDesc('entry_date');
+    /* Newest receipt first. Allocated slices are cloned only for display so the
+       row opens the original cashflow entry while showing this invoice's share,
+       not the entry's full bank amount. */
+    $allocatedReceipts = $invoice->relationLoaded('cashflowAllocations')
+        ? $invoice->cashflowAllocations->map(function ($allocation) {
+            if (! $allocation->cashflowEntry) return null;
+            $payment = clone $allocation->cashflowEntry;
+            $amount = $allocation->documentAmount();
+            $payment->credit_amount = $payment->transaction_type === 'credit' ? $amount : 0;
+            $payment->debit_amount = $payment->transaction_type === 'debit' ? $amount : 0;
+            $payment->particular = $allocation->note ?: $payment->particular;
+            return $payment;
+        })->filter()
+        : collect();
+    $receipts = $invoice->payments->concat($allocatedReceipts)->sortByDesc('entry_date');
 
     $stateKey = $invoice->stateKey();
     $daysLate = $invoice->daysOverdue();
@@ -625,6 +639,9 @@
                                 {{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}
                             </strong>
                         </div>
+                        @if($advanceAmount > 0.009)
+                            <div><span>Advance / overpayment</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($advanceAmount, $invoice->currency) }}</strong></div>
+                        @endif
                     </div>
                 </div>
             </div>

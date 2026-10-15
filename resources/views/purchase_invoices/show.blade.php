@@ -6,6 +6,7 @@
 @php
     $paidAmount = $invoice->paidAmount();
     $openAmount = $invoice->openAmount();
+    $advanceAmount = $invoice->advanceAmount();
     $balanceAmount = $invoice->isBill() ? $invoice->balanceDue() : $openAmount;
     $isImport = $invoice->gst_type === 'export';
     $taxAmount = (float) $invoice->cgst_amount + (float) $invoice->sgst_amount + (float) $invoice->igst_amount;
@@ -341,12 +342,15 @@
                         <div class="si-payment">
                             <span class="si-payment-icon"><i class="fas fa-indian-rupee-sign"></i></span>
                             <div class="si-payment-main">
-                                <strong>Paid {{ optional($payment->transaction_date)->format('d M Y') }}</strong>
+                                <strong>{{ $payment->foreign_amount < 0 ? 'Refunded' : 'Paid' }} {{ optional($payment->transaction_date)->format('d M Y') }}</strong>
                                 <span class="master-sub">{{ $payment->payment_mode ?: 'Mode not recorded' }}
                                     @if (filled($payment->particular)) · {{ $payment->particular }} @endif
                                 </span>
+                                @if (! empty($payment->cashflow_entry_id))
+                                    <a class="si-payment-ref" href="{{ route('cashflows.show', $payment->cashflow_entry_id) }}">Cashflow entry #{{ $payment->cashflow_entry_id }}</a>
+                                @endif
                             </div>
-                            <strong class="si-payment-amount si-clear">{{ \App\Helpers\CommonHelper::amount($payment->foreign_amount, $payment->foreign_currency ?: $invoice->currency) }}</strong>
+                            <strong class="si-payment-amount {{ $payment->foreign_amount < 0 ? 'si-due' : 'si-clear' }}">{{ \App\Helpers\CommonHelper::amount($payment->foreign_amount, $payment->foreign_currency ?: $invoice->currency) }}</strong>
                         </div>
                     @endforeach
                 </div>
@@ -354,6 +358,7 @@
             <div class="si-pay-foot">
                 <div><span>Paid</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($paidAmount, $invoice->currency) }}</strong></div>
                 <div><span>Still open</span><strong class="{{ $openAmount > 0 ? 'si-due' : 'si-clear' }}">{{ \App\Helpers\CommonHelper::amount($openAmount, $invoice->currency) }}</strong></div>
+                @if($advanceAmount > 0.009)<div><span>Advance / overpayment</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($advanceAmount, $invoice->currency) }}</strong></div>@endif
             </div>
         </div>
     @endif

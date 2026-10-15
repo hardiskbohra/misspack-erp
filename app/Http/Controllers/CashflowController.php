@@ -10,6 +10,7 @@ use App\Models\CashflowEntry;
 use App\Models\CashflowMasterOption;
 use App\Models\SavedView;
 use App\Models\User;
+use App\Services\CashflowAllocations;
 use App\Services\CashflowAnalysis;
 use App\Services\CashflowFilters;
 use App\Services\CashflowPickers;
@@ -148,6 +149,10 @@ class CashflowController extends Controller
                 $entry->accounting_status = 'pending';
                 $entry->bank_reference_number = null;
                 $entry->entry_date = now()->toDateString();
+                if (Schema::hasTable('cashflow_allocations')) {
+                    $source->load('allocations');
+                    $entry->setRelation('allocations', $source->allocations);
+                }
             }
         }
 
@@ -156,12 +161,16 @@ class CashflowController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data = CashflowEntry::alignPartyType($this->validatedData($request));
+        $data = $this->validatedData($request);
+        $allocationRows = $data['allocations'] ?? [];
+        unset($data['allocations']);
+        $data = CashflowEntry::alignPartyType($data);
         $data = $this->normalizeAmounts($data);
         $data['created_by'] = Auth::id();
 
-        $entry = DB::transaction(function () use ($data) {
+        $entry = DB::transaction(function () use ($data, $allocationRows) {
             $entry = CashflowEntry::create($data);
+            app(CashflowAllocations::class)->sync($entry, $allocationRows);
             $this->recalculateAccountLedger($entry->account_id);
             return $entry;
         });
@@ -218,6 +227,11 @@ class CashflowController extends Controller
     public function show(Request $request, CashflowEntry $cashflow): View
     {
         $with = ['account', 'category', 'creator', 'attachments.uploader', 'employee', 'project', 'salesInvoice'];
+        if (Schema::hasTable('cashflow_allocations')) {
+            $with[] = 'allocations.project';
+            $with[] = 'allocations.salesInvoice';
+            $with[] = 'allocations.purchaseInvoice';
+        }
         if ($this->clientModelAvailable()) $with[] = 'client';
         if ($this->vendorModelAvailable()) $with[] = 'vendor';
         if (Schema::hasTable('office_services')) $with[] = 'officeService';
@@ -242,6 +256,7 @@ class CashflowController extends Controller
 
         return view('cashflows.show', array_merge($this->sharedData(), [
             'entry' => $cashflow,
+            'allocations' => $cashflow->relationLoaded('allocations') ? $cashflow->allocations : collect(),
             'tab' => $tab,
             'tabs' => $tabs,
             'tabCounts' => [
@@ -324,6 +339,10 @@ class CashflowController extends Controller
 
     public function edit(CashflowEntry $cashflow): View
     {
+        if (Schema::hasTable('cashflow_allocations')) {
+            $cashflow->load('allocations');
+        }
+
         return view('cashflows.form', array_merge($this->sharedData(), [
             'entry' => $cashflow,
             'linkedVendorPayment' => app(VendorPaymentCashflowSync::class)->linkedPaymentFor($cashflow),
@@ -332,12 +351,16 @@ class CashflowController extends Controller
 
     public function update(Request $request, CashflowEntry $cashflow): RedirectResponse
     {
-        $data = CashflowEntry::alignPartyType($this->validatedData($request));
+        $data = $this->validatedData($request);
+        $allocationRows = $data['allocations'] ?? [];
+        unset($data['allocations']);
+        $data = CashflowEntry::alignPartyType($data);
         $data = $this->normalizeAmounts($data);
         $oldAccountId = $cashflow->account_id;
 
-        DB::transaction(function () use ($cashflow, $data, $oldAccountId) {
+        DB::transaction(function () use ($cashflow, $data, $allocationRows, $oldAccountId) {
             $cashflow->update($data);
+            app(CashflowAllocations::class)->sync($cashflow, $allocationRows);
             $this->recalculateAccountLedger($oldAccountId);
             $this->recalculateAccountLedger($cashflow->account_id);
         });
@@ -352,6 +375,7 @@ class CashflowController extends Controller
             // Never leave a vendor payment or shipment cost pointing at a deleted entry.
             $detached = app(VendorPaymentCashflowSync::class)->detach($cashflow);
             $detached += app(\App\Services\ShipmentCostCashflowSync::class)->detach($cashflow);
+            app(CashflowAllocations::class)->sync($cashflow, []);
             $cashflow->delete();
             $this->recalculateAccountLedger($accountId);
 
@@ -407,6 +431,7 @@ class CashflowController extends Controller
             foreach ($entries as $entry) {
                 app(VendorPaymentCashflowSync::class)->detach($entry);
                 app(\App\Services\ShipmentCostCashflowSync::class)->detach($entry);
+                app(CashflowAllocations::class)->sync($entry, []);
                 if ($entry->account_id) {
                     $accountIds[$entry->account_id] = true;
                 }
@@ -513,6 +538,13 @@ class CashflowController extends Controller
             'related_party_type' => ['required', Rule::in($this->masterKeys('related_party_type', array_keys(CashflowEntry::relatedPartyOptions())))],
             'related_party_name' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
+            'allocations' => ['nullable', 'array', 'max:100'],
+            'allocations.*.project_id' => ['nullable', 'integer', 'exists:projects,id'],
+            'allocations.*.sales_invoice_id' => ['nullable', 'integer', 'exists:sales_invoices,id'],
+            'allocations.*.purchase_invoice_id' => ['nullable', 'integer', 'exists:purchase_invoices,id'],
+            'allocations.*.amount' => ['nullable', 'numeric', 'min:0.01'],
+            'allocations.*.document_amount' => ['nullable', 'numeric', 'min:0.01'],
+            'allocations.*.note' => ['nullable', 'string', 'max:500'],
         ]);
     }
 
@@ -835,7 +867,10 @@ class CashflowController extends Controller
             /* The paperclip on a row is this count, fetched with the page
                instead of one query per row. Only the list asks for relations,
                so the reports and the chip counts never pay for it. */
-            ->when($withRelations, fn ($q) => $q->withCount('attachments'));
+            ->when($withRelations, fn ($q) => $q->withCount('attachments'))
+            ->when($withRelations && Schema::hasTable('cashflow_allocations'), fn ($q) => $q
+                ->withCount('allocations')
+                ->withSum('allocations as allocated_amount', 'amount'));
 
         return app(CashflowFilters::class)->apply($query, $filters);
     }

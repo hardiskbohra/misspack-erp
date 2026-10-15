@@ -1476,3 +1476,38 @@ a.cf-report-value:hover {
     gap: 8px;
     margin-top: 12px;
 }
+
+/* Multi-project/document allocation builder -------------------------------- */
+.cf-allocation-section { display:grid; gap:14px; }
+.cf-allocation-summary {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    border:1px solid var(--mc-border);
+    border-radius:10px;
+    background:var(--mc-card-soft);
+}
+.cf-allocation-summary > div { padding:11px 14px; border-right:1px solid var(--mc-border); }
+.cf-allocation-summary > div:last-child { border-right:0; }
+.cf-allocation-summary span,.cf-allocation-summary strong { display:block; }
+.cf-allocation-summary span { color:var(--mc-text-3); font-size:10px; font-weight:700; text-transform:uppercase; }
+.cf-allocation-summary strong { margin-top:3px; color:var(--mc-text); font-size:15px; font-variant-numeric:tabular-nums; }
+.cf-allocation-section.has-allocation-error [data-allocation-remaining] { color:var(--cf-red); }
+.cf-allocation-list { display:grid; gap:12px; }
+.cf-allocation-row {
+    position:relative;
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px 16px;
+    padding:14px 48px 14px 14px;
+    border:1px solid var(--mc-border);
+    border-radius:10px;
+    background:var(--mc-card-soft);
+}
+.cf-allocation-note { grid-column:span 1; }
+.cf-allocation-remove { position:absolute; top:12px; right:10px; color:var(--cf-red); }
+@media (max-width:900px) { .cf-allocation-row { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:640px) {
+    .cf-allocation-summary,.cf-allocation-row { grid-template-columns:1fr; }
+    .cf-allocation-summary > div { border-right:0; border-bottom:1px solid var(--mc-border); }
+    .cf-allocation-summary > div:last-child { border-bottom:0; }
+}

@@ -205,6 +205,44 @@
                         </div>
                     </div>
 
+                    @if ($allocations->isNotEmpty())
+                        <div class="master-card master-table-card master-card--flat">
+                            <div class="master-section-head">
+                                <div>
+                                    <h3 class="master-section-title">Allocation breakdown</h3>
+                                    <p class="master-sub">{{ $allocations->count() }} monetary {{ \Illuminate\Support\Str::plural('slice', $allocations->count()) }} across projects and documents</p>
+                                </div>
+                                <div class="master-section-meta">
+                                    <span class="master-chip">{{ $money($entry->allocatedAmount()) }} allocated</span>
+                                    @if ($entry->unallocatedAmount() > 0.009)<span class="master-chip">{{ $money($entry->unallocatedAmount()) }} unapplied</span>@endif
+                                </div>
+                            </div>
+                            <div class="master-table-wrap">
+                                <table class="master-table">
+                                    <thead><tr><th>Project</th><th>Document</th><th>Note</th><th class="is-num">Cash amount</th><th class="is-num">Document amount</th></tr></thead>
+                                    <tbody>
+                                        @foreach($allocations as $allocation)
+                                            @php($document = $allocation->salesInvoice ?: $allocation->purchaseInvoice)
+                                            <tr>
+                                                <td data-label="Project">{{ $allocation->project ? $allocation->project->project_number.' · '.$allocation->project->name : '—' }}</td>
+                                                <td data-label="Document">
+                                                    @if($allocation->salesInvoice)
+                                                        <a href="{{ route('sales-invoices.show', $allocation->salesInvoice) }}">{{ $allocation->salesInvoice->invoice_number }}</a>
+                                                    @elseif($allocation->purchaseInvoice)
+                                                        <a href="{{ route('purchase-invoices.show', $allocation->purchaseInvoice) }}">{{ $allocation->purchaseInvoice->invoice_number }}</a>
+                                                    @else — @endif
+                                                </td>
+                                                <td data-label="Note">{{ $allocation->note ?: '—' }}</td>
+                                                <td data-label="Cash amount" class="is-num"><strong>{{ \App\Helpers\CommonHelper::amount($allocation->amount, $allocation->currency) }}</strong></td>
+                                                <td data-label="Document amount" class="is-num">{{ $document ? \App\Helpers\CommonHelper::amount($allocation->documentAmount(), $allocation->document_currency) : '—' }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @endif
+
                     <div class="master-card master-card--flat master-section">
                         <h3 class="master-section-title">Notes</h3>
                         <div class="master-muted-box">{{ $entry->notes ?: 'No notes added.' }}</div>

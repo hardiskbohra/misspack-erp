@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -55,7 +56,9 @@ class PurchaseInvoice extends Model
     ];
 
     /** The paid figure is upstream of every balance: one SQL, read everywhere. */
-    public const PAID_SQL = '(coalesce(purchase_invoices.amount_paid, 0) + (select coalesce(sum(foreign_amount), 0) from vendor_payment_entries where vendor_payment_entries.purchase_invoice_id = purchase_invoices.id and vendor_payment_entries.transaction_type = \'debit\'))';
+    public const PAID_SQL = '(coalesce(purchase_invoices.amount_paid, 0)'
+        .' + (select coalesce(sum(foreign_amount), 0) from vendor_payment_entries where vendor_payment_entries.purchase_invoice_id = purchase_invoices.id and vendor_payment_entries.transaction_type = \'debit\')'
+        .' + (select coalesce(sum(case when cashflow_entries.transaction_type = \'debit\' then coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) else -coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) end), 0) from cashflow_allocations join cashflow_entries on cashflow_entries.id = cashflow_allocations.cashflow_entry_id where cashflow_allocations.purchase_invoice_id = purchase_invoices.id))';
 
     /** The supplier's own bill number, falling back to our document number. */
     public function referenceNumber(): string
@@ -163,6 +166,11 @@ class PurchaseInvoice extends Model
         return $this->hasMany(VendorPaymentEntry::class, 'purchase_invoice_id')
             ->where('transaction_type', 'debit')
             ->orderBy('transaction_date');
+    }
+
+    public function cashflowAllocations()
+    {
+        return $this->hasMany(CashflowAllocation::class, 'purchase_invoice_id')->orderBy('id');
     }
 
     /* ------------------------------------------------------------------
@@ -323,11 +331,24 @@ class PurchaseInvoice extends Model
     /** Payments against this document, in the document's own currency. */
     public function ledgerPaid(): float
     {
-        if ($this->relationLoaded('payments')) {
-            return round((float) $this->payments->sum('foreign_amount'), 2);
+        $vendorLedger = array_key_exists('paid_total', $this->attributes)
+            ? (float) ($this->attributes['paid_total'] ?? 0)
+            : ($this->relationLoaded('payments')
+                ? (float) $this->payments->sum('foreign_amount')
+                : (float) $this->payments()->sum('foreign_amount'));
+
+        $allocated = array_key_exists('allocation_paid', $this->attributes)
+            ? (float) ($this->attributes['allocation_paid'] ?? 0)
+            : 0.0;
+        if (! array_key_exists('allocation_paid', $this->attributes) && $this->exists && Schema::hasTable('cashflow_allocations')) {
+            $allocated = (float) CashflowAllocation::query()
+                ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
+                ->where('cashflow_allocations.purchase_invoice_id', $this->id)
+                ->selectRaw("coalesce(sum(case when cashflow_entries.transaction_type = 'debit' then coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) else -coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) end), 0) as total")
+                ->value('total');
         }
 
-        return round((float) $this->payments()->sum('foreign_amount'), 2);
+        return round($vendorLedger + $allocated, 2);
     }
 
     public function paidAmount(): float
@@ -348,6 +369,11 @@ class PurchaseInvoice extends Model
         }
 
         return round(max((float) $this->total_amount - $this->paidAmount(), 0), 2);
+    }
+
+    public function advanceAmount(): float
+    {
+        return round(max($this->paidAmount() - (float) $this->total_amount, 0), 2);
     }
 
     /** What is still open to record as an advance or a payment. */
@@ -483,8 +509,19 @@ class PurchaseInvoice extends Model
      */
     public function scopeWithPaid(Builder $query): Builder
     {
-        return $query
-            ->withSum('payments as paid_total', 'amount_in_inr');
+        $query->withSum('payments as paid_total', 'foreign_amount');
+
+        if (Schema::hasTable('cashflow_allocations')) {
+            if ($query->getQuery()->columns === null) {
+                $query->select('purchase_invoices.*');
+            }
+            $query->addSelect(['allocation_paid' => CashflowAllocation::query()
+                ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
+                ->whereColumn('cashflow_allocations.purchase_invoice_id', 'purchase_invoices.id')
+                ->selectRaw("coalesce(sum(case when cashflow_entries.transaction_type = 'debit' then coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) else -coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) end), 0)")]);
+        }
+
+        return $query;
     }
 
     public function scopeSearch(Builder $query, ?string $search): Builder

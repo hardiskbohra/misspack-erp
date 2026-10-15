@@ -416,6 +416,11 @@
                                     <a class="cf-sync-chip" href="{{ route('shipments.show', $mirroredShipmentCosts[$entry->id]) }}"
                                         title="Auto-synced from a shipment cost head — open the shipment">↔ Shipment cost</a>
                                 @endif
+                                @if (($entry->allocations_count ?? 0) > 0)
+                                    <a class="cf-sync-chip" href="{{ route('cashflows.show', $entry) }}" title="Open the project and document allocation breakdown">
+                                        {{ $entry->allocations_count }} {{ \Illuminate\Support\Str::plural('allocation', $entry->allocations_count) }} · {{ \App\Helpers\CommonHelper::amount($entry->allocated_amount, $entry->currency) }}
+                                    </a>
+                                @endif
                                 <span class="master-sub">
                                     {{ $relatedPartyOptions[$entry->related_party_type] ?? 'Other' }}:
                                     {{-- the party the row is against: the linked record

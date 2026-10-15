@@ -93,6 +93,11 @@ class Project extends Model
         return $this->hasMany(\App\Models\CashflowEntry::class, 'project_id')->latest('entry_date')->latest('id');
     }
 
+    public function cashflowAllocations()
+    {
+        return $this->hasMany(\App\Models\CashflowAllocation::class, 'project_id')->latest('id');
+    }
+
     public function shipments()
     {
         return $this->hasMany(\App\Models\Shipment::class, 'project_id')->latest('id');
@@ -337,6 +342,18 @@ class Project extends Model
     
         $inward = (float) $cashflows->where('transaction_type', 'credit')->sum('credit_amount');
         $outward = (float) $cashflows->where('transaction_type', 'debit')->sum('debit_amount');
+
+        if (Schema::hasTable('cashflow_allocations')) {
+            $allocations = $this->relationLoaded('cashflowAllocations')
+                ? $this->cashflowAllocations
+                : $this->cashflowAllocations()->with('cashflowEntry')->get();
+            $inward += (float) $allocations
+                ->filter(fn ($allocation) => $allocation->cashflowEntry?->transaction_type === 'credit')
+                ->sum('amount');
+            $outward += (float) $allocations
+                ->filter(fn ($allocation) => $allocation->cashflowEntry?->transaction_type === 'debit')
+                ->sum('amount');
+        }
     
         return [
             'inward' => $inward,

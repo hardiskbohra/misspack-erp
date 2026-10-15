@@ -59,6 +59,10 @@ class ClientPortalProjectController extends ClientPortalBaseController
             'projectReceipts',
         ];
 
+        if (Schema::hasTable('cashflow_allocations')) {
+            $load[] = 'cashflowAllocations.cashflowEntry';
+        }
+
         if (class_exists(\App\Models\Shipment::class)
             && Schema::hasTable('shipments')
             && Schema::hasColumn('shipments', 'project_id')
@@ -68,6 +72,23 @@ class ClientPortalProjectController extends ClientPortalBaseController
         }
 
         $project->load($load);
+        if ($project->relationLoaded('cashflowAllocations')) {
+            $allocatedReceipts = $project->cashflowAllocations
+                ->filter(fn ($allocation) => $allocation->cashflowEntry
+                    && $allocation->cashflowEntry->transaction_type === 'credit'
+                    && in_array($allocation->cashflowEntry->accounting_status, ['booked', 'reconciled'], true))
+                ->map(function ($allocation) {
+                    $receipt = clone $allocation->cashflowEntry;
+                    $receipt->credit_amount = $allocation->amount;
+                    $receipt->debit_amount = 0;
+                    $receipt->particular = $allocation->note ?: $receipt->particular;
+                    return $receipt;
+                });
+            $project->setRelation('projectReceipts', $project->projectReceipts
+                ->concat($allocatedReceipts)
+                ->sortByDesc('entry_date')
+                ->values());
+        }
         $portalDocuments = ClientPortalDocument::query()
             ->where('client_id', $this->client($request)->id)
             ->where('related_type', 'project')

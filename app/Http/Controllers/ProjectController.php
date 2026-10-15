@@ -51,6 +51,9 @@ class ProjectController extends Controller
            the four document relations, one query each instead of a query per
            project per figure. The row's quick view reads the same totals. */
         $with = ['products', 'products.milestones', 'cashflowEntries', 'assignedUser'];
+        if (Schema::hasTable('cashflow_allocations')) {
+            $with[] = 'cashflowAllocations.cashflowEntry';
+        }
         foreach (array_keys($this->documentRelations()) as $relation) {
             $with[] = $relation;
         }
@@ -202,6 +205,9 @@ class ProjectController extends Controller
         if ($this->cashflowEntryModelAvailable() && Schema::hasColumn('cashflow_entries', 'project_id')) {
             $with[] = 'cashflowEntries';
         }
+        if (Schema::hasTable('cashflow_allocations')) {
+            $with[] = 'cashflowAllocations.cashflowEntry';
+        }
 
         if ($this->shipmentModelAvailable()) {
             $with[] = 'shipments';
@@ -247,6 +253,9 @@ class ProjectController extends Controller
         }
 
         $cashflowCount = $project->relationLoaded('cashflowEntries') ? $project->cashflowEntries->count() : 0;
+        if ($project->relationLoaded('cashflowAllocations')) {
+            $cashflowCount += $project->cashflowAllocations->count();
+        }
 
         return view('projects.show', array_merge($this->sharedData(), [
             'project' => $project,
@@ -353,6 +362,9 @@ class ProjectController extends Controller
                 $project->cashflowEntries()->update([
                     'project_id' => null,
                 ]);
+            }
+            if (Schema::hasTable('cashflow_allocations')) {
+                $project->cashflowAllocations()->update(['project_id' => null]);
             }
     
             // Finally delete project
