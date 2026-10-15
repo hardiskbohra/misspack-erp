@@ -1522,7 +1522,9 @@ a.cf-report-value:hover {
 .cf-allocation-table td:nth-child(3) { min-width:160px; }
 .cf-allocation-table tr.has-error { background:rgba(217,45,32,.05); }
 .cf-allocation-actions { justify-content:flex-end; gap:4px; }
+.cf-allocation-actions form { display:inline-flex; margin:0; }
 .cf-allocation-actions .is-danger { color:var(--cf-red); }
+.cf-allocation-detail-errors { margin-bottom:16px; }
 .cf-allocation-empty { min-height:150px; padding:22px; }
 .cf-allocation-modal .master-modal-body { display:grid; gap:18px; padding:20px 22px; }
 .cf-allocation-modal-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 20px; }

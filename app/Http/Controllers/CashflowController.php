@@ -6,6 +6,7 @@ use App\Helpers\DateRanges;
 use App\Models\CashflowAccount;
 use App\Models\CashflowCategory;
 use App\Models\CashflowAttachment;
+use App\Models\CashflowAllocation;
 use App\Models\CashflowEntry;
 use App\Models\CashflowMasterOption;
 use App\Models\SavedView;
@@ -335,6 +336,77 @@ class CashflowController extends Controller
         $cashflow->update($data);
 
         return back()->with('success', 'Status set to '.$cashflow->statusLabel().'.');
+    }
+
+    public function storeAllocation(Request $request, CashflowEntry $cashflow): RedirectResponse
+    {
+        $rows = $cashflow->allocations()->get()->map(fn (CashflowAllocation $allocation) => $this->allocationRow($allocation))->all();
+        /* Preserve an untouched legacy single link when the first detail-page
+           allocation upgrades this entry to the multi-allocation structure. */
+        if ($rows === [] && ($cashflow->project_id || $cashflow->sales_invoice_id)) {
+            $rows[] = [
+                'project_id' => $cashflow->project_id,
+                'sales_invoice_id' => $cashflow->sales_invoice_id,
+                'purchase_invoice_id' => null,
+                'amount' => $cashflow->amountMoved(),
+                'document_amount' => $cashflow->sales_invoice_id ? $cashflow->amountMoved() : null,
+                'note' => null,
+            ];
+        }
+        $rows[] = $this->validatedAllocation($request);
+
+        DB::transaction(fn () => app(CashflowAllocations::class)->sync($cashflow, $rows));
+
+        return back()->with('success', 'Allocation added successfully.');
+    }
+
+    public function updateAllocation(Request $request, CashflowEntry $cashflow, CashflowAllocation $allocation): RedirectResponse
+    {
+        $this->assertAllocationOwner($cashflow, $allocation);
+        $replacement = $this->validatedAllocation($request);
+        $rows = $cashflow->allocations()->get()->map(
+            fn (CashflowAllocation $row) => $row->is($allocation) ? $replacement : $this->allocationRow($row)
+        )->all();
+
+        DB::transaction(fn () => app(CashflowAllocations::class)->sync($cashflow, $rows));
+
+        return back()->with('success', 'Allocation updated successfully.');
+    }
+
+    public function destroyAllocation(CashflowEntry $cashflow, CashflowAllocation $allocation): RedirectResponse
+    {
+        $this->assertAllocationOwner($cashflow, $allocation);
+        $rows = $cashflow->allocations()->where('id', '!=', $allocation->id)->get()
+            ->map(fn (CashflowAllocation $row) => $this->allocationRow($row))->all();
+
+        DB::transaction(fn () => app(CashflowAllocations::class)->sync($cashflow, $rows));
+
+        return back()->with('success', 'Allocation deleted successfully.');
+    }
+
+    private function validatedAllocation(Request $request): array
+    {
+        return $request->validate([
+            'project_id' => ['nullable', 'integer', 'exists:projects,id'],
+            'sales_invoice_id' => ['nullable', 'integer', 'exists:sales_invoices,id'],
+            'purchase_invoice_id' => ['nullable', 'integer', 'exists:purchase_invoices,id'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'document_amount' => ['nullable', 'numeric', 'min:0.01'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+    }
+
+    private function allocationRow(CashflowAllocation $allocation): array
+    {
+        return $allocation->only([
+            'project_id', 'sales_invoice_id', 'purchase_invoice_id',
+            'amount', 'document_amount', 'note',
+        ]);
+    }
+
+    private function assertAllocationOwner(CashflowEntry $cashflow, CashflowAllocation $allocation): void
+    {
+        abort_unless((int) $allocation->cashflow_entry_id === (int) $cashflow->id, 404);
     }
 
     public function edit(CashflowEntry $cashflow): View

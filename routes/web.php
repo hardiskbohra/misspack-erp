@@ -523,6 +523,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/cashflows/{cashflow}/expense-statement', [CashflowController::class, 'expenseStatement'])->name('cashflows.expenseStatement');
         Route::post('/cashflows/{cashflow}/duplicate', [CashflowController::class, 'duplicate'])->name('cashflows.duplicate');
         Route::patch('/cashflows/{cashflow}/status', [CashflowController::class, 'updateStatus'])->name('cashflows.status');
+        Route::post('/cashflows/{cashflow}/allocations', [CashflowController::class, 'storeAllocation'])->name('cashflows.allocations.store');
+        Route::put('/cashflows/{cashflow}/allocations/{allocation}', [CashflowController::class, 'updateAllocation'])->name('cashflows.allocations.update');
+        Route::delete('/cashflows/{cashflow}/allocations/{allocation}', [CashflowController::class, 'destroyAllocation'])->name('cashflows.allocations.destroy');
         Route::resource('cashflows', CashflowController::class);
     });
 

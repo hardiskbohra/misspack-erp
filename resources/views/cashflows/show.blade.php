@@ -205,13 +205,15 @@
                         </div>
                     </div>
 
-                    @if ($allocations->isNotEmpty())
-                        <div class="master-card master-table-card master-card--flat cf-allocation-record-card">
+                    <div class="master-card master-table-card master-card--flat cf-allocation-record-card">
                             <div class="master-section-head">
                                 <div>
                                     <h3 class="master-section-title">Allocation breakdown</h3>
                                     <p class="master-sub">{{ $allocations->count() }} monetary {{ \Illuminate\Support\Str::plural('slice', $allocations->count()) }}</p>
                                 </div>
+                                <button type="button" class="master-btn master-btn-soft master-btn-sm" data-detail-allocation-add>
+                                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Add allocation
+                                </button>
                             </div>
                             <div class="master-stats cf-allocation-stats cf-allocation-record-stats">
                                 <div class="master-stat master-stat--flat blue"><div><p class="master-stat-title">Entry amount</p><p class="master-stat-value">{{ $money($entry->amountMoved()) }}</p></div></div>
@@ -220,9 +222,9 @@
                             </div>
                             <div class="master-table-wrap">
                                 <table class="master-table">
-                                    <thead><tr><th>Project</th><th>Document</th><th>Note</th><th class="is-num">Cash amount</th><th class="is-num">Document amount</th></tr></thead>
+                                    <thead><tr><th>Project</th><th>Document</th><th>Note</th><th class="is-num">Cash amount</th><th class="is-num">Document amount</th><th class="is-action">Action</th></tr></thead>
                                     <tbody>
-                                        @foreach($allocations as $allocation)
+                                        @forelse($allocations as $allocation)
                                             @php($document = $allocation->salesInvoice ?: $allocation->purchaseInvoice)
                                             <tr>
                                                 <td data-label="Project">{{ $allocation->project ? $allocation->project->project_number.' · '.$allocation->project->name : '—' }}</td>
@@ -236,13 +238,42 @@
                                                 <td data-label="Note">{{ $allocation->note ?: '—' }}</td>
                                                 <td data-label="Cash amount" class="is-num"><strong>{{ \App\Helpers\CommonHelper::amount($allocation->amount, $allocation->currency) }}</strong></td>
                                                 <td data-label="Document amount" class="is-num">{{ $document ? \App\Helpers\CommonHelper::amount($allocation->documentAmount(), $allocation->document_currency) : '—' }}</td>
+                                                <td data-label="Action" class="is-action">
+                                                    <div class="master-row-actions cf-allocation-actions">
+                                                        <button type="button" class="master-icon-btn" aria-label="Edit allocation"
+                                                            data-detail-allocation-edit
+                                                            data-update-url="{{ route('cashflows.allocations.update', [$entry, $allocation]) }}"
+                                                            data-allocation-id="{{ $allocation->id }}"
+                                                            data-project-id="{{ $allocation->project_id }}"
+                                                            data-sales-id="{{ $allocation->sales_invoice_id }}"
+                                                            data-purchase-id="{{ $allocation->purchase_invoice_id }}"
+                                                            data-amount="{{ $allocation->amount }}"
+                                                            data-document-amount="{{ $allocation->document_amount }}"
+                                                            data-note="{{ $allocation->note }}"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+                                                        <form method="POST" action="{{ route('cashflows.allocations.destroy', [$entry, $allocation]) }}" onsubmit="return confirm('Delete this allocation? The linked document balance will be recalculated.');">
+                                                            @csrf @method('DELETE')
+                                                            <button type="submit" class="master-icon-btn is-danger" aria-label="Delete allocation"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                                                        </form>
+                                                    </div>
+                                                </td>
                                             </tr>
-                                        @endforeach
+                                        @empty
+                                            <tr>
+                                                <td colspan="6">
+                                                    <div class="master-empty-state cf-allocation-empty">
+                                                        <i class="fa-solid fa-code-branch" aria-hidden="true"></i>
+                                                        <p>No allocation lines yet.</p>
+                                                        <button type="button" class="master-btn master-btn-soft master-btn-sm" data-detail-allocation-add>Add first allocation</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforelse
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-                    @endif
+
+                    @include('cashflows.partials.detail-allocation-modal')
 
                     <div class="master-card master-card--flat master-section">
                         <h3 class="master-section-title">Notes</h3>
