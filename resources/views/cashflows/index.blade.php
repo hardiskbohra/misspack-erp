@@ -357,6 +357,7 @@
                 <thead>
                     <tr>
                         <th scope="col" class="master-list-pick">
+                            <span class="sr-only">Select</span>
                             <input type="checkbox" data-bulk-all aria-label="Select every entry on this page">
                         </th>
                         <th scope="col">Date</th>

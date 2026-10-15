@@ -355,8 +355,10 @@ check('the module is written down',
 check('the check itself is listed with its siblings',
     /projects-check\.cjs/.test(read('tools/checks/README.md')));
 
-check('the portal page this rule protects still exists',
-    /project-index|projects-project-card/.test(portalView));
+check('the authenticated client portal project list still exists',
+    /cp-project-list/.test(portalView)
+    && /cp-project-card/.test(portalView)
+    && /client-portal\.projects\.show/.test(portalView));
 
 /* ------------------------------------------------- 8. the record page */
 

@@ -103,7 +103,7 @@
                 </button>
                 <div class="master-dropdown-menu">
                     <button type="button" data-copy-link="{{ route('purchase-invoices.public', $invoice->public_token) }}">
-                        Copy public link
+                        <i class="fa-solid fa-link" aria-hidden="true"></i> Copy public link
                     </button>
                     @if ($invoice->canConvert())
                         <form method="POST" action="{{ route('purchase-invoices.convert', $invoice) }}"
@@ -112,7 +112,7 @@
                             data-confirm-text="Convert to bill"
                             data-confirm-danger="false">
                             @csrf
-                            <button type="submit">Convert to bill</button>
+                            <button type="submit"><i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i> Convert to bill</button>
                         </form>
                     @endif
                     @foreach ($nextStatuses as $next)
@@ -120,14 +120,14 @@
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="status" value="{{ $next }}">
-                            <button type="submit">Mark {{ \App\Models\PurchaseInvoice::statusOptions()[$next] ?? $next }}</button>
+                            <button type="submit"><i class="fa-solid fa-check" aria-hidden="true"></i> Mark {{ \App\Models\PurchaseInvoice::statusOptions()[$next] ?? $next }}</button>
                         </form>
                     @endforeach
                     <form method="POST" action="{{ route($routePrefix.'.destroy', $invoice) }}"
                         data-confirm="Delete {{ $invoice->invoice_number }}?">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="danger">Delete</button>
+                        <button type="submit" class="danger"><i class="fa-solid fa-trash" aria-hidden="true"></i> Delete</button>
                     </form>
                 </div>
             </div>

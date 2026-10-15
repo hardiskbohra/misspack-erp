@@ -344,11 +344,11 @@ class PurchaseInvoice extends Model
             ? (float) ($this->attributes['allocation_paid'] ?? 0)
             : 0.0;
         if (! array_key_exists('allocation_paid', $this->attributes) && $this->exists && Schema::hasTable('cashflow_allocations')) {
-            $allocated = (float) CashflowAllocation::query()
+            $allocated = (float) (CashflowAllocation::query()
                 ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
                 ->where('cashflow_allocations.purchase_invoice_id', $this->id)
                 ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) as total")
-                ->value('total');
+                ->first()?->total ?? 0);
         }
 
         return round($vendorLedger + $allocated, 2);

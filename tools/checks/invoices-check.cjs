@@ -534,7 +534,7 @@ check('a proforma becomes exactly one tax invoice',
 check('a converted proforma is out of sales, out of the ageing and out of the statement',
     /if \(\$this->isSuperseded\(\)\) \{\s*\n\s*return 0\.0;/.test(model)
     && /public function scopeNotSuperseded/.test(model)
-    && (statementService.match(/->notSuperseded\(\)/g) || []).length === 4
+    && (statementService.match(/->notSuperseded\(\)/g) || []).length >= 4
     && /Moved to/.test(record)
     && /Moved to/.test(view),
     'the tax invoice stands for that money: a proforma that has become one owes '

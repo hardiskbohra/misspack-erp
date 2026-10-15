@@ -116,24 +116,27 @@ check('the bucket function actually returns the last bucket',
 
 check('a statement is built for one currency, not for a sum of them',
     /rows in it carry the running balance, rows in any other currency are reported separately/.test(prose(service))
-    && /strtoupper\(\(string\) \(\$options\['currency'\]/.test(service));
+    && /\$requested = strtoupper\(trim\(\(string\) \(\$options\['currency'\]/.test(service)
+    && /\$this->statementRows\(\$type, \$party, \$currency/.test(service));
 check('the opening balance is everything before the period',
-    /private function splitOpening/.test(service) && /if \(\$date < \$from\)/.test(service));
+    /private function splitOpening/.test(service)
+    && /if \(\$from !== null && \$date < \$from\)/.test(service));
 check('the running balance starts from the opening balance',
     /\$running = \$opening;/.test(service) && /\$running \+= \$sign \* \(\$row\['debit'\] - \$row\['credit'\]\)/.test(service));
 check('the sign is decided once, by party type',
     /\$sign = \$type === 'vendor' \? -1 : 1;/.test(service));
 check('a client statement pairs invoices with receipts',
-    /if \(Schema::hasTable\('sales_invoices'\)\) \{\s*\$invoices = SalesInvoice::query\(\)/.test(service)
+    /private function clientStatementRows/.test(service)
+    && /SalesInvoice::query\(\)[\s\S]{0,260}?->notSuperseded\(\)/.test(service)
     && /'particular' => \$credit > 0 \? 'Receipt' : 'Refund/.test(service));
 check('a vendor statement is the vendor currency ledger',
     /VendorPaymentEntry::query\(\)[\s\S]{0,200}where\('vendor_id'/.test(service)
     && /vendor currency ledger: bills raised and payments made/.test(service));
 check('a vendor with only cashflow rows still gets a statement, and it says so',
-    /The fallback for a vendor whose money was only ever filed/.test(prose(service))
-    && /no vendor-currency rows filed yet/.test(service)
+    /no vendor-currency rows filed yet/.test(service)
     /* and the fallback is a live branch, not a comment about one */
-    && /if \(\$rows === \[\] && Schema::hasTable\('cashflow_entries'\)\) \{/.test(service));
+    && /if \(\$rows === \[\] && ! \$hasVendorLedger && Schema::hasTable\('cashflow_entries'\)\)/.test(service)
+    && /\$this->partyCashflow\(\$vendor->id, 'vendor'/.test(service));
 check('a party is matched on its own id column — never both',
     /where\(\$type === 'vendor' \? 'vendor_id' : 'client_id', \$partyId\)/.test(service)
     && /one's money on the other's statement/.test(prose(service)));
@@ -144,7 +147,7 @@ check('a vendor is aged from the bill date, and the statement says so',
 check('a bill that was paid is not outstanding',
     /\$entry->transaction_type === 'debit' \|\| ! in_array/.test(service));
 check('other currencies are reported, never added in',
-    /'other_currencies' => \$this->otherCurrencies\(\$type, \$party, \$currency, \$from, \$to\)/.test(service)
+    /'other_currencies' => \$this->otherCurrencies\(\$type, \$party, \$currency, \$from, \$to, \$clientPortal\)/.test(service)
     && /each currency is its own statement/.test(read('resources/views/cashflows/partials/statement.blade.php')));
 
 /* ------------------------------------------------------------- the routes */
@@ -161,7 +164,8 @@ check('the surface is registered before the resource route',
     statementsRouteAt > 0 && resourceRouteAt > statementsRouteAt,
     statementsRouteAt === -1 ? 'surface route missing' : 'order');
 check('the PDF route cannot be read as a party page',
-    /Route::get\('\/cashflows\/statements\/pdf'/.test(routes));
+    /Route::get\('\/cashflows\/statements\/\{partyType\}\/\{party\}\/pdf'/.test(routes)
+    && routes.indexOf("->name('cashflows.statements.pdf')") < routes.indexOf("->name('cashflows.statements.show')"));
 check('the party page is constrained to the two ledgers there are',
     /whereIn\('partyType', \['client', 'vendor'\]\)/.test(routes));
 check('a link is revoked with PATCH and forgotten with DELETE',
@@ -234,7 +238,7 @@ check('the note belongs to the link, printed on the statement',
 const helper = read('app/Helpers/CommonHelper.php');
 check('one place turns a currency code into what a person reads',
     /public static function currencyLabel\(/.test(helper)
-    && /return \$code === 'INR' \? self::SYMBOL : \$code;/.test(helper));
+    && /return self::symbol\(\$code\);/.test(helper));
 check('the statement never prints the letters INR where a rupee sign belongs',
     /\$currencyLabel = \\App\\Helpers\\CommonHelper::currencyLabel\(\$currency\);/.test(partial)
     && ! />INR</.test(surface + preview + partial + publicPage + portalPage + expired)
@@ -322,7 +326,7 @@ check('the nav reaches the new surface',
 check('the ledger item no longer lights up while a statement is open',
     /'except' => \[[^\]]*'cashflows\.documents', 'cashflows\.statements', 'cashflows\.statements\.\*'/.test(read('resources/views/layouts/app.blade.php')));
 check('a party page offers its own statement',
-    /partyType' => 'client', 'party' => \$client->id/.test(read('resources/views/clients/show.blade.php'))
+    /\$tabUrl\('statement'\)/.test(read('resources/views/clients/show.blade.php'))
     && /partyType' => 'vendor', 'party' => \$vendor->id/.test(read('resources/views/vendors/show.blade.php')));
 
 /* ------------------------------------------------------------------- PHP */

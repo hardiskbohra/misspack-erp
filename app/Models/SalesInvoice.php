@@ -240,12 +240,14 @@ class SalesInvoice extends Model
             return 0.0;
         }
 
-        return round((float) CashflowAllocation::query()
+        $total = CashflowAllocation::query()
             ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
             ->where('cashflow_allocations.sales_invoice_id', $this->id)
             ->when($finalizedOnly, fn ($query) => $query->whereIn('cashflow_entries.accounting_status', ['booked', 'reconciled']))
             ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) as total")
-            ->value('total'), 2);
+            ->first()?->total;
+
+        return round((float) ($total ?? 0), 2);
     }
 
     /** Everything received: the invoice's opening figure plus the ledger's receipts. */
@@ -284,9 +286,9 @@ class SalesInvoice extends Model
             ->whereIn('accounting_status', ['booked', 'reconciled'])
             ->reorder()
             ->selectRaw('coalesce(sum(credit_amount - debit_amount), 0) as received')
-            ->value('received');
+            ->first()?->received;
 
-        return round((float) $this->amount_paid + (float) $ledger + $this->allocatedReceived(true), 2);
+        return round((float) $this->amount_paid + (float) ($ledger ?? 0) + $this->allocatedReceived(true), 2);
     }
 
     public function clientPortalBalanceDue(): float

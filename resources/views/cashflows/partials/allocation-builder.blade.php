@@ -125,14 +125,14 @@
                     <label class="master-label" for="allocationSales">Sales invoice / proforma</label>
                     <select class="master-select" id="allocationSales" data-modal-value="sales_invoice_id" data-allocation-sales>
                         <option value="">No sales document</option>
-                        @foreach($salesInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}">{{ $invoice->invoice_number }} · {{ $invoice->currency }} {{ number_format((float) $invoice->total_amount, 2) }}</option>@endforeach
+                        @foreach($salesInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}">{{ $invoice->invoice_number }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
                     </select>
                 </div>
                 <div class="master-field">
                     <label class="master-label" for="allocationPurchase">Purchase order / bill</label>
                     <select class="master-select" id="allocationPurchase" data-modal-value="purchase_invoice_id" data-allocation-purchase>
                         <option value="">No purchase document</option>
-                        @foreach($purchaseInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}">{{ $invoice->invoice_number }} · {{ $invoice->typeLabel() }} · {{ $invoice->currency }} {{ number_format((float) $invoice->total_amount, 2) }}</option>@endforeach
+                        @foreach($purchaseInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}">{{ $invoice->invoice_number }} · {{ $invoice->typeLabel() }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
                     </select>
                 </div>
                 <div class="master-field">
@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function field(key) { return modal.querySelector('[data-modal-value="' + key + '"]'); }
     function notifySelect(select) { if (window.jQuery) window.jQuery(select).trigger('change'); }
     function optionText(select) { return select.value ? select.options[select.selectedIndex].text.trim() : ''; }
-    function money(value, currency) {
+    function formatAllocationMoney(value, currency) {
         return (currency || 'INR') + ' ' + (Number(value) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     function rows() { return Array.from(list.querySelectorAll('[data-allocation-row]')); }
@@ -193,10 +193,10 @@ document.addEventListener('DOMContentLoaded', function () {
         var entry = parseFloat(amountInput ? amountInput.value : 0) || 0;
         var allocated = rows().reduce(function (sum, row) { return sum + (parseFloat(value(row, 'amount')) || 0); }, 0);
         var currency = currencyInput ? currencyInput.value : 'INR';
-        builder.querySelector('[data-allocation-entry]').textContent = money(entry, currency);
-        builder.querySelector('[data-allocation-total]').textContent = money(allocated, currency);
+        builder.querySelector('[data-allocation-entry]').textContent = formatAllocationMoney(entry, currency);
+        builder.querySelector('[data-allocation-total]').textContent = formatAllocationMoney(allocated, currency);
         var remaining = entry - allocated;
-        builder.querySelector('[data-allocation-remaining]').textContent = money(remaining, currency);
+        builder.querySelector('[data-allocation-remaining]').textContent = formatAllocationMoney(remaining, currency);
         builder.classList.toggle('has-allocation-error', remaining < -0.009);
         modalTotals();
     }
@@ -208,9 +208,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 0);
         var available = entry - otherAllocated;
         var currency = currencyInput ? currencyInput.value : 'INR';
-        modal.querySelector('[data-modal-entry-total]').textContent = money(entry, currency);
-        modal.querySelector('[data-modal-allocated-total]').textContent = money(otherAllocated, currency);
-        modal.querySelector('[data-modal-available-total]').textContent = money(available, currency);
+        modal.querySelector('[data-modal-entry-total]').textContent = formatAllocationMoney(entry, currency);
+        modal.querySelector('[data-modal-allocated-total]').textContent = formatAllocationMoney(otherAllocated, currency);
+        modal.querySelector('[data-modal-available-total]').textContent = formatAllocationMoney(available, currency);
         return available;
     }
 
@@ -273,8 +273,8 @@ document.addEventListener('DOMContentLoaded', function () {
         row.querySelector('[data-document-label]').textContent = optionText(documentSelect) || 'No document';
         row.querySelector('[data-document-meta]').textContent = documentType ? documentType + ' · ' + documentCurrency : 'Project-only allocation';
         row.querySelector('[data-note-label]').textContent = values.note || '—';
-        row.querySelector('[data-cash-label]').textContent = money(values.amount, entryCurrency);
-        row.querySelector('[data-document-amount-label]').textContent = documentType ? money(values.document_amount || values.amount, documentCurrency) : '—';
+        row.querySelector('[data-cash-label]').textContent = formatAllocationMoney(values.amount, entryCurrency);
+        row.querySelector('[data-document-amount-label]').textContent = documentType ? formatAllocationMoney(values.document_amount || values.amount, documentCurrency) : '—';
     }
 
     function updateCurrencyHint() {

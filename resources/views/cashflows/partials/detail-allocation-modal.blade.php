@@ -35,14 +35,14 @@
                         <label class="master-label" for="detailAllocationSales">Sales invoice / proforma</label>
                         <select class="master-select" id="detailAllocationSales" name="sales_invoice_id" data-detail-sales>
                             <option value="">No sales document</option>
-                            @foreach($salesInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}" @selected((string) old('sales_invoice_id') === (string) $invoice->id)>{{ $invoice->invoice_number }} · {{ $invoice->currency }} {{ number_format((float) $invoice->total_amount, 2) }}</option>@endforeach
+                            @foreach($salesInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}" @selected((string) old('sales_invoice_id') === (string) $invoice->id)>{{ $invoice->invoice_number }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
                         </select>
                     </div>
                     <div class="master-field">
                         <label class="master-label" for="detailAllocationPurchase">Purchase order / bill</label>
                         <select class="master-select" id="detailAllocationPurchase" name="purchase_invoice_id" data-detail-purchase>
                             <option value="">No purchase document</option>
-                            @foreach($purchaseInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}" @selected((string) old('purchase_invoice_id') === (string) $invoice->id)>{{ $invoice->invoice_number }} · {{ $invoice->typeLabel() }} · {{ $invoice->currency }} {{ number_format((float) $invoice->total_amount, 2) }}</option>@endforeach
+                            @foreach($purchaseInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}" @selected((string) old('purchase_invoice_id') === (string) $invoice->id)>{{ $invoice->invoice_number }} · {{ $invoice->typeLabel() }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
                         </select>
                     </div>
                     <div class="master-field">
@@ -90,16 +90,16 @@ document.addEventListener('DOMContentLoaded', function () {
     var currency = modal.dataset.currency || 'INR';
     var activeAmount = 0;
 
-    function money(value) {
+    function formatAllocationMoney(value) {
         return currency + ' ' + (Number(value) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     function notify(select) { if (window.jQuery) window.jQuery(select).trigger('change'); }
     function setValue(control, value) { control.value = value || ''; notify(control); }
     function stats() {
         var other = Math.max(allocatedTotal - activeAmount, 0);
-        modal.querySelector('[data-detail-entry-total]').textContent = money(entryTotal);
-        modal.querySelector('[data-detail-other-total]').textContent = money(other);
-        modal.querySelector('[data-detail-available-total]').textContent = money(Math.max(entryTotal - other, 0));
+        modal.querySelector('[data-detail-entry-total]').textContent = formatAllocationMoney(entryTotal);
+        modal.querySelector('[data-detail-other-total]').textContent = formatAllocationMoney(other);
+        modal.querySelector('[data-detail-available-total]').textContent = formatAllocationMoney(Math.max(entryTotal - other, 0));
     }
     function currencyHint() {
         var selected = sales.value ? sales.options[sales.selectedIndex] : (purchase.value ? purchase.options[purchase.selectedIndex] : null);
@@ -161,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function () {
     form.addEventListener('submit', function (event) {
         var available = entryTotal - Math.max(allocatedTotal - activeAmount, 0);
         if (!project.value && !sales.value && !purchase.value) { event.preventDefault(); window.alert('Select a project or document.'); return; }
-        if ((Number(amount.value) || 0) > available + 0.009) { event.preventDefault(); window.alert('This allocation exceeds the available ' + money(available) + '.'); }
+        if ((Number(amount.value) || 0) > available + 0.009) { event.preventDefault(); window.alert('This allocation exceeds the available ' + formatAllocationMoney(available) + '.'); }
     });
 
     @if(!old('allocation_form'))

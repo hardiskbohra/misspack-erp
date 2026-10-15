@@ -99,9 +99,9 @@
                             <label class="master-check">
                                 <input type="hidden" name="record_cashflow" value="0">
                                 <input type="checkbox" name="record_cashflow" value="1" checked>
-                                Record this payment in the INR cashflow
+                                Record this payment in the rupee cashflow
                             </label>
-                            <small class="master-help">Needs an exchange rate (or INR amount) so the cashflow entry can be created. An advance on a PO moves to the bill when you convert.</small>
+                            <small class="master-help">Needs an exchange rate or rupee equivalent so the cashflow entry can be created. An advance on a PO moves to the bill when you convert.</small>
                         </div>
                     </div>
                 </div>
