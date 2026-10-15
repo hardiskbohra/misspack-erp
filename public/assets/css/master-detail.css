@@ -61,55 +61,61 @@
    important, not an error. This shared callout keeps it visible on client,
    vendor and project records without pretending it is another balance card. */
 .master-unallocated-alert {
-    margin-bottom: 16px;
+    margin-bottom: 18px;
     overflow: hidden;
-    border: 1px solid var(--mc-border);
-    border-left: 4px solid #f59e0b;
-    border-radius: 14px;
-    background: var(--mc-card);
+    border: 1px solid color-mix(in srgb, #f59e0b 45%, var(--mc-border));
+    border-left: 5px solid #f59e0b;
+    border-radius: 16px;
+    background: color-mix(in srgb, #f59e0b 5%, var(--mc-card));
 }
 
 .master-unallocated-alert-head {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 16px 18px;
-    background: color-mix(in srgb, #f59e0b 8%, var(--mc-card));
+    gap: 16px;
+    padding: 18px 20px;
+    background: linear-gradient(110deg, color-mix(in srgb, #f59e0b 14%, var(--mc-card)), color-mix(in srgb, #f59e0b 4%, var(--mc-card)) 70%);
 }
 
 .master-unallocated-alert-icon {
     display: grid;
-    width: 38px;
-    height: 38px;
-    flex: 0 0 38px;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
     place-items: center;
-    border-radius: 10px;
-    background: color-mix(in srgb, #f59e0b 18%, var(--mc-card));
-    color: #b45309;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #f59e0b, #d97706);
+    color: #fff;
+    font-size: 17px;
 }
 
 .master-unallocated-alert-copy { min-width: 0; flex: 1; }
-.master-unallocated-alert-copy h2 { margin: 0; color: var(--mc-text); font-size: 15px; font-weight: 700; }
-.master-unallocated-alert-copy p { margin: 3px 0 0; color: var(--mc-text-2); font-size: 12.5px; line-height: 1.45; }
-.master-unallocated-alert-totals { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; white-space: nowrap; }
-.master-unallocated-alert-totals strong { color: #b45309; font-size: 18px; line-height: 1.2; }
-.master-unallocated-alert-totals span { color: var(--mc-text-3); font-size: 11.5px; }
-.master-unallocated-alert-rows { border-top: 1px solid var(--mc-border); }
-.master-unallocated-alert-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 18px; color: inherit; text-decoration: none; }
-.master-unallocated-alert-row + .master-unallocated-alert-row { border-top: 1px solid var(--mc-border); }
-.master-unallocated-alert-row:hover { background: var(--mc-soft); }
+.master-unallocated-alert-eyebrow { display: inline-flex; margin-bottom: 5px; padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, #f59e0b 20%, var(--mc-card)); color: #a84b08; font-size: 10px; font-weight: 800; letter-spacing: .07em; line-height: 1.2; text-transform: uppercase; }
+.master-unallocated-alert-copy h2 { margin: 0; color: var(--mc-text); font-size: 17px; font-weight: 750; letter-spacing: -.015em; }
+.master-unallocated-alert-copy p { margin: 4px 0 0; color: var(--mc-text-2); font-size: 13px; line-height: 1.5; }
+.master-unallocated-alert-totals { display: flex; min-width: 170px; flex-direction: column; align-items: flex-end; gap: 2px; padding: 11px 14px; border: 1px solid color-mix(in srgb, #f59e0b 35%, var(--mc-border)); border-radius: 12px; background: var(--mc-card); white-space: nowrap; }
+.master-unallocated-alert-totals > span { color: #a84b08; font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.master-unallocated-alert-totals strong { color: #b45309; font-size: 20px; line-height: 1.2; }
+.master-unallocated-alert-totals small { color: var(--mc-text-3); font-size: 11px; }
+.master-unallocated-alert-rows { display: grid; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid color-mix(in srgb, #f59e0b 25%, var(--mc-border)); }
+.master-unallocated-alert-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 14px; border: 1px solid var(--mc-border); border-radius: 11px; background: var(--mc-card); color: inherit; text-decoration: none; transition: border-color .15s ease, background .15s ease; }
+.master-unallocated-alert-row:hover { border-color: color-mix(in srgb, #f59e0b 60%, var(--mc-border)); background: color-mix(in srgb, #f59e0b 5%, var(--mc-card)); }
 .master-unallocated-alert-row > span:first-child { min-width: 0; }
-.master-unallocated-alert-row strong { display: block; color: var(--mc-text); font-size: 13px; }
+.master-unallocated-alert-row strong { display: block; color: var(--mc-text); font-size: 13.5px; }
 .master-unallocated-alert-row small { display: block; margin-top: 3px; color: var(--mc-text-3); font-size: 11.5px; }
-.master-unallocated-alert-amount { flex: 0 0 auto; text-align: right; }
-.master-unallocated-alert-amount > strong { color: #b45309; }
-.master-unallocated-alert-more { margin: 0; padding: 10px 18px; border-top: 1px solid var(--mc-border); color: var(--mc-text-3); font-size: 11.5px; }
+.master-unallocated-alert-amount { display: grid; min-width: 150px; flex: 0 0 auto; justify-items: end; text-align: right; }
+.master-unallocated-alert-amount > small { margin: 0 0 2px; color: var(--mc-text-3); font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.master-unallocated-alert-amount > strong { color: #b45309; font-size: 15px; }
+.master-unallocated-alert-action { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; padding: 5px 9px; border-radius: 8px; background: #f59e0b; color: #fff; font-size: 11px; font-weight: 750; }
+.master-unallocated-alert-row:hover .master-unallocated-alert-action { background: #d97706; }
+.master-unallocated-alert-more { margin: -2px 12px 12px; padding: 8px 12px; border-radius: 8px; background: color-mix(in srgb, #f59e0b 8%, var(--mc-card)); color: var(--mc-text-3); font-size: 11.5px; }
 
 @media (max-width: 767px) {
-    .master-unallocated-alert-head { align-items: flex-start; flex-wrap: wrap; }
-    .master-unallocated-alert-totals { width: 100%; align-items: flex-start; padding-left: 52px; }
-    .master-unallocated-alert-row { align-items: flex-start; flex-direction: column; gap: 8px; }
-    .master-unallocated-alert-amount { text-align: left; }
+    .master-unallocated-alert-head { align-items: flex-start; flex-wrap: wrap; padding: 16px; }
+    .master-unallocated-alert-icon { width: 42px; height: 42px; flex-basis: 42px; border-radius: 12px; }
+    .master-unallocated-alert-totals { width: 100%; min-width: 0; align-items: flex-start; margin-left: 58px; }
+    .master-unallocated-alert-row { align-items: flex-start; flex-direction: column; gap: 10px; }
+    .master-unallocated-alert-amount { min-width: 0; justify-items: start; text-align: left; }
 }
 
 /* --------------------------------------------------------------------------
