@@ -58,7 +58,7 @@ class PurchaseInvoice extends Model
     /** The paid figure is upstream of every balance: one SQL, read everywhere. */
     public const PAID_SQL = '(coalesce(purchase_invoices.amount_paid, 0)'
         .' + (select coalesce(sum(foreign_amount), 0) from vendor_payment_entries where vendor_payment_entries.purchase_invoice_id = purchase_invoices.id and vendor_payment_entries.transaction_type = \'debit\')'
-        .' + (select coalesce(sum(case when cashflow_entries.transaction_type = \'debit\' then coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) else -coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) end), 0) from cashflow_allocations join cashflow_entries on cashflow_entries.id = cashflow_allocations.cashflow_entry_id where cashflow_allocations.purchase_invoice_id = purchase_invoices.id))';
+        .' + (select coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) from cashflow_allocations join cashflow_entries on cashflow_entries.id = cashflow_allocations.cashflow_entry_id where cashflow_allocations.purchase_invoice_id = purchase_invoices.id))';
 
     /** The supplier's own bill number, falling back to our document number. */
     public function referenceNumber(): string
@@ -337,6 +337,9 @@ class PurchaseInvoice extends Model
                 ? (float) $this->payments->sum('foreign_amount')
                 : (float) $this->payments()->sum('foreign_amount'));
 
+        /* `document_amount` is the positive amount explicitly applied to this
+           bill. The parent cashflow direction belongs to the account ledger;
+           it does not reverse the document allocation into a refund. */
         $allocated = array_key_exists('allocation_paid', $this->attributes)
             ? (float) ($this->attributes['allocation_paid'] ?? 0)
             : 0.0;
@@ -344,7 +347,7 @@ class PurchaseInvoice extends Model
             $allocated = (float) CashflowAllocation::query()
                 ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
                 ->where('cashflow_allocations.purchase_invoice_id', $this->id)
-                ->selectRaw("coalesce(sum(case when cashflow_entries.transaction_type = 'debit' then coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) else -coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) end), 0) as total")
+                ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) as total")
                 ->value('total');
         }
 
@@ -518,7 +521,7 @@ class PurchaseInvoice extends Model
             $query->addSelect(['allocation_paid' => CashflowAllocation::query()
                 ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
                 ->whereColumn('cashflow_allocations.purchase_invoice_id', 'purchase_invoices.id')
-                ->selectRaw("coalesce(sum(case when cashflow_entries.transaction_type = 'debit' then coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) else -coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) end), 0)")]);
+                ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0)")]);
         }
 
         return $query;

@@ -329,7 +329,7 @@ class PurchaseInvoiceController extends Controller
                     'transaction_date' => $entry->entry_date,
                     'payment_mode' => $entry->payment_mode,
                     'particular' => $allocation->note ?: $entry->particular,
-                    'foreign_amount' => ($entry->transaction_type === 'debit' ? 1 : -1) * $allocation->documentAmount(),
+                    'foreign_amount' => $allocation->documentAmount(),
                     'foreign_currency' => $allocation->document_currency ?: $purchaseInvoice->currency,
                     'cashflow_entry_id' => $entry->id,
                 ];

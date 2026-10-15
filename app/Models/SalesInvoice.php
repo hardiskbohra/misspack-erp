@@ -186,7 +186,7 @@ class SalesInvoice extends Model
      */
     public const RECEIVED_SQL = '(coalesce(sales_invoices.amount_paid, 0)'
         .' + (select coalesce(sum(credit_amount - debit_amount), 0) from cashflow_entries where cashflow_entries.sales_invoice_id = sales_invoices.id)'
-        .' + (select coalesce(sum(case when cashflow_entries.transaction_type = \'credit\' then coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) else -coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) end), 0) from cashflow_allocations join cashflow_entries on cashflow_entries.id = cashflow_allocations.cashflow_entry_id where cashflow_allocations.sales_invoice_id = sales_invoices.id))';
+        .' + (select coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) from cashflow_allocations join cashflow_entries on cashflow_entries.id = cashflow_allocations.cashflow_entry_id where cashflow_allocations.sales_invoice_id = sales_invoices.id))';
 
     /**
      * The receipts filed against this invoice in the ledger.
@@ -222,6 +222,14 @@ class SalesInvoice extends Model
             ->first()?->received ?? 0) + $this->allocatedReceived(), 2);
     }
 
+    /**
+     * Explicit allocations are positive applications to this document.
+     *
+     * The parent cashflow's credit/debit controls the account ledger, not the
+     * sign of `document_amount`. A user who allocates 200,000 to an invoice has
+     * applied 200,000; interpreting a debit parent as -200,000 produces a false
+     * refund and increases the invoice balance instead of settling it.
+     */
     private function allocatedReceived(bool $finalizedOnly = false): float
     {
         $attribute = $finalizedOnly ? 'client_portal_allocation_received' : 'allocation_received';
@@ -236,7 +244,7 @@ class SalesInvoice extends Model
             ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
             ->where('cashflow_allocations.sales_invoice_id', $this->id)
             ->when($finalizedOnly, fn ($query) => $query->whereIn('cashflow_entries.accounting_status', ['booked', 'reconciled']))
-            ->selectRaw("coalesce(sum(case when cashflow_entries.transaction_type = 'credit' then coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) else -coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) end), 0) as total")
+            ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) as total")
             ->value('total'), 2);
     }
 
@@ -512,7 +520,7 @@ class SalesInvoice extends Model
             $query->addSelect(['allocation_received' => CashflowAllocation::query()
                 ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
                 ->whereColumn('cashflow_allocations.sales_invoice_id', 'sales_invoices.id')
-                ->selectRaw("coalesce(sum(case when cashflow_entries.transaction_type = 'credit' then coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) else -coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) end), 0)")]);
+                ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0)")]);
         }
 
         return $query;
@@ -534,7 +542,7 @@ class SalesInvoice extends Model
                 ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
                 ->whereColumn('cashflow_allocations.sales_invoice_id', 'sales_invoices.id')
                 ->whereIn('cashflow_entries.accounting_status', ['booked', 'reconciled'])
-                ->selectRaw("coalesce(sum(case when cashflow_entries.transaction_type = 'credit' then coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) else -coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount) end), 0)")]);
+                ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0)")]);
         }
 
         return $query;

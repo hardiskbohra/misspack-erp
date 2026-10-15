@@ -21,8 +21,11 @@
             if (! $allocation->cashflowEntry) return null;
             $payment = clone $allocation->cashflowEntry;
             $amount = $allocation->documentAmount();
-            $payment->credit_amount = $payment->transaction_type === 'credit' ? $amount : 0;
-            $payment->debit_amount = $payment->transaction_type === 'debit' ? $amount : 0;
+            /* An allocation is the positive amount applied to this document.
+               The cashflow direction describes the account movement; it must
+               not turn an explicitly applied invoice payment into a refund. */
+            $payment->credit_amount = $amount;
+            $payment->debit_amount = 0;
             $payment->particular = $allocation->note ?: $payment->particular;
             return $payment;
         })->filter()
