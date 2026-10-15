@@ -20,7 +20,8 @@
                             <th scope="col">Date</th>
                             <th scope="col">Particular</th>
                             <th scope="col">Bank reference</th>
-                            <th scope="col" class="is-num">Amount</th>
+                            <th scope="col" class="is-num">Inward</th>
+                            <th scope="col" class="is-num">Outward</th>
                             <th scope="col">Mode</th>
                         </tr>
                     </thead>
@@ -29,19 +30,28 @@
                             <tr>
                                 <td data-label="Date">
                                     {{ optional($entry->entry_date)->format('d M Y') ?: '—' }}
-                                    <span class="project-fact-note">{{ $entry->transaction_type === 'credit' ? 'Inward' : 'Expense' }}</span>
                                 </td>
                                 <td data-label="Particular">{{ $entry->particular ?: '—' }}</td>
                                 <td data-label="Bank reference">{{ $entry->bank_reference_number ?: '—' }}</td>
-                                <td data-label="Amount" class="is-num">
-                                    <strong class="{{ $entry->transaction_type === 'credit' ? 'project-money-in' : 'project-money-out' }}">
-                                    {{ \App\Helpers\CommonHelper::amount($entry->transaction_type === 'credit' ? $entry->credit_amount : $entry->debit_amount, $entry->currency ?? $project->currency) }}</strong>
+                                <td data-label="Inward" class="is-num">
+                                    @if ($entry->credit_amount > 0)
+                                        <strong class="project-money-in">{{ \App\Helpers\CommonHelper::amount($entry->credit_amount, $entry->currency ?? $project->currency) }}</strong>
+                                    @else
+                                        <span class="master-empty-value">—</span>
+                                    @endif
+                                </td>
+                                <td data-label="Outward" class="is-num">
+                                    @if ($entry->debit_amount > 0)
+                                        <strong class="project-money-out">{{ \App\Helpers\CommonHelper::amount($entry->debit_amount, $entry->currency ?? $project->currency) }}</strong>
+                                    @else
+                                        <span class="master-empty-value">—</span>
+                                    @endif
                                 </td>
                                 <td data-label="Mode">{{ $entry->payment_mode ? \Illuminate\Support\Str::title($entry->payment_mode) : '—' }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5">
+                                <td colspan="6">
                                     <div class="master-empty-state">
                                         <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
                                         <p>No ledger entry is tagged to this project yet. Payments are recorded in the cashflow

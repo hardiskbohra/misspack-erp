@@ -1002,12 +1002,14 @@
     white-space: pre-line
 }
 
-.project-money-in {
-    color: #039855
+.project .master-table .project-money-in {
+    color: #039855;
+    font-weight: 700
 }
 
-.project-money-out {
-    color: #d92d20
+.project .master-table .project-money-out {
+    color: #d92d20;
+    font-weight: 700
 }
 
 .project-money-late {

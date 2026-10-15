@@ -435,11 +435,19 @@
                                 {{ $entry->account?->account_name ?: '—' }}
                                 <span class="master-sub ui-mobile-secondary">{{ $entry->account?->typeLabel() ?: 'No account' }}</span>
                             </td>
-                            <td class="cf-money is-num cf-credit" data-label="Credit">
-                                {{ $entry->credit_amount > 0 ? \App\Helpers\CommonHelper::amount($entry->credit_amount, $entry->currency) : '—' }}
+                            <td class="cf-money is-num" data-label="Credit">
+                                @if ($entry->credit_amount > 0)
+                                    <strong class="cf-credit">{{ \App\Helpers\CommonHelper::amount($entry->credit_amount, $entry->currency) }}</strong>
+                                @else
+                                    <span class="master-empty-value">—</span>
+                                @endif
                             </td>
-                            <td class="cf-money is-num cf-debit" data-label="Debit">
-                                {{ $entry->debit_amount > 0 ? \App\Helpers\CommonHelper::amount($entry->debit_amount, $entry->currency) : '—' }}
+                            <td class="cf-money is-num" data-label="Debit">
+                                @if ($entry->debit_amount > 0)
+                                    <strong class="cf-debit">{{ \App\Helpers\CommonHelper::amount($entry->debit_amount, $entry->currency) }}</strong>
+                                @else
+                                    <span class="master-empty-value">—</span>
+                                @endif
                             </td>
                             <td class="cf-money is-num" data-label="Balance">
                                 {{ $entry->balance !== null ? \App\Helpers\CommonHelper::amount($entry->balance, $entry->currency) : '—' }}

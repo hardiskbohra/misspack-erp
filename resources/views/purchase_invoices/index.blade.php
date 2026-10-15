@@ -323,6 +323,18 @@
                                         <div class="master-dropdown-menu">
                                             <a href="{{ route('purchase-invoices.show', $invoice) }}"><i class="fas fa-eye"></i> View</a>
                                             <a href="{{ route('purchase-invoices.edit', $invoice) }}"><i class="fas fa-pen"></i> Edit</a>
+                                            @if ($invoice->isBill() && $invoice->status === 'draft')
+                                                <form method="POST" action="{{ route('purchase-invoices.status', $invoice) }}"
+                                                    data-confirm="Mark {{ $invoice->invoice_number }} as received?"
+                                                    data-confirm-title="Mark bill received"
+                                                    data-confirm-text="Mark received"
+                                                    data-confirm-danger="false">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <input type="hidden" name="status" value="received">
+                                                    <button type="submit"><i class="fas fa-box-open"></i> Mark received</button>
+                                                </form>
+                                            @endif
                                             @if ($invoice->canReceiveMoney() && $openAmt > 0)
                                                 <button type="button" data-open-payment
                                                     data-invoice-id="{{ $invoice->id }}"

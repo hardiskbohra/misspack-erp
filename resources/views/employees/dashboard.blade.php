@@ -67,7 +67,7 @@
             <h3 class="master-section-title">This year, month by month</h3>
             @include('employees.partials.pay-months', ['months' => $months, 'currency' => 'INR'])
             <div class="emp-card-foot">
-                <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('my.salary', ['year' => $year]) }}">
+                <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('my.salary', ['year' => 'all']) }}">
                     All salary entries</a>
             </div>
         </div>

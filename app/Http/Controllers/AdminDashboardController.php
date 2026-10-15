@@ -548,7 +548,20 @@ class AdminDashboardController extends Controller
             return $this->zeroSeries($period);
         }
 
-        return $this->sumSeries('cashflow_entries', $dateColumn, $amountColumn, $period);
+        return $this->sumSeries('cashflow_entries', $dateColumn, $amountColumn, $period, function ($query) {
+            /* A contra/internal-transfer pair moves money between our own
+               accounts. Counting its debit as expense and credit as income
+               doubles turnover without changing profit. It remains visible in
+               the cash book and account balances, but not in P&L figures. */
+            if (Schema::hasTable('cashflow_categories')) {
+                $query->whereNotExists(function ($categories) {
+                    $categories->selectRaw('1')
+                        ->from('cashflow_categories')
+                        ->whereColumn('cashflow_categories.id', 'cashflow_entries.category_id')
+                        ->where('cashflow_categories.type', 'transfer');
+                });
+            }
+        });
     }
 
     /** Money tagged to a project: `credit_amount` is inward, `debit_amount` out. */
