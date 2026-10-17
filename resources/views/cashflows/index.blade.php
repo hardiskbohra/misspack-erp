@@ -357,6 +357,7 @@
                 <thead>
                     <tr>
                         <th scope="col" class="master-list-pick">
+                            <span class="sr-only">Select</span>
                             <input type="checkbox" data-bulk-all aria-label="Select every entry on this page">
                         </th>
                         <th scope="col">Date</th>
@@ -416,6 +417,11 @@
                                     <a class="cf-sync-chip" href="{{ route('shipments.show', $mirroredShipmentCosts[$entry->id]) }}"
                                         title="Auto-synced from a shipment cost head — open the shipment">↔ Shipment cost</a>
                                 @endif
+                                @if (($entry->allocations_count ?? 0) > 0)
+                                    <a class="cf-sync-chip" href="{{ route('cashflows.show', $entry) }}" title="Open the project and document allocation breakdown">
+                                        {{ $entry->allocations_count }} {{ \Illuminate\Support\Str::plural('allocation', $entry->allocations_count) }} · {{ \App\Helpers\CommonHelper::amount($entry->allocated_amount, $entry->currency) }}
+                                    </a>
+                                @endif
                                 <span class="master-sub">
                                     {{ $relatedPartyOptions[$entry->related_party_type] ?? 'Other' }}:
                                     {{-- the party the row is against: the linked record
@@ -435,11 +441,19 @@
                                 {{ $entry->account?->account_name ?: '—' }}
                                 <span class="master-sub ui-mobile-secondary">{{ $entry->account?->typeLabel() ?: 'No account' }}</span>
                             </td>
-                            <td class="cf-money is-num cf-credit" data-label="Credit">
-                                {{ $entry->credit_amount > 0 ? \App\Helpers\CommonHelper::amount($entry->credit_amount, $entry->currency) : '—' }}
+                            <td class="cf-money is-num" data-label="Credit">
+                                @if ($entry->credit_amount > 0)
+                                    <strong class="cf-credit">{{ \App\Helpers\CommonHelper::amount($entry->credit_amount, $entry->currency) }}</strong>
+                                @else
+                                    <span class="master-empty-value">—</span>
+                                @endif
                             </td>
-                            <td class="cf-money is-num cf-debit" data-label="Debit">
-                                {{ $entry->debit_amount > 0 ? \App\Helpers\CommonHelper::amount($entry->debit_amount, $entry->currency) : '—' }}
+                            <td class="cf-money is-num" data-label="Debit">
+                                @if ($entry->debit_amount > 0)
+                                    <strong class="cf-debit">{{ \App\Helpers\CommonHelper::amount($entry->debit_amount, $entry->currency) }}</strong>
+                                @else
+                                    <span class="master-empty-value">—</span>
+                                @endif
                             </td>
                             <td class="cf-money is-num" data-label="Balance">
                                 {{ $entry->balance !== null ? \App\Helpers\CommonHelper::amount($entry->balance, $entry->currency) : '—' }}

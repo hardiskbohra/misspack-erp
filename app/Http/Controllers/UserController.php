@@ -259,7 +259,9 @@ class UserController extends Controller
      */
     public function show(User $user, EmployeeProfile $profile): View
     {
-        $year = (int) request()->query('year', date('Y'));
+        $yearFilter = (string) request()->query('year', 'all');
+        $showAllSalary = $yearFilter === 'all' || ! preg_match('/^\d{4}$/', $yearFilter);
+        $year = $showAllSalary ? (int) date('Y') : (int) $yearFilter;
         $tab = (string) request()->query('tab', 'overview');
         $tab = self::TAB_ALIASES[$tab] ?? $tab;
         $tab = array_key_exists($tab, self::TABS) ? $tab : 'overview';
@@ -271,7 +273,12 @@ class UserController extends Controller
         /* The year's ledger entries, read once and read *here*: a view array is
            evaluated top to bottom, so a variable first assigned inside it is an
            undefined variable at the line that reads it. */
-        $salaryEntries = $profile->salaryEntries($user, $year.'-01-01', $year.'-12-31');
+        $salaryFrom = $showAllSalary ? $user->date_of_joining?->toDateString() : $year.'-01-01';
+        $salaryTo = $showAllSalary ? now()->toDateString() : $year.'-12-31';
+        $salaryEntries = $profile->salaryEntries($user, $salaryFrom, $salaryTo);
+        $salaryPeriodLabel = $showAllSalary
+            ? ($user->date_of_joining ? 'since joining on '.$user->date_of_joining->format('d M Y') : 'across all recorded years')
+            : 'in '.$year;
 
         /* The payslip being corrected, if the page was opened from a row rather
            than from the record form. Read as an id and matched against this
@@ -297,16 +304,21 @@ class UserController extends Controller
                payslip on the same row. The slips are read once here and handed
                to the view, which is why the rows are built in the service
                rather than in the template. */
-            'payRows' => $profile->payRows($year, $salaryEntries, $payslips),
+            'payRows' => $profile->payRows($showAllSalary ? null : $year, $salaryEntries, $payslips),
             'prefill' => $this->payslipPrefill($salaryEntries),
             'openPayslipDialog' => $this->payslipDialog($editingPayslip),
             'payslipLines' => [
                 'earnings' => EmployeePayslip::EARNING_LINES,
                 'deductions' => EmployeePayslip::DEDUCTION_LINES,
             ],
-            'total' => $profile->yearTotal($user, $year),
-            'months' => $profile->monthlyPay($user, $year),
+            'total' => $showAllSalary
+                ? $profile->payTotals($user, $salaryFrom, $salaryTo)
+                : $profile->yearTotal($user, $year),
+            'months' => $showAllSalary ? [] : $profile->monthlyPay($user, $year),
             'years' => $profile->salaryYears($user),
+            'showAllSalary' => $showAllSalary,
+            'salaryPeriodLabel' => $salaryPeriodLabel,
+            'salaryYearQuery' => $showAllSalary ? 'all' : $year,
             'salaryEntries' => $salaryEntries,
             'attachments' => $profile->attachments($user),
             'tasks' => $tasks,

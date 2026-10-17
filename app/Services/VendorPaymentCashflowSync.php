@@ -116,7 +116,19 @@ class VendorPaymentCashflowSync
         }
 
         if (Schema::hasColumn('cashflow_entries', 'project_id')) {
-            $mirror->project_id = $entry->project_id;
+            $hasProjectAllocation = $mirror->exists
+                && Schema::hasTable('cashflow_allocations')
+                && $mirror->allocations()->whereNotNull('project_id')->exists();
+            $mirror->project_id = $hasProjectAllocation ? null : $entry->project_id;
+            if ($hasProjectAllocation) {
+                /* A full-form edit upgraded the legacy project link to an
+                   allocation. Keep that slice in step with the vendor payment
+                   without restoring the old column and counting it twice. */
+                $mirror->allocations()
+                    ->whereNull('sales_invoice_id')
+                    ->whereNull('purchase_invoice_id')
+                    ->update(['project_id' => $entry->project_id]);
+            }
         }
 
         $mirror->save();

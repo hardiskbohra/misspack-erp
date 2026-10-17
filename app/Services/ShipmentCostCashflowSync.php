@@ -85,12 +85,16 @@ class ShipmentCostCashflowSync
             $mirror->category_id = null;
         }
 
+        $hasAllocations = $mirror->exists
+            && Schema::hasTable('cashflow_allocations')
+            && $mirror->allocations()->exists();
+
         if ($shipment && Schema::hasColumn('cashflow_entries', 'project_id')) {
-            $mirror->project_id = $shipment->project_id;
+            $mirror->project_id = $hasAllocations ? null : $shipment->project_id;
         }
 
         if ($shipment && Schema::hasColumn('cashflow_entries', 'sales_invoice_id')) {
-            $mirror->sales_invoice_id = $shipment->sales_invoice_id;
+            $mirror->sales_invoice_id = $hasAllocations ? null : $shipment->sales_invoice_id;
         }
 
         $mirror->save();

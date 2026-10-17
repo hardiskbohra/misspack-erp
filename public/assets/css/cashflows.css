@@ -1476,3 +1476,66 @@ a.cf-report-value:hover {
     gap: 8px;
     margin-top: 12px;
 }
+
+/* Multi-project/document allocation builder -------------------------------- */
+.cf-allocation-section {
+    display:grid;
+    gap:16px;
+    margin:10px 0 24px;
+    padding:20px;
+    border:1px solid var(--mc-border);
+    border-radius:12px;
+    background:var(--mc-card);
+}
+.cf-allocation-section .master-section-head { margin:0; }
+.cf-allocation-section .master-section-title { margin:0; font-size:15px; letter-spacing:0; text-transform:none; }
+.cf-allocation-section .master-section-title:after { display:none; }
+.cf-allocation-stats,.cf-allocation-modal-stats {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px;
+    margin:0;
+}
+.cf-allocation-stats .master-stat,.cf-allocation-modal-stats .master-stat {
+    min-height:76px;
+    padding:13px 14px;
+    border:1px solid var(--mc-border);
+    border-radius:10px;
+    background:var(--mc-card);
+}
+.cf-allocation-stats .master-stat .icon {
+    width:38px;
+    height:38px;
+    flex-basis:38px;
+    border-radius:9px;
+    font-size:15px;
+}
+.cf-allocation-stats .master-stat-title,.cf-allocation-modal-stats .master-stat-title { font-size:12px; font-weight:600; }
+.cf-allocation-stats .master-stat-value,.cf-allocation-modal-stats .master-stat-value { font-size:18px; font-weight:700; }
+.cf-allocation-section.has-allocation-error [data-allocation-remaining] { color:var(--cf-red); }
+.cf-allocation-table-wrap { border:1px solid var(--mc-border); border-radius:10px; }
+.cf-allocation-table { min-width:900px; }
+.cf-allocation-table th { font-size:10.5px; }
+.cf-allocation-table td { vertical-align:middle; font-size:13.5px; }
+.cf-allocation-table td strong { font-size:13.5px; font-weight:600; }
+.cf-allocation-table td:nth-child(1) { min-width:170px; }
+.cf-allocation-table td:nth-child(2) { min-width:190px; }
+.cf-allocation-table td:nth-child(3) { min-width:160px; }
+.cf-allocation-table tr.has-error { background:rgba(217,45,32,.05); }
+.cf-allocation-actions { justify-content:flex-end; gap:4px; }
+.cf-allocation-actions form { display:inline-flex; margin:0; }
+.cf-allocation-actions .is-danger { color:var(--cf-red); }
+.cf-allocation-detail-errors { margin-bottom:16px; }
+.cf-allocation-empty { min-height:150px; padding:22px; }
+.cf-allocation-modal .master-modal-body { display:grid; gap:18px; padding:20px 22px; }
+.cf-allocation-modal-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 20px; }
+.cf-allocation-modal-grid > .master-field { grid-column:auto; }
+.cf-allocation-modal-stats .master-stat { min-height:66px; }
+.cf-allocation-record-card { margin-bottom:16px; }
+.cf-allocation-record-card > .master-section-head { margin:0; padding:24px 24px 0; }
+.cf-allocation-record-stats { padding:16px 24px 0; }
+.cf-allocation-modal .master-field-hint { margin:5px 0 0; color:var(--mc-text-3); font-size:11.5px; line-height:1.45; }
+@media (max-width:767px) {
+    .cf-allocation-section { padding:16px; }
+    .cf-allocation-stats,.cf-allocation-modal-stats { grid-template-columns:1fr; }
+    .cf-allocation-modal-grid { grid-template-columns:1fr; gap:12px; }
+}

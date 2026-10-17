@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\DateRanges;
 use App\Models\CashflowAccount;
+use App\Models\CashflowCategory;
 use App\Models\CashflowEntry;
 use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceAttachment;
@@ -21,6 +22,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Services\CashflowLedger;
 use App\Services\ProjectProducts;
 use App\Services\SalesInvoiceFilters;
 use App\Services\SavedViews;
@@ -129,6 +131,7 @@ class SalesInvoiceController extends Controller
         $invoices = $this->filteredQuery($filters)
             ->withReceived()
             ->withCount('payments')
+            ->when(Schema::hasTable('cashflow_allocations'), fn ($query) => $query->withCount('cashflowAllocations'))
             ->withReminders()
             ->latest('invoice_date')
             ->latest('id')
@@ -150,6 +153,7 @@ class SalesInvoiceController extends Controller
             'chaseLabels' => SalesInvoiceFilters::CHASE_LABELS,
             'reminderChannels' => SalesInvoiceReminder::channelOptions(),
             'accounts' => $this->accounts(),
+            'receiptCategories' => $this->receiptCategories(),
             'bulkActions' => self::BULK_ACTIONS,
             ...$filters,
         ]));
@@ -251,10 +255,13 @@ class SalesInvoiceController extends Controller
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01'],
             'entry_date' => ['required', 'date'],
-            'account_id' => ['nullable', 'integer'],
-            'payment_mode' => ['nullable', 'string', 'max:40'],
+            'account_id' => ['required', 'integer', 'exists:cashflow_accounts,id'],
+            'category_id' => ['nullable', 'integer', 'exists:cashflow_categories,id'],
+            'accounting_status' => ['required', Rule::in(array_keys(CashflowEntry::accountingStatusOptions()))],
+            'payment_mode' => ['nullable', Rule::in(array_keys(CashflowEntry::paymentModeOptions()))],
             'bank_reference_number' => ['nullable', 'string', 'max:191'],
             'particular' => ['nullable', 'string', 'max:191'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $entry = new CashflowEntry();
@@ -266,22 +273,27 @@ class SalesInvoiceController extends Controller
         $entry->currency = in_array($salesInvoice->currency, array_keys(CashflowEntry::currencyOptions()), true)
             ? $salesInvoice->currency
             : 'INR';
-        $entry->account_id = $data['account_id'] ?? null;
+        $entry->account_id = $data['account_id'];
+        $entry->category_id = $data['category_id'] ?? null;
         $entry->payment_mode = CashflowEntry::normalisePaymentMode($data['payment_mode'] ?? null);
         $entry->bank_reference_number = $data['bank_reference_number'] ?? null;
+        $entry->notes = $data['notes'] ?? null;
         $entry->invoice_bill_number = $salesInvoice->invoice_number;
         $entry->client_id = $salesInvoice->client_id;
         $entry->related_party_type = 'client';
         $entry->related_party_name = $salesInvoice->client_company_name;
         $entry->sales_invoice_id = $salesInvoice->id;
-        $entry->accounting_status = 'pending';
+        $entry->accounting_status = $data['accounting_status'];
         $entry->created_by = Auth::id();
 
         if (Schema::hasColumn('cashflow_entries', 'project_id')) {
             $entry->project_id = $salesInvoice->project_id;
         }
 
-        $entry->save();
+        DB::transaction(function () use ($entry) {
+            $entry->save();
+            CashflowLedger::recalculateAccount($entry->account_id);
+        });
 
         $this->refreshInvoiceMoney($salesInvoice);
 
@@ -418,6 +430,15 @@ class SalesInvoiceController extends Controller
             CashflowEntry::query()
                 ->where('sales_invoice_id', $proforma->id)
                 ->update(['sales_invoice_id' => $tax->id]);
+        }
+        if (Schema::hasTable('cashflow_allocations')) {
+            DB::table('cashflow_allocations')
+                ->where('sales_invoice_id', $proforma->id)
+                ->update([
+                    'sales_invoice_id' => $tax->id,
+                    'document_currency' => $tax->currency,
+                    'updated_at' => now(),
+                ]);
         }
 
         $this->refreshInvoiceMoney($tax);
@@ -564,6 +585,20 @@ class SalesInvoiceController extends Controller
         return CashflowAccount::query()->orderBy('account_name')->get();
     }
 
+    /** Accounting classifications offered by the invoice receipt dialog. */
+    private function receiptCategories()
+    {
+        if (! Schema::hasTable('cashflow_categories')) {
+            return collect();
+        }
+
+        return CashflowCategory::query()
+            ->where('is_active', true)
+            ->whereIn('type', ['income', 'tax', 'other'])
+            ->orderBy('name')
+            ->get();
+    }
+
     public function create(Request $request): View
     {
         $invoiceType = $request->query('type', 'proforma');
@@ -630,6 +665,9 @@ class SalesInvoiceController extends Controller
     public function show(SalesInvoice $salesInvoice): View
     {
         $salesInvoice->load(['items.product', 'attachments', 'creator', 'reminders.creator']);
+        if (Schema::hasTable('cashflow_allocations')) {
+            $salesInvoice->load('cashflowAllocations.cashflowEntry');
+        }
         if ($this->clientAvailable()) { $salesInvoice->load('client'); }
         if ($this->projectAvailable()) { $salesInvoice->load('project'); }
 
@@ -638,6 +676,7 @@ class SalesInvoiceController extends Controller
         return view('sales_invoices.show', [
             'invoice' => $salesInvoice,
             'accounts' => $this->accounts(),
+            'receiptCategories' => $this->receiptCategories(),
             'reminderChannels' => SalesInvoiceReminder::channelOptions(),
         ]);
     }
@@ -670,6 +709,9 @@ class SalesInvoiceController extends Controller
             if ($attachment->file_path) {
                 Storage::disk('public')->delete($attachment->file_path);
             }
+        }
+        if (Schema::hasTable('cashflow_allocations')) {
+            DB::table('cashflow_allocations')->where('sales_invoice_id', $salesInvoice->id)->update(['sales_invoice_id' => null]);
         }
         $salesInvoice->delete();
 

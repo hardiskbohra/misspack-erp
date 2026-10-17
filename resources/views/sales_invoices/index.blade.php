@@ -421,8 +421,9 @@
                             <td data-label="Received" class="is-num ui-mobile-secondary">
                                 <strong>{{ \App\Helpers\CommonHelper::indianCurrency($received) }}</strong>
                                 <span class="master-sub">
-                                    @if ($invoice->payments_count > 0)
-                                        {{ $invoice->payments_count }} {{ \Illuminate\Support\Str::plural('receipt', $invoice->payments_count) }}
+                                    @php($receiptCount = (int) $invoice->payments_count + (int) ($invoice->cashflow_allocations_count ?? 0))
+                                    @if ($receiptCount > 0)
+                                        {{ $receiptCount }} {{ \Illuminate\Support\Str::plural('receipt', $receiptCount) }}
                                     @else
                                         {{ $invoice->amount_paid > 0 ? 'Opening figure' : 'Nothing recorded' }}
                                     @endif
@@ -486,7 +487,9 @@
                                                     data-invoice-id="{{ $invoice->id }}"
                                                     data-invoice-number="{{ $invoice->invoice_number }}"
                                                     data-invoice-amount="{{ number_format($balance, 2, '.', '') }}"
-                                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balance) }}">
+                                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balance) }}"
+                                                    data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
+                                                    data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
                                                     <i class="fas fa-indian-rupee-sign" aria-hidden="true"></i> Record payment
                                                 </button>
                                             @endif

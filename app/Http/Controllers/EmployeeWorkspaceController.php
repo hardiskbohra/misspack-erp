@@ -109,15 +109,26 @@ class EmployeeWorkspaceController extends Controller
      */
     public function salary(Request $request): View
     {
-        $year = (int) $request->query('year', date('Y'));
-        $entries = $this->profile->salaryEntries($this->user(), $year.'-01-01', $year.'-12-31');
-        $slips = $this->profile->issuedPayslips($this->user());
+        $yearFilter = (string) $request->query('year', 'all');
+        $showAllSalary = $yearFilter === 'all' || ! preg_match('/^\d{4}$/', $yearFilter);
+        $year = $showAllSalary ? (int) date('Y') : (int) $yearFilter;
+        $employee = $this->user();
+        $salaryFrom = $showAllSalary ? $employee->date_of_joining?->toDateString() : $year.'-01-01';
+        $salaryTo = $showAllSalary ? now()->toDateString() : $year.'-12-31';
+        $entries = $this->profile->salaryEntries($employee, $salaryFrom, $salaryTo);
+        $slips = $this->profile->issuedPayslips($employee);
 
         return view('employees.salary', array_merge($this->shared(), [
             'year' => $year,
             'years' => $this->salaryYears(),
-            'total' => $this->profile->yearTotal($this->user(), $year),
-            'months' => $this->profile->monthlyPay($this->user(), $year),
+            'showAllSalary' => $showAllSalary,
+            'salaryPeriodLabel' => $showAllSalary
+                ? ($employee->date_of_joining ? 'since joining on '.$employee->date_of_joining->format('d M Y') : 'across all recorded years')
+                : 'in '.$year,
+            'total' => $showAllSalary
+                ? $this->profile->payTotals($employee, $salaryFrom, $salaryTo)
+                : $this->profile->yearTotal($employee, $year),
+            'months' => $showAllSalary ? [] : $this->profile->monthlyPay($employee, $year),
             'entries' => $entries,
             /* The slips belong on this page, not on one of their own: a payslip
                is a month of this salary, and a second page listing the same
@@ -125,7 +136,7 @@ class EmployeeWorkspaceController extends Controller
             'payslips' => $slips,
             /* One table: the months and the slips on the same row, so the page
                is a page rather than three answers to "what did I earn". */
-            'payRows' => $this->profile->payRows($year, $entries, $slips),
+            'payRows' => $this->profile->payRows($showAllSalary ? null : $year, $entries, $slips),
         ]));
     }
 

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class SalesInvoice extends Model
@@ -76,6 +77,11 @@ class SalesInvoice extends Model
     public function payments()
     {
         return $this->hasMany(CashflowEntry::class)->orderBy('entry_date');
+    }
+
+    public function cashflowAllocations()
+    {
+        return $this->hasMany(CashflowAllocation::class, 'sales_invoice_id')->orderBy('id');
     }
 
     public function attachments()
@@ -178,7 +184,9 @@ class SalesInvoice extends Model
      * invoice uses the method. Two spellings of one rule is how the ledger and
      * the statement started disagreeing in the first place.
      */
-    public const RECEIVED_SQL = '(coalesce(sales_invoices.amount_paid, 0) + (select coalesce(sum(credit_amount - debit_amount), 0) from cashflow_entries where cashflow_entries.sales_invoice_id = sales_invoices.id))';
+    public const RECEIVED_SQL = '(coalesce(sales_invoices.amount_paid, 0)'
+        .' + (select coalesce(sum(credit_amount - debit_amount), 0) from cashflow_entries where cashflow_entries.sales_invoice_id = sales_invoices.id)'
+        .' + (select coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) from cashflow_allocations join cashflow_entries on cashflow_entries.id = cashflow_allocations.cashflow_entry_id where cashflow_allocations.sales_invoice_id = sales_invoices.id))';
 
     /**
      * The receipts filed against this invoice in the ledger.
@@ -192,12 +200,14 @@ class SalesInvoice extends Model
         if ($this->relationLoaded('payments')) {
             return round((float) $this->payments->sum(
                 fn ($payment) => (float) $payment->credit_amount - (float) $payment->debit_amount
-            ), 2);
+            ) + $this->allocatedReceived(), 2);
         }
 
         if (array_key_exists('received_credit', $this->attributes) || array_key_exists('received_debit', $this->attributes)) {
             return round(
-                (float) ($this->attributes['received_credit'] ?? 0) - (float) ($this->attributes['received_debit'] ?? 0),
+                (float) ($this->attributes['received_credit'] ?? 0)
+                    - (float) ($this->attributes['received_debit'] ?? 0)
+                    + $this->allocatedReceived(),
                 2
             );
         }
@@ -207,8 +217,37 @@ class SalesInvoice extends Model
         }
 
         return round((float) ($this->payments()
+            ->reorder()
             ->selectRaw('coalesce(sum(credit_amount - debit_amount), 0) as received')
-            ->first()?->received ?? 0), 2);
+            ->first()?->received ?? 0) + $this->allocatedReceived(), 2);
+    }
+
+    /**
+     * Explicit allocations are positive applications to this document.
+     *
+     * The parent cashflow's credit/debit controls the account ledger, not the
+     * sign of `document_amount`. A user who allocates 200,000 to an invoice has
+     * applied 200,000; interpreting a debit parent as -200,000 produces a false
+     * refund and increases the invoice balance instead of settling it.
+     */
+    private function allocatedReceived(bool $finalizedOnly = false): float
+    {
+        $attribute = $finalizedOnly ? 'client_portal_allocation_received' : 'allocation_received';
+        if (array_key_exists($attribute, $this->attributes)) {
+            return round((float) ($this->attributes[$attribute] ?? 0), 2);
+        }
+        if (! $this->exists || ! Schema::hasTable('cashflow_allocations')) {
+            return 0.0;
+        }
+
+        $total = CashflowAllocation::query()
+            ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
+            ->where('cashflow_allocations.sales_invoice_id', $this->id)
+            ->when($finalizedOnly, fn ($query) => $query->whereIn('cashflow_entries.accounting_status', ['booked', 'reconciled']))
+            ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) as total")
+            ->first()?->total;
+
+        return round((float) ($total ?? 0), 2);
     }
 
     /** Everything received: the invoice's opening figure plus the ledger's receipts. */
@@ -225,7 +264,7 @@ class SalesInvoice extends Model
                 ->whereIn('accounting_status', ['booked', 'reconciled'])
                 ->sum(fn ($payment) => (float) $payment->credit_amount - (float) $payment->debit_amount);
 
-            return round((float) $this->amount_paid + (float) $ledger, 2);
+            return round((float) $this->amount_paid + (float) $ledger + $this->allocatedReceived(true), 2);
         }
 
         if (array_key_exists('client_portal_received_credit', $this->attributes)
@@ -233,7 +272,8 @@ class SalesInvoice extends Model
             return round(
                 (float) $this->amount_paid
                     + (float) ($this->attributes['client_portal_received_credit'] ?? 0)
-                    - (float) ($this->attributes['client_portal_received_debit'] ?? 0),
+                    - (float) ($this->attributes['client_portal_received_debit'] ?? 0)
+                    + $this->allocatedReceived(true),
                 2
             );
         }
@@ -244,10 +284,11 @@ class SalesInvoice extends Model
 
         $ledger = $this->payments()
             ->whereIn('accounting_status', ['booked', 'reconciled'])
+            ->reorder()
             ->selectRaw('coalesce(sum(credit_amount - debit_amount), 0) as received')
-            ->value('received');
+            ->first()?->received;
 
-        return round((float) $this->amount_paid + (float) $ledger, 2);
+        return round((float) $this->amount_paid + (float) ($ledger ?? 0) + $this->allocatedReceived(true), 2);
     }
 
     public function clientPortalBalanceDue(): float
@@ -314,6 +355,11 @@ class SalesInvoice extends Model
         }
 
         return round(max((float) $this->total_amount - $this->receivedAmount(), 0), 2);
+    }
+
+    public function advanceAmount(): float
+    {
+        return round(max($this->receivedAmount() - (float) $this->total_amount, 0), 2);
     }
 
     /** unpaid | partial | paid — read from the money, never from a stored word. */
@@ -466,9 +512,20 @@ class SalesInvoice extends Model
      */
     public function scopeWithReceived(Builder $query): Builder
     {
-        return $query
-            ->withSum('payments as received_credit', 'credit_amount')
+        $query->withSum('payments as received_credit', 'credit_amount')
             ->withSum('payments as received_debit', 'debit_amount');
+
+        if (Schema::hasTable('cashflow_allocations')) {
+            if ($query->getQuery()->columns === null) {
+                $query->select('sales_invoices.*');
+            }
+            $query->addSelect(['allocation_received' => CashflowAllocation::query()
+                ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
+                ->whereColumn('cashflow_allocations.sales_invoice_id', 'sales_invoices.id')
+                ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0)")]);
+        }
+
+        return $query;
     }
 
     /** Portal totals count only receipts the office has finalized. */
@@ -476,9 +533,21 @@ class SalesInvoice extends Model
     {
         $finalizedPayments = fn (Builder $payments) => $payments->whereIn('accounting_status', ['booked', 'reconciled']);
 
-        return $query
-            ->withSum(['payments as client_portal_received_credit' => $finalizedPayments], 'credit_amount')
+        $query->withSum(['payments as client_portal_received_credit' => $finalizedPayments], 'credit_amount')
             ->withSum(['payments as client_portal_received_debit' => $finalizedPayments], 'debit_amount');
+
+        if (Schema::hasTable('cashflow_allocations')) {
+            if ($query->getQuery()->columns === null) {
+                $query->select('sales_invoices.*');
+            }
+            $query->addSelect(['client_portal_allocation_received' => CashflowAllocation::query()
+                ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
+                ->whereColumn('cashflow_allocations.sales_invoice_id', 'sales_invoices.id')
+                ->whereIn('cashflow_entries.accounting_status', ['booked', 'reconciled'])
+                ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0)")]);
+        }
+
+        return $query;
     }
 
     /**
@@ -667,5 +736,10 @@ class SalesInvoice extends Model
             '9. Bank charges, forex fluctuation, logistics charges and third-party charges are to be borne by the buyer unless agreed otherwise.',
             '10. This is a computer-generated document and does not require a physical signature unless specifically requested.',
         ]);
+    }
+
+    public function packagingLists()
+    {
+        return $this->hasMany(PackagingList::class);
     }
 }

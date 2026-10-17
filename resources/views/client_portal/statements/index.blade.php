@@ -24,7 +24,7 @@
     </div>
 </div>
 
-<div class="cp-card no-print" style="padding:16px 18px;margin-bottom:18px;">
+<div class="cp-card cp-filter-card no-print">
     <form method="GET" action="{{ route('client-portal.statement.index') }}">
         <div class="core-filter-toolbar">
             <x-filter-trigger drawer="portalStatementFiltersDrawer" label="Statement period"

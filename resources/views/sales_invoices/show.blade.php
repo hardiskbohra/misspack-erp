@@ -9,11 +9,28 @@
        different balances on two screens (`SalesInvoice::receivedAmount()`). */
     $receivedAmount = $invoice->receivedAmount();
     $balanceAmount = $invoice->balanceDue();
+    $advanceAmount = $invoice->advanceAmount();
     $taxAmount = (float) $invoice->cgst_amount + (float) $invoice->sgst_amount + (float) $invoice->igst_amount;
     $chargesAmount = (float) $invoice->freight_amount + (float) $invoice->packing_amount + (float) $invoice->other_charges;
 
-    /* Newest receipt first: the one that just landed is the one being read for. */
-    $receipts = $invoice->payments->sortByDesc('entry_date');
+    /* Newest receipt first. Allocated slices are cloned only for display so the
+       row opens the original cashflow entry while showing this invoice's share,
+       not the entry's full bank amount. */
+    $allocatedReceipts = $invoice->relationLoaded('cashflowAllocations')
+        ? $invoice->cashflowAllocations->map(function ($allocation) {
+            if (! $allocation->cashflowEntry) return null;
+            $payment = clone $allocation->cashflowEntry;
+            $amount = $allocation->documentAmount();
+            /* An allocation is the positive amount applied to this document.
+               The cashflow direction describes the account movement; it must
+               not turn an explicitly applied invoice payment into a refund. */
+            $payment->credit_amount = $amount;
+            $payment->debit_amount = 0;
+            $payment->particular = $allocation->note ?: $payment->particular;
+            return $payment;
+        })->filter()
+        : collect();
+    $receipts = $invoice->payments->concat($allocatedReceipts)->sortByDesc('entry_date');
 
     $stateKey = $invoice->stateKey();
     $daysLate = $invoice->daysOverdue();
@@ -110,7 +127,9 @@
                         data-invoice-id="{{ $invoice->id }}"
                         data-invoice-number="{{ $invoice->invoice_number }}"
                         data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
-                        data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}">
+                        data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}"
+                        data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
+                        data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
                         <i class="fas fa-indian-rupee-sign" aria-hidden="true"></i> Record payment
                     </button>
                 @endif
@@ -541,7 +560,9 @@
                                     data-invoice-id="{{ $invoice->id }}"
                                     data-invoice-number="{{ $invoice->invoice_number }}"
                                     data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
-                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}">
+                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}"
+                                    data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
+                                    data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
                                     <i class="fas fa-plus" aria-hidden="true"></i> Record
                                 </button>
                             </div>
@@ -564,7 +585,9 @@
                                     data-invoice-id="{{ $invoice->id }}"
                                     data-invoice-number="{{ $invoice->invoice_number }}"
                                     data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
-                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}">
+                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}"
+                                    data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
+                                    data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
                                     Record payment
                                 </button>
                             @endif
@@ -619,6 +642,9 @@
                                 {{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}
                             </strong>
                         </div>
+                        @if($advanceAmount > 0.009)
+                            <div><span>Advance / overpayment</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($advanceAmount, $invoice->currency) }}</strong></div>
+                        @endif
                     </div>
                 </div>
             </div>

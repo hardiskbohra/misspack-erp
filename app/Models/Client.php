@@ -151,4 +151,9 @@ class Client extends Model
     {
         return $this->hasMany(\App\Models\ClientPortalInvoice::class, 'client_id');
     }
+
+    public function packagingLists()
+    {
+        return $this->hasMany(PackagingList::class);
+    }
 }

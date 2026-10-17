@@ -32,4 +32,5 @@
 
 @import './pages/module-adapters.css';
 @import './pages/vendors.css';
+@import './pages/client-portal.css';
 @import './layout/responsive.css';

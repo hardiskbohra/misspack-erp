@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\EmployeeDocumentController;
 use App\Http\Controllers\EmployeePayslipController;
 use App\Http\Controllers\EmployeeWorkspaceController;
@@ -56,6 +57,7 @@ use App\Http\Controllers\NoteController;
 use App\Http\Controllers\OfficeAlertController;
 use App\Http\Controllers\OfficeBriefingSettingController;
 use App\Http\Controllers\OrganisationController;
+use App\Http\Controllers\PackagingListController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
 
@@ -133,7 +135,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/clients/{client}/portal/support/{conversation}/status', [ClientPortalSupportManagementController::class, 'updateStatus'])->name('clients.portal.support.status');
         Route::get('/clients/{client}/portal/documents/{document}/file', [ClientPortalManagementController::class, 'downloadDocument'])->name('clients.portal.documents.file');
 
-        Route::redirect('/dashboard', '/clients');
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::get('/search', GlobalSearchController::class)->name('search');
 
         /* =====================================================================
@@ -271,6 +273,11 @@ Route::middleware('auth')->group(function () {
         Route::delete('/shipments/attachments/{attachment}', [ShipmentController::class, 'destroyAttachment'])->name('shipments.attachments.destroy');
         Route::put('/shipments/attachments/{attachment}/toggle-public', [ShipmentController::class, 'togglePublic'])->name('shipments.attachments.toggle-public');
         Route::resource('shipments', ShipmentController::class);
+
+        // Packaging Lists — printable carton/item manifests linked to shipments.
+        Route::get('/packaging-lists/{packagingList}/print', [PackagingListController::class, 'print'])->name('packaging-lists.print');
+        Route::post('/packaging-lists/{packagingList}/duplicate', [PackagingListController::class, 'duplicate'])->name('packaging-lists.duplicate');
+        Route::resource('packaging-lists', PackagingListController::class);
 
         // Client Management
         Route::post('/clients/quick', [ClientController::class, 'quickStore'])->name('clients.quickStore');
@@ -522,6 +529,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/cashflows/{cashflow}/expense-statement', [CashflowController::class, 'expenseStatement'])->name('cashflows.expenseStatement');
         Route::post('/cashflows/{cashflow}/duplicate', [CashflowController::class, 'duplicate'])->name('cashflows.duplicate');
         Route::patch('/cashflows/{cashflow}/status', [CashflowController::class, 'updateStatus'])->name('cashflows.status');
+        Route::post('/cashflows/{cashflow}/allocations', [CashflowController::class, 'storeAllocation'])->name('cashflows.allocations.store');
+        Route::put('/cashflows/{cashflow}/allocations/{allocation}', [CashflowController::class, 'updateAllocation'])->name('cashflows.allocations.update');
+        Route::delete('/cashflows/{cashflow}/allocations/{allocation}', [CashflowController::class, 'destroyAllocation'])->name('cashflows.allocations.destroy');
         Route::resource('cashflows', CashflowController::class);
     });
 

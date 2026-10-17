@@ -279,6 +279,7 @@ class ClientController extends Controller
             'notificationsAvailable' => $notificationsAvailable,
             'notifications' => $notifications,
             'supportCount' => $supportCount,
+            'unallocatedCash' => app(\App\Services\UnallocatedCashflows::class)->forClient($client->id),
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
             ...$invoiceData,

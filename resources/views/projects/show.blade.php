@@ -86,6 +86,11 @@
             </nav>
         </header>
 
+        @include('cashflows.partials.unallocated-party-alert', [
+            'unallocatedTitle' => 'Unallocated project cash',
+            'unallocatedDescription' => 'A cashflow allocated to this project still has an unapplied remainder. Assign it to the correct project or document.',
+        ])
+
         {{-- The one thing on this page that says “do something today”. --}}
         @if ($isLate)
             <div class="project-attention">

@@ -210,7 +210,7 @@ class EmployeeProfile
      * @param  Collection<int, EmployeePayslip>  $slips
      * @return Collection<int, array<string, mixed>>
      */
-    public function payRows(int $year, Collection $entries, Collection $slips): Collection
+    public function payRows(?int $year, Collection $entries, Collection $slips): Collection
     {
         $byPeriod = [];
 
@@ -249,7 +249,7 @@ class EmployeeProfile
         }
 
         foreach ($byPeriod as $period => $slip) {
-            if (isset($owned[$period]) || ! str_starts_with((string) $period, (string) $year)) {
+            if (isset($owned[$period]) || ($year !== null && ! str_starts_with((string) $period, (string) $year))) {
                 continue;
             }
 
