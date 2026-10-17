@@ -44,4 +44,5 @@ check('split packing can copy source identity into another carton and aggregates
 check('individual carton mode is structurally limited to one carton', controller.includes("packing_mode'] ?? 'grouped') === 'individual'")&&js.includes("value === 'individual'"));
 check('duplicate serial numbers are refused before persistence', controller.includes('Serial number $serial appears more than once'));
 check('shipment automation failure cannot roll back an already-created shipment', read('app/Http/Controllers/ShipmentController.php').includes('catch (\\Throwable $exception)'));
+check('manual rows cannot write null into numeric packing defaults', controller.includes("$item['previously_packed_quantity'] = (float) ($item['previously_packed_quantity'] ?? 0)")&&read('app/Models/PackagingListItem.php').includes('$item->previously_packed_quantity ??= 0')&&read('app/Models/PackagingListCarton.php').includes('$carton->tare_weight ??= 0'));
 console.log(`\nPackaging lists: ${passed} passed, ${failed} failed`);process.exitCode=failed?1:0;

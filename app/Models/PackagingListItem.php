@@ -24,6 +24,18 @@ class PackagingListItem extends Model
         'serial_numbers' => 'array', 'manufactured_at' => 'date', 'expires_at' => 'date',
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (self $item) {
+            // An empty hidden source field arrives as null on manual/custom rows.
+            // The database column is deliberately non-null so calculations always
+            // have a number; normalise every write path instead of relying on a
+            // database default that an explicit NULL bypasses.
+            $item->previously_packed_quantity ??= 0;
+            $item->serial_numbers ??= [];
+        });
+    }
+
     public function carton() { return $this->belongsTo(PackagingListCarton::class, 'packaging_list_carton_id'); }
     public function product() { return $this->belongsTo(Product::class); }
 

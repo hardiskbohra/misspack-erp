@@ -238,11 +238,13 @@ class PackagingListController extends Controller
         foreach (array_values($cartons) as $cartonIndex => $row) {
             $items = $row['items']; unset($row['items']);
             foreach (['is_fragile','keep_dry','this_side_up','is_stackable','is_hazardous'] as $flag) $row[$flag] = (bool) ($row[$flag] ?? false);
+            $row['tare_weight'] = (float) ($row['tare_weight'] ?? 0);
             $row['sort_order'] = $cartonIndex;
             $carton = $list->cartons()->create($row);
             foreach (array_values($items) as $itemIndex => $item) {
                 // Total quantity is derived, never trusted from a stale or edited browser value.
                 $item['total_quantity'] = round((float) $item['quantity_per_carton'] * (int) $carton->carton_count, 3);
+                $item['previously_packed_quantity'] = (float) ($item['previously_packed_quantity'] ?? 0);
                 $serialText = (string) ($item['serial_numbers_text'] ?? '');
                 unset($item['serial_numbers_text']);
                 $item['serial_numbers'] = collect(preg_split('/[\r\n,]+/', $serialText))->map(fn ($value) => trim($value))->filter()->unique()->values()->all();

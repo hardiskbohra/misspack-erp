@@ -30,6 +30,9 @@ class PackagingListCarton extends Model
             $carton->public_token ??= \Illuminate\Support\Str::random(48);
             $carton->barcode ??= 'CTN-'.strtoupper(\Illuminate\Support\Str::random(10));
         });
+        static::saving(function (self $carton) {
+            $carton->tare_weight ??= 0;
+        });
     }
 
     public function packagingList() { return $this->belongsTo(PackagingList::class); }
