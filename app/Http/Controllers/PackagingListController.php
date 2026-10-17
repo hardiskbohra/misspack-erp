@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\Organisation;
 use App\Models\PackagingList;
+use App\Models\PackagingListCarton;
 use App\Models\Product;
 use App\Models\Project;
+use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
+use App\Services\PackagingListSource;
 use App\Models\Shipment;
 use App\Models\Vendor;
 use Illuminate\Http\RedirectResponse;
@@ -15,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PackagingListController extends Controller
@@ -53,33 +57,30 @@ class PackagingListController extends Controller
         ]);
     }
 
-    public function create(Request $request): View
+    public function create(Request $request, PackagingListSource $sources): View
     {
         $list = new PackagingList([
             'packing_date' => now()->toDateString(), 'status' => 'draft', 'transport_mode' => 'air',
             'declaration' => 'I/We hereby certify that the information of this packaging list is true and correct and that the contents of this shipment are as stated above.',
         ]);
         $list->packing_number = $this->nextNumber();
-
         $organisation = Organisation::current();
         $address = $organisation->defaultAddress('billing') ?: $organisation->defaultAddress('shipping');
         $list->bill_to_name = $organisation->legal_name ?: $organisation->trade_name;
         $list->bill_to_address = $address?->oneLine();
+        $prefillCartons = [];
 
-        if ($shipment = Shipment::find((int) $request->query('shipment'))) {
-            $list->shipment_id = $shipment->id;
-            $list->project_id = $shipment->project_id;
-            $list->client_id = $shipment->client_id;
-            $list->vendor_id = $shipment->vendor_id;
-            $list->sales_invoice_id = $shipment->sales_invoice_id;
-            $list->transport_mode = in_array($shipment->shipment_mode, array_keys(PackagingList::transportModeOptions()), true) ? $shipment->shipment_mode : 'air';
-            $list->ship_to_name = $shipment->to_name;
-            $list->ship_to_address = $this->shipmentAddress($shipment, 'to');
-            $list->from_name = $shipment->from_name;
-            $list->from_address = $this->shipmentAddress($shipment, 'from');
+        $source = null;
+        if ($invoice = SalesInvoice::find((int) $request->query('sales_invoice'))) $source = $sources->salesInvoice($invoice);
+        elseif ($purchase = PurchaseInvoice::where('invoice_type', PurchaseInvoice::TYPE_BILL)->find((int) $request->query('purchase_invoice'))) $source = $sources->purchaseInvoice($purchase);
+        elseif ($shipment = Shipment::find((int) $request->query('shipment'))) $source = $sources->shipment($shipment);
+
+        if ($source) {
+            $list->forceFill($source['attributes']);
+            $prefillCartons = $source['cartons'];
         }
 
-        return view('packaging_lists.form', $this->formData($list));
+        return view('packaging_lists.form', $this->formData($list, $prefillCartons));
     }
 
     public function store(Request $request): RedirectResponse
@@ -88,6 +89,7 @@ class PackagingListController extends Controller
         $list = DB::transaction(function () use ($data) {
             $cartons = $data['cartons'];
             unset($data['cartons']);
+            $data['packing_warnings'] = $this->packingWarnings($cartons);
             $data['created_by'] = Auth::id();
             $data['packing_number'] = $data['packing_number'] ?: $this->nextNumber();
             $list = PackagingList::create($data);
@@ -100,7 +102,7 @@ class PackagingListController extends Controller
 
     public function show(PackagingList $packagingList): View
     {
-        $packagingList->load(['cartons.items.product', 'vendor', 'client', 'project', 'shipment', 'salesInvoice', 'creator']);
+        $packagingList->load(['cartons.items.product', 'vendor', 'client', 'project', 'shipment', 'salesInvoice', 'purchaseInvoice', 'creator', 'packingOwner']);
         return view('packaging_lists.show', ['list' => $packagingList]);
     }
 
@@ -116,6 +118,7 @@ class PackagingListController extends Controller
         DB::transaction(function () use ($data, $packagingList) {
             $cartons = $data['cartons'];
             unset($data['cartons']);
+            $data['packing_warnings'] = $this->packingWarnings($cartons);
             $packagingList->update($data);
             $packagingList->cartons()->delete();
             $this->syncCartons($packagingList, $cartons);
@@ -147,8 +150,8 @@ class PackagingListController extends Controller
             $copy->created_by = Auth::id();
             $copy->save();
             foreach ($packagingList->cartons as $carton) {
-                $newCarton = $copy->cartons()->create($carton->only(['carton_label', 'carton_count', 'length_cm', 'width_cm', 'height_cm', 'net_weight_per_carton', 'gross_weight_per_carton', 'sort_order']));
-                $newCarton->items()->createMany($carton->items->map->only(['product_id', 'item_description', 'quantity_per_carton', 'total_quantity', 'unit', 'sort_order'])->all());
+                $newCarton = $copy->cartons()->create($carton->only(array_diff($carton->getFillable(), ['packaging_list_id','barcode','public_token'])));
+                $newCarton->items()->createMany($carton->items->map(fn ($item) => $item->only(array_diff($item->getFillable(), ['packaging_list_carton_id'])))->all());
             }
             $copy->recalculate();
             return $copy;
@@ -159,14 +162,17 @@ class PackagingListController extends Controller
 
     private function validated(Request $request, ?PackagingList $list = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'packing_number' => ['required', 'string', 'max:60', Rule::unique('packaging_lists')->ignore($list)],
             'packing_date' => ['required', 'date'], 'invoice_number' => ['nullable', 'string', 'max:100'],
             'transport_mode' => ['required', Rule::in(array_keys(PackagingList::transportModeOptions()))],
             'status' => ['required', Rule::in(array_keys(PackagingList::statusOptions()))],
+            'source_type' => ['nullable', Rule::in(['sales_invoice','purchase_invoice','shipment'])],
+            'source_id' => ['nullable', 'integer'],
             'vendor_id' => ['nullable', 'exists:vendors,id'], 'client_id' => ['nullable', 'exists:clients,id'],
             'project_id' => ['nullable', 'exists:projects,id'], 'shipment_id' => ['nullable', 'exists:shipments,id'],
             'sales_invoice_id' => ['nullable', 'exists:sales_invoices,id'],
+            'purchase_invoice_id' => ['nullable', 'exists:purchase_invoices,id'],
             'from_name' => ['required', 'string', 'max:255'], 'from_address' => ['nullable', 'string'],
             'from_contact' => ['nullable', 'string', 'max:255'], 'from_email' => ['nullable', 'email', 'max:255'],
             'bill_to_name' => ['required', 'string', 'max:255'], 'bill_to_address' => ['nullable', 'string'],
@@ -175,33 +181,109 @@ class PackagingListController extends Controller
             'supplier_signature' => ['nullable', 'string', 'max:255'], 'notes' => ['nullable', 'string'],
             'cartons' => ['required', 'array', 'min:1', 'max:200'],
             'cartons.*.carton_label' => ['nullable', 'string', 'max:100'],
+            'cartons.*.packing_mode' => ['required', Rule::in(['grouped','individual'])],
+            'cartons.*.carton_number' => ['nullable', 'string', 'max:100'],
+            'cartons.*.carton_type' => ['required', 'string', 'max:40'],
+            'cartons.*.shipping_mark' => ['nullable', 'string', 'max:255'],
+            'cartons.*.material' => ['nullable', 'string', 'max:255'],
+            'cartons.*.pallet_number' => ['nullable', 'string', 'max:100'],
+            'cartons.*.seal_number' => ['nullable', 'string', 'max:100'],
             'cartons.*.carton_count' => ['required', 'integer', 'min:1', 'max:100000'],
             'cartons.*.length_cm' => ['required', 'numeric', 'gt:0'], 'cartons.*.width_cm' => ['required', 'numeric', 'gt:0'],
             'cartons.*.height_cm' => ['required', 'numeric', 'gt:0'],
             'cartons.*.net_weight_per_carton' => ['required', 'numeric', 'min:0'],
             'cartons.*.gross_weight_per_carton' => ['required', 'numeric', 'min:0', 'gte:cartons.*.net_weight_per_carton'],
+            'cartons.*.tare_weight' => ['nullable', 'numeric', 'min:0'],
+            'cartons.*.is_fragile' => ['nullable', 'boolean'], 'cartons.*.keep_dry' => ['nullable', 'boolean'],
+            'cartons.*.this_side_up' => ['nullable', 'boolean'], 'cartons.*.is_stackable' => ['nullable', 'boolean'],
+            'cartons.*.is_hazardous' => ['nullable', 'boolean'], 'cartons.*.handling_instructions' => ['nullable', 'string'],
             'cartons.*.items' => ['required', 'array', 'min:1', 'max:200'],
             'cartons.*.items.*.product_id' => ['nullable', 'exists:products,id'],
+            'cartons.*.items.*.source_type' => ['nullable', Rule::in(['sales_invoice','purchase_invoice','shipment'])],
+            'cartons.*.items.*.source_item_id' => ['nullable', 'integer'],
+            'cartons.*.items.*.source_quantity' => ['nullable', 'numeric', 'min:0'],
+            'cartons.*.items.*.previously_packed_quantity' => ['nullable', 'numeric', 'min:0'],
             'cartons.*.items.*.item_description' => ['required', 'string', 'max:500'],
             'cartons.*.items.*.quantity_per_carton' => ['required', 'numeric', 'min:0'],
             'cartons.*.items.*.total_quantity' => ['required', 'numeric', 'min:0'],
             'cartons.*.items.*.unit' => ['required', 'string', 'max:30'],
+            'cartons.*.items.*.sku' => ['nullable', 'string', 'max:255'],
+            'cartons.*.items.*.customer_item_code' => ['nullable', 'string', 'max:255'],
+            'cartons.*.items.*.hs_code' => ['nullable', 'string', 'max:40'],
+            'cartons.*.items.*.batch_number' => ['nullable', 'string', 'max:255'],
+            'cartons.*.items.*.serial_numbers_text' => ['nullable', 'string'],
+            'cartons.*.items.*.manufactured_at' => ['nullable', 'date'],
+            'cartons.*.items.*.expires_at' => ['nullable', 'date', 'after_or_equal:cartons.*.items.*.manufactured_at'],
+            'cartons.*.items.*.country_of_origin' => ['nullable', 'string', 'max:255'],
+            'cartons.*.items.*.unit_net_weight' => ['nullable', 'numeric', 'min:0'],
+            'cartons.*.items.*.unit_gross_weight' => ['nullable', 'numeric', 'min:0'],
+            'cartons.*.items.*.packing_instructions' => ['nullable', 'string'],
+            'cartons.*.items.*.remarks' => ['nullable', 'string'],
         ]);
+        $serials = [];
+        foreach ($data['cartons'] as $cartonIndex => &$carton) {
+            if (($carton['packing_mode'] ?? 'grouped') === 'individual') $carton['carton_count'] = 1;
+            foreach ($carton['items'] as $itemIndex => $item) foreach (preg_split('/[\r\n,]+/', (string)($item['serial_numbers_text'] ?? '')) as $serial) {
+                $serial = strtoupper(trim($serial)); if ($serial === '') continue;
+                if (isset($serials[$serial])) throw ValidationException::withMessages(["cartons.$cartonIndex.items.$itemIndex.serial_numbers_text" => "Serial number $serial appears more than once in this packaging list."]);
+                $serials[$serial] = true;
+            }
+        }
+        unset($carton);
+        return $data;
     }
 
     private function syncCartons(PackagingList $list, array $cartons): void
     {
         foreach (array_values($cartons) as $cartonIndex => $row) {
-            $items = $row['items']; unset($row['items']); $row['sort_order'] = $cartonIndex;
+            $items = $row['items']; unset($row['items']);
+            foreach (['is_fragile','keep_dry','this_side_up','is_stackable','is_hazardous'] as $flag) $row[$flag] = (bool) ($row[$flag] ?? false);
+            $row['sort_order'] = $cartonIndex;
             $carton = $list->cartons()->create($row);
             foreach (array_values($items) as $itemIndex => $item) {
                 // Total quantity is derived, never trusted from a stale or edited browser value.
                 $item['total_quantity'] = round((float) $item['quantity_per_carton'] * (int) $carton->carton_count, 3);
+                $serialText = (string) ($item['serial_numbers_text'] ?? '');
+                unset($item['serial_numbers_text']);
+                $item['serial_numbers'] = collect(preg_split('/[\r\n,]+/', $serialText))->map(fn ($value) => trim($value))->filter()->unique()->values()->all();
                 $item['sort_order'] = $itemIndex;
                 $carton->items()->create($item);
             }
         }
         $list->recalculate();
+    }
+
+    public function label(PackagingListCarton $carton, Request $request): View
+    {
+        $data = $request->validate(['format'=>['required',Rule::in(['a4','thermal'])],'copies'=>['required','integer','min:1','max:100'],'reason'=>['nullable','string','max:255']]);
+        $carton->load('packagingList.client', 'items.product');
+        $format = $data['format'];
+        $copies = (int) $data['copies'];
+        $carton->labelPrints()->create([
+            'label_format'=>$format, 'copies'=>$copies, 'reason'=>$data['reason'] ?? null,
+            'printed_by'=>Auth::id(), 'printed_at'=>now(),
+        ]);
+        return view('packaging_lists.label', compact('carton','format','copies'));
+    }
+
+    private function packingWarnings(array $cartons): array
+    {
+        $sources = [];
+        foreach ($cartons as $cartonIndex => $carton) foreach (($carton['items'] ?? []) as $itemIndex => $item) {
+            if (($item['source_quantity'] ?? null) === null) continue;
+            $key = ($item['source_type'] ?? 'source').':'.($item['source_item_id'] ?? $cartonIndex.'-'.$itemIndex);
+            $sources[$key] ??= [
+                'description'=>$item['item_description'] ?? 'Item', 'source'=>(float)$item['source_quantity'],
+                'previous'=>(float)($item['previously_packed_quantity'] ?? 0), 'current'=>0,
+            ];
+            $sources[$key]['current'] += (float) ($item['quantity_per_carton'] ?? 0) * (int) ($carton['carton_count'] ?? 1);
+        }
+        $warnings = [];
+        foreach ($sources as $row) {
+            $excess = $row['previous'] + $row['current'] - $row['source'];
+            if ($excess > 0) $warnings[] = ['type'=>'overpacked','description'=>$row['description'],'excess'=>round($excess,3)];
+        }
+        return $warnings;
     }
 
     private function nextNumber(): string
@@ -210,13 +292,15 @@ class PackagingListController extends Controller
         return 'PL'.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
     }
 
-    private function formData(PackagingList $list): array
+    private function formData(PackagingList $list, array $prefillCartons = []): array
     {
         return [
             'list' => $list, 'vendors' => Vendor::orderBy('vendor_name')->get(),
             'clients' => Client::orderBy('company_name')->get(), 'projects' => Project::latest('id')->get(),
             'shipments' => Shipment::latest('id')->limit(500)->get(),
             'salesInvoices' => SalesInvoice::latest('invoice_date')->limit(500)->get(),
+            'purchaseInvoices' => PurchaseInvoice::where('invoice_type', PurchaseInvoice::TYPE_BILL)->latest('invoice_date')->limit(500)->get(),
+            'prefillCartons' => $prefillCartons,
             'products' => Product::where('status', 'active')->orderBy('name')->get(),
             'statusOptions' => PackagingList::statusOptions(), 'modeOptions' => PackagingList::transportModeOptions(),
         ];

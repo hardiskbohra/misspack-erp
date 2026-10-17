@@ -7,13 +7,18 @@
     $cartonRows = old('cartons');
     if ($cartonRows === null) {
         $cartonRows = $list->relationLoaded('cartons') ? $list->cartons->map(fn($carton) => [
-            'carton_label'=>$carton->carton_label, 'carton_count'=>$carton->carton_count,
+            'carton_label'=>$carton->carton_label, 'packing_mode'=>$carton->packing_mode, 'carton_number'=>$carton->carton_number,
+            'carton_type'=>$carton->carton_type, 'shipping_mark'=>$carton->shipping_mark, 'material'=>$carton->material,
+            'pallet_number'=>$carton->pallet_number, 'seal_number'=>$carton->seal_number, 'carton_count'=>$carton->carton_count,
             'length_cm'=>$carton->length_cm, 'width_cm'=>$carton->width_cm, 'height_cm'=>$carton->height_cm,
             'net_weight_per_carton'=>$carton->net_weight_per_carton, 'gross_weight_per_carton'=>$carton->gross_weight_per_carton,
-            'items'=>$carton->items->map->only(['product_id','item_description','quantity_per_carton','total_quantity','unit'])->all(),
-        ])->all() : [];
+            'tare_weight'=>$carton->tare_weight, 'is_fragile'=>$carton->is_fragile, 'keep_dry'=>$carton->keep_dry,
+            'this_side_up'=>$carton->this_side_up, 'is_stackable'=>$carton->is_stackable, 'is_hazardous'=>$carton->is_hazardous,
+            'handling_instructions'=>$carton->handling_instructions,
+            'items'=>$carton->items->map(fn($item)=>array_merge($item->only(['product_id','source_type','source_item_id','source_quantity','previously_packed_quantity','item_description','sku','customer_item_code','hs_code','batch_number','manufactured_at','expires_at','country_of_origin','unit_net_weight','unit_gross_weight','packing_instructions','remarks','quantity_per_carton','total_quantity','unit']),['serial_numbers_text'=>implode("\n",$item->serial_numbers ?? [])]))->all(),
+        ])->all() : ($prefillCartons ?? []);
     }
-    if (!$cartonRows) $cartonRows = [['carton_label'=>'Carton 1','carton_count'=>1,'length_cm'=>'','width_cm'=>'','height_cm'=>'','net_weight_per_carton'=>'','gross_weight_per_carton'=>'','items'=>[['product_id'=>'','item_description'=>'','quantity_per_carton'=>'','total_quantity'=>'','unit'=>'pcs']]]];
+    if (!$cartonRows) $cartonRows = [['carton_label'=>'Carton 1','packing_mode'=>'grouped','carton_number'=>'1','carton_type'=>'box','carton_count'=>1,'length_cm'=>'','width_cm'=>'','height_cm'=>'','net_weight_per_carton'=>'','gross_weight_per_carton'=>'','tare_weight'=>0,'is_stackable'=>1,'items'=>[['product_id'=>'','item_description'=>'','quantity_per_carton'=>'','total_quantity'=>'','unit'=>'pcs']]]];
 @endphp
 <div class="master-form packaging-list-form" data-packaging-form>
     <header class="master-card master-card--flat master-header">
@@ -23,6 +28,12 @@
     @if($errors->any())<div class="master-alert error"><strong>Please correct the highlighted information.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
     <form method="POST" action="{{ $list->exists ? route('packaging-lists.update',$list) : route('packaging-lists.store') }}" class="master-card master-card--flat master-form-card">
         @csrf @if($list->exists) @method('PUT') @endif
+        <input type="hidden" name="source_type" value="{{ old('source_type',$list->source_type) }}">
+        <input type="hidden" name="source_id" value="{{ old('source_id',$list->source_id) }}">
+        <input type="hidden" name="purchase_invoice_id" value="{{ old('purchase_invoice_id',$list->purchase_invoice_id) }}">
+        @if($list->source_type)
+            <div class="pl-source-strip"><span><i class="fa-solid fa-wand-magic-sparkles"></i> Generated from {{ $list->sourceLabel() }}</span><strong>{{ $list->invoice_number }}</strong><small>Quantities below show the original, previously packed and remaining balance.</small></div>
+        @endif
         <div class="master-section">
             <h2 class="master-section-title">Document details</h2>
             <div class="master-detail-grid is-three-up">

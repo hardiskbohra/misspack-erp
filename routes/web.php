@@ -277,6 +277,7 @@ Route::middleware('auth')->group(function () {
         // Packaging Lists — printable carton/item manifests linked to shipments.
         Route::get('/packaging-lists/{packagingList}/print', [PackagingListController::class, 'print'])->name('packaging-lists.print');
         Route::post('/packaging-lists/{packagingList}/duplicate', [PackagingListController::class, 'duplicate'])->name('packaging-lists.duplicate');
+        Route::post('/packaging-list-cartons/{carton}/label', [PackagingListController::class, 'label'])->name('packaging-lists.cartons.label');
         Route::resource('packaging-lists', PackagingListController::class);
 
         // Client Management

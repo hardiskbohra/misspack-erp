@@ -13,6 +13,7 @@ use App\Models\ShipmentAttachment;
 use App\Models\ShipmentCost;
 use App\Models\ShipmentTrackingHistory;
 use App\Services\ClientPortalNotifier;
+use App\Services\PackagingListSource;
 use App\Services\SavedViews;
 use App\Services\ShipmentCostCashflowSync;
 use App\Services\ShipmentCostLedger;
@@ -174,9 +175,13 @@ class ShipmentController extends Controller
             return $shipment;
         });
 
+        $packagingPrepared = $this->preparePackagingList($shipment);
+
         return redirect()
             ->route('shipments.show', $shipment)
-            ->with('success', 'Shipment created successfully.');
+            ->with($packagingPrepared ? 'success' : 'warning', $packagingPrepared
+                ? 'Shipment created successfully. A draft packaging list was prepared automatically.'
+                : 'Shipment created successfully, but its packaging list could not be prepared. You can create it from this page.');
     }
 
     public function quickStore(Request $request): RedirectResponse
@@ -212,9 +217,13 @@ class ShipmentController extends Controller
             return $shipment;
         });
 
+        $packagingPrepared = $this->preparePackagingList($shipment);
+
         return redirect()
             ->route('shipments.show', $shipment)
-            ->with('success', 'Quick shipment created successfully.');
+            ->with($packagingPrepared ? 'success' : 'warning', $packagingPrepared
+                ? 'Quick shipment created successfully. A draft packaging list was prepared automatically.'
+                : 'Quick shipment created successfully, but its packaging list could not be prepared. You can create it from this page.');
     }
 
     public function show(Shipment $shipment): View
@@ -1138,6 +1147,17 @@ class ShipmentController extends Controller
             ->sum('shipment_cost');
 
         return round($inr + $legacyInr, 2);
+    }
+
+    private function preparePackagingList(Shipment $shipment): bool
+    {
+        try {
+            app(PackagingListSource::class)->createAutomaticFromShipment($shipment);
+            return true;
+        } catch (\Throwable $exception) {
+            report($exception);
+            return false;
+        }
     }
 
     private function formData(Shipment $shipment): array

@@ -11,8 +11,13 @@
 
   function update() {
     let cartons = 0, net = 0, gross = 0, cbm = 0;
+    const sourceGroups = new Map();
     cartonList.querySelectorAll('[data-carton]').forEach((carton, index) => {
-      const count = number(carton.querySelector('[data-carton-count]')?.value);
+      const countInput = carton.querySelector('[data-carton-count]');
+      const individual = carton.querySelector('[name$="[packing_mode]"]')?.value === 'individual';
+      if (individual) countInput.value = '1';
+      countInput.readOnly = individual;
+      const count = number(countInput?.value);
       const length = number(carton.querySelector('[data-length]')?.value);
       const width = number(carton.querySelector('[data-width]')?.value);
       const height = number(carton.querySelector('[data-height]')?.value);
@@ -31,6 +36,25 @@
         const quantity = number(item.querySelector('[data-qty]')?.value);
         const total = item.querySelector('[data-total-qty]');
         if (total && document.activeElement !== total) total.value = formatQuantity(quantity * count);
+        const source = item.querySelector('[name$="[source_quantity]"]');
+        const previous = item.querySelector('[name$="[previously_packed_quantity]"]');
+        const balance = item.querySelector('[data-source-balance]');
+        if (source && source.value !== '' && balance) {
+          const sourceId = item.querySelector('[name$="[source_item_id]"]')?.value;
+          const sourceType = item.querySelector('[name$="[source_type]"]')?.value;
+          const key = `${sourceType}:${sourceId || item.querySelector('[name$="[item_description]"]')?.value}`;
+          const group = sourceGroups.get(key) || { source: number(source.value), previous: number(previous?.value), current: 0, balances: [] };
+          group.current += quantity * count; group.balances.push(balance); sourceGroups.set(key, group);
+        }
+      });
+    });
+    sourceGroups.forEach(group => {
+      const remaining = group.source - group.previous - group.current;
+      group.balances.forEach(balance => {
+        const output = balance.querySelector('[data-remaining]');
+        output.textContent = formatQuantity(remaining);
+        balance.classList.toggle('is-overpacked', remaining < 0);
+        output.closest('span').firstChild.textContent = remaining < 0 ? 'Excess packing ' : 'Remaining after this PL ';
       });
     });
     root.querySelector('[data-total-cartons]').textContent = String(cartons);
@@ -39,11 +63,17 @@
     root.querySelector('[data-total-cbm]').textContent = cbm.toFixed(4);
   }
   function formatQuantity(value) { return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/0+$/, '').replace(/\.$/, ''); }
-  function addItem(carton) {
+  function addItem(carton, sourceItem = null) {
     const cartonKey = carton.querySelector('[name*="[carton_count]"]').name.match(/cartons\[([^\]]+)\]/)?.[1] ?? nextCarton;
     const html = itemTemplate.innerHTML.replaceAll('__CARTON__', cartonKey).replaceAll('__ITEM__', String(nextItem++));
     carton.querySelector('[data-item-list]').insertAdjacentHTML('beforeend', html);
-    carton.querySelector('[data-item-list] [data-item]:last-child input')?.focus();
+    const added = carton.querySelector('[data-item-list] [data-item]:last-child');
+    if (sourceItem) sourceItem.querySelectorAll('input,select,textarea').forEach(control => {
+      const field = control.name.match(/\[([^\]]+)\]$/)?.[1];
+      const target = field ? added.querySelector(`[name$="[${field}]"]`) : null;
+      if (target) target.value = control.value;
+    });
+    added.querySelector('input:not([type="hidden"])')?.focus();
     update();
   }
   function fill(select, targets) {
@@ -59,6 +89,17 @@
     if (addCarton) {
       cartonList.insertAdjacentHTML('beforeend', cartonTemplate.innerHTML.replaceAll('__CARTON__', String(nextCarton++)));
       cartonList.querySelector('[data-carton]:last-child input')?.focus(); update(); return;
+    }
+    const copySources = event.target.closest('[data-copy-source-items]');
+    if (copySources) {
+      const carton = copySources.closest('[data-carton]');
+      const candidates = [...cartonList.querySelectorAll('[data-item]')].filter(item => item.closest('[data-carton]') !== carton && item.querySelector('[name$="[source_item_id]"]')?.value);
+      const sources = [...new Map(candidates.map(item => [`${item.querySelector('[name$="[source_type]"]').value}:${item.querySelector('[name$="[source_item_id]"]').value}`, item])).values()];
+      if (!sources.length) { window.alert('No source-linked lines are available to copy.'); return; }
+      const blank = carton.querySelectorAll('[data-item]').length === 1 && !carton.querySelector('[name$="[item_description]"]').value.trim();
+      sources.forEach(item => addItem(carton, item));
+      if (blank) carton.querySelector('[data-item]')?.remove();
+      update(); return;
     }
     const add = event.target.closest('[data-add-item]');
     if (add) { addItem(add.closest('[data-carton]')); return; }
@@ -76,6 +117,7 @@
   });
   root.addEventListener('input', event => { if (event.target.matches('[data-carton-count],[data-length],[data-width],[data-height],[data-net],[data-gross],[data-qty]')) update(); });
   root.addEventListener('change', event => {
+    if (event.target.matches('[name$="[packing_mode]"]')) update();
     if (event.target.matches('[data-product]')) {
       const description = event.target.closest('[data-item]').querySelector('[name$="[item_description]"]');
       const option = event.target.selectedOptions[0];

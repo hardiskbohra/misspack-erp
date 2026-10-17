@@ -57,6 +57,7 @@
         <div class="record-head-actions">
             <a href="{{ route($routePrefix.'.index') }}" class="master-btn master-btn-light">Back</a>
             <a href="{{ route($routePrefix.'.edit', $invoice) }}" class="master-btn master-btn-light">Edit</a>
+            @if($invoice->isBill())<a href="{{ route('packaging-lists.create',['purchase_invoice'=>$invoice->id]) }}" class="master-btn master-btn-soft"><i class="fa-solid fa-boxes-stacked"></i> Pack items</a>@endif
             @php
                 $advanceOpen = $invoice->isOrder() && $invoice->canReceiveMoney()
                     ? max((float) $invoice->total_amount - $paidAmount, 0)

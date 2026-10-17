@@ -141,6 +141,10 @@
                     <i class="fas fa-bell" aria-hidden="true"></i> Log reminder
                 </button>
 
+                <a href="{{ route('packaging-lists.create', ['sales_invoice'=>$invoice->id]) }}" class="master-btn master-btn-soft">
+                    <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> Pack items
+                </a>
+
                 <a href="{{ route('sales-invoices.print', $invoice) }}" target="_blank"
                     class="master-btn master-btn-primary">
                     <i class="fas fa-print" aria-hidden="true"></i> Print
