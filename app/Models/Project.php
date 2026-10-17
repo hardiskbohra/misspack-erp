@@ -426,4 +426,9 @@ class Project extends Model
     {
         return ['INR' => 'INR', 'USD' => 'USD', 'RMB' => 'RMB'];
     }
+
+    public function packagingLists()
+    {
+        return $this->hasMany(PackagingList::class);
+    }
 }

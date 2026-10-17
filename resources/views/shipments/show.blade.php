@@ -59,6 +59,9 @@
             <a href="{{ route('shipments.edit', $shipment) }}" class="master-btn master-btn-primary">
                 <i class="fa-solid fa-pen"></i> Edit Shipment
             </a>
+            <a href="{{ route('packaging-lists.create', ['shipment' => $shipment->id]) }}" class="master-btn master-btn-soft">
+                <i class="fa-solid fa-boxes-stacked"></i> Create Packaging List
+            </a>
 
             {{-- Print previews are one capability, so they read as one group. --}}
             <div class="record-action-group" role="group" aria-label="Print and preview">

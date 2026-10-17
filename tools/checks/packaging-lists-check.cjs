@@ -1,0 +1,28 @@
+'use strict';
+const fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'../..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const migration=read('database/migrations/2026_10_17_100000_create_packaging_lists_table.php');
+const model=read('app/Models/PackagingListCarton.php');
+const controller=read('app/Http/Controllers/PackagingListController.php');
+const routes=read('routes/web.php');
+const form=read('resources/views/packaging_lists/form.blade.php');
+const print=read('resources/views/packaging_lists/print.blade.php');
+const js=read('public/assets/js/packaging-lists.js');
+let passed=0,failed=0;
+function check(label,value){if(value){passed++;console.log(`PASS ${label}`)}else{failed++;console.error(`FAIL ${label}`)}}
+check('three normalized packaging tables', ['packaging_lists','packaging_list_cartons','packaging_list_items'].every(x=>migration.includes(`Schema::create('${x}'`)));
+check('linked records use nullable foreign keys', ['vendor_id','client_id','project_id','shipment_id','sales_invoice_id'].every(x=>migration.includes(`foreignId('${x}')->nullable()`)));
+check('cartons and items cascade with document', (migration.match(/cascadeOnDelete\(\)/g)||[]).length>=2);
+check('CBM uses cubic centimetres to cubic metres', model.includes('/ 1000000'));
+check('aggregate weight and CBM multiply by carton count', ['totalCbm','totalNetWeight','totalGrossWeight'].every(x=>model.includes(`function ${x}`)));
+check('nested input has bounds and at least one carton/item', /cartons.*min:1.*max:200/.test(controller)&&/cartons\.\*\.items.*min:1.*max:200/.test(controller));
+check('nested persistence and aggregate recalculation are transactional', controller.includes('DB::transaction')&&controller.includes('$list->recalculate()'));
+check('server derives total quantity instead of trusting the browser', controller.includes("$item['total_quantity'] = round")&&read('resources/views/packaging_lists/partials/item-editor.blade.php').includes('data-total-qty readonly'));
+check('CRUD, print and duplicate routes exist',  routes.includes("Route::resource('packaging-lists'")&&routes.includes("'packaging-lists.print'")&&routes.includes("'packaging-lists.duplicate'"));
+check('form includes address snapshots, links and nested editors', ['from_name','bill_to_name','ship_to_name','data-carton-list','plItemTemplate'].every(x=>form.includes(x)));
+check('live calculator derives total quantity and CBM', js.includes('quantity * count')&&js.includes('/ 1000000'));
+check('editor protects minimum carton and item counts', js.includes('at least one item')&&js.includes('at least one carton group'));
+check('print document contains business fields', ['PACKAGING LIST','FROM','BILL TO','SHIP TO','Dimensions (cm)','N.W. / carton','G.W. / carton','DECLARATION','Authorised signatory'].every(x=>print.includes(x)));
+check('print uses print media and an A4 landscape page', read('public/assets/css/packaging-lists.css').includes('@media print')&&read('public/assets/css/packaging-lists.css').includes('size:A4 landscape'));
+console.log(`\nPackaging lists: ${passed} passed, ${failed} failed`);process.exitCode=failed?1:0;

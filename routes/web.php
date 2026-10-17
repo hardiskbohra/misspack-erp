@@ -57,6 +57,7 @@ use App\Http\Controllers\NoteController;
 use App\Http\Controllers\OfficeAlertController;
 use App\Http\Controllers\OfficeBriefingSettingController;
 use App\Http\Controllers\OrganisationController;
+use App\Http\Controllers\PackagingListController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
 
@@ -272,6 +273,11 @@ Route::middleware('auth')->group(function () {
         Route::delete('/shipments/attachments/{attachment}', [ShipmentController::class, 'destroyAttachment'])->name('shipments.attachments.destroy');
         Route::put('/shipments/attachments/{attachment}/toggle-public', [ShipmentController::class, 'togglePublic'])->name('shipments.attachments.toggle-public');
         Route::resource('shipments', ShipmentController::class);
+
+        // Packaging Lists — printable carton/item manifests linked to shipments.
+        Route::get('/packaging-lists/{packagingList}/print', [PackagingListController::class, 'print'])->name('packaging-lists.print');
+        Route::post('/packaging-lists/{packagingList}/duplicate', [PackagingListController::class, 'duplicate'])->name('packaging-lists.duplicate');
+        Route::resource('packaging-lists', PackagingListController::class);
 
         // Client Management
         Route::post('/clients/quick', [ClientController::class, 'quickStore'])->name('clients.quickStore');

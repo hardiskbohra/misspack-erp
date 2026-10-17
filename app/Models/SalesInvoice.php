@@ -737,4 +737,9 @@ class SalesInvoice extends Model
             '10. This is a computer-generated document and does not require a physical signature unless specifically requested.',
         ]);
     }
+
+    public function packagingLists()
+    {
+        return $this->hasMany(PackagingList::class);
+    }
 }
