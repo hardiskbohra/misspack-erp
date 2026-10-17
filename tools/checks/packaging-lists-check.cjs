@@ -25,4 +25,8 @@ check('live calculator derives total quantity and CBM', js.includes('quantity * 
 check('editor protects minimum carton and item counts', js.includes('at least one item')&&js.includes('at least one carton group'));
 check('print document contains business fields', ['PACKAGING LIST','FROM','BILL TO','SHIP TO','Dimensions (cm)','N.W. / carton','G.W. / carton','DECLARATION','Authorised signatory'].every(x=>print.includes(x)));
 check('print uses print media and an A4 landscape page', read('public/assets/css/packaging-lists.css').includes('@media print')&&read('public/assets/css/packaging-lists.css').includes('size:A4 landscape'));
+const index=read('resources/views/packaging_lists/index.blade.php'), css=read('public/assets/css/packaging-lists.css');
+check('list follows shared page-action, flat-card, filter-drawer and applied-filter patterns', index.includes("@section('page-actions')")&&index.includes('master-card master-card--flat')&&index.includes('<x-filter-trigger')&&index.includes('master-list-applied'));
+check('form is one flat surface divided into shared sections', form.includes('master-card master-card--flat master-form-card')&&(form.match(/master-form-card/g)||[]).length===1&&form.includes('master-section'));
+check('screen surfaces use theme tokens rather than fixed light fills', css.slice(0,css.indexOf('.pl-print-body')).includes('var(--mc-card)')&&!/#(?:fff|f8fafc|eff6ff|dbeafe)/i.test(css.slice(0,css.indexOf('.pl-print-body'))));
 console.log(`\nPackaging lists: ${passed} passed, ${failed} failed`);process.exitCode=failed?1:0;
