@@ -5,6 +5,7 @@
   const cartonList = root.querySelector('[data-carton-list]');
   const cartonTemplate = document.querySelector('#plCartonTemplate');
   const itemTemplate = document.querySelector('#plItemTemplate');
+  const cartonTabs = root.querySelector('[data-carton-tabs]');
   const number = value => Number.parseFloat(value) || 0;
   const openModal = modal => {
     if (!modal) return;
@@ -14,9 +15,28 @@
   const closeModal = modal => { if (!modal) return; if (typeof modal.close === 'function') modal.close(); else modal.removeAttribute('open'); };
   let nextCarton = cartonList.querySelectorAll('[data-carton]').length;
   let nextItem = Date.now();
+  let activeCarton = 0;
+
+  function activateCarton(index, focusTab = false) {
+    const panels = [...cartonList.querySelectorAll('[data-carton]')];
+    activeCarton = Math.max(0, Math.min(index, panels.length - 1));
+    panels.forEach((panel, panelIndex) => {
+      panel.hidden = panelIndex !== activeCarton;
+      panel.setAttribute('role', 'tabpanel');
+      panel.id = `plCartonPanel${panelIndex}`;
+      panel.setAttribute('aria-labelledby', `plCartonTab${panelIndex}`);
+    });
+    cartonTabs?.querySelectorAll('[data-carton-tab]').forEach((tab, tabIndex) => {
+      const selected = tabIndex === activeCarton;
+      tab.classList.toggle('is-active', selected);
+      tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+      tab.tabIndex = selected ? 0 : -1;
+    });
+    if (focusTab) cartonTabs?.querySelector(`[data-carton-tab="${activeCarton}"]`)?.focus();
+  }
 
   function update() {
-    let cartons = 0, net = 0, gross = 0, cbm = 0;
+    let cartons = 0, net = 0, gross = 0, cbm = 0, itemLines = 0, completeGroups = 0;
     const sourceGroups = new Map();
     cartonList.querySelectorAll('[data-carton]').forEach((carton, index) => {
       const countInput = carton.querySelector('[data-carton-count]');
@@ -28,9 +48,12 @@
       const width = number(carton.querySelector('[data-width]')?.value);
       const height = number(carton.querySelector('[data-height]')?.value);
       const cartonCbm = length * width * height / 1000000;
+      const netPerCarton = number(carton.querySelector('[data-net]')?.value);
+      const grossPerCarton = number(carton.querySelector('[data-gross]')?.value);
+      if (count > 0 && length > 0 && width > 0 && height > 0 && grossPerCarton >= netPerCarton) completeGroups++;
       cartons += count;
-      net += count * number(carton.querySelector('[data-net]')?.value);
-      gross += count * number(carton.querySelector('[data-gross]')?.value);
+      net += count * netPerCarton;
+      gross += count * grossPerCarton;
       cbm += count * cartonCbm;
       const heading = carton.querySelector('[data-carton-number]');
       const cbmOutput = carton.querySelector('[data-cbm]');
@@ -39,6 +62,7 @@
       if (cbmOutput) cbmOutput.textContent = cartonCbm.toFixed(4);
       if (summary) summary.textContent = `${count || 0} carton${count === 1 ? '' : 's'} · ${length || 0} × ${width || 0} × ${height || 0} cm`;
       const itemCount = carton.querySelectorAll('[data-item]').length;
+      itemLines += itemCount;
       const itemCountOutput = carton.querySelector('[data-item-count]');
       if (itemCountOutput) itemCountOutput.textContent = `${itemCount} item ${itemCount === 1 ? 'line' : 'lines'}`;
       carton.querySelectorAll('[data-item]').forEach(item => {
@@ -57,6 +81,14 @@
         }
       });
     });
+    const panels = [...cartonList.querySelectorAll('[data-carton]')];
+    if (cartonTabs) cartonTabs.innerHTML = panels.map((panel, index) => {
+      const label = panel.querySelector('[name$="[carton_label]"]')?.value.trim() || `Carton group ${index + 1}`;
+      const count = number(panel.querySelector('[data-carton-count]')?.value);
+      const dimensions = [panel.querySelector('[data-length]')?.value, panel.querySelector('[data-width]')?.value, panel.querySelector('[data-height]')?.value].filter(Boolean).join(' × ') || 'Dimensions pending';
+      return `<button type="button" class="pl-carton-tab" role="tab" id="plCartonTab${index}" aria-controls="plCartonPanel${index}" data-carton-tab="${index}"><span>${escapeHtml(label)}</span><small>${count || 0} cartons · ${escapeHtml(dimensions)}</small></button>`;
+    }).join('');
+    activateCarton(activeCarton);
     sourceGroups.forEach(group => {
       const remaining = group.source - group.previous - group.current;
       group.balances.forEach(balance => {
@@ -75,22 +107,22 @@
     const from = root.querySelector('[name="from_name"]')?.value.trim() || 'Sender not set';
     const ship = root.querySelector('[name="ship_to_name"]')?.value.trim() || 'Destination not set';
     const partySummary = root.querySelector('[data-party-summary]'); if (partySummary) partySummary.textContent = `${from} → ${ship}`;
+    root.querySelector('[data-total-groups]').textContent = String(panels.length);
+    root.querySelector('[data-total-items]').textContent = String(itemLines);
     root.querySelector('[data-total-cartons]').textContent = String(cartons);
+    const completeness = root.querySelector('[data-summary-completeness]');
+    if (completeness) completeness.textContent = completeGroups === panels.length ? 'All carton groups complete' : `${completeGroups} of ${panels.length} carton groups complete`;
     root.querySelector('[data-total-net]').textContent = `${net.toFixed(3)} kg`;
     root.querySelector('[data-total-gross]').textContent = `${gross.toFixed(3)} kg`;
     root.querySelector('[data-total-cbm]').textContent = cbm.toFixed(4);
   }
+  function escapeHtml(value) { const span=document.createElement('span'); span.textContent=String(value); return span.innerHTML; }
   function formatQuantity(value) { return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/0+$/, '').replace(/\.$/, ''); }
-  function addItem(carton, sourceItem = null) {
+  function addItem(carton) {
     const cartonKey = carton.querySelector('[name*="[carton_count]"]').name.match(/cartons\[([^\]]+)\]/)?.[1] ?? nextCarton;
     const html = itemTemplate.innerHTML.replaceAll('__CARTON__', cartonKey).replaceAll('__ITEM__', String(nextItem++));
     carton.querySelector('[data-item-list]').insertAdjacentHTML('beforeend', html);
     const added = carton.querySelector('[data-item-list] [data-item]:last-child');
-    if (sourceItem) sourceItem.querySelectorAll('input,select,textarea').forEach(control => {
-      const field = control.name.match(/\[([^\]]+)\]$/)?.[1];
-      const target = field ? added.querySelector(`[name$="[${field}]"]`) : null;
-      if (target) target.value = control.value;
-    });
     added.querySelector('input:not([type="hidden"])')?.focus();
     update();
   }
@@ -104,6 +136,8 @@
   }
   root.addEventListener('click', event => {
     if (event.target.matches('dialog.pl-modal')) { closeModal(event.target); return; }
+    const tab = event.target.closest('[data-carton-tab]');
+    if (tab) { activateCarton(number(tab.dataset.cartonTab)); return; }
     const opener = event.target.closest('[data-open-pl-modal]');
     if (opener) { openModal(document.getElementById(opener.dataset.openPlModal)); return; }
     const closer = event.target.closest('[data-close-pl-modal]');
@@ -111,18 +145,9 @@
     const addCarton = event.target.closest('[data-add-carton]');
     if (addCarton) {
       cartonList.insertAdjacentHTML('beforeend', cartonTemplate.innerHTML.replaceAll('__CARTON__', String(nextCarton++)));
-      cartonList.querySelector('[data-carton]:last-child input')?.focus(); update(); return;
-    }
-    const copySources = event.target.closest('[data-copy-source-items]');
-    if (copySources) {
-      const carton = copySources.closest('[data-carton]');
-      const candidates = [...cartonList.querySelectorAll('[data-item]')].filter(item => item.closest('[data-carton]') !== carton && item.querySelector('[name$="[source_item_id]"]')?.value);
-      const sources = [...new Map(candidates.map(item => [`${item.querySelector('[name$="[source_type]"]').value}:${item.querySelector('[name$="[source_item_id]"]').value}`, item])).values()];
-      if (!sources.length) { window.alert('No source-linked lines are available to copy.'); return; }
-      const blank = carton.querySelectorAll('[data-item]').length === 1 && !carton.querySelector('[name$="[item_description]"]').value.trim();
-      sources.forEach(item => addItem(carton, item));
-      if (blank) carton.querySelector('[data-item]')?.remove();
-      update(); return;
+      activeCarton = cartonList.querySelectorAll('[data-carton]').length - 1;
+      update();
+      cartonList.querySelector('[data-carton]:last-child input')?.focus(); return;
     }
     const add = event.target.closest('[data-add-item]');
     if (add) { addItem(add.closest('[data-carton]')); return; }
@@ -135,11 +160,26 @@
     const removeCarton = event.target.closest('[data-remove-carton]');
     if (removeCarton) {
       if (cartonList.querySelectorAll('[data-carton]').length <= 1) { window.alert('A packaging list needs at least one carton group.'); return; }
-      removeCarton.closest('[data-carton]').remove(); update();
+      const panels = [...cartonList.querySelectorAll('[data-carton]')];
+      const removedIndex = panels.indexOf(removeCarton.closest('[data-carton]'));
+      removeCarton.closest('[data-carton]').remove();
+      if (removedIndex <= activeCarton) activeCarton = Math.max(0, activeCarton - 1);
+      update();
     }
   });
-  root.addEventListener('input', event => { if (event.target.matches('[data-carton-count],[data-length],[data-width],[data-height],[data-net],[data-gross],[data-qty],[name="from_name"],[name="ship_to_name"]')) update(); });
-  root.addEventListener('invalid', event => { const modal=event.target.closest('dialog'); if(modal && !modal.open && !root.querySelector('dialog[open]')) openModal(modal); }, true);
+  cartonTabs?.addEventListener('keydown', event => {
+    if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    event.preventDefault(); const count=cartonList.querySelectorAll('[data-carton]').length;
+    const next=event.key==='Home'?0:event.key==='End'?count-1:event.key==='ArrowRight'?(activeCarton+1)%count:(activeCarton-1+count)%count;
+    activateCarton(next,true);
+  });
+  root.addEventListener('input', event => { if (event.target.matches('[data-carton-count],[data-length],[data-width],[data-height],[data-net],[data-gross],[data-qty],[name$="[carton_label]"],[name="from_name"],[name="ship_to_name"]')) update(); });
+  root.addEventListener('invalid', event => {
+    const panel = event.target.closest('[data-carton]');
+    if (panel) activateCarton([...cartonList.querySelectorAll('[data-carton]')].indexOf(panel));
+    const modal=event.target.closest('dialog');
+    if(modal && !modal.open && !root.querySelector('dialog[open]')) openModal(modal);
+  }, true);
   root.addEventListener('change', event => {
     if (event.target.matches('[name$="[packing_mode]"]')) update();
     if (event.target.matches('[data-product]')) {
@@ -166,6 +206,8 @@
       const parts = first.split('.');
       const fieldName = parts.shift() + parts.map(part => `[${part}]`).join('');
       const field = root.querySelector(`[name="${CSS.escape(fieldName)}"]`);
+      const panel = field?.closest('[data-carton]');
+      if (panel) activateCarton([...cartonList.querySelectorAll('[data-carton]')].indexOf(panel));
       const modal = field?.closest('dialog');
       if (modal) openModal(modal);
     }
