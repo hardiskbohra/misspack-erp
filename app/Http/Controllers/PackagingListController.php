@@ -127,6 +127,14 @@ class PackagingListController extends Controller
         return redirect()->route('packaging-lists.show', $packagingList)->with('success', 'Packaging list updated successfully.');
     }
 
+    public function updateStatus(Request $request, PackagingList $packagingList): RedirectResponse
+    {
+        $data = $request->validate(['status' => ['required', Rule::in(array_keys(PackagingList::statusOptions()))]]);
+        $packagingList->update(['status' => $data['status']]);
+
+        return back()->with('success', 'Packaging list status changed to '.$packagingList->statusLabel().'.');
+    }
+
     public function destroy(PackagingList $packagingList): RedirectResponse
     {
         $packagingList->delete();
