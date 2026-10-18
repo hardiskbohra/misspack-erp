@@ -32,6 +32,7 @@ use App\Http\Controllers\LeadCommentController;
 use App\Http\Controllers\ProjectAttachmentController;
 use App\Http\Controllers\ProjectCommentController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectApprovalController;
 use App\Http\Controllers\ProjectWorkflowController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectTrackingController;
@@ -387,6 +388,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/projects/{project}/workflow/gates/{evaluation}/override', [ProjectWorkflowController::class, 'override'])->name('projects.workflow.gates.override');
         Route::patch('/projects/{project}/workflow/overrides/{override}/revoke', [ProjectWorkflowController::class, 'revokeOverride'])->name('projects.workflow.overrides.revoke');
         Route::patch('/projects/{project}/workflow/steps/{step}', [ProjectWorkflowController::class, 'updateStep'])->name('projects.workflow.steps.update');
+        Route::post('/projects/{project}/approvals', [ProjectApprovalController::class, 'store'])->name('projects.approvals.store');
+        Route::post('/projects/{project}/approvals/{approval}/versions', [ProjectApprovalController::class, 'addVersion'])->name('projects.approvals.versions.store');
+        Route::post('/projects/{project}/approvals/{approval}/override', [ProjectApprovalController::class, 'override'])->name('projects.approvals.override');
+        Route::patch('/projects/{project}/approvals/{approval}/override/revoke', [ProjectApprovalController::class, 'revokeOverride'])->name('projects.approvals.override.revoke');
 
         /* One route: a project product is created by the invoice or purchase
            document that mentions it (`App\Services\ProjectProducts`) and is not
@@ -625,6 +630,7 @@ Route::prefix('client-portal')->name('client-portal.')->group(function () {
         Route::get('/projects/{project}', [ClientPortalProjectController::class, 'show'])->name('projects.show');
         Route::get('/projects/{project}/attachments/{attachment}', [ClientPortalProjectController::class, 'attachmentFile'])->name('projects.attachments.file');
         Route::post('/projects/{project}/comments', [ClientPortalProjectController::class, 'storeComment'])->name('projects.comments.store');
+        Route::post('/projects/{project}/approvals/{approval}/decision', [ClientPortalProjectController::class, 'decideApproval'])->name('projects.approvals.decision');
         Route::post('/projects/{project}/documents', [ClientPortalProjectController::class, 'upload'])->name('projects.documents.store');
 
         Route::get('/shipments', [ClientPortalShipmentController::class, 'index'])->name('shipments.index');

@@ -27,6 +27,7 @@ class ProjectWorkflow extends Model
     public function project() { return $this->belongsTo(Project::class); }
     public function steps() { return $this->hasMany(ProjectWorkflowStep::class)->orderBy('sort_order')->orderBy('id'); }
     public function evaluations() { return $this->hasMany(ProjectGateEvaluation::class)->latest('evaluated_at')->latest('id'); }
+    public function approvals() { return $this->hasMany(ProjectApprovalRequest::class)->latest('requested_at')->latest('id'); }
     public function reporter() { return $this->belongsTo(User::class, 'reported_by'); }
     public function starter() { return $this->belongsTo(User::class, 'started_by'); }
     public function commercialInvoice() { return $this->belongsTo(SalesInvoice::class, 'commercial_sales_invoice_id'); }

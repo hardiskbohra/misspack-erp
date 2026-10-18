@@ -258,7 +258,7 @@ class ProjectController extends Controller
         $workflow = null;
         if (Schema::hasTable('project_workflows')) {
             $workflow = $project->workflow()
-                ->with(['steps.product', 'steps.owner', 'reporter', 'commercialInvoice', 'evaluations.activeOverride.approver', 'evaluations.evaluator'])
+                ->with(['steps.product', 'steps.owner', 'reporter', 'commercialInvoice', 'evaluations.activeOverride.approver', 'evaluations.evaluator', 'approvals.product', 'approvals.currentVersion.attachment', 'approvals.versions.attachment', 'approvals.versions.clientUser', 'approvals.overrides.approver'])
                 ->first();
         }
 

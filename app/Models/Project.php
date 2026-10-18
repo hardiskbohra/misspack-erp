@@ -436,4 +436,9 @@ class Project extends Model
     {
         return $this->hasOne(ProjectWorkflow::class);
     }
+
+    public function approvalRequests()
+    {
+        return $this->hasMany(ProjectApprovalRequest::class)->latest('requested_at')->latest('id');
+    }
 }

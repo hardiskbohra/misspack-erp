@@ -62,4 +62,10 @@ Commercial baseline, production advance and complete pre-dispatch balance are ca
 
 Administrators can record or revoke manager overrides from the command centre. Each override remains attached to one exact evaluation, preserves its risk snapshot, reason, approver, time and expected resolution date, and makes the related workflow step explicitly `skipped` rather than pretending the underlying gate passed. When financial facts change, the prior override is stale and cannot release the new evaluation.
 
-Versioned artwork/PPS client approvals are the next slice on this foundation.
+## Versioned client approvals delivered
+
+Artwork and PPS approval requests are product-specific and available in both the internal Workflow command centre and the authenticated client portal. Every submitted file is hashed with SHA-256 and stored as an immutable numbered version. Approve, reject and request-changes decisions record the portal user, time and comment against that exact version.
+
+Uploading a revision marks the previous decision superseded, reopens the request and moves its workflow step back to `waiting_client`. A passed decision completes the corresponding artwork/PPS step; rejection or requested changes blocks it. Response deadlines produce warnings but never close the request automatically.
+
+Administrators can proceed under a version-scoped manager override. Overrides and revocations are normalized audit rows rather than fields overwritten by the next decision. A later client decision retires the active override without deleting it. Approval files cannot be deleted while referenced by this history.

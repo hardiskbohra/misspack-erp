@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClientPortalDocument;
+use App\Models\ProjectApprovalRequest;
 use App\Models\ProjectAttachment;
 use App\Services\ClientPortalNotifier;
+use App\Services\ProjectApprovals;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -62,6 +64,12 @@ class ClientPortalProjectController extends ClientPortalBaseController
         if (Schema::hasTable('cashflow_allocations')) {
             $load[] = 'cashflowAllocations.cashflowEntry';
         }
+        if (Schema::hasTable('project_approval_requests')) {
+            $load[] = 'approvalRequests.currentVersion.attachment';
+            $load[] = 'approvalRequests.versions.attachment';
+            $load[] = 'approvalRequests.versions.clientUser';
+            $load[] = 'approvalRequests.overrides.approver';
+        }
 
         if (class_exists(\App\Models\Shipment::class)
             && Schema::hasTable('shipments')
@@ -101,6 +109,9 @@ class ClientPortalProjectController extends ClientPortalBaseController
         if (! $project->relationLoaded('publicShipments')) {
             $project->setRelation('publicShipments', collect());
         }
+        if (! $project->relationLoaded('approvalRequests')) {
+            $project->setRelation('approvalRequests', collect());
+        }
 
         $portalComments = \App\Models\ClientPortalComment::where('client_id', $this->client($request)->id)
             ->where('related_type', 'project')
@@ -111,6 +122,19 @@ class ClientPortalProjectController extends ClientPortalBaseController
             ->get();
 
         return view('client_portal.projects.show', compact('project', 'portalComments', 'portalDocuments'));
+    }
+
+    public function decideApproval(Request $request, int $project, ProjectApprovalRequest $approval, ProjectApprovals $approvals): RedirectResponse
+    {
+        $visibleProject = $this->findProjectForClient($request, $project);
+        abort_unless($approval->project_id === $visibleProject->id, 404);
+        $data = $request->validate([
+            'decision' => ['required', \Illuminate\Validation\Rule::in(['approved','rejected','changes_requested'])],
+            'client_comment' => ['nullable', 'string', 'max:2000'],
+        ]);
+        $approvals->decide($approval, $data['decision'], $data['client_comment'] ?? null, $this->portalUser($request));
+
+        return back()->with('success', $data['decision'] === 'approved' ? 'Approval recorded successfully.' : 'Your decision and comments were sent to the project coordinator.');
     }
 
     public function attachmentFile(Request $request, int $project, ProjectAttachment $attachment)

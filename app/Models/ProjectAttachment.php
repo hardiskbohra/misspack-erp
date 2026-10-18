@@ -48,6 +48,11 @@ class ProjectAttachment extends Model
         return $this->belongsTo(User::class, 'uploaded_by');
     }
 
+    public function approvalVersions()
+    {
+        return $this->hasMany(ProjectApprovalVersion::class, 'project_attachment_id');
+    }
+
     public function fileUrl(): string
     {
         return Storage::disk('public')->url($this->file_path);

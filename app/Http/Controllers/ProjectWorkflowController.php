@@ -89,7 +89,7 @@ class ProjectWorkflowController extends Controller
     public function updateStep(Request $request, Project $project, ProjectWorkflowStep $step, ProjectWorkflowExecution $execution): RedirectResponse
     {
         abort_unless($step->workflow?->project_id === $project->id, 404);
-        abort_if(in_array($step->step_key, ProjectWorkflowGates::AUTOMATED_GATES, true), 422, 'This step is controlled by its current gate evaluation.');
+        abort_if(in_array($step->step_key, array_merge(ProjectWorkflowGates::AUTOMATED_GATES, \App\Services\ProjectApprovals::CONTROLLED_STEPS), true), 422, 'This step is controlled by its current gate or client approval.');
         $data = $request->validate([
             'status' => ['required', Rule::in(array_values(array_diff(array_keys(ProjectWorkflowStep::statusOptions()), ['skipped', 'cancelled'])))],
             'notes' => ['nullable', 'string', 'max:2000'],

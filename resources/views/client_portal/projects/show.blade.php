@@ -42,6 +42,8 @@
             <span>{{ $project->products->count() }}</span></button>
         <button type="button" class="pd-tab-btn" data-tab="milestones" role="tab" aria-selected="false">
             Milestones <span>{{ $project->publicMilestones->count() }}</span></button>
+        <button type="button" class="pd-tab-btn" data-tab="approvals" role="tab" aria-selected="false">
+            Approvals <span>{{ $project->approvalRequests->where('status','open')->count() }}</span></button>
         <button type="button" class="pd-tab-btn" data-tab="comments" role="tab" aria-selected="false">
             Comments <span>{{ $project->publicComments->count() }}</span></button>
         <button type="button" class="pd-tab-btn" data-tab="attachments" role="tab" aria-selected="false">Attachments
@@ -186,6 +188,31 @@
             </div>
         </section>
         
+        <section class="pd-tab-panel" id="pd-tab-approvals" data-tab-panel="approvals" role="tabpanel">
+            <div class="pd-section-head"><div><p class="pd-eyebrow">Decisions</p><h2>Artwork and PPS approvals</h2><p>Each decision applies only to the exact file version shown.</p></div><span class="pd-count">{{ $project->approvalRequests->count() }} requests</span></div>
+            <div class="cp-approval-list">
+                @forelse($project->approvalRequests as $approval)
+                    <article class="cp-approval-card is-{{ $approval->effectiveStatus() }}">
+                        <header><div><strong>{{ $approval->title }}</strong><span>{{ $approval->typeLabel() }} · {{ $approval->product?->product_name }} · version {{ $approval->current_version_number }}</span></div><span class="master-badge">{{ $approval->statusLabel() }}</span></header>
+                        @if($approval->isOverdue())<div class="cp-approval-overdue"><i class="fa-solid fa-triangle-exclamation"></i> The requested response date has passed, but this approval remains open.</div>@endif
+                        <div class="cp-approval-file"><i class="fa-solid fa-file-shield"></i><div><span>File for your decision</span><a href="{{ route('client-portal.projects.attachments.file',[$project->id,$approval->currentVersion->attachment]) }}" target="_blank">{{ $approval->currentVersion->attachment->original_name }}</a><small>Version {{ $approval->current_version_number }} · submitted {{ $approval->currentVersion->submitted_at?->format('d M Y, H:i') }}</small></div></div>
+                        @if($approval->instructions)<p class="cp-approval-instructions">{{ $approval->instructions }}</p>@endif
+                        @if($approval->status==='open')
+                            <form method="POST" action="{{ route('client-portal.projects.approvals.decision',[$project->id,$approval]) }}" class="cp-approval-decision">@csrf
+                                <label><span>Comment</span><textarea name="client_comment" rows="3" maxlength="2000" placeholder="Required when requesting changes or rejecting"></textarea></label>
+                                <div><button class="master-btn master-btn-primary" type="submit" name="decision" value="approved"><i class="fa-solid fa-check"></i> Approve version {{ $approval->current_version_number }}</button><button class="master-btn master-btn-soft" type="submit" name="decision" value="changes_requested">Request changes</button><button class="master-btn master-btn-light" type="submit" name="decision" value="rejected">Reject</button></div>
+                            </form>
+                        @elseif($approval->currentVersion?->client_comment)
+                            <div class="cp-approval-response"><strong>Your response</strong><p>{{ $approval->currentVersion->client_comment }}</p><small>{{ $approval->currentVersion->decided_at?->format('d M Y, H:i') }}</small></div>
+                        @endif
+                        <details class="cp-approval-history"><summary>Version history</summary><div>@foreach($approval->versions as $version)<span><strong>Version {{ $version->version_number }} · {{ $version->statusLabel() }}</strong><small>{{ $version->submitted_at?->format('d M Y, H:i') }}</small>@if($version->client_comment)<em>{{ $version->client_comment }}</em>@endif</span>@endforeach</div></details>
+                    </article>
+                @empty
+                    <div class="master-empty"><i class="fa-solid fa-stamp"></i><p>No artwork or PPS approvals are waiting for you.</p></div>
+                @endforelse
+            </div>
+        </section>
+
         @php
             $milestones = $project->publicMilestones;
             $milestoneTotal = $milestones->count();

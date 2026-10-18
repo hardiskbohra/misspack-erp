@@ -83,6 +83,9 @@ class ProjectAttachmentController extends Controller
 
     public function destroy(ProjectAttachment $projectAttachment): RedirectResponse
     {
+        if (\Illuminate\Support\Facades\Schema::hasTable('project_approval_versions') && $projectAttachment->approvalVersions()->exists()) {
+            throw ValidationException::withMessages(['attachment' => 'This file is part of an approval audit history and cannot be deleted.']);
+        }
         $project = $projectAttachment->project;
         if ($projectAttachment->file_path) {
             Storage::disk('public')->delete($projectAttachment->file_path);
