@@ -388,6 +388,20 @@ class ShipmentController extends Controller
             return;
         }
 
+        if ($status === Shipment::STATUS_PICKED_UP && $shipment->project_id) {
+            $workflow = \App\Models\ProjectWorkflow::query()->where('project_id', $shipment->project_id)->first();
+            if ($workflow) {
+                $evaluations = app(\App\Services\ProjectWorkflowGates::class)->evaluateAll($workflow, Auth::id());
+                $dispatchGate = collect($evaluations)->firstWhere('gate_key', \App\Services\ProjectWorkflowGates::GATE_DISPATCH_BALANCE);
+                $dispatchGate?->loadMissing('activeOverride');
+                if (! $dispatchGate || ! in_array($dispatchGate->effectiveResult(), ['passed', 'overridden'], true)) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Shipment pickup is blocked until the complete Proforma balance is received or a manager records a current workflow override.',
+                    ]);
+                }
+            }
+        }
+
         if (in_array($status, [Shipment::STATUS_CUSTOM_HOLD, Shipment::STATUS_DELAYED], true)
             && trim((string) ($context['remarks'] ?? '')) === '') {
             throw ValidationException::withMessages([
@@ -540,6 +554,7 @@ class ShipmentController extends Controller
         $latestHistory = $shipment->histories()->first();
 
         if ($latestHistory) {
+            $this->assertStatusChangeAllowed($shipment, $latestHistory->status, ['remarks' => $latestHistory->remarks]);
             /* the status is derived from history here, so the delivery default
                has to follow it: a history edit can make the row delivered */
             $shipment->update(Shipment::withDeliveryDefaults(

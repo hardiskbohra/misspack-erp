@@ -54,4 +54,12 @@ Managers may close an operationally complete project with receivables or payable
 
 ## Foundation delivered
 
-The first foundation slice contains workflow instances, product/project steps, gate evaluation and override audit tables, standard-path synchronisation, weighted calculation, structured Proforma payment terms, project-scoped workflow actions and a Workflow command-centre tab. Automated source gate evaluators, versioned client approvals and manager override actions are subsequent slices on this foundation.
+The first foundation slice contains workflow instances, product/project steps, gate evaluation and override audit tables, standard-path synchronisation, weighted calculation, structured Proforma payment terms, project-scoped workflow actions and a Workflow command-centre tab.
+
+## Financial gate slice delivered
+
+Commercial baseline, production advance and complete pre-dispatch balance are calculated from the selected Proforma and finalized receipts. An unchanged set of facts reuses its immutable SHA-256 evaluation; changed terms, totals or receipts create a new current evaluation and leave earlier decisions in history. Moving a product into production enforces the current advance gate. Moving a shipment to Picked up enforces the complete-balance gate.
+
+Administrators can record or revoke manager overrides from the command centre. Each override remains attached to one exact evaluation, preserves its risk snapshot, reason, approver, time and expected resolution date, and makes the related workflow step explicitly `skipped` rather than pretending the underlying gate passed. When financial facts change, the prior override is stale and cannot release the new evaluation.
+
+Versioned artwork/PPS client approvals are the next slice on this foundation.

@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ProjectProductController extends Controller
 {
@@ -33,6 +34,20 @@ class ProjectProductController extends Controller
             'actual_ready_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
         ]);
+
+        if ($data['status'] === 'in_production' && $projectProduct->status !== 'in_production') {
+            $workflow = $projectProduct->project?->workflow;
+            if ($workflow) {
+                $evaluations = app(\App\Services\ProjectWorkflowGates::class)->evaluateAll($workflow, Auth::id());
+                $advanceGate = collect($evaluations)->firstWhere('gate_key', \App\Services\ProjectWorkflowGates::GATE_ADVANCE);
+                $advanceGate?->loadMissing('activeOverride');
+                if (! $advanceGate || ! in_array($advanceGate->effectiveResult(), ['passed', 'overridden'], true)) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Production is blocked until the required Proforma advance is received or a manager records a current workflow override.',
+                    ]);
+                }
+            }
+        }
 
         $old = $projectProduct->toArray();
         $projectProduct->update($data);

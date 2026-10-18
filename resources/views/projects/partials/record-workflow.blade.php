@@ -35,6 +35,44 @@
             </section>
 
             <section class="master-card master-card--flat master-section project-detail-card">
+                <div class="master-section-head"><div><h2 class="master-section-title">Commercial and financial gates</h2><p class="master-sub">Checks use the selected Proforma and booked or reconciled receipts. Material changes create a new auditable evaluation.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Run gate checks</button></form></div>
+                @php
+                    $currentGates = $workflow->evaluations->unique('gate_key');
+                    $currentGateIds = $currentGates->pluck('id');
+                    $previousGates = $workflow->evaluations->reject(fn ($gate) => $currentGateIds->contains($gate->id));
+                @endphp
+                @if($currentGates->isEmpty())
+                    <div class="master-empty-state"><i class="fa-solid fa-shield-halved"></i><p>Select the commercial baseline and run gate checks to evaluate the production advance and complete pre-dispatch balance.</p></div>
+                @else
+                    <div class="project-gate-list">
+                        @foreach($currentGates as $evaluation)
+                            @php
+                                $gateDetails = $evaluation->details ?: [];
+                                $effectiveResult = $evaluation->effectiveResult();
+                            @endphp
+                            <article class="project-gate is-{{ $effectiveResult }}">
+                                <div class="project-gate-icon"><i class="fa-solid {{ $effectiveResult==='passed' ? 'fa-circle-check' : ($effectiveResult==='overridden' ? 'fa-triangle-exclamation' : 'fa-circle-xmark') }}"></i></div>
+                                <div class="project-gate-copy"><div><strong>{{ $evaluation->gateLabel() }}</strong><span class="master-badge is-{{ $effectiveResult }}">{{ $evaluation->resultLabel() }}</span></div><p>{{ $evaluation->summary }}</p><small>Checked {{ $evaluation->evaluated_at?->format('d M Y, H:i') }} by {{ $evaluation->evaluator?->name ?: 'System' }}</small>
+                                    @if(array_key_exists('required_amount',$gateDetails))<div class="project-gate-money"><span>Required <strong>{{ $money($gateDetails['required_amount']) }}</strong></span><span>Received <strong>{{ $money($gateDetails['received_amount'] ?? 0) }}</strong></span><span>Shortfall <strong>{{ $money($gateDetails['shortfall'] ?? 0) }}</strong></span></div>@endif
+                                    @if($evaluation->activeOverride)<div class="project-gate-override"><strong>Manager override by {{ $evaluation->activeOverride->approver?->name ?: 'Administrator' }}</strong><span>{{ $evaluation->activeOverride->reason }}</span>@if($evaluation->activeOverride->expected_resolution_date)<small>Expected resolution {{ $evaluation->activeOverride->expected_resolution_date->format('d M Y') }}</small>@endif</div>@endif
+                                </div>
+                                <div class="project-gate-actions">
+                                    @if($evaluation->result==='blocked' && !$evaluation->activeOverride && auth()->user()?->isAdmin())
+                                        <details><summary class="master-btn master-btn-soft master-btn-sm">Manager override</summary><form method="POST" action="{{ route('projects.workflow.gates.override',[$project,$evaluation]) }}">@csrf<textarea class="master-textarea" name="reason" rows="3" minlength="10" maxlength="2000" required placeholder="Risk and reason for proceeding"></textarea><input class="master-input" type="date" name="expected_resolution_date" aria-label="Expected resolution date"><button class="master-btn master-btn-primary master-btn-sm" type="submit">Approve override</button></form></details>
+                                    @elseif($evaluation->activeOverride && auth()->user()?->isAdmin())
+                                        <details><summary class="master-btn master-btn-light master-btn-sm">Revoke override</summary><form method="POST" action="{{ route('projects.workflow.overrides.revoke',[$project,$evaluation->activeOverride]) }}">@csrf @method('PATCH')<textarea class="master-textarea" name="revocation_reason" rows="2" minlength="5" maxlength="2000" required placeholder="Why this override is revoked"></textarea><button class="master-btn master-btn-light master-btn-sm" type="submit">Revoke</button></form></details>
+                                    @endif
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                    @if($previousGates->isNotEmpty())
+                        <details class="project-gate-history"><summary>Previous gate evaluations ({{ $previousGates->count() }})</summary><div>@foreach($previousGates->take(12) as $pastGate)<span><strong>{{ $pastGate->gateLabel() }}</strong><small>{{ $pastGate->resultLabel() }} · {{ $pastGate->evaluated_at?->format('d M Y, H:i') }}</small><em>{{ $pastGate->summary }}</em></span>@endforeach</div></details>
+                    @endif
+                @endif
+            </section>
+
+            <section class="master-card master-card--flat master-section project-detail-card">
                 <div class="master-section-head"><div><h2 class="master-section-title">Standard execution path</h2><p class="master-sub">Project-level controls and product-level execution remain separate while contributing to one calculated progress.</p></div></div>
                 <div class="project-workflow-stages">
                     @foreach($workflowStages as $stageKey=>$stageLabel)
@@ -47,18 +85,22 @@
                                 <header><div><span>{{ str_pad((string)$loop->iteration,2,'0',STR_PAD_LEFT) }}</span><div><h3>{{ $stageLabel }}</h3><p>{{ $stageDone }} of {{ $stageSteps->count() }} steps complete</p></div></div><strong>{{ $stageSteps->count() ? round($stageDone/$stageSteps->count()*100) : 0 }}%</strong></header>
                                 <div class="project-workflow-step-list">
                                     @foreach($stageSteps as $step)
-                                        <form method="POST" action="{{ route('projects.workflow.steps.update',[$project,$step]) }}" class="project-workflow-step">@csrf @method('PATCH')
-                                            <div class="project-workflow-step-copy"><i class="fa-solid {{ in_array($step->status,['completed','skipped']) ? 'fa-circle-check' : ($step->status==='blocked' ? 'fa-circle-xmark' : 'fa-circle') }}"></i><div><strong>{{ $step->title }}</strong><span>{{ $step->product ? $step->product->product_name : 'Project-level control' }} · {{ $step->owner?->name ?: 'Coordinator unassigned' }}</span>@if($step->blocked_reason)<small>{{ $step->blocked_reason }}</small>@endif</div></div>
-                                            <select class="master-select" name="status" aria-label="Status for {{ $step->title }}">
-                                                @foreach($workflowStepStatuses as $key=>$label)
-                                                    @continue(in_array($key, ['skipped', 'cancelled'], true))
-                                                    <option value="{{ $key }}" @selected($step->status===$key)>{{ $label }}</option>
-                                                @endforeach
-                                            </select>
-                                            <input class="master-input" name="blocked_reason" value="{{ $step->blocked_reason }}" placeholder="Blocked reason">
-                                            <input type="hidden" name="notes" value="{{ $step->notes }}">
-                                            <button class="master-btn master-btn-soft master-btn-sm" type="submit">Update</button>
-                                        </form>
+                                        @if(in_array($step->step_key, \App\Services\ProjectWorkflowGates::AUTOMATED_GATES, true))
+                                            <div class="project-workflow-step is-automated"><div class="project-workflow-step-copy"><i class="fa-solid {{ in_array($step->status,['completed','skipped']) ? 'fa-circle-check' : ($step->status==='blocked' ? 'fa-circle-xmark' : 'fa-circle') }}"></i><div><strong>{{ $step->title }}</strong><span>Automated gate · {{ $step->statusLabel() }}</span>@if($step->blocked_reason)<small>{{ $step->blocked_reason }}</small>@endif</div></div><span class="master-badge">Controlled by gate checks</span></div>
+                                        @else
+                                            <form method="POST" action="{{ route('projects.workflow.steps.update',[$project,$step]) }}" class="project-workflow-step">@csrf @method('PATCH')
+                                                <div class="project-workflow-step-copy"><i class="fa-solid {{ in_array($step->status,['completed','skipped']) ? 'fa-circle-check' : ($step->status==='blocked' ? 'fa-circle-xmark' : 'fa-circle') }}"></i><div><strong>{{ $step->title }}</strong><span>{{ $step->product ? $step->product->product_name : 'Project-level control' }} · {{ $step->owner?->name ?: 'Coordinator unassigned' }}</span>@if($step->blocked_reason)<small>{{ $step->blocked_reason }}</small>@endif</div></div>
+                                                <select class="master-select" name="status" aria-label="Status for {{ $step->title }}">
+                                                    @foreach($workflowStepStatuses as $key=>$label)
+                                                        @continue(in_array($key, ['skipped', 'cancelled'], true))
+                                                        <option value="{{ $key }}" @selected($step->status===$key)>{{ $label }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <input class="master-input" name="blocked_reason" value="{{ $step->blocked_reason }}" placeholder="Blocked reason">
+                                                <input type="hidden" name="notes" value="{{ $step->notes }}">
+                                                <button class="master-btn master-btn-soft master-btn-sm" type="submit">Update</button>
+                                            </form>
+                                        @endif
                                     @endforeach
                                 </div>
                             </section>

@@ -18,6 +18,28 @@ class ProjectGateEvaluation extends Model
 
     public function workflow() { return $this->belongsTo(ProjectWorkflow::class, 'project_workflow_id'); }
     public function product() { return $this->belongsTo(ProjectProduct::class, 'project_product_id'); }
+    public function evaluator() { return $this->belongsTo(User::class, 'evaluated_by'); }
     public function overrides() { return $this->hasMany(ProjectGateOverride::class); }
     public function activeOverride() { return $this->hasOne(ProjectGateOverride::class)->whereNull('revoked_at')->latestOfMany(); }
+
+    public function effectiveResult(): string
+    {
+        return $this->result === 'blocked' && ($this->relationLoaded('activeOverride') ? $this->activeOverride : $this->activeOverride()->exists())
+            ? 'overridden'
+            : $this->result;
+    }
+
+    public function resultLabel(): string
+    {
+        return ['passed' => 'Passed', 'blocked' => 'Blocked', 'overridden' => 'Manager override'][$this->effectiveResult()] ?? str($this->effectiveResult())->headline()->toString();
+    }
+
+    public function gateLabel(): string
+    {
+        return [
+            'commercial_baseline' => 'Commercial baseline',
+            'advance_received' => 'Production advance',
+            'dispatch_balance' => 'Pre-dispatch balance',
+        ][$this->gate_key] ?? str($this->gate_key)->headline()->toString();
+    }
 }
