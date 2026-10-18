@@ -62,6 +62,12 @@ class PackagingList extends Model
         return ['air' => 'Air', 'sea' => 'Sea', 'road' => 'Road', 'rail' => 'Rail', 'courier' => 'Courier'];
     }
 
+    public function totalChargeableWeight(): float
+    {
+        $cartons = $this->relationLoaded('cartons') ? $this->cartons : $this->cartons()->get();
+        return round((float) $cartons->sum(fn ($carton) => $carton->totalChargeableWeight()), 3);
+    }
+
     public function recalculate(): void
     {
         $cartons = $this->cartons()->get();

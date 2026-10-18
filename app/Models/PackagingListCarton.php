@@ -42,5 +42,8 @@ class PackagingListCarton extends Model
     public function totalCbm(): float { return round($this->cbmPerCarton() * (int) $this->carton_count, 4); }
     public function totalNetWeight(): float { return round((float) $this->net_weight_per_carton * (int) $this->carton_count, 3); }
     public function totalGrossWeight(): float { return round((float) $this->gross_weight_per_carton * (int) $this->carton_count, 3); }
+    public function volumetricWeightPerCarton(): float { return round($this->cbmPerCarton() * 164, 3); }
+    public function chargeableWeightPerCarton(): float { return max(round((float) $this->gross_weight_per_carton, 3), $this->volumetricWeightPerCarton()); }
+    public function totalChargeableWeight(): float { return round($this->chargeableWeightPerCarton() * (int) $this->carton_count, 3); }
     public function dimensionsLabel(): string { return $this->length_cm.' × '.$this->width_cm.' × '.$this->height_cm.' cm'; }
 }

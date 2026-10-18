@@ -223,6 +223,7 @@ class PackagingListController extends Controller
         $serials = [];
         foreach ($data['cartons'] as $cartonIndex => &$carton) {
             if (($carton['packing_mode'] ?? 'grouped') === 'individual') $carton['carton_count'] = 1;
+            $carton['carton_number'] = (string) ($cartonIndex + 1);
             foreach ($carton['items'] as $itemIndex => $item) foreach (preg_split('/[\r\n,]+/', (string)($item['serial_numbers_text'] ?? '')) as $serial) {
                 $serial = strtoupper(trim($serial)); if ($serial === '') continue;
                 if (isset($serials[$serial])) throw ValidationException::withMessages(["cartons.$cartonIndex.items.$itemIndex.serial_numbers_text" => "Serial number $serial appears more than once in this packaging list."]);

@@ -36,7 +36,7 @@
   }
 
   function update() {
-    let cartons = 0, net = 0, gross = 0, cbm = 0, itemLines = 0, completeGroups = 0;
+    let cartons = 0, net = 0, gross = 0, cbm = 0, chargeable = 0, itemLines = 0, completeGroups = 0;
     const sourceGroups = new Map();
     cartonList.querySelectorAll('[data-carton]').forEach((carton, index) => {
       const countInput = carton.querySelector('[data-carton-count]');
@@ -47,20 +47,33 @@
       const length = number(carton.querySelector('[data-length]')?.value);
       const width = number(carton.querySelector('[data-width]')?.value);
       const height = number(carton.querySelector('[data-height]')?.value);
-      const cartonCbm = length * width * height / 1000000;
+      const cartonCbm = Number((length * width * height / 1000000).toFixed(4));
       const netPerCarton = number(carton.querySelector('[data-net]')?.value);
       const grossPerCarton = number(carton.querySelector('[data-gross]')?.value);
+      const volumetricPerCarton = cartonCbm * 164;
+      const chargeablePerCarton = Math.max(grossPerCarton, volumetricPerCarton);
       if (count > 0 && length > 0 && width > 0 && height > 0 && grossPerCarton >= netPerCarton) completeGroups++;
       cartons += count;
       net += count * netPerCarton;
       gross += count * grossPerCarton;
       cbm += count * cartonCbm;
+      chargeable += count * chargeablePerCarton;
       const heading = carton.querySelector('[data-carton-number]');
       const cbmOutput = carton.querySelector('[data-cbm]');
       const summary = carton.querySelector('[data-carton-summary]');
+      const sequence = carton.querySelector('[data-carton-sequence]');
+      const cartonNumber = carton.querySelector('[name$="[carton_number]"]');
+      const volumetricOutput = carton.querySelector('[data-volumetric]');
+      const chargeableOutput = carton.querySelector('[data-chargeable]');
+      const chargeableBasis = carton.querySelector('[data-chargeable-basis]');
       if (heading) heading.textContent = `Carton group ${index + 1}`;
+      if (sequence) sequence.textContent = String(index + 1);
+      if (cartonNumber) cartonNumber.value = String(index + 1);
       if (cbmOutput) cbmOutput.textContent = cartonCbm.toFixed(4);
-      if (summary) summary.textContent = `${count || 0} carton${count === 1 ? '' : 's'} · ${length || 0} × ${width || 0} × ${height || 0} cm`;
+      if (volumetricOutput) volumetricOutput.textContent = `${volumetricPerCarton.toFixed(3)} kg`;
+      if (chargeableOutput) chargeableOutput.textContent = `${chargeablePerCarton.toFixed(3)} kg`;
+      if (chargeableBasis) chargeableBasis.textContent = volumetricPerCarton > grossPerCarton ? 'Volumetric weight' : 'Gross weight';
+      if (summary) summary.textContent = `Carton no. ${index + 1} · ${count || 0} carton${count === 1 ? '' : 's'} · ${length || 0} × ${width || 0} × ${height || 0} cm`;
       const itemCount = carton.querySelectorAll('[data-item]').length;
       itemLines += itemCount;
       const itemCountOutput = carton.querySelector('[data-item-count]');
@@ -86,7 +99,7 @@
       const label = panel.querySelector('[name$="[carton_label]"]')?.value.trim() || `Carton group ${index + 1}`;
       const count = number(panel.querySelector('[data-carton-count]')?.value);
       const dimensions = [panel.querySelector('[data-length]')?.value, panel.querySelector('[data-width]')?.value, panel.querySelector('[data-height]')?.value].filter(Boolean).join(' × ') || 'Dimensions pending';
-      return `<button type="button" class="pl-carton-tab" role="tab" id="plCartonTab${index}" aria-controls="plCartonPanel${index}" data-carton-tab="${index}"><span>${escapeHtml(label)}</span><small>${count || 0} cartons · ${escapeHtml(dimensions)}</small></button>`;
+      return `<button type="button" class="master-tab pl-carton-tab" role="tab" id="plCartonTab${index}" aria-controls="plCartonPanel${index}" data-carton-tab="${index}"><b>${index + 1}</b><span><strong>${escapeHtml(label)}</strong><small>${count || 0} carton${count === 1 ? '' : 's'} · ${escapeHtml(dimensions)}</small></span></button>`;
     }).join('');
     activateCarton(activeCarton);
     sourceGroups.forEach(group => {
@@ -115,6 +128,7 @@
     root.querySelector('[data-total-net]').textContent = `${net.toFixed(3)} kg`;
     root.querySelector('[data-total-gross]').textContent = `${gross.toFixed(3)} kg`;
     root.querySelector('[data-total-cbm]').textContent = cbm.toFixed(4);
+    root.querySelector('[data-total-chargeable]').textContent = `${chargeable.toFixed(3)} kg`;
   }
   function escapeHtml(value) { const span=document.createElement('span'); span.textContent=String(value); return span.innerHTML; }
   function formatQuantity(value) { return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/0+$/, '').replace(/\.$/, ''); }
