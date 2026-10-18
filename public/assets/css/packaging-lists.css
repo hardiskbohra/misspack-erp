@@ -1,6 +1,6 @@
 /* Packaging list screens extend the shared master surfaces; module CSS owns only layout and meaning. */
 .packaging-list-form,.packaging-list-show{display:grid;gap:var(--master-space-4,16px)}
-.packaging-list-show>.master-header,.packaging-list-show>.master-section,.packaging-list-show>.master-table-card,.packaging-list-show>.master-grid>.master-section{margin:0}
+.packaging-list-show>.master-header,.packaging-list-show>.master-stats,.packaging-list-show>.master-section,.packaging-list-show>.master-table-card,.packaging-list-show>.master-grid>.master-section{margin:0}
 .packaging-list-show>.master-section,.packaging-list-show>.pl-breakdown{padding:24px}
 .packaging-list-page{display:grid;gap:var(--master-space-4,16px)}
 .pl-address-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--master-space-4,16px)}
