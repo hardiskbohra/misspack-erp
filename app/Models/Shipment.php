@@ -68,6 +68,11 @@ class Shipment extends Model
         return $this->hasMany(PackagingList::class);
     }
 
+    public function latestPackagingList()
+    {
+        return $this->hasOne(PackagingList::class)->latestOfMany();
+    }
+
     public function histories()
     {
         return $this->hasMany(ShipmentTrackingHistory::class)->latest('event_time')->latest('id');

@@ -8,7 +8,6 @@ use App\Models\PackagingListItem;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
 use App\Models\Shipment;
-use Illuminate\Support\Facades\Auth;
 
 class PackagingListSource
 {
@@ -64,29 +63,6 @@ class PackagingListSource
         ];
     }
 
-    public function createAutomaticFromShipment(Shipment $shipment): ?PackagingList
-    {
-        if (PackagingList::where('shipment_id',$shipment->id)->exists()) return null;
-        $source=$this->shipment($shipment);
-        $list=PackagingList::create(array_merge($source['attributes'],[
-            'packing_number'=>$this->nextNumber(),'packing_date'=>now()->toDateString(),'status'=>'draft',
-            'declaration'=>'I/We hereby certify that the information of this packaging list is true and correct and that the contents of this shipment are as stated above.',
-            'created_by'=>Auth::id() ?: $shipment->created_by,'packing_owner_id'=>Auth::id() ?: $shipment->created_by,'auto_generated'=>true,
-        ]));
-        // A shipment with no item detail still gets a useful draft; carton geometry remains an operator decision.
-        if ($source['cartons']) {
-            foreach ($source['cartons'] as $index=>$row) {
-                $items=$row['items']; unset($row['items']);
-                foreach (['length_cm','width_cm','height_cm','net_weight_per_carton','gross_weight_per_carton'] as $field) if ($row[$field] === '') $row[$field] = 0;
-                $row['sort_order']=$index;
-                $carton=$list->cartons()->create($row);
-                foreach ($items as $itemIndex=>$item) { $item['sort_order']=$itemIndex; $carton->items()->create($item); }
-            }
-            $list->recalculate();
-        }
-        return $list;
-    }
-
     private function lines(string $type, $lines): array
     {
         if ($lines->isEmpty()) return [];
@@ -120,5 +96,4 @@ class PackagingListSource
         $mode=strtolower((string)$mode); return array_key_exists($mode,PackagingList::transportModeOptions()) ? $mode : 'road';
     }
     private function address(array $parts): string { return collect($parts)->filter()->implode(', '); }
-    private function nextNumber(): string { return 'PL'.str_pad((string)(((int)PackagingList::max('id'))+1),4,'0',STR_PAD_LEFT); }
 }

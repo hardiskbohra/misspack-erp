@@ -394,10 +394,17 @@
                                                 Shipping Mark / Stickers
                                             </a>
 
-                                            <a href="{{ route('shipments.print', [$shipment, 'packing-list']) }}" target="_blank">
-                                                <i class="fas fa-print"></i>
-                                                Packing List
-                                            </a>
+                                            @if ($shipment->latestPackagingList)
+                                                <a href="{{ route('packaging-lists.show', $shipment->latestPackagingList) }}">
+                                                    <i class="fa-solid fa-boxes-stacked"></i>
+                                                    View Packaging List
+                                                </a>
+                                            @else
+                                                <a href="{{ route('packaging-lists.create', ['shipment' => $shipment->id]) }}">
+                                                    <i class="fa-solid fa-boxes-stacked"></i>
+                                                    Create Packaging List
+                                                </a>
+                                            @endif
 
                                             <a href="{{ route('shipments.print', [$shipment, 'summary']) }}" target="_blank">
                                                 <i class="fas fa-print"></i>

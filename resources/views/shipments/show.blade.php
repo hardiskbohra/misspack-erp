@@ -59,17 +59,23 @@
             <a href="{{ route('shipments.edit', $shipment) }}" class="master-btn master-btn-primary">
                 <i class="fa-solid fa-pen"></i> Edit Shipment
             </a>
-            <a href="{{ route('packaging-lists.create', ['shipment' => $shipment->id]) }}" class="master-btn master-btn-soft">
-                <i class="fa-solid fa-boxes-stacked"></i> Create Packaging List
-            </a>
+            @if ($shipment->latestPackagingList)
+                <a href="{{ route('packaging-lists.show', $shipment->latestPackagingList) }}" class="master-btn master-btn-soft">
+                    <i class="fa-solid fa-boxes-stacked"></i> View Packaging List
+                </a>
+                <a href="{{ route('packaging-lists.create', ['shipment' => $shipment->id]) }}" class="master-btn master-btn-light">
+                    <i class="fa-solid fa-plus"></i> New Packaging List
+                </a>
+            @else
+                <a href="{{ route('packaging-lists.create', ['shipment' => $shipment->id]) }}" class="master-btn master-btn-soft">
+                    <i class="fa-solid fa-boxes-stacked"></i> Create Packaging List
+                </a>
+            @endif
 
             {{-- Print previews are one capability, so they read as one group. --}}
             <div class="record-action-group" role="group" aria-label="Print and preview">
                 <a href="{{ route('shipments.shipping-mark', $shipment) }}" target="_blank" class="master-btn master-btn-soft">
                     <i class="fa-solid fa-tag"></i> Shipping Mark
-                </a>
-                <a href="{{ route('shipments.print', [$shipment, 'packing-list']) }}" target="_blank" class="master-btn master-btn-soft">
-                    <i class="fas fa-print"></i> Packing List
                 </a>
                 <a href="{{ route('shipments.print', [$shipment, 'delivery-challan']) }}" target="_blank" class="master-btn master-btn-soft">
                     <i class="fas fa-print"></i> Challan

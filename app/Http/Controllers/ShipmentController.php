@@ -13,7 +13,6 @@ use App\Models\ShipmentAttachment;
 use App\Models\ShipmentCost;
 use App\Models\ShipmentTrackingHistory;
 use App\Services\ClientPortalNotifier;
-use App\Services\PackagingListSource;
 use App\Services\SavedViews;
 use App\Services\ShipmentCostCashflowSync;
 use App\Services\ShipmentCostLedger;
@@ -56,7 +55,7 @@ class ShipmentController extends Controller
         // Open shipments first, finished ones below; date is the tie-breaker
         // inside each group (see Shipment::scopePriorityOrder).
         $shipments = $this->filteredQuery($request)
-            ->with('creator')
+            ->with(['creator', 'latestPackagingList'])
             ->withCount('items')
             ->withCount('costs')
             ->withSum(['costs as cost_same_currency' => fn ($query) => $query->whereColumn('shipment_costs.currency', 'shipments.currency')], 'amount')
@@ -175,13 +174,9 @@ class ShipmentController extends Controller
             return $shipment;
         });
 
-        $packagingPrepared = $this->preparePackagingList($shipment);
-
         return redirect()
             ->route('shipments.show', $shipment)
-            ->with($packagingPrepared ? 'success' : 'warning', $packagingPrepared
-                ? 'Shipment created successfully. A draft packaging list was prepared automatically.'
-                : 'Shipment created successfully, but its packaging list could not be prepared. You can create it from this page.');
+            ->with('success', 'Shipment created successfully. Create its packaging list from the Packaging Lists module when packing details are ready.');
     }
 
     public function quickStore(Request $request): RedirectResponse
@@ -217,19 +212,15 @@ class ShipmentController extends Controller
             return $shipment;
         });
 
-        $packagingPrepared = $this->preparePackagingList($shipment);
-
         return redirect()
             ->route('shipments.show', $shipment)
-            ->with($packagingPrepared ? 'success' : 'warning', $packagingPrepared
-                ? 'Quick shipment created successfully. A draft packaging list was prepared automatically.'
-                : 'Quick shipment created successfully, but its packaging list could not be prepared. You can create it from this page.');
+            ->with('success', 'Quick shipment created successfully. Create its packaging list from the Packaging Lists module when needed.');
     }
 
     public function show(Shipment $shipment): View
     {
         $shipment->load([
-            'items', 'histories', 'attachments', 'client', 'project', 'salesInvoice',
+            'items', 'histories', 'attachments', 'client', 'project', 'salesInvoice', 'latestPackagingList',
             'costs.vendor', 'costs.paidAccount',
         ]);
 
@@ -862,8 +853,8 @@ class ShipmentController extends Controller
     }
 
     /**
-     * Print-ready paperwork built from the shipment itself: packing list,
-     * delivery challan or a one-page summary. Downloads a PDF when the dompdf
+     * Print-ready paperwork built from the shipment itself: a delivery
+     * challan or one-page summary. Packaging Lists belong to their own module. Downloads a PDF when the dompdf
      * package is present, otherwise renders the same page for Print > Save as
      * PDF — the pattern already used by the cashflow reports.
      */
@@ -901,7 +892,6 @@ class ShipmentController extends Controller
     public function printPack(Request $request, Shipment $shipment, string $document)
     {
         $views = [
-            'packing-list' => 'shipments.print.packing-list',
             'delivery-challan' => 'shipments.print.delivery-challan',
             'summary' => 'shipments.print.summary',
         ];
@@ -1147,17 +1137,6 @@ class ShipmentController extends Controller
             ->sum('shipment_cost');
 
         return round($inr + $legacyInr, 2);
-    }
-
-    private function preparePackagingList(Shipment $shipment): bool
-    {
-        try {
-            app(PackagingListSource::class)->createAutomaticFromShipment($shipment);
-            return true;
-        } catch (\Throwable $exception) {
-            report($exception);
-            return false;
-        }
     }
 
     private function formData(Shipment $shipment): array

@@ -27,7 +27,6 @@ const invoiceCss = plain(read('public/assets/css/sales-invoices-print.css'));
 const cashflowView = read('resources/views/cashflows/pdf.blade.php');
 const cashflowCss = plain(read('public/assets/css/cashflows-pdf.css'));
 const shipmentViews = [
-    read('resources/views/shipments/print/packing-list.blade.php'),
     read('resources/views/shipments/print/delivery-challan.blade.php'),
     read('resources/views/shipments/print/summary.blade.php'),
 ];
