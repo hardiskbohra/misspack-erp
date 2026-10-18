@@ -29,9 +29,9 @@ check('print uses print media and an A4 landscape page', read('public/assets/css
 const index=read('resources/views/packaging_lists/index.blade.php'), css=read('public/assets/css/packaging-lists.css');
 check('list follows shared page-action, flat-card, filter-drawer and applied-filter patterns', index.includes("@section('page-actions')")&&index.includes('master-card master-card--flat')&&index.includes('<x-filter-trigger')&&index.includes('master-list-applied'));
 check('form is one flat surface divided into shared sections', form.includes('master-card master-card--flat master-form-card')&&(form.match(/master-form-card/g)||[]).length===1&&form.includes('master-section'));
-check('create and edit save from the top action bar', form.includes('form="packagingListForm"')&&form.includes('id="packagingListForm"')&&form.indexOf('Save packaging list')<form.indexOf('master-form-card')&&!form.includes('master-form-actions'));
+check('create and edit save from the application top bar', form.includes("@section('page-actions')")&&form.includes('form="packagingListForm"')&&form.includes('id="packagingListForm"')&&form.indexOf('Save packaging list')<form.indexOf("@section('content')")&&!form.includes('master-form-actions'));
 const show=read('resources/views/packaging_lists/show.blade.php');
-check('duplicate and delete actions live in the record header', show.indexOf("packaging-lists.duplicate")<show.indexOf('master-stats')&&show.indexOf("packaging-lists.destroy")<show.indexOf('master-stats')&&!show.includes('emp-card-foot'));
+check('duplicate and delete actions live in the application top bar', show.includes("@section('page-actions')")&&show.indexOf("packaging-lists.duplicate")<show.indexOf("@section('content')")&&show.indexOf("packaging-lists.destroy")<show.indexOf("@section('content')")&&!show.includes('emp-card-foot'));
 check('screen surfaces use theme tokens rather than fixed light fills', css.slice(0,css.indexOf('.pl-print-body')).includes('var(--mc-card)')&&!/#(?:fff|f8fafc|eff6ff|dbeafe)/i.test(css.slice(0,css.indexOf('.pl-print-body'))));
 const expansion=read('database/migrations/2026_10_17_120000_expand_packaging_lists_for_source_packing_and_labels.php');
 const source=read('app/Services/PackagingListSource.php'), label=read('resources/views/packaging_lists/label.blade.php');

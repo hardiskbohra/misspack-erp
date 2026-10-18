@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @section('title', $list->exists ? 'Edit '.$list->packing_number : 'New Packaging List')
 @section('page-title', $list->exists ? 'Edit Packaging List' : 'New Packaging List')
+@section('page-actions')
+<a class="master-btn master-btn-light" href="{{ $list->exists ? route('packaging-lists.show',$list) : route('packaging-lists.index') }}"><i class="fa-solid fa-xmark"></i> Cancel</a>
+<button class="master-btn master-btn-primary" type="submit" form="packagingListForm"><i class="fa-solid fa-check"></i> Save packaging list</button>
+@endsection
 @push('styles')<link rel="stylesheet" href="{{ $assetVer('assets/css/packaging-lists.css') }}">@endpush
 @section('content')
 @php
@@ -23,7 +27,6 @@
 <div class="master-form packaging-list-form" data-packaging-form data-error-fields="{{ json_encode($errors->keys()) }}">
     <header class="master-card master-card--flat master-header">
         <div><h1>{{ $list->exists ? 'Edit Packaging List' : 'New Packaging List' }}</h1><div class="master-breadcrumb"><a href="{{ url('/') }}">Home</a><span>•</span><a href="{{ route('packaging-lists.index') }}">Packaging Lists</a><span>•</span><span class="active">{{ $list->exists ? $list->packing_number : 'New' }}</span></div></div>
-        <nav class="record-head-actions" aria-label="Packaging list actions"><a class="master-btn master-btn-light" href="{{ $list->exists ? route('packaging-lists.show',$list) : route('packaging-lists.index') }}"><i class="fa-solid fa-xmark"></i> Cancel</a><button class="master-btn master-btn-primary" type="submit" form="packagingListForm"><i class="fa-solid fa-check"></i> Save packaging list</button></nav>
     </header>
     @if($errors->any())<div class="master-alert error"><strong>Please correct the highlighted information.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
     <form id="packagingListForm" method="POST" action="{{ $list->exists ? route('packaging-lists.update',$list) : route('packaging-lists.store') }}" class="master-card master-card--flat master-form-card">
