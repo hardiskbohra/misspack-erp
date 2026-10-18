@@ -258,15 +258,23 @@ class PackagingListController extends Controller
 
     public function label(PackagingListCarton $carton, Request $request): View
     {
-        $data = $request->validate(['format'=>['required',Rule::in(['a4','thermal'])],'copies'=>['required','integer','min:1','max:100'],'reason'=>['nullable','string','max:255']]);
-        $carton->load('packagingList.client', 'items.product');
+        $data = $request->validate(['format'=>['required',Rule::in(['a4','a5','thermal'])],'copies'=>['required','integer','min:1','max:100000'],'reason'=>['nullable','string','max:255']]);
+        $carton->load('packagingList.client', 'packagingList.cartons', 'items.product');
         $format = $data['format'];
         $copies = (int) $data['copies'];
+        if ($copies > (int) $carton->carton_count) {
+            throw ValidationException::withMessages(['copies' => 'Label count cannot exceed the number of cartons in this group.']);
+        }
+        $startCartonNumber = 1;
+        foreach ($carton->packagingList->cartons as $group) {
+            if ($group->is($carton)) break;
+            $startCartonNumber += (int) $group->carton_count;
+        }
         $carton->labelPrints()->create([
             'label_format'=>$format, 'copies'=>$copies, 'reason'=>$data['reason'] ?? null,
             'printed_by'=>Auth::id(), 'printed_at'=>now(),
         ]);
-        return view('packaging_lists.label', compact('carton','format','copies'));
+        return view('packaging_lists.label', compact('carton','format','copies','startCartonNumber'));
     }
 
     private function packingWarnings(array $cartons): array
