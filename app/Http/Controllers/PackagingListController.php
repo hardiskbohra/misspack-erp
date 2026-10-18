@@ -171,7 +171,7 @@ class PackagingListController extends Controller
     private function validated(Request $request, ?PackagingList $list = null): array
     {
         $data = $request->validate([
-            'packing_number' => ['required', 'string', 'max:60', Rule::unique('packaging_lists')->ignore($list)],
+            'packing_number' => ['required', 'string', 'max:60', Rule::unique('packaging_lists')->ignore($list), Rule::when($list === null || $request->input('packing_number') !== $list->packing_number, ['regex:/^MP\/PL\/\d{2}-\d{2}\/\d{3,}$/'])],
             'packing_date' => ['required', 'date'], 'invoice_number' => ['nullable', 'string', 'max:100'],
             'transport_mode' => ['required', Rule::in(array_keys(PackagingList::transportModeOptions()))],
             'status' => ['required', Rule::in(array_keys(PackagingList::statusOptions()))],
@@ -307,8 +307,21 @@ class PackagingListController extends Controller
 
     private function nextNumber(): string
     {
-        $next = ((int) PackagingList::max('id')) + 1;
-        return 'PL'.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+        $today = now();
+        $startYear = (int) $today->format('n') >= 4 ? (int) $today->format('Y') : (int) $today->format('Y') - 1;
+        $financialYear = sprintf('%02d-%02d', $startYear % 100, ($startYear + 1) % 100);
+        $prefix = 'MP/PL/'.$financialYear.'/';
+        $lastSequence = PackagingList::query()
+            ->where('packing_number', 'like', $prefix.'%')
+            ->pluck('packing_number')
+            ->map(function ($number) use ($prefix) {
+                return preg_match('/^'.preg_quote($prefix, '/').'(\d+)$/', (string) $number, $matches)
+                    ? (int) $matches[1]
+                    : 0;
+            })
+            ->max() ?? 0;
+
+        return $prefix.str_pad((string) ($lastSequence + 1), 3, '0', STR_PAD_LEFT);
     }
 
     private function formData(PackagingList $list, array $prefillCartons = []): array
