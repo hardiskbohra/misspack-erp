@@ -24,13 +24,15 @@ check('CRUD, print and duplicate routes exist',  routes.includes("Route::resourc
 check('form includes address snapshots, links and nested editors', ['from_name','bill_to_name','ship_to_name','data-carton-list','plItemTemplate'].every(x=>form.includes(x)));
 check('live calculator derives total quantity and CBM', js.includes('quantity * count')&&js.includes('/ 1000000'));
 check('editor protects minimum carton and item counts', js.includes('at least one item')&&js.includes('at least one carton group'));
-check('print document contains business fields', ['PACKAGING LIST','FROM','BILL TO','SHIP TO','Dimensions (cm)','N.W. / carton','G.W. / carton','DECLARATION','Authorised signatory'].every(x=>print.includes(x)));
+check('print document contains business fields', ['PACKAGING LIST','FROM','BILL TO','SHIP TO','Item description','Dimensions (cm)','N.W. / carton','G.W. / carton','DECLARATION','Authorised signatory'].every(x=>print.includes(x)));
 check('print uses print media and an A4 landscape page', read('public/assets/css/packaging-lists.css').includes('@media print')&&read('public/assets/css/packaging-lists.css').includes('size:A4 landscape'));
-const index=read('resources/views/packaging_lists/index.blade.php'), css=read('public/assets/css/packaging-lists.css');
+const index=read('resources/views/packaging_lists/index.blade.php'), css=read('public/assets/css/packaging-lists.css'), show=read('resources/views/packaging_lists/show.blade.php');
 check('list follows shared page-action, flat-card, filter-drawer and applied-filter patterns', index.includes("@section('page-actions')")&&index.includes('master-card master-card--flat')&&index.includes('<x-filter-trigger')&&index.includes('master-list-applied'));
 check('form is one flat surface divided into shared sections', form.includes('master-card master-card--flat master-form-card')&&(form.match(/master-form-card/g)||[]).length===1&&form.includes('master-section'));
 check('create and edit save from the application top bar', form.includes("@section('page-actions')")&&form.includes('form="packagingListForm"')&&form.includes('id="packagingListForm"')&&form.indexOf('Save packaging list')<form.indexOf("@section('content')")&&!form.includes('master-form-actions'));
-const show=read('resources/views/packaging_lists/show.blade.php');
+check('carton groups are full-width headings with item rows beneath', print.includes('class="pl-print-group"')&&print.includes('colspan="10"')&&show.includes('class="pl-carton-group-row"')&&show.includes('colspan="9"')&&show.indexOf('pl-carton-group-row')<show.indexOf('pl-carton-item-row'));
+check('packaging quantities display as whole numbers', [print,show].every(view=>view.includes('quantity_per_carton,0')&&view.includes('total_quantity,0')));
+check('record cards use guideline padding and one shared vertical rhythm', css.includes('.packaging-list-show>.master-section,.packaging-list-show>.pl-breakdown{padding:24px}')&&css.includes('gap:var(--master-space-4,16px)')&&css.includes('.packaging-list-show>.master-header'));
 check('duplicate and delete actions live in the application top bar', show.includes("@section('page-actions')")&&show.indexOf("packaging-lists.duplicate")<show.indexOf("@section('content')")&&show.indexOf("packaging-lists.destroy")<show.indexOf("@section('content')")&&!show.includes('emp-card-foot'));
 check('screen surfaces use theme tokens rather than fixed light fills', css.slice(0,css.indexOf('.pl-print-body')).includes('var(--mc-card)')&&!/#(?:fff|f8fafc|eff6ff|dbeafe)/i.test(css.slice(0,css.indexOf('.pl-print-body'))));
 const expansion=read('database/migrations/2026_10_17_120000_expand_packaging_lists_for_source_packing_and_labels.php');
