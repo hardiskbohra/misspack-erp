@@ -3,6 +3,9 @@ const fs=require('fs'),path=require('path');
 const root=path.resolve(__dirname,'../..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const migration=read('database/migrations/2026_10_17_100000_create_packaging_lists_table.php');
+const verificationMigration=read('database/migrations/2026_10_18_160000_create_packaging_list_verifications_table.php');
+const verificationModel=read('app/Models/PackagingListVerification.php');
+const verificationService=read('app/Services/PackagingListVerifier.php');
 const model=read('app/Models/PackagingListCarton.php');
 const controller=read('app/Http/Controllers/PackagingListController.php');
 const routes=read('routes/web.php');
@@ -12,6 +15,8 @@ const js=read('public/assets/js/packaging-lists.js');
 let passed=0,failed=0;
 function check(label,value){if(value){passed++;console.log(`PASS ${label}`)}else{failed++;console.error(`FAIL ${label}`)}}
 check('three normalized packaging tables', ['packaging_lists','packaging_list_cartons','packaging_list_items'].every(x=>migration.includes(`Schema::create('${x}'`)));
+check('verification attempts have an auditable normalized table', verificationMigration.includes("Schema::create('packaging_list_verifications'")&&['automated_checks','manual_checks','content_hash','verified_by','verified_at'].every(x=>verificationMigration.includes(`'${x}'`))&&verificationMigration.includes('cascadeOnDelete'));
+check('verification model exposes pass, warning and fail states', ['STATUS_PASSED','STATUS_WARNING','STATUS_FAILED','function passed','function statusLabel'].every(x=>verificationModel.includes(x)));
 check('linked records use nullable foreign keys', ['vendor_id','client_id','project_id','shipment_id','sales_invoice_id'].every(x=>migration.includes(`foreignId('${x}')->nullable()`)));
 check('cartons and items cascade with document', (migration.match(/cascadeOnDelete\(\)/g)||[]).length>=2);
 check('CBM uses cubic centimetres to cubic metres', model.includes('/ 1000000'));
@@ -20,7 +25,10 @@ check('chargeable weight is the greater of gross weight or CBM × 164', model.in
 check('nested input has bounds and at least one carton/item', /cartons.*min:1.*max:200/.test(controller)&&/cartons\.\*\.items.*min:1.*max:200/.test(controller));
 check('nested persistence and aggregate recalculation are transactional', controller.includes('DB::transaction')&&controller.includes('$list->recalculate()'));
 check('server derives total quantity instead of trusting the browser', controller.includes("$item['total_quantity'] = round")&&read('resources/views/packaging_lists/partials/item-editor.blade.php').includes('data-total-qty readonly'));
-check('CRUD, print, duplicate and status routes exist', routes.includes("Route::resource('packaging-lists'")&&routes.includes("'packaging-lists.print'")&&routes.includes("'packaging-lists.duplicate'")&&routes.includes("'packaging-lists.status'"));
+check('CRUD, print, duplicate, status and verification routes exist', routes.includes("Route::resource('packaging-lists'")&&routes.includes("'packaging-lists.print'")&&routes.includes("'packaging-lists.duplicate'")&&routes.includes("'packaging-lists.status'")&&routes.includes("'packaging-lists.verify'"));
+check('phase 3 runs structured automated and physical checks', ['carton_specs','item_quantities','serials','traceability','source_allocation','label_identity'].every(x=>verificationService.includes(`'${x}'`))&&['contents_match','quantities_counted','cartons_intact','weights_verified','labels_applied'].every(x=>verificationService.includes(`'${x}'`)));
+check('verification fingerprint invalidates stale packing approvals', verificationService.includes("hash('sha256'")&&controller.includes('hash_equals((string) $verification->content_hash')&&controller.includes('assertVerifiedForStatus'));
+check('confirmed and dispatched states require current successful verification', controller.includes("in_array($status, ['confirmed', 'dispatched']")&&controller.includes('Run a successful packing verification'));
 check('packaging numbers use a financial-year MP/PL sequence', controller.includes("$prefix = 'MP/PL/'.$financialYear.'/'")&&controller.includes("str_pad((string) ($lastSequence + 1), 3")&&controller.includes("regex:/^MP\\/PL\\/\\d{2}-\\d{2}\\/\\d{3,}$/"));
 check('form includes address snapshots, links and nested editors', ['from_name','bill_to_name','ship_to_name','data-carton-list','plItemTemplate'].every(x=>form.includes(x)));
 check('live calculator derives total quantity and CBM', js.includes('quantity * count')&&js.includes('/ 1000000'));
@@ -43,6 +51,7 @@ check('packaging print table uses readable ten-pixel text', css.includes('.pl-do
 check('record cards and stats use one shared vertical rhythm', css.includes('.packaging-list-show>.master-section,.packaging-list-show>.pl-breakdown{padding:24px}')&&css.includes('gap:var(--master-space-4,16px)')&&css.includes('.packaging-list-show>.master-header,.packaging-list-show>.master-stats'));
 check('default carton labels are not repeated beside their carton number', [print,show].every(view=>view.includes("strcasecmp(trim($carton->carton_label), 'Carton '.($carton->carton_number ?: $loop->iteration)) !== 0")));
 check('duplicate and delete actions live in the application top bar', show.includes("@section('page-actions')")&&show.indexOf("packaging-lists.duplicate")<show.indexOf("@section('content')")&&show.indexOf("packaging-lists.destroy")<show.indexOf("@section('content')")&&!show.includes('emp-card-foot'));
+check('verification UI shows automated results, physical checklist and history', ['Packing verification','plVerificationModal','Automated checks','Physical checklist','Verification history','packaging-lists.verify'].every(x=>show.includes(x))&&css.includes('.pl-verification-summary')&&css.includes('.pl-manual-checks'));
 check('screen surfaces use theme tokens rather than fixed light fills', css.slice(0,css.indexOf('.pl-print-body')).includes('var(--mc-card)')&&!/#(?:fff|f8fafc|eff6ff|dbeafe)/i.test(css.slice(0,css.indexOf('.pl-print-body'))));
 const expansion=read('database/migrations/2026_10_17_120000_expand_packaging_lists_for_source_packing_and_labels.php');
 const source=read('app/Services/PackagingListSource.php'), label=read('resources/views/packaging_lists/label.blade.php');

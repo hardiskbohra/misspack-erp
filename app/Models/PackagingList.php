@@ -30,6 +30,8 @@ class PackagingList extends Model
     ];
 
     public function cartons() { return $this->hasMany(PackagingListCarton::class)->orderBy('sort_order')->orderBy('id'); }
+    public function verifications() { return $this->hasMany(PackagingListVerification::class)->latest('verified_at')->latest('id'); }
+    public function latestVerification() { return $this->hasOne(PackagingListVerification::class)->latestOfMany('verified_at'); }
     public function vendor() { return $this->belongsTo(Vendor::class); }
     public function client() { return $this->belongsTo(Client::class); }
     public function project() { return $this->belongsTo(Project::class); }

@@ -6,11 +6,13 @@ use App\Models\Client;
 use App\Models\Organisation;
 use App\Models\PackagingList;
 use App\Models\PackagingListCarton;
+use App\Models\PackagingListVerification;
 use App\Models\Product;
 use App\Models\Project;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
 use App\Services\PackagingListSource;
+use App\Services\PackagingListVerifier;
 use App\Models\Shipment;
 use App\Models\Vendor;
 use Illuminate\Http\RedirectResponse;
@@ -30,7 +32,7 @@ class PackagingListController extends Controller
         $mode = (string) $request->query('mode', 'all');
 
         $base = PackagingList::query()
-            ->with(['vendor', 'client', 'project', 'shipment'])
+            ->with(['vendor', 'client', 'project', 'shipment', 'latestVerification'])
             ->withCount('cartons')
             ->when($search, fn ($query) => $query->where(function ($nested) use ($search) {
                 $nested->where('packing_number', 'like', "%{$search}%")
@@ -86,6 +88,9 @@ class PackagingListController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
+        if (in_array($data['status'], ['confirmed', 'dispatched'], true)) {
+            throw ValidationException::withMessages(['status' => 'Save the packaging list as a draft, complete verification, then advance its status.']);
+        }
         $list = DB::transaction(function () use ($data) {
             $cartons = $data['cartons'];
             unset($data['cartons']);
@@ -100,10 +105,15 @@ class PackagingListController extends Controller
         return redirect()->route('packaging-lists.show', $list)->with('success', 'Packaging list created successfully.');
     }
 
-    public function show(PackagingList $packagingList): View
+    public function show(PackagingList $packagingList, PackagingListVerifier $verifier): View
     {
-        $packagingList->load(['cartons.items.product', 'vendor', 'client', 'project', 'shipment', 'salesInvoice', 'purchaseInvoice', 'creator', 'packingOwner']);
-        return view('packaging_lists.show', ['list' => $packagingList]);
+        $packagingList->load(['cartons.items.product', 'vendor', 'client', 'project', 'shipment', 'salesInvoice', 'purchaseInvoice', 'creator', 'packingOwner', 'verifications.verifier']);
+        return view('packaging_lists.show', [
+            'list' => $packagingList,
+            'verificationInspection' => $verifier->inspect($packagingList),
+            'verificationFingerprint' => $verifier->fingerprint($packagingList),
+            'manualVerificationChecks' => PackagingListVerifier::MANUAL_CHECKS,
+        ]);
     }
 
     public function edit(PackagingList $packagingList): View
@@ -112,27 +122,63 @@ class PackagingListController extends Controller
         return view('packaging_lists.form', $this->formData($packagingList));
     }
 
-    public function update(Request $request, PackagingList $packagingList): RedirectResponse
+    public function update(Request $request, PackagingList $packagingList, PackagingListVerifier $verifier): RedirectResponse
     {
         $data = $this->validated($request, $packagingList);
-        DB::transaction(function () use ($data, $packagingList) {
+        DB::transaction(function () use ($data, $packagingList, $verifier) {
             $cartons = $data['cartons'];
             unset($data['cartons']);
             $data['packing_warnings'] = $this->packingWarnings($cartons);
             $packagingList->update($data);
             $packagingList->cartons()->delete();
             $this->syncCartons($packagingList, $cartons);
+            $this->assertVerifiedForStatus($packagingList->fresh(), $data['status'], $verifier);
         });
 
         return redirect()->route('packaging-lists.show', $packagingList)->with('success', 'Packaging list updated successfully.');
     }
 
-    public function updateStatus(Request $request, PackagingList $packagingList): RedirectResponse
+    public function updateStatus(Request $request, PackagingList $packagingList, PackagingListVerifier $verifier): RedirectResponse
     {
         $data = $request->validate(['status' => ['required', Rule::in(array_keys(PackagingList::statusOptions()))]]);
+        $this->assertVerifiedForStatus($packagingList, $data['status'], $verifier);
         $packagingList->update(['status' => $data['status']]);
 
         return back()->with('success', 'Packaging list status changed to '.$packagingList->statusLabel().'.');
+    }
+
+    public function verify(Request $request, PackagingList $packagingList, PackagingListVerifier $verifier): RedirectResponse
+    {
+        $rules = ['notes' => ['nullable', 'string', 'max:2000']];
+        foreach (array_keys(PackagingListVerifier::MANUAL_CHECKS) as $key) $rules["checks.$key"] = ['required', 'boolean'];
+        $data = $request->validate($rules);
+
+        $inspection = $verifier->inspect($packagingList);
+        $manualChecks = collect(PackagingListVerifier::MANUAL_CHECKS)->map(fn ($label, $key) => [
+            'key' => $key,
+            'label' => $label,
+            'passed' => (bool) data_get($data, "checks.$key", false),
+        ])->values()->all();
+        $manualFailed = collect($manualChecks)->contains(fn ($check) => ! $check['passed']);
+        $status = $inspection['failed'] > 0 || $manualFailed
+            ? PackagingListVerification::STATUS_FAILED
+            : ($inspection['warnings'] > 0 ? PackagingListVerification::STATUS_WARNING : PackagingListVerification::STATUS_PASSED);
+
+        $packagingList->verifications()->create([
+            'status' => $status,
+            'content_hash' => $verifier->fingerprint($packagingList),
+            'automated_checks' => $inspection['checks'],
+            'manual_checks' => $manualChecks,
+            'notes' => $data['notes'] ?? null,
+            'verified_by' => Auth::id(),
+            'verified_at' => now(),
+        ]);
+
+        $message = $status === PackagingListVerification::STATUS_FAILED
+            ? 'Verification recorded with failed checks. Correct the issues and run it again.'
+            : 'Packaging verification completed successfully.';
+
+        return back()->with($status === PackagingListVerification::STATUS_FAILED ? 'warning' : 'success', $message);
     }
 
     public function destroy(PackagingList $packagingList): RedirectResponse
@@ -303,6 +349,21 @@ class PackagingListController extends Controller
             if ($excess > 0) $warnings[] = ['type'=>'overpacked','description'=>$row['description'],'excess'=>round($excess,3)];
         }
         return $warnings;
+    }
+
+    private function assertVerifiedForStatus(PackagingList $list, string $status, PackagingListVerifier $verifier): void
+    {
+        if (! in_array($status, ['confirmed', 'dispatched'], true)) return;
+
+        $verification = $list->latestVerification()->first();
+        $isCurrent = $verification
+            && $verification->passed()
+            && hash_equals((string) $verification->content_hash, $verifier->fingerprint($list));
+        if (! $isCurrent) {
+            throw ValidationException::withMessages([
+                'status' => 'Run a successful packing verification for the current carton and item details before confirming or dispatching this list.',
+            ]);
+        }
     }
 
     private function nextNumber(): string
