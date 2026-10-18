@@ -70,8 +70,8 @@
       if (sequence) sequence.textContent = String(index + 1);
       if (cartonNumber) cartonNumber.value = String(index + 1);
       if (cbmOutput) cbmOutput.textContent = cartonCbm.toFixed(4);
-      if (volumetricOutput) volumetricOutput.textContent = `${volumetricPerCarton.toFixed(3)} kg`;
-      if (chargeableOutput) chargeableOutput.textContent = `${chargeablePerCarton.toFixed(3)} kg`;
+      if (volumetricOutput) volumetricOutput.textContent = `${volumetricPerCarton.toFixed(1)} kg`;
+      if (chargeableOutput) chargeableOutput.textContent = `${chargeablePerCarton.toFixed(1)} kg`;
       if (chargeableBasis) chargeableBasis.textContent = volumetricPerCarton > grossPerCarton ? 'Volumetric weight' : 'Gross weight';
       if (summary) summary.textContent = `Carton no. ${index + 1} · ${count || 0} carton${count === 1 ? '' : 's'} · ${length || 0} × ${width || 0} × ${height || 0} cm`;
       const itemCount = carton.querySelectorAll('[data-item]').length;
@@ -125,13 +125,13 @@
     root.querySelector('[data-total-cartons]').textContent = String(cartons);
     const completeness = root.querySelector('[data-summary-completeness]');
     if (completeness) completeness.textContent = completeGroups === panels.length ? 'All carton groups complete' : `${completeGroups} of ${panels.length} carton groups complete`;
-    root.querySelector('[data-total-net]').textContent = `${net.toFixed(3)} kg`;
-    root.querySelector('[data-total-gross]').textContent = `${gross.toFixed(3)} kg`;
+    root.querySelector('[data-total-net]').textContent = `${net.toFixed(1)} kg`;
+    root.querySelector('[data-total-gross]').textContent = `${gross.toFixed(1)} kg`;
     root.querySelector('[data-total-cbm]').textContent = cbm.toFixed(4);
-    root.querySelector('[data-total-chargeable]').textContent = `${chargeable.toFixed(3)} kg`;
+    root.querySelector('[data-total-chargeable]').textContent = `${chargeable.toFixed(1)} kg`;
   }
   function escapeHtml(value) { const span=document.createElement('span'); span.textContent=String(value); return span.innerHTML; }
-  function formatQuantity(value) { return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/0+$/, '').replace(/\.$/, ''); }
+  function formatQuantity(value) { return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/0+$/, '').replace(/\.$/, ''); }
   function addItem(carton) {
     const cartonKey = carton.querySelector('[name*="[carton_count]"]').name.match(/cartons\[([^\]]+)\]/)?.[1] ?? nextCarton;
     const html = itemTemplate.innerHTML.replaceAll('__CARTON__', cartonKey).replaceAll('__ITEM__', String(nextItem++));

@@ -14,8 +14,8 @@
         <div class="pl-weight-grid">
             <div class="master-field"><label class="master-label">Net weight / carton (kg) <span class="master-required">*</span></label><input class="master-input" type="number" min="0" step="0.001" name="cartons[{{ $cartonIndex }}][net_weight_per_carton]" value="{{ $carton['net_weight_per_carton'] ?? '' }}" data-net required></div>
             <div class="master-field"><label class="master-label">Gross weight / carton (kg) <span class="master-required">*</span></label><input class="master-input" type="number" min="0" step="0.001" name="cartons[{{ $cartonIndex }}][gross_weight_per_carton]" value="{{ $carton['gross_weight_per_carton'] ?? '' }}" data-gross required></div>
-            <div class="pl-calculated-field"><span>Volumetric / carton</span><strong data-volumetric>0.000 kg</strong><small>CBM × 164</small></div>
-            <div class="pl-calculated-field is-chargeable"><span>Chargeable / carton</span><strong data-chargeable>0.000 kg</strong><small data-chargeable-basis>Gross weight</small></div>
+            <div class="pl-calculated-field"><span>Volumetric / carton</span><strong data-volumetric>0.0 kg</strong><small>CBM × 164</small></div>
+            <div class="pl-calculated-field is-chargeable"><span>Chargeable / carton</span><strong data-chargeable>0.0 kg</strong><small data-chargeable-basis>Gross weight</small></div>
         </div>
     </div>
 
