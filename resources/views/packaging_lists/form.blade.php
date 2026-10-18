@@ -22,11 +22,11 @@
 @endphp
 <div class="master-form packaging-list-form" data-packaging-form data-error-fields="{{ json_encode($errors->keys()) }}">
     <header class="master-card master-card--flat master-header">
-        <h1>{{ $list->exists ? 'Edit Packaging List' : 'New Packaging List' }}</h1>
-        <div class="master-breadcrumb"><a href="{{ url('/') }}">Home</a><span>•</span><a href="{{ route('packaging-lists.index') }}">Packaging Lists</a><span>•</span><span class="active">{{ $list->exists ? $list->packing_number : 'New' }}</span></div>
+        <div><h1>{{ $list->exists ? 'Edit Packaging List' : 'New Packaging List' }}</h1><div class="master-breadcrumb"><a href="{{ url('/') }}">Home</a><span>•</span><a href="{{ route('packaging-lists.index') }}">Packaging Lists</a><span>•</span><span class="active">{{ $list->exists ? $list->packing_number : 'New' }}</span></div></div>
+        <nav class="record-head-actions" aria-label="Packaging list actions"><a class="master-btn master-btn-light" href="{{ $list->exists ? route('packaging-lists.show',$list) : route('packaging-lists.index') }}"><i class="fa-solid fa-xmark"></i> Cancel</a><button class="master-btn master-btn-primary" type="submit" form="packagingListForm"><i class="fa-solid fa-check"></i> Save packaging list</button></nav>
     </header>
     @if($errors->any())<div class="master-alert error"><strong>Please correct the highlighted information.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
-    <form method="POST" action="{{ $list->exists ? route('packaging-lists.update',$list) : route('packaging-lists.store') }}" class="master-card master-card--flat master-form-card">
+    <form id="packagingListForm" method="POST" action="{{ $list->exists ? route('packaging-lists.update',$list) : route('packaging-lists.store') }}" class="master-card master-card--flat master-form-card">
         @csrf @if($list->exists) @method('PUT') @endif
         <input type="hidden" name="source_type" value="{{ old('source_type',$list->source_type) }}">
         <input type="hidden" name="source_id" value="{{ old('source_id',$list->source_id) }}">
@@ -87,7 +87,6 @@
 
         <div class="master-section pl-compact-section"><div class="master-section-head"><div><h2 class="master-section-title">Certification and notes</h2><p class="master-sub">Declaration, signature names and internal notes</p></div><button type="button" class="master-btn master-btn-soft master-btn-sm" data-open-pl-modal="plCertificationModal"><i class="fa-solid fa-pen"></i> Edit certification</button></div></div>
         <dialog class="pl-modal" id="plCertificationModal" aria-labelledby="plCertificationTitle"><div class="master-modal-card pl-modal-card"><header class="master-modal-header pl-modal-head"><div><p class="master-eyebrow">Packaging list</p><h2 id="plCertificationTitle">Certification and notes</h2><p>These details appear at the end of the printable document, except internal notes.</p></div><button type="button" class="master-modal-close" data-close-pl-modal aria-label="Close"><i class="fa-solid fa-xmark"></i></button></header><div class="master-modal-body pl-modal-body"><div class="master-field"><label class="master-label">Declaration</label><textarea class="master-textarea" name="declaration" rows="4">{{ old('declaration',$list->declaration) }}</textarea></div><div class="master-detail-grid"><div class="master-field"><label class="master-label">Customer signature name</label><input class="master-input" name="customer_signature" value="{{ old('customer_signature',$list->customer_signature) }}"></div><div class="master-field"><label class="master-label">Supplier signature name</label><input class="master-input" name="supplier_signature" value="{{ old('supplier_signature',$list->supplier_signature) }}"></div></div><div class="master-field"><label class="master-label">Internal notes</label><textarea class="master-textarea" name="notes" rows="4">{{ old('notes',$list->notes) }}</textarea></div></div><footer class="master-modal-footer pl-modal-foot"><button type="button" class="master-btn master-btn-primary" data-close-pl-modal>Done</button></footer></div></dialog>
-        <div class="master-form-actions"><a class="master-btn master-btn-light" href="{{ route('packaging-lists.index') }}">Cancel</a><button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-check"></i> Save packaging list</button></div>
     </form>
 </div>
 
