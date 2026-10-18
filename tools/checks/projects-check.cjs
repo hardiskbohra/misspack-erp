@@ -459,8 +459,8 @@ const branchKeys = [...showView.matchAll(/@(?:if|elseif) \(\$tab === '([a-z_]+)'
 const tallyBlock = controller.match(/'tabCounts' => \[([\s\S]*?)\n            \],/)?.[1] || '';
 
 check('every tab in the strip has a panel, and every panel a tab',
-    stripKeys.length === 11
-    && branchKeys.length === 10
+    stripKeys.length === 12
+    && branchKeys.length === 11
     && stripKeys.filter(key => key !== 'overview').every(key => branchKeys.includes(key))
     && branchKeys.every(key => stripKeys.includes(key))
     /* The Invoices chip counts the four sections it opens — the same four
@@ -477,15 +477,15 @@ check('one panel is rendered per request',
     !/data-tab-panel=/.test(showView)
     && !/pd-tab-(panel|btn)/.test(showView + recordViews + milestoneViews)
     && !/function initTabs/.test(script)
-    && showIncludes.length === 11
-    && ['record-overview', 'record-products', 'record-money', 'record-shipments', 'record-documents',
+    && showIncludes.length === 12
+    && ['record-overview', 'record-workflow', 'record-products', 'record-money', 'record-shipments', 'record-documents',
         'record-invoices', 'record-comments', 'record-activity', 'record-logs', 'milestones-tab',
         'feedback-tab']
         .every(name => showIncludes.includes('projects.partials.' + name))
-    && (showView.match(/@elseif \(\$tab === '/g) || []).length === 9);
+    && (showView.match(/@elseif \(\$tab === '/g) || []).length === 10);
 
 check('every panel is a panel of the shared kind',
-    recordFiles.length === 9
+    recordFiles.length === 10
     && Object.values(recordSource).every(text => /class="master-tab-panel"/.test(text))
     && Object.values(recordSource).every(text => /id="project-panel-[a-z]+"/.test(text))
     && Object.values(recordSource).every(text => /role="tabpanel"/.test(text))
@@ -564,7 +564,7 @@ const nesting = recordFiles.concat(['resources/views/projects/partials/milestone
     .flatMap(file => nestingErrors(file, read(file)));
 
 check('every panel is well formed',
-    recordFiles.length === 9 && nesting.length === 0,
+    recordFiles.length === 10 && nesting.length === 0,
     nesting.slice(0, 3).join(' | '));
 
 /* The wrapper is the panel's only child: the cards inside it stack on the

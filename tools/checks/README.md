@@ -65,6 +65,12 @@ node tools/checks/projects-check.cjs  # the projects list is the shared master-l
                                       # every class a screen names carried by a rule, and the
                                       # client following a project through the login portal
                                       # rather than the removed token link
+node tools/checks/project-workflow-check.cjs
+                                      # the standard project-execution foundation: independent
+                                      # product steps, weighted calculated progress beside the
+                                      # coordinator report, structured Proforma payment policy,
+                                      # auditable gate snapshots and manager overrides, and the
+                                      # workflow command centre on the project record
 node tools/checks/notes-check.cjs     # the notes module: a note is private to the login that wrote
                                       # it — one owner scope and one row door (a 404 for anybody
                                       # else), one writer, one colour vocabulary with a rule and

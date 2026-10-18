@@ -32,6 +32,7 @@ use App\Http\Controllers\LeadCommentController;
 use App\Http\Controllers\ProjectAttachmentController;
 use App\Http\Controllers\ProjectCommentController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectWorkflowController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectTrackingController;
 use App\Http\Controllers\ProjectMilestoneController;
@@ -380,6 +381,9 @@ Route::middleware('auth')->group(function () {
         // Project Management
         Route::post('/projects/quick', [ProjectController::class, 'quickStore'])->name('projects.quickStore');
         Route::patch('/projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.status.update');
+        Route::post('/projects/{project}/workflow', [ProjectWorkflowController::class, 'start'])->name('projects.workflow.start');
+        Route::patch('/projects/{project}/workflow/report', [ProjectWorkflowController::class, 'report'])->name('projects.workflow.report');
+        Route::patch('/projects/{project}/workflow/steps/{step}', [ProjectWorkflowController::class, 'updateStep'])->name('projects.workflow.steps.update');
 
         /* One route: a project product is created by the invoice or purchase
            document that mentions it (`App\Services\ProjectProducts`) and is not

@@ -67,7 +67,7 @@ button. It is now the shared record page:
 ├── .project-attention            only when the target date has passed
 ├── .master-stats                 four .master-stat--flat figures
 └── .master-tabs-card
-    ├── nav.master-tabs            eleven links, each ?tab=key, each with its count
+    ├── nav.master-tabs            twelve links, each ?tab=key, each with its count
     └── .master-tabs-panels        one panel per request
 ```
 

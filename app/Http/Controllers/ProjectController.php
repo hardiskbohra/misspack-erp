@@ -7,6 +7,7 @@ use App\Models\ProjectLog;
 use App\Models\ProjectProduct;
 use App\Models\User;
 use App\Models\ProjectMilestone;
+use App\Services\ProjectWorkflowExecution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,6 +27,7 @@ class ProjectController extends Controller
      */
     private const SHOW_TABS = [
         'overview' => 'Overview',
+        'workflow' => 'Workflow',
         'products' => 'Products',
         'milestones' => 'Milestones',
         'payments' => 'Payments',
@@ -118,7 +120,7 @@ class ProjectController extends Controller
         ]));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, ProjectWorkflowExecution $workflowExecution): RedirectResponse
     {
         $data = $this->validatedData($request);
         $data['project_number'] = $data['project_number'] ?: $this->makeProjectNumber();
@@ -130,10 +132,10 @@ class ProjectController extends Controller
             $data['progress_percent'] = 100;
         }
 
-        $project = DB::transaction(function () use ($data) {
+        $project = DB::transaction(function () use ($data, $workflowExecution) {
             $project = Project::create($data);
-
-            $this->writeLog($project, 'created', 'Project created', 'Project was created from the deal/project form.', null, $project->toArray(), false);
+            $workflowExecution->start($project, Auth::id());
+            $this->writeLog($project, 'created', 'Project created', 'Project was created with the standard execution workflow.', null, $project->toArray(), false);
 
             return $project;
         });
@@ -141,7 +143,7 @@ class ProjectController extends Controller
         return redirect()->route('projects.show', $project)->with('success', 'Project created successfully.');
     }
 
-    public function quickStore(Request $request): RedirectResponse
+    public function quickStore(Request $request, ProjectWorkflowExecution $workflowExecution): RedirectResponse
     {
         $data = $request->validate([
             'client_id' => ['required', 'integer'],
@@ -152,7 +154,7 @@ class ProjectController extends Controller
             'priority' => ['nullable', Rule::in(array_keys(Project::priorityOptions()))],
         ]);
 
-        $project = DB::transaction(function () use ($data) {
+        $project = DB::transaction(function () use ($data, $workflowExecution) {
             $project = Project::create([
                 'project_number' => $this->makeProjectNumber(),
                 'client_id' => $data['client_id'],
@@ -170,7 +172,8 @@ class ProjectController extends Controller
                 'created_by' => Auth::id(),
             ]);
 
-            $this->writeLog($project, 'created', 'Quick project created', 'Project was created from quick create modal.', null, $project->toArray(), false);
+            $workflowExecution->start($project, Auth::id());
+            $this->writeLog($project, 'created', 'Quick project created', 'Project and its standard execution workflow were created from quick create.', null, $project->toArray(), false);
 
             return $project;
         });
@@ -252,6 +255,13 @@ class ProjectController extends Controller
             }
         }
 
+        $workflow = null;
+        if (Schema::hasTable('project_workflows')) {
+            $workflow = $project->workflow()
+                ->with(['steps.product', 'steps.owner', 'reporter', 'commercialInvoice'])
+                ->first();
+        }
+
         $cashflowCount = $project->relationLoaded('cashflowEntries') ? $project->cashflowEntries->count() : 0;
         if ($project->relationLoaded('cashflowAllocations')) {
             $cashflowCount += $project->cashflowAllocations->count();
@@ -259,10 +269,14 @@ class ProjectController extends Controller
 
         return view('projects.show', array_merge($this->sharedData(), [
             'project' => $project,
+            'workflow' => $workflow,
+            'workflowStages' => ProjectWorkflowExecution::stageOptions(),
+            'workflowStepStatuses' => \App\Models\ProjectWorkflowStep::statusOptions(),
             'unallocatedCash' => app(\App\Services\UnallocatedCashflows::class)->forProject($project->id),
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
             'tabCounts' => [
+                'workflow' => $workflow?->steps?->whereNotIn('status', ['completed', 'skipped'])->count() ?? 0,
                 'products' => $project->products->count(),
                 'milestones' => $project->milestones->count(),
                 'payments' => $cashflowCount,

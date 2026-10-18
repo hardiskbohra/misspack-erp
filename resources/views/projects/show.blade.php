@@ -164,7 +164,9 @@
             </nav>
 
             <div class="master-tabs-panels">
-                @if ($tab === 'products')
+                @if ($tab === 'workflow')
+                    @include('projects.partials.record-workflow')
+                @elseif ($tab === 'products')
                     @include('projects.partials.record-products')
                 @elseif ($tab === 'milestones')
                     @include('projects.partials.milestones-tab')

@@ -378,6 +378,10 @@
                             <div class="master-field"><label class="master-label" for="paymentTerms">Payment
                                     Terms</label><input class="master-input" id="paymentTerms" name="payment_terms"
                                     value="{{ old('payment_terms', $invoice->payment_terms) }}"></div>
+                            <div class="master-field"><label class="master-label" for="advancePercentage">Required advance %</label><input class="master-input" id="advancePercentage" type="number" name="advance_percentage" min="0" max="100" step="0.01" value="{{ old('advance_percentage', $invoice->advance_percentage) }}" placeholder="For workflow gate"></div>
+                            <div class="master-field"><label class="master-label" for="paymentTolerance">Payment tolerance</label><input class="master-input" id="paymentTolerance" type="number" name="payment_tolerance" min="0" step="0.01" value="{{ old('payment_tolerance', $invoice->payment_tolerance ?? 0) }}"></div>
+                            <label class="master-check"><input type="hidden" name="advance_required" value="0"><input type="checkbox" name="advance_required" value="1" @checked(old('advance_required', $invoice->advance_required))><span>Advance required before production</span></label>
+                            <label class="master-check"><input type="hidden" name="balance_before_dispatch" value="0"><input type="checkbox" name="balance_before_dispatch" value="1" @checked(old('balance_before_dispatch', $invoice->balance_before_dispatch))><span>Complete balance required before dispatch</span></label>
                             <div class="master-field"><label class="master-label" for="deliveryTerms">Delivery
                                     Terms</label><input class="master-input" id="deliveryTerms" name="delivery_terms"
                                     value="{{ old('delivery_terms', $invoice->delivery_terms) }}"></div>

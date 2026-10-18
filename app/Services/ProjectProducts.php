@@ -120,6 +120,16 @@ class ProjectProducts
             $touched++;
         }
 
+        if ($touched > 0 && Schema::hasTable('project_workflows')) {
+            $workflow = \App\Models\ProjectWorkflow::query()->where('project_id', $projectId)->first();
+            if ($workflow) {
+                $project = $workflow->project()->with('products')->firstOrFail();
+                $execution = app(ProjectWorkflowExecution::class);
+                $execution->sync($workflow, $project);
+                $execution->recalculate($workflow);
+            }
+        }
+
         return $touched;
     }
 

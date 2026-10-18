@@ -625,6 +625,10 @@ class SalesInvoiceController extends Controller
             'currency' => $client ? ($client->preferred_currency ?? 'INR') : 'INR',
             'gst_type' => 'intra_state',
             'payment_terms' => '50% advance, balance before dispatch',
+            'advance_required' => $invoiceType === 'proforma',
+            'advance_percentage' => $invoiceType === 'proforma' ? 50 : null,
+            'balance_before_dispatch' => $invoiceType === 'proforma',
+            'payment_tolerance' => 0,
             'delivery_terms' => 'As mutually discussed',
             'dispatch_terms' => 'Dispatch after payment and approval confirmation',
             'terms_conditions' => SalesInvoice::defaultTerms(),
@@ -805,6 +809,10 @@ class SalesInvoiceController extends Controller
             'shipping_pincode' => ['nullable', 'string', 'max:30'],
 
             'payment_terms' => ['nullable', 'string', 'max:255'],
+            'advance_required' => ['nullable', 'boolean'],
+            'advance_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'balance_before_dispatch' => ['nullable', 'boolean'],
+            'payment_tolerance' => ['nullable', 'numeric', 'min:0'],
             'delivery_terms' => ['nullable', 'string', 'max:255'],
             'dispatch_terms' => ['nullable', 'string', 'max:255'],
             'transport_mode' => ['nullable', 'string', 'max:255'],
@@ -849,6 +857,10 @@ class SalesInvoiceController extends Controller
         $data['amount_paid'] = $data['amount_paid'] ?? 0;
         $data['terms_conditions'] = $data['terms_conditions'] ?: SalesInvoice::defaultTerms();
         $data['show_client_portal'] = $request->boolean('show_client_portal');
+        $data['advance_required'] = $request->boolean('advance_required');
+        $data['balance_before_dispatch'] = $request->boolean('balance_before_dispatch');
+        $data['advance_percentage'] = $data['advance_required'] ? ($data['advance_percentage'] ?? 0) : null;
+        $data['payment_tolerance'] = $data['payment_tolerance'] ?? 0;
 
         if (! empty($data['client_id'])) {
             $client = $this->clientById($data['client_id']);

@@ -431,4 +431,9 @@ class Project extends Model
     {
         return $this->hasMany(PackagingList::class);
     }
+
+    public function workflow()
+    {
+        return $this->hasOne(ProjectWorkflow::class);
+    }
 }
