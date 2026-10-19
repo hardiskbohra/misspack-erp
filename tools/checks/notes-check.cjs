@@ -410,9 +410,9 @@ check('an employee keeps notes too, from their own menu',
     /'label' => 'Notes', 'route' => 'notes\.index'/.test(employeeMenu));
 
 const officeMenu = shell.slice(shell.indexOf('$sidebarItems = Auth::user()'));
-check('and the office has its own, in a section of its own',
-    /'section' => 'Personal'/.test(officeMenu)
-    && /'label' => 'Notes', 'route' => 'notes\.index'/.test(officeMenu));
+check('the office does not duplicate the topbar notes door in its long sidebar',
+    ! /'section' => 'Personal'/.test(officeMenu)
+    && ! /'label' => 'Notes', 'route' => 'notes\.index'/.test(officeMenu));
 
 check('the shell tells the stylesheets which module the page is',
     /request\(\)->routeIs\('notes\.\*'\) => 'notes'/.test(shell));

@@ -558,7 +558,7 @@ check('the ids in the URLs are numbers',
     times(recurringRoutes, '->whereNumber(') >= 12);
 
 check('the sidebar carries the module, and the ledger item steps aside for it',
-    /'label' => 'Recurring', 'route' => 'cashflows\.recurring\.index'/.test(shell)
+    /'label' => 'Recurring payments', 'route' => 'cashflows\.recurring\.index'/.test(shell)
     && /'except' => \[[^\]]*'cashflows\.recurring'/.test(shell),
     'two lit items for one page is a menu that cannot say where you are');
 
