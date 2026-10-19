@@ -40,6 +40,7 @@ class ProjectGateEvaluation extends Model
             'commercial_baseline' => 'Commercial baseline',
             'advance_received' => 'Production advance',
             'dispatch_balance' => 'Pre-dispatch balance',
+            'dispatch_approved' => 'Shipment dispatch authorization',
             'procurement_ready' => 'Procurement readiness',
             'production_complete' => 'Production readiness',
             'quality_passed' => 'Quality readiness',

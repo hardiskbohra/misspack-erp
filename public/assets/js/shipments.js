@@ -480,6 +480,31 @@
         button.closest('tr').remove();
     };
 
+    function initDispatchAllocations() {
+        document.querySelectorAll('[data-dispatch-allocation]').forEach(function (card) {
+            var rows = card.querySelector('[data-allocation-rows]');
+            var add = card.querySelector('[data-add-dispatch-allocation]');
+            if (!rows || !add) return;
+            add.addEventListener('click', function () {
+                var source = rows.querySelector('[data-allocation-row]');
+                if (!source) return;
+                var clone = source.cloneNode(true);
+                var next = rows.querySelectorAll('[data-allocation-row]').length;
+                clone.querySelectorAll('select,input').forEach(function (control) {
+                    control.name = control.name.replace(/\[allocations\]\[\d+\]/, '[allocations][' + next + ']');
+                    control.value = '';
+                });
+                rows.appendChild(clone);
+            });
+        });
+        document.addEventListener('click', function (event) {
+            var remove = event.target.closest('[data-remove-dispatch-allocation]');
+            if (!remove) return;
+            var rows = remove.closest('[data-allocation-rows]');
+            if (rows && rows.querySelectorAll('[data-allocation-row]').length > 1) remove.closest('[data-allocation-row]').remove();
+        });
+    }
+
     /** Remove an attachment via AJAX (form page). */
     window.removeAttachment = function (id, btn) {
         MasterAlert.confirm('Remove this attachment?', { title: 'Remove attachment', confirmText: 'Remove', danger: true }).then(function (ok) {
@@ -551,4 +576,5 @@
     document.addEventListener('DOMContentLoaded', initShipmentIndexExtras);
     document.addEventListener('DOMContentLoaded', initCostModal);
     document.addEventListener('DOMContentLoaded', initPartyMemory);
+    document.addEventListener('DOMContentLoaded', initDispatchAllocations);
 })();

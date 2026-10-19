@@ -18,6 +18,46 @@
     --ship-muted: #687386;
 }
 
+.shipment-items-fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.shipment-items-fieldset:disabled {
+    opacity: .72;
+}
+
+.shipment-allocation-list {
+    display: grid;
+    gap: 16px;
+}
+
+.shipment-allocation-card {
+    display: grid;
+    gap: 12px;
+    padding: 16px 0;
+    border-top: 1px solid var(--master-border);
+}
+
+.shipment-allocation-card > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.shipment-allocation-card > header strong,
+.shipment-allocation-card > header span {
+    display: block;
+}
+
+.shipment-allocation-card [data-allocation-rows] {
+    display: grid;
+    gap: 10px;
+}
+
 /* =====================================================================
    1. Shipment List (index)
    Badge colours + mobile table-card layout.

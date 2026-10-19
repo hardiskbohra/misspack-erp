@@ -125,6 +125,7 @@ class PackagingListController extends Controller
 
     public function update(Request $request, PackagingList $packagingList, PackagingListVerifier $verifier): RedirectResponse
     {
+        $this->assertPackingEditable($packagingList);
         $data = $this->validated($request, $packagingList);
         DB::transaction(function () use ($data, $packagingList, $verifier) {
             $cartons = $data['cartons'];
@@ -143,6 +144,7 @@ class PackagingListController extends Controller
     public function updateStatus(Request $request, PackagingList $packagingList, PackagingListVerifier $verifier): RedirectResponse
     {
         $data = $request->validate(['status' => ['required', Rule::in(array_keys(PackagingList::statusOptions()))]]);
+        if ($data['status'] !== $packagingList->status && $data['status'] !== 'dispatched') $this->assertPackingEditable($packagingList);
         $this->assertVerifiedForStatus($packagingList, $data['status'], $verifier);
         $packagingList->update(['status' => $data['status']]);
         $this->refreshProjectReadiness($packagingList);
@@ -187,9 +189,10 @@ class PackagingListController extends Controller
 
     public function destroy(PackagingList $packagingList): RedirectResponse
     {
-        $project = $packagingList->project;
+        $this->assertPackingEditable($packagingList);
+        $packagingList->loadMissing('project.workflow');
         $packagingList->delete();
-        if ($project?->workflow) app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($project->workflow, Auth::id());
+        $this->refreshProjectReadiness($packagingList);
         return redirect()->route('packaging-lists.index')->with('success', 'Packaging list deleted successfully.');
     }
 
@@ -406,10 +409,23 @@ class PackagingListController extends Controller
         ];
     }
 
+    private function assertPackingEditable(PackagingList $list): void
+    {
+        $usedForDispatch = $list->cartons()->whereHas('items.shipmentAllocations.shipmentItem.shipment', fn ($query) => $query->whereIn('status', Shipment::dispatchedStatuses()))->exists();
+        if ($usedForDispatch) {
+            throw ValidationException::withMessages(['status' => 'This verified packing is frozen because dispatched shipment quantities consume it. Reverse or cancel the shipment before editing packing content.']);
+        }
+    }
+
     private function refreshProjectReadiness(PackagingList $list): void
     {
         if ($workflow = $list->project?->workflow) {
             app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($workflow, Auth::id());
+            $authorization = app(\App\Services\ShipmentDispatchAuthorization::class);
+            Shipment::query()->where('project_id', $list->project_id)->where('status', Shipment::STATUS_PLANNING)
+                ->with('items.packingAllocations')->get()->each(function ($shipment) use ($authorization, $workflow) {
+                    $authorization->evaluate($shipment, $workflow, $authorization->rowsFromShipment($shipment), Auth::id());
+                });
         }
     }
 

@@ -39,6 +39,7 @@ class PackagingListItem extends Model
     public function carton() { return $this->belongsTo(PackagingListCarton::class, 'packaging_list_carton_id'); }
     public function product() { return $this->belongsTo(Product::class); }
     public function projectProduct() { return $this->belongsTo(ProjectProduct::class); }
+    public function shipmentAllocations() { return $this->hasMany(ShipmentPackingAllocation::class); }
 
     public function remainingAfterPacking(): ?float
     {

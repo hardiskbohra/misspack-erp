@@ -13,7 +13,8 @@ class ProjectWorkflowGates
     public const GATE_BASELINE = 'commercial_baseline';
     public const GATE_ADVANCE = 'advance_received';
     public const GATE_DISPATCH_BALANCE = 'dispatch_balance';
-    public const AUTOMATED_GATES = [self::GATE_BASELINE, self::GATE_ADVANCE, self::GATE_DISPATCH_BALANCE];
+    public const GATE_DISPATCH_AUTHORIZATION = 'dispatch_approved';
+    public const AUTOMATED_GATES = [self::GATE_BASELINE, self::GATE_ADVANCE, self::GATE_DISPATCH_BALANCE, self::GATE_DISPATCH_AUTHORIZATION];
 
     public function evaluateAll(ProjectWorkflow $workflow, ?int $userId = null): array
     {

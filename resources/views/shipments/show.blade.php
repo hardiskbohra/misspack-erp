@@ -248,6 +248,9 @@
                                         @if ($item->description)
                                             <span class="master-sub">{{ $item->description }}</span>
                                         @endif
+                                        @foreach($item->packingAllocations as $allocation)
+                                            <span class="master-sub">{{ $allocation->packagingListItem?->carton?->packagingList?->packing_number }} · {{ number_format((float)$allocation->allocated_quantity,3) }} {{ $item->unit }}</span>
+                                        @endforeach
                                     </td>
                                     <td class="ship-cell-muted">{{ $item->hs_code ?: '—' }}</td>
                                     <td class="is-num">{{ (int) $item->quantity }} {{ $item->unit }}</td>

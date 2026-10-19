@@ -30,4 +30,9 @@ class ShipmentItem extends Model
     {
         return $this->belongsTo(ProjectProduct::class);
     }
+
+    public function packingAllocations()
+    {
+        return $this->hasMany(ShipmentPackingAllocation::class);
+    }
 }

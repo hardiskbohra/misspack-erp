@@ -18,6 +18,7 @@ use App\Services\SavedViews;
 use App\Services\ShipmentCostCashflowSync;
 use App\Services\ShipmentCostLedger;
 use App\Services\ShipmentDocuments;
+use App\Services\ShipmentDispatchAuthorization;
 use App\Services\ShipmentPartyDirectory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -161,6 +162,9 @@ class ShipmentController extends Controller
         /* a shipment can be created already delivered: same rule, same default */
         $data = Shipment::withDeliveryDefaults($data);
         $this->assertDeliveryDateAllowed($data['drop_date'] ?? null, $data['pickup_date'] ?? null);
+        if (! empty($data['project_id']) && in_array($data['status'], Shipment::dispatchedStatuses(), true)) {
+            throw ValidationException::withMessages(['status' => 'Save the project shipment in Planning first, allocate its verified packing quantities, then authorize dispatch.']);
+        }
         $probe = new Shipment(['status' => Shipment::STATUS_PLANNING, 'project_id' => $data['project_id'] ?? null]);
         $this->assertStatusChangeAllowed($probe, $data['status'], ['remarks' => $data['delay_reason'] ?? $data['notes'] ?? null]);
 
@@ -226,7 +230,7 @@ class ShipmentController extends Controller
     public function show(Shipment $shipment): View
     {
         $shipment->load([
-            'items', 'histories', 'attachments', 'client', 'project', 'salesInvoice', 'latestPackagingList',
+            'items.packingAllocations.packagingListItem.carton.packagingList', 'histories', 'attachments', 'client', 'project', 'salesInvoice', 'latestPackagingList',
             'costs.vendor', 'costs.paidAccount',
         ]);
 
@@ -235,7 +239,7 @@ class ShipmentController extends Controller
 
     public function edit(Shipment $shipment): View
     {
-        $shipment->load(['items', 'histories.creator', 'attachments.uploader']);
+        $shipment->load(['items.packingAllocations.packagingListItem.carton.packagingList', 'histories.creator', 'attachments.uploader']);
 
         return view('shipments.form', $this->formData($shipment));
     }
@@ -260,12 +264,38 @@ class ShipmentController extends Controller
             'remarks' => $request->input('delay_reason') ?: $request->input('remarks'),
         ]);
 
+        $dispatchTransition = $shipment->status === Shipment::STATUS_PLANNING
+            && in_array($data['status'], Shipment::dispatchedStatuses(), true);
+        $workflow = $shipment->project?->workflow;
+        $evaluation = null;
+        if ($dispatchTransition && $workflow) {
+            $authorizationCandidate = clone $shipment;
+            $authorizationCandidate->status = $data['status'];
+            $evaluation = app(ShipmentDispatchAuthorization::class)->evaluate($authorizationCandidate, $workflow, $items, Auth::id());
+            $evaluation->loadMissing('activeOverride');
+            if (! in_array($evaluation->effectiveResult(), ['passed', 'overridden'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => $evaluation->summary.' Save allocation or paperwork corrections in Planning, then retry dispatch.',
+                ]);
+            }
+        }
+
         $oldStatus = $shipment->status;
 
-        DB::transaction(function () use ($request, $shipment, $data, $items, $oldStatus) {
+        DB::transaction(function () use ($request, $shipment, $data, $items, $oldStatus, $dispatchTransition, $workflow, $evaluation) {
             $data['show_client_portal'] = $request->boolean('show_client_portal');
             $shipment->update($data);
-            $this->syncItems($shipment, $items);
+            if ($oldStatus === Shipment::STATUS_PLANNING) {
+                $this->syncItems($shipment, $items);
+            }
+            if ($dispatchTransition && $workflow && $evaluation) {
+                $authorization = app(ShipmentDispatchAuthorization::class);
+                $lockedDetails = $authorization->inspect($shipment, $workflow, $authorization->rowsFromShipment($shipment), true);
+                $lockedHash = hash('sha256', json_encode($lockedDetails, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                if (! hash_equals((string)$evaluation->content_hash, $lockedHash)) {
+                    throw ValidationException::withMessages(['status' => 'Packing availability changed while dispatch was being authorized. Review the current allocation and retry.']);
+                }
+            }
             $this->storePhotoAttachments($request, $shipment, $request->boolean('is_public'));
 
             if ($oldStatus !== $shipment->status) {
@@ -301,6 +331,7 @@ class ShipmentController extends Controller
 
     public function destroy(Shipment $shipment): RedirectResponse
     {
+        abort_if(in_array($shipment->status, Shipment::dispatchedStatuses(), true), 422, 'A dispatched shipment is an operational audit record. Cancel it before deletion.');
         $project = $shipment->project;
         foreach ($shipment->attachments as $attachment) {
             if ($attachment->file_path) {
@@ -357,10 +388,33 @@ class ShipmentController extends Controller
             'remarks' => $data['remarks'] ?? null,
         ]);
 
+        $dispatchTransition = $shipment->status === Shipment::STATUS_PLANNING && in_array($data['status'], Shipment::dispatchedStatuses(), true);
+        $workflow = $shipment->project?->workflow;
+        $dispatchEvaluation = null;
+        if ($dispatchTransition && $workflow) {
+            $authorization = app(ShipmentDispatchAuthorization::class);
+            $candidate = clone $shipment; $candidate->status = $data['status'];
+            $dispatchRows = $authorization->rowsFromShipment($shipment);
+            $dispatchEvaluation = $authorization->evaluate($candidate, $workflow, $dispatchRows, Auth::id());
+            $dispatchEvaluation->loadMissing('activeOverride');
+            if (! in_array($dispatchEvaluation->effectiveResult(), ['passed','overridden'], true)) {
+                throw ValidationException::withMessages(['status' => $dispatchEvaluation->summary.' Correct the shipment allocation and paperwork before dispatch.']);
+            }
+        }
+
         $oldStatus = $shipment->status;
         $notify = $request->boolean('notify_client', true);
 
-        DB::transaction(function () use ($shipment, $data, $attributes, $oldStatus, $notify) {
+        DB::transaction(function () use ($shipment, $data, $attributes, $oldStatus, $notify, $dispatchTransition, $workflow, $dispatchEvaluation) {
+            if ($dispatchTransition && $workflow && $dispatchEvaluation) {
+                $authorization = app(ShipmentDispatchAuthorization::class);
+                $candidate = clone $shipment; $candidate->status = $data['status'];
+                $lockedDetails = $authorization->inspect($candidate, $workflow, $authorization->rowsFromShipment($shipment), true);
+                $lockedHash = hash('sha256', json_encode($lockedDetails, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                if (! hash_equals((string)$dispatchEvaluation->content_hash, $lockedHash)) {
+                    throw ValidationException::withMessages(['status' => 'Packing availability changed while dispatch was being authorized. Review the current allocation and retry.']);
+                }
+            }
             $shipment->histories()->create($data);
             $shipment->update($attributes);
 
@@ -664,6 +718,9 @@ class ShipmentController extends Controller
             'items.*.net_weight' => ['nullable', 'numeric', 'min:0'],
             'items.*.gross_weight' => ['nullable', 'numeric', 'min:0'],
             'items.*.description' => ['nullable', 'string'],
+            'items.*.allocations' => ['nullable', 'array', 'max:100'],
+            'items.*.allocations.*.packaging_list_item_id' => ['nullable', 'integer', 'exists:packaging_list_items,id'],
+            'items.*.allocations.*.allocated_quantity' => ['nullable', 'numeric', 'gt:0'],
         ]);
     }
 
@@ -726,7 +783,7 @@ class ShipmentController extends Controller
                 continue;
             }
 
-            $shipment->items()->create([
+            $shipmentItem = $shipment->items()->create([
                 'project_product_id' => $item['project_product_id'] ?? null,
                 'product_name' => $item['product_name'],
                 'sku' => $item['sku'] ?? null,
@@ -739,6 +796,15 @@ class ShipmentController extends Controller
                 'gross_weight' => $item['gross_weight'] ?? null,
                 'description' => $item['description'] ?? null,
             ]);
+            $allocations = collect($item['allocations'] ?? [])->filter(fn ($allocation) => ! empty($allocation['packaging_list_item_id']) && (float)($allocation['allocated_quantity'] ?? 0) > 0)
+                ->groupBy('packaging_list_item_id')
+                ->map(fn ($group, $packingItemId) => [
+                    'packaging_list_item_id'=>(int)$packingItemId,
+                    'project_product_id'=>(int)$shipmentItem->project_product_id,
+                    'allocated_quantity'=>round((float)$group->sum('allocated_quantity'), 3),
+                    'created_by'=>Auth::id(),
+                ])->values()->all();
+            if ($allocations) $shipmentItem->packingAllocations()->createMany($allocations);
         }
     }
 
@@ -1174,7 +1240,19 @@ class ShipmentController extends Controller
     {
         if ($workflow = $shipment->project?->workflow) {
             app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($workflow, Auth::id());
+            if ($shipment->status === Shipment::STATUS_PLANNING) {
+                $authorization = app(ShipmentDispatchAuthorization::class);
+                $authorization->evaluate($shipment, $workflow, $authorization->rowsFromShipment($shipment), Auth::id());
+            }
         }
+    }
+
+    private function dispatchAuthorizationEvaluation(Shipment $shipment): ?\App\Models\ProjectGateEvaluation
+    {
+        $workflow = $shipment->project?->workflow;
+        if (! $shipment->exists || ! $workflow) return null;
+        $evaluation = $workflow->evaluations()->where('gate_key', ShipmentDispatchAuthorization::GATE_KEY)->with('activeOverride.approver')->latest('evaluated_at')->latest('id')->first();
+        return (int)data_get($evaluation?->details, 'shipment_id') === (int)$shipment->id ? $evaluation : null;
     }
 
     private function formData(Shipment $shipment): array
@@ -1196,6 +1274,9 @@ class ShipmentController extends Controller
             'costTotals' => $shipment->costSummary(),
             'invoiceOptions' => $this->invoiceOptions($shipment),
             'projectProductOptions' => ProjectProduct::query()->with('project:id,name,project_number')->where('status', '!=', 'cancelled')->orderBy('project_id')->orderBy('sort_order')->limit(1000)->get(),
+            'dispatchPackingOptions' => app(ShipmentDispatchAuthorization::class)->allocationOptions($shipment),
+            'shipmentItemsFrozen' => $shipment->exists && $shipment->status !== Shipment::STATUS_PLANNING,
+            'dispatchAuthorizationEvaluation' => $this->dispatchAuthorizationEvaluation($shipment),
             'paymentModeOptions' => CashflowEntry::paymentModeOptions(),
             'paidAccounts' => $this->paidAccounts(),
             /* the rate each currency was last billed at — offered as the
