@@ -230,7 +230,7 @@ class ShipmentController extends Controller
     public function show(Shipment $shipment): View
     {
         $shipment->load([
-            'items.packingAllocations.packagingListItem.carton.packagingList', 'histories', 'attachments', 'client', 'project', 'salesInvoice', 'latestPackagingList',
+            'items.packingAllocations.packagingListItem.carton.packagingList', 'items.deliveryReceiptLines', 'deliveryReceipts.lines.shipmentItem', 'deliveryReceipts.recorder', 'histories', 'attachments', 'client', 'project', 'salesInvoice', 'latestPackagingList',
             'costs.vendor', 'costs.paidAccount',
         ]);
 
@@ -332,6 +332,7 @@ class ShipmentController extends Controller
     public function destroy(Shipment $shipment): RedirectResponse
     {
         abort_if(in_array($shipment->status, Shipment::dispatchedStatuses(), true), 422, 'A dispatched shipment is an operational audit record. Cancel it before deletion.');
+        abort_if($shipment->deliveryReceipts()->exists(), 422, 'A shipment with immutable delivery receipts cannot be deleted.');
         $project = $shipment->project;
         foreach ($shipment->attachments as $attachment) {
             if ($attachment->file_path) {

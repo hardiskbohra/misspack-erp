@@ -10,6 +10,7 @@ use App\Http\Controllers\EmployeeWorkspaceController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ShipmentController;
+use App\Http\Controllers\ShipmentDeliveryReceiptController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\OfficeServiceController;
@@ -269,6 +270,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/shipments/costs/{cost}', [ShipmentController::class, 'updateCost'])->name('shipments.costs.update');
         Route::delete('/shipments/costs/{cost}', [ShipmentController::class, 'destroyCost'])->name('shipments.costs.destroy');
         Route::post('/shipments/{shipment}/history', [ShipmentController::class, 'storeHistory'])->name('shipments.history.store');
+        Route::post('/shipments/{shipment}/delivery-receipts', [ShipmentDeliveryReceiptController::class, 'store'])->name('shipments.delivery-receipts.store');
         Route::put('/shipments/history/{history}', [ShipmentController::class, 'updateHistory'])->name('shipments.history.update');
         Route::delete('/shipments/history/{history}', [ShipmentController::class, 'destroyHistory'])->name('shipments.history.destroy');
         Route::post('/shipments/{shipment}/attachments', [ShipmentController::class, 'storeAttachment'])->name('shipments.attachments.store');

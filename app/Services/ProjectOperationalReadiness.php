@@ -9,6 +9,7 @@ use App\Models\ProjectWorkflow;
 use App\Models\ProjectWorkflowStep;
 use App\Models\PurchaseInvoiceItem;
 use App\Models\Shipment;
+use App\Models\ShipmentDeliveryReceiptLine;
 use App\Models\ShipmentItem;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -131,7 +132,7 @@ class ProjectOperationalReadiness
                 'required_quantity'=>$required, 'delivered_quantity'=>$delivered,
                 'remaining_quantity'=>round(max($required-$delivered, 0), 3),
                 'excess_quantity'=>round(max($delivered-$required, 0), 3), 'shipments'=>$shipmentEvidence,
-            ], $deliveryPassed, $deliveryPassed ? ($delivered > $required + 0.0001 ? 'Delivered quantity exceeds the requirement by '.number_format($delivered-$required, 3).'; review the linked shipment lines.' : 'Delivered shipment quantities cover this product.') : 'Delivery covers '.number_format($delivered, 3).' of '.number_format($required, 3).'; the remaining quantity stays open.', $userId),
+            ], $deliveryPassed, $deliveryPassed ? ($delivered > $required + 0.0001 ? 'Net accepted delivery receipts exceed the requirement by '.number_format($delivered-$required, 3).'; review receipt lines.' : 'Net accepted delivery receipts cover this product.') : 'Accepted delivery receipts cover '.number_format($delivered, 3).' of '.number_format($required, 3).'; the remaining quantity or discrepancy stays open.', $userId),
         ];
     }
 
@@ -164,15 +165,35 @@ class ProjectOperationalReadiness
             ->with('shipment:id,shipment_number,status,pickup_date,drop_date')
             ->get();
         $dispatched = round((float) $lines->sum('quantity'), 3);
-        $delivered = round((float) $lines->filter(fn ($line) => $line->shipment?->status === Shipment::STATUS_DELIVERED)->sum('quantity'), 3);
-        $evidence = $lines->map(fn ($line) => [
+        $receiptLines = ShipmentDeliveryReceiptLine::query()
+            ->where('project_product_id', $product->id)
+            ->whereHas('receipt.shipment', fn ($query) => $query->where('project_id', $product->project_id)->whereIn('status', $dispatchedStatuses))
+            ->with(['receipt:id,shipment_id,receipt_reference,recipient_name,received_at,evidence_hash', 'receipt.shipment:id,shipment_number,status'])
+            ->get();
+        $delivered = round(max((float)$receiptLines->sum('accepted_quantity') - (float)$receiptLines->sum('returned_quantity'), 0), 3);
+        $shipmentEvidence = $lines->map(fn ($line) => [
             'shipment_item_id'=>$line->id, 'shipment_id'=>$line->shipment_id,
             'shipment_number'=>$line->shipment?->shipment_number, 'status'=>$line->shipment?->status,
-            'quantity'=>(float)$line->quantity,
+            'dispatched_quantity'=>(float)$line->quantity,
             'pickup_date'=>$line->shipment?->pickup_date?->toDateString(),
             'drop_date'=>$line->shipment?->drop_date?->toDateString(),
-        ])->values()->all();
-        return [$dispatched, $delivered, $evidence];
+        ])->values();
+        $receiptEvidence = $receiptLines->map(fn ($line) => [
+            'delivery_receipt_id'=>$line->shipment_delivery_receipt_id,
+            'shipment_item_id'=>$line->shipment_item_id,
+            'shipment_id'=>$line->receipt?->shipment_id,
+            'shipment_number'=>$line->receipt?->shipment?->shipment_number,
+            'receipt_reference'=>$line->receipt?->receipt_reference,
+            'received_at'=>$line->receipt?->received_at?->toISOString(),
+            'accepted_quantity'=>(float)$line->accepted_quantity,
+            'short_quantity'=>(float)$line->short_quantity,
+            'damaged_quantity'=>(float)$line->damaged_quantity,
+            'rejected_quantity'=>(float)$line->rejected_quantity,
+            'returned_quantity'=>(float)$line->returned_quantity,
+            'replacement_quantity'=>(float)$line->replacement_quantity,
+            'evidence_hash'=>$line->receipt?->evidence_hash,
+        ])->values();
+        return [$dispatched, $delivered, ['shipments'=>$shipmentEvidence->all(), 'delivery_receipts'=>$receiptEvidence->all()]];
     }
 
     private function record(ProjectWorkflow $workflow, ProjectProduct $product, string $key, array $details, bool $passed, string $summary, ?int $userId): ProjectGateEvaluation

@@ -35,4 +35,16 @@ class ShipmentItem extends Model
     {
         return $this->hasMany(ShipmentPackingAllocation::class);
     }
+
+    public function deliveryReceiptLines()
+    {
+        return $this->hasMany(ShipmentDeliveryReceiptLine::class);
+    }
+
+    public function acceptedDeliveryQuantity(): float
+    {
+        $accepted = (float) $this->deliveryReceiptLines()->sum('accepted_quantity');
+        $returned = (float) $this->deliveryReceiptLines()->sum('returned_quantity');
+        return round(max($accepted - $returned, 0), 3);
+    }
 }

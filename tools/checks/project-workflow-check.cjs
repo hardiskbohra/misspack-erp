@@ -7,6 +7,7 @@ const termsMigration=read('database/migrations/2026_10_18_171000_add_structured_
 const approvalMigration=read('database/migrations/2026_10_18_172000_create_project_approval_tables.php');
 const qualityMigration=read('database/migrations/2026_10_18_173000_create_project_quality_inspections.php');
 const dispatchMigration=read('database/migrations/2026_10_18_174000_create_shipment_packing_allocations.php');
+const deliveryMigration=read('database/migrations/2026_10_18_175000_create_shipment_delivery_receipts.php');
 const salesInvoice=read('app/Models/SalesInvoice.php');
 const salesForm=read('resources/views/sales_invoices/form.blade.php');
 const project=read('app/Models/Project.php');
@@ -18,6 +19,7 @@ const approvals=read('app/Services/ProjectApprovals.php');
 const operations=read('app/Services/ProjectOperationalReadiness.php');
 const dispatchAuthorization=read('app/Services/ShipmentDispatchAuthorization.php');
 const qualityController=read('app/Http/Controllers/ProjectQualityInspectionController.php');
+const deliveryController=read('app/Http/Controllers/ShipmentDeliveryReceiptController.php');
 const packagingController=read('app/Http/Controllers/PackagingListController.php');
 const packagingSource=read('app/Services/PackagingListSource.php');
 const packagingVerifier=read('app/Services/PackagingListVerifier.php');
@@ -80,7 +82,7 @@ check('operational workflow steps reject manual completion and support manager o
 check('workflow command centre captures QC and shows independent readiness', view.includes('Product operational readiness')&&view.includes('Record immutable inspection')&&view.includes('Structured checklist')&&routes.includes('projects.quality-inspections.store'));
 check('standard workflow upgrades existing instances for dispatch and delivery', execution.includes('TEMPLATE_VERSION = 2')&&execution.includes("'shipment_dispatched'")&&execution.includes("'delivery_complete'")&&execution.includes("$existing->update(["));
 check('shipment quantities are synchronized from direct product-linked lines', operations.includes('ShipmentItem::query()')&&operations.includes("where('project_product_id', $product->id)")&&operations.includes('Shipment::dispatchedStatuses()'));
-check('only delivered shipment lines count as delivered quantities', operations.includes("->shipment?->status === Shipment::STATUS_DELIVERED")&&operations.includes("$delivered = round"));
+check('only accepted delivery receipt quantities count as delivered', operations.includes('ShipmentDeliveryReceiptLine::query()')&&operations.includes("$delivered = round(max((float)$receiptLines->sum('accepted_quantity')"));
 check('partial dispatch and delivery expose remaining and excess quantities', operations.includes("'dispatched_quantity'")&&operations.includes("'delivered_quantity'")&&operations.includes("'excess_quantity'")&&view.includes("excess_quantity"));
 check('project delivery reconciliation requires every active product', operations.includes('GATE_DELIVERY_RECONCILED')&&operations.includes('$allDelivered')&&operations.includes('delivered_product_count'));
 check('shipment writes immediately refresh operational readiness', (shipmentController.match(/refreshProjectReadiness/g)||[]).length>=4&&shipmentController.includes('ProjectOperationalReadiness::class'));
@@ -96,4 +98,13 @@ check('dispatch authorization is immutable and manager-overridable', dispatchAut
 check('final allocation availability is protected by row locking', dispatchAuthorization.includes('lockForUpdate()')&&shipmentController.includes('Packing availability changed while dispatch was being authorized'));
 check('project shipments must be saved in planning before allocation', shipmentController.includes('Save the project shipment in Planning first')&&read('resources/views/shipments/form.blade.php').includes('Verified packing allocation'));
 check('dispatched shipment allocations are frozen and protect consumed packing', shipmentController.includes("$oldStatus === Shipment::STATUS_PLANNING")&&packagingController.includes('assertPackingEditable')&&packagingController.includes('frozen because dispatched shipment quantities consume it'));
+check('delivery receipt schema preserves immutable header and line evidence', ['shipment_delivery_receipts','shipment_delivery_receipt_lines','recipient_name','received_at','evidence_hash','content_hash','recorded_by'].every(value=>deliveryMigration.includes(`'${value}'`)));
+check('delivery lines capture accepted and discrepancy quantities', ['received_quantity','accepted_quantity','short_quantity','damaged_quantity','rejected_quantity','returned_quantity','replacement_quantity','discrepancy_reason'].every(value=>deliveryMigration.includes(`'${value}'`)));
+check('delivery receipt arithmetic is structurally reconciled', deliveryController.includes("$values['received_quantity'] - ($values['accepted_quantity'] + $values['damaged_quantity'] + $values['rejected_quantity'])")&&deliveryController.includes('Replacement quantity is part of accepted quantity'));
+check('delivery discrepancies require reasons and returns cannot exceed accepted', deliveryController.includes('Explain the shortage, damage, rejection or return')&&deliveryController.includes('Returned quantity cannot exceed'));
+check('delivery receipt writes use locks and evidence fingerprints', deliveryController.includes('lockForUpdate()')&&deliveryController.includes("hash_file('sha256'")&&deliveryController.includes("hash('sha256'"));
+check('delivery readiness uses net accepted receipt quantities instead of shipment status', operations.includes('ShipmentDeliveryReceiptLine::query()')&&operations.includes("sum('accepted_quantity') - (float)$receiptLines->sum('returned_quantity')")&&operations.includes('Accepted delivery receipts cover'));
+check('delivery receipt immediately recalculates workflow readiness', deliveryController.includes('ProjectOperationalReadiness::class')&&routes.includes('shipments.delivery-receipts.store'));
+check('receipt evidence satisfies POD and receipt shipments retain audit history', read('app/Services/ShipmentDocuments.php').includes("$key === 'pod' && $deliveryReceiptRecorded")&&shipmentController.includes('shipment with immutable delivery receipts cannot be deleted'));
+check('shipment UX captures receipts and displays reconciliation', read('resources/views/shipments/show.blade.php').includes('Delivery receipt reconciliation')&&read('resources/views/shipments/show.blade.php').includes('Record immutable receipt')&&read('resources/views/shipments/show.blade.php').includes('Discrepancy open'));
 console.log(`\nProject workflow: ${passed} passed, ${failed} failed`);if(failed)process.exit(1);

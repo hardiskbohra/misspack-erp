@@ -58,6 +58,57 @@
     gap: 10px;
 }
 
+.shipment-receipt-entry {
+    margin-top: 16px;
+}
+
+.shipment-receipt-entry > summary {
+    width: max-content;
+    list-style: none;
+    cursor: pointer;
+}
+
+.shipment-receipt-entry > form {
+    display: grid;
+    gap: 16px;
+    margin-top: 16px;
+    padding: 16px 0 0;
+    border-top: 1px solid var(--master-border);
+}
+
+.shipment-receipt-history {
+    display: grid;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.shipment-receipt-card {
+    display: grid;
+    gap: 10px;
+    padding: 16px 0;
+    border-top: 1px solid var(--master-border);
+}
+
+.shipment-receipt-card header,
+.shipment-receipt-card footer {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.shipment-receipt-card header strong,
+.shipment-receipt-card header span,
+.shipment-receipt-lines span {
+    display: block;
+}
+
+.shipment-receipt-lines {
+    display: grid;
+    gap: 6px;
+    color: var(--mc-text-2);
+}
+
 /* =====================================================================
    1. Shipment List (index)
    Badge colours + mobile table-card layout.

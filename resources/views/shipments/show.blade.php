@@ -283,6 +283,63 @@
                     </div>
                 @endif
             </section>
+
+            <section class="master-card master-card--flat master-section">
+                <div class="master-section-head"><div><h3 class="master-section-title">Delivery receipt reconciliation</h3><p class="master-sub">Accepted quantities drive project delivery readiness. Short, damaged, rejected and returned quantities remain open until replacement receipts reconcile them.</p></div><span class="master-chip">{{ $shipment->deliveryReceipts->count() }} receipt{{ $shipment->deliveryReceipts->count()===1?'':'s' }}</span></div>
+                <div class="master-table-wrap">
+                    <table class="master-table"><thead><tr><th>Product</th><th class="is-num">Dispatched</th><th class="is-num">Net accepted</th><th class="is-num">Remaining</th><th>Status</th></tr></thead><tbody>
+                        @foreach($shipment->items as $item)
+                            @php
+                                $accepted = (float)$item->deliveryReceiptLines->sum('accepted_quantity');
+                                $returned = (float)$item->deliveryReceiptLines->sum('returned_quantity');
+                                $netAccepted = max($accepted-$returned,0);
+                                $remaining = max((float)$item->quantity-$netAccepted,0);
+                                $hasIssues = $item->deliveryReceiptLines->contains(fn($line) => $line->hasDiscrepancy()) && $remaining > 0;
+                            @endphp
+                            <tr><td><strong>{{ $item->product_name }}</strong></td><td class="is-num">{{ number_format((float)$item->quantity,3) }}</td><td class="is-num">{{ number_format($netAccepted,3) }}</td><td class="is-num">{{ number_format($remaining,3) }}</td><td><span class="master-badge {{ $remaining<=0 ? 'status-completed' : ($hasIssues ? 'status-delayed' : 'status-planning') }}">{{ $remaining<=0 ? 'Reconciled' : ($hasIssues ? 'Discrepancy open' : 'Awaiting receipt') }}</span></td></tr>
+                        @endforeach
+                    </tbody></table>
+                </div>
+
+                @if(in_array($shipment->status, \App\Models\Shipment::dispatchedStatuses(), true))
+                    <details class="shipment-receipt-entry"><summary class="master-btn master-btn-soft"><i class="fa-solid fa-clipboard-check"></i> Record delivery receipt</summary>
+                        <form method="POST" enctype="multipart/form-data" action="{{ route('shipments.delivery-receipts.store',$shipment) }}" class="master-form-card">@csrf
+                            <div class="master-detail-grid">
+                                <label class="master-field"><span class="master-label">Receipt / POD reference</span><input class="master-input" name="receipt_reference" maxlength="255" aria-label="Receipt or POD reference"></label>
+                                <label class="master-field"><span class="master-label">Recipient name</span><input class="master-input" name="recipient_name" maxlength="255" required aria-label="Recipient name"></label>
+                                <label class="master-field"><span class="master-label">Received at</span><input class="master-input" type="datetime-local" name="received_at" value="{{ now()->format('Y-m-d\TH:i') }}" required aria-label="Received at"></label>
+                                <label class="master-field"><span class="master-label">POD / receipt evidence</span><input class="master-input" type="file" name="evidence_file" accept=".jpg,.jpeg,.png,.webp,.pdf" required></label>
+                            </div>
+                            <div class="master-table-wrap"><table class="master-table"><thead><tr><th>Product</th><th>Received</th><th>Accepted</th><th>Short</th><th>Damaged</th><th>Rejected</th><th>Returned</th><th>Replacement</th><th>Reason</th></tr></thead><tbody>
+                                @foreach($shipment->items as $index=>$item)<tr><td><input type="hidden" name="lines[{{ $index }}][shipment_item_id]" value="{{ $item->id }}"><strong>{{ $item->product_name }}</strong><span class="master-sub">Dispatched {{ number_format((float)$item->quantity,3) }}</span></td>@foreach(['received_quantity','accepted_quantity','short_quantity','damaged_quantity','rejected_quantity','returned_quantity','replacement_quantity'] as $field)<td><input class="master-input" type="number" min="0" step="0.001" name="lines[{{ $index }}][{{ $field }}]" value="0" aria-label="{{ str($field)->headline() }} for {{ $item->product_name }}"></td>@endforeach<td><input class="master-input" name="lines[{{ $index }}][discrepancy_reason]" maxlength="2000" aria-label="Discrepancy reason for {{ $item->product_name }}"></td></tr>@endforeach
+                            </tbody></table></div>
+                            <label class="master-field"><span class="master-label">Receipt notes</span><textarea class="master-textarea" name="notes" rows="3" maxlength="4000" aria-label="Receipt notes"></textarea></label>
+                            <div class="master-form-actions"><button class="master-btn master-btn-primary" type="submit">Record immutable receipt</button></div>
+                        </form>
+                    </details>
+                @endif
+
+                <div class="shipment-receipt-history">
+                    @forelse($shipment->deliveryReceipts as $receipt)
+                        <article class="shipment-receipt-card">
+                            <header><div><strong>{{ $receipt->receipt_reference ?: 'Receipt #'.$receipt->id }}</strong><span>{{ $receipt->received_at?->format('d M Y, H:i') }} · {{ $receipt->recipient_name }}</span></div><span class="master-badge {{ $receipt->hasDiscrepancy() ? 'status-delayed' : 'status-completed' }}">{{ $receipt->hasDiscrepancy() ? 'Discrepancy recorded' : 'Accepted' }}</span></header>
+                            <div class="shipment-receipt-lines">
+                                @foreach($receipt->lines as $line)
+                                    <span><strong>{{ $line->shipmentItem?->product_name }}</strong> · {{ number_format((float)$line->accepted_quantity,3) }} accepted
+                                        @if((float)$line->short_quantity>0) · {{ number_format((float)$line->short_quantity,3) }} short @endif
+                                        @if((float)$line->damaged_quantity>0) · {{ number_format((float)$line->damaged_quantity,3) }} damaged @endif
+                                        @if((float)$line->rejected_quantity>0) · {{ number_format((float)$line->rejected_quantity,3) }} rejected @endif
+                                        @if((float)$line->returned_quantity>0) · {{ number_format((float)$line->returned_quantity,3) }} returned @endif
+                                    </span>
+                                @endforeach
+                            </div>
+                            <footer><a href="{{ $receipt->evidenceUrl() }}" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip"></i> {{ $receipt->evidence_original_name }}</a><small>SHA-256 {{ substr($receipt->evidence_hash,0,12) }} · recorded by {{ $receipt->recorder?->name ?: 'System' }}</small></footer>
+                        </article>
+                    @empty
+                        <div class="master-empty-state"><i class="fa-solid fa-clipboard"></i><p>No line-level delivery receipt has been recorded. Shipment status alone does not complete delivered quantities.</p></div>
+                    @endforelse
+                </div>
+            </section>
         </div>
 
         <div class="ship-side">

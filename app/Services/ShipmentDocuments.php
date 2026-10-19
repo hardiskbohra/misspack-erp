@@ -89,15 +89,18 @@ class ShipmentDocuments
         $grouped = $attachments
             ->filter(fn (ShipmentAttachment $attachment) => (string) $attachment->document_type !== '')
             ->groupBy('document_type');
+        $deliveryReceiptRecorded = $shipment->relationLoaded('deliveryReceipts')
+            ? $shipment->deliveryReceipts->isNotEmpty()
+            : $shipment->deliveryReceipts()->exists();
 
-        return collect(self::TYPES)->map(function (string $label, string $key) use ($grouped, $required) {
+        return collect(self::TYPES)->map(function (string $label, string $key) use ($grouped, $required, $deliveryReceiptRecorded) {
             $files = $grouped->get($key, collect());
 
             return [
                 'key' => $key,
                 'label' => $label,
                 'required' => in_array($key, $required, true),
-                'done' => $files->isNotEmpty(),
+                'done' => $files->isNotEmpty() || ($key === 'pod' && $deliveryReceiptRecorded),
                 'attachments' => $files->values(),
             ];
         })->values();
