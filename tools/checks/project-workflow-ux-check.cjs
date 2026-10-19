@@ -12,7 +12,7 @@ function check(label,value){if(value){passed++;console.log(`PASS ${label}`)}else
 check('workflow opens with a task-first action centre',view.includes('Workflow command centre')&&view.includes('Current actions')&&view.includes('Future controls stay out of the way'));
 check('compact summary exposes operational attention', ['Current','Overdue','Blocked','Waiting','Overrides','Exceptions'].every(label=>view.includes(`<span>${label}</span>`)));
 check('stage rail provides direct progressive navigation',view.includes('workflow-stage-rail')&&view.includes("$railDone")&&view.includes("$railBlocked"));
-check('five workflow views separate daily work from evidence',['actions','matrix','products','commercial','history'].every(key=>view.includes(`'${key}'`))&&view.includes('data-workflow-open="{{ $viewKey }}"'));
+check('five workflow views use the shared design-system tab pattern',['actions','matrix','products','commercial','history'].every(key=>view.includes(`'${key}'`))&&view.includes('master-tabs workflow-view-tabs')&&view.includes('class="master-tab {{')&&view.includes('data-workflow-open="{{ $viewKey }}"'));
 check('all long workflow sections belong to a focused view',matrix.includes('data-workflow-view="matrix"')&&closure.includes('data-workflow-view="commercial"')&&(view.match(/data-workflow-view="products"/g)||[]).length>=2&&view.includes('data-workflow-view="history"'));
 check('current action rows retain owner due state reason and direct management', ['workflow-action-copy','workflow-action-meta','blocked_reason','due_date','Manage action'].every(value=>view.includes(value)));
 check('product readiness is progressively disclosed',view.includes('workflow-product-disclosure')&&view.includes('fa-chevron-down')&&view.includes('@if($loop->first) open'));

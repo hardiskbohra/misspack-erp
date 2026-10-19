@@ -354,7 +354,8 @@
         }
 
         triggers.forEach(function (trigger) {
-            trigger.addEventListener('click', function () {
+            trigger.addEventListener('click', function (event) {
+                if (trigger.matches('a')) event.preventDefault();
                 select(trigger.getAttribute('data-workflow-open'), true);
             });
             trigger.addEventListener('keydown', function (event) {

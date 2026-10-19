@@ -58,14 +58,16 @@
                 </div>
             </section>
 
-            <nav class="workflow-view-tabs" role="tablist" aria-label="Workflow views">
-                @foreach(['actions'=>['fa-bolt','Action centre'],'matrix'=>['fa-table-cells-large','Matrix'],'products'=>['fa-boxes-stacked','Products & approvals'],'commercial'=>['fa-file-invoice-dollar','Commercial & closure'],'history'=>['fa-clock-rotate-left','History & controls']] as $viewKey=>$viewMeta)
-                    <button type="button" role="tab" class="{{ $viewKey==='actions'?'is-active':'' }}" data-workflow-open="{{ $viewKey }}" aria-selected="{{ $viewKey==='actions'?'true':'false' }}"><i class="fa-solid {{ $viewMeta[0] }}" aria-hidden="true"></i><span>{{ $viewMeta[1] }}</span></button>
-                @endforeach
-            </nav>
+            <div class="master-tabs-card workflow-view-switcher">
+                <nav class="master-tabs workflow-view-tabs" role="tablist" aria-label="Workflow views">
+                    @foreach(['actions'=>['fa-bolt','Action centre'],'matrix'=>['fa-table-cells-large','Matrix'],'products'=>['fa-boxes-stacked','Products & approvals'],'commercial'=>['fa-file-invoice-dollar','Commercial & closure'],'history'=>['fa-clock-rotate-left','History & controls']] as $viewKey=>$viewMeta)
+                        <a href="#workflow-{{ $viewKey }}" role="tab" id="workflow-tab-{{ $viewKey }}" class="master-tab {{ $viewKey==='actions'?'is-active':'' }}" data-workflow-open="{{ $viewKey }}" aria-selected="{{ $viewKey==='actions'?'true':'false' }}"><i class="fa-solid {{ $viewMeta[0] }}" aria-hidden="true"></i><span>{{ $viewMeta[1] }}</span></a>
+                    @endforeach
+                </nav>
+            </div>
             <noscript><style>[data-workflow-view][hidden]{display:block!important}</style></noscript>
 
-            <section class="workflow-action-centre" data-workflow-view="actions" aria-labelledby="workflowActionsTitle">
+            <section class="workflow-action-centre" data-workflow-view="actions" role="tabpanel" aria-labelledby="workflow-tab-actions workflowActionsTitle">
                 <div class="workflow-view-heading"><div><span>Work requiring attention</span><h2 id="workflowActionsTitle">Current actions</h2><p>Only work that can move now is shown. Future controls stay out of the way.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Refresh sources</button></form></div>
                 <div class="workflow-action-list">
                     @forelse($currentActions as $action)
@@ -85,7 +87,7 @@
             </section>
 
             @if($projectExceptions->isNotEmpty())
-                <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="actions">
+                <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="actions" role="tabpanel" aria-labelledby="workflow-tab-actions">
                     <div class="master-section-head"><div><h2 class="master-section-title">Active exceptions</h2><p class="master-sub">Response plans track ownership and escalation without changing the underlying gate or financial condition.</p></div><a class="master-btn master-btn-danger master-btn-sm" href="{{ route('projects.exceptions.index',['status'=>'active','search'=>$project->project_number]) }}">Open exception register</a></div>
                     <div class="project-approval-history">@foreach($projectExceptions as $exception)<span><strong>{{ $exception->title }} · {{ $exception->statusLabel() }}</strong><small>{{ ucfirst($exception->severity) }}@if($exception->escalation_level) · escalation L{{ $exception->escalation_level }}@endif · {{ $exception->owner?->name ?: 'Owner unassigned' }}</small><em>{{ $exception->summary }}</em></span>@endforeach</div>
                 </section>
@@ -93,7 +95,7 @@
 
             @include('projects.partials.workflow-matrix')
 
-            <section class="master-card master-card--flat master-section project-detail-card workflow-collapsible-card" data-workflow-view="actions">
+            <section class="master-card master-card--flat master-section project-detail-card workflow-collapsible-card" data-workflow-view="actions" role="tabpanel" aria-labelledby="workflow-tab-actions">
                 <div class="master-section-head"><div><h2 class="master-section-title">Coordinator report</h2><p class="master-sub">Manual reporting stays alongside the calculated workflow and never bypasses a gate.</p></div></div>
                 <form method="POST" action="{{ route('projects.workflow.report', $project) }}" class="project-workflow-report">@csrf @method('PATCH')
                     <label class="master-field"><span class="master-label">Reported stage</span><select class="master-select" name="reported_stage" required>@foreach($workflowStages as $key=>$label)<option value="{{ $key }}" @selected(old('reported_stage',$workflow->reported_stage ?: $workflow->calculated_stage)===$key)>{{ $label }}</option>@endforeach</select></label>
@@ -105,7 +107,7 @@
                 </form>
             </section>
 
-            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="commercial" hidden>
+            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="commercial" role="tabpanel" aria-labelledby="workflow-tab-commercial" hidden>
                 <div class="master-section-head"><div><h2 class="master-section-title">Commercial and dispatch authorization gates</h2><p class="master-sub">Financial checks use the selected Proforma and receipts; dispatch authorization uses exact verified packing allocations, QC, approvals and paperwork. Material changes create a new auditable evaluation.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Run gate checks</button></form></div>
                 @php
                     $visibleGateKeys = array_merge(\App\Services\ProjectWorkflowGates::AUTOMATED_GATES, \App\Services\ProjectFeedbackClosure::CONTROLLED_STEPS);
@@ -146,7 +148,7 @@
                 @endif
             </section>
 
-            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="products" hidden>
+            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="products" role="tabpanel" aria-labelledby="workflow-tab-products" hidden>
                 <div class="master-section-head"><div><h2 class="master-section-title">Client artwork and PPS approvals</h2><p class="master-sub">Every decision belongs to one exact file version. A revision makes the previous decision historical.</p></div></div>
                 <form method="POST" enctype="multipart/form-data" action="{{ route('projects.approvals.store',$project) }}" class="project-approval-create">@csrf
                     <label class="master-field"><span class="master-label">Product</span><select class="master-select" name="project_product_id" required><option value="">Select product</option>@foreach($project->products->where('status','!=','cancelled') as $product)<option value="{{ $product->id }}">{{ $product->product_name }}</option>@endforeach</select></label>
@@ -177,7 +179,7 @@
                 </div>
             </section>
 
-            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="products" hidden>
+            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="products" role="tabpanel" aria-labelledby="workflow-tab-products" hidden>
                 <div class="master-section-head"><div><h2 class="master-section-title">Product operational readiness</h2><p class="master-sub">Each product is evaluated independently through procurement, production, QC, packing, partial dispatch and delivery.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Refresh readiness</button></form></div>
                 @php
                     $deliveryReconciliation = $workflow->evaluations->whereNull('project_product_id')->firstWhere('gate_key', \App\Services\ProjectOperationalReadiness::GATE_DELIVERY_RECONCILED);
@@ -246,7 +248,7 @@
 
             @include('projects.partials.financial-closure')
 
-            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="history" hidden>
+            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="history" role="tabpanel" aria-labelledby="workflow-tab-history" hidden>
                 <div class="master-section-head"><div><h2 class="master-section-title">Standard execution path · History & manual controls</h2><p class="master-sub">The complete standard path remains available for audit and controlled manual updates.</p></div></div>
                 <div class="workflow-history-toolbar"><span><i class="fa-solid fa-clock-rotate-left"></i> Complete workflow evidence</span><small>Completed and future stages are grouped below for audit and controlled updates.</small></div>
                 <div class="project-workflow-stages">
