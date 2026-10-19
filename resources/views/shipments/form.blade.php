@@ -271,7 +271,7 @@
                         <tbody>
                             @foreach($items as $index => $item)
                                 <tr>
-                                    <td><input class="master-input" name="items[{{ $index }}][product_name]"
+                                    <td><select class="master-select" name="items[{{ $index }}][project_product_id]" aria-label="Project product identity"><option value="">Unlinked project product</option>@foreach($projectProductOptions as $option)<option value="{{ $option->id }}" @selected((string)($item['project_product_id'] ?? '')===(string)$option->id)>{{ $option->project?->project_number ?: $option->project?->name }} · {{ $option->product_name }}</option>@endforeach</select><input class="master-input" name="items[{{ $index }}][product_name]"
                                             value="{{ $item['product_name'] ?? '' }}" placeholder="Product">
                                         <input class="master-input" name="items[{{ $index }}][sku]"
                                             value="{{ $item['sku'] ?? '' }}" hidden>
@@ -508,7 +508,7 @@
 
 <template id="shipmentItemRowTemplate">
     <tr>
-        <td><input class="master-input" name="items[__INDEX__][product_name]" placeholder="Product"></td>
+        <td><select class="master-select" name="items[__INDEX__][project_product_id]" aria-label="Project product identity"><option value="">Unlinked project product</option>@foreach($projectProductOptions as $option)<option value="{{ $option->id }}">{{ $option->project?->project_number ?: $option->project?->name }} · {{ $option->product_name }}</option>@endforeach</select><input class="master-input" name="items[__INDEX__][product_name]" placeholder="Product"></td>
         <td><input class="master-input" name="items[__INDEX__][hs_code]"></td>
         <td><input class="master-input" type="number" step="0.001" min="0" name="items[__INDEX__][quantity]" value="1"></td>
         <td><input class="master-input" name="items[__INDEX__][unit]" value="pcs"></td>

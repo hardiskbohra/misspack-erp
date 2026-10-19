@@ -117,6 +117,9 @@ class ProjectProducts
                the model's defaults are the vocabulary for a project product,
                and the office moves it along from the products tab. */
             $row->save();
+            if ((int) $line->project_product_id !== (int) $row->id) {
+                $line->forceFill(['project_product_id' => $row->id])->saveQuietly();
+            }
             $touched++;
         }
 
@@ -127,6 +130,9 @@ class ProjectProducts
                 $execution = app(ProjectWorkflowExecution::class);
                 $execution->sync($workflow, $project);
                 $execution->recalculate($workflow);
+                if (Schema::hasTable('project_quality_inspections')) {
+                    app(ProjectOperationalReadiness::class)->evaluateAll($workflow->fresh(), auth()->id());
+                }
             }
         }
 

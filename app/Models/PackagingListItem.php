@@ -10,7 +10,7 @@ class PackagingListItem extends Model
     use HasFactory;
 
     protected $fillable = [
-        'packaging_list_carton_id', 'product_id', 'source_type', 'source_item_id', 'source_quantity',
+        'packaging_list_carton_id', 'product_id', 'project_product_id', 'source_type', 'source_item_id', 'source_quantity',
         'previously_packed_quantity', 'item_description', 'sku', 'customer_item_code', 'hs_code',
         'batch_number', 'serial_numbers', 'manufactured_at', 'expires_at', 'country_of_origin',
         'unit_net_weight', 'unit_gross_weight', 'packing_instructions', 'remarks',
@@ -38,6 +38,7 @@ class PackagingListItem extends Model
 
     public function carton() { return $this->belongsTo(PackagingListCarton::class, 'packaging_list_carton_id'); }
     public function product() { return $this->belongsTo(Product::class); }
+    public function projectProduct() { return $this->belongsTo(ProjectProduct::class); }
 
     public function remainingAfterPacking(): ?float
     {

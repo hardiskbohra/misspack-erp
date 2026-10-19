@@ -133,6 +133,14 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="master-field">
+                        <label class="master-label">Production completed quantity</label>
+                        <input class="master-input" type="number" min="0" step="0.001" name="production_completed_quantity" required>
+                    </div>
+                    <div class="master-field full">
+                        <label class="master-label">Production evidence</label>
+                        <textarea class="master-textarea" rows="3" name="production_evidence" placeholder="Batch, work-order, completion report or other operational evidence"></textarea>
+                    </div>
                     <div class="master-field full">
                         <label class="master-label">Notes</label>
                         <textarea class="master-textarea" rows="5" name="notes" placeholder="Artwork, production, packaging notes"></textarea>

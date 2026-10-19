@@ -19,7 +19,7 @@
             'tare_weight'=>$carton->tare_weight, 'is_fragile'=>$carton->is_fragile, 'keep_dry'=>$carton->keep_dry,
             'this_side_up'=>$carton->this_side_up, 'is_stackable'=>$carton->is_stackable, 'is_hazardous'=>$carton->is_hazardous,
             'handling_instructions'=>$carton->handling_instructions,
-            'items'=>$carton->items->map(fn($item)=>array_merge($item->only(['product_id','source_type','source_item_id','source_quantity','previously_packed_quantity','item_description','sku','customer_item_code','hs_code','batch_number','manufactured_at','expires_at','country_of_origin','unit_net_weight','unit_gross_weight','packing_instructions','remarks','quantity_per_carton','total_quantity','unit']),['serial_numbers_text'=>implode("\n",$item->serial_numbers ?? [])]))->all(),
+            'items'=>$carton->items->map(fn($item)=>array_merge($item->only(['product_id','project_product_id','source_type','source_item_id','source_quantity','previously_packed_quantity','item_description','sku','customer_item_code','hs_code','batch_number','manufactured_at','expires_at','country_of_origin','unit_net_weight','unit_gross_weight','packing_instructions','remarks','quantity_per_carton','total_quantity','unit']),['serial_numbers_text'=>implode("\n",$item->serial_numbers ?? [])]))->all(),
         ])->all() : ($prefillCartons ?? []);
     }
     if (!$cartonRows) $cartonRows = [['carton_label'=>'Carton 1','packing_mode'=>'grouped','carton_number'=>'1','carton_type'=>'box','carton_count'=>1,'length_cm'=>'','width_cm'=>'','height_cm'=>'','net_weight_per_carton'=>'','gross_weight_per_carton'=>'','tare_weight'=>0,'is_stackable'=>1,'items'=>[['product_id'=>'','item_description'=>'','quantity_per_carton'=>'','total_quantity'=>'','unit'=>'pcs']]]];

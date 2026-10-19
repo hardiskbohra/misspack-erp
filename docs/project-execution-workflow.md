@@ -69,3 +69,16 @@ Artwork and PPS approval requests are product-specific and available in both the
 Uploading a revision marks the previous decision superseded, reopens the request and moves its workflow step back to `waiting_client`. A passed decision completes the corresponding artwork/PPS step; rejection or requested changes blocks it. Response deadlines produce warnings but never close the request automatically.
 
 Administrators can proceed under a version-scoped manager override. Overrides and revocations are normalized audit rows rather than fields overwritten by the next decision. A later client decision retires the active override without deleting it. Approval files cannot be deleted while referenced by this history.
+
+## Product operational readiness delivered
+
+The four operational steps are source-controlled and evaluated separately for every active project product:
+
+- **Procurement** requires an assigned vendor and enough directly linked lines on sent, approved or billed Purchase Orders. Draft and cancelled documents never release the gate.
+- **Production** reads the quantity completed plus a required operational evidence reference. Partial production remains visible and does not complete the product step.
+- **Quality** is an append-only series of structured inspection attempts. Each attempt reconciles inspected quantity into passed, rejected and rework quantities, stores the checklist, inspector, time, evidence file SHA-256 and record fingerprint, and cannot pass more than the ordered product quantity cumulatively.
+- **Packing** sums only Packaging List lines carrying the direct `project_product_id` whose list has a latest successful verification matching the list's current fingerprint. Editing packing content invalidates that evidence until verification runs again.
+
+Invoice, purchase and shipment source lines retain project-product identity when copied into a Packaging List. This avoids guessing by product name or a generic catalogue product. QC and verified packing expose required, covered and remaining quantities in the Workflow command centre, so a partial quantity cannot falsely complete the whole product.
+
+Every readiness refresh creates a new immutable gate evaluation only when its evidence changes. Existing manager override and revocation controls apply to these product-scoped failures, while the underlying failed quantities and evidence remain visible. Coordinators cannot manually mark procurement, production, quality or packing complete.

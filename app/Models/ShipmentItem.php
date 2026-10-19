@@ -10,7 +10,7 @@ class ShipmentItem extends Model
     use HasFactory;
 
     protected $fillable = [
-        'shipment_id', 'product_name', 'sku', 'hs_code', 'quantity', 'unit', 'declared_value', 'currency',
+        'shipment_id', 'project_product_id', 'product_name', 'sku', 'hs_code', 'quantity', 'unit', 'declared_value', 'currency',
         'net_weight', 'gross_weight', 'description',
     ];
 
@@ -24,5 +24,10 @@ class ShipmentItem extends Model
     public function shipment()
     {
         return $this->belongsTo(Shipment::class);
+    }
+
+    public function projectProduct()
+    {
+        return $this->belongsTo(ProjectProduct::class);
     }
 }

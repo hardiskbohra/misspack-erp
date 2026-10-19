@@ -70,7 +70,8 @@ class PackagingListSource
         foreach ($lines as $line) {
             $source=(float)($line->quantity ?? 0); $previous=$this->packed($type,$line->id); $remaining=max(0,$source-$previous);
             $items[]=[
-                'product_id'=>$line->product_id ?? null,'source_type'=>$type,'source_item_id'=>$line->id,
+                'product_id'=>$line->product_id ?? null,'project_product_id'=>$line->project_product_id ?? null,
+                'source_type'=>$type,'source_item_id'=>$line->id,
                 'source_quantity'=>$source,'previously_packed_quantity'=>$previous,
                 'item_description'=>$line->product_name ?? $line->description ?? 'Item','sku'=>$line->sku ?? $line->product?->sku,
                 'hs_code'=>$line->hsn_sac ?? $line->hs_code ?? null,'quantity_per_carton'=>$remaining,

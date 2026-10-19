@@ -204,6 +204,7 @@ class ProjectController extends Controller
         }
         if ($this->productModelAvailable()) {
             $with[] = 'products.product';
+            if (Schema::hasTable('project_quality_inspections')) $with[] = 'products.qualityInspections.inspector';
         }
         if ($this->cashflowEntryModelAvailable() && Schema::hasColumn('cashflow_entries', 'project_id')) {
             $with[] = 'cashflowEntries';
@@ -258,7 +259,7 @@ class ProjectController extends Controller
         $workflow = null;
         if (Schema::hasTable('project_workflows')) {
             $workflow = $project->workflow()
-                ->with(['steps.product', 'steps.owner', 'reporter', 'commercialInvoice', 'evaluations.activeOverride.approver', 'evaluations.evaluator', 'approvals.product', 'approvals.currentVersion.attachment', 'approvals.versions.attachment', 'approvals.versions.clientUser', 'approvals.overrides.approver'])
+                ->with(['steps.product', 'steps.owner', 'reporter', 'commercialInvoice', 'evaluations.activeOverride.approver', 'evaluations.evaluator', 'evaluations.product', 'approvals.product', 'approvals.currentVersion.attachment', 'approvals.versions.attachment', 'approvals.versions.clientUser', 'approvals.overrides.approver'])
                 ->first();
         }
 

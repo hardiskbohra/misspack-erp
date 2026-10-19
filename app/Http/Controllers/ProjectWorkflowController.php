@@ -8,6 +8,7 @@ use App\Models\ProjectGateOverride;
 use App\Models\ProjectWorkflowStep;
 use App\Services\ProjectWorkflowExecution;
 use App\Services\ProjectWorkflowGates;
+use App\Services\ProjectOperationalReadiness;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -37,8 +38,9 @@ class ProjectWorkflowController extends Controller
         $workflow->update($data + ['reported_by' => Auth::id(), 'reported_at' => now()]);
         $execution->recalculate($workflow);
         app(ProjectWorkflowGates::class)->evaluateAll($workflow->fresh(), Auth::id());
+        app(ProjectOperationalReadiness::class)->evaluateAll($workflow->fresh(), Auth::id());
 
-        return back()->with('success', 'Coordinator report, commercial settings and financial gates updated.');
+        return back()->with('success', 'Coordinator report and all financial and product readiness gates updated.');
     }
 
     public function evaluate(Project $project, ProjectWorkflowGates $gates): RedirectResponse
@@ -46,8 +48,9 @@ class ProjectWorkflowController extends Controller
         $workflow = $project->workflow;
         abort_unless($workflow, 404);
         $gates->evaluateAll($workflow, Auth::id());
+        app(ProjectOperationalReadiness::class)->evaluateAll($workflow->fresh(), Auth::id());
 
-        return back()->with('success', 'Commercial and financial gates evaluated against the current Proforma and finalized receipts.');
+        return back()->with('success', 'Financial and product readiness gates evaluated against current source records.');
     }
 
     public function override(Request $request, Project $project, ProjectGateEvaluation $evaluation, ProjectWorkflowGates $gates, ProjectWorkflowExecution $execution): RedirectResponse
@@ -66,7 +69,9 @@ class ProjectWorkflowController extends Controller
             'approved_at' => now(),
         ]);
         $evaluation->setRelation('activeOverride', $override);
-        $gates->applyToStep($evaluation);
+        $evaluation->project_product_id
+            ? app(ProjectOperationalReadiness::class)->applyToStep($evaluation)
+            : $gates->applyToStep($evaluation);
         $execution->recalculate($evaluation->workflow);
 
         return back()->with('warning', 'Manager override recorded. The failed condition remains visible and auditable.');
@@ -80,7 +85,9 @@ class ProjectWorkflowController extends Controller
         $data = $request->validate(['revocation_reason' => ['required', 'string', 'min:5', 'max:2000']]);
         $override->update($data + ['revoked_by' => Auth::id(), 'revoked_at' => now()]);
         $evaluation->unsetRelation('activeOverride');
-        $gates->applyToStep($evaluation);
+        $evaluation->project_product_id
+            ? app(ProjectOperationalReadiness::class)->applyToStep($evaluation)
+            : $gates->applyToStep($evaluation);
         $execution->recalculate($evaluation->workflow);
 
         return back()->with('success', 'Manager override revoked; the gate is blocked again.');
@@ -89,7 +96,7 @@ class ProjectWorkflowController extends Controller
     public function updateStep(Request $request, Project $project, ProjectWorkflowStep $step, ProjectWorkflowExecution $execution): RedirectResponse
     {
         abort_unless($step->workflow?->project_id === $project->id, 404);
-        abort_if(in_array($step->step_key, array_merge(ProjectWorkflowGates::AUTOMATED_GATES, \App\Services\ProjectApprovals::CONTROLLED_STEPS), true), 422, 'This step is controlled by its current gate or client approval.');
+        abort_if(in_array($step->step_key, array_merge(ProjectWorkflowGates::AUTOMATED_GATES, ProjectOperationalReadiness::CONTROLLED_STEPS, \App\Services\ProjectApprovals::CONTROLLED_STEPS), true), 422, 'This step is controlled by its current gate or client approval.');
         $data = $request->validate([
             'status' => ['required', Rule::in(array_values(array_diff(array_keys(ProjectWorkflowStep::statusOptions()), ['skipped', 'cancelled'])))],
             'notes' => ['nullable', 'string', 'max:2000'],
@@ -104,6 +111,7 @@ class ProjectWorkflowController extends Controller
     {
         return (int) $evaluation->workflow->evaluations()
             ->where('gate_key', $evaluation->gate_key)
+            ->where('project_product_id', $evaluation->project_product_id)
             ->latest('evaluated_at')->latest('id')->value('id') === $evaluation->id;
     }
 }

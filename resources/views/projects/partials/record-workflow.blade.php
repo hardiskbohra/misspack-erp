@@ -37,9 +37,9 @@
             <section class="master-card master-card--flat master-section project-detail-card">
                 <div class="master-section-head"><div><h2 class="master-section-title">Commercial and financial gates</h2><p class="master-sub">Checks use the selected Proforma and booked or reconciled receipts. Material changes create a new auditable evaluation.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Run gate checks</button></form></div>
                 @php
-                    $currentGates = $workflow->evaluations->unique('gate_key');
+                    $currentGates = $workflow->evaluations->whereNull('project_product_id')->unique('gate_key');
                     $currentGateIds = $currentGates->pluck('id');
-                    $previousGates = $workflow->evaluations->reject(fn ($gate) => $currentGateIds->contains($gate->id));
+                    $previousGates = $workflow->evaluations->whereNull('project_product_id')->reject(fn ($gate) => $currentGateIds->contains($gate->id));
                 @endphp
                 @if($currentGates->isEmpty())
                     <div class="master-empty-state"><i class="fa-solid fa-shield-halved"></i><p>Select the commercial baseline and run gate checks to evaluate the production advance and complete pre-dispatch balance.</p></div>
@@ -104,6 +104,57 @@
             </section>
 
             <section class="master-card master-card--flat master-section project-detail-card">
+                <div class="master-section-head"><div><h2 class="master-section-title">Product operational readiness</h2><p class="master-sub">Each product is evaluated independently from purchase orders, production evidence, immutable QC attempts and current verified Packaging Lists.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Refresh readiness</button></form></div>
+                <div class="project-approval-list">
+                    @foreach($project->products->where('status','!=','cancelled') as $product)
+                        @php
+                            $productEvaluations = $workflow->evaluations->where('project_product_id',$product->id)->unique('gate_key')->keyBy('gate_key');
+                            $passedQc = (float) $product->qualityInspections->sum('passed_quantity');
+                            $remainingQc = max((float)$product->quantity-$passedQc,0);
+                        @endphp
+                        <article class="project-approval">
+                            <header><div><strong>{{ $product->product_name }}</strong><span>{{ number_format((float)$product->quantity,3) }} {{ $product->unit }} required</span></div><span class="master-badge">Independent product</span></header>
+                            <div class="project-gate-list">
+                                @foreach(\App\Services\ProjectOperationalReadiness::CONTROLLED_STEPS as $gateKey)
+                                    @php
+                                        $evaluation = $productEvaluations->get($gateKey);
+                                        $effective = $evaluation?->effectiveResult() ?? 'pending';
+                                        $details = $evaluation?->details ?: [];
+                                    @endphp
+                                    <article class="project-gate is-{{ $effective }}">
+                                        <div class="project-gate-icon"><i class="fa-solid {{ $effective==='passed' ? 'fa-circle-check' : ($effective==='overridden' ? 'fa-triangle-exclamation' : 'fa-circle-xmark') }}"></i></div>
+                                        <div class="project-gate-copy"><div><strong>{{ $evaluation?->gateLabel() ?: str($gateKey)->headline() }}</strong><span class="master-badge is-{{ $effective }}">{{ $evaluation?->resultLabel() ?: 'Not evaluated' }}</span></div><p>{{ $evaluation?->summary ?: 'Run readiness checks to capture source evidence.' }}</p>
+                                            @if(array_key_exists('required_quantity',$details))<small>{{ number_format((float)($details['required_quantity']??0),3) }} required · {{ number_format((float)($details['remaining_quantity']??0),3) }} remaining</small>@endif
+                                            @if($evaluation?->activeOverride)<div class="project-gate-override"><strong>Manager override by {{ $evaluation->activeOverride->approver?->name ?: 'Administrator' }}</strong><span>{{ $evaluation->activeOverride->reason }}</span></div>@endif
+                                        </div>
+                                        <div class="project-gate-actions">
+                                            @if($evaluation && $evaluation->result==='blocked' && !$evaluation->activeOverride && auth()->user()?->isAdmin())<details><summary class="master-btn master-btn-soft master-btn-sm">Manager override</summary><form method="POST" action="{{ route('projects.workflow.gates.override',[$project,$evaluation]) }}">@csrf<textarea class="master-textarea" name="reason" rows="3" minlength="10" maxlength="2000" required placeholder="Risk and reason for proceeding"></textarea><input class="master-input" type="date" name="expected_resolution_date"><button class="master-btn master-btn-primary master-btn-sm">Approve override</button></form></details>
+                                            @elseif($evaluation?->activeOverride && auth()->user()?->isAdmin())<details><summary class="master-btn master-btn-light master-btn-sm">Revoke override</summary><form method="POST" action="{{ route('projects.workflow.overrides.revoke',[$project,$evaluation->activeOverride]) }}">@csrf @method('PATCH')<textarea class="master-textarea" name="revocation_reason" minlength="5" maxlength="2000" required></textarea><button class="master-btn master-btn-light master-btn-sm">Revoke</button></form></details>@endif
+                                        </div>
+                                    </article>
+                                @endforeach
+                            </div>
+                            <details><summary class="master-btn master-btn-soft master-btn-sm">Record QC inspection · {{ number_format($remainingQc,3) }} remaining</summary>
+                                <form method="POST" enctype="multipart/form-data" action="{{ route('projects.quality-inspections.store',[$project,$product]) }}" class="project-approval-create">@csrf
+                                    <label class="master-field"><span class="master-label">Batch / lot</span><input class="master-input" name="batch_reference" maxlength="255"></label>
+                                    <label class="master-field"><span class="master-label">Inspected</span><input class="master-input" type="number" name="inspected_quantity" min="0.001" step="0.001" required></label>
+                                    <label class="master-field"><span class="master-label">Passed</span><input class="master-input" type="number" name="passed_quantity" min="0" step="0.001" value="0" required></label>
+                                    <label class="master-field"><span class="master-label">Rejected</span><input class="master-input" type="number" name="rejected_quantity" min="0" step="0.001" value="0" required></label>
+                                    <label class="master-field"><span class="master-label">Rework</span><input class="master-input" type="number" name="rework_quantity" min="0" step="0.001" value="0" required></label>
+                                    <label class="master-field"><span class="master-label">Result</span><select class="master-select" name="result" required><option value="passed">Passed</option><option value="passed_with_observations">Passed with observations</option><option value="failed">Failed</option><option value="rework_required">Rework required</option></select></label>
+                                    <div class="master-field project-approval-instructions"><span class="master-label">Structured checklist</span>@foreach(\App\Models\ProjectQualityInspection::CHECKS as $key=>$label)<label><input type="hidden" name="checklist[{{ $key }}]" value="0"><input type="checkbox" name="checklist[{{ $key }}]" value="1"> {{ $label }}</label>@endforeach</div>
+                                    <label class="master-field"><span class="master-label">Inspection evidence</span><input class="master-input" type="file" name="evidence_file" required accept=".jpg,.jpeg,.png,.webp,.pdf,.xls,.xlsx,.doc,.docx"></label>
+                                    <label class="master-field project-approval-instructions"><span class="master-label">Inspection notes</span><textarea class="master-textarea" name="notes" rows="3" maxlength="4000"></textarea></label>
+                                    <button class="master-btn master-btn-primary" type="submit">Record immutable inspection</button>
+                                </form>
+                            </details>
+                            @if($product->qualityInspections->isNotEmpty())<details><summary>QC history ({{ $product->qualityInspections->count() }})</summary><div class="project-approval-history">@foreach($product->qualityInspections as $inspection)<span><strong>{{ $inspection->resultLabel() }} · {{ number_format((float)$inspection->passed_quantity,3) }} passed</strong><small>{{ $inspection->inspected_at?->format('d M Y, H:i') }} · {{ $inspection->inspector?->name ?: 'System' }} · evidence SHA-256 {{ substr($inspection->evidence_hash,0,10) }}</small><a href="{{ $inspection->evidenceUrl() }}" target="_blank">{{ $inspection->evidence_original_name }}</a><em>{{ $inspection->notes }}</em></span>@endforeach</div></details>@endif
+                        </article>
+                    @endforeach
+                </div>
+            </section>
+
+            <section class="master-card master-card--flat master-section project-detail-card">
                 <div class="master-section-head"><div><h2 class="master-section-title">Standard execution path</h2><p class="master-sub">Project-level controls and product-level execution remain separate while contributing to one calculated progress.</p></div></div>
                 <div class="project-workflow-stages">
                     @foreach($workflowStages as $stageKey=>$stageLabel)
@@ -116,7 +167,7 @@
                                 <header><div><span>{{ str_pad((string)$loop->iteration,2,'0',STR_PAD_LEFT) }}</span><div><h3>{{ $stageLabel }}</h3><p>{{ $stageDone }} of {{ $stageSteps->count() }} steps complete</p></div></div><strong>{{ $stageSteps->count() ? round($stageDone/$stageSteps->count()*100) : 0 }}%</strong></header>
                                 <div class="project-workflow-step-list">
                                     @foreach($stageSteps as $step)
-                                        @if(in_array($step->step_key, array_merge(\App\Services\ProjectWorkflowGates::AUTOMATED_GATES, \App\Services\ProjectApprovals::CONTROLLED_STEPS), true))
+                                        @if(in_array($step->step_key, array_merge(\App\Services\ProjectWorkflowGates::AUTOMATED_GATES, \App\Services\ProjectOperationalReadiness::CONTROLLED_STEPS, \App\Services\ProjectApprovals::CONTROLLED_STEPS), true))
                                             <div class="project-workflow-step is-automated"><div class="project-workflow-step-copy"><i class="fa-solid {{ in_array($step->status,['completed','skipped']) ? 'fa-circle-check' : ($step->status==='blocked' ? 'fa-circle-xmark' : 'fa-circle') }}"></i><div><strong>{{ $step->title }}</strong><span>{{ in_array($step->step_key, \App\Services\ProjectApprovals::CONTROLLED_STEPS, true) ? 'Client approval' : 'Automated gate' }} · {{ $step->statusLabel() }}</span>@if($step->blocked_reason)<small>{{ $step->blocked_reason }}</small>@endif</div></div><span class="master-badge">Controlled by {{ in_array($step->step_key, \App\Services\ProjectApprovals::CONTROLLED_STEPS, true) ? 'approval version' : 'gate checks' }}</span></div>
                                         @else
                                             <form method="POST" action="{{ route('projects.workflow.steps.update',[$project,$step]) }}" class="project-workflow-step">@csrf @method('PATCH')

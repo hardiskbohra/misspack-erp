@@ -102,6 +102,7 @@ class PackagingListController extends Controller
             return $list;
         });
 
+        $this->refreshProjectReadiness($list);
         return redirect()->route('packaging-lists.show', $list)->with('success', 'Packaging list created successfully.');
     }
 
@@ -135,6 +136,7 @@ class PackagingListController extends Controller
             $this->assertVerifiedForStatus($packagingList->fresh(), $data['status'], $verifier);
         });
 
+        $this->refreshProjectReadiness($packagingList->fresh());
         return redirect()->route('packaging-lists.show', $packagingList)->with('success', 'Packaging list updated successfully.');
     }
 
@@ -143,6 +145,7 @@ class PackagingListController extends Controller
         $data = $request->validate(['status' => ['required', Rule::in(array_keys(PackagingList::statusOptions()))]]);
         $this->assertVerifiedForStatus($packagingList, $data['status'], $verifier);
         $packagingList->update(['status' => $data['status']]);
+        $this->refreshProjectReadiness($packagingList);
 
         return back()->with('success', 'Packaging list status changed to '.$packagingList->statusLabel().'.');
     }
@@ -174,6 +177,7 @@ class PackagingListController extends Controller
             'verified_at' => now(),
         ]);
 
+        $this->refreshProjectReadiness($packagingList->fresh());
         $message = $status === PackagingListVerification::STATUS_FAILED
             ? 'Verification recorded with failed checks. Correct the issues and run it again.'
             : 'Packaging verification completed successfully.';
@@ -183,7 +187,9 @@ class PackagingListController extends Controller
 
     public function destroy(PackagingList $packagingList): RedirectResponse
     {
+        $project = $packagingList->project;
         $packagingList->delete();
+        if ($project?->workflow) app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($project->workflow, Auth::id());
         return redirect()->route('packaging-lists.index')->with('success', 'Packaging list deleted successfully.');
     }
 
@@ -253,6 +259,7 @@ class PackagingListController extends Controller
             'cartons.*.is_hazardous' => ['nullable', 'boolean'], 'cartons.*.handling_instructions' => ['nullable', 'string'],
             'cartons.*.items' => ['required', 'array', 'min:1', 'max:200'],
             'cartons.*.items.*.product_id' => ['nullable', 'exists:products,id'],
+            'cartons.*.items.*.project_product_id' => ['nullable', Rule::exists('project_products', 'id')->where(fn ($query) => $query->where('project_id', $request->input('project_id')))],
             'cartons.*.items.*.source_type' => ['nullable', Rule::in(['sales_invoice','purchase_invoice','shipment'])],
             'cartons.*.items.*.source_item_id' => ['nullable', 'integer'],
             'cartons.*.items.*.source_quantity' => ['nullable', 'numeric', 'min:0'],
@@ -397,6 +404,13 @@ class PackagingListController extends Controller
             'products' => Product::where('status', 'active')->orderBy('name')->get(),
             'statusOptions' => PackagingList::statusOptions(), 'modeOptions' => PackagingList::transportModeOptions(),
         ];
+    }
+
+    private function refreshProjectReadiness(PackagingList $list): void
+    {
+        if ($workflow = $list->project?->workflow) {
+            app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($workflow, Auth::id());
+        }
     }
 
     private function shipmentAddress(Shipment $shipment, string $side): string

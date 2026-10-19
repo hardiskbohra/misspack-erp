@@ -34,6 +34,7 @@ use App\Http\Controllers\ProjectCommentController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectApprovalController;
 use App\Http\Controllers\ProjectWorkflowController;
+use App\Http\Controllers\ProjectQualityInspectionController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectTrackingController;
 use App\Http\Controllers\ProjectMilestoneController;
@@ -385,6 +386,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/projects/{project}/workflow', [ProjectWorkflowController::class, 'start'])->name('projects.workflow.start');
         Route::patch('/projects/{project}/workflow/report', [ProjectWorkflowController::class, 'report'])->name('projects.workflow.report');
         Route::post('/projects/{project}/workflow/evaluate', [ProjectWorkflowController::class, 'evaluate'])->name('projects.workflow.evaluate');
+        Route::post('/projects/{project}/products/{product}/quality-inspections', [ProjectQualityInspectionController::class, 'store'])->name('projects.quality-inspections.store');
         Route::post('/projects/{project}/workflow/gates/{evaluation}/override', [ProjectWorkflowController::class, 'override'])->name('projects.workflow.gates.override');
         Route::patch('/projects/{project}/workflow/overrides/{override}/revoke', [ProjectWorkflowController::class, 'revokeOverride'])->name('projects.workflow.overrides.revoke');
         Route::patch('/projects/{project}/workflow/steps/{step}', [ProjectWorkflowController::class, 'updateStep'])->name('projects.workflow.steps.update');

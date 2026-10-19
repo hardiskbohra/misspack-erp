@@ -13,7 +13,8 @@ class ProjectProduct extends Model
     protected $fillable = [
         'project_id', 'product_id', 'product_name', 'sku', 'product_snapshot', 'quantity', 'unit',
         'unit_price', 'total_amount', 'currency', 'status', 'stage', 'assignee_id', 'vendor_id',
-        'vendor_invoice_number', 'expected_ready_date', 'actual_ready_date', 'notes', 'sort_order',
+        'vendor_invoice_number', 'expected_ready_date', 'actual_ready_date', 'production_completed_quantity',
+        'production_evidence', 'production_recorded_by', 'production_recorded_at', 'notes', 'sort_order',
     ];
 
     protected $casts = [
@@ -23,6 +24,8 @@ class ProjectProduct extends Model
         'total_amount' => 'decimal:2',
         'expected_ready_date' => 'date',
         'actual_ready_date' => 'date',
+        'production_completed_quantity' => 'decimal:3',
+        'production_recorded_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -52,6 +55,11 @@ class ProjectProduct extends Model
     public function vendor()
     {
         return $this->belongsTo(\App\Models\Vendor::class, 'vendor_id');
+    }
+
+    public function productionRecorder()
+    {
+        return $this->belongsTo(User::class, 'production_recorded_by');
     }
 
     public function comments()
@@ -90,6 +98,11 @@ class ProjectProduct extends Model
     public function logs()
     {
         return $this->hasMany(ProjectLog::class)->latest('id');
+    }
+
+    public function qualityInspections()
+    {
+        return $this->hasMany(ProjectQualityInspection::class)->latest('inspected_at')->latest('id');
     }
 
     public function statusLabel(): string

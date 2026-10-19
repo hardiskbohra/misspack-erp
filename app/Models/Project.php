@@ -441,4 +441,9 @@ class Project extends Model
     {
         return $this->hasMany(ProjectApprovalRequest::class)->latest('requested_at')->latest('id');
     }
+
+    public function qualityInspections()
+    {
+        return $this->hasMany(ProjectQualityInspection::class)->latest('inspected_at')->latest('id');
+    }
 }

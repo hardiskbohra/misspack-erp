@@ -7,6 +7,7 @@ use App\Models\CashflowAccount;
 use App\Models\CashflowEntry;
 use App\Models\SalesInvoice;
 use App\Models\SavedView;
+use App\Models\ProjectProduct;
 use App\Helpers\DateRanges;
 use App\Models\Shipment;
 use App\Models\ShipmentAttachment;
@@ -27,6 +28,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ShipmentController extends Controller
@@ -639,6 +641,7 @@ class ShipmentController extends Controller
             'attachment_photos.*' => ['nullable', 'file', 'max:8192'],
 
             'items' => ['nullable', 'array'],
+            'items.*.project_product_id' => ['nullable', Rule::exists('project_products', 'id')->where(fn ($query) => $query->where('project_id', $request->input('project_id')))],
             'items.*.product_name' => ['nullable', 'string', 'max:255'],
             'items.*.sku' => ['nullable', 'string', 'max:255'],
             'items.*.hs_code' => ['nullable', 'string', 'max:255'],
@@ -712,6 +715,7 @@ class ShipmentController extends Controller
             }
 
             $shipment->items()->create([
+                'project_product_id' => $item['project_product_id'] ?? null,
                 'product_name' => $item['product_name'],
                 'sku' => $item['sku'] ?? null,
                 'hs_code' => $item['hs_code'] ?? null,
@@ -1172,6 +1176,7 @@ class ShipmentController extends Controller
             'costHeads' => ShipmentCost::headOptions(),
             'costTotals' => $shipment->costSummary(),
             'invoiceOptions' => $this->invoiceOptions($shipment),
+            'projectProductOptions' => ProjectProduct::query()->with('project:id,name,project_number')->where('status', '!=', 'cancelled')->orderBy('project_id')->orderBy('sort_order')->limit(1000)->get(),
             'paymentModeOptions' => CashflowEntry::paymentModeOptions(),
             'paidAccounts' => $this->paidAccounts(),
             /* the rate each currency was last billed at — offered as the
