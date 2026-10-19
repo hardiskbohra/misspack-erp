@@ -36,6 +36,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectApprovalController;
 use App\Http\Controllers\ProjectWorkflowController;
 use App\Http\Controllers\ProjectCoordinatorQueueController;
+use App\Http\Controllers\ProjectExceptionController;
 use App\Http\Controllers\ProjectQualityInspectionController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectTrackingController;
@@ -386,6 +387,10 @@ Route::middleware('auth')->group(function () {
         // Project Management
         Route::get('/projects/work-queue', [ProjectCoordinatorQueueController::class, 'index'])->name('projects.work-queue.index');
         Route::patch('/projects/{project}/work-queue/{step}', [ProjectCoordinatorQueueController::class, 'update'])->name('projects.work-queue.update');
+        Route::get('/projects/exceptions', [ProjectExceptionController::class, 'index'])->name('projects.exceptions.index');
+        Route::post('/projects/exceptions/refresh', [ProjectExceptionController::class, 'refresh'])->name('projects.exceptions.refresh');
+        Route::patch('/projects/exceptions/{exception}/acknowledge', [ProjectExceptionController::class, 'acknowledge'])->name('projects.exceptions.acknowledge');
+        Route::patch('/projects/exceptions/{exception}/escalate', [ProjectExceptionController::class, 'escalate'])->name('projects.exceptions.escalate');
         Route::post('/projects/quick', [ProjectController::class, 'quickStore'])->name('projects.quickStore');
         Route::patch('/projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.status.update');
         Route::post('/projects/{project}/workflow', [ProjectWorkflowController::class, 'start'])->name('projects.workflow.start');

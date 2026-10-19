@@ -215,6 +215,10 @@ class ProjectController extends Controller
         if (Schema::hasTable('cashflow_allocations')) {
             $with[] = 'cashflowAllocations.cashflowEntry';
         }
+        if (Schema::hasTable('project_exceptions')) {
+            $with[] = 'exceptions.owner';
+            $with[] = 'exceptions.product';
+        }
 
         if ($this->shipmentModelAvailable()) {
             $with[] = 'shipments.items.projectProduct';
@@ -253,6 +257,9 @@ class ProjectController extends Controller
         if (! $project->relationLoaded('feedbackRequests')) {
             $project->setRelation('feedbackRequests', collect());
         }
+        if (! $project->relationLoaded('exceptions')) {
+            $project->setRelation('exceptions', collect());
+        }
         foreach (array_keys($this->documentRelations()) as $relation) {
             if (! $project->relationLoaded($relation)) {
                 $project->setRelation($relation, collect());
@@ -281,13 +288,14 @@ class ProjectController extends Controller
             'project' => $project,
             'workflow' => $workflow,
             'financialClosureSnapshot' => $financialClosureSnapshot,
+            'projectExceptions' => $project->exceptions->whereIn('status', [\App\Models\ProjectException::STATUS_OPEN, \App\Models\ProjectException::STATUS_ACKNOWLEDGED])->values(),
             'workflowStages' => ProjectWorkflowExecution::stageOptions(),
             'workflowStepStatuses' => \App\Models\ProjectWorkflowStep::statusOptions(),
             'unallocatedCash' => app(\App\Services\UnallocatedCashflows::class)->forProject($project->id),
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
             'tabCounts' => [
-                'workflow' => $workflow?->steps?->whereNotIn('status', ['completed', 'skipped'])->count() ?? 0,
+                'workflow' => ($workflow?->steps?->whereNotIn('status', ['completed', 'skipped'])->count() ?? 0) + $project->exceptions->whereIn('status', [\App\Models\ProjectException::STATUS_OPEN, \App\Models\ProjectException::STATUS_ACKNOWLEDGED])->count(),
                 'products' => $project->products->count(),
                 'milestones' => $project->milestones->count(),
                 'payments' => $cashflowCount,

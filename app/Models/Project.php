@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use App\Models\ProjectFinancialClosure;
+use App\Models\ProjectException;
 
 class Project extends Model
 {
@@ -362,6 +363,11 @@ class Project extends Model
             'net' => $inward - $outward,
             'outstanding' => max($this->estimatedValue() - $inward, 0),
         ];
+    }
+
+    public function exceptions()
+    {
+        return $this->hasMany(ProjectException::class)->latest('detected_at')->latest('id');
     }
 
     public function financialClosures()

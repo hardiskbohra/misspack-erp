@@ -16,6 +16,12 @@ const closureView=read('resources/views/projects/partials/financial-closure.blad
 const coordinatorQueue=read('app/Services/ProjectCoordinatorQueue.php');
 const coordinatorController=read('app/Http/Controllers/ProjectCoordinatorQueueController.php');
 const coordinatorView=read('resources/views/projects/work-queue.blade.php');
+const exceptionMigration=read('database/migrations/2026_10_18_177000_create_project_exceptions.php');
+const exceptionRegistry=read('app/Services/ProjectExceptionRegistry.php');
+const exceptionController=read('app/Http/Controllers/ProjectExceptionController.php');
+const exceptionModel=read('app/Models/ProjectException.php');
+const exceptionEvent=read('app/Models/ProjectExceptionEvent.php');
+const exceptionView=read('resources/views/projects/exceptions.blade.php');
 const salesInvoice=read('app/Models/SalesInvoice.php');
 const salesForm=read('resources/views/sales_invoices/form.blade.php');
 const project=read('app/Models/Project.php');
@@ -133,4 +139,15 @@ check('queue planning updates central coordinator owner dates notes and audit', 
 check('queue planning is project scoped and validates workflow identity', routes.includes("projects/{project}/work-queue/{step}")&&coordinatorController.includes("$step->workflow?->project_id === $project->id"));
 check('coordinator queue UI shows actionable context and planning controls', ['Current execution actions','Product lanes advance independently','Project coordinator','Action owner','Planned completion','Open workflow'].every(label=>coordinatorView.includes(label)));
 check('coordinator queue is reachable before project wildcard routes', routes.indexOf("/projects/work-queue")<routes.indexOf("Route::resource('projects'"));
+check('exception schema separates current state from immutable event history', ['project_exceptions','project_exception_events','source_key','source_fingerprint','source_snapshot','escalation_level','next_review_at'].every(value=>exceptionMigration.includes(`'${value}'`))&&exceptionEvent.includes('Project exception events are immutable'));
+check('exception discovery covers workflow failures accepted risks and financial closure', ['workflow_step','gate_override','approval_override','financial_closure'].every(source=>exceptionRegistry.includes(`'${source}'`))&&exceptionRegistry.includes('ProjectCoordinatorQueue::class'));
+check('exception sources use stable keys and changing fingerprints reopen response', exceptionRegistry.includes("'source_key' => 'workflow_step:'")&&exceptionRegistry.includes("hash('sha256'")&&exceptionRegistry.includes("'source_changed'")&&exceptionRegistry.includes('previous response plan is stale'));
+check('exception registry auto resolves only when source condition disappears', exceptionRegistry.includes("'auto_resolved'")&&exceptionRegistry.includes('The source condition is no longer active.')&&!exceptionController.includes('function resolve('));
+check('SLA escalation can reach management level two and raises office alert', exceptionRegistry.includes("'auto_escalated'")&&exceptionRegistry.includes('escalation_level === 1 ? 2')&&exceptionRegistry.includes('OfficeAlert::SEVERITY_CRITICAL'));
+check('acknowledgment requires owner response plan and future review', exceptionController.includes("'owner_id' => ['required'")&&exceptionController.includes("'response_plan' => ['required'")&&exceptionController.includes("'next_review_at' => ['required', 'date', 'after:now']"));
+check('manager escalation preserves underlying source condition', exceptionController.includes('isAdmin()')&&exceptionController.includes('underlying workflow or financial condition remains active'));
+check('exception UI exposes active critical unacknowledged escalated and review overdue', ['Active exceptions','Critical','Unacknowledged','Escalated','Review overdue'].every(label=>exceptionView.includes(label)));
+check('exception register shows source response plan escalation and immutable history', ['Exception register','Current response plan','Save response plan','Escalate to level','Audit history'].every(label=>exceptionView.includes(label)));
+check('project workflow surfaces active exception warnings without changing gates', view.includes('Active exceptions')&&view.includes('Open exception register')&&view.includes('underlying gate or financial condition'));
+check('exception routes precede project wildcard and remain project scoped', routes.includes('/projects/exceptions/{exception}/acknowledge')&&routes.indexOf("/projects/exceptions")<routes.indexOf("Route::resource('projects'"));
 console.log(`\nProject workflow: ${passed} passed, ${failed} failed`);if(failed)process.exit(1);

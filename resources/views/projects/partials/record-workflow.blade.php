@@ -22,6 +22,13 @@
                 <div class="master-stat master-stat--flat {{ $reportedVariance !== null && abs($reportedVariance) > 15 ? 'orange' : 'teal' }}"><span class="icon"><i class="fa-solid fa-code-compare"></i></span><div><p class="master-stat-title">Reported variance</p><p class="master-stat-value">{{ $reportedVariance === null ? '—' : (($reportedVariance > 0 ? '+' : '').$reportedVariance.'%') }}</p><p class="master-sub">Manual versus calculated</p></div></div>
             </div>
 
+            @if($projectExceptions->isNotEmpty())
+                <section class="master-card master-card--flat master-section project-detail-card">
+                    <div class="master-section-head"><div><h2 class="master-section-title">Active exceptions</h2><p class="master-sub">Response plans track ownership and escalation without changing the underlying gate or financial condition.</p></div><a class="master-btn master-btn-danger master-btn-sm" href="{{ route('projects.exceptions.index',['status'=>'active','search'=>$project->project_number]) }}">Open exception register</a></div>
+                    <div class="project-approval-history">@foreach($projectExceptions as $exception)<span><strong>{{ $exception->title }} · {{ $exception->statusLabel() }}</strong><small>{{ ucfirst($exception->severity) }}@if($exception->escalation_level) · escalation L{{ $exception->escalation_level }}@endif · {{ $exception->owner?->name ?: 'Owner unassigned' }}</small><em>{{ $exception->summary }}</em></span>@endforeach</div>
+                </section>
+            @endif
+
             <section class="master-card master-card--flat master-section project-detail-card">
                 <div class="master-section-head"><div><h2 class="master-section-title">Coordinator report</h2><p class="master-sub">Manual reporting stays alongside the calculated workflow and never bypasses a gate.</p></div></div>
                 <form method="POST" action="{{ route('projects.workflow.report', $project) }}" class="project-workflow-report">@csrf @method('PATCH')

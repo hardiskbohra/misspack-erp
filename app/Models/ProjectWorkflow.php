@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\ProjectFinancialClosure;
+use App\Models\ProjectException;
 
 class ProjectWorkflow extends Model
 {
@@ -30,6 +31,7 @@ class ProjectWorkflow extends Model
     public function evaluations() { return $this->hasMany(ProjectGateEvaluation::class)->latest('evaluated_at')->latest('id'); }
     public function approvals() { return $this->hasMany(ProjectApprovalRequest::class)->latest('requested_at')->latest('id'); }
     public function financialClosures() { return $this->hasMany(ProjectFinancialClosure::class)->latest('closed_at')->latest('id'); }
+    public function exceptions() { return $this->hasMany(ProjectException::class)->latest('detected_at')->latest('id'); }
     public function reporter() { return $this->belongsTo(User::class, 'reported_by'); }
     public function starter() { return $this->belongsTo(User::class, 'started_by'); }
     public function commercialInvoice() { return $this->belongsTo(SalesInvoice::class, 'commercial_sales_invoice_id'); }
