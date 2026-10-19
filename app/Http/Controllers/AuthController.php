@@ -27,6 +27,11 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
+            app(\App\Services\AuditTrail::class)->event('auth.login.succeeded', [
+                'actor_type' => 'office_user', 'actor_id' => Auth::id(), 'actor_name' => Auth::user()->name,
+                'actor_identifier' => Auth::user()->email, 'method' => 'POST', 'route_name' => 'login.post',
+                'ip_address' => $request->ip(), 'user_agent' => $request->userAgent(),
+            ]);
 
             /* Where somebody lands after signing in depends on who they are.
                An employee's home is their own record, not the office dashboard —
@@ -35,6 +40,10 @@ class AuthController extends Controller
             return redirect()->intended($this->homeFor(Auth::user()));
         }
 
+        app(\App\Services\AuditTrail::class)->event('auth.login.failed', [
+            'outcome' => 'failed', 'actor_type' => 'public', 'actor_identifier' => $request->input('email'),
+            'method' => 'POST', 'route_name' => 'login.post', 'ip_address' => $request->ip(), 'user_agent' => $request->userAgent(),
+        ]);
         return back()->withErrors([
             'email' => 'The provided credentials do not match our records.',
         ])->withInput($request->except('password'));

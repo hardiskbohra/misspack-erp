@@ -61,6 +61,10 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'access_profile',
+        'permissions',
+        'permissions_updated_at',
+        'permissions_updated_by',
         'mobile',
         'department',
         'designation',
@@ -92,6 +96,8 @@ class User extends Authenticatable
             'date_of_joining'   => 'date',
             'date_of_birth'     => 'date',
             'password'          => 'hashed',
+            'permissions' => 'array',
+            'permissions_updated_at' => 'datetime',
         ];
     }
 
@@ -137,6 +143,22 @@ class User extends Authenticatable
     public function roleLabel(): string
     {
         return self::ROLES[$this->role] ?? self::ROLES[self::DEFAULT_ROLE];
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        return app(\App\Services\PermissionMatrix::class)->allows($this, $permission);
+    }
+
+    public function accessProfileLabel(): string
+    {
+        if ($this->isEmployee()) return 'Employee self-service';
+        return ($this->access_profile ?: 'full') === 'full' ? 'Full office access' : 'Custom office access';
+    }
+
+    public function permissionsUpdater()
+    {
+        return $this->belongsTo(self::class, 'permissions_updated_by');
     }
 
     public function employmentTypeLabel(): ?string

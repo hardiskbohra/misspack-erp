@@ -70,6 +70,7 @@
            page would lose the treatment its own rows were designed with. The
            hub, which belongs to no single area, is the settings module. */
         request()->routeIs('dashboard', 'dashboards.*') => 'dashboard',
+        request()->routeIs('audit.*') => 'audit',
         request()->routeIs('settings.cashflow*') => 'cashflows',
         request()->routeIs('settings.organisation*') => 'users',
         request()->routeIs('settings.leads*') => 'leads',
@@ -151,6 +152,7 @@
                themselves are records, and records have modules. */
             ['label' => 'Fixed assets', 'route' => 'assets.index', 'active' => 'assets.*', 'icon' => 'fa-solid fa-industry'],
             ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'icon' => 'fas fa-users-cog'],
+            ['label' => 'Audit register', 'route' => 'audit.index', 'active' => 'audit.*', 'icon' => 'fa-solid fa-shield-halved'],
             /* One door for every rule in the ERP. The module-wise menu is the
                rail *inside* Settings, where the reader is already looking for a
                setting and the five areas sit next to what they change; a second
@@ -162,6 +164,14 @@
             ['section' => 'Personal'],
             ['label' => 'Notes', 'route' => 'notes.index', 'active' => 'notes.*', 'icon' => 'fa-regular fa-note-sticky'],
         ];
+        if (Auth::user() && Auth::user()->isAdmin() && (Auth::user()->access_profile ?: 'full') === 'custom') {
+            $matrix = app(\App\Services\PermissionMatrix::class);
+            $sidebarItems = collect($sidebarItems)->filter(function ($item) use ($matrix) {
+                if (isset($item['section'])) return true;
+                $required = $matrix->requiredForRoute($item['route']);
+                return $required === null || Auth::user()->hasPermission($required);
+            })->values()->all();
+        }
     @endphp
     
     

@@ -32,12 +32,21 @@ class VendorPortalAuthController extends Controller
         }
         if (! $user || ! Hash::check($data['password'], $user->password) || ! $user->canLogin()) {
             RateLimiter::hit($key, 60);
+            app(\App\Services\AuditTrail::class)->event('vendor_portal.login.failed', [
+                'outcome' => 'failed', 'actor_type' => 'public', 'actor_identifier' => $data['login'],
+                'method' => 'POST', 'route_name' => 'vendor-portal.login.submit', 'ip_address' => $request->ip(), 'user_agent' => $request->userAgent(),
+            ]);
             return back()->withInput($request->only('login'))->with('error', 'Sign-in details are invalid or portal access is unavailable.');
         }
         RateLimiter::clear($key);
         $request->session()->put('vendor_portal_user_id', $user->id);
         $request->session()->regenerate();
         $user->update(['last_login_at' => now()]);
+        app(\App\Services\AuditTrail::class)->event('vendor_portal.login.succeeded', [
+            'actor_type' => 'vendor_portal_user', 'actor_id' => $user->id, 'actor_name' => $user->displayName(),
+            'actor_identifier' => $user->email ?: $user->username, 'method' => 'POST',
+            'route_name' => 'vendor-portal.login.submit', 'ip_address' => $request->ip(), 'user_agent' => $request->userAgent(),
+        ]);
         return redirect()->route($user->must_change_password ? 'vendor-portal.password.edit' : 'vendor-portal.dashboard')
             ->with($user->must_change_password ? 'warning' : 'success', $user->must_change_password ? 'Please change your one-time password.' : 'Welcome to your vendor workspace.');
     }

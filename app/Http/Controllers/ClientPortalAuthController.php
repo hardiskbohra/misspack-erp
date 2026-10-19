@@ -50,6 +50,10 @@ class ClientPortalAuthController extends Controller
 
         if (! $portalUser || ! Hash::check($data['password'], $portalUser->password) || ! $portalUser->canLogin()) {
             RateLimiter::hit($throttleKey, 60);
+            app(\App\Services\AuditTrail::class)->event('client_portal.login.failed', [
+                'outcome' => 'failed', 'actor_type' => 'public', 'actor_identifier' => $data['login'],
+                'method' => 'POST', 'route_name' => 'client-portal.login.submit', 'ip_address' => $request->ip(), 'user_agent' => $request->userAgent(),
+            ]);
 
             return back()->withInput($request->only('login'))->with('error', 'Sign-in details are invalid or portal access is unavailable.');
         }
@@ -59,6 +63,11 @@ class ClientPortalAuthController extends Controller
         $request->session()->regenerate();
 
         $portalUser->update(['last_login_at' => now()]);
+        app(\App\Services\AuditTrail::class)->event('client_portal.login.succeeded', [
+            'actor_type' => 'client_portal_user', 'actor_id' => $portalUser->id, 'actor_name' => $portalUser->displayName(),
+            'actor_identifier' => $portalUser->email ?: $portalUser->username, 'method' => 'POST',
+            'route_name' => 'client-portal.login.submit', 'ip_address' => $request->ip(), 'user_agent' => $request->userAgent(),
+        ]);
 
         if ($portalUser->must_change_password) {
             return redirect()->route('client-portal.password.edit')->with('warning', 'Please change your one-time password.');

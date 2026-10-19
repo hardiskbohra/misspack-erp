@@ -6,7 +6,7 @@
 @section('page-actions')
     <a class="master-btn master-btn-ghost" href="{{ route('users.index') }}">All users</a>
     @if (! $user->isEmployee())
-        <span class="emp-pill is-off">Office account — full access</span>
+        <span class="emp-pill is-off">Office account — {{ strtolower($user->accessProfileLabel()) }}</span>
     @else
         <span class="emp-pill is-off">Signs in as an employee — sees only their own record</span>
     @endif
@@ -16,6 +16,7 @@
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/employees.css') }}">
     <link rel="stylesheet" href="{{ $assetVer('assets/css/users.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/audit-access.css') }}">
 @endpush
 
 @php
@@ -682,6 +683,31 @@
                             </table>
                         </div>
                     </div>
+                </section>
+            @endif
+
+            @if ($tab === 'access')
+                <section class="master-tab-panel access-panel" aria-label="Access profile">
+                    <div class="master-card master-card--flat access-summary">
+                        <div class="access-summary-copy"><p class="master-eyebrow">Permission boundary</p><h2>{{ $user->accessProfileLabel() }}</h2><p>{{ $user->isEmployee() ? 'Employee self-service is restricted to this person’s own workspace.' : 'Office permissions are enforced on direct URLs and write actions, not only hidden in navigation.' }}</p></div>
+                        <div class="access-summary-meta"><span>Last changed</span><strong>{{ $user->permissions_updated_at?->format('d M Y, H:i') ?: 'Default profile' }}</strong><small>{{ $user->permissionsUpdater?->name ?: 'System default' }}</small></div>
+                    </div>
+                    @if(!$user->isEmployee() && auth()->user()?->hasPermission('permissions.manage'))
+                        <form class="master-card master-card--flat access-form" method="POST" action="{{ route('users.permissions.update', $user) }}">@csrf @method('PATCH')
+                            <div class="master-section-head"><div><p class="master-eyebrow">Office access</p><h2>Access profile</h2></div><button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-shield-halved"></i> Save access</button></div>
+                            <div class="access-profile-choices">
+                                <label><input type="radio" name="access_profile" value="full" @checked(($user->access_profile ?: 'full') === 'full')><span><strong>Full office access</strong><small>All current and future office modules. Use only for trusted administrators.</small></span></label>
+                                <label><input type="radio" name="access_profile" value="custom" @checked($user->access_profile === 'custom')><span><strong>Custom office access</strong><small>Only explicitly selected capabilities. New modules start denied.</small></span></label>
+                            </div>
+                            <div class="access-permission-grid">
+                                @foreach(collect($permissionOptions)->groupBy('group') as $group => $permissions)
+                                    <fieldset><legend>{{ $group }}</legend>@foreach($permissions as $key => $permission)<label><input type="checkbox" name="permissions[]" value="{{ $key }}" @checked(in_array($key, $user->permissions ?: [], true))><span><strong>{{ $permission['label'] }}</strong><small>{{ $permission['description'] }}</small></span></label>@endforeach</fieldset>
+                                @endforeach
+                            </div>
+                        </form>
+                    @elseif(!$user->isEmployee())
+                        <div class="master-card master-card--flat master-empty-state"><i class="fa-solid fa-lock" aria-hidden="true"></i><p>You can review this profile, but only an administrator with access-management permission can change it.</p></div>
+                    @endif
                 </section>
             @endif
         </div>

@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\ModuleDashboardController;
 use App\Http\Controllers\EmployeeDocumentController;
@@ -155,6 +156,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/clients/{client}/portal/documents/{document}/file', [ClientPortalManagementController::class, 'downloadDocument'])->name('clients.portal.documents.file');
 
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/audit', [AuditLogController::class, 'index'])->name('audit.index');
         Route::get('/dashboards', [ModuleDashboardController::class, 'index'])->name('dashboards.index');
         Route::get('/dashboards/{module}', [ModuleDashboardController::class, 'show'])
             ->whereIn('module', array_keys(\App\Services\ModuleDashboard::MODULES))
@@ -268,6 +270,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/users/{user}/documents/{document}', [EmployeeDocumentController::class, 'destroy'])->name('users.documents.destroy');
         Route::get('/users/{user}/documents/{document}/file', [EmployeeDocumentController::class, 'file'])->name('users.documents.file');
         Route::get('/users/{user}/data', [UserController::class, 'getData'])->name('users.data');
+        Route::patch('/users/{user}/permissions', [UserController::class, 'updatePermissions'])->name('users.permissions.update');
         Route::put('/users/{user}',      [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}',   [UserController::class, 'destroy'])->name('users.destroy');
 

@@ -52,6 +52,7 @@ class UserController extends Controller
         'salary' => 'Salary',
         'documents' => 'Documents',
         'work' => 'Work',
+        'access' => 'Access',
     ];
 
     /**
@@ -331,6 +332,7 @@ class UserController extends Controller
             'roles' => User::ROLES,
             'isSelf' => (int) auth()->id() === (int) $user->id,
             'isLastAdmin' => $this->isLastAdmin($user),
+            'permissionOptions' => app(\App\Services\PermissionMatrix::class)->options(),
         ]);
     }
 
@@ -676,6 +678,35 @@ class UserController extends Controller
     }
 
     /** Delete user */
+    public function updatePermissions(Request $request, User $user)
+    {
+        abort_unless(auth()->user()?->hasPermission('permissions.manage'), 403);
+        abort_if($user->isEmployee() && $request->input('access_profile') !== 'employee', 422, 'Employee accounts use self-service access only.');
+        abort_if((int) auth()->id() === (int) $user->id && $request->input('access_profile') === 'custom'
+            && ! in_array('permissions.manage', (array) $request->input('permissions', []), true), 422,
+            'You cannot remove your own ability to manage access profiles.');
+
+        $options = app(\App\Services\PermissionMatrix::class)->options();
+        $profile = $user->isEmployee() ? 'employee' : (string) $request->validate([
+            'access_profile' => ['required', Rule::in(['full','custom'])],
+        ])['access_profile'];
+        $permissions = $profile === 'custom'
+            ? collect((array) $request->input('permissions', []))->filter(fn ($permission) => array_key_exists($permission, $options))->unique()->values()->all()
+            : [];
+        $before = ['access_profile' => $user->access_profile ?: 'full', 'permissions' => $user->permissions ?: []];
+        $user->update([
+            'access_profile' => $profile, 'permissions' => $permissions,
+            'permissions_updated_at' => now(), 'permissions_updated_by' => auth()->id(),
+        ]);
+        app(\App\Services\AuditTrail::class)->event('permissions.updated', [
+            'actor_type' => 'office_user', 'actor_id' => auth()->id(), 'actor_name' => auth()->user()->name,
+            'actor_identifier' => auth()->user()->email, 'auditable_type' => User::class, 'auditable_id' => $user->id,
+            'method' => 'PATCH', 'route_name' => 'users.permissions.update',
+            'changed_fields' => ['access_profile','permissions'], 'context' => ['before' => $before, 'after' => ['access_profile' => $profile, 'permissions' => $permissions]],
+        ]);
+        return redirect()->route('users.show', ['user' => $user, 'tab' => 'access'])->with('success', 'Access profile updated.');
+    }
+
     public function destroy(User $user)
     {
         if ($user->id === auth()->id()) {

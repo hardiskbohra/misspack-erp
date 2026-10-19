@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
                its own workspace and nothing else — see the middleware. */
             'office' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
+        $middleware->appendToGroup('web', [\App\Http\Middleware\AuditMutations::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

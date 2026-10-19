@@ -20,7 +20,7 @@ use Throwable;
 
 class GlobalSearch
 {
-    public function __construct(private SettingsDirectory $settings)
+    public function __construct(private SettingsDirectory $settings, private PermissionMatrix $permissions)
     {
     }
 
@@ -35,6 +35,8 @@ class GlobalSearch
         $groups = [];
 
         foreach ($this->sources() as $source) {
+            $required = $this->permissionForSource($source['key']);
+            if ($required && auth()->user() && ! $this->permissions->allows(auth()->user(), $required)) continue;
             if (! class_exists($source['model']) || ! Schema::hasTable($source['table'])) {
                 continue;
             }
@@ -75,7 +77,7 @@ class GlobalSearch
            answer, and the group only appears when it has something to say. */
         $settings = $this->settings->searchHits($query, $perGroup);
 
-        if ($settings !== []) {
+        if ($settings !== [] && (! auth()->user() || $this->permissions->allows(auth()->user(), 'settings.manage'))) {
             $groups[] = [
                 'key' => 'settings',
                 'label' => 'Settings',
@@ -94,6 +96,20 @@ class GlobalSearch
     /**
      * @return list<array<string, mixed>>
      */
+    private function permissionForSource(string $key): ?string
+    {
+        return match ($key) {
+            'clients', 'products', 'leads', 'sales' => 'sales.view',
+            'vendors', 'purchases' => 'purchase.view',
+            'projects' => 'projects.view',
+            'cashflows', 'assets' => 'finance.view',
+            'shipments' => 'operations.view',
+            'tasks' => 'work.view',
+            'people' => 'people.view',
+            default => null,
+        };
+    }
+
     private function sources(): array
     {
         return [
