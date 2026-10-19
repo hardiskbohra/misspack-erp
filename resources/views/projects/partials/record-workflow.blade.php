@@ -68,7 +68,7 @@
             <noscript><style>[data-workflow-view][hidden]{display:block!important}</style></noscript>
 
             <section class="workflow-action-centre" data-workflow-view="actions" role="tabpanel" aria-labelledby="workflow-tab-actions workflowActionsTitle">
-                <div class="workflow-view-heading"><div><span>Work requiring attention</span><h2 id="workflowActionsTitle">Current actions</h2><p>Only work that can move now is shown. Future controls stay out of the way.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Refresh sources</button></form></div>
+                <div class="workflow-view-heading"><div><span>Work requiring attention</span><h2 id="workflowActionsTitle">Current actions</h2><p>Only work that can move now is shown. Future controls stay out of the way.</p></div><div class="workflow-view-actions"><button type="button" class="master-btn master-btn-light master-btn-sm" data-modal-open="workflowReportModal"><i class="fa-solid fa-user-pen"></i> Coordinator report</button><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Refresh sources</button></form></div></div>
                 <div class="workflow-action-list">
                     @forelse($currentActions as $action)
                         @php
@@ -89,23 +89,11 @@
             @if($projectExceptions->isNotEmpty())
                 <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="actions" role="tabpanel" aria-labelledby="workflow-tab-actions">
                     <div class="master-section-head"><div><h2 class="master-section-title">Active exceptions</h2><p class="master-sub">Response plans track ownership and escalation without changing the underlying gate or financial condition.</p></div><a class="master-btn master-btn-danger master-btn-sm" href="{{ route('projects.exceptions.index',['status'=>'active','search'=>$project->project_number]) }}">Open exception register</a></div>
-                    <div class="project-approval-history">@foreach($projectExceptions as $exception)<span><strong>{{ $exception->title }} · {{ $exception->statusLabel() }}</strong><small>{{ ucfirst($exception->severity) }}@if($exception->escalation_level) · escalation L{{ $exception->escalation_level }}@endif · {{ $exception->owner?->name ?: 'Owner unassigned' }}</small><em>{{ $exception->summary }}</em></span>@endforeach</div>
+                    <div class="workflow-exception-list">@foreach($projectExceptions as $exception)<article><span class="workflow-exception-state is-{{ $exception->severity }}"><i class="fa-solid fa-triangle-exclamation"></i></span><div><strong>{{ $exception->title }}</strong><p>{{ $exception->summary }}</p></div><div class="workflow-exception-meta"><span class="master-badge">{{ $exception->statusLabel() }}</span><small>{{ ucfirst($exception->severity) }}@if($exception->escalation_level) · escalation L{{ $exception->escalation_level }}@endif · {{ $exception->owner?->name ?: 'Owner unassigned' }}</small></div></article>@endforeach</div>
                 </section>
             @endif
 
             @include('projects.partials.workflow-matrix')
-
-            <section class="master-card master-card--flat master-section project-detail-card workflow-collapsible-card" data-workflow-view="actions" role="tabpanel" aria-labelledby="workflow-tab-actions">
-                <div class="master-section-head"><div><h2 class="master-section-title">Coordinator report</h2><p class="master-sub">Manual reporting stays alongside the calculated workflow and never bypasses a gate.</p></div></div>
-                <form method="POST" action="{{ route('projects.workflow.report', $project) }}" class="project-workflow-report">@csrf @method('PATCH')
-                    <label class="master-field"><span class="master-label">Reported stage</span><select class="master-select" name="reported_stage" required>@foreach($workflowStages as $key=>$label)<option value="{{ $key }}" @selected(old('reported_stage',$workflow->reported_stage ?: $workflow->calculated_stage)===$key)>{{ $label }}</option>@endforeach</select></label>
-                    <label class="master-field"><span class="master-label">Reported progress</span><input class="master-input" type="number" name="reported_progress" min="0" max="100" value="{{ old('reported_progress',$workflow->reported_progress ?? $workflow->calculated_progress) }}" required></label>
-                    <label class="master-field"><span class="master-label">Commercial baseline PI</span><select class="master-select" name="commercial_sales_invoice_id"><option value="">Not selected</option>@foreach($project->proformaInvoices as $invoice)<option value="{{ $invoice->id }}" @selected((string)old('commercial_sales_invoice_id',$workflow->commercial_sales_invoice_id)===(string)$invoice->id)>{{ $invoice->invoice_number }} · {{ $money($invoice->total_amount) }}</option>@endforeach</select></label>
-                    <label class="master-field"><span class="master-label">Advance override %</span><input class="master-input" type="number" name="advance_percentage_override" min="0" max="100" step="0.01" value="{{ old('advance_percentage_override',$workflow->advance_percentage_override) }}" placeholder="Use PI terms"></label>
-                    <label class="master-field project-workflow-report-note"><span class="master-label">Reason / execution update</span><textarea class="master-textarea" name="reported_reason" rows="3" maxlength="2000" required>{{ old('reported_reason',$workflow->reported_reason) }}</textarea></label>
-                    <div class="project-workflow-report-action"><button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-check"></i> Save report</button></div>
-                </form>
-            </section>
 
             <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="commercial" role="tabpanel" aria-labelledby="workflow-tab-commercial" hidden>
                 <div class="master-section-head"><div><h2 class="master-section-title">Commercial and dispatch authorization gates</h2><p class="master-sub">Financial checks use the selected Proforma and receipts; dispatch authorization uses exact verified packing allocations, QC, approvals and paperwork. Material changes create a new auditable evaluation.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Run gate checks</button></form></div>
@@ -285,6 +273,27 @@
                     @endforeach
                 </div>
             </section>
+
+            <div class="master-modal" id="workflowReportModal" aria-hidden="true" aria-labelledby="workflowReportTitle" data-open-on-errors="{{ $errors->hasAny(['reported_stage','reported_progress','commercial_sales_invoice_id','advance_percentage_override','reported_reason']) ? 'true' : 'false' }}">
+                <div class="master-modal-card workflow-report-modal" role="dialog" aria-modal="true" aria-labelledby="workflowReportTitle" aria-describedby="workflowReportDescription">
+                    <form method="POST" action="{{ route('projects.workflow.report', $project) }}">@csrf @method('PATCH')
+                        <div class="master-modal-header">
+                            <div class="master-modal-heading"><span class="master-modal-icon"><i class="fa-solid fa-user-pen"></i></span><div><h3 class="master-modal-title" id="workflowReportTitle">Coordinator report</h3><p class="master-modal-subtitle" id="workflowReportDescription">Update the manual execution view and commercial inputs. Manual reporting never bypasses a gate.</p></div></div>
+                            <button type="button" class="master-modal-close" data-close-modal aria-label="Close coordinator report">×</button>
+                        </div>
+                        <div class="master-modal-body">
+                            <div class="master-modal-grid workflow-report-grid">
+                                <label class="master-field"><span class="master-label">Reported stage</span><select class="master-select" name="reported_stage" required>@foreach($workflowStages as $key=>$label)<option value="{{ $key }}" @selected(old('reported_stage',$workflow->reported_stage ?: $workflow->calculated_stage)===$key)>{{ $label }}</option>@endforeach</select></label>
+                                <label class="master-field"><span class="master-label">Reported progress</span><input class="master-input" type="number" name="reported_progress" min="0" max="100" value="{{ old('reported_progress',$workflow->reported_progress ?? $workflow->calculated_progress) }}" required><small class="master-help">Calculated progress is {{ $workflow->calculated_progress }}%.</small></label>
+                                <label class="master-field"><span class="master-label">Commercial baseline PI</span><select class="master-select" name="commercial_sales_invoice_id"><option value="">Not selected</option>@foreach($project->proformaInvoices as $invoice)<option value="{{ $invoice->id }}" @selected((string)old('commercial_sales_invoice_id',$workflow->commercial_sales_invoice_id)===(string)$invoice->id)>{{ $invoice->invoice_number }} · {{ $money($invoice->total_amount) }}</option>@endforeach</select><small class="master-help">Authoritative source for advance and dispatch terms.</small></label>
+                                <label class="master-field"><span class="master-label">Advance override %</span><input class="master-input" type="number" name="advance_percentage_override" min="0" max="100" step="0.01" value="{{ old('advance_percentage_override',$workflow->advance_percentage_override) }}" placeholder="Use PI terms"><small class="master-help">Leave empty to use the selected PI.</small></label>
+                                <label class="master-field full"><span class="master-label">Reason / execution update</span><textarea class="master-textarea" name="reported_reason" rows="4" maxlength="2000" required>{{ old('reported_reason',$workflow->reported_reason) }}</textarea></label>
+                            </div>
+                        </div>
+                        <div class="master-modal-footer"><button type="button" class="master-btn master-btn-light" data-close-modal>Cancel</button><button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-check"></i> Save report</button></div>
+                    </form>
+                </div>
+            </div>
         @endif
     </div>
 </section>

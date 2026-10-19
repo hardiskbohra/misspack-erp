@@ -99,6 +99,9 @@
                 window.MasterModal.open(target);
             });
         });
+        document.querySelectorAll('.master-modal[data-open-on-errors="true"]').forEach(function (modal) {
+            window.MasterModal.open(modal);
+        });
 
         /* `type="date"` wants `YYYY-MM-DD`; a model cast hands over a full ISO
            timestamp, which the field quietly refuses and shows as empty. */
