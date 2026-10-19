@@ -7,7 +7,7 @@
         return collect($totals)->map(fn ($amount, $currency) => \App\Helpers\CommonHelper::amount((float) $amount, $currency))->implode(' · ') ?: 'None';
     };
 @endphp
-<section class="master-card master-card--flat master-section project-detail-card project-financial-closure" aria-labelledby="financialClosureTitle">
+<section class="master-card master-card--flat master-section project-detail-card project-financial-closure" data-workflow-view="commercial" hidden aria-labelledby="financialClosureTitle">
     <div class="master-section-head">
         <div>
             <h2 class="master-section-title" id="financialClosureTitle">Financial closure</h2>

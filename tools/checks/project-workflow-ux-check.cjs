@@ -1,0 +1,24 @@
+'use strict';
+const fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'../..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const view=read('resources/views/projects/partials/record-workflow.blade.php');
+const matrix=read('resources/views/projects/partials/workflow-matrix.blade.php');
+const closure=read('resources/views/projects/partials/financial-closure.blade.php');
+const css=read('public/assets/css/projects.css');
+const js=read('public/assets/js/projects.js');
+let passed=0,failed=0;
+function check(label,value){if(value){passed++;console.log(`PASS ${label}`)}else{failed++;console.error(`FAIL ${label}`)}}
+check('workflow opens with a task-first action centre',view.includes('Workflow command centre')&&view.includes('Current actions')&&view.includes('Future controls stay out of the way'));
+check('compact summary exposes operational attention', ['Current','Overdue','Blocked','Waiting','Overrides','Exceptions'].every(label=>view.includes(`<span>${label}</span>`)));
+check('stage rail provides direct progressive navigation',view.includes('workflow-stage-rail')&&view.includes("$railDone")&&view.includes("$railBlocked"));
+check('five workflow views separate daily work from evidence',['actions','matrix','products','commercial','history'].every(key=>view.includes(`'${key}'`))&&view.includes('data-workflow-open="{{ $viewKey }}"'));
+check('all long workflow sections belong to a focused view',matrix.includes('data-workflow-view="matrix"')&&closure.includes('data-workflow-view="commercial"')&&(view.match(/data-workflow-view="products"/g)||[]).length>=2&&view.includes('data-workflow-view="history"'));
+check('current action rows retain owner due state reason and direct management', ['workflow-action-copy','workflow-action-meta','blocked_reason','due_date','Manage action'].every(value=>view.includes(value)));
+check('product readiness is progressively disclosed',view.includes('workflow-product-disclosure')&&view.includes('fa-chevron-down')&&view.includes('@if($loop->first) open'));
+check('history stages are collapsed except the current stage',view.includes('<details class="project-workflow-stage')&&view.includes("$workflow->calculated_stage === $stageKey) open"));
+check('accessible tabs support keyboard navigation',js.includes("['ArrowLeft', 'ArrowRight']")&&js.includes("setAttribute('aria-selected'")&&view.includes('role="tablist"'));
+check('selected view survives form round trips per project',js.includes("project-workflow-view:")&&js.includes('window.localStorage.setItem')&&js.includes("#workflow-"));
+check('no-script fallback keeps source controls available',view.includes('<noscript>')&&view.includes('display:block!important'));
+check('responsive command UI has no box shadows',css.includes('.workflow-command-header')&&css.includes('.workflow-action-row')&&css.includes('@media(max-width:700px)')&&!css.match(/workflow-[^{]+\{[^}]*box-shadow/));
+console.log(`\n${passed} passed, ${failed} failed`);if(failed)process.exit(1);

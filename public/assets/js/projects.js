@@ -308,10 +308,77 @@
            (app-layout.js) through [data-close-modal]. */
     }
 
+    /* ------------------------------------------------------------------
+       Workflow command centre — task-first views
+       Only one operational surface is visible at a time. The selected view is
+       kept per project so a form round-trip returns the coordinator to the
+       context they were working in.
+       ------------------------------------------------------------------ */
+    function initWorkflowViews() {
+        var root = document.getElementById('project-panel-workflow');
+        if (!root) return;
+
+        var views = Array.prototype.slice.call(root.querySelectorAll('[data-workflow-view]'));
+        var triggers = Array.prototype.slice.call(root.querySelectorAll('[data-workflow-open]'));
+        if (!views.length || !triggers.length) return;
+
+        var project = document.querySelector('.project-show');
+        var storageKey = 'project-workflow-view:' + (project ? project.getAttribute('data-project-id') : 'default');
+        var allowed = ['actions', 'matrix', 'products', 'commercial', 'history'];
+
+        function select(name, shouldFocus) {
+            if (allowed.indexOf(name) === -1) name = 'actions';
+            views.forEach(function (view) {
+                view.hidden = view.getAttribute('data-workflow-view') !== name;
+            });
+            triggers.forEach(function (trigger) {
+                var active = trigger.getAttribute('data-workflow-open') === name;
+                if (trigger.getAttribute('role') === 'tab') {
+                    trigger.classList.toggle('is-active', active);
+                    trigger.setAttribute('aria-selected', active ? 'true' : 'false');
+                    trigger.setAttribute('tabindex', active ? '0' : '-1');
+                }
+            });
+            try { window.localStorage.setItem(storageKey, name); } catch (error) {}
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', window.location.pathname + window.location.search + '#workflow-' + name);
+            }
+            if (shouldFocus) {
+                var heading = root.querySelector('[data-workflow-view="' + name + '"] h2');
+                if (heading) {
+                    heading.setAttribute('tabindex', '-1');
+                    heading.focus({ preventScroll: true });
+                }
+                root.querySelector('.workflow-view-tabs').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        triggers.forEach(function (trigger) {
+            trigger.addEventListener('click', function () {
+                select(trigger.getAttribute('data-workflow-open'), true);
+            });
+            trigger.addEventListener('keydown', function (event) {
+                if (trigger.getAttribute('role') !== 'tab' || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+                event.preventDefault();
+                var tabs = triggers.filter(function (item) { return item.getAttribute('role') === 'tab'; });
+                var index = tabs.indexOf(trigger) + (event.key === 'ArrowRight' ? 1 : -1);
+                var next = tabs[(index + tabs.length) % tabs.length];
+                next.focus();
+                select(next.getAttribute('data-workflow-open'), false);
+            });
+        });
+
+        var fromHash = window.location.hash.indexOf('#workflow-') === 0 ? window.location.hash.replace('#workflow-', '') : null;
+        var saved = null;
+        try { saved = window.localStorage.getItem(storageKey); } catch (error) {}
+        select(allowed.indexOf(fromHash) !== -1 ? fromHash : (allowed.indexOf(saved) !== -1 ? saved : 'actions'), false);
+    }
+
     onReady(function () {
         initProjectList();
         initDeleteConfirm();
         initDetailModals();
         initMilestoneModal();
+        initWorkflowViews();
     });
 })();

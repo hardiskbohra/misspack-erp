@@ -14,16 +14,78 @@
             @php
                 $reportedVariance = $workflow->reported_progress === null ? null : $workflow->reported_progress - $workflow->calculated_progress;
                 $groupedSteps = $workflow->steps->groupBy('stage_key');
+                $currentActions = app(\App\Services\ProjectCoordinatorQueue::class)->currentForWorkflow($workflow);
+                $blockedActions = $currentActions->where('is_blocked', true)->count();
+                $waitingActions = $currentActions->where('is_waiting', true)->count();
+                $overdueActions = $currentActions->where('is_overdue', true)->count();
+                $activeOverrides = $workflow->evaluations->filter(fn($evaluation) => $evaluation->activeOverride)->count();
+                $actionViewFor = fn($step) => in_array($step->step_key, \App\Services\ProjectApprovals::CONTROLLED_STEPS, true) || $step->project_product_id ? 'products' : (in_array($step->step_key, array_merge(\App\Services\ProjectWorkflowGates::AUTOMATED_GATES, \App\Services\ProjectFinancialClosure::CONTROLLED_STEPS, \App\Services\ProjectFeedbackClosure::CONTROLLED_STEPS), true) ? 'commercial' : 'history');
             @endphp
-            <div class="master-stats" aria-label="Workflow summary">
-                <div class="master-stat master-stat--flat blue"><span class="icon"><i class="fa-solid fa-route"></i></span><div><p class="master-stat-title">Calculated stage</p><p class="master-stat-value">{{ $workflow->stageLabel() }}</p><p class="master-sub">From required execution steps</p></div></div>
-                <div class="master-stat master-stat--flat green"><span class="icon"><i class="fa-solid fa-chart-line"></i></span><div><p class="master-stat-title">Calculated progress</p><p class="master-stat-value">{{ $workflow->calculated_progress }}%</p><p class="master-sub">Weighted completed work</p></div></div>
-                <div class="master-stat master-stat--flat purple"><span class="icon"><i class="fa-solid fa-user-pen"></i></span><div><p class="master-stat-title">Coordinator report</p><p class="master-stat-value">{{ $workflow->reported_progress === null ? 'Not reported' : $workflow->reported_progress.'%' }}</p><p class="master-sub">{{ $workflow->reported_stage ? ($workflowStages[$workflow->reported_stage] ?? $workflow->reported_stage) : 'No manual stage' }}</p></div></div>
-                <div class="master-stat master-stat--flat {{ $reportedVariance !== null && abs($reportedVariance) > 15 ? 'orange' : 'teal' }}"><span class="icon"><i class="fa-solid fa-code-compare"></i></span><div><p class="master-stat-title">Reported variance</p><p class="master-stat-value">{{ $reportedVariance === null ? '—' : (($reportedVariance > 0 ? '+' : '').$reportedVariance.'%') }}</p><p class="master-sub">Manual versus calculated</p></div></div>
-            </div>
+
+            <section class="master-card master-card--flat project-detail-card workflow-command-header" aria-labelledby="workflowCommandTitle">
+                <div class="workflow-command-main">
+                    <div>
+                        <span class="workflow-command-eyebrow">Workflow command centre</span>
+                        <h2 id="workflowCommandTitle">{{ $workflow->stageLabel() }}</h2>
+                        <p>Calculated stage · {{ $currentActions->count() }} current {{ \Illuminate\Support\Str::plural('action', $currentActions->count()) }} · Coordinator: {{ $project->assignedUser?->name ?: 'Unassigned' }}</p>
+                    </div>
+                    <div class="workflow-command-progress" aria-label="Calculated workflow progress">
+                        <strong>{{ $workflow->calculated_progress }}%</strong>
+                        <span><i style="width:{{ $workflow->calculated_progress }}%"></i></span>
+                        <small>Calculated progress</small>
+                    </div>
+                </div>
+                <div class="workflow-command-kpis" aria-label="Workflow attention summary">
+                    <button type="button" data-workflow-open="actions"><strong>{{ $currentActions->count() }}</strong><span>Current</span></button>
+                    <button type="button" data-workflow-open="actions" class="{{ $overdueActions ? 'is-danger' : '' }}"><strong>{{ $overdueActions }}</strong><span>Overdue</span></button>
+                    <button type="button" data-workflow-open="actions" class="{{ $blockedActions ? 'is-danger' : '' }}"><strong>{{ $blockedActions }}</strong><span>Blocked</span></button>
+                    <button type="button" data-workflow-open="actions" class="{{ $waitingActions ? 'is-warning' : '' }}"><strong>{{ $waitingActions }}</strong><span>Waiting</span></button>
+                    <button type="button" data-workflow-open="history" class="{{ $activeOverrides ? 'is-warning' : '' }}"><strong>{{ $activeOverrides }}</strong><span>Overrides</span></button>
+                    <button type="button" data-workflow-open="actions" class="{{ $projectExceptions->count() ? 'is-danger' : '' }}"><strong>{{ $projectExceptions->count() }}</strong><span>Exceptions</span></button>
+                </div>
+                <div class="workflow-stage-rail" aria-label="Workflow stages">
+                    @foreach($workflowStages as $stageKey=>$stageLabel)
+                        @if($groupedSteps->has($stageKey))
+                            @php
+                                $railSteps=$groupedSteps[$stageKey];
+                                $railDone=$railSteps->whereIn('status',['completed','skipped'])->count();
+                                $railBlocked=$railSteps->where('status','blocked')->count();
+                                $railCurrent=$workflow->calculated_stage===$stageKey;
+                            @endphp
+                            <button type="button" data-workflow-open="{{ in_array($stageKey,['commercial','closure'],true)?'commercial':(in_array($stageKey,['setup'],true)?'history':'products') }}" class="{{ $railCurrent?'is-current':'' }} {{ $railBlocked?'is-blocked':'' }} {{ $railDone===$railSteps->count()?'is-complete':'' }}" title="{{ $stageLabel }} · {{ $railDone }}/{{ $railSteps->count() }} cleared"><i></i><span>{{ $stageLabel }}</span></button>
+                        @endif
+                    @endforeach
+                </div>
+            </section>
+
+            <nav class="workflow-view-tabs" role="tablist" aria-label="Workflow views">
+                @foreach(['actions'=>['fa-bolt','Action centre'],'matrix'=>['fa-table-cells-large','Matrix'],'products'=>['fa-boxes-stacked','Products & approvals'],'commercial'=>['fa-file-invoice-dollar','Commercial & closure'],'history'=>['fa-clock-rotate-left','History & controls']] as $viewKey=>$viewMeta)
+                    <button type="button" role="tab" class="{{ $viewKey==='actions'?'is-active':'' }}" data-workflow-open="{{ $viewKey }}" aria-selected="{{ $viewKey==='actions'?'true':'false' }}"><i class="fa-solid {{ $viewMeta[0] }}" aria-hidden="true"></i><span>{{ $viewMeta[1] }}</span></button>
+                @endforeach
+            </nav>
+            <noscript><style>[data-workflow-view][hidden]{display:block!important}</style></noscript>
+
+            <section class="workflow-action-centre" data-workflow-view="actions" aria-labelledby="workflowActionsTitle">
+                <div class="workflow-view-heading"><div><span>Work requiring attention</span><h2 id="workflowActionsTitle">Current actions</h2><p>Only work that can move now is shown. Future controls stay out of the way.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Refresh sources</button></form></div>
+                <div class="workflow-action-list">
+                    @forelse($currentActions as $action)
+                        @php
+                            $actionStep = $action['step'];
+                        @endphp
+                        <article class="workflow-action-row {{ $action['is_overdue']?'is-overdue':($action['is_blocked']?'is-blocked':($action['is_waiting']?'is-waiting':'')) }}">
+                            <span class="workflow-action-state"><i class="fa-solid {{ $action['is_overdue']?'fa-clock':($action['is_blocked']?'fa-circle-xmark':($action['is_waiting']?'fa-hourglass-half':'fa-circle-play')) }}"></i></span>
+                            <div class="workflow-action-copy"><div><span>{{ $action['product']?->product_name ?: 'Project control' }}</span><strong>{{ $actionStep->title }}</strong></div><p>{{ $actionStep->blocked_reason ?: $actionStep->notes ?: 'Ready for the next recorded action.' }}</p></div>
+                            <div class="workflow-action-meta"><span><i class="fa-solid fa-user"></i>{{ $action['owner']?->name ?: $action['coordinator']?->name ?: 'Unassigned' }}</span><span class="{{ $action['is_overdue']?'is-danger':'' }}"><i class="fa-regular fa-calendar"></i>{{ $action['due_date']?->format('d M Y') ?: 'No due date' }}</span><span class="master-badge">{{ $action['attention'] }}</span></div>
+                            <button type="button" class="master-btn master-btn-primary master-btn-sm" data-workflow-open="{{ $actionViewFor($actionStep) }}">Manage action</button>
+                        </article>
+                    @empty
+                        <div class="master-empty-state"><i class="fa-solid fa-circle-check"></i><p>No current action remains. Review closure or workflow history for completed evidence.</p></div>
+                    @endforelse
+                </div>
+            </section>
 
             @if($projectExceptions->isNotEmpty())
-                <section class="master-card master-card--flat master-section project-detail-card">
+                <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="actions">
                     <div class="master-section-head"><div><h2 class="master-section-title">Active exceptions</h2><p class="master-sub">Response plans track ownership and escalation without changing the underlying gate or financial condition.</p></div><a class="master-btn master-btn-danger master-btn-sm" href="{{ route('projects.exceptions.index',['status'=>'active','search'=>$project->project_number]) }}">Open exception register</a></div>
                     <div class="project-approval-history">@foreach($projectExceptions as $exception)<span><strong>{{ $exception->title }} · {{ $exception->statusLabel() }}</strong><small>{{ ucfirst($exception->severity) }}@if($exception->escalation_level) · escalation L{{ $exception->escalation_level }}@endif · {{ $exception->owner?->name ?: 'Owner unassigned' }}</small><em>{{ $exception->summary }}</em></span>@endforeach</div>
                 </section>
@@ -31,7 +93,7 @@
 
             @include('projects.partials.workflow-matrix')
 
-            <section class="master-card master-card--flat master-section project-detail-card">
+            <section class="master-card master-card--flat master-section project-detail-card workflow-collapsible-card" data-workflow-view="actions">
                 <div class="master-section-head"><div><h2 class="master-section-title">Coordinator report</h2><p class="master-sub">Manual reporting stays alongside the calculated workflow and never bypasses a gate.</p></div></div>
                 <form method="POST" action="{{ route('projects.workflow.report', $project) }}" class="project-workflow-report">@csrf @method('PATCH')
                     <label class="master-field"><span class="master-label">Reported stage</span><select class="master-select" name="reported_stage" required>@foreach($workflowStages as $key=>$label)<option value="{{ $key }}" @selected(old('reported_stage',$workflow->reported_stage ?: $workflow->calculated_stage)===$key)>{{ $label }}</option>@endforeach</select></label>
@@ -43,7 +105,7 @@
                 </form>
             </section>
 
-            <section class="master-card master-card--flat master-section project-detail-card">
+            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="commercial" hidden>
                 <div class="master-section-head"><div><h2 class="master-section-title">Commercial and dispatch authorization gates</h2><p class="master-sub">Financial checks use the selected Proforma and receipts; dispatch authorization uses exact verified packing allocations, QC, approvals and paperwork. Material changes create a new auditable evaluation.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Run gate checks</button></form></div>
                 @php
                     $visibleGateKeys = array_merge(\App\Services\ProjectWorkflowGates::AUTOMATED_GATES, \App\Services\ProjectFeedbackClosure::CONTROLLED_STEPS);
@@ -84,7 +146,7 @@
                 @endif
             </section>
 
-            <section class="master-card master-card--flat master-section project-detail-card">
+            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="products" hidden>
                 <div class="master-section-head"><div><h2 class="master-section-title">Client artwork and PPS approvals</h2><p class="master-sub">Every decision belongs to one exact file version. A revision makes the previous decision historical.</p></div></div>
                 <form method="POST" enctype="multipart/form-data" action="{{ route('projects.approvals.store',$project) }}" class="project-approval-create">@csrf
                     <label class="master-field"><span class="master-label">Product</span><select class="master-select" name="project_product_id" required><option value="">Select product</option>@foreach($project->products->where('status','!=','cancelled') as $product)<option value="{{ $product->id }}">{{ $product->product_name }}</option>@endforeach</select></label>
@@ -115,7 +177,7 @@
                 </div>
             </section>
 
-            <section class="master-card master-card--flat master-section project-detail-card">
+            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="products" hidden>
                 <div class="master-section-head"><div><h2 class="master-section-title">Product operational readiness</h2><p class="master-sub">Each product is evaluated independently through procurement, production, QC, packing, partial dispatch and delivery.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Refresh readiness</button></form></div>
                 @php
                     $deliveryReconciliation = $workflow->evaluations->whereNull('project_product_id')->firstWhere('gate_key', \App\Services\ProjectOperationalReadiness::GATE_DELIVERY_RECONCILED);
@@ -136,8 +198,8 @@
                             $passedQc = (float) $product->qualityInspections->sum('passed_quantity');
                             $remainingQc = max((float)$product->quantity-$passedQc,0);
                         @endphp
-                        <article class="project-approval">
-                            <header><div><strong>{{ $product->product_name }}</strong><span>{{ number_format((float)$product->quantity,3) }} {{ $product->unit }} required</span></div><span class="master-badge">Independent product</span></header>
+                        <details class="project-approval workflow-product-disclosure" @if($loop->first) open @endif>
+                            <summary><div><strong>{{ $product->product_name }}</strong><span>{{ number_format((float)$product->quantity,3) }} {{ $product->unit }} required</span></div><span class="master-badge">Independent product</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary>
                             <div class="project-gate-list">
                                 @foreach(\App\Services\ProjectOperationalReadiness::PRODUCT_CONTROLLED_STEPS as $gateKey)
                                     @php
@@ -177,15 +239,16 @@
                                 </form>
                             </details>
                             @if($product->qualityInspections->isNotEmpty())<details><summary>QC history ({{ $product->qualityInspections->count() }})</summary><div class="project-approval-history">@foreach($product->qualityInspections as $inspection)<span><strong>{{ $inspection->resultLabel() }} · {{ number_format((float)$inspection->passed_quantity,3) }} passed</strong><small>{{ $inspection->inspected_at?->format('d M Y, H:i') }} · {{ $inspection->inspector?->name ?: 'System' }} · evidence SHA-256 {{ substr($inspection->evidence_hash,0,10) }}</small><a href="{{ $inspection->evidenceUrl() }}" target="_blank">{{ $inspection->evidence_original_name }}</a><em>{{ $inspection->notes }}</em></span>@endforeach</div></details>@endif
-                        </article>
+                        </details>
                     @endforeach
                 </div>
             </section>
 
             @include('projects.partials.financial-closure')
 
-            <section class="master-card master-card--flat master-section project-detail-card">
-                <div class="master-section-head"><div><h2 class="master-section-title">Standard execution path</h2><p class="master-sub">Project-level controls and product-level execution remain separate while contributing to one calculated progress.</p></div></div>
+            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="history" hidden>
+                <div class="master-section-head"><div><h2 class="master-section-title">Standard execution path · History & manual controls</h2><p class="master-sub">The complete standard path remains available for audit and controlled manual updates.</p></div></div>
+                <div class="workflow-history-toolbar"><span><i class="fa-solid fa-clock-rotate-left"></i> Complete workflow evidence</span><small>Completed and future stages are grouped below for audit and controlled updates.</small></div>
                 <div class="project-workflow-stages">
                     @foreach($workflowStages as $stageKey=>$stageLabel)
                         @if($groupedSteps->has($stageKey))
@@ -193,11 +256,11 @@
                                 $stageSteps = $groupedSteps[$stageKey];
                                 $stageDone = $stageSteps->whereIn('status', ['completed', 'skipped'])->count();
                             @endphp
-                            <section class="project-workflow-stage {{ $workflow->calculated_stage === $stageKey ? 'is-current' : '' }}">
-                                <header><div><span>{{ str_pad((string)$loop->iteration,2,'0',STR_PAD_LEFT) }}</span><div><h3>{{ $stageLabel }}</h3><p>{{ $stageDone }} of {{ $stageSteps->count() }} steps complete</p></div></div><strong>{{ $stageSteps->count() ? round($stageDone/$stageSteps->count()*100) : 0 }}%</strong></header>
+                            <details class="project-workflow-stage {{ $workflow->calculated_stage === $stageKey ? 'is-current' : '' }}" @if($workflow->calculated_stage === $stageKey) open @endif>
+                                <summary><div><span>{{ str_pad((string)$loop->iteration,2,'0',STR_PAD_LEFT) }}</span><div><h3>{{ $stageLabel }}</h3><p>{{ $stageDone }} of {{ $stageSteps->count() }} steps complete</p></div></div><strong>{{ $stageSteps->count() ? round($stageDone/$stageSteps->count()*100) : 0 }}%</strong><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary>
                                 <div class="project-workflow-step-list">
                                     @foreach($stageSteps as $step)
-                                        @if(in_array($step->step_key, array_merge(\App\Services\ProjectWorkflowGates::AUTOMATED_GATES, \App\Services\ProjectOperationalReadiness::CONTROLLED_STEPS, \App\Services\ProjectApprovals::CONTROLLED_STEPS, \App\Services\ProjectFinancialClosure::CONTROLLED_STEPS), true))
+                                        @if(in_array($step->step_key, array_merge(\App\Services\ProjectWorkflowGates::AUTOMATED_GATES, \App\Services\ProjectOperationalReadiness::CONTROLLED_STEPS, \App\Services\ProjectApprovals::CONTROLLED_STEPS, \App\Services\ProjectFinancialClosure::CONTROLLED_STEPS, \App\Services\ProjectFeedbackClosure::CONTROLLED_STEPS), true))
                                             <div class="project-workflow-step is-automated"><div class="project-workflow-step-copy"><i class="fa-solid {{ in_array($step->status,['completed','skipped']) ? 'fa-circle-check' : ($step->status==='blocked' ? 'fa-circle-xmark' : 'fa-circle') }}"></i><div><strong>{{ $step->title }}</strong><span>{{ in_array($step->step_key, \App\Services\ProjectApprovals::CONTROLLED_STEPS, true) ? 'Client approval' : 'Automated gate' }} · {{ $step->statusLabel() }}</span>@if($step->blocked_reason)<small>{{ $step->blocked_reason }}</small>@endif</div></div><span class="master-badge">Controlled by {{ in_array($step->step_key, \App\Services\ProjectApprovals::CONTROLLED_STEPS, true) ? 'approval version' : 'gate checks' }}</span></div>
                                         @else
                                             <form method="POST" action="{{ route('projects.workflow.steps.update',[$project,$step]) }}" class="project-workflow-step">@csrf @method('PATCH')
@@ -215,7 +278,7 @@
                                         @endif
                                     @endforeach
                                 </div>
-                            </section>
+                            </details>
                         @endif
                     @endforeach
                 </div>

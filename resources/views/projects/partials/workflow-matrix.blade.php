@@ -1,5 +1,5 @@
 @if($workflowMatrix)
-<section class="master-card master-card--flat master-section project-detail-card project-command-matrix" id="workflow-command-matrix" aria-labelledby="workflowMatrixTitle">
+<section class="master-card master-card--flat master-section project-detail-card project-command-matrix" id="workflow-command-matrix" data-workflow-view="matrix" hidden aria-labelledby="workflowMatrixTitle">
     <div class="master-section-head">
         <div><h2 class="master-section-title" id="workflowMatrixTitle">Execution control matrix</h2><p class="master-sub">Every project control and independent product lane in one source-controlled view. Quantities and money come from the latest gate evaluations.</p></div>
         <div class="project-matrix-summary"><span>{{ $workflowMatrix['summary']['lanes'] }} lanes</span><span>{{ $workflowMatrix['summary']['current'] }} current</span><span>{{ $workflowMatrix['summary']['blocked'] }} blocked</span><span>{{ $workflowMatrix['summary']['waiting'] }} waiting</span><span>{{ $workflowMatrix['summary']['overridden'] }} overrides</span></div>
