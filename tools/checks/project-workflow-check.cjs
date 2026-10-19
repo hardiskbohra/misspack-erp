@@ -22,6 +22,8 @@ const exceptionController=read('app/Http/Controllers/ProjectExceptionController.
 const exceptionModel=read('app/Models/ProjectException.php');
 const exceptionEvent=read('app/Models/ProjectExceptionEvent.php');
 const exceptionView=read('resources/views/projects/exceptions.blade.php');
+const workflowMatrix=read('app/Services/ProjectWorkflowMatrix.php');
+const workflowMatrixView=read('resources/views/projects/partials/workflow-matrix.blade.php');
 const salesInvoice=read('app/Models/SalesInvoice.php');
 const salesForm=read('resources/views/sales_invoices/form.blade.php');
 const project=read('app/Models/Project.php');
@@ -131,7 +133,7 @@ check('exception closure keeps balances live and is a distinct project status', 
 check('financial closure is workflow controlled and cannot be manually bypassed', controller.includes('ProjectFinancialClosure::CONTROLLED_STEPS')&&controller.includes('Use the financial closure manager-exception action')&&view.includes('ProjectFinancialClosure::CONTROLLED_STEPS'));
 check('closed projects can be explicitly reopened without deleting closure history', closureModel.includes('TYPE_REOPENED')&&financialClosure.includes("'status' => 'in_progress'")&&closureController.includes('function reopen(')&&closureController.includes('Previous closure decisions remain'));
 check('workflow UI exposes current balances, stale warning and immutable history', ['Financial closure','Balances changed after the latest closure decision','Outstanding source detail and fingerprint','Immutable closure history'].every(label=>closureView.includes(label))&&routes.includes('financial-closure/close-outstanding'));
-check('coordinator queue exposes one current action per independent lane', coordinatorQueue.includes('workflowItems')&&coordinatorQueue.includes("groupBy('project_product_id')")&&coordinatorQueue.includes('earlierProjectOpen')&&coordinatorQueue.includes('earlierProductOpen'));
+check('coordinator queue exposes one current action per independent lane', coordinatorQueue.includes('currentForWorkflow')&&coordinatorQueue.includes("groupBy('project_product_id')")&&coordinatorQueue.includes('earlierProjectOpen')&&coordinatorQueue.includes('earlierProductOpen'));
 check('coordinator queue excludes terminal projects and completed future work', coordinatorQueue.includes("whereNotIn('status', ['closed', 'closed_with_outstanding_financials', 'cancelled'])")&&coordinatorQueue.includes("TERMINAL = ['completed', 'skipped', 'cancelled']"));
 check('queue prioritizes overdue blocked waiting and unassigned work', ['overdue','blocked','waiting','unassigned','ready'].every(key=>coordinatorQueue.includes(`'${key}'`))&&coordinatorQueue.includes('attention_rank'));
 check('queue supports mine team coordinator stage schedule and search filters', ['scope','coordinator_id','attention','due','stage','search'].every(filter=>coordinatorController.includes(`'${filter}'`)||coordinatorView.includes(`name=\"${filter}\"`)));
@@ -150,4 +152,12 @@ check('exception UI exposes active critical unacknowledged escalated and review 
 check('exception register shows source response plan escalation and immutable history', ['Exception register','Current response plan','Save response plan','Escalate to level','Audit history'].every(label=>exceptionView.includes(label)));
 check('project workflow surfaces active exception warnings without changing gates', view.includes('Active exceptions')&&view.includes('Open exception register')&&view.includes('underlying gate or financial condition'));
 check('exception routes precede project wildcard and remain project scoped', routes.includes('/projects/exceptions/{exception}/acknowledge')&&routes.indexOf("/projects/exceptions")<routes.indexOf("Route::resource('projects'"));
+check('workflow matrix keeps project controls and independent product lanes separate', workflowMatrix.includes("'Project controls'")&&workflowMatrix.includes("'Product lane · '")&&workflowMatrix.includes("groupBy('project_product_id')"));
+check('matrix covers every standard stage and computes per-stage completion', workflowMatrix.includes('ProjectWorkflowExecution::stageOptions()')&&workflowMatrix.includes("'stage_summary'")&&workflowMatrixView.includes("$workflowMatrix['stage_summary']"));
+check('matrix distinguishes pass override blocked waiting active and future states', ['completed','overridden','blocked','waiting','active','ready','planned','not_applicable'].every(state=>workflowMatrix.includes(`'${state}'`)));
+check('matrix uses latest gate and approval evidence rather than manual labels', workflowMatrix.includes("$workflow->evaluations->first")&&workflowMatrix.includes("$workflow->approvals->first")&&workflowMatrix.includes('effectiveResult()')&&workflowMatrix.includes('effectiveStatus()'));
+check('matrix exposes quantity money product and remaining coverage', ['valid_po_quantity','production_completed_quantity','passed_quantity','verified_packed_quantity','dispatched_quantity','delivered_quantity','required_amount','active_product_count'].every(key=>workflowMatrix.includes(`'${key}'`)));
+check('matrix marks current lane actions and active source exceptions', workflowMatrix.includes('currentForWorkflow')&&workflowMatrix.includes("'exception_count'")&&workflowMatrixView.includes('active exception(s)'));
+check('matrix UI shows stages lanes progress fingerprints and explicit override semantics', ['Execution control matrix','Current lane action','Manager override','Checked','Not reached'].every(label=>workflowMatrixView.includes(label)));
+check('matrix remains horizontally readable with pinned lane identity', read('public/assets/css/projects.css').includes('.project-matrix-table tbody th{position:sticky;left:0')&&workflowMatrixView.includes('project-matrix-wrap'));
 console.log(`\nProject workflow: ${passed} passed, ${failed} failed`);if(failed)process.exit(1);

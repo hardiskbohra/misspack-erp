@@ -278,6 +278,10 @@ class ProjectController extends Controller
         $financialClosureSnapshot = $workflow && Schema::hasTable('project_financial_closures')
             ? app(\App\Services\ProjectFinancialClosure::class)->snapshot($project)
             : null;
+        $projectExceptions = $project->exceptions->whereIn('status', [\App\Models\ProjectException::STATUS_OPEN, \App\Models\ProjectException::STATUS_ACKNOWLEDGED])->values();
+        $workflowMatrix = $workflow && $tab === 'workflow'
+            ? app(\App\Services\ProjectWorkflowMatrix::class)->build($workflow, $projectExceptions)
+            : null;
 
         $cashflowCount = $project->relationLoaded('cashflowEntries') ? $project->cashflowEntries->count() : 0;
         if ($project->relationLoaded('cashflowAllocations')) {
@@ -288,14 +292,15 @@ class ProjectController extends Controller
             'project' => $project,
             'workflow' => $workflow,
             'financialClosureSnapshot' => $financialClosureSnapshot,
-            'projectExceptions' => $project->exceptions->whereIn('status', [\App\Models\ProjectException::STATUS_OPEN, \App\Models\ProjectException::STATUS_ACKNOWLEDGED])->values(),
+            'projectExceptions' => $projectExceptions,
+            'workflowMatrix' => $workflowMatrix,
             'workflowStages' => ProjectWorkflowExecution::stageOptions(),
             'workflowStepStatuses' => \App\Models\ProjectWorkflowStep::statusOptions(),
             'unallocatedCash' => app(\App\Services\UnallocatedCashflows::class)->forProject($project->id),
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
             'tabCounts' => [
-                'workflow' => ($workflow?->steps?->whereNotIn('status', ['completed', 'skipped'])->count() ?? 0) + $project->exceptions->whereIn('status', [\App\Models\ProjectException::STATUS_OPEN, \App\Models\ProjectException::STATUS_ACKNOWLEDGED])->count(),
+                'workflow' => ($workflow?->steps?->whereNotIn('status', ['completed', 'skipped'])->count() ?? 0) + $projectExceptions->count(),
                 'products' => $project->products->count(),
                 'milestones' => $project->milestones->count(),
                 'payments' => $cashflowCount,

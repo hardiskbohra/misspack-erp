@@ -29,6 +29,8 @@
                 </section>
             @endif
 
+            @include('projects.partials.workflow-matrix')
+
             <section class="master-card master-card--flat master-section project-detail-card">
                 <div class="master-section-head"><div><h2 class="master-section-title">Coordinator report</h2><p class="master-sub">Manual reporting stays alongside the calculated workflow and never bypasses a gate.</p></div></div>
                 <form method="POST" action="{{ route('projects.workflow.report', $project) }}" class="project-workflow-report">@csrf @method('PATCH')

@@ -34,7 +34,7 @@ class ProjectCoordinatorQueue
             ->orderBy('id')
             ->get();
 
-        return $workflows->flatMap(fn (ProjectWorkflow $workflow) => $this->workflowItems($workflow))
+        return $workflows->flatMap(fn (ProjectWorkflow $workflow) => $this->currentForWorkflow($workflow))
             ->sortBy(fn (array $item) => sprintf(
                 '%02d-%s-%05d-%05d',
                 $item['attention_rank'],
@@ -94,7 +94,7 @@ class ProjectCoordinatorQueue
         };
     }
 
-    private function workflowItems(ProjectWorkflow $workflow): Collection
+    public function currentForWorkflow(ProjectWorkflow $workflow): Collection
     {
         $open = $workflow->steps
             ->where('is_required', true)
