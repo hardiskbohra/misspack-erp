@@ -8,6 +8,11 @@ const approvalMigration=read('database/migrations/2026_10_18_172000_create_proje
 const qualityMigration=read('database/migrations/2026_10_18_173000_create_project_quality_inspections.php');
 const dispatchMigration=read('database/migrations/2026_10_18_174000_create_shipment_packing_allocations.php');
 const deliveryMigration=read('database/migrations/2026_10_18_175000_create_shipment_delivery_receipts.php');
+const closureMigration=read('database/migrations/2026_10_18_176000_create_project_financial_closures.php');
+const financialClosure=read('app/Services/ProjectFinancialClosure.php');
+const closureController=read('app/Http/Controllers/ProjectFinancialClosureController.php');
+const closureModel=read('app/Models/ProjectFinancialClosure.php');
+const closureView=read('resources/views/projects/partials/financial-closure.blade.php');
 const salesInvoice=read('app/Models/SalesInvoice.php');
 const salesForm=read('resources/views/sales_invoices/form.blade.php');
 const project=read('app/Models/Project.php');
@@ -107,4 +112,14 @@ check('delivery readiness uses net accepted receipt quantities instead of shipme
 check('delivery receipt immediately recalculates workflow readiness', deliveryController.includes('ProjectOperationalReadiness::class')&&routes.includes('shipments.delivery-receipts.store'));
 check('receipt evidence satisfies POD and receipt shipments retain audit history', read('app/Services/ShipmentDocuments.php').includes("$key === 'pod' && $deliveryReceiptRecorded")&&shipmentController.includes('shipment with immutable delivery receipts cannot be deleted'));
 check('shipment UX captures receipts and displays reconciliation', read('resources/views/shipments/show.blade.php').includes('Delivery receipt reconciliation')&&read('resources/views/shipments/show.blade.php').includes('Record immutable receipt')&&read('resources/views/shipments/show.blade.php').includes('Discrepancy open'));
+check('financial closure schema preserves immutable decisions and exact snapshots', ['project_financial_closures','closure_type','content_hash','financial_snapshot','expected_resolution_date','approved_by','closed_at'].every(value=>closureMigration.includes(`'${value}'`))&&closureModel.includes('Financial closure decisions are immutable'));
+check('financial closure separates obligations by currency without netting', ['receivables','payables','client_advances','vendor_advances','unallocated_client_cash','unallocated_vendor_cash'].every(category=>financialClosure.includes(`'${category}'`))&&financialClosure.includes("groupBy('currency')"));
+check('closure sources exclude superseded proformas and purchase orders', financialClosure.includes('countsTowardsProject()')&&financialClosure.includes("$project->bills")&&!financialClosure.includes('$project->purchaseOrders'));
+check('closure fingerprint captures documents, settlements and allocation sources', financialClosure.includes("'settlement_sources'")&&financialClosure.includes("'allocation_sources'")&&financialClosure.includes("hash('sha256'")&&financialClosure.includes('hash_equals'));
+check('ordinary closure rejects every unresolved financial category', financialClosure.includes("has_outstanding_financials")&&financialClosure.includes('Ordinary closure is blocked while receivables, payables, advances, or unapplied cash remain'));
+check('manager exception requires reason, risk acceptance and resolution date', closureController.includes('isAdmin()')&&closureController.includes("'reason' => ['required'")&&closureController.includes("'risk_acknowledgement' => ['accepted']")&&closureController.includes("'expected_resolution_date' => ['required'"));
+check('exception closure keeps balances live and is a distinct project status', project.includes("'closed_with_outstanding_financials'")&&closureView.includes('does not settle, cancel or conceal them')&&closureView.includes('balances below remain live'));
+check('financial closure is workflow controlled and cannot be manually bypassed', controller.includes('ProjectFinancialClosure::CONTROLLED_STEPS')&&controller.includes('Use the financial closure manager-exception action')&&view.includes('ProjectFinancialClosure::CONTROLLED_STEPS'));
+check('closed projects can be explicitly reopened without deleting closure history', closureModel.includes('TYPE_REOPENED')&&financialClosure.includes("'status' => 'in_progress'")&&closureController.includes('function reopen(')&&closureController.includes('Previous closure decisions remain'));
+check('workflow UI exposes current balances, stale warning and immutable history', ['Financial closure','Balances changed after the latest closure decision','Outstanding source detail and fingerprint','Immutable closure history'].every(label=>closureView.includes(label))&&routes.includes('financial-closure/close-outstanding'));
 console.log(`\nProject workflow: ${passed} passed, ${failed} failed`);if(failed)process.exit(1);

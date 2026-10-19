@@ -89,7 +89,7 @@ class ProjectController extends Controller
             'total' => (int) $statusCounts->sum(),
             'in_progress' => (int) ($statusCounts['in_progress'] ?? 0),
             'waiting' => (int) ($statusCounts['waiting_client'] ?? 0) + (int) ($statusCounts['waiting_vendor'] ?? 0),
-            'completed' => (int) ($statusCounts['completed'] ?? 0),
+            'completed' => (int) ($statusCounts['completed'] ?? 0) + (int) ($statusCounts['closed'] ?? 0) + (int) ($statusCounts['closed_with_outstanding_financials'] ?? 0),
         ];
 
         return view('projects.index', array_merge($this->sharedData(), compact(
@@ -123,6 +123,9 @@ class ProjectController extends Controller
     public function store(Request $request, ProjectWorkflowExecution $workflowExecution): RedirectResponse
     {
         $data = $this->validatedData($request);
+        if (in_array($data['status'], Project::closureStatuses(), true)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['status' => 'A new project cannot start in a financial-closure status.']);
+        }
         $data['project_number'] = $data['project_number'] ?: $this->makeProjectNumber();
         $data['show_client_portal'] = $request->has('show_client_portal');
         $data['created_by'] = Auth::id();
@@ -258,10 +261,16 @@ class ProjectController extends Controller
 
         $workflow = null;
         if (Schema::hasTable('project_workflows')) {
-            $workflow = $project->workflow()
-                ->with(['steps.product', 'steps.owner', 'reporter', 'commercialInvoice', 'evaluations.activeOverride.approver', 'evaluations.evaluator', 'evaluations.product', 'approvals.product', 'approvals.currentVersion.attachment', 'approvals.versions.attachment', 'approvals.versions.clientUser', 'approvals.overrides.approver'])
-                ->first();
+            $workflowWith = ['steps.product', 'steps.owner', 'reporter', 'commercialInvoice', 'evaluations.activeOverride.approver', 'evaluations.evaluator', 'evaluations.product', 'approvals.product', 'approvals.currentVersion.attachment', 'approvals.versions.attachment', 'approvals.versions.clientUser', 'approvals.overrides.approver'];
+            if (Schema::hasTable('project_financial_closures')) {
+                $workflowWith[] = 'financialClosures.approver';
+            }
+            $workflow = $project->workflow()->with($workflowWith)->first();
+            $project->setRelation('workflow', $workflow);
         }
+        $financialClosureSnapshot = $workflow && Schema::hasTable('project_financial_closures')
+            ? app(\App\Services\ProjectFinancialClosure::class)->snapshot($project)
+            : null;
 
         $cashflowCount = $project->relationLoaded('cashflowEntries') ? $project->cashflowEntries->count() : 0;
         if ($project->relationLoaded('cashflowAllocations')) {
@@ -271,6 +280,7 @@ class ProjectController extends Controller
         return view('projects.show', array_merge($this->sharedData(), [
             'project' => $project,
             'workflow' => $workflow,
+            'financialClosureSnapshot' => $financialClosureSnapshot,
             'workflowStages' => ProjectWorkflowExecution::stageOptions(),
             'workflowStepStatuses' => \App\Models\ProjectWorkflowStep::statusOptions(),
             'unallocatedCash' => app(\App\Services\UnallocatedCashflows::class)->forProject($project->id),
@@ -311,13 +321,19 @@ class ProjectController extends Controller
     public function update(Request $request, Project $project): RedirectResponse
     {
         $data = $this->validatedData($request, $project);
+        if (in_array($data['status'], Project::closureStatuses(), true) && $data['status'] !== $project->status) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['status' => 'Use the Workflow financial-closure action to apply a closed status.']);
+        }
+        if (in_array($project->status, Project::closureStatuses(), true) && $data['status'] !== $project->status) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['status' => 'Use the Workflow manager action to reopen a financially closed project.']);
+        }
         $data['show_client_portal'] = $request->has('show_client_portal');
 
         if (($data['status'] ?? null) === 'completed' && ! $project->completed_at) {
             $data['completed_at'] = now();
             $data['progress_percent'] = 100;
         }
-        if (($data['status'] ?? null) !== 'completed') {
+        if (! in_array(($data['status'] ?? null), array_merge(['completed'], Project::closureStatuses()), true)) {
             $data['completed_at'] = null;
         }
 
@@ -339,11 +355,18 @@ class ProjectController extends Controller
             'progress_percent' => ['required', 'integer', 'min:0', 'max:100'],
         ]);
 
+        if (in_array($data['status'], Project::closureStatuses(), true) && $data['status'] !== $project->status) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['status' => 'Use the Workflow financial-closure action to close this project.']);
+        }
+        if (in_array($project->status, Project::closureStatuses(), true) && $data['status'] !== $project->status) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['status' => 'Use the Workflow manager action to reopen this project.']);
+        }
+
         $old = $project->only(['status', 'stage', 'health', 'progress_percent', 'completed_at']);
         if ($data['status'] === 'completed') {
             $data['progress_percent'] = 100;
             $data['completed_at'] = $project->completed_at ?: now();
-        } else {
+        } elseif (! in_array($data['status'], Project::closureStatuses(), true)) {
             $data['completed_at'] = null;
         }
 

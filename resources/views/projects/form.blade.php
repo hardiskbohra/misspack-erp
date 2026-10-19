@@ -91,6 +91,7 @@
                     <label class="master-label">Status <span>*</span></label>
                     <select class="master-select" name="status" required>
                         @foreach ($statusOptions as $key => $label)
+                            @continue(in_array($project->status, \App\Models\Project::closureStatuses(), true) ? $key !== $project->status : in_array($key, \App\Models\Project::closureStatuses(), true))
                             <option value="{{ $key }}"
                                 {{ old('status', $project->status) === $key ? 'selected' : '' }}>{{ $label }}
                             </option>

@@ -57,6 +57,7 @@ class ProjectWorkflowController extends Controller
     {
         abort_unless(Auth::user()?->isAdmin(), 403);
         abort_unless($evaluation->workflow?->project_id === $project->id && $evaluation->result === 'blocked', 404);
+        abort_if($evaluation->gate_key === \App\Services\ProjectFinancialClosure::GATE, 422, 'Use the financial closure manager-exception action so the closure decision and risk snapshot are recorded together.');
         abort_unless($this->isLatestEvaluation($evaluation), 422, 'Only the current gate evaluation can be overridden.');
         abort_if($evaluation->activeOverride()->exists(), 422, 'This gate already has an active override.');
         $data = $request->validate([
@@ -102,7 +103,7 @@ class ProjectWorkflowController extends Controller
     public function updateStep(Request $request, Project $project, ProjectWorkflowStep $step, ProjectWorkflowExecution $execution): RedirectResponse
     {
         abort_unless($step->workflow?->project_id === $project->id, 404);
-        abort_if(in_array($step->step_key, array_merge(ProjectWorkflowGates::AUTOMATED_GATES, ProjectOperationalReadiness::CONTROLLED_STEPS, \App\Services\ProjectApprovals::CONTROLLED_STEPS), true), 422, 'This step is controlled by its current gate or client approval.');
+        abort_if(in_array($step->step_key, array_merge(ProjectWorkflowGates::AUTOMATED_GATES, ProjectOperationalReadiness::CONTROLLED_STEPS, \App\Services\ProjectApprovals::CONTROLLED_STEPS, \App\Services\ProjectFinancialClosure::CONTROLLED_STEPS), true), 422, 'This step is controlled by its current gate or client approval.');
         $data = $request->validate([
             'status' => ['required', Rule::in(array_values(array_diff(array_keys(ProjectWorkflowStep::statusOptions()), ['skipped', 'cancelled'])))],
             'notes' => ['nullable', 'string', 'max:2000'],

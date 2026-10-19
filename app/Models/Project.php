@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use App\Models\ProjectFinancialClosure;
 
 class Project extends Model
 {
@@ -363,9 +364,24 @@ class Project extends Model
         ];
     }
 
+    public function financialClosures()
+    {
+        return $this->hasMany(ProjectFinancialClosure::class)->latest('closed_at')->latest('id');
+    }
+
+    public function latestFinancialClosure()
+    {
+        return $this->hasOne(ProjectFinancialClosure::class)->latestOfMany('closed_at');
+    }
+
     public function isCompleted(): bool
     {
-        return in_array($this->status, ['completed', 'cancelled'], true);
+        return in_array($this->status, ['completed', 'closed', 'closed_with_outstanding_financials', 'cancelled'], true);
+    }
+
+    public static function closureStatuses(): array
+    {
+        return ['closed', 'closed_with_outstanding_financials'];
     }
 
     public static function statusOptions(): array
@@ -378,6 +394,8 @@ class Project extends Model
             'waiting_vendor' => 'Waiting for Vendor',
             'on_hold' => 'On Hold',
             'completed' => 'Completed',
+            'closed' => 'Financially Closed',
+            'closed_with_outstanding_financials' => 'Closed with Outstanding Financials',
             'cancelled' => 'Cancelled',
         ];
     }

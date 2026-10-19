@@ -48,6 +48,7 @@ class ProjectGateEvaluation extends Model
             'shipment_dispatched' => 'Quantity dispatched',
             'delivery_complete' => 'Quantity delivered',
             'delivery_reconciled' => 'Project delivery reconciliation',
+            'commercial_closure' => 'Financial closure reconciliation',
         ][$this->gate_key] ?? str($this->gate_key)->headline()->toString();
     }
 }

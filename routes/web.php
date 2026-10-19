@@ -388,6 +388,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/projects/{project}/workflow', [ProjectWorkflowController::class, 'start'])->name('projects.workflow.start');
         Route::patch('/projects/{project}/workflow/report', [ProjectWorkflowController::class, 'report'])->name('projects.workflow.report');
         Route::post('/projects/{project}/workflow/evaluate', [ProjectWorkflowController::class, 'evaluate'])->name('projects.workflow.evaluate');
+        Route::post('/projects/{project}/workflow/financial-closure/evaluate', [\App\Http\Controllers\ProjectFinancialClosureController::class, 'evaluate'])->name('projects.workflow.financial-closure.evaluate');
+        Route::post('/projects/{project}/workflow/financial-closure/close', [\App\Http\Controllers\ProjectFinancialClosureController::class, 'close'])->name('projects.workflow.financial-closure.close');
+        Route::post('/projects/{project}/workflow/financial-closure/close-outstanding', [\App\Http\Controllers\ProjectFinancialClosureController::class, 'closeOutstanding'])->name('projects.workflow.financial-closure.close-outstanding');
+        Route::post('/projects/{project}/workflow/financial-closure/reopen', [\App\Http\Controllers\ProjectFinancialClosureController::class, 'reopen'])->name('projects.workflow.financial-closure.reopen');
         Route::post('/projects/{project}/products/{product}/quality-inspections', [ProjectQualityInspectionController::class, 'store'])->name('projects.quality-inspections.store');
         Route::post('/projects/{project}/workflow/gates/{evaluation}/override', [ProjectWorkflowController::class, 'override'])->name('projects.workflow.gates.override');
         Route::patch('/projects/{project}/workflow/overrides/{override}/revoke', [ProjectWorkflowController::class, 'revokeOverride'])->name('projects.workflow.overrides.revoke');

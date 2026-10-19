@@ -318,11 +318,13 @@
             color: #2563eb
         }
 
-        .projects-chip-status-completed {
+        .projects-chip-status-completed,
+        .projects-chip-status-closed {
             background: #e8fff3;
             color: #039855
         }
 
+        .projects-chip-status-closed_with_outstanding_financials,
         .projects-chip-status-on_hold,
         .projects-chip-status-waiting_client,
         .projects-chip-status-waiting_vendor {
@@ -517,6 +519,7 @@
 /* Somebody else has to act, or the date is slipping: a part-paid invoice is
    waiting for the rest, and goods received are waiting for the bill. */
 .project .status-waiting,
+.project .status-closed-with-outstanding-financials,
 .project .status-waiting-client,
 .project .status-waiting-vendor,
 .project .status-on-hold,
@@ -531,6 +534,7 @@
 /* Done. A paid invoice and an approved order are as finished as a delivered
    milestone — the same green the invoices listing gives them. */
 .project .status-completed,
+.project .status-closed,
 .project .status-delivered,
 .project .status-resolved,
 .project .status-paid,
@@ -628,6 +632,7 @@
 }
 
 :root[data-theme="dark"] .project .status-waiting,
+:root[data-theme="dark"] .project .status-closed-with-outstanding-financials,
 :root[data-theme="dark"] .project .status-waiting-client,
 :root[data-theme="dark"] .project .status-waiting-vendor,
 :root[data-theme="dark"] .project .status-on-hold,
@@ -642,6 +647,7 @@
 }
 
 :root[data-theme="dark"] .project .status-completed,
+:root[data-theme="dark"] .project .status-closed,
 :root[data-theme="dark"] .project .status-delivered,
 :root[data-theme="dark"] .project .status-resolved,
 :root[data-theme="dark"] .project .status-paid,
@@ -3151,3 +3157,8 @@
 .project-gate-history{margin-top:12px}.project-gate-history>summary{color:var(--master-primary);font-size:11px;font-weight:700;cursor:pointer}.project-gate-history>div{display:grid;margin-top:8px;border-top:1px solid var(--mc-border)}.project-gate-history span{display:grid;grid-template-columns:170px 190px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--mc-border)}.project-gate-history strong{color:var(--mc-text);font-size:11px}.project-gate-history small,.project-gate-history em{color:var(--mc-text-2);font-size:10.5px;font-style:normal}@media(max-width:700px){.project-gate-history span{grid-template-columns:1fr;gap:2px}}
 .project-approval-create{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:end;padding-bottom:14px;border-bottom:1px solid var(--mc-border)}.project-approval-instructions{grid-column:span 2}.project-approval-list{display:grid}.project-approval{padding:14px 0;border-bottom:1px solid var(--mc-border)}.project-approval>header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.project-approval>header strong,.project-approval>header span{display:block}.project-approval>header strong{color:var(--mc-text);font-size:13px}.project-approval>header div>span{margin-top:2px;color:var(--mc-text-2);font-size:10.5px}.project-approval-current{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px;padding:9px 10px;background:var(--mc-card-soft)}.project-approval-current>div{display:grid;gap:2px}.project-approval-current span{color:var(--mc-text-2);font-size:10px;text-transform:uppercase}.project-approval-current a,.project-approval-current strong{color:var(--mc-text);font-size:11.5px}.project-approval-current small{color:var(--mc-text-2);font-size:10.5px}.project-approval-warning{margin-top:9px;padding:8px 10px;border-left:3px solid var(--master-red);background:rgba(217,45,79,.08);color:var(--master-red);font-size:11px}.project-approval-override{display:grid;gap:2px;margin-top:9px;padding-left:10px;border-left:3px solid var(--master-orange)}.project-approval-override strong{color:var(--mc-text);font-size:11px}.project-approval-override span{color:var(--mc-text-2);font-size:10.5px}.project-approval-actions{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-top:10px}.project-approval-actions details{position:relative}.project-approval-actions summary{cursor:pointer;color:var(--master-primary);font-size:11px;font-weight:700;list-style:none}.project-approval-actions summary::-webkit-details-marker{display:none}.project-approval-actions details>form{display:grid;position:absolute;z-index:6;left:0;width:320px;gap:8px;margin-top:7px;padding:12px;border:1px solid var(--mc-border);border-radius:10px;background:var(--mc-card)}.project-approval-history{display:grid;position:absolute;z-index:6;right:0;width:360px;margin-top:7px;padding:10px;border:1px solid var(--mc-border);border-radius:10px;background:var(--mc-card)}.project-approval-history>span{display:grid;gap:2px;padding:7px 0;border-bottom:1px solid var(--mc-border)}.project-approval-history strong{color:var(--mc-text);font-size:11px}.project-approval-history small,.project-approval-history em{color:var(--mc-text-2);font-size:10px;font-style:normal}
 @media(max-width:900px){.project-approval-create{grid-template-columns:1fr 1fr}}@media(max-width:620px){.project-approval-create,.project-approval-current{grid-template-columns:1fr}.project-approval-instructions{grid-column:auto}.project-approval-actions details{width:100%}.project-approval-actions details>form,.project-approval-history{position:static;width:100%;box-sizing:border-box}}
+
+/* Financial closure keeps source balances visibly separate; no net figure can hide an obligation. */
+.project-financial-closure{display:grid;gap:16px}.project-financial-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.project-financial-stats .master-stat{min-width:0}.project-financial-stats .master-stat-value{font-size:16px;overflow-wrap:anywhere}.project-financial-closure-actions{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px}.project-financial-closure-actions>details{max-width:760px}.project-financial-closure-actions details[open]{width:100%}.project-financial-closure-actions .project-approval-create{margin-top:12px}.project-risk-acknowledgement{display:flex;grid-column:1/-1;gap:10px;align-items:flex-start;padding:12px;border:1px solid color-mix(in srgb,var(--master-red) 35%,var(--mc-border));border-radius:10px;background:color-mix(in srgb,var(--master-red) 5%,var(--mc-card));color:var(--mc-text);font-size:12px;line-height:1.5}.project-risk-acknowledgement input{margin-top:3px}.project-financial-sources{padding:12px 14px;border:1px solid var(--mc-border);border-radius:10px;background:var(--mc-card-soft)}.project-financial-sources>summary{cursor:pointer;color:var(--mc-text);font-size:12px;font-weight:750}.project-financial-source-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}.project-financial-source-grid>div{padding:12px;border:1px solid var(--mc-border);border-radius:8px;background:var(--mc-card)}.project-financial-source-grid h3{margin:0 0 8px;color:var(--mc-text);font-size:12px}.project-financial-source-grid p{display:grid;gap:2px;margin:0;padding:7px 0;border-top:1px solid var(--mc-border);font-size:11px}.project-financial-source-grid p:first-of-type{border-top:0}.project-financial-source-grid p span{color:var(--mc-text-2)}.project-financial-sources code{display:block;overflow-wrap:anywhere;color:var(--mc-text-2);font-size:11px}.project-inline-form{display:grid;gap:8px;margin-top:10px}
+@media(max-width:980px){.project-financial-stats,.project-financial-source-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.project-financial-stats,.project-financial-source-grid{grid-template-columns:1fr}.project-financial-closure-actions{display:grid}.project-financial-closure-actions .master-btn{width:100%}}
