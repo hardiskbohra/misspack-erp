@@ -35,6 +35,7 @@ use App\Http\Controllers\ProjectCommentController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectApprovalController;
 use App\Http\Controllers\ProjectWorkflowController;
+use App\Http\Controllers\ProjectCoordinatorQueueController;
 use App\Http\Controllers\ProjectQualityInspectionController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectTrackingController;
@@ -383,6 +384,8 @@ Route::middleware('auth')->group(function () {
         Route::resource('leads', LeadController::class);
 
         // Project Management
+        Route::get('/projects/work-queue', [ProjectCoordinatorQueueController::class, 'index'])->name('projects.work-queue.index');
+        Route::patch('/projects/{project}/work-queue/{step}', [ProjectCoordinatorQueueController::class, 'update'])->name('projects.work-queue.update');
         Route::post('/projects/quick', [ProjectController::class, 'quickStore'])->name('projects.quickStore');
         Route::patch('/projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.status.update');
         Route::post('/projects/{project}/workflow', [ProjectWorkflowController::class, 'start'])->name('projects.workflow.start');

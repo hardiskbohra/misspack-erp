@@ -110,6 +110,7 @@
         $sidebarItems = Auth::user() && Auth::user()->isEmployee() ? $employeeItems : [
             ['section' => 'Management'],
             ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'fa-solid fa-gauge-high'],
+            ['label' => 'Coordinator queue', 'route' => 'projects.work-queue.index', 'active' => 'projects.work-queue.*', 'icon' => 'fa-solid fa-list-check'],
             ['label' => 'Tasks', 'route' => 'tasks.index', 'active' => 'tasks.*', 'icon' => 'fa-solid fa-layer-group'],
             ['label' => 'Products', 'route' => 'products.index', 'active' => 'products.*', 'icon' => 'fas fa-box-open'],
             ['label' => 'Shipments', 'route' => 'shipments.index', 'active' => 'shipments.*', 'icon' => 'fas fa-truck'],
@@ -121,7 +122,7 @@
             ['label' => 'Feedback', 'route' => 'feedback.index', 'active' => 'feedback.*', 'except' => ['feedback.public.*'], 'icon' => 'fa-regular fa-comment-dots'],
             ['section' => 'Sales'],
             ['label' => 'Clients', 'route' => 'clients.index', 'active' => 'clients.*', 'icon' => 'fa-solid fa-users'],
-            ['label' => 'Projects', 'route' => 'projects.index', 'active' => 'projects.*', 'icon' => 'fa-solid fa-briefcase'],
+            ['label' => 'Projects', 'route' => 'projects.index', 'active' => 'projects.*', 'except' => ['projects.work-queue.*'], 'icon' => 'fa-solid fa-briefcase'],
             ['label' => 'Invoices', 'route' => 'sales-invoices.index', 'active' => 'sales-invoices.*', 'icon' => 'fa-solid fa-file-invoice-dollar'],
             ['section' => 'Purchase'],
             ['label' => 'Vendors', 'route' => 'vendors.index', 'active' => 'vendors.*', 'icon' => 'fa-solid fa-user-gear'],

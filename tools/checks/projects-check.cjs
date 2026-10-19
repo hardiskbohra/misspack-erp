@@ -391,7 +391,8 @@ check('the record page is the shared shell',
 const panelFiles = walk('resources/views/projects')
     .filter(file => file.endsWith('.blade.php'))
     .filter(file => file !== 'resources/views/projects/index.blade.php'
-        && file !== 'resources/views/projects/form.blade.php');
+        && file !== 'resources/views/projects/form.blade.php'
+        && file !== 'resources/views/projects/work-queue.blade.php');
 const panelCards = panelFiles.flatMap(file => [...read(file).matchAll(/class="([^"]*)"/g)]
     .map(match => match[1])
     .filter(classes => /(^|\s)master-card(\s|$)/.test(classes))
