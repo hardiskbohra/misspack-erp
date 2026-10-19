@@ -472,10 +472,14 @@ class ProjectController extends Controller
     private function makeProjectNumber(): string
     {
         $prefix = 'PRJ-';
-        $next = str_pad((string) (Project::whereDate('created_at', today())->count() + 1), 4, '0', STR_PAD_LEFT);
+        /* Soft-deleted projects still own their number as audit identity. They
+           must participate in both the starting sequence and collision check,
+           otherwise deleting PRJ-0001 makes quick-create attempt PRJ-0001 again
+           and the database's unique key correctly rejects it. */
+        $next = str_pad((string) (Project::withTrashed()->whereDate('created_at', today())->count() + 1), 4, '0', STR_PAD_LEFT);
         $number = $prefix.$next;
 
-        while (Project::where('project_number', $number)->exists()) {
+        while (Project::withTrashed()->where('project_number', $number)->exists()) {
             $next = str_pad((string) ((int) $next + 1), 4, '0', STR_PAD_LEFT);
             $number = $prefix.$next;
         }

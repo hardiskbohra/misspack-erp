@@ -23,4 +23,5 @@ check('exception history can still identify a deleted project',exception.include
 check('approval exception discovery rejects missing soft-deleted projects',registry.includes('$override->request->project')&&registry.includes("$override->request->project->status"));
 check('scheduled feedback automation ignores deleted project workflows',closure.includes("whereHas('project')"));
 check('raw sales and cashflow filter labels exclude deleted projects',salesFilters.includes("whereNull('deleted_at')->where('id', $id)")&&cashflowFilters.includes("whereNull('deleted_at')->where('id', $id)"));
+check('project numbering reserves numbers retained by deleted audit records',(controller.match(/Project::withTrashed\(\)/g)||[]).length>=2&&controller.includes("where('project_number', $number)->exists()"));
 console.log(`\nproject deletion: ${passed} passed, ${failed} failed`);if(failed)process.exit(1);
