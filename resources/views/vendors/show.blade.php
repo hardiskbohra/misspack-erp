@@ -3,6 +3,10 @@
 @section('title', $vendor->vendor_name)
 @section('page-title', 'Vendor record')
 
+@push('styles')
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/vendor-portal.css') }}">
+@endpush
+
 @section('content')
 
 @php
@@ -177,6 +181,8 @@
                         @include('vendors.partials.attachments')
                     </div>
                 </section>
+            @elseif ($tab === 'portal')
+                @include('vendors.partials.portal')
             @elseif ($tab === 'comments')
                 @include('vendors.partials.comments')
             @endif

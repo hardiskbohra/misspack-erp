@@ -14,6 +14,10 @@ use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ShipmentDeliveryReceiptController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\VendorPortalAuthController;
+use App\Http\Controllers\VendorPortalController;
+use App\Http\Controllers\VendorPortalManagementController;
+use App\Http\Controllers\VendorShareController;
 use App\Http\Controllers\OfficeServiceController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CashflowAttachmentController;
@@ -103,6 +107,14 @@ Route::post('/lead-enquiry', [PublicLeadController::class, 'store'])->name('lead
 Route::get('/statement/{token}', [PartyStatementController::class, 'publicShow'])
     ->where('token', '[A-Za-z0-9]{20,80}')
     ->name('statements.public');
+
+Route::get('/vendor-share/{token}', [VendorShareController::class, 'show'])
+    ->where('token', '[A-Za-z0-9]{40,80}')
+    ->name('vendor-shares.show');
+Route::post('/vendor-share/{token}/updates', [VendorShareController::class, 'storeUpdate'])
+    ->where('token', '[A-Za-z0-9]{40,80}')
+    ->middleware('throttle:10,1')
+    ->name('vendor-shares.updates.store');
 
 /* The feedback link. Outside auth for the same reason a statement link is: the
    person answering is a client, not a user of this ERP. The token is the whole
@@ -331,6 +343,13 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/vendors/{vendor}/comments', [VendorController::class, 'storeComment'])->name('vendors.comments.store');
         Route::delete('/vendor-comments/{comment}', [VendorController::class, 'destroyComment'])->name('vendors.comments.destroy');
+        Route::patch('/vendors/{vendor}/portal', [VendorPortalManagementController::class, 'enable'])->name('vendors.portal.enable');
+        Route::post('/vendors/{vendor}/portal/users', [VendorPortalManagementController::class, 'storeUser'])->name('vendors.portal.users.store');
+        Route::post('/vendors/{vendor}/portal/updates', [VendorPortalManagementController::class, 'storeUpdate'])->name('vendors.portal.updates.store');
+        Route::patch('/vendors/{vendor}/portal/users/{portalUser}/toggle', [VendorPortalManagementController::class, 'toggleUser'])->name('vendors.portal.users.toggle');
+        Route::post('/vendors/{vendor}/portal/users/{portalUser}/reset-password', [VendorPortalManagementController::class, 'resetUser'])->name('vendors.portal.users.reset');
+        Route::post('/vendors/{vendor}/shares', [VendorPortalManagementController::class, 'storeShare'])->name('vendors.shares.store');
+        Route::patch('/vendors/{vendor}/shares/{share}/revoke', [VendorPortalManagementController::class, 'revokeShare'])->name('vendors.shares.revoke');
         Route::resource('vendors', VendorController::class);
 
         Route::resource('office-services', OfficeServiceController::class);
@@ -697,5 +716,19 @@ Route::prefix('client-portal')->name('client-portal.')->group(function () {
         Route::get('/notifications', [ClientPortalNotificationController::class, 'index'])->name('notifications.index');
         Route::patch('/notifications/{notification}/read', [ClientPortalNotificationController::class, 'markRead'])->name('notifications.read');
         Route::patch('/notifications/read-all', [ClientPortalNotificationController::class, 'markAllRead'])->name('notifications.readAll');
+    });
+});
+
+Route::prefix('vendor-portal')->name('vendor-portal.')->group(function () {
+    Route::get('/login', [VendorPortalAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [VendorPortalAuthController::class, 'login'])->middleware('throttle:10,1')->name('login.submit');
+    Route::middleware('vendor.portal')->group(function () {
+        Route::post('/logout', [VendorPortalAuthController::class, 'logout'])->name('logout');
+        Route::get('/change-password', [VendorPortalAuthController::class, 'editPassword'])->name('password.edit');
+        Route::post('/change-password', [VendorPortalAuthController::class, 'updatePassword'])->name('password.update');
+        Route::get('/', [VendorPortalController::class, 'dashboard'])->name('dashboard');
+        Route::get('/purchases/{purchaseInvoice}', [VendorPortalController::class, 'purchase'])->name('purchases.show');
+        Route::post('/purchases/{purchaseInvoice}/updates', [VendorPortalController::class, 'storeUpdate'])
+            ->middleware('throttle:20,1')->name('purchases.updates.store');
     });
 });

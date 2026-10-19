@@ -46,6 +46,7 @@ class VendorController extends Controller
         'procurement' => 'Procurement',
         'money' => 'Money',
         'documents' => 'Documents',
+        'portal' => 'Portal & sharing',
         'comments' => 'Comments',
     ];
 
@@ -313,16 +314,40 @@ class VendorController extends Controller
         $vendor->load($relations);
 
         $data = $this->dashboardData($vendor);
+        $portalUsers = collect();
+        $shareLinks = collect();
+        $portalPurchaseDocuments = collect();
+        $portalShipments = collect();
+        $portalPackagingLists = collect();
+        $portalUpdates = collect();
+        if ($tab === 'portal' && Schema::hasTable('vendor_portal_users')) {
+            $portalUsers = \App\Models\VendorPortalUser::where('vendor_id', $vendor->id)->orderBy('id')->get();
+            $shareLinks = \App\Models\VendorShareLink::where('vendor_id', $vendor->id)->latest('id')->get();
+            $portalPurchaseDocuments = PurchaseInvoice::where('vendor_id', $vendor->id)->where('status', '!=', 'draft')->latest('id')->get();
+            $portalShipments = \App\Models\Shipment::where('vendor_id', $vendor->id)->latest('id')->get();
+            $portalPackagingLists = \App\Models\PackagingList::where('vendor_id', $vendor->id)->latest('id')->get();
+            $portalUpdates = \App\Models\VendorCollaborationUpdate::with(['portalUser', 'purchaseInvoice', 'shareLink'])
+                ->where('vendor_id', $vendor->id)->latest('id')->limit(20)->get();
+            \App\Models\VendorCollaborationUpdate::where('vendor_id', $vendor->id)
+                ->whereIn('author_type', ['vendor', 'secure_link'])->whereNull('read_by_office_at')->update(['read_by_office_at' => now()]);
+        }
 
         return view('vendors.show', array_merge($this->formData($vendor), $data, [
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
             'unallocatedCash' => app(\App\Services\UnallocatedCashflows::class)->forVendor($vendor->id),
+            'portalUsers' => $portalUsers,
+            'shareLinks' => $shareLinks,
+            'portalPurchaseDocuments' => $portalPurchaseDocuments,
+            'portalShipments' => $portalShipments,
+            'portalPackagingLists' => $portalPackagingLists,
+            'portalUpdates' => $portalUpdates,
             'tabCounts' => [
                 'contacts' => $vendor->relationLoaded('contacts') ? $vendor->contacts->count() : 0,
                 'procurement' => (int) ($data['summary']['project_products_count'] ?? 0) + (int) ($data['summary']['shipments_count'] ?? 0),
                 'money' => (int) ($data['summary']['statement_count'] ?? 0) + (int) ($data['summary']['cashflow_count'] ?? 0),
                 'documents' => $vendor->relationLoaded('attachments') ? $vendor->attachments->count() : (int) ($data['summary']['attachments_count'] ?? 0),
+                'portal' => $portalUsers->count() + $shareLinks->where('revoked_at', null)->count(),
                 'comments' => $vendor->relationLoaded('comments') ? $vendor->comments->count() : 0,
             ],
             'recordUrl' => fn (string $key) => route('vendors.show', ['vendor' => $vendor, 'tab' => $key]),
