@@ -112,7 +112,7 @@ class ProjectFinancialClosure
             'unallocated_vendor_cash' => $this->totals(array_values(array_filter($unallocated, fn ($row) => $row['transaction_type'] === 'debit')), 'unallocated'),
         ];
         $openSteps = $project->workflow?->steps
-            ->reject(fn ($step) => $step->step_key === self::GATE)
+            ->reject(fn ($step) => in_array($step->step_key, [self::GATE, ProjectFeedbackClosure::GATE], true))
             ->whereNotIn('status', ['completed', 'skipped', 'cancelled'])
             ->map(fn ($step) => ['step_key' => $step->step_key, 'title' => $step->title, 'status' => $step->status])
             ->values()->all() ?? [];
@@ -225,6 +225,7 @@ class ProjectFinancialClosure
                 'closure_id' => $closure->id, 'closure_type' => $type, 'content_hash' => $snapshot['content_hash'],
                 'totals' => $snapshot['totals'], 'expected_resolution_date' => $expectedDate,
             ]);
+            app(ProjectFeedbackClosure::class)->sync($workflow->fresh(['steps', 'project']), $userId, true);
 
             return $closure;
         });

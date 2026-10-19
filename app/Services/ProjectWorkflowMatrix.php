@@ -152,6 +152,14 @@ class ProjectWorkflowMatrix
             'evaluated_at' => $evaluation?->evaluated_at?->format('d M, H:i'),
             'fingerprint' => $evaluation?->content_hash,
             'metric' => $metric,
+            'feedback' => $step->step_key === ProjectFeedbackClosure::GATE ? [
+                'request_id' => $details['request_id'] ?? null,
+                'state' => $details['request_state'] ?? 'not issued',
+                'band' => $details['response_band'] ?? null,
+                'reminders' => (int) ($details['reminder_count'] ?? 0),
+                'open_actions' => count($details['open_action_ids'] ?? []),
+                'resolved_actions' => count($details['resolved_action_ids'] ?? []),
+            ] : null,
             'approval' => $approval ? [
                 'status' => $approval->effectiveStatus(),
                 'label' => $approval->statusLabel(),

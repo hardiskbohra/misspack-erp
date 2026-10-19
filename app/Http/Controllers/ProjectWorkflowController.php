@@ -9,6 +9,7 @@ use App\Models\ProjectWorkflowStep;
 use App\Services\ProjectWorkflowExecution;
 use App\Services\ProjectWorkflowGates;
 use App\Services\ProjectOperationalReadiness;
+use App\Services\ProjectFeedbackClosure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,8 +40,9 @@ class ProjectWorkflowController extends Controller
         $execution->recalculate($workflow);
         app(ProjectWorkflowGates::class)->evaluateAll($workflow->fresh(), Auth::id());
         app(ProjectOperationalReadiness::class)->evaluateAll($workflow->fresh(), Auth::id());
+        app(ProjectFeedbackClosure::class)->sync($workflow->fresh(), Auth::id());
 
-        return back()->with('success', 'Coordinator report and all financial and product readiness gates updated.');
+        return back()->with('success', 'Coordinator report and all source-controlled gates updated.');
     }
 
     public function evaluate(Project $project, ProjectWorkflowGates $gates): RedirectResponse
@@ -49,8 +51,9 @@ class ProjectWorkflowController extends Controller
         abort_unless($workflow, 404);
         $gates->evaluateAll($workflow, Auth::id());
         app(ProjectOperationalReadiness::class)->evaluateAll($workflow->fresh(), Auth::id());
+        app(ProjectFeedbackClosure::class)->sync($workflow->fresh(), Auth::id());
 
-        return back()->with('success', 'Financial and product readiness gates evaluated against current source records.');
+        return back()->with('success', 'Financial, product and final-feedback gates evaluated against current source records.');
     }
 
     public function override(Request $request, Project $project, ProjectGateEvaluation $evaluation, ProjectWorkflowGates $gates, ProjectWorkflowExecution $execution): RedirectResponse
@@ -73,6 +76,9 @@ class ProjectWorkflowController extends Controller
         if (in_array($evaluation->gate_key, ProjectOperationalReadiness::CONTROLLED_STEPS, true)) {
             app(ProjectOperationalReadiness::class)->applyToStep($evaluation);
             app(ProjectOperationalReadiness::class)->evaluateAll($evaluation->workflow->fresh(), Auth::id());
+        } elseif ($evaluation->gate_key === ProjectFeedbackClosure::GATE) {
+            app(ProjectFeedbackClosure::class)->applyToStep($evaluation);
+            $execution->recalculate($evaluation->workflow);
         } else {
             $gates->applyToStep($evaluation);
             $execution->recalculate($evaluation->workflow);
@@ -92,6 +98,9 @@ class ProjectWorkflowController extends Controller
         if (in_array($evaluation->gate_key, ProjectOperationalReadiness::CONTROLLED_STEPS, true)) {
             app(ProjectOperationalReadiness::class)->applyToStep($evaluation);
             app(ProjectOperationalReadiness::class)->evaluateAll($evaluation->workflow->fresh(), Auth::id());
+        } elseif ($evaluation->gate_key === ProjectFeedbackClosure::GATE) {
+            app(ProjectFeedbackClosure::class)->applyToStep($evaluation);
+            app(ProjectFeedbackClosure::class)->sync($evaluation->workflow->fresh(), Auth::id(), false);
         } else {
             $gates->applyToStep($evaluation);
             $execution->recalculate($evaluation->workflow);
@@ -103,7 +112,7 @@ class ProjectWorkflowController extends Controller
     public function updateStep(Request $request, Project $project, ProjectWorkflowStep $step, ProjectWorkflowExecution $execution): RedirectResponse
     {
         abort_unless($step->workflow?->project_id === $project->id, 404);
-        abort_if(in_array($step->step_key, array_merge(ProjectWorkflowGates::AUTOMATED_GATES, ProjectOperationalReadiness::CONTROLLED_STEPS, \App\Services\ProjectApprovals::CONTROLLED_STEPS, \App\Services\ProjectFinancialClosure::CONTROLLED_STEPS), true), 422, 'This step is controlled by its current gate or client approval.');
+        abort_if(in_array($step->step_key, array_merge(ProjectWorkflowGates::AUTOMATED_GATES, ProjectOperationalReadiness::CONTROLLED_STEPS, \App\Services\ProjectApprovals::CONTROLLED_STEPS, \App\Services\ProjectFinancialClosure::CONTROLLED_STEPS, ProjectFeedbackClosure::CONTROLLED_STEPS), true), 422, 'This step is controlled by its current source records or client approval.');
         $data = $request->validate([
             'status' => ['required', Rule::in(array_values(array_diff(array_keys(ProjectWorkflowStep::statusOptions()), ['skipped', 'cancelled'])))],
             'notes' => ['nullable', 'string', 'max:2000'],

@@ -26,7 +26,10 @@ class ProjectCoordinatorQueue
             ])
             ->where('status', '!=', 'completed')
             ->whereHas('project', function ($query) use ($coordinatorId, $mineOnly) {
-                $query->whereNotIn('status', ['closed', 'closed_with_outstanding_financials', 'cancelled']);
+                /* Financially closed projects stay here until their final-feedback
+                   step is complete; workflow completion, not project status,
+                   removes them from the coordinator's queue. */
+                $query->where('status', '!=', 'cancelled');
                 if ($mineOnly || $coordinatorId) {
                     $query->where('assigned_to', $coordinatorId);
                 }

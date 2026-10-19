@@ -12,6 +12,7 @@ use App\Services\FeedbackFigures;
 use App\Services\FeedbackFilters;
 use App\Services\FeedbackIntake;
 use App\Services\FeedbackVocabulary;
+use App\Services\ProjectFeedbackClosure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -136,6 +137,7 @@ class FeedbackController extends Controller
             'expires_in_days' => $data['expires_in_days'] ?? FeedbackRequest::DEFAULT_EXPIRY_DAYS,
             'shared_via' => $data['shared_via'] ?? null,
         ]);
+        $this->syncFinalClosure($ask);
 
         return redirect()
             ->route('feedback.show', $ask)
@@ -150,6 +152,7 @@ class FeedbackController extends Controller
         ]);
 
         $feedbackRequest->update(['shared_via' => $data['shared_via']]);
+        $this->syncFinalClosure($feedbackRequest);
 
         return back()->with('success', 'Marked as sent by '.$feedbackRequest->channelLabel().'.');
     }
@@ -173,6 +176,7 @@ class FeedbackController extends Controller
             'reminder_count' => $feedbackRequest->reminder_count + 1,
             'last_reminded_at' => now(),
         ]);
+        $this->syncFinalClosure($feedbackRequest);
 
         return back()->with('success', 'Reminder '.$feedbackRequest->reminder_count.' of '.FeedbackRequest::MAX_REMINDERS.' recorded. Send it from the buttons above.');
     }
@@ -182,6 +186,7 @@ class FeedbackController extends Controller
         if ($feedbackRequest->revoked_at === null) {
             $feedbackRequest->update(['revoked_at' => now()]);
         }
+        $this->syncFinalClosure($feedbackRequest);
 
         return back()->with('success', 'Link revoked. The answers already given are untouched.');
     }
@@ -199,7 +204,9 @@ class FeedbackController extends Controller
             return back()->with('error', 'This ask has an answer. Revoke the link instead — the answer is kept.');
         }
 
+        $workflow = $feedbackRequest->project?->workflow;
         $feedbackRequest->delete();
+        if ($workflow) app(ProjectFeedbackClosure::class)->sync($workflow->fresh(), auth()->id(), false);
 
         return redirect()->route('feedback.index')->with('success', 'Ask deleted.');
     }
@@ -241,6 +248,9 @@ class FeedbackController extends Controller
             'resolution_note' => $data['note'] ?? null,
             'created_by' => auth()->id(),
         ]);
+        if ($workflow = $feedbackResponse->project?->workflow) {
+            app(ProjectFeedbackClosure::class)->sync($workflow->fresh(), auth()->id(), false);
+        }
 
         return back()->with('success', 'Follow-up opened and owned.');
     }
@@ -473,5 +483,13 @@ class FeedbackController extends Controller
             ->orderBy('name')
             ->get(['id', 'name'])
             ->pluck('name', 'id');
+    }
+
+    private function syncFinalClosure(FeedbackRequest $request): void
+    {
+        if ($request->kind !== FeedbackRequest::KIND_CLOSE_OUT) return;
+        if ($workflow = $request->project?->workflow) {
+            app(ProjectFeedbackClosure::class)->sync($workflow->fresh(), auth()->id(), false);
+        }
     }
 }
