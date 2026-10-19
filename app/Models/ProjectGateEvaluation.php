@@ -44,6 +44,9 @@ class ProjectGateEvaluation extends Model
             'production_complete' => 'Production readiness',
             'quality_passed' => 'Quality readiness',
             'packing_verified' => 'Verified packing',
+            'shipment_dispatched' => 'Quantity dispatched',
+            'delivery_complete' => 'Quantity delivered',
+            'delivery_reconciled' => 'Project delivery reconciliation',
         ][$this->gate_key] ?? str($this->gate_key)->headline()->toString();
     }
 }

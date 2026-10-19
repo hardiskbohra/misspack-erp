@@ -37,9 +37,9 @@
             <section class="master-card master-card--flat master-section project-detail-card">
                 <div class="master-section-head"><div><h2 class="master-section-title">Commercial and financial gates</h2><p class="master-sub">Checks use the selected Proforma and booked or reconciled receipts. Material changes create a new auditable evaluation.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Run gate checks</button></form></div>
                 @php
-                    $currentGates = $workflow->evaluations->whereNull('project_product_id')->unique('gate_key');
+                    $currentGates = $workflow->evaluations->whereNull('project_product_id')->whereIn('gate_key', \App\Services\ProjectWorkflowGates::AUTOMATED_GATES)->unique('gate_key');
                     $currentGateIds = $currentGates->pluck('id');
-                    $previousGates = $workflow->evaluations->whereNull('project_product_id')->reject(fn ($gate) => $currentGateIds->contains($gate->id));
+                    $previousGates = $workflow->evaluations->whereNull('project_product_id')->whereIn('gate_key', \App\Services\ProjectWorkflowGates::AUTOMATED_GATES)->reject(fn ($gate) => $currentGateIds->contains($gate->id));
                 @endphp
                 @if($currentGates->isEmpty())
                     <div class="master-empty-state"><i class="fa-solid fa-shield-halved"></i><p>Select the commercial baseline and run gate checks to evaluate the production advance and complete pre-dispatch balance.</p></div>
@@ -104,7 +104,19 @@
             </section>
 
             <section class="master-card master-card--flat master-section project-detail-card">
-                <div class="master-section-head"><div><h2 class="master-section-title">Product operational readiness</h2><p class="master-sub">Each product is evaluated independently from purchase orders, production evidence, immutable QC attempts and current verified Packaging Lists.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Refresh readiness</button></form></div>
+                <div class="master-section-head"><div><h2 class="master-section-title">Product operational readiness</h2><p class="master-sub">Each product is evaluated independently through procurement, production, QC, packing, partial dispatch and delivery.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Refresh readiness</button></form></div>
+                @php
+                    $deliveryReconciliation = $workflow->evaluations->whereNull('project_product_id')->firstWhere('gate_key', \App\Services\ProjectOperationalReadiness::GATE_DELIVERY_RECONCILED);
+                    $deliveryResult = $deliveryReconciliation?->effectiveResult() ?? 'pending';
+                @endphp
+                <article class="project-gate is-{{ $deliveryResult }}">
+                    <div class="project-gate-icon"><i class="fa-solid {{ $deliveryResult==='passed' ? 'fa-circle-check' : ($deliveryResult==='overridden' ? 'fa-triangle-exclamation' : 'fa-truck-ramp-box') }}"></i></div>
+                    <div class="project-gate-copy"><div><strong>Project delivery reconciliation</strong><span class="master-badge is-{{ $deliveryResult }}">{{ $deliveryReconciliation?->resultLabel() ?: 'Not evaluated' }}</span></div><p>{{ $deliveryReconciliation?->summary ?: 'Refresh readiness to reconcile delivered quantities across all active products.' }}</p></div>
+                    <div class="project-gate-actions">
+                        @if($deliveryReconciliation && $deliveryReconciliation->result==='blocked' && !$deliveryReconciliation->activeOverride && auth()->user()?->isAdmin())<details><summary class="master-btn master-btn-soft master-btn-sm">Manager override</summary><form method="POST" action="{{ route('projects.workflow.gates.override',[$project,$deliveryReconciliation]) }}">@csrf<textarea class="master-textarea" name="reason" rows="3" minlength="10" maxlength="2000" required placeholder="Risk and reason for reconciling delivery"></textarea><input class="master-input" type="date" name="expected_resolution_date"><button class="master-btn master-btn-primary master-btn-sm">Approve override</button></form></details>
+                        @elseif($deliveryReconciliation?->activeOverride && auth()->user()?->isAdmin())<details><summary class="master-btn master-btn-light master-btn-sm">Revoke override</summary><form method="POST" action="{{ route('projects.workflow.overrides.revoke',[$project,$deliveryReconciliation->activeOverride]) }}">@csrf @method('PATCH')<textarea class="master-textarea" name="revocation_reason" minlength="5" maxlength="2000" required></textarea><button class="master-btn master-btn-light master-btn-sm">Revoke</button></form></details>@endif
+                    </div>
+                </article>
                 <div class="project-approval-list">
                     @foreach($project->products->where('status','!=','cancelled') as $product)
                         @php
@@ -115,7 +127,7 @@
                         <article class="project-approval">
                             <header><div><strong>{{ $product->product_name }}</strong><span>{{ number_format((float)$product->quantity,3) }} {{ $product->unit }} required</span></div><span class="master-badge">Independent product</span></header>
                             <div class="project-gate-list">
-                                @foreach(\App\Services\ProjectOperationalReadiness::CONTROLLED_STEPS as $gateKey)
+                                @foreach(\App\Services\ProjectOperationalReadiness::PRODUCT_CONTROLLED_STEPS as $gateKey)
                                     @php
                                         $evaluation = $productEvaluations->get($gateKey);
                                         $effective = $evaluation?->effectiveResult() ?? 'pending';
@@ -124,7 +136,11 @@
                                     <article class="project-gate is-{{ $effective }}">
                                         <div class="project-gate-icon"><i class="fa-solid {{ $effective==='passed' ? 'fa-circle-check' : ($effective==='overridden' ? 'fa-triangle-exclamation' : 'fa-circle-xmark') }}"></i></div>
                                         <div class="project-gate-copy"><div><strong>{{ $evaluation?->gateLabel() ?: str($gateKey)->headline() }}</strong><span class="master-badge is-{{ $effective }}">{{ $evaluation?->resultLabel() ?: 'Not evaluated' }}</span></div><p>{{ $evaluation?->summary ?: 'Run readiness checks to capture source evidence.' }}</p>
-                                            @if(array_key_exists('required_quantity',$details))<small>{{ number_format((float)($details['required_quantity']??0),3) }} required · {{ number_format((float)($details['remaining_quantity']??0),3) }} remaining</small>@endif
+                                            @if(array_key_exists('required_quantity',$details))
+                                                <small>{{ number_format((float)($details['required_quantity']??0),3) }} required · {{ number_format((float)($details['remaining_quantity']??0),3) }} remaining
+                                                    @if((float)($details['excess_quantity']??0)>0) · {{ number_format((float)$details['excess_quantity'],3) }} excess @endif
+                                                </small>
+                                            @endif
                                             @if($evaluation?->activeOverride)<div class="project-gate-override"><strong>Manager override by {{ $evaluation->activeOverride->approver?->name ?: 'Administrator' }}</strong><span>{{ $evaluation->activeOverride->reason }}</span></div>@endif
                                         </div>
                                         <div class="project-gate-actions">

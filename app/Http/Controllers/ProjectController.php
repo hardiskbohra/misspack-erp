@@ -214,7 +214,7 @@ class ProjectController extends Controller
         }
 
         if ($this->shipmentModelAvailable()) {
-            $with[] = 'shipments';
+            $with[] = 'shipments.items.projectProduct';
         }
 
         /* The Invoices tab: the money documents the modules raised against this

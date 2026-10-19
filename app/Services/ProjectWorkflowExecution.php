@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 class ProjectWorkflowExecution
 {
     public const TEMPLATE_KEY = 'standard_execution';
-    public const TEMPLATE_VERSION = 1;
+    public const TEMPLATE_VERSION = 2;
 
     private const PROJECT_STEPS = [
         ['setup', 'project_setup', 'Project setup complete', 10, 4, true],
@@ -18,7 +18,7 @@ class ProjectWorkflowExecution
         ['commercial', 'advance_received', 'Required production advance received', 30, 3, false],
         ['dispatch', 'dispatch_balance', 'Complete pre-dispatch balance received', 100, 3, false],
         ['dispatch', 'dispatch_approved', 'Dispatch approved', 110, 2, false],
-        ['delivery', 'delivery_reconciled', 'All required quantities delivered', 120, 3, true],
+        ['delivery', 'delivery_reconciled', 'All product quantities delivered and reconciled', 125, 3, true],
         ['closure', 'commercial_closure', 'Commercial closure reviewed', 130, 2, false],
         ['closure', 'feedback_closure', 'Feedback and final closure completed', 140, 1, true],
     ];
@@ -30,6 +30,8 @@ class ProjectWorkflowExecution
         ['production', 'production_complete', 'Production quantity completed', 70, 4, true],
         ['quality', 'quality_passed', 'Quality inspection passed', 80, 2, true],
         ['packing', 'packing_verified', 'Packing completed and verified', 90, 2, true],
+        ['dispatch', 'shipment_dispatched', 'Required quantity dispatched', 115, 2, true],
+        ['delivery', 'delivery_complete', 'Required quantity delivered', 120, 3, true],
     ];
 
     public static function stageOptions(): array
@@ -70,6 +72,9 @@ class ProjectWorkflowExecution
     {
         $project ??= $workflow->project;
         $owner = $project->assigned_to;
+        if ((int) $workflow->template_version !== self::TEMPLATE_VERSION) {
+            $workflow->update(['template_version' => self::TEMPLATE_VERSION]);
+        }
 
         foreach (self::PROJECT_STEPS as $definition) {
             $this->ensureStep($workflow, null, $definition, 'project', $owner);
@@ -126,7 +131,14 @@ class ProjectWorkflowExecution
         [$stage, $key, $title, $sort, $weight, $clientVisible] = $definition;
         $query = $workflow->steps()->where('step_key', $key);
         $productId === null ? $query->whereNull('project_product_id') : $query->where('project_product_id', $productId);
-        if ($query->exists()) return;
+        if ($existing = $query->first()) {
+            $existing->update([
+                'stage_key' => $stage, 'title' => $title, 'scope' => $scope,
+                'sort_order' => $sort, 'weight' => $weight,
+                'is_client_visible' => $clientVisible, 'owner_id' => $ownerId,
+            ]);
+            return;
+        }
 
         $workflow->steps()->create([
             'project_product_id' => $productId,

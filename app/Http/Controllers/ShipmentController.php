@@ -161,6 +161,8 @@ class ShipmentController extends Controller
         /* a shipment can be created already delivered: same rule, same default */
         $data = Shipment::withDeliveryDefaults($data);
         $this->assertDeliveryDateAllowed($data['drop_date'] ?? null, $data['pickup_date'] ?? null);
+        $probe = new Shipment(['status' => Shipment::STATUS_PLANNING, 'project_id' => $data['project_id'] ?? null]);
+        $this->assertStatusChangeAllowed($probe, $data['status'], ['remarks' => $data['delay_reason'] ?? $data['notes'] ?? null]);
 
         $shipment = DB::transaction(function () use ($request, $data, $items) {
             $data['shipment_number'] = $data['shipment_number'] ?: $this->makeShipmentNumber();
@@ -175,6 +177,8 @@ class ShipmentController extends Controller
 
             return $shipment;
         });
+
+        $this->refreshProjectReadiness($shipment);
 
         return redirect()
             ->route('shipments.show', $shipment)
@@ -273,6 +277,7 @@ class ShipmentController extends Controller
         if ($oldStatus !== $shipment->status) {
             ShipmentStatusChanged::dispatch($shipment->fresh(), $oldStatus);
         }
+        $this->refreshProjectReadiness($shipment->fresh());
 
         $redirect = redirect()
             ->route('shipments.show', $shipment)
@@ -296,6 +301,7 @@ class ShipmentController extends Controller
 
     public function destroy(Shipment $shipment): RedirectResponse
     {
+        $project = $shipment->project;
         foreach ($shipment->attachments as $attachment) {
             if ($attachment->file_path) {
                 Storage::disk('public')->delete($attachment->file_path);
@@ -303,6 +309,9 @@ class ShipmentController extends Controller
         }
 
         $shipment->delete();
+        if ($project?->workflow) {
+            app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($project->workflow, Auth::id());
+        }
 
         return redirect()
             ->route('shipments.index')
@@ -363,6 +372,7 @@ class ShipmentController extends Controller
         if ($oldStatus !== $shipment->status) {
             ShipmentStatusChanged::dispatch($shipment->fresh(), $oldStatus);
         }
+        $this->refreshProjectReadiness($shipment->fresh());
 
         $message = 'Tracking history added successfully.';
 
@@ -390,7 +400,9 @@ class ShipmentController extends Controller
             return;
         }
 
-        if ($status === Shipment::STATUS_PICKED_UP && $shipment->project_id) {
+        if ($shipment->status === Shipment::STATUS_PLANNING
+            && in_array($status, Shipment::dispatchedStatuses(), true)
+            && $shipment->project_id) {
             $workflow = \App\Models\ProjectWorkflow::query()->where('project_id', $shipment->project_id)->first();
             if ($workflow) {
                 $evaluations = app(\App\Services\ProjectWorkflowGates::class)->evaluateAll($workflow, Auth::id());
@@ -641,7 +653,7 @@ class ShipmentController extends Controller
             'attachment_photos.*' => ['nullable', 'file', 'max:8192'],
 
             'items' => ['nullable', 'array'],
-            'items.*.project_product_id' => ['nullable', Rule::exists('project_products', 'id')->where(fn ($query) => $query->where('project_id', $request->input('project_id')))],
+            'items.*.project_product_id' => [Rule::requiredIf(fn () => filled($request->input('project_id'))), 'nullable', Rule::exists('project_products', 'id')->where(fn ($query) => $query->where('project_id', $request->input('project_id')))],
             'items.*.product_name' => ['nullable', 'string', 'max:255'],
             'items.*.sku' => ['nullable', 'string', 'max:255'],
             'items.*.hs_code' => ['nullable', 'string', 'max:255'],
@@ -1156,6 +1168,13 @@ class ShipmentController extends Controller
             ->sum('shipment_cost');
 
         return round($inr + $legacyInr, 2);
+    }
+
+    private function refreshProjectReadiness(Shipment $shipment): void
+    {
+        if ($workflow = $shipment->project?->workflow) {
+            app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($workflow, Auth::id());
+        }
     }
 
     private function formData(Shipment $shipment): array

@@ -36,6 +36,9 @@
                                 <td data-label="Shipment">
                                     <strong>{{ $shipment->shipment_number }}</strong>
                                     <span class="project-fact-note">{{ $shipment->identity_name ?: 'No reference' }}</span>
+                                    @foreach($shipment->items->whereNotNull('project_product_id')->take(3) as $line)
+                                        <span class="project-fact-note">{{ $line->projectProduct?->product_name ?: $line->product_name }} · {{ number_format((float)$line->quantity,3) }} {{ $line->unit }}</span>
+                                    @endforeach
                                 </td>
                                 <td data-label="Route">
                                     {{ $shipment->from_name ?: 'Origin' }} → {{ $shipment->to_name ?: 'Destination' }}

@@ -69,10 +69,13 @@ class ProjectWorkflowController extends Controller
             'approved_at' => now(),
         ]);
         $evaluation->setRelation('activeOverride', $override);
-        $evaluation->project_product_id
-            ? app(ProjectOperationalReadiness::class)->applyToStep($evaluation)
-            : $gates->applyToStep($evaluation);
-        $execution->recalculate($evaluation->workflow);
+        if (in_array($evaluation->gate_key, ProjectOperationalReadiness::CONTROLLED_STEPS, true)) {
+            app(ProjectOperationalReadiness::class)->applyToStep($evaluation);
+            app(ProjectOperationalReadiness::class)->evaluateAll($evaluation->workflow->fresh(), Auth::id());
+        } else {
+            $gates->applyToStep($evaluation);
+            $execution->recalculate($evaluation->workflow);
+        }
 
         return back()->with('warning', 'Manager override recorded. The failed condition remains visible and auditable.');
     }
@@ -85,10 +88,13 @@ class ProjectWorkflowController extends Controller
         $data = $request->validate(['revocation_reason' => ['required', 'string', 'min:5', 'max:2000']]);
         $override->update($data + ['revoked_by' => Auth::id(), 'revoked_at' => now()]);
         $evaluation->unsetRelation('activeOverride');
-        $evaluation->project_product_id
-            ? app(ProjectOperationalReadiness::class)->applyToStep($evaluation)
-            : $gates->applyToStep($evaluation);
-        $execution->recalculate($evaluation->workflow);
+        if (in_array($evaluation->gate_key, ProjectOperationalReadiness::CONTROLLED_STEPS, true)) {
+            app(ProjectOperationalReadiness::class)->applyToStep($evaluation);
+            app(ProjectOperationalReadiness::class)->evaluateAll($evaluation->workflow->fresh(), Auth::id());
+        } else {
+            $gates->applyToStep($evaluation);
+            $execution->recalculate($evaluation->workflow);
+        }
 
         return back()->with('success', 'Manager override revoked; the gate is blocked again.');
     }

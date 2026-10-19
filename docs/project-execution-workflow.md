@@ -82,3 +82,11 @@ The four operational steps are source-controlled and evaluated separately for ev
 Invoice, purchase and shipment source lines retain project-product identity when copied into a Packaging List. This avoids guessing by product name or a generic catalogue product. QC and verified packing expose required, covered and remaining quantities in the Workflow command centre, so a partial quantity cannot falsely complete the whole product.
 
 Every readiness refresh creates a new immutable gate evaluation only when its evidence changes. Existing manager override and revocation controls apply to these product-scoped failures, while the underlying failed quantities and evidence remain visible. Coordinators cannot manually mark procurement, production, quality or packing complete.
+
+## Partial shipment and delivery synchronization delivered
+
+Shipment lines linked to a project must retain a direct `project_product_id`; shipment quantities are never guessed by product name. The standard path now contains product-scoped dispatch and delivery steps plus a project-level delivery reconciliation step.
+
+A product's dispatched quantity is the sum of its directly linked lines on picked-up, in-transit, held, delayed, out-for-delivery and delivered shipments. Its delivered quantity counts only delivered shipments. Planning and cancelled shipments contribute nothing. Each immutable evaluation records shipment line identity, shipment number, status, quantity, pickup date and delivery date. Partial quantities remain blocked with an explicit balance; excess quantities remain visible as warnings rather than being silently discarded.
+
+Shipment creation, edits, tracking-status changes and deletion immediately recalculate readiness. Existing workflows are upgraded in place to version 2 of the same standard template, preserving their history while adding the two product steps. The project delivery reconciliation passes only when every active product is fully delivered or has a current manager override. Complete pre-dispatch financial balance remains mandatory before a project shipment can move from planning into any dispatched state.

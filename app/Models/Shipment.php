@@ -227,6 +227,14 @@ class Shipment extends Model
      * Statuses that mean the shipment is still moving. Everything else is
      * either finished (delivered / cancelled) or not yet dispatched.
      */
+    public static function dispatchedStatuses(): array
+    {
+        return [
+            self::STATUS_PICKED_UP, self::STATUS_IN_TRANSIT, self::STATUS_CUSTOM_HOLD,
+            self::STATUS_DELAYED, self::STATUS_OUT_DELIVERY, self::STATUS_DELIVERED,
+        ];
+    }
+
     public static function closedStatuses(): array
     {
         return [self::STATUS_DELIVERED, self::STATUS_CANCELLED];

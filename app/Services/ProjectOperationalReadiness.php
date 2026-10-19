@@ -8,6 +8,8 @@ use App\Models\ProjectProduct;
 use App\Models\ProjectWorkflow;
 use App\Models\ProjectWorkflowStep;
 use App\Models\PurchaseInvoiceItem;
+use App\Models\Shipment;
+use App\Models\ShipmentItem;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -17,7 +19,14 @@ class ProjectOperationalReadiness
     public const GATE_PRODUCTION = 'production_complete';
     public const GATE_QUALITY = 'quality_passed';
     public const GATE_PACKING = 'packing_verified';
-    public const CONTROLLED_STEPS = [self::GATE_PROCUREMENT, self::GATE_PRODUCTION, self::GATE_QUALITY, self::GATE_PACKING];
+    public const GATE_SHIPMENT = 'shipment_dispatched';
+    public const GATE_DELIVERY = 'delivery_complete';
+    public const GATE_DELIVERY_RECONCILED = 'delivery_reconciled';
+    public const PRODUCT_CONTROLLED_STEPS = [
+        self::GATE_PROCUREMENT, self::GATE_PRODUCTION, self::GATE_QUALITY,
+        self::GATE_PACKING, self::GATE_SHIPMENT, self::GATE_DELIVERY,
+    ];
+    public const CONTROLLED_STEPS = [...self::PRODUCT_CONTROLLED_STEPS, self::GATE_DELIVERY_RECONCILED];
 
     public function __construct(private readonly PackagingListVerifier $packingVerifier) {}
 
@@ -25,13 +34,34 @@ class ProjectOperationalReadiness
     {
         return DB::transaction(function () use ($workflow, $userId) {
             $workflow->loadMissing('project.products.qualityInspections');
+            app(ProjectWorkflowExecution::class)->sync($workflow, $workflow->project);
             $evaluations = [];
+            $deliveryEvidence = [];
             foreach ($workflow->project->products->where('status', '!=', 'cancelled') as $product) {
-                foreach ($this->evaluateProduct($workflow, $product, $userId) as $evaluation) {
+                $productEvaluations = $this->evaluateProduct($workflow, $product, $userId);
+                foreach ($productEvaluations as $evaluation) {
                     $this->applyToStep($evaluation);
                     $evaluations[] = $evaluation;
                 }
+                $delivery = collect($productEvaluations)->firstWhere('gate_key', self::GATE_DELIVERY);
+                $deliveryEvidence[] = [
+                    'project_product_id' => $product->id,
+                    'product_name' => $product->product_name,
+                    'evaluation_id' => $delivery?->id,
+                    'result' => $delivery?->effectiveResult(),
+                    'required_quantity' => (float) $product->quantity,
+                    'delivered_quantity' => (float) data_get($delivery?->details, 'delivered_quantity', 0),
+                    'remaining_quantity' => (float) data_get($delivery?->details, 'remaining_quantity', $product->quantity),
+                ];
             }
+            $allDelivered = $deliveryEvidence !== [] && collect($deliveryEvidence)->every(fn ($row) => in_array($row['result'], ['passed', 'overridden'], true));
+            $aggregate = $this->recordProject($workflow, self::GATE_DELIVERY_RECONCILED, [
+                'products' => $deliveryEvidence,
+                'product_count' => count($deliveryEvidence),
+                'delivered_product_count' => collect($deliveryEvidence)->whereIn('result', ['passed', 'overridden'])->count(),
+            ], $allDelivered, $allDelivered ? 'Every active project product is fully delivered or covered by a current manager override.' : 'One or more project products still have undelivered quantities.', $userId);
+            $this->applyToStep($aggregate);
+            $evaluations[] = $aggregate;
             app(ProjectWorkflowExecution::class)->recalculate($workflow);
             return $evaluations;
         });
@@ -63,6 +93,10 @@ class ProjectOperationalReadiness
         [$packed, $packingLists] = $this->verifiedPackedQuantity($product);
         $packingPassed = $required > 0 && $packed + 0.0001 >= $required;
 
+        [$dispatched, $delivered, $shipmentEvidence] = $this->shipmentQuantities($product);
+        $shipmentPassed = $required > 0 && $dispatched + 0.0001 >= $required;
+        $deliveryPassed = $required > 0 && $delivered + 0.0001 >= $required;
+
         return [
             $this->record($workflow, $product, self::GATE_PROCUREMENT, [
                 'required_quantity' => $required, 'vendor_id' => $product->vendor_id,
@@ -88,6 +122,16 @@ class ProjectOperationalReadiness
                 'required_quantity'=>$required, 'verified_packed_quantity'=>$packed,
                 'remaining_quantity'=>round(max($required-$packed, 0), 3), 'packaging_lists'=>$packingLists,
             ], $packingPassed, $packingPassed ? 'Current verified Packaging Lists cover this product.' : 'Verified packing covers '.number_format($packed, 3).' of '.number_format($required, 3).'; the balance remains open.', $userId),
+            $this->record($workflow, $product, self::GATE_SHIPMENT, [
+                'required_quantity'=>$required, 'dispatched_quantity'=>$dispatched,
+                'remaining_quantity'=>round(max($required-$dispatched, 0), 3),
+                'excess_quantity'=>round(max($dispatched-$required, 0), 3), 'shipments'=>$shipmentEvidence,
+            ], $shipmentPassed, $shipmentPassed ? ($dispatched > $required + 0.0001 ? 'Dispatch exceeds the required quantity by '.number_format($dispatched-$required, 3).'; review the linked shipment lines.' : 'Dispatched shipment quantities cover this product.') : 'Dispatch covers '.number_format($dispatched, 3).' of '.number_format($required, 3).'; the remaining quantity stays open.', $userId),
+            $this->record($workflow, $product, self::GATE_DELIVERY, [
+                'required_quantity'=>$required, 'delivered_quantity'=>$delivered,
+                'remaining_quantity'=>round(max($required-$delivered, 0), 3),
+                'excess_quantity'=>round(max($delivered-$required, 0), 3), 'shipments'=>$shipmentEvidence,
+            ], $deliveryPassed, $deliveryPassed ? ($delivered > $required + 0.0001 ? 'Delivered quantity exceeds the requirement by '.number_format($delivered-$required, 3).'; review the linked shipment lines.' : 'Delivered shipment quantities cover this product.') : 'Delivery covers '.number_format($delivered, 3).' of '.number_format($required, 3).'; the remaining quantity stays open.', $userId),
         ];
     }
 
@@ -111,6 +155,26 @@ class ProjectOperationalReadiness
         return [round($quantity, 3), $evidence];
     }
 
+    private function shipmentQuantities(ProjectProduct $product): array
+    {
+        $dispatchedStatuses = Shipment::dispatchedStatuses();
+        $lines = ShipmentItem::query()
+            ->where('project_product_id', $product->id)
+            ->whereHas('shipment', fn ($query) => $query->where('project_id', $product->project_id)->whereIn('status', $dispatchedStatuses))
+            ->with('shipment:id,shipment_number,status,pickup_date,drop_date')
+            ->get();
+        $dispatched = round((float) $lines->sum('quantity'), 3);
+        $delivered = round((float) $lines->filter(fn ($line) => $line->shipment?->status === Shipment::STATUS_DELIVERED)->sum('quantity'), 3);
+        $evidence = $lines->map(fn ($line) => [
+            'shipment_item_id'=>$line->id, 'shipment_id'=>$line->shipment_id,
+            'shipment_number'=>$line->shipment?->shipment_number, 'status'=>$line->shipment?->status,
+            'quantity'=>(float)$line->quantity,
+            'pickup_date'=>$line->shipment?->pickup_date?->toDateString(),
+            'drop_date'=>$line->shipment?->drop_date?->toDateString(),
+        ])->values()->all();
+        return [$dispatched, $delivered, $evidence];
+    }
+
     private function record(ProjectWorkflow $workflow, ProjectProduct $product, string $key, array $details, bool $passed, string $summary, ?int $userId): ProjectGateEvaluation
     {
         $hash = hash('sha256', json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
@@ -118,6 +182,18 @@ class ProjectOperationalReadiness
         if ($latest && hash_equals((string) $latest->content_hash, $hash)) return $latest;
         return $workflow->evaluations()->create([
             'project_product_id'=>$product->id, 'gate_key'=>$key, 'result'=>$passed ? 'passed' : 'blocked',
+            'content_hash'=>$hash, 'summary'=>$summary, 'details'=>$details,
+            'evaluated_by'=>$userId, 'evaluated_at'=>now(),
+        ]);
+    }
+
+    private function recordProject(ProjectWorkflow $workflow, string $key, array $details, bool $passed, string $summary, ?int $userId): ProjectGateEvaluation
+    {
+        $hash = hash('sha256', json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        $latest = $workflow->evaluations()->whereNull('project_product_id')->where('gate_key', $key)->latest('evaluated_at')->latest('id')->first();
+        if ($latest && hash_equals((string) $latest->content_hash, $hash)) return $latest;
+        return $workflow->evaluations()->create([
+            'project_product_id'=>null, 'gate_key'=>$key, 'result'=>$passed ? 'passed' : 'blocked',
             'content_hash'=>$hash, 'summary'=>$summary, 'details'=>$details,
             'evaluated_by'=>$userId, 'evaluated_at'=>now(),
         ]);
