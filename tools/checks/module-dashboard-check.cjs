@@ -19,6 +19,7 @@ check('unknown dashboard modules return a real 404', controller.includes('abort_
 check('month quarter half-year and year are parsed in one period service', ['month','quarter','half','year'].every(type=>period.includes(`'${type}'`))&&period.includes('previousStart')&&period.includes('previousEnd'));
 check('period controls live in application topbar actions', view.includes("@section('page-actions')")&&view.includes('moduleDashboardPeriodDrawer')&&view.includes('modulePeriodType'));
 check('every module exposes comparable metrics, trends, distributions and alerts', ['metrics','trend','breakdowns','alerts'].every(key=>(projection.match(new RegExp(`'${key}' =>`,'g'))||[]).length>=6));
+check('work dashboard resolves coordinator queue from its service namespace', projection.includes('namespace App\\Services;')&&projection.includes('app(ProjectCoordinatorQueue::class)')&&!projection.includes('use App\\Models\\ProjectCoordinatorQueue;'));
 check('statistic cards are explicitly white and title description cards are absent', css.includes('.module-stat-card')&&css.includes('background:#fff')&&!view.includes('dashboard-description'));
 check('current versus prior period is visible on comparable statistics', view.includes("$metric['change']")&&view.includes("$period['previousLabel']")&&projection.includes("'comparison' => true"));
 check('important alerts use a red immediate-attention treatment', view.includes('module-alert-banner')&&view.includes('role="alert"')&&css.includes('border-left:4px solid #dc2626'));
