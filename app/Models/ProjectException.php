@@ -36,7 +36,7 @@ class ProjectException extends Model
         'escalation_level' => 'integer',
     ];
 
-    public function project() { return $this->belongsTo(Project::class); }
+    public function project() { return $this->belongsTo(Project::class)->withTrashed(); }
     public function workflow() { return $this->belongsTo(ProjectWorkflow::class, 'project_workflow_id'); }
     public function step() { return $this->belongsTo(ProjectWorkflowStep::class, 'project_workflow_step_id'); }
     public function product() { return $this->belongsTo(ProjectProduct::class, 'project_product_id'); }

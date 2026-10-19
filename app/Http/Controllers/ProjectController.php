@@ -401,31 +401,21 @@ class ProjectController extends Controller
 
     public function destroy(Project $project): RedirectResponse
     {
-        DB::transaction(function () use ($project) {
+        /*
+         * Projects own immutable workflow, closure and exception evidence.
+         * Hard deletion conflicts with those deliberately restrictive foreign
+         * keys and, more importantly, would erase the audit trail. Soft delete
+         * removes the project from normal ERP work while retaining every source
+         * record and ledger allocation under the original project identity.
+         */
+        DB::transaction(fn () => $project->delete());
+        if (Schema::hasTable('project_exceptions')) {
+            app(\App\Services\ProjectExceptionRegistry::class)->synchronize(Auth::id());
+        }
 
-            // Delete child records
-            $project->comments()->delete();
-            $project->attachments()->delete();
-            $project->trackingUpdates()->delete();
-            $project->logs()->delete();
-    
-            // If cashflow relation exists
-            if (method_exists($project, 'cashflowEntries')) {
-                $project->cashflowEntries()->update([
-                    'project_id' => null,
-                ]);
-            }
-            if (Schema::hasTable('cashflow_allocations')) {
-                $project->cashflowAllocations()->update(['project_id' => null]);
-            }
-    
-            // Finally delete project
-            $project->delete();
-        });
-    
         return redirect()
             ->route('projects.index')
-            ->with('success', 'Project deleted successfully.');
+            ->with('success', 'Project deleted. Workflow, financial and audit evidence has been retained.');
     }
 
     private function validatedData(Request $request, ?Project $project = null): array

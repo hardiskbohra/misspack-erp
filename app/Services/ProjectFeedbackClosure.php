@@ -79,7 +79,7 @@ class ProjectFeedbackClosure
         }
 
         $stats = ['projects' => 0, 'issued' => 0, 'reminded' => 0, 'alerts' => 0];
-        ProjectWorkflow::query()->where('status', '!=', 'cancelled')->with(['project', 'steps'])->chunkById(100, function ($workflows) use (&$stats) {
+        ProjectWorkflow::query()->where('status', '!=', 'cancelled')->whereHas('project')->with(['project', 'steps'])->chunkById(100, function ($workflows) use (&$stats) {
             foreach ($workflows as $workflow) {
                 $commercial = $workflow->steps->first(fn ($row) => $row->step_key === ProjectFinancialClosure::GATE && $row->project_product_id === null);
                 if (! $commercial || ! in_array($commercial->status, ['completed', 'skipped'], true)) continue;

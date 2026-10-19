@@ -165,9 +165,10 @@ class ProjectExceptionRegistry
     {
         return ProjectApprovalOverride::query()->whereNull('revoked_at')
             ->with(['request.project', 'request.workflow'])->get()
-            ->filter(fn ($override) => $override->request && $override->request->status === 'open'
+            ->filter(fn ($override) => $override->request && $override->request->project
+                && $override->request->status === 'open'
                 && $override->version_number === $override->request->current_version_number
-                && ! in_array($override->request->project?->status, ['closed', 'cancelled'], true))
+                && ! in_array($override->request->project->status, ['closed', 'cancelled'], true))
             ->map(function ($override) {
                 $request = $override->request;
                 $project = $request->project;

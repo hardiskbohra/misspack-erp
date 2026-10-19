@@ -608,6 +608,9 @@ const declaredColumns = (() => {
             columns.add('created_at');
             columns.add('updated_at');
         }
+        if (/->softDeletes\(\)/.test(up)) {
+            columns.add('deleted_at');
+        }
     });
 
     return columns;

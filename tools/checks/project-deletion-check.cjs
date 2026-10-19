@@ -1,0 +1,26 @@
+'use strict';
+const fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'../..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const migration=read('database/migrations/2026_10_19_120000_add_soft_deletes_to_projects.php');
+const project=read('app/Models/Project.php');
+const controller=read('app/Http/Controllers/ProjectController.php');
+const exception=read('app/Models/ProjectException.php');
+const exceptionView=read('resources/views/projects/exceptions.blade.php');
+const registry=read('app/Services/ProjectExceptionRegistry.php');
+const closure=read('app/Services/ProjectFeedbackClosure.php');
+const salesFilters=read('app/Services/SalesInvoiceFilters.php');
+const cashflowFilters=read('app/Services/CashflowFilters.php');
+let passed=0,failed=0;
+function check(label,value){if(value){passed++;console.log(`PASS ${label}`)}else{failed++;console.error(`FAIL ${label}`)}}
+check('projects have a reversible soft-delete column',migration.includes("Schema::table('projects'")&&migration.includes('$table->softDeletes()')&&migration.includes('$table->dropSoftDeletes()'));
+check('project model applies the soft-delete global scope',project.includes('use Illuminate\\Database\\Eloquent\\SoftDeletes;')&&project.includes('use HasFactory, SoftDeletes;'));
+const destroy=(controller.match(/public function destroy\(Project \$project\)[\s\S]*?\n    }\n\n    private function validatedData/)||[''])[0];
+check('project deletion preserves child and ledger evidence',destroy.includes('$project->delete()')&&!destroy.includes('comments()->delete()')&&!destroy.includes("cashflowAllocations()->update"));
+check('delete response explains retained evidence',destroy.includes('Workflow, financial and audit evidence has been retained'));
+check('deletion resolves vanished source exceptions through the registry',destroy.includes('ProjectExceptionRegistry::class')&&destroy.includes('synchronize(Auth::id())'));
+check('exception history can still identify a deleted project',exception.includes('belongsTo(Project::class)->withTrashed()')&&exceptionView.includes('$exception->project->trashed()')&&exceptionView.includes('Project deleted'));
+check('approval exception discovery rejects missing soft-deleted projects',registry.includes('$override->request->project')&&registry.includes("$override->request->project->status"));
+check('scheduled feedback automation ignores deleted project workflows',closure.includes("whereHas('project')"));
+check('raw sales and cashflow filter labels exclude deleted projects',salesFilters.includes("whereNull('deleted_at')->where('id', $id)")&&cashflowFilters.includes("whereNull('deleted_at')->where('id', $id)"));
+console.log(`\nproject deletion: ${passed} passed, ${failed} failed`);if(failed)process.exit(1);

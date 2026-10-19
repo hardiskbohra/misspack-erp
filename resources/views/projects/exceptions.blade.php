@@ -73,7 +73,7 @@
                     </div>
                     @if($exception->response_plan)<div class="project-exception-plan"><strong>Current response plan</strong><p>{{ $exception->response_plan }}</p></div>@endif
                     <div class="project-exception-actions">
-                        <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('projects.show',['project'=>$exception->project,'tab'=>'workflow']) }}">Open workflow</a>
+                        @if($exception->project && !$exception->project->trashed())<a class="master-btn master-btn-soft master-btn-sm" href="{{ route('projects.show',['project'=>$exception->project,'tab'=>'workflow']) }}">Open workflow</a>@else<span class="master-badge">Project deleted</span>@endif
                         @if($exception->status!=='resolved')
                             <details><summary class="master-btn master-btn-light master-btn-sm">{{ $exception->status==='acknowledged'?'Update follow-up':'Acknowledge' }}</summary><form method="POST" action="{{ route('projects.exceptions.acknowledge',$exception) }}" class="project-exception-action-form">@csrf @method('PATCH')
                                 <label class="master-field"><span class="master-label">Follow-up owner</span><select class="master-select" name="owner_id" required><option value="">Select owner</option>@foreach($owners as $user)<option value="{{ $user->id }}" @selected((int)$exception->owner_id===$user->id)>{{ $user->name ?: $user->email }}</option>@endforeach</select></label>

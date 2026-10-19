@@ -427,7 +427,7 @@ class SalesInvoiceFilters
             return '';
         }
 
-        $project = DB::table('projects')->where('id', $id)->first(['name', 'project_number']);
+        $project = DB::table('projects')->whereNull('deleted_at')->where('id', $id)->first(['name', 'project_number']);
 
         if (! $project) {
             return '';
