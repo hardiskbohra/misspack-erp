@@ -69,7 +69,7 @@
            belongs to, so a cashflow settings page that stopped being a cashflow
            page would lose the treatment its own rows were designed with. The
            hub, which belongs to no single area, is the settings module. */
-        request()->routeIs('dashboard') => 'dashboard',
+        request()->routeIs('dashboard', 'dashboards.*') => 'dashboard',
         request()->routeIs('settings.cashflow*') => 'cashflows',
         request()->routeIs('settings.organisation*') => 'users',
         request()->routeIs('settings.leads*') => 'leads',
@@ -110,6 +110,7 @@
         $sidebarItems = Auth::user() && Auth::user()->isEmployee() ? $employeeItems : [
             ['section' => 'Management'],
             ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'fa-solid fa-gauge-high'],
+            ['label' => 'Module dashboards', 'route' => 'dashboards.index', 'active' => 'dashboards.*', 'icon' => 'fa-solid fa-chart-column'],
             ['label' => 'Coordinator queue', 'route' => 'projects.work-queue.index', 'active' => 'projects.work-queue.*', 'icon' => 'fa-solid fa-list-check'],
             ['label' => 'Exceptions', 'route' => 'projects.exceptions.index', 'active' => 'projects.exceptions.*', 'icon' => 'fa-solid fa-triangle-exclamation'],
             ['label' => 'Tasks', 'route' => 'tasks.index', 'active' => 'tasks.*', 'icon' => 'fa-solid fa-layer-group'],

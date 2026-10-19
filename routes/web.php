@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\ModuleDashboardController;
 use App\Http\Controllers\EmployeeDocumentController;
 use App\Http\Controllers\EmployeePayslipController;
 use App\Http\Controllers\EmployeeWorkspaceController;
@@ -142,6 +143,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/clients/{client}/portal/documents/{document}/file', [ClientPortalManagementController::class, 'downloadDocument'])->name('clients.portal.documents.file');
 
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboards', [ModuleDashboardController::class, 'index'])->name('dashboards.index');
+        Route::get('/dashboards/{module}', [ModuleDashboardController::class, 'show'])
+            ->whereIn('module', array_keys(\App\Services\ModuleDashboard::MODULES))
+            ->name('dashboards.show');
         Route::get('/search', GlobalSearchController::class)->name('search');
 
         /* =====================================================================
