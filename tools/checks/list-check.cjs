@@ -762,6 +762,24 @@ check('a fragment borrows the surface from the page that draws it',
         .map(e => e.name + ' -> ' + (e.hosts.map(h => path.relative(ROOT, h)).join(' ') || 'no page includes it'))
         .join(', '));
 
+/* The bar is what gives a chip row its inset. Chips dropped straight onto the
+   card touch its top-left corner — the exception register did exactly that,
+   so its tabs sat flush against the card edge while the filter row below it
+   was inset. Every chip row has to open inside a bar, in the same card. */
+const unwrappedChips = bladeFiles.filter(file => {
+    const text = fs.readFileSync(file, 'utf8');
+    const chips = [...text.matchAll(/class="[^"]*\bmaster-list-chips\b/g)].map(match => match.index);
+    if (!chips.length) return false;
+    const bars = [...text.matchAll(/class="[^"]*\bmaster-list-bar\b/g)].map(match => match.index);
+    return chips.some(position => {
+        const bar = bars.filter(at => at < position).pop();
+        return bar === undefined || /<\/section>/.test(text.slice(bar, position));
+    });
+});
+check('every chip row opens inside the list bar that insets it',
+    unwrappedChips.length === 0,
+    unwrappedChips.map(f => path.relative(ROOT, f)).join(', '));
+
 /* And nobody patches the shared chrome with an inline style: that is how a
    missing inset gets hidden — products/index carried an inline
    padding-top:22px on its filter row until the sheet owned the rule. */

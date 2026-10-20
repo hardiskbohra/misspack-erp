@@ -89,12 +89,28 @@
                 status.classList.toggle('is-ok', tone === 'ok');
             }
 
+            var acceptedPristine = true;
+
             function sync(origin) {
                 var damagedQuantity = damaged ? receiptQuantity(damaged.value) : 0;
                 var rejectedQuantity = rejected ? receiptQuantity(rejected.value) : 0;
                 var returnedQuantity = ret ? receiptQuantity(ret.value) : 0;
                 var replacementQuantity = replacement ? receiptQuantity(replacement.value) : 0;
                 var acceptedQuantity = receiptQuantity(accepted.value);
+
+                /* The sheet prefills accepted with everything still
+                   outstanding, so it stays a derived figure until the operator
+                   writes their own: six dispatched with one damaged is five
+                   accepted, not seven received — and clearing the damage gives
+                   the six back. Once accepted or short is typed by hand,
+                   neither is derived again. */
+                if (origin === 'received' && acceptedPristine) {
+                    var room = Math.max(remaining - damagedQuantity - rejectedQuantity, 0);
+                    if (Math.abs(acceptedQuantity - room) > 0.0001) {
+                        acceptedQuantity = room;
+                        accepted.value = receiptText(acceptedQuantity);
+                    }
+                }
 
                 /* Short is the dispatched quantity that never arrived, so it is
                    the only figure that can be written directly: editing it
@@ -155,6 +171,7 @@
                 input.addEventListener('input', function () {
                     line.dataset.receiptDirty = '1';
                     delete line.dataset.receiptError;
+                    if (input === accepted || input === shortInput) acceptedPristine = false;
                     sync(input === shortInput ? 'short' : 'received');
                     showAlert('');
                 });

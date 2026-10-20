@@ -24,11 +24,13 @@
     </div>
 
     <section class="master-card master-card--flat" aria-label="Filter project exceptions">
-        <nav class="master-list-chips" aria-label="Filter exception status">
-            @foreach(['active'=>'Active','open'=>'Unacknowledged','acknowledged'=>'In follow-up','resolved'=>'Resolved','all'=>'All history'] as $key=>$label)
-                <a class="master-list-chip {{ $status===$key?'is-active':'' }}" href="{{ route('projects.exceptions.index',array_merge(request()->except(['status','page']),['status'=>$key])) }}">{{ $label }}@if(isset($counts[$key]))<span class="master-list-chip-count">{{ $counts[$key] }}</span>@endif</a>
-            @endforeach
-        </nav>
+        <div class="master-list-bar">
+            <nav class="master-list-chips" aria-label="Filter exception status">
+                @foreach(['active'=>'Active','open'=>'Unacknowledged','acknowledged'=>'In follow-up','resolved'=>'Resolved','all'=>'All history'] as $key=>$label)
+                    <a class="master-list-chip {{ $status===$key?'is-active':'' }}" href="{{ route('projects.exceptions.index',array_merge(request()->except(['status','page']),['status'=>$key])) }}">{{ $label }}@if(isset($counts[$key]))<span class="master-list-chip-count">{{ $counts[$key] }}</span>@endif</a>
+                @endforeach
+            </nav>
+        </div>
         <form method="GET" action="{{ route('projects.exceptions.index') }}">
             <input type="hidden" name="status" value="{{ $status }}">
             <div class="master-filter-row core-filter-toolbar">
