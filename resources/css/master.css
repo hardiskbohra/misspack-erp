@@ -20,6 +20,7 @@
 @import './components/tables.css';
 @import './components/badges.css';
 @import './components/tabs.css';
+@import './components/tooltips.css';
 @import './components/modals.css';
 @import './components/drawers.css';
 @import './components/alerts.css';

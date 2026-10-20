@@ -25,6 +25,9 @@ const tableCss = read('resources/css/components/tables.css');
 const formCss = read('resources/css/components/forms.css');
 const legacyFormCss = read('public/assets/css/master-form.css');
 const responsiveCss = read('resources/css/layout/responsive.css');
+const tooltipCss = read('resources/css/components/tooltips.css');
+const tooltipJs = read('public/assets/js/master-tooltips.js');
+const designAssets = read('resources/views/layouts/partials/design-system-styles.blade.php');
 const inventory = read('docs/ui-component-inventory.md');
 
 check('the shared drawer is an accessible labelled dialog',
@@ -63,6 +66,23 @@ check('right drawers cover page popovers while remaining below modals and toasts
 check('Select2 options remain usable above right drawers and modal dialogs',
     zLayers.select > zLayers.drawer && zLayers.select > zLayers.modal
     && /body\[data-ui-shell\]\s+\.select2-dropdown\s*\{[^}]*z-index:\s*var\(--ui-z-select/.test(dropdownCss));
+check('native titles are promoted to one custom tooltip across every design-system surface',
+    /master-tooltips\.js/.test(designAssets)
+    && /removeAttribute\('title'\)/.test(tooltipJs)
+    && /dataset\.uiTooltip/.test(tooltipJs)
+    && /MutationObserver/.test(tooltipJs));
+check('the shared tooltip is safe, keyboard accessible and viewport positioned',
+    /textContent = text/.test(tooltipJs)
+    && /role', 'tooltip'/.test(tooltipJs)
+    && /focusin/.test(tooltipJs)
+    && /event\.key === 'Escape'/.test(tooltipJs)
+    && /aria-describedby/.test(tooltipJs)
+    && /getBoundingClientRect/.test(tooltipJs));
+check('the custom tooltip is themed, non-intercepting and motion considerate',
+    /background:\s*var\(--ui-text\)/.test(tooltipCss)
+    && /color:\s*var\(--ui-card-surface\)/.test(tooltipCss)
+    && /pointer-events:\s*none/.test(tooltipCss)
+    && /prefers-reduced-motion/.test(tooltipCss));
 check('drawer field rows stay top-aligned and collapse to one column on phones',
     /align-content:\s*start/.test(drawerCss)
     && /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/.test(drawerCss)

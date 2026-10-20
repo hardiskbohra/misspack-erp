@@ -6,3 +6,4 @@
 @else
     @vite('resources/css/master.css')
 @endif
+<script defer src="{{ $assetVer('assets/js/master-tooltips.js') }}"></script>

@@ -103,7 +103,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Drawer | Shared | `<x-drawer>` plus `master-drawer.js` provides theme-aware, responsive panels, focus trapping, Escape/backdrop/close handling, and focus restoration; vendor/project quick details and module filter panels demonstrate the pattern |
 | Dropdown | Shared | `.master-dropdown`, user-menu and Select2 dropdowns |
 | Popover | Partial | Tooltips and anchored helper patterns exist; no shared popover primitive |
-| Tooltip | Partial | Tooltip containers in lists and finance summaries; not consistently accessible/initialized |
+| Tooltip | Shared | `master-tooltips.js` promotes native `title` text into the themed `.ui-tooltip` surface across office, portal and public layouts; supports hover, keyboard focus, Escape, viewport positioning and dynamic content |
 | Context menu | Gap | No common context-menu component found |
 
 ## Business components

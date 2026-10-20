@@ -1,0 +1,53 @@
+/* Shared custom tooltip. Native title attributes are promoted to this surface
+   by master-tooltips.js, giving every office and portal screen one readable,
+   keyboard-accessible tooltip treatment. */
+.ui-tooltip {
+    position: fixed;
+    z-index: var(--ui-z-tooltip);
+    inset: auto auto 0 0;
+    max-width: min(280px, calc(100vw - 24px));
+    padding: 7px 9px;
+    border: 1px solid color-mix(in srgb, var(--ui-card-surface) 18%, transparent);
+    border-radius: 7px;
+    background: var(--ui-text);
+    color: var(--ui-card-surface);
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 1.4;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate3d(0, 2px, 0);
+    transition: opacity .12s ease, transform .12s ease;
+}
+
+.ui-tooltip[data-state="visible"] {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+}
+
+.ui-tooltip::after {
+    content: '';
+    position: absolute;
+    left: var(--ui-tooltip-arrow-x, 50%);
+    width: 7px;
+    height: 7px;
+    background: var(--ui-text);
+    border: solid color-mix(in srgb, var(--ui-card-surface) 18%, transparent);
+    transform: translateX(-50%) rotate(45deg);
+}
+
+.ui-tooltip[data-placement="top"]::after {
+    bottom: -4px;
+    border-width: 0 1px 1px 0;
+}
+
+.ui-tooltip[data-placement="bottom"]::after {
+    top: -4px;
+    border-width: 1px 0 0 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ui-tooltip { transition: none; }
+}
