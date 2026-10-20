@@ -30,7 +30,7 @@
 
         <form method="GET" action="{{ route('packaging-lists.index') }}">
             <div class="master-filter-row core-filter-toolbar">
-                <div class="master-search"><span aria-hidden="true">⌕</span><input class="master-input" name="search" value="{{ $search }}" placeholder="Search PL number, invoice or party..." aria-label="Search packaging lists"></div>
+                <div class="master-search"><span aria-hidden="true">⌕</span><input class="master-input" name="search" value="{{ $search }}" placeholder="Search PL number, project, invoice or party..." aria-label="Search packaging lists by number, project, invoice or party"></div>
                 <x-filter-trigger drawer="packagingListFilters" :count="($status !== 'all' ? 1 : 0) + ($mode !== 'all' ? 1 : 0)" />
             </div>
             <x-drawer id="packagingListFilters" title="Filter packaging lists" eyebrow="Packaging list filters" subtitle="Narrow the list by workflow status or transport mode." size="medium">

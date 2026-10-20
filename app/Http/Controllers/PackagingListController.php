@@ -39,7 +39,10 @@ class PackagingListController extends Controller
                     ->orWhere('invoice_number', 'like', "%{$search}%")
                     ->orWhere('from_name', 'like', "%{$search}%")
                     ->orWhere('bill_to_name', 'like', "%{$search}%")
-                    ->orWhere('ship_to_name', 'like', "%{$search}%");
+                    ->orWhere('ship_to_name', 'like', "%{$search}%")
+                    ->orWhereHas('project', fn ($project) => $project
+                        ->where('project_number', 'like', "%{$search}%")
+                        ->orWhere('name', 'like', "%{$search}%"));
             }))
             ->when($status !== 'all', fn ($query) => $query->where('status', $status))
             ->when($mode !== 'all', fn ($query) => $query->where('transport_mode', $mode));
