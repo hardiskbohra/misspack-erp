@@ -139,6 +139,15 @@ class PartyStatement
                 $found = VendorPaymentEntry::where('vendor_id', $id)
                     ->select('foreign_currency')->distinct()->pluck('foreign_currency')->all();
             }
+            /* A payment recorded in the cashflow module posts to the ledger, but
+               a name-matched or foreign-currency row does not — and its
+               currency still has to be offered, or its statement cannot be
+               opened at all. */
+            $vendor = $this->findParty('vendor', $id);
+            if ($vendor instanceof Vendor) {
+                $found = array_merge($found, app(CashflowVendorPaymentSync::class)
+                    ->unlinkedCashflow($vendor)->pluck('currency')->all());
+            }
         } elseif ($clientPortal) {
             $client = $this->findParty('client', $id);
             if ($client instanceof Client) {
@@ -191,7 +200,57 @@ class PartyStatement
     /** The statement currency when nobody has chosen: what the party quotes in. */
     public function defaultCurrency(string $type, int $id): string
     {
-        return $this->currencies($type, $id)[0] ?? ($type === 'vendor' ? 'RMB' : 'INR');
+        $currencies = $this->currencies($type, $id);
+        $fallback = $currencies[0] ?? ($type === 'vendor' ? 'RMB' : 'INR');
+
+        /* A vendor quotes in one currency and is often paid in another. Opening
+           on the quoted currency when nothing has been filed in it shows an
+           empty statement beside a payment that exists — so for a vendor, the
+           first currency with something in it wins, preferred first. */
+        if ($type !== 'vendor' || count($currencies) < 2) {
+            return $fallback;
+        }
+
+        foreach ($currencies as $currency) {
+            if ($this->vendorCurrencyHasRows($id, $currency)) {
+                return $currency;
+            }
+        }
+
+        return $fallback;
+    }
+
+    /** Whether any ledger or cashflow row is filed against a vendor in one currency. */
+    private function vendorCurrencyHasRows(int $vendorId, string $currency): bool
+    {
+        $vendor = $this->findParty('vendor', $vendorId);
+        $ledgerCurrency = strtoupper((string) ($vendor?->preferred_currency ?: 'RMB'));
+
+        if (Schema::hasTable('vendor_payment_entries')) {
+            $exists = VendorPaymentEntry::query()
+                ->where('vendor_id', $vendorId)
+                ->where(function ($query) use ($currency, $ledgerCurrency) {
+                    $query->where('foreign_currency', $currency);
+
+                    if ($ledgerCurrency === $currency) {
+                        $query->orWhere(function ($blank) {
+                            $blank->whereNull('foreign_currency')->orWhere('foreign_currency', '');
+                        });
+                    }
+                })
+                ->exists();
+
+            if ($exists) {
+                return true;
+            }
+        }
+
+        if ($vendor instanceof Vendor) {
+            return app(CashflowVendorPaymentSync::class)->unlinkedCashflow($vendor)
+                ->contains(fn ($entry) => strtoupper((string) ($entry->currency ?: 'INR')) === $currency);
+        }
+
+        return false;
     }
 
     /** The month the office is closing when the screen opens. */
@@ -528,6 +587,10 @@ class PartyStatement
         $statement['uses_vendor_ledger'] = $type === 'vendor'
             && Schema::hasTable('vendor_payment_entries')
             && VendorPaymentEntry::where('vendor_id', $id)->exists();
+        /* Rupee cashflow rows no ledger row stands behind; the note says so
+           rather than claiming the ledger is the whole story. */
+        $statement['uses_cashflow'] = $type === 'vendor'
+            && collect($statement['rows'])->contains(fn ($row) => ($row['kind'] ?? null) === 'entry');
         $statement['source_note'] = $this->sourceNote($statement);
 
         return $statement;
@@ -683,14 +746,11 @@ class PartyStatement
     {
         $rows = [];
 
-        $hasVendorLedger = false;
-
         if (Schema::hasTable('vendor_payment_entries')) {
             $entries = VendorPaymentEntry::query()
                 ->where('vendor_id', $vendor->id)
                 ->orderBy('transaction_date')->orderBy('id')
                 ->get();
-            $hasVendorLedger = $entries->isNotEmpty();
             $ledgerCurrency = strtoupper((string) ($vendor->preferred_currency ?: 'RMB'));
 
             foreach ($entries as $entry) {
@@ -716,25 +776,33 @@ class PartyStatement
             }
         }
 
-        /* Cashflow is rupees. If this vendor has a currency ledger, an empty
-           INR statement must not be filled with those rupee rows. */
-        if ($rows === [] && ! $hasVendorLedger && Schema::hasTable('cashflow_entries')) {
-            foreach ($this->partyCashflow($vendor->id, 'vendor', (string) $vendor->vendor_name) as $entry) {
-                if (strtoupper((string) ($entry->currency ?: 'INR')) !== $currency) {
-                    continue;
-                }
-
-                $rows[] = [
-                    'date' => $entry->entry_date,
-                    'particular' => (string) $entry->particular,
-                    'reference' => $entry->invoice_bill_number ?: $entry->bank_reference_number,
-                    'status' => method_exists($entry, 'statusLabel') ? $entry->statusLabel() : null,
-                    'debit' => (float) $entry->debit_amount,
-                    'credit' => (float) $entry->credit_amount,
-                    'kind' => 'entry',
-                ];
+        /* The cashflow rows no ledger row stands behind — a name-matched
+           vendor, a foreign-currency payment, money received back. Appended
+           always, not only when the ledger is empty: a vendor can have both a
+           currency ledger and rupee rows the ledger never received. A mirrored
+           row is not here, so a payment is never printed twice. */
+        foreach (app(CashflowVendorPaymentSync::class)->unlinkedCashflow($vendor) as $entry) {
+            if (strtoupper((string) ($entry->currency ?: 'INR')) !== $currency) {
+                continue;
             }
+
+            $rows[] = [
+                'date' => $entry->entry_date,
+                'particular' => (string) $entry->particular,
+                'reference' => $entry->invoice_bill_number ?: $entry->bank_reference_number,
+                'status' => method_exists($entry, 'statusLabel') ? $entry->statusLabel() : null,
+                'debit' => (float) $entry->debit_amount,
+                'credit' => (float) $entry->credit_amount,
+                'kind' => 'entry',
+            ];
         }
+
+        usort($rows, function ($left, $right) {
+            $leftDate = $left['date'] instanceof Carbon ? $left['date']->toDateString() : (string) $left['date'];
+            $rightDate = $right['date'] instanceof Carbon ? $right['date']->toDateString() : (string) $right['date'];
+
+            return $leftDate <=> $rightDate;
+        });
 
         return $rows;
     }
@@ -833,19 +901,24 @@ class PartyStatement
            fallback is decided by whether the vendor has *any* currency-ledger
            rows, exactly as `vendorStatementRows` decides it. */
         if ($type === 'vendor') {
-            $hasLedgerRows = Schema::hasTable('vendor_payment_entries')
-                && VendorPaymentEntry::where('vendor_id', $party->id)->exists();
+            /* The same two sources the body reads: the currency ledger, and the
+               cashflow rows no ledger row stands behind. */
+            if (Schema::hasTable('vendor_payment_entries')) {
+                /* A ledger row with no currency is in the vendor's own, exactly
+                   as `vendorStatementRows` reads it — not in rupees. */
+                $ledgerCurrency = strtoupper((string) ($party->preferred_currency ?: 'RMB'));
 
-            if ($hasLedgerRows) {
                 $collect(VendorPaymentEntry::where('vendor_id', $party->id)->get()
                     ->map(fn ($entry) => [
-                        'currency' => strtoupper((string) ($entry->foreign_currency ?: 'INR')),
+                        'currency' => strtoupper((string) ($entry->foreign_currency ?: $ledgerCurrency)),
                         'date' => $entry->transaction_date,
                         'debit' => $entry->transaction_type === 'debit' ? (float) $entry->foreign_amount : 0.0,
                         'credit' => $entry->transaction_type === 'debit' ? 0.0 : (float) $entry->foreign_amount,
                     ])->all());
-            } elseif (Schema::hasTable('cashflow_entries')) {
-                $collect($this->partyCashflow($party->id, 'vendor', (string) $party->vendor_name)
+            }
+
+            if (Schema::hasTable('cashflow_entries') && $party instanceof Vendor) {
+                $collect(app(CashflowVendorPaymentSync::class)->unlinkedCashflow($party)
                     ->map(fn ($entry) => [
                         'currency' => strtoupper((string) ($entry->currency ?: 'INR')),
                         'date' => $entry->entry_date,
@@ -1147,6 +1220,10 @@ class PartyStatement
     private function sourceNote(array $statement): string
     {
         if ($statement['party_type'] === 'vendor') {
+            if ($statement['uses_vendor_ledger'] && ($statement['uses_cashflow'] ?? false)) {
+                return 'Built from the vendor ledger (bills and payments) and the cashflow rows filed against this vendor, in '.$statement['currency'].'.';
+            }
+
             return $statement['uses_vendor_ledger']
                 ? 'Built from the vendor currency ledger: bills raised and payments made, in '.$statement['currency'].'.'
                 : 'Built from the cashflow ledger for this vendor — no vendor-currency rows filed yet.';

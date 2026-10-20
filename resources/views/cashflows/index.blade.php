@@ -411,7 +411,7 @@
                                 @endif
                                 @if (! empty($mirroredPayments[$entry->id] ?? null))
                                     <a class="cf-sync-chip" href="{{ route('vendors.show', $entry->vendor_id) }}#payments"
-                                        title="Auto-synced from a vendor payment — open the vendor ledger">↔ Vendor payment</a>
+                                        title="This entry and the vendor ledger are one payment — open the vendor ledger">↔ Vendor ledger</a>
                                 @endif
                                 @if (! empty($mirroredShipmentCosts[$entry->id] ?? null))
                                     <a class="cf-sync-chip" href="{{ route('shipments.show', $mirroredShipmentCosts[$entry->id]) }}"

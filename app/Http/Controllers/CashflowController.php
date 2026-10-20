@@ -17,6 +17,7 @@ use App\Services\CashflowAnalysis;
 use App\Services\CashflowFilters;
 use App\Services\CashflowPickers;
 use App\Services\CashflowLedger;
+use App\Services\CashflowVendorPaymentSync;
 use App\Services\SavedViews;
 use App\Services\VendorPaymentCashflowSync;
 use Carbon\Carbon;
@@ -143,6 +144,17 @@ class CashflowController extends Controller
             'particular' => $project ? 'Project receipt · '.$project->project_number : null,
         ]);
 
+        /* Opened from a vendor record: the payment is theirs, and the vendor
+           ledger row follows it once it is saved. */
+        $vendor = $request->query('vendor_id')
+            ? \App\Models\Vendor::query()->find((int) $request->query('vendor_id'))
+            : null;
+        if ($vendor && ! $project) {
+            $entry->vendor_id = $vendor->id;
+            $entry->related_party_type = 'vendor';
+            $entry->related_party_name = $vendor->vendor_name;
+        }
+
         $fromId = (int) $request->query('from');
         if ($fromId > 0) {
             $source = CashflowEntry::query()->find($fromId);
@@ -180,6 +192,9 @@ class CashflowController extends Controller
         $entry = DB::transaction(function () use ($data, $allocationRows) {
             $entry = CashflowEntry::create($data);
             app(CashflowAllocations::class)->sync($entry, $allocationRows);
+            /* Money paid to a linked vendor is a vendor-ledger payment too, or
+               the vendor record and the statement never hear about it. */
+            app(CashflowVendorPaymentSync::class)->sync($entry);
             $this->recalculateAccountLedger($entry->account_id);
             return $entry;
         });
@@ -229,6 +244,7 @@ class CashflowController extends Controller
 
         $entry = DB::transaction(function () use ($data) {
             $entry = CashflowEntry::create($data);
+            app(CashflowVendorPaymentSync::class)->sync($entry);
             $this->recalculateAccountLedger($entry->account_id);
             return $entry;
         });
@@ -287,6 +303,7 @@ class CashflowController extends Controller
                 ->limit(50)
                 ->get(),
             'linkedVendorPayment' => app(VendorPaymentCashflowSync::class)->linkedPaymentFor($cashflow),
+            'derivedVendorPayment' => app(VendorPaymentCashflowSync::class)->derivedPaymentFor($cashflow),
             'linkedShipmentCost' => app(\App\Services\ShipmentCostCashflowSync::class)->linkedCostFor($cashflow),
         ]));
     }
@@ -429,6 +446,7 @@ class CashflowController extends Controller
         return view('cashflows.form', array_merge($this->sharedData(), [
             'entry' => $cashflow,
             'linkedVendorPayment' => app(VendorPaymentCashflowSync::class)->linkedPaymentFor($cashflow),
+            'derivedVendorPayment' => app(VendorPaymentCashflowSync::class)->derivedPaymentFor($cashflow),
         ]));
     }
 
@@ -444,6 +462,7 @@ class CashflowController extends Controller
         DB::transaction(function () use ($cashflow, $data, $allocationRows, $oldAccountId) {
             $cashflow->update($data);
             app(CashflowAllocations::class)->sync($cashflow, $allocationRows);
+            app(CashflowVendorPaymentSync::class)->sync($cashflow);
             $this->recalculateAccountLedger($oldAccountId);
             $this->recalculateAccountLedger($cashflow->account_id);
         });
@@ -455,6 +474,9 @@ class CashflowController extends Controller
     {
         $accountId = $cashflow->account_id;
         $detached = DB::transaction(function () use ($cashflow, $accountId) {
+            /* A ledger row that this entry created goes with it — removed while
+               the link it is found by still exists. */
+            app(CashflowVendorPaymentSync::class)->remove($cashflow);
             // Never leave a vendor payment or shipment cost pointing at a deleted entry.
             $detached = app(VendorPaymentCashflowSync::class)->detach($cashflow);
             $detached += app(\App\Services\ShipmentCostCashflowSync::class)->detach($cashflow);
@@ -512,6 +534,7 @@ class CashflowController extends Controller
 
             $accountIds = [];
             foreach ($entries as $entry) {
+                app(CashflowVendorPaymentSync::class)->remove($entry);
                 app(VendorPaymentCashflowSync::class)->detach($entry);
                 app(\App\Services\ShipmentCostCashflowSync::class)->detach($entry);
                 app(CashflowAllocations::class)->sync($entry, []);

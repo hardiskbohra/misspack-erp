@@ -48,6 +48,22 @@
                 class="active">{{ $isEdit ? 'Edit' : 'Add' }}</span></div>
     </div>
     
+    @if ($isEdit && ! empty($derivedVendorPayment))
+        <div class="master-card master-section cf-sync-note">
+            <p style="margin:0;font-weight:700;">
+                Posted to the vendor ledger as payment #{{ $derivedVendorPayment->id }}
+                ({{ $derivedVendorPayment->vendor?->vendor_name ?: 'Vendor' }}).
+                Amount, date, reference, mode and account are this entry's own —
+                @if (\Illuminate\Support\Facades\Route::has('vendors.show'))
+                    <a href="{{ route('vendors.show', $derivedVendorPayment->vendor_id) }}#payments">open the vendor ledger</a>
+                @else
+                    open the vendor ledger
+                @endif
+                to see the row; it follows every change made here.
+            </p>
+        </div>
+    @endif
+
     @if ($isEdit && ! empty($linkedVendorPayment))
         <div class="master-card master-section cf-sync-note">
             <p style="margin:0;font-weight:700;">

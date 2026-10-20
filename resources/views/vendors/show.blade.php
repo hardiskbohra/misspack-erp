@@ -63,8 +63,10 @@
                 <i class="fa-solid fa-pen" aria-hidden="true"></i> Edit vendor
             </a>
             {{-- The manual ledger is the vendor-currency view; this is the same
-                 account as a statement the vendor can be sent. --}}
-            <a href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id, 'currency' => $vendorCurrency, 'period' => 'all']) }}"
+                 account as a statement the vendor can be sent. No currency in
+                 the link: the statement opens on the currency that actually has
+                 rows, which is not always the quoted one. --}}
+            <a href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id, 'period' => 'all']) }}"
                 class="master-btn master-btn-soft">
                 <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Full statement of account
             </a>
@@ -173,6 +175,7 @@
                     <div class="vendor-blocks">
                         @include('vendors.partials.payables')
                         @include('vendors.partials.payments')
+                        @include('vendors.partials.cashflow')
                     </div>
                 </section>
             @elseif ($tab === 'documents')

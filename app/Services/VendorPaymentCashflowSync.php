@@ -185,9 +185,29 @@ class VendorPaymentCashflowSync
             return null;
         }
 
+        /* Only a payment the ledger owns. A row this entry generated itself
+           (`source = cashflow`) is its mirror, not its source — showing it as
+           "generated from vendor payment #N" would explain the entry backwards. */
         return VendorPaymentEntry::query()
             ->with('vendor')
             ->where('cashflow_entry_id', $cashflow->id)
+            ->when(Schema::hasColumn('vendor_payment_entries', 'source'), fn ($query) => $query->where(function ($query) {
+                $query->whereNull('source')->orWhere('source', '!=', CashflowVendorPaymentSync::SOURCE);
+            }))
+            ->first();
+    }
+
+    /** The vendor ledger row this cashflow entry posted, if it posted one. */
+    public function derivedPaymentFor(CashflowEntry $cashflow): ?VendorPaymentEntry
+    {
+        if (! $this->available() || ! Schema::hasColumn('vendor_payment_entries', 'source')) {
+            return null;
+        }
+
+        return VendorPaymentEntry::query()
+            ->with('vendor')
+            ->where('cashflow_entry_id', $cashflow->id)
+            ->where('source', CashflowVendorPaymentSync::SOURCE)
             ->first();
     }
 

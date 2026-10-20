@@ -124,9 +124,16 @@ class CashflowAllocations
         if (array_filter(array_column($prepared, 'purchase_invoice_id'))
             && Schema::hasTable('vendor_payment_entries')
             && Schema::hasColumn('vendor_payment_entries', 'cashflow_entry_id')) {
+            /* A row derived from this very cashflow entry is not a second
+               record of the money — it is this row, seen from the vendor
+               ledger — so a bill allocation here is the only place the bill is
+               counted and stays allowed. */
             $mirrorPayment = VendorPaymentEntry::query()
                 ->with('vendor')
                 ->where('cashflow_entry_id', $entry->id)
+                ->when(Schema::hasColumn('vendor_payment_entries', 'source'), fn ($query) => $query->where(function ($query) {
+                    $query->whereNull('source')->orWhere('source', '!=', CashflowVendorPaymentSync::SOURCE);
+                }))
                 ->first();
 
             if ($mirrorPayment) {

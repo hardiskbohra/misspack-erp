@@ -527,9 +527,17 @@ class VendorController extends Controller
     }
     
     public function updatePayment(Request $request, Vendor $vendor, VendorPaymentEntry $entry): RedirectResponse {
-    
+
         // Make sure the entry actually belongs to this vendor
         abort_unless((int) $entry->vendor_id === (int) $vendor->id,404);
+
+        /* This row is the vendor-ledger side of a payment recorded in the
+           cashflow module. The cashflow entry owns it, so it is changed there
+           — editing the copy here would silently rewrite the bank row. */
+        if ($entry->isFromCashflow()) {
+            return $this->backToTab($vendor, 'money',
+                'This payment was recorded in the cashflow ledger. Change it there — the vendor ledger keeps the copy up to date.', 'error');
+        }
     
         $data = $request->validate([
             'transaction_date' => ['required', 'date'],
@@ -581,6 +589,18 @@ class VendorController extends Controller
 
     public function destroyPayment(VendorPaymentEntry $entry): RedirectResponse
     {
+        /* Deleting this row here would delete the bank entry it was derived
+           from. The cashflow screen is where it can be removed. */
+        if ($entry->isFromCashflow()) {
+            $vendor = $entry->vendor;
+
+            return $vendor
+                ? $this->backToTab($vendor, 'money',
+                    'This payment was recorded in the cashflow ledger. Delete it there — the vendor ledger follows the bank row.', 'error')
+                : redirect()->route('vendors.index')->with('error',
+                    'This payment was recorded in the cashflow ledger. Delete it in Cashflow.');
+        }
+
         $hadCashflow = (bool) $entry->cashflow_entry_id;
 
         DB::transaction(function () use ($entry) {
@@ -633,11 +653,11 @@ class VendorController extends Controller
      * the payments tab has to come home to the payments tab even when the
      * browser sent no referer at all.
      */
-    private function backToTab(Vendor $vendor, string $tab, string $message): RedirectResponse
+    private function backToTab(Vendor $vendor, string $tab, string $message, string $level = 'success'): RedirectResponse
     {
         return redirect()
             ->route('vendors.show', ['vendor' => $vendor, 'tab' => $tab])
-            ->with('success', $message);
+            ->with($level, $message);
     }
 
     private function cashflowSync(): VendorPaymentCashflowSync
@@ -827,7 +847,10 @@ class VendorController extends Controller
     private function dashboardData(Vendor $vendor): array
     {
         $projectProducts = $this->vendorProjectProducts($vendor);
-        $statementEntries = $this->vendorStatementEntries($vendor); // cashflow entries
+        /* Cashflow rows with no ledger row behind them: the ledger owns the
+           rupee payments to a linked vendor, so only the rest belongs in the
+           "other cashflow activity" card. */
+        $statementEntries = app(\App\Services\CashflowVendorPaymentSync::class)->unlinkedCashflow($vendor);
         $vendorPaymentEntries = $this->vendorPaymentEntries($vendor); // manual vendor-currency ledger
         $shipments = $this->vendorShipments($vendor);
         $products = $this->vendorProducts($projectProducts);
@@ -1588,48 +1611,6 @@ class VendorController extends Controller
         }
 
         return $query->limit(100)->get();
-    }
-
-    private function vendorStatementEntries(Vendor $vendor)
-    {
-        if (! class_exists(\App\Models\CashflowEntry::class) || ! Schema::hasTable('cashflow_entries')) {
-            return collect();
-        }
-
-        $hasVendorId = Schema::hasColumn('cashflow_entries', 'vendor_id');
-        $hasRelatedType = Schema::hasColumn('cashflow_entries', 'related_party_type');
-        $hasRelatedName = Schema::hasColumn('cashflow_entries', 'related_party_name');
-
-        if (! $hasVendorId && ! ($hasRelatedType && $hasRelatedName)) {
-            return collect();
-        }
-
-        $relations = [];
-        if (class_exists(\App\Models\CashflowAccount::class) && Schema::hasTable('cashflow_accounts')) {
-            $relations[] = 'account';
-        }
-        if (class_exists(\App\Models\CashflowCategory::class) && Schema::hasTable('cashflow_categories')) {
-            $relations[] = 'category';
-        }
-
-        return \App\Models\CashflowEntry::query()
-            ->with($relations)
-            ->where(function ($query) use ($vendor, $hasVendorId, $hasRelatedType, $hasRelatedName) {
-                if ($hasVendorId) {
-                    $query->where('vendor_id', $vendor->id);
-                }
-                if ($hasRelatedType && $hasRelatedName) {
-                    $method = $hasVendorId ? 'orWhere' : 'where';
-                    $query->{$method}(function ($nested) use ($vendor) {
-                        $nested->where('related_party_type', 'vendor')
-                            ->where('related_party_name', 'like', '%'.$vendor->vendor_name.'%');
-                    });
-                }
-            })
-            ->latest('entry_date')
-            ->latest('id')
-            ->limit(250)
-            ->get();
     }
 
     private function vendorShipments(Vendor $vendor)

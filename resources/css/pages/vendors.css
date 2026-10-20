@@ -158,6 +158,13 @@
     white-space: nowrap;
 }
 
+/* A ledger row derived from a cashflow entry: shown here, changed there. */
+.vendor-source-chip {
+    border-color: color-mix(in srgb, var(--master-primary) 30%, var(--mc-border));
+    background: color-mix(in srgb, var(--master-primary) 12%, var(--mc-card));
+    color: var(--master-primary);
+}
+
 .vendor-pill {
     display: inline-flex;
     align-items: center;

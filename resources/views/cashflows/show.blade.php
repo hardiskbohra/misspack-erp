@@ -121,7 +121,7 @@
         <div class="master-tabs-panels">
             @if ($tab === 'overview')
                 <section class="master-tab-panel" aria-label="Overview">
-                    @if (! empty($linkedShipmentCost) || ! empty($linkedVendorPayment))
+                    @if (! empty($linkedShipmentCost) || ! empty($linkedVendorPayment) || ! empty($derivedVendorPayment))
                         <div class="master-card master-card--flat master-section cf-sync-note">
                             @if (! empty($linkedShipmentCost))
                                 <h3 class="master-section-title">Linked shipment cost</h3>
@@ -132,6 +132,18 @@
                                     @endif
                                     · {{ $linkedShipmentCost->shipment?->shipment_number }}
                                     · {{ $linkedShipmentCost->headLabel() }}
+                                </p>
+                            @endif
+                            @if (! empty($derivedVendorPayment))
+                                <h3 class="master-section-title">Posted to the vendor ledger</h3>
+                                <p class="master-sub">
+                                    Payment #{{ $derivedVendorPayment->id }} in the vendor ledger follows this entry
+                                    @if (\Illuminate\Support\Facades\Route::has('vendors.show'))
+                                        — <a href="{{ route('vendors.show', $derivedVendorPayment->vendor_id) }}#payments">open the vendor ledger</a>
+                                    @endif
+                                    · {{ $derivedVendorPayment->vendor?->vendor_name }}
+                                    · {{ \App\Helpers\CommonHelper::amount($derivedVendorPayment->foreign_amount, $derivedVendorPayment->foreign_currency) }}.
+                                    Edit it here; the ledger row is read-only.
                                 </p>
                             @endif
                             @if (! empty($linkedVendorPayment))
