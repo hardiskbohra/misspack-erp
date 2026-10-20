@@ -134,11 +134,12 @@ check('the four figures are the shared flat tile',
 /* ------------------------------------------------- 2. the filter card */
 
 const chipAnchors = [...view.matchAll(/<a class="master-list-chip[^"]*"[\s\S]*?<\/a>/g)].map(m => m[0]);
-check('every chip is the shared chip and carries its own tally',
+check('the reduced quick filters use shared chips and carry their own tallies',
     chipAnchors.length === 3
     && chipAnchors.every(chip => /master-list-chip-count/.test(chip))
-    && /aria-label="Filter projects by status"/.test(view)
-    && /aria-label="Filter projects by health"/.test(view));
+    && /aria-label="Quick project filters"/.test(view)
+    && /\$quickStatusOptions = \[[\s\S]*?'in_progress'[\s\S]*?'waiting'[\s\S]*?'on_hold'/.test(view)
+    && /only\(\['amber', 'red'\]\)/.test(view));
 
 check('a chip changes what it owns and carries the rest of the search with it',
     /\$statusUrl = function \(\$value\) use \(\$keep\)/.test(view)
