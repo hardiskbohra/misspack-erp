@@ -89,8 +89,8 @@
                             <footer>
                                 <div class="workflow-action-meta"><span><i class="fa-solid fa-database"></i>{{ $guide['source'] }}</span><span><i class="fa-solid fa-user"></i>{{ $action['owner']?->name ?: $action['coordinator']?->name ?: 'Unassigned' }}</span><span class="{{ $action['is_overdue']?'is-danger':'' }}"><i class="fa-regular fa-calendar"></i>{{ $action['due_date']?->format('d M Y') ?: 'No due date' }}</span></div>
                                 <div class="workflow-action-buttons">
-                                    @if($guide['modal']==='production' && $action['product'])
-                                        <button type="button" class="master-btn master-btn-primary master-btn-sm" data-modal-open="workflowProductionModal{{ $action['product']->id }}"><i class="fa-solid fa-industry"></i> {{ $guide['label'] }}</button>
+                                    @if(in_array($guide['modal'],['production','quality'],true) && $action['product'])
+                                        <button type="button" class="master-btn master-btn-primary master-btn-sm" data-modal-open="{{ $guide['modal']==='quality' ? 'workflowQualityModal' : 'workflowProductionModal' }}{{ $action['product']->id }}"><i class="fa-solid {{ $guide['modal']==='quality' ? 'fa-clipboard-check' : 'fa-industry' }}"></i> {{ $guide['label'] }}</button>
                                     @elseif($sameWorkflow)
                                         <button type="button" class="master-btn master-btn-primary master-btn-sm" data-workflow-open="{{ $guide['view'] }}"><i class="fa-solid fa-arrow-right"></i> {{ $guide['label'] }}</button>
                                     @else
@@ -121,6 +121,38 @@
                                             </div>
                                         </div>
                                         <div class="master-modal-footer"><button type="button" class="master-btn master-btn-light" data-close-modal>Cancel</button><button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-check"></i> Save production record</button></div>
+                                    </form>
+                                </div>
+                            </div>
+                        @endif
+                        @if($guide['modal']==='quality' && $action['product'])
+                            @php
+                                $qcProduct = $action['product'];
+                                $qcPassed = (float) $qcProduct->qualityInspections->sum('passed_quantity');
+                                $qcRemaining = max((float) $qcProduct->quantity - $qcPassed, 0);
+                                $qcErrors = ['batch_reference','inspected_quantity','passed_quantity','rejected_quantity','rework_quantity','result','checklist','evidence_file','notes'];
+                            @endphp
+                            <div class="master-modal" id="workflowQualityModal{{ $qcProduct->id }}" aria-hidden="true" aria-labelledby="workflowQualityTitle{{ $qcProduct->id }}" data-open-on-errors="{{ (int)old('workflow_action_product_id')===$qcProduct->id && $errors->hasAny($qcErrors) ? 'true' : 'false' }}">
+                                <div class="master-modal-card workflow-action-modal workflow-quality-modal" role="dialog" aria-modal="true" aria-labelledby="workflowQualityTitle{{ $qcProduct->id }}">
+                                    <form method="POST" enctype="multipart/form-data" action="{{ route('projects.quality-inspections.store',[$project,$qcProduct]) }}">@csrf
+                                        <input type="hidden" name="workflow_action_product_id" value="{{ $qcProduct->id }}">
+                                        <div class="master-modal-header"><div class="master-modal-heading"><span class="master-modal-icon"><i class="fa-solid fa-clipboard-check"></i></span><div><h3 class="master-modal-title" id="workflowQualityTitle{{ $qcProduct->id }}">Record QC inspection · {{ $qcProduct->product_name }}</h3><p class="master-modal-subtitle">Reconcile every inspected unit and preserve the inspection evidence.</p></div></div><button type="button" class="master-modal-close" data-close-modal aria-label="Close quality inspection form">×</button></div>
+                                        <div class="master-modal-body">
+                                            <div class="workflow-production-summary" aria-label="Quality inspection requirement"><div><span>Required</span><strong>{{ number_format((float)$qcProduct->quantity,3) }} {{ $qcProduct->unit }}</strong></div><div><span>Previously passed</span><strong>{{ number_format($qcPassed,3) }} {{ $qcProduct->unit }}</strong></div><div><span>Remaining</span><strong>{{ number_format($qcRemaining,3) }} {{ $qcProduct->unit }}</strong></div></div>
+                                            <div class="workflow-production-rule"><i class="fa-solid fa-scale-balanced"></i><div><strong>Inspection must reconcile</strong><span>Passed + rejected + rework must equal inspected. A Passed result requires the full inspected quantity and every checklist item to pass.</span></div></div>
+                                            <div class="master-modal-grid">
+                                                <label class="master-field"><span class="master-label">Batch / lot</span><input class="master-input" name="batch_reference" maxlength="255" value="{{ old('batch_reference') }}" placeholder="Production batch reference"></label>
+                                                <label class="master-field"><span class="master-label">Result <b>*</b></span><select class="master-select" name="result" required><option value="passed" @selected(old('result','passed')==='passed')>Passed</option><option value="passed_with_observations" @selected(old('result')==='passed_with_observations')>Passed with observations</option><option value="failed" @selected(old('result')==='failed')>Failed</option><option value="rework_required" @selected(old('result')==='rework_required')>Rework required</option></select></label>
+                                                <label class="master-field"><span class="master-label">Inspected <b>*</b></span><input class="master-input" type="number" name="inspected_quantity" min="0.001" step="0.001" value="{{ old('inspected_quantity',$qcRemaining ?: '') }}" required></label>
+                                                <label class="master-field"><span class="master-label">Passed <b>*</b></span><input class="master-input" type="number" name="passed_quantity" min="0" max="{{ $qcRemaining }}" step="0.001" value="{{ old('passed_quantity',$qcRemaining) }}" required></label>
+                                                <label class="master-field"><span class="master-label">Rejected <b>*</b></span><input class="master-input" type="number" name="rejected_quantity" min="0" step="0.001" value="{{ old('rejected_quantity',0) }}" required></label>
+                                                <label class="master-field"><span class="master-label">Rework <b>*</b></span><input class="master-input" type="number" name="rework_quantity" min="0" step="0.001" value="{{ old('rework_quantity',0) }}" required></label>
+                                                <fieldset class="master-field full workflow-quality-checklist"><legend class="master-label">Structured checklist <b>*</b></legend><div>@foreach(\App\Models\ProjectQualityInspection::CHECKS as $checkKey=>$checkLabel)<label><input type="hidden" name="checklist[{{ $checkKey }}]" value="0"><input type="checkbox" name="checklist[{{ $checkKey }}]" value="1" @checked((bool)old('checklist.'.$checkKey))> <span>{{ $checkLabel }}</span></label>@endforeach</div></fieldset>
+                                                <label class="master-field full"><span class="master-label">Inspection evidence <b>*</b></span><input class="master-input" type="file" name="evidence_file" required accept=".jpg,.jpeg,.png,.webp,.pdf,.xls,.xlsx,.doc,.docx"><small class="master-help">Upload the inspection report, photographs, worksheet or signed evidence.</small></label>
+                                                <label class="master-field full"><span class="master-label">Inspection notes</span><textarea class="master-textarea" name="notes" rows="3" maxlength="4000" placeholder="Observations, defects, disposition or follow-up">{{ old('notes') }}</textarea></label>
+                                            </div>
+                                        </div>
+                                        <div class="master-modal-footer"><button type="button" class="master-btn master-btn-light" data-close-modal>Cancel</button><button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-lock"></i> Record immutable inspection</button></div>
                                     </form>
                                 </div>
                             </div>
@@ -230,8 +262,6 @@
                     @foreach($project->products->where('status','!=','cancelled') as $product)
                         @php
                             $productEvaluations = $workflow->evaluations->where('project_product_id',$product->id)->unique('gate_key')->keyBy('gate_key');
-                            $passedQc = (float) $product->qualityInspections->sum('passed_quantity');
-                            $remainingQc = max((float)$product->quantity-$passedQc,0);
                         @endphp
                         <details class="project-approval workflow-product-disclosure" @if($loop->first) open @endif>
                             <summary><div><strong>{{ $product->product_name }}</strong><span>{{ number_format((float)$product->quantity,3) }} {{ $product->unit }} required</span></div><span class="master-badge">Independent product</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary>
@@ -259,20 +289,6 @@
                                     </article>
                                 @endforeach
                             </div>
-                            <details><summary class="master-btn master-btn-soft master-btn-sm">Record QC inspection · {{ number_format($remainingQc,3) }} remaining</summary>
-                                <form method="POST" enctype="multipart/form-data" action="{{ route('projects.quality-inspections.store',[$project,$product]) }}" class="project-approval-create">@csrf
-                                    <label class="master-field"><span class="master-label">Batch / lot</span><input class="master-input" name="batch_reference" maxlength="255"></label>
-                                    <label class="master-field"><span class="master-label">Inspected</span><input class="master-input" type="number" name="inspected_quantity" min="0.001" step="0.001" required></label>
-                                    <label class="master-field"><span class="master-label">Passed</span><input class="master-input" type="number" name="passed_quantity" min="0" step="0.001" value="0" required></label>
-                                    <label class="master-field"><span class="master-label">Rejected</span><input class="master-input" type="number" name="rejected_quantity" min="0" step="0.001" value="0" required></label>
-                                    <label class="master-field"><span class="master-label">Rework</span><input class="master-input" type="number" name="rework_quantity" min="0" step="0.001" value="0" required></label>
-                                    <label class="master-field"><span class="master-label">Result</span><select class="master-select" name="result" required><option value="passed">Passed</option><option value="passed_with_observations">Passed with observations</option><option value="failed">Failed</option><option value="rework_required">Rework required</option></select></label>
-                                    <div class="master-field project-approval-instructions"><span class="master-label">Structured checklist</span>@foreach(\App\Models\ProjectQualityInspection::CHECKS as $key=>$label)<label><input type="hidden" name="checklist[{{ $key }}]" value="0"><input type="checkbox" name="checklist[{{ $key }}]" value="1"> {{ $label }}</label>@endforeach</div>
-                                    <label class="master-field"><span class="master-label">Inspection evidence</span><input class="master-input" type="file" name="evidence_file" required accept=".jpg,.jpeg,.png,.webp,.pdf,.xls,.xlsx,.doc,.docx"></label>
-                                    <label class="master-field project-approval-instructions"><span class="master-label">Inspection notes</span><textarea class="master-textarea" name="notes" rows="3" maxlength="4000"></textarea></label>
-                                    <button class="master-btn master-btn-primary" type="submit">Record immutable inspection</button>
-                                </form>
-                            </details>
                             @if($product->qualityInspections->isNotEmpty())<details><summary>QC history ({{ $product->qualityInspections->count() }})</summary><div class="project-approval-history">@foreach($product->qualityInspections as $inspection)<span><strong>{{ $inspection->resultLabel() }} · {{ number_format((float)$inspection->passed_quantity,3) }} passed</strong><small>{{ $inspection->inspected_at?->format('d M Y, H:i') }} · {{ $inspection->inspector?->name ?: 'System' }} · evidence SHA-256 {{ substr($inspection->evidence_hash,0,10) }}</small><a href="{{ $inspection->evidenceUrl() }}" target="_blank">{{ $inspection->evidence_original_name }}</a><em>{{ $inspection->notes }}</em></span>@endforeach</div></details>@endif
                         </details>
                     @endforeach

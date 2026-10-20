@@ -78,8 +78,8 @@ class ProjectWorkflowGuidance
                 'Record the quality inspection',
                 'Reconcile inspected quantity into passed, rejected and rework quantities and attach inspection evidence.',
                 'Record QC inspection', $projectProducts,
-                ['Open this product lane.', 'Record reconciled inspection quantities.', 'Attach evidence and save the immutable inspection.'],
-                'QC inspection', false, 'products'
+                ['Open the QC form here.', 'Reconcile passed, rejected and rework quantities.', 'Complete the checklist, attach evidence and save the immutable inspection.'],
+                'QC inspection', false, 'products', 'quality'
             ),
             'packing_verified' => $this->recipe(
                 'Create and verify the Packaging List',
