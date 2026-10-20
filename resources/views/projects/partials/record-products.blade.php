@@ -29,7 +29,6 @@
                         @forelse($project->products as $projectProduct)
                             @php
                                 $media = optional($projectProduct->product)->primaryMedia();
-                                $milestone = $projectProduct->currentMilestone();
                             @endphp
                             <tr>
                                 <td data-label="Image">
@@ -42,8 +41,7 @@
                                 <td data-label="Product">
                                     <strong>{{ $projectProduct->product_name }}</strong>
                                     <span class="project-fact-note">{{ optional($projectProduct->product)->product_number ?: 'No product code' }}</span>
-                                    <span class="master-badge status-{{ str_replace('_', '-', (string) $milestone?->status) }}">
-                                    {{ $milestone?->title ?? 'No milestone' }}</span>
+                                    <span class="master-badge status-{{ str_replace('_', '-', (string) $projectProduct->status) }}">{{ $projectProduct->statusLabel() }}</span>
                                 </td>
                                 <td data-label="Qty">
                                     <strong>{{ number_format($projectProduct->quantity) }} {{ $projectProduct->unit }}</strong>

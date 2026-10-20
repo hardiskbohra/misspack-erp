@@ -178,3 +178,9 @@ The Workflow Control Center presents each independently executable lane as a pla
 Source-document actions carry project and, where applicable, product context. Proforma Invoices, inward Cashflow receipts, Purchase Orders, and Shipments open preselected from the workflow and return to the same project workflow after a successful save. Return targets are restricted to local project routes. Packaging Lists remain source-generated and verified in their dedicated module.
 
 Production quantity and evidence are recorded in a focused modal inside the Control Center through the same controlled project-product endpoint used by the detailed product lane. Partial completion remains open; saved production evidence immediately recalculates operational readiness. Source records continue to own all gates—guided actions do not add manual completion shortcuts.
+
+## Workflow-owned project progress
+
+Project progress is the weighted `calculated_progress` produced by the standard workflow. The calculator publishes that value to `projects.progress_percent` only as a list/dashboard cache. Project forms, status controls, activity updates, financial closure, and coordinator reporting cannot submit or write a separate percentage. A coordinator may still report the observed stage and reason, but that narrative does not alter calculated progress.
+
+The former project timeline feature has been retired. Its office and client tabs, routes, controller, model, views, scripts, styles, relationships, and source migration are removed. Deployment migration `2026_10_20_140000_remove_milestones_and_manual_progress.php` drops the obsolete table and the two manual-progress columns, then aligns existing project progress caches to their workflow values.

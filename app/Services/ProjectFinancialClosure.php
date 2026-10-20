@@ -217,7 +217,6 @@ class ProjectFinancialClosure
             $locked->update([
                 'status' => $acceptOutstanding ? Closure::TYPE_OUTSTANDING : 'closed',
                 'stage' => 'closed',
-                'progress_percent' => 100,
                 'completed_at' => now(),
             ]);
             app(ProjectWorkflowExecution::class)->recalculate($workflow);

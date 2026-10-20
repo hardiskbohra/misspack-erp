@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('calculated_stage', 60)->default('setup');
             $table->unsignedTinyInteger('calculated_progress')->default(0);
             $table->string('reported_stage', 60)->nullable();
-            $table->unsignedTinyInteger('reported_progress')->nullable();
             $table->text('reported_reason')->nullable();
             $table->foreignId('reported_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('reported_at')->nullable();

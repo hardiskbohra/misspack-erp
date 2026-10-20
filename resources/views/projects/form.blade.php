@@ -137,11 +137,6 @@
                     <input class="master-input" type="date" name="target_date" value="{{ $targetValue }}">
                 </div>
                 <div class="master-field">
-                    <label class="master-label">Progress %</label>
-                    <input class="master-input" type="number" min="0" max="100" name="progress_percent"
-                        value="{{ old('progress_percent', $project->progress_percent) }}">
-                </div>
-                <div class="master-field">
                     <label class="master-label">Currency <span>*</span></label>
                     <select class="master-select" name="currency" required>
                         @foreach ($currencyOptions as $key => $label)

@@ -53,7 +53,7 @@ const view=read('resources/views/projects/partials/record-workflow.blade.php');
 let passed=0,failed=0;
 function check(label,value){if(value){passed++;console.log(`PASS ${label}`)}else{failed++;console.error(`FAIL ${label}`)}}
 check('workflow schema separates instances, steps, gate evaluations and overrides', ['project_workflows','project_workflow_steps','project_gate_evaluations','project_gate_overrides'].every(table=>migration.includes(`Schema::create('${table}'`)));
-check('workflow keeps calculated and coordinator-reported progress side by side', ['calculated_stage','calculated_progress','reported_stage','reported_progress','reported_reason','reported_by','reported_at'].every(column=>migration.includes(`'${column}'`)));
+check('workflow is the sole project progress authority', ['calculated_stage','calculated_progress','reported_stage','reported_reason','reported_by','reported_at'].every(column=>migration.includes(`'${column}'`))&&!migration.includes("'reported_progress'")&&execution.includes("project()->update(['progress_percent' => $calculatedProgress])"));
 check('commercial baseline and advance override are explicit workflow inputs', migration.includes("'commercial_sales_invoice_id'")&&migration.includes("'advance_percentage_override'"));
 check('proforma payment terms are structured for enforceable gates', ['advance_required','advance_percentage','balance_before_dispatch','payment_tolerance'].every(column=>termsMigration.includes(`'${column}'`)&&salesInvoice.includes(`'${column}'`)));
 check('sales form captures advance and complete pre-dispatch balance policy', salesForm.includes('Required advance %')&&salesForm.includes('Advance required before production')&&salesForm.includes('Complete balance required before dispatch'));
@@ -63,10 +63,10 @@ check('standard path covers commercial through closure and independent product w
 check('new full and quick projects start the standard workflow', (projectController.match(/\$workflowExecution->start\(\$project, Auth::id\(\)\)/g)||[]).length===2);
 check('existing projects can start workflow explicitly', routes.includes("projects.workflow.start")&&controller.includes('function start('));
 check('workflow synchronises a path for every active project product', execution.includes("$project->products->where('status', '!=', 'cancelled')")&&execution.includes('project_product_id'));
-check('weighted completion calculates stage and progress without overwriting report', execution.includes('completedWeight')&&execution.includes('calculated_progress')&&!execution.includes("'reported_progress' => $progress"));
+check('weighted completion calculates and publishes project progress', execution.includes('completedWeight')&&execution.includes("'calculated_progress' => $calculatedProgress")&&execution.includes("'progress_percent' => $calculatedProgress"));
 check('step updates preserve blocked reasons and completion identity', ['blocked_reason','completed_at','completed_by'].every(field=>execution.includes(`'${field}'`)));
 check('workflow command centre exposes summary, coordinator report and execution path', ['Calculated stage','Calculated progress','Coordinator report','Standard execution path','Commercial baseline PI','Advance override %'].every(label=>view.includes(label)));
-check('manual reporting says it cannot bypass gates', view.includes('never bypasses a gate'));
+check('coordinator reporting cannot alter calculated progress', view.includes('Project progress remains calculated exclusively from workflow controls.')&&!view.includes('name="reported_progress"'));
 check('workflow steps expose all waiting, blocked and terminal states', ['waiting_client','waiting_vendor','blocked','completed','skipped','cancelled'].every(status=>step.includes(`'${status}'`)));
 check('workflow routes stay project-scoped', ['projects/{project}/workflow','projects/{project}/workflow/report','projects/{project}/workflow/evaluate','projects/{project}/workflow/gates/{evaluation}/override','projects/{project}/workflow/overrides/{override}/revoke','projects/{project}/workflow/steps/{step}'].every(uri=>routes.includes(uri)));
 check('financial gates use the baseline PI and finalized receipt amount', gates.includes('commercialInvoice')&&gates.includes('clientPortalReceivedAmount()')&&gates.includes('advance_percentage_override')&&gates.includes('balance_before_dispatch'));

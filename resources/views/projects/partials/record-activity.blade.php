@@ -63,7 +63,7 @@
                                 <td colspan="7">
                                     <div class="master-empty-state">
                                         <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
-                                        <p>No activity update yet. One public update per milestone keeps the client portal honest
+                                        <p>No activity update yet. Publish source-backed updates to keep the client portal current
                                         without a phone call.</p>
                                         <button type="button" class="master-btn master-btn-soft master-btn-sm"
                                             data-modal-open="addTrackingModal"><i class="fas fa-plus" aria-hidden="true"></i> Add activity</button>
@@ -110,9 +110,6 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="master-field small"><label class="master-label">Progress %</label><input class="master-input" type="number"
-                        name="progress_percent" min="0" max="100"
-                        value="{{ $project->progress_percent }}"></div>
                     <div class="master-field"><label class="master-label">Activity By</label><input class="master-input" type="text" name="location"
                         placeholder="MP / Client / Vendor etc."></div>
                     <div class="master-field"><label class="master-label">Date & Time</label><input class="master-input" type="datetime-local"
@@ -170,10 +167,6 @@
                                 <option value="{{ $key }}">{{ $label }}</option>
                             @endforeach
                         </select>
-                    </div>
-                    <div class="master-field small">
-                        <label class="master-label">Progress %</label>
-                        <input class="master-input" type="number" name="progress_percent" min="0" max="100" value="{{ $project->progress_percent }}">
                     </div>
                     <div class="master-field">
                         <label class="master-label">Location</label>

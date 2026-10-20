@@ -25,6 +25,7 @@ class ClientPortalProjectController extends ClientPortalBaseController
         $projects = collect();
         if ($this->projectsAvailable()) {
             $projects = \App\Models\Project::query()
+                ->with('workflow:id,project_id,calculated_progress')
                 ->where('client_id', $client->id)
                 ->where('show_client_portal', true)
                 ->when($search, function ($query) use ($search) {
@@ -52,12 +53,12 @@ class ClientPortalProjectController extends ClientPortalBaseController
         $project = $this->findProjectForClient($request, $project);
 
         $load = [
+            'workflow:id,project_id,calculated_progress',
             'products',
             'publicTrackingUpdates.product',
             'clientPortalAttachments.product',
             'publicComments.user',
             'publicComments.product',
-            'publicMilestones',
             'projectReceipts',
         ];
 

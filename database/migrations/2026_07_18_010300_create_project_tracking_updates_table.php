@@ -14,7 +14,6 @@ return new class extends Migration
             $table->foreignId('project_product_id')->nullable()->constrained('project_products')->nullOnDelete();
             $table->string('title');
             $table->string('status', 40)->default('info');
-            $table->unsignedTinyInteger('progress_percent')->nullable();
             $table->string('location')->nullable();
             $table->timestamp('occurred_at')->nullable();
             $table->text('notes')->nullable();

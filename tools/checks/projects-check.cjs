@@ -253,8 +253,7 @@ check('the list section is scoped to the page it styles',
 
 /* One vocabulary for the two pages: the same tone answers for a status on the
    list and on the record, so a badge cannot mean one thing in one place. Every
-   state the record can print — a project's status, a milestone's stage, an
-   activity's state, a shipment's leg — has a tone, and a tone for the dark
+   state the record can print — a project's status, an activity's state, a shipment's leg — has a tone, and a tone for the dark
    theme, because a badge with no tone is a state the reader cannot scan. */
 const optionKeys = (file, method) => {
     const body = read(file).match(new RegExp(`function ${method}\\(\\): array\\s*\\{([\\s\\S]*?)\\n    \\}`));
@@ -263,7 +262,6 @@ const optionKeys = (file, method) => {
 };
 const STATE_TONES = [...new Set([
     ...optionKeys('app/Models/Project.php', 'statusOptions'),
-    ...optionKeys('app/Models/ProjectMilestone.php', 'statusOptions'),
     ...optionKeys('app/Models/ProjectTrackingUpdate.php', 'statusOptions'),
     ...[...read('app/Models/Shipment.php').matchAll(/const STATUS_[A-Z_]+ = '([a-z_]+)';/g)]
         .map(match => match[1]),
@@ -367,8 +365,7 @@ const recordFiles = walk('resources/views/projects/partials')
     .filter(file => /record-[a-z-]+\.blade\.php$/.test(file));
 const recordSource = Object.fromEntries(recordFiles.map(file => [file, read(file)]));
 const recordViews = showView + '\n' + Object.values(recordSource).join('\n');
-const milestoneViews = read('resources/views/projects/partials/milestones-tab.blade.php')
-    + read('resources/views/projects/partials/milestone-product-block.blade.php');
+const retiredViews = ''; // Milestones were retired in favor of workflow controls.
 /* The feedback tab is a record panel too: the ask is issued from the project,
    so its chrome is the record page's, not the feedback sheet's. */
 const feedbackTab = read('resources/views/projects/partials/feedback-tab.blade.php');
@@ -414,7 +411,7 @@ check('every panel on the record wears the module card, and the card carries its
    collect the parts and map them). A `Str::of()` chain is a string: the one
    collection method it cannot answer throws BadMethodCallException only when a
    browser opens the page, which is a check no template reader would catch. */
-const viewCode = plain((showView + recordViews + milestoneViews + feedbackTab).replace(/\{\{--[\s\S]*?--\}\}/g, ''));
+const viewCode = plain((showView + recordViews + retiredViews + feedbackTab).replace(/\{\{--[\s\S]*?--\}\}/g, ''));
 
 check('the record mark is built the way the client pages build theirs',
     /collect\(explode\(' ', trim\(\(string\) \$project->name\)\)\)/.test(showView)
@@ -461,8 +458,8 @@ const branchKeys = [...showView.matchAll(/@(?:if|elseif) \(\$tab === '([a-z_]+)'
 const tallyBlock = controller.match(/'tabCounts' => \[([\s\S]*?)\n            \],/)?.[1] || '';
 
 check('every tab in the strip has a panel, and every panel a tab',
-    stripKeys.length === 12
-    && branchKeys.length === 11
+    stripKeys.length === 11
+    && branchKeys.length === 10
     && stripKeys.filter(key => key !== 'overview').every(key => branchKeys.includes(key))
     && branchKeys.every(key => stripKeys.includes(key))
     /* The Invoices chip counts the four sections it opens — the same four
@@ -477,27 +474,23 @@ check('every tab in the strip has a panel, and every panel a tab',
    shareable, and a form posted from a tab returns to it through `back()`. */
 check('one panel is rendered per request',
     !/data-tab-panel=/.test(showView)
-    && !/pd-tab-(panel|btn)/.test(showView + recordViews + milestoneViews)
+    && !/pd-tab-(panel|btn)/.test(showView + recordViews + retiredViews)
     && !/function initTabs/.test(script)
-    && showIncludes.length === 12
+    && showIncludes.length === 11
     && ['record-overview', 'record-workflow', 'record-products', 'record-money', 'record-shipments', 'record-documents',
-        'record-invoices', 'record-comments', 'record-activity', 'record-logs', 'milestones-tab',
-        'feedback-tab']
+        'record-invoices', 'record-comments', 'record-activity', 'record-logs', 'feedback-tab']
         .every(name => showIncludes.includes('projects.partials.' + name))
-    && (showView.match(/@elseif \(\$tab === '/g) || []).length === 10);
+    && (showView.match(/@elseif \(\$tab === '/g) || []).length === 9);
 
 check('every panel is a panel of the shared kind',
     recordFiles.length === 10
     && Object.values(recordSource).every(text => /class="master-tab-panel"/.test(text))
     && Object.values(recordSource).every(text => /id="project-panel-[a-z]+"/.test(text))
-    && Object.values(recordSource).every(text => /role="tabpanel"/.test(text))
-    && /<section class="master-tab-panel" id="project-panel-milestones"/.test(milestoneViews));
+    && Object.values(recordSource).every(text => /role="tabpanel"/.test(text)));
 
 check('the record page declares no copy of the shell',
     !/pd-[a-z]/.test(showView + recordViews)
-    && !/\bpd-[a-z]/.test(milestoneViews)
-    && !/pmile-page|pmile-stats|pmile-actions-card|pmile-product-block|pmile-empty|pmile-status/.test(milestoneViews)
-    && !/class="master-empty"/.test(recordViews + milestoneViews));
+    && !/class="master-empty"/.test(recordViews));
 
 /* The shell owns the shape of every card, badge and button; the record
    section may place them (a phone breakpoint flexing an action row) but never
@@ -512,21 +505,6 @@ check('the cards are the shell\'s, and the rhythm between them is the module\'s'
     /\.project-blocks \{\s*display: grid;\s*gap: 16px/.test(recordSection)
     && !/\.master-card/.test(recordSection)
     && (recordViews.match(/class="master-card master-card--flat/g) || []).length >= 10);
-
-/* A timeline is wider than any card: five 285px steps and their connectors do
-   not fit a laptop, let alone the panel they sit in. The strip is meant to
-   scroll inside itself — but a bare `auto` grid track may not shrink below
-   its content, so the strip's max-content width walked up through the card
-   and widened the page. The reader then got a page-wide horizontal scrollbar
-   and cropped panels (the figures row included) instead of a scrolling
-   timeline. The fix is structural, so all four parts of it are checked: the
-   explicit zero track, the zero minimums down the chain, the scroll container
-   and the scrollbar it draws. */
-check('a timeline wider than its card scrolls inside the card',
-    /\.project-blocks \{[\s\S]{0,200}grid-template-columns: minmax\(0, 1fr\)/.test(sheet)
-    && /\.project-blocks > \*,[\s\S]{0,200}\.pmile-step-scroll \{\s*min-width: 0/.test(sheet)
-    && /\.pmile-step-scroll \{[\s\S]{0,140}overflow-x: auto/.test(sheet)
-    && /\.pmile-step-scroll::-webkit-scrollbar \{[\s\S]{0,80}height: 6px/.test(sheet));
 
 /* The framework never reads the markup, so a panel that closes its wrapper one
    line early puts every card after it outside the grid and nothing complains:
@@ -561,9 +539,7 @@ const nestingErrors = (file, source) => {
     return errors.concat(stack.map(open => `${file}:${open.line} <${open.name}> is never closed`));
 };
 
-const nesting = recordFiles.concat(['resources/views/projects/partials/milestones-tab.blade.php',
-    'resources/views/projects/partials/milestone-product-block.blade.php'])
-    .flatMap(file => nestingErrors(file, read(file)));
+const nesting = recordFiles.flatMap(file => nestingErrors(file, read(file)));
 
 check('every panel is well formed',
     recordFiles.length === 10 && nesting.length === 0,
@@ -589,7 +565,7 @@ check('the card wrapper is the panel\'s own child',
    `status-overdue` be owned by a rule for `status-overdue-x`, so the boundary
    has to exclude a dash and a digit too. */
 const toneOwned = (tone, code = sheetCode) => new RegExp(`\\.project \\.${tone}(?![A-Za-z0-9_-])`).test(code);
-const printedTones = new Set([...(showView + recordViews + milestoneViews + feedbackTab)
+const printedTones = new Set([...(showView + recordViews + retiredViews + feedbackTab)
     .matchAll(/[\s"']status-([a-z-]+)/g)].map(match => match[1]));
 
 check('every tone the page prints is one the sheet owns',
@@ -709,7 +685,7 @@ check('the project products are written by the documents that mention them',
     /* A line is matched to its row before anything is written — by the row it
        already points at, then the product, then the name — so re-saving an
        invoice updates the product instead of adding a second one, and nothing
-       here deletes a row that carries milestones, comments and attachments. */
+       here deletes a row that carries comments and attachments. */
     && /\$line->project_product_id && \(\$match = \(clone \$query\)->whereKey\(\$line->project_product_id\)/.test(productServiceCode)
     && /\$line->product_id && \(\$match = \(clone \$query\)->where\('product_id', \$line->product_id\)/.test(productServiceCode)
     && /whereRaw\('LOWER\(product_name\) = \?', \[mb_strtolower\(\$name\)\]\)/.test(productServiceCode)
@@ -720,7 +696,7 @@ check('the project products are written by the documents that mention them',
     && ! /total_amount\s*=[^=]/.test(productServiceCode)
     && /total_amount = round\(\$qty \* \$price, 2\)/.test(read('app/Models/ProjectProduct.php'))
     /* There is no add door and no delete door. A project product is made by
-       the document that mentions it, and the row carries milestones, comments
+       the document that mentions it, and the row carries comments
        and attachments — so the tab may not offer either, the router may not
        declare either, and the controller answers one verb. */
     && ! /addProductModal|openAddProductModal|projects\.products\.store/.test(productTab)
@@ -865,7 +841,7 @@ const declaredRoutes = new Set([...webRoutes.matchAll(/name\('([a-z0-9_.-]+)'\)/
 const routeNamePrefixes = [...webRoutes.matchAll(/->name\('([a-z0-9_.-]+\.)'\)/g)].map(m => m[1]);
 routeNamePrefixes.forEach(prefix => [...declaredRoutes].forEach(name => declaredRoutes.add(prefix + name)));
 const resourceBases = [...webRoutes.matchAll(/Route::resource\('([a-z-]+)'/g)].map(m => m[1]);
-const doorsUsed = [...(recordViews + milestoneViews).matchAll(/route\('([a-z0-9_.-]+)'/g)]
+const doorsUsed = [...(recordViews + retiredViews).matchAll(/route\('([a-z0-9_.-]+)'/g)]
     .map(m => m[1].replace(/['\s)]+$/, ''));
 
 check('every door a panel opens exists',
@@ -877,12 +853,12 @@ check('every door a panel opens exists',
    is `data-confirm` on the form; a form that already sits in its own modal
    footer has asked the question, and asking twice is how people learn to click
    through the question. */
-const deleteForms = [...(recordViews + milestoneViews).matchAll(/<form[\s\S]*?<\/form>/g)]
+const deleteForms = [...(recordViews + retiredViews).matchAll(/<form[\s\S]*?<\/form>/g)]
     .map(form => form[0])
     .filter(form => /@method\('DELETE'\)/.test(form));
 
 check('a destructive action asks first',
-    deleteForms.length >= 4
+    deleteForms.length >= 3
     && deleteForms.every(form => /data-confirm=/.test(form) || /master-modal-footer/.test(form)));
 
 /* The public project portal is gone — the client follows a project by signing
@@ -907,12 +883,13 @@ check('the client follows a project in the login portal, not through a token lin
     && /route\('client-portal\.login'\)/.test(recordViews)
     && /where\('show_client_portal', true\)/.test(read('app/Http/Controllers/ClientPortalProjectController.php')));
 
-check('the status form keeps its four facts, in the shared drawer',
+check('the status form keeps editable state separate from workflow progress',
     /<x-drawer id="projectStatusDrawer"/.test(showView)
     && /action="\{\{ route\('projects\.status\.update', \$project\) \}\}"/.test(showView)
     && /@method\('PATCH'\)/.test(showView)
-    && ['status', 'stage', 'health', 'progress_percent']
-        .every(name => new RegExp(`name="${name}"`).test(showView)));
+    && ['status', 'stage', 'health'].every(name => new RegExp(`name="${name}"`).test(showView))
+    && !/name="progress_percent"/.test(showView)
+    && /Workflow progress/.test(showView));
 
 check('the record page is written down',
     /record page/i.test(read('docs/projects-module.md'))

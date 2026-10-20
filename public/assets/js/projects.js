@@ -6,9 +6,7 @@
        shared list toolkit (row navigation and the pinned-header shadow) and
        delete confirmation
      - project detail: tab navigation (hash + localStorage restore) and the
-       add/edit modals for products, milestones, attachments and tracking
-     - milestones tab: timeline editor modal (pmile-*, module-specific
-       design)
+       add/edit modals for products, attachments and tracking
    The standard .master-modal dialogs on the detail page use the shared
    master-* modal lifecycle from app-layout.js (window.MasterModal): this
    file only opens modals and fills their forms — close/Escape/backdrop
@@ -158,7 +156,6 @@
                     setValue(editTrackingForm, 'project_product_id', tracking.project_product_id);
                     setValue(editTrackingForm, 'title', tracking.title);
                     setValue(editTrackingForm, 'status', tracking.status);
-                    setValue(editTrackingForm, 'progress_percent', tracking.progress_percent);
                     setValue(editTrackingForm, 'location', tracking.location);
                     setValue(editTrackingForm, 'notes', tracking.notes);
                     setValue(editTrackingForm, 'is_public', tracking.is_public);
@@ -204,111 +201,6 @@
                 window.MasterModal.open(addAttachmentModal);
             });
         }
-    }
-
-    /* ------------------------------------------------------------------
-       Milestones tab — timeline editor modal
-       Uses the shared master-modal layer (app-layout.js) so it matches
-       every other module: same card, header, close button and footer.
-       Destructive actions open a separate themed confirmation modal.
-       ------------------------------------------------------------------ */
-    function initMilestoneModal() {
-        var editModal = document.getElementById('editMilestoneModal');
-        if (!editModal) return;
-
-        var deleteModal = document.getElementById('deleteMilestoneModal');
-        var editForm = document.getElementById('editMilestoneForm');
-        var deleteForm = document.getElementById('deleteMilestoneForm');
-
-        function openModal(modal) {
-            if (!modal) return;
-            if (typeof window.MasterModal !== 'undefined') {
-                window.MasterModal.open(modal);
-                return;
-            }
-            modal.classList.add('open');
-            modal.setAttribute('aria-hidden', 'false');
-            document.body.classList.add('master-modal-open');
-        }
-
-        function closeModal(modal) {
-            if (!modal) return;
-            if (typeof window.MasterModal !== 'undefined') {
-                window.MasterModal.close(modal);
-                return;
-            }
-            modal.classList.remove('open');
-            modal.setAttribute('aria-hidden', 'true');
-            if (!document.querySelector('.master-modal.open')) {
-                document.body.classList.remove('master-modal-open');
-            }
-        }
-
-        function setField(id, value) {
-            var field = document.getElementById(id);
-            if (field) field.value = value || '';
-        }
-
-        function setChecked(id, value) {
-            var field = document.getElementById(id);
-            if (field) field.checked = !!value;
-        }
-
-        document.querySelectorAll('.editMilestoneBtn').forEach(function (button) {
-            button.addEventListener('click', function () {
-                var milestone = {};
-                try {
-                    milestone = JSON.parse(button.getAttribute('data-milestone') || '{}');
-                } catch (e) { /* ignore malformed payload */ }
-
-                if (editForm) editForm.action = button.getAttribute('data-update-url') || '#';
-                if (deleteForm) deleteForm.action = button.getAttribute('data-delete-url') || '#';
-
-                var modalTitle = document.getElementById('editMilestoneModalTitle');
-                if (modalTitle) {
-                    modalTitle.textContent = milestone.title ? 'Edit ' + milestone.title : 'Edit Milestone';
-                }
-
-                var deleteDesc = document.getElementById('deleteMilestoneDesc');
-                if (deleteDesc) {
-                    deleteDesc.textContent = milestone.title
-                        ? 'Are you sure you want to delete "' + milestone.title + '"? This action cannot be undone.'
-                        : 'Are you sure you want to delete this milestone? This action cannot be undone.';
-                }
-
-                setField('edit_milestone_key', milestone.milestone_key);
-                setField('edit_project_product_id', milestone.project_product_id);
-                setField('edit_title', milestone.title);
-                setField('edit_status', milestone.status || 'not_started');
-                setField('edit_progress_percent', milestone.progress_percent || 0);
-                setField('edit_planned_start_date', milestone.planned_start_date);
-                setField('edit_planned_end_date', milestone.planned_end_date);
-                setField('edit_actual_start_date', milestone.actual_start_date);
-                setField('edit_actual_end_date', milestone.actual_end_date);
-                setField('edit_owner_id', milestone.owner_id);
-                setField('edit_sort_order', milestone.sort_order || 0);
-                setField('edit_client_note', milestone.client_note);
-                setField('edit_internal_notes', milestone.internal_notes);
-                setField('edit_notes', milestone.notes);
-                setField('edit_blocked_reason', milestone.blocked_reason);
-                setChecked('edit_is_public', milestone.is_public);
-                setChecked('edit_is_required', milestone.is_required);
-
-                openModal(editModal);
-            });
-        });
-
-        /* Footer "Delete" hands over to the themed confirmation modal. */
-        var openDelete = document.getElementById('openDeleteMilestoneModal');
-        if (openDelete) {
-            openDelete.addEventListener('click', function () {
-                closeModal(editModal);
-                openModal(deleteModal);
-            });
-        }
-
-        /* Close/backdrop/Escape handling is owned by the shared modal layer
-           (app-layout.js) through [data-close-modal]. */
     }
 
     /* ------------------------------------------------------------------
@@ -382,7 +274,6 @@
         initProjectList();
         initDeleteConfirm();
         initDetailModals();
-        initMilestoneModal();
         initWorkflowViews();
     });
 })();

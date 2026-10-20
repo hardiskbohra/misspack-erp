@@ -13,14 +13,12 @@
             && ! in_array($project->status, ['completed', 'cancelled'], true)
             && $project->target_date->lessThan(now()->startOfDay());
         $daysLate = $isLate ? (int) $project->target_date->diffInDays(now()->startOfDay()) : 0;
-        $milestonesDone = $project->milestones->where('status', 'completed')->count();
-        $milestonesOpen = $project->milestones->whereNotIn('status', ['completed', 'skipped'])->count();
         $estimatedValue = $project->estimatedValue();
         $budgetAmount = $project->budgetAmount();
         $receivedPercent = $estimatedValue > 0
             ? min(100, (int) round($totals['inward'] / $estimatedValue * 100))
             : 0;
-        $progress = max(0, min(100, (int) $project->progress_percent));
+        $progress = max(0, min(100, (int) ($workflow?->calculated_progress ?? 0)));
         /* The initials, the way the client and vendor pages compute theirs: a
            Stringable is a string, not a collection — `Str::of(...)->map()` is a
            collection method that only fails when the page is opened. */
@@ -97,13 +95,10 @@
                 <span class="project-attention-icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></span>
                 <div class="project-attention-copy">
                     <strong>Target date passed {{ $daysLate }} {{ \Illuminate\Support\Str::plural('day', $daysLate) }} ago</strong>
-                    <span>
-                        {{ $milestonesOpen }} open {{ \Illuminate\Support\Str::plural('milestone', $milestonesOpen) }} ·
-                        {{ $money($totals['outstanding']) }} outstanding
-                    </span>
+                    <span>{{ $workflow?->steps?->whereNotIn('status', ['completed', 'skipped'])->count() ?? 0 }} workflow controls remain · {{ $money($totals['outstanding']) }} outstanding</span>
                 </div>
-                <a class="master-btn master-btn-soft master-btn-sm" href="{{ $recordUrl('milestones') }}">
-                    <i class="fa-solid fa-flag-checkered" aria-hidden="true"></i> Open milestones
+                <a class="master-btn master-btn-soft master-btn-sm" href="{{ $recordUrl('workflow') }}#workflow-actions">
+                    <i class="fa-solid fa-diagram-project" aria-hidden="true"></i> Open workflow
                 </a>
             </div>
         @endif
@@ -168,8 +163,6 @@
                     @include('projects.partials.record-workflow')
                 @elseif ($tab === 'products')
                     @include('projects.partials.record-products')
-                @elseif ($tab === 'milestones')
-                    @include('projects.partials.milestones-tab')
                 @elseif ($tab === 'payments')
                     @include('projects.partials.record-money')
                 @elseif ($tab === 'shipments')
@@ -196,7 +189,7 @@
              this page that changes what the record says, and it does not need to
              occupy the header for the rest of the visit. --}}
         <x-drawer id="projectStatusDrawer" title="Update status" eyebrow="Project status"
-            subtitle="Status, stage, health and progress in one place. The project's page reads them everywhere." size="medium">
+            subtitle="Update status, stage and health. Progress is calculated only by the Workflow Control Center." size="medium">
             <form method="POST" action="{{ route('projects.status.update', $project) }}" id="projectStatusForm">
                 @csrf
                 @method('PATCH')
@@ -228,12 +221,7 @@
                                 @endforeach
                             </select>
                         </label>
-                        <label class="master-field">
-                            <span class="master-label">Progress</span>
-                            <input class="master-input" type="number" name="progress_percent" min="0" max="100"
-                                value="{{ $progress }}">
-                            <small class="master-help">A percentage, 0 to 100.</small>
-                        </label>
+                        <div class="master-field"><span class="master-label">Workflow progress</span><div class="master-input" aria-readonly="true">{{ $progress }}% calculated</div><small class="master-help">Complete workflow controls to advance this value.</small></div>
                     </div>
                 </section>
                 <x-slot:footer>

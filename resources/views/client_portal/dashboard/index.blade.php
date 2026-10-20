@@ -64,9 +64,9 @@
                         <span class="cp-dashboard-record-copy">
                             <strong>{{ $project->name }}</strong>
                             <small>{{ $project->project_number }} · {{ $project->stageLabel() }}</small>
-                            <span class="cp-progress-track" aria-label="{{ (int) $project->progress_percent }} percent complete"><span style="width:{{ (int) $project->progress_percent }}%"></span></span>
+                            <span class="cp-progress-track" aria-label="{{ (int) ($project->workflow?->calculated_progress ?? 0) }} percent complete"><span style="width:{{ (int) ($project->workflow?->calculated_progress ?? 0) }}%"></span></span>
                         </span>
-                        <span class="cp-record-percent">{{ (int) $project->progress_percent }}%</span>
+                        <span class="cp-record-percent">{{ (int) ($project->workflow?->calculated_progress ?? 0) }}%</span>
                     </a>
                 @empty
                     <div class="cp-empty cp-empty-spacious"><i class="fa-regular fa-folder-open"></i><strong>No published projects yet</strong><span>Projects shared by MissPack will appear here.</span></div>

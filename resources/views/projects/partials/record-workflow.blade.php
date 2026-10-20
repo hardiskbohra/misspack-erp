@@ -12,7 +12,6 @@
             </section>
         @else
             @php
-                $reportedVariance = $workflow->reported_progress === null ? null : $workflow->reported_progress - $workflow->calculated_progress;
                 $groupedSteps = $workflow->steps->groupBy('stage_key');
                 $currentActions = app(\App\Services\ProjectCoordinatorQueue::class)->currentForWorkflow($workflow);
                 $blockedActions = $currentActions->where('is_blocked', true)->count();
@@ -337,17 +336,16 @@
                 </div>
             </section>
 
-            <div class="master-modal" id="workflowReportModal" aria-hidden="true" aria-labelledby="workflowReportTitle" data-open-on-errors="{{ $errors->hasAny(['reported_stage','reported_progress','commercial_sales_invoice_id','advance_percentage_override','reported_reason']) ? 'true' : 'false' }}">
+            <div class="master-modal" id="workflowReportModal" aria-hidden="true" aria-labelledby="workflowReportTitle" data-open-on-errors="{{ $errors->hasAny(['reported_stage','commercial_sales_invoice_id','advance_percentage_override','reported_reason']) ? 'true' : 'false' }}">
                 <div class="master-modal-card workflow-report-modal" role="dialog" aria-modal="true" aria-labelledby="workflowReportTitle" aria-describedby="workflowReportDescription">
                     <form method="POST" action="{{ route('projects.workflow.report', $project) }}">@csrf @method('PATCH')
                         <div class="master-modal-header">
-                            <div class="master-modal-heading"><span class="master-modal-icon"><i class="fa-solid fa-user-pen"></i></span><div><h3 class="master-modal-title" id="workflowReportTitle">Coordinator report</h3><p class="master-modal-subtitle" id="workflowReportDescription">Update the manual execution view and commercial inputs. Manual reporting never bypasses a gate.</p></div></div>
+                            <div class="master-modal-heading"><span class="master-modal-icon"><i class="fa-solid fa-user-pen"></i></span><div><h3 class="master-modal-title" id="workflowReportTitle">Coordinator report</h3><p class="master-modal-subtitle" id="workflowReportDescription">Update the reported stage and commercial inputs. Project progress remains calculated exclusively from workflow controls.</p></div></div>
                             <button type="button" class="master-modal-close" data-close-modal aria-label="Close coordinator report">×</button>
                         </div>
                         <div class="master-modal-body">
                             <div class="master-modal-grid workflow-report-grid">
                                 <label class="master-field"><span class="master-label">Reported stage</span><select class="master-select" name="reported_stage" required>@foreach($workflowStages as $key=>$label)<option value="{{ $key }}" @selected(old('reported_stage',$workflow->reported_stage ?: $workflow->calculated_stage)===$key)>{{ $label }}</option>@endforeach</select></label>
-                                <label class="master-field"><span class="master-label">Reported progress</span><input class="master-input" type="number" name="reported_progress" min="0" max="100" value="{{ old('reported_progress',$workflow->reported_progress ?? $workflow->calculated_progress) }}" required><small class="master-help">Calculated progress is {{ $workflow->calculated_progress }}%.</small></label>
                                 <label class="master-field"><span class="master-label">Commercial baseline PI</span><select class="master-select" name="commercial_sales_invoice_id"><option value="">Not selected</option>@foreach($project->proformaInvoices as $invoice)<option value="{{ $invoice->id }}" @selected((string)old('commercial_sales_invoice_id',$workflow->commercial_sales_invoice_id)===(string)$invoice->id)>{{ $invoice->invoice_number }} · {{ $money($invoice->total_amount) }}</option>@endforeach</select><small class="master-help">Authoritative source for advance and dispatch terms.</small></label>
                                 <label class="master-field"><span class="master-label">Advance override %</span><input class="master-input" type="number" name="advance_percentage_override" min="0" max="100" step="0.01" value="{{ old('advance_percentage_override',$workflow->advance_percentage_override) }}" placeholder="Use PI terms"><small class="master-help">Leave empty to use the selected PI.</small></label>
                                 <label class="master-field full"><span class="master-label">Reason / execution update</span><textarea class="master-textarea" name="reported_reason" rows="4" maxlength="2000" required>{{ old('reported_reason',$workflow->reported_reason) }}</textarea></label>

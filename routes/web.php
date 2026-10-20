@@ -46,7 +46,6 @@ use App\Http\Controllers\ProjectExceptionController;
 use App\Http\Controllers\ProjectQualityInspectionController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectTrackingController;
-use App\Http\Controllers\ProjectMilestoneController;
 use App\Http\Controllers\PublicFeedbackController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ClientPortalFeedbackController;
@@ -438,8 +437,8 @@ Route::middleware('auth')->group(function () {
 
         /* One route: a project product is created by the invoice or purchase
            document that mentions it (`App\Services\ProjectProducts`) and is not
-           deleted from the project — the row carries milestones, comments and
-           attachments, and the office edits only what the project owns. */
+           deleted from the project — the row carries comments and attachments,
+           and the office edits only what the project owns. */
         Route::put('/project-products/{projectProduct}', [ProjectProductController::class, 'update'])->name('projects.products.update');
 
         Route::post('/projects/{project}/comments', [ProjectCommentController::class, 'store'])->name('projects.comments.store');
@@ -455,10 +454,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/project-tracking/{trackingUpdate}', [ProjectTrackingController::class, 'destroy'])->name('projects.tracking.destroy');
 
     
-        Route::post('/projects/{project}/milestones', [ProjectMilestoneController::class, 'store'])->name('projects.milestones.store');
-        Route::post('/projects/{project}/milestones/defaults', [ProjectMilestoneController::class, 'generateDefaults'])->name('projects.milestones.defaults');
-        Route::patch('/project-milestones/{milestone}', [ProjectMilestoneController::class, 'update'])->name('projects.milestones.update');
-        Route::delete('/project-milestones/{milestone}', [ProjectMilestoneController::class, 'destroy'])->name('projects.milestones.destroy');
     
         /* Feedback Management.
 

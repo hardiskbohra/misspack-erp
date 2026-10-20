@@ -21,6 +21,7 @@ class ClientPortalDashboardController extends ClientPortalBaseController
         $projects = collect();
         $projectTotal = 0;
         $projectQuery = Project::query()
+            ->with('workflow:id,project_id,calculated_progress')
             ->where('client_id', $client->id)
             ->where('show_client_portal', true);
         $projectTotal = (clone $projectQuery)->count();

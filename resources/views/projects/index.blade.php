@@ -252,6 +252,7 @@
                             $totals = $project->paymentTotals();
                             $statusClass = str_replace('_', '-', (string) $project->status);
                             $healthWord = \Illuminate\Support\Str::before($project->healthLabel(), ' /');
+                            $workflowProgress = max(0, min(100, (int) ($project->workflow?->calculated_progress ?? 0)));
                             $isLate = $project->target_date
                                 && ! in_array($project->status, ['completed', 'cancelled'], true)
                                 && $project->target_date->lessThan($today);
@@ -274,10 +275,10 @@
                             <td data-label="Stage">
                                 <span class="project-table-stage">
                                     <span>{{ $project->stageLabel() }}</span>
-                                    <strong>{{ $project->progress_percent }}%</strong>
+                                    <strong>{{ $workflowProgress }}%</strong>
                                 </span>
                                 <span class="project-table-progress" aria-hidden="true">
-                                    <span style="width: {{ max(0, min(100, (int) $project->progress_percent)) }}%"></span>
+                                    <span style="width: {{ $workflowProgress }}%"></span>
                                 </span>
                             </td>
                             <td data-label="Owner" class="ui-mobile-secondary">
@@ -321,7 +322,7 @@
                                                 data-drawer-status="{{ $project->statusLabel() }}"
                                                 data-drawer-health="{{ $project->healthLabel() }}"
                                                 data-drawer-priority="{{ $project->priorityLabel() }}"
-                                                data-drawer-progress="{{ $project->progress_percent }}%"
+                                                data-drawer-progress="{{ $workflowProgress }}%"
                                                 data-drawer-start-date="{{ $project->start_date?->format('d M Y') ?? 'No start date' }}"
                                                 data-drawer-target-date="{{ $project->target_date?->format('d M Y') ?? 'No target date' }}"
                                                 data-drawer-estimated="{{ \App\Helpers\CommonHelper::amount($project->estimatedValue(), $project->currency) }}"
@@ -358,7 +359,7 @@
                                     <p class="master-list-empty-text">
                                         {{ $filtersActive
                                             ? 'Try a different search or clear the filters to see every project.'
-                                            : 'Create a project when an order is confirmed, and track its products, milestones, payments and feedback from one page.' }}
+                                            : 'Create a project when an order is confirmed, and track its workflow, products, payments and feedback from one page.' }}
                                     </p>
                                     <div class="master-list-empty-actions">
                                         @if ($filtersActive)
@@ -423,7 +424,7 @@
                         <div>
                             <h2 class="master-modal-title" id="quickProjectTitle">Quick project</h2>
                             <p class="master-modal-subtitle" id="quickProjectDescription">
-                                Start the project with the essentials. Products, milestones and payments are added on its page.</p>
+                                Start the project with the essentials. Workflow, products and payments are managed on its page.</p>
                         </div>
                     </div>
                     <button type="button" class="master-modal-close" data-close-modal="quickProjectModal"

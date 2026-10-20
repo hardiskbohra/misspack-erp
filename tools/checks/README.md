@@ -67,10 +67,14 @@ node tools/checks/projects-check.cjs  # the projects list is the shared master-l
                                       # rather than the removed token link
 node tools/checks/project-workflow-check.cjs
                                       # the standard project-execution foundation: independent
-                                      # product steps, weighted calculated progress beside the
-                                      # coordinator report, structured Proforma payment policy,
-                                      # auditable gate snapshots and manager overrides, and the
-                                      # workflow command centre on the project record
+                                      # product steps, workflow-owned calculated progress,
+                                      # structured Proforma payment policy, auditable gate
+                                      # snapshots and manager overrides, and the workflow command
+                                      # centre on the project record
+node tools/checks/project-simplification-check.cjs
+                                      # milestones are fully retired and every manual progress
+                                      # write path is removed; workflow calculation is the sole
+                                      # publisher of project progress
 node tools/checks/notes-check.cjs     # the notes module: a note is private to the login that wrote
                                       # it — one owner scope and one row door (a 404 for anybody
                                       # else), one writer, one colour vocabulary with a rule and
@@ -244,14 +248,13 @@ when the dialogs were run.
 | One payroll list | the ledger's Employee field offers employees first and office accounts underneath, from one method on the model — entries filed before roles existed still point at people the picker contains |
 | A tab is a URL | the project record rendered all ten panels on every request and kept the active one in `localStorage`, so no panel could be linked, bookmarked, opened in a second window, or reached with the back button. One panel is rendered per request now, `?tab=` is validated against the controller's own list of names, and a form posted from a tab returns to that tab because every sub-action redirects `back()` |
 | The server writes the URL | each edit dialog carries `data-update-url="{{ route(...) }}"` with an `__ID__` placeholder, bound by one script helper: a hand-built `/project-products/12` misses an install served from a sub-path, and a renamed route is a 404 in whichever of the two places was forgotten |
-| One vocabulary, two pages | the status and health tones are scoped to `.project` and shared by the list, the record header, a milestone badge and the log — so a status cannot mean one thing on the list and another on the page it opens |
+| One vocabulary, two pages | the status and health tones are scoped to `.project` and shared by the list, the record header, a workflow control badge and the log — so a status cannot mean one thing on the list and another on the page it opens |
 | The record page speaks the shell | the record page's sheet may place the shell's classes and no more: it composes the header, the two-column grid and the thread rows, while the cards, facts, tables, badges, empty states and dialogs come from the shared sheets. A second card design on the detail page is how the module stopped matching the list next door |
 | A panel closes as it opens | the tag stack is the only reader a Blade panel has: a wrapper closed one line early moves every card after it out of the grid, and the browser silently recovers — so the checks walk the panel's tags instead of trusting the eye |
 | One writer for a control | a module sheet may place a shared class only inside that module's own scopes: a bare `.master-field input` (`padding: 10px 11px`) beat the shell's `.master-input` (`10px 14px`) on every projects screen, so the same control was a different size on one module's pages — the legacy page's field rules and the form's label colours are scoped to their own pages, and the check refuses a new rule that places a shell class on its own |
 | A string is not a list | `Str::of()` hands back a Stringable — a string that answers to string methods and to nothing else — so `->map()`, `->filter()` or `->each()` on that chain compiles, passes every check that reads a template, and throws `BadMethodCallException` the first time a browser opens the page it is on. The record mark's initials did exactly that. The house idiom is to collect the parts (`collect(explode(...))->map(...)->implode('')`), and no `Str::of()` chain may call a collection method |
 | A string is not an object | the mirror rule: every other `Str::*` static returns a string, and so do `str_*`, `mb_*`, `trim`, `explode`, `implode`, `number_format` and friends — a `->method()` chained onto one of those is a fatal error the moment the page renders, not a clever way to compose text |
 | A panel another sheet owns | the feedback tab renders inside the project record, which loads `projects.css` and never `feedback.css`: a class from another module's sheet is a class with no rules at all, so the tab is built from the record's vocabulary, owns its own `master-tab-panel` wrapper, and reads its band tones from the same state table as every other badge on the page |
-| A class a screen names has rules | a class left behind in the markup renders as nothing, and no reviewer reading the Blade can tell: every `project-*`/`pd-*`/`pmile-*`/`fb-*` class a module screen names is defined by a rule in one of the app's sheets or by another screen that names it, with dynamic compositions (`project-health-dot--{{ $key }}`) not counted as names |
 | A panel brings its own padding | the shared `.master-card` is a surface with no inset — a list card can be flush because its bars are padded instead — but a record panel holds facts, stats or a table directly, so every panel the record renders wears `.project-detail-card` and the card writes the guideline's 22/24 (16/18 on phones), the same inset the client and vendor records give their own cards |
 | A door is not left standing | the public project portal (`/project-portal/{token}`) is gone — the client follows a project by signing in — so no route name, column or copy button may survive it, and `projects.show_client_portal` is checked as still read by the login portal, because that flag is the reason the column stayed |
 | A recipe, not the answer | a fixed asset stores *how* it depreciates — useful life, method, residual value — and never the accumulated depreciation or the net book value, which are computed on every read from the asset's own dates. A stored book value is a column somebody has to remember to correct, and the first time somebody forgets, the register prints a figure the arithmetic does not produce |

@@ -101,11 +101,15 @@ class ProjectWorkflowExecution
         $progress = $totalWeight > 0 ? (int) round($completedWeight / $totalWeight * 100) : 0;
         $next = $eligible->whereNotIn('status', ['completed', 'skipped'])->sortBy('sort_order')->first();
 
+        $calculatedProgress = max(0, min(100, $progress));
         $workflow->update([
-            'calculated_progress' => max(0, min(100, $progress)),
+            'calculated_progress' => $calculatedProgress,
             'calculated_stage' => $next?->stage_key ?: 'completed',
             'status' => $next ? 'active' : 'completed',
         ]);
+        // projects.progress_percent is a read cache for lists and dashboards;
+        // the workflow calculator is its only writer.
+        $workflow->project()->update(['progress_percent' => $calculatedProgress]);
 
         return $workflow->fresh(['steps.product', 'steps.owner', 'reporter', 'commercialInvoice']);
     }

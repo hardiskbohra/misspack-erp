@@ -72,24 +72,6 @@ class ProjectProduct extends Model
         return $this->hasMany(ProjectAttachment::class)->latest('id');
     }
 
-    public function milestones()
-    {
-        return $this->hasMany(ProjectMilestone::class)->orderBy('sort_order')->orderBy('id');
-    }
-
-    public function publicMilestones()
-    {
-        return $this->hasMany(ProjectMilestone::class)->where('is_public', true)->orderBy('sort_order')->orderBy('id');
-    }
-    
-    public function currentMilestone()
-    {
-        return $this->milestones
-            ->whereNotIn('status', ['completed', 'skipped'])
-            ->sortBy('sort_order')
-            ->first();
-    }
-
     public function trackingUpdates()
     {
         return $this->hasMany(ProjectTrackingUpdate::class)->latest('occurred_at')->latest('id');

@@ -31,7 +31,6 @@ class ProjectWorkflowController extends Controller
         abort_unless($workflow, 404);
         $data = $request->validate([
             'reported_stage' => ['required', Rule::in(array_keys(ProjectWorkflowExecution::stageOptions()))],
-            'reported_progress' => ['required', 'integer', 'min:0', 'max:100'],
             'reported_reason' => ['required', 'string', 'max:2000'],
             'advance_percentage_override' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'commercial_sales_invoice_id' => ['nullable', Rule::exists('sales_invoices', 'id')->where(fn ($query) => $query->where('project_id', $project->id)->where('invoice_type', 'proforma'))],

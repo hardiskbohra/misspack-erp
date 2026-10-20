@@ -6,7 +6,6 @@ use App\Models\Project;
 use App\Models\ProjectLog;
 use App\Models\ProjectProduct;
 use App\Models\User;
-use App\Models\ProjectMilestone;
 use App\Services\ProjectWorkflowExecution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,7 +28,6 @@ class ProjectController extends Controller
         'overview' => 'Overview',
         'workflow' => 'Workflow',
         'products' => 'Products',
-        'milestones' => 'Milestones',
         'payments' => 'Payments',
         'shipments' => 'Shipments',
         'attachments' => 'Documents',
@@ -52,7 +50,7 @@ class ProjectController extends Controller
            is worth and may spend — so the list loads the cashflow entries and
            the four document relations, one query each instead of a query per
            project per figure. The row's quick view reads the same totals. */
-        $with = ['products', 'products.milestones', 'cashflowEntries', 'assignedUser'];
+        $with = ['products', 'workflow', 'cashflowEntries', 'assignedUser'];
         if (Schema::hasTable('cashflow_allocations')) {
             $with[] = 'cashflowAllocations.cashflowEntry';
         }
@@ -110,7 +108,6 @@ class ProjectController extends Controller
             'start_date' => now()->toDateString(),
             'target_date' => now()->addDays(30)->toDateString(),
             'currency' => 'INR',
-            'progress_percent' => 0,
             'show_client_portal' => true,
         ]);
 
@@ -132,7 +129,6 @@ class ProjectController extends Controller
 
         if (($data['status'] ?? null) === 'completed' && empty($data['completed_at'])) {
             $data['completed_at'] = now();
-            $data['progress_percent'] = 100;
         }
 
         $project = DB::transaction(function () use ($data, $workflowExecution) {
@@ -169,7 +165,6 @@ class ProjectController extends Controller
                 'start_date' => $data['start_date'] ?? now()->toDateString(),
                 'target_date' => $data['target_date'] ?? now()->addDays(30)->toDateString(),
                 'currency' => 'INR',
-                'progress_percent' => 0,
                 'show_client_portal' => true,
                 'assigned_to' => $data['assigned_to'] ?? null,
                 'created_by' => Auth::id(),
@@ -196,12 +191,6 @@ class ProjectController extends Controller
             'trackingUpdates.product', 'trackingUpdates.creator',
             'logs.user', 'logs.product', 'assignedUser', 'creator',
         ];
-        if (class_exists(\App\Models\ProjectMilestone::class) && Schema::hasTable('project_milestones')) {
-            $with[] = 'milestones.product';
-            $with[] = 'milestones.owner';
-            $with[] = 'milestones.creator';
-        }
-
         if ($this->clientModelAvailable()) {
             $with[] = 'client';
         }
@@ -248,9 +237,6 @@ class ProjectController extends Controller
         }
 
         $project->load($with);
-        if (! $project->relationLoaded('milestones')) {
-            $project->setRelation('milestones', collect());
-        }
         if (! $project->relationLoaded('shipments')) {
             $project->setRelation('shipments', collect());
         }
@@ -302,7 +288,6 @@ class ProjectController extends Controller
             'tabCounts' => [
                 'workflow' => ($workflow?->steps?->whereNotIn('status', ['completed', 'skipped'])->count() ?? 0) + $projectExceptions->count(),
                 'products' => $project->products->count(),
-                'milestones' => $project->milestones->count(),
                 'payments' => $cashflowCount,
                 'shipments' => $project->shipments->count(),
                 'attachments' => $project->attachments->count(),
@@ -344,14 +329,13 @@ class ProjectController extends Controller
 
         if (($data['status'] ?? null) === 'completed' && ! $project->completed_at) {
             $data['completed_at'] = now();
-            $data['progress_percent'] = 100;
         }
         if (! in_array(($data['status'] ?? null), array_merge(['completed'], Project::closureStatuses()), true)) {
             $data['completed_at'] = null;
         }
 
         DB::transaction(function () use ($project, $data) {
-            $old = $project->only(['name', 'status', 'stage', 'priority', 'health', 'progress_percent', 'target_date']);
+            $old = $project->only(['name', 'status', 'stage', 'priority', 'health', 'target_date']);
             $project->update($data);
             $this->writeLog($project, 'updated', 'Project updated', 'Project details were updated.', $old, $project->fresh()->toArray(), false);
         });
@@ -365,7 +349,6 @@ class ProjectController extends Controller
             'status' => ['required', Rule::in(array_keys(Project::statusOptions()))],
             'stage' => ['required', Rule::in(array_keys(Project::stageOptions()))],
             'health' => ['required', Rule::in(array_keys(Project::healthOptions()))],
-            'progress_percent' => ['required', 'integer', 'min:0', 'max:100'],
         ]);
 
         if (in_array($data['status'], Project::closureStatuses(), true) && $data['status'] !== $project->status) {
@@ -375,16 +358,15 @@ class ProjectController extends Controller
             throw \Illuminate\Validation\ValidationException::withMessages(['status' => 'Use the Workflow manager action to reopen this project.']);
         }
 
-        $old = $project->only(['status', 'stage', 'health', 'progress_percent', 'completed_at']);
+        $old = $project->only(['status', 'stage', 'health', 'completed_at']);
         if ($data['status'] === 'completed') {
-            $data['progress_percent'] = 100;
             $data['completed_at'] = $project->completed_at ?: now();
         } elseif (! in_array($data['status'], Project::closureStatuses(), true)) {
             $data['completed_at'] = null;
         }
 
         $project->update($data);
-        $this->writeLog($project, 'status_updated', 'Project status updated', 'Status/stage/progress was updated.', $old, $data, true);
+        $this->writeLog($project, 'status_updated', 'Project status updated', 'Status, stage and health were updated. Progress remains workflow-calculated.', $old, $data, true);
 
         /* Marking a project complete is the moment the feedback ask is worth
            making, so the message says where it is. An offer, never automatic: a
@@ -439,7 +421,6 @@ class ProjectController extends Controller
             /* The value and the budget are the documents' — see
                `Project::estimatedValue()` and `Project::budgetAmount()`. The
                form has no field for either, so neither is validated here. */
-            'progress_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
             'scope_summary' => ['nullable', 'string'],
             'deliverables' => ['nullable', 'string'],
             'client_notes' => ['nullable', 'string'],
@@ -464,8 +445,6 @@ class ProjectController extends Controller
             'productStatusOptions' => \App\Models\ProjectProduct::statusOptions(),
             'attachmentCategoryOptions' => \App\Models\ProjectAttachment::categoryOptions(),
             'trackingStatusOptions' => \App\Models\ProjectTrackingUpdate::statusOptions(),
-            'milestoneOptions' => class_exists(\App\Models\ProjectMilestone::class) ? \App\Models\ProjectMilestone::milestoneOptions() : [],
-            'milestoneStatusOptions' => class_exists(\App\Models\ProjectMilestone::class) ? \App\Models\ProjectMilestone::statusOptions() : [],
         ];
     }
 

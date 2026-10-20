@@ -13,14 +13,13 @@ class ProjectWorkflow extends Model
 
     protected $fillable = [
         'project_id', 'template_key', 'template_version', 'status', 'calculated_stage',
-        'calculated_progress', 'reported_stage', 'reported_progress', 'reported_reason',
+        'calculated_progress', 'reported_stage', 'reported_reason',
         'reported_by', 'reported_at', 'commercial_sales_invoice_id',
         'advance_percentage_override', 'started_by', 'started_at',
     ];
 
     protected $casts = [
         'calculated_progress' => 'integer',
-        'reported_progress' => 'integer',
         'advance_percentage_override' => 'decimal:2',
         'reported_at' => 'datetime',
         'started_at' => 'datetime',

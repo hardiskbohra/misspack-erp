@@ -23,13 +23,13 @@
 
 <div class="cp-project-list">
     @forelse($projects as $project)
-        <article class="cp-card cp-project-card {{ (int)$project->progress_percent === 100 ? 'is-complete' : '' }}">
+        <article class="cp-card cp-project-card {{ (int) ($project->workflow?->calculated_progress ?? 0) === 100 ? 'is-complete' : '' }}">
             <div class="cp-project-card-main">
                 <span class="cp-project-icon"><i class="fa-solid fa-briefcase"></i></span>
                 <div class="cp-project-card-copy">
                     <div class="cp-project-card-top"><div><span class="cp-product-number">{{ $project->project_number }}</span><h2><a href="{{ route('client-portal.projects.show', $project) }}">{{ $project->name }}</a></h2></div></div>
                     <div class="cp-project-meta"><span><i class="fa-regular fa-calendar"></i> Started {{ optional($project->start_date)->format('d M Y') ?: 'not set' }}</span><span><i class="fa-solid fa-bullseye"></i> Target {{ optional($project->target_date)->format('d M Y') ?: 'not set' }}</span><span><i class="fa-solid fa-layer-group"></i> {{ $project->stageLabel() }}</span></div>
-                    <div class="cp-project-progress"><div><span>{{ $project->stageLabel() }}</span><strong>{{ (int)$project->progress_percent }}%</strong></div><div class="cp-progress-track"><span style="width:{{ (int)$project->progress_percent }}%"></span></div></div>
+                    <div class="cp-project-progress"><div><span>{{ $project->stageLabel() }}</span><strong>{{ (int) ($project->workflow?->calculated_progress ?? 0) }}%</strong></div><div class="cp-progress-track"><span style="width:{{ (int) ($project->workflow?->calculated_progress ?? 0) }}%"></span></div></div>
                 </div>
             </div>
             <div class="cp-project-card-action"><span class="cp-badge status-{{ $project->status }}">{{ $project->statusLabel() }}</span><a class="master-btn master-btn-soft" href="{{ route('client-portal.projects.show', $project) }}">Open project <i class="fa-solid fa-arrow-right"></i></a></div>

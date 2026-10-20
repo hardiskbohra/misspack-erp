@@ -1,7 +1,7 @@
 # The projects module
 
 A project is the office's record of an order being made: the client it belongs
-to, the products and milestones it is built from, the money that moves against
+to, the products and workflow controls it is built from, the money that moves against
 it, and the feedback that closes it. This file is the design of record for the
 screens that list and open it. `tools/checks/projects-check.cjs` is its guard,
 run with `node tools/checks/projects-check.cjs` before any commit that touches
@@ -74,7 +74,7 @@ button. It is now the shared record page:
 - **The tabs are links.** `SHOW_TABS` in `ProjectController` is the one list —
   the view draws the strip from it and the controller validates `?tab=` against
   it (an unknown tab lands on the overview). Because every sub-action redirects
-  `back()`, adding a product, a milestone, an attachment or a comment returns to the
+  `back()`, adding a product, a workflow control, an attachment or a comment returns to the
   tab it was posted from; and a panel can be shared, bookmarked, or opened in a
   new window. The old `initTabs` handler and the ten-panel render are gone.
 - **The panels are the shell's.** Each is a `section.master-tab-panel` holding
@@ -98,7 +98,7 @@ button. It is now the shared record page:
   empty state), so an empty table is never a dead end.
 - **One colour vocabulary.** The `.status-*` and `.health-*` tones are scoped to
   `.project` and shared by both pages, so a status reads the same in the list, in
-  the record header, in a milestone badge and in the log.
+  the record header, in a workflow control badge and in the log.
 - **The feedback tab is a record panel, not a copy of the feedback module.** The
   ask is issued from here (one live link per kind, refused while it is open), the
   answers are read here, and every door leads into `feedback.*` — that is where the
@@ -196,14 +196,14 @@ first to mention, because the client's invoice owns that figure once it exists. 
 matched to its row before anything is written — the row it already points at
 (`project_product_id`), then the same product, then the same name — so re-saving an invoice
 updates a product instead of adding a second one. Nothing is ever deleted: a project product
-carries milestones, comments and attachments, and a line dropped from a draft invoice must
+carries workflow controls, comments and attachments, and a line dropped from a draft invoice must
 not take the job's work with it. And `total_amount` is still only written by
 `ProjectProduct::saving` — quantity × rate, once — because a second arithmetic is how the two
 start disagreeing.
 
 The tab has **no add door and no delete door**. Adding by hand is what made the same product
 exist twice in the first place, and deleting is the wrong verb for a row that carries
-milestones, comments and attachments — a line dropped from a draft invoice must not take the
+workflow controls, comments and attachments — a line dropped from a draft invoice must not take the
 job's work with it. Gone with them: `ProjectProductController::store()` and `destroy()`, the
 two routes, the add modal, the row's delete form, and the `$products` / `$vendors` master
 lists the modals fed (the controller's `productModelAvailable()` / `vendorModelAvailable()`
@@ -217,10 +217,7 @@ are the documents'), the empty state offers the two doors that *do* fill it — 
 invoice* and *Record a purchase* — and `ProjectProduct::saving` remains the only writer of
 `total_amount`.
 
-The milestones tab keeps its own `pmile-*` stepper — a genuinely bespoke timeline
-— but its chrome is the shell's now: the five-box stat row is a `master-stats`
-row, its action bar is a `master-card`, its badges are `master-badge` tones, and
-its empty block is the shared one.
+The Workflow tab is the sole authority for calculated project progress. Completing, skipping, or manager-overriding required workflow controls recalculates the percentage; project forms, activity updates, and status controls cannot write it.
 
 ## How the sheet is scoped
 
@@ -254,7 +251,7 @@ module's size, so a chip click keeps its page context.
 ## What the module sheet owns
 
 `public/assets/css/projects.css` is loaded by the office list, the project form,
-the tabbed project page and the milestones tab. It owns:
+the tabbed project page and the workflow controls tab. It owns:
 
 - the domain's colour — `.status-*`, `.health-*` and `.band-*` tones, the
   priority chip, the late date, and their `:root[data-theme="dark"]`
@@ -284,8 +281,8 @@ the tabbed project page and the milestones tab. It owns:
   because a section head already spaces the table above it;
 - **nothing else.** A rule that names a `master-*` / `core-*` class must also
   name one of this module's scopes — `.project`, `.project-index`,
-  `.project-show`, `.project-form-page`, `.pd-page`, a `pmile-*`/`pf-*` class,
-  or the milestone modal's id. A bare `.master-field input` (`padding: 10px
+  `.project-show`, `.project-form-page`, `.pd-page`, a `pf-*` class,
+  or a workflow modal's id. A bare `.master-field input` (`padding: 10px
   11px`) used to beat the shell's `.master-input` (`padding: 10px 14px`) on
   every projects screen, so the same control was a different size here than
   everywhere else; the legacy page's field geometry and the form's label
@@ -296,19 +293,11 @@ One screen is still outside this file's scope: the form
 (`projects/form.blade.php`, `pf-*`). The client's own view of a project is the
 login portal's screen (`client_portal/projects/show.blade.php`), which loads the
 portal's own sheets — there is no second, public copy of the record any more.
-Everything the record page renders is in scope — all eleven panels are a
-`master-tab-panel` of shell cards — and the milestones sheet section keeps
-the stepper's own vocabulary (`pmile-step-*`, `pmile-current-*`,
-`pmile-product-head`, `pmile-head-actions`): a timeline drawn as a strip of
-connected steps is something no shared class describes. Those rules stay: the
-client portal's copy of the same block
-(`client_portal/projects/partials/milestone-product-block.blade.php`), the
-portal's own sheet, and the static preview under `public/_preview/` still render
-`pmile-*`, so nothing in that section is deleted with the office page.
+Everything the record page renders is in scope. The Workflow panel owns the execution matrix, current-action cards, production and QC modals, and the calculated progress displayed throughout the office and client views.
 
 ## Checks
 
-`tools/checks/projects-check.cjs` (61 checks) pins the composition above: the
+`tools/checks/projects-check.cjs` (60 checks) pins the composition above: the
 root is the master-list, the two cards sit in that order, the gap is not
 declared in the module's sheet, every chip carries its tally, the columns are
 named in the order the table draws them, the figures come from the grouped

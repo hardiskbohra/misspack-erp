@@ -40,8 +40,6 @@
         <button type="button" class="pd-tab-btn active" data-tab="overview" role="tab" aria-selected="true">Overview</button>
         <button type="button" class="pd-tab-btn" data-tab="products" role="tab" aria-selected="false">Products
             <span>{{ $project->products->count() }}</span></button>
-        <button type="button" class="pd-tab-btn" data-tab="milestones" role="tab" aria-selected="false">
-            Milestones <span>{{ $project->publicMilestones->count() }}</span></button>
         <button type="button" class="pd-tab-btn" data-tab="approvals" role="tab" aria-selected="false">
             Approvals <span>{{ $project->approvalRequests->where('status','open')->count() }}</span></button>
         <button type="button" class="pd-tab-btn" data-tab="comments" role="tab" aria-selected="false">
@@ -212,69 +210,6 @@
                 @endforelse
             </div>
         </section>
-
-        @php
-            $milestones = $project->publicMilestones;
-            $milestoneTotal = $milestones->count();
-            $milestoneCompleted = $milestones->where('status', 'completed')->count();
-            $milestonePublic = $milestoneTotal;
-            $milestoneOverdue = $milestones
-                ->filter(function ($milestone) {
-                    return method_exists($milestone, 'isOverdue') && $milestone->isOverdue();
-                })
-                ->count();
-            $milestoneProgress = $milestoneTotal ? (int) round($milestones->avg('progress_percent')) : 0;
-            $productsWithMilestones = $project->products;
-            $projectLevelMilestones = $milestones->whereNull('project_product_id')->values();
-        @endphp
-        
-        <section class="pd-tab-panel" id="pd-tab-milestones" data-tab-panel="milestones" role="tabpanel">
-            <div class="pmile-page">
-                <div class="pmile-stats">
-                    <div><span>Total Milestones</span><strong>{{ $milestoneTotal }}</strong></div>
-                    <div><span>Completed</span><strong class="green">{{ $milestoneCompleted }}</strong></div>
-                    <div><span>Milestones visible to you</span><strong class="blue">{{ $milestonePublic }}</strong></div>
-                    <div><span>Overdue / Attention</span><strong class="red">{{ $milestoneOverdue }}</strong></div>
-                    <div><span>Average Progress</span><strong>{{ $milestoneProgress }}%</strong></div>
-                </div>
-        
-                <div class="pmile-actions-card">
-                    <div class="pd-section-head">
-                        <div>
-                            <p class="pd-eyebrow">Product Timeline</p>
-                            <h2>Project Milestone Timelines</h2>
-                        </div>
-                    </div>
-                </div>
-        
-                <div class="pmile-product-list">
-                    @if ($projectLevelMilestones->count())
-                        @include('client_portal.projects.partials.milestone-product-block', [
-                            'title' => 'Project Level Milestones',
-                            'productMilestones' => $projectLevelMilestones,
-                            'projectProduct' => null,
-                        ])
-                    @endif
-        
-                    @forelse($productsWithMilestones as $projectProduct)
-
-                        @php($productMilestones = $milestones->where('project_product_id', $projectProduct->id)->values())
-                        @include('client_portal.projects.partials.milestone-product-block', [
-                            'title' => $projectProduct->product_name,
-                            'productMilestones' => $productMilestones,
-                            'projectProduct' => $projectProduct,
-                        ])
-
-                    @empty
-                        @if (!$projectLevelMilestones->count())
-                            <div class="pd-empty">Add products first, then generate product-wise milestone timelines.</div>
-                        @endif
-                    @endforelse
-                </div>
-            </div>
-        
-        </section>
-
 
         <!--Tracking-->
         <section class="pd-tab-panel" id="pd-tab-tracking" data-tab-panel="tracking" role="tabpanel">

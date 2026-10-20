@@ -18,7 +18,7 @@ class Project extends Model
     protected $fillable = [
         'project_number', 'client_id', 'name', 'status',
         'stage', 'priority', 'health', 'start_date', 'target_date', 'completed_at', 'currency',
-        'progress_percent', 'scope_summary', 'deliverables',
+        'scope_summary', 'deliverables',
         'client_notes', 'internal_notes', 'show_client_portal', 'assigned_to', 'created_by',
     ];
 
@@ -69,16 +69,6 @@ class Project extends Model
                 $query->whereNull('category')->orWhereNotIn('category', ['vendor_invoice']);
             })
             ->latest('id');
-    }
-
-    public function milestones()
-    {
-        return $this->hasMany(ProjectMilestone::class)->orderBy('project_product_id')->orderBy('sort_order')->orderBy('id');
-    }
-
-    public function publicMilestones()
-    {
-        return $this->hasMany(ProjectMilestone::class)->where('is_public', true)->orderBy('project_product_id')->orderBy('sort_order')->orderBy('id');
     }
 
     public function trackingUpdates()
