@@ -127,7 +127,7 @@ class ShipmentDocuments
     /**
      * Compact state for lists and print headers.
      *
-     * @return array{required: int, done: int, missing: array<int, string>, complete: bool}
+     * @return array{required: int, done: int, missing: array<int, string>, complete: bool, checklist: Collection<int, array<string, mixed>>}
      */
     public function summary(Shipment $shipment): array
     {
@@ -140,6 +140,7 @@ class ShipmentDocuments
             'done' => $done->count(),
             'missing' => $required->where('done', false)->pluck('label')->values()->all(),
             'complete' => $required->where('done', false)->isEmpty(),
+            'checklist' => $checklist,
         ];
     }
 }
