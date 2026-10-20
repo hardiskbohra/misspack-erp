@@ -470,6 +470,17 @@ check('the two copies of the choice chip are identical',
     copies[0].length > 0 && copies[0].join('|') === copies[1].join('|'),
     copies.map(c => c.length + ' rules').join(' vs '));
 
+/* Repeated boolean settings use a compact switch, not a second primary button. */
+expect('.master-switch', 'width', v => v.trim() === '38px',
+    'the application switch stays compact');
+expect('.master-switch', 'height', v => v.trim() === '22px',
+    'the application switch has field-scale height');
+expect('.master-slider::before', 'box-shadow', v => !v || v.trim() === 'none',
+    'the switch thumb is flat rather than floating');
+expect('.master-switch input:focus-visible + .master-slider', 'outline',
+    v => /^2px solid var\(--/.test(v.trim()),
+    'the application switch keeps a visible keyboard focus ring');
+
 /* the option list: portaled to the page, and above the dialog it belongs to */
 const selects = strip(read(path.join(ROOT, 'public/assets/js/master-selects.js')))
     .split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
