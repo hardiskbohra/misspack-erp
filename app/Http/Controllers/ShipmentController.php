@@ -13,6 +13,7 @@ use App\Helpers\DateRanges;
 use App\Models\Shipment;
 use App\Models\ShipmentAttachment;
 use App\Models\ShipmentCost;
+use App\Models\ShipmentItem;
 use App\Models\ShipmentTrackingHistory;
 use App\Services\ClientPortalNotifier;
 use App\Services\SavedViews;
@@ -150,7 +151,9 @@ class ShipmentController extends Controller
             'project_id' => $project?->id,
             'client_id' => $project?->client_id,
         ]);
-        $shipment->setRelation('items', collect());
+        $shipment->setRelation('items', $project
+            ? $this->projectShipmentItemDefaults($project)->map(fn (array $row) => new ShipmentItem($row))
+            : collect());
         $shipment->setRelation('attachments', collect());
 
         return view('shipments.form', $this->formData($shipment));
@@ -659,6 +662,13 @@ class ShipmentController extends Controller
 
     private function validatedData(Request $request, ?Shipment $shipment = null): array
     {
+        $request->merge([
+            'items' => collect($request->input('items', []))
+                ->filter(fn ($item) => filled($item['project_product_id'] ?? null) || filled($item['product_name'] ?? null))
+                ->values()
+                ->all(),
+        ]);
+
         return $request->validate([
             'shipment_number' => ['nullable', 'string', 'max:255', 'unique:shipments,shipment_number,'.($shipment?->id ?? 'NULL')],
             'identity_name' => ['required', 'string', 'max:255'],
@@ -725,6 +735,11 @@ class ShipmentController extends Controller
             'items.*.net_weight' => ['nullable', 'numeric', 'min:0'],
             'items.*.gross_weight' => ['nullable', 'numeric', 'min:0'],
             'items.*.description' => ['nullable', 'string'],
+        ], [
+            'items.*.project_product_id.required' => 'Select the matching project product for each shipment line.',
+            'items.*.project_product_id.exists' => 'A selected product does not belong to this project. Choose it again.',
+        ], [
+            'items.*.project_product_id' => 'shipment product',
         ]);
     }
 
@@ -1247,8 +1262,45 @@ class ShipmentController extends Controller
         return (int)data_get($evaluation?->details, 'shipment_id') === (int)$shipment->id ? $evaluation : null;
     }
 
+    private function projectShipmentItemDefaults(Project $project): \Illuminate\Support\Collection
+    {
+        $products = $project->products()->where('status', '!=', 'cancelled')->orderBy('sort_order')->get();
+        $reserved = ShipmentItem::query()
+            ->whereIn('project_product_id', $products->pluck('id'))
+            ->whereHas('shipment', fn ($query) => $query->where('status', '!=', Shipment::STATUS_CANCELLED))
+            ->selectRaw('project_product_id, SUM(quantity) as aggregate')
+            ->groupBy('project_product_id')
+            ->pluck('aggregate', 'project_product_id');
+
+        return $products->map(function (ProjectProduct $product) use ($project, $reserved) {
+            $quantity = round(max((float) $product->quantity - (float) ($reserved[$product->id] ?? 0), 0), 3);
+            if ($quantity <= 0) return null;
+
+            return [
+                'project_product_id' => $product->id,
+                'product_name' => $product->product_name,
+                'sku' => $product->sku,
+                'hs_code' => data_get($product->product_snapshot, 'hs_code'),
+                'quantity' => $quantity,
+                'unit' => $product->unit ?: 'pcs',
+                'declared_value' => round($quantity * (float) $product->unit_price, 2),
+                'currency' => $product->currency ?: $project->currency ?: 'INR',
+                'net_weight' => null,
+                'gross_weight' => null,
+                'description' => data_get($product->product_snapshot, 'description'),
+            ];
+        })->filter()->values();
+    }
+
     private function formData(Shipment $shipment): array
     {
+        $productOptions = ProjectProduct::query()
+            ->with('project:id,name,project_number')
+            ->when($shipment->project_id,
+                fn ($query) => $query->where('project_id', $shipment->project_id),
+                fn ($query) => $query->where('status', '!=', 'cancelled')->limit(1000))
+            ->orderBy('project_id')->orderBy('sort_order')->get();
+
         return [
             'shipment' => $shipment,
             'statusOptions' => Shipment::statusOptions(),
@@ -1265,7 +1317,7 @@ class ShipmentController extends Controller
             'costHeads' => ShipmentCost::headOptions(),
             'costTotals' => $shipment->costSummary(),
             'invoiceOptions' => $this->invoiceOptions($shipment),
-            'projectProductOptions' => ProjectProduct::query()->with('project:id,name,project_number')->where('status', '!=', 'cancelled')->orderBy('project_id')->orderBy('sort_order')->limit(1000)->get(),
+            'projectProductOptions' => $productOptions,
             'shipmentItemsFrozen' => $shipment->exists && $shipment->status !== Shipment::STATUS_PLANNING,
             'dispatchAuthorizationEvaluation' => $this->dispatchAuthorizationEvaluation($shipment),
             'paymentModeOptions' => CashflowEntry::paymentModeOptions(),

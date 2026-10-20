@@ -14,6 +14,18 @@
         $items = $oldItems !== null ? $oldItems : $shipment->items
             ->map(fn($item) => $item->only(['project_product_id', 'product_name', 'sku', 'hs_code', 'quantity', 'unit', 'declared_value', 'currency', 'net_weight', 'gross_weight', 'description']))
             ->toArray();
+        if ($shipment->project_id) {
+            foreach ($items as &$item) {
+                if (!empty($item['project_product_id'])) continue;
+                $matches = $projectProductOptions->filter(function ($option) use ($item) {
+                    $skuMatches = filled($item['sku'] ?? null) && strcasecmp(trim((string)$option->sku), trim((string)$item['sku'])) === 0;
+                    $nameMatches = strcasecmp(trim((string)$option->product_name), trim((string)($item['product_name'] ?? ''))) === 0;
+                    return $skuMatches || $nameMatches;
+                });
+                if ($matches->count() === 1) $item['project_product_id'] = $matches->first()->id;
+            }
+            unset($item);
+        }
         if (empty($items)) {
             $items = [['product_name' => '', 'sku' => '', 'hs_code' => '', 'quantity' => 1, 'unit' => 'pcs', 'declared_value' => '', 'currency' => $shipment->currency ?: 'INR', 'net_weight' => '', 'gross_weight' => '', 'description' => '']];
         }
@@ -277,7 +289,7 @@
                         <tbody>
                             @foreach($items as $index => $item)
                                 <tr>
-                                    <td><select class="master-select" name="items[{{ $index }}][project_product_id]" aria-label="Project product identity"><option value="">Unlinked project product</option>@foreach($projectProductOptions as $option)<option value="{{ $option->id }}" @selected((string)($item['project_product_id'] ?? '')===(string)$option->id)>{{ $option->project?->project_number ?: $option->project?->name }} · {{ $option->product_name }}</option>@endforeach</select><input class="master-input" name="items[{{ $index }}][product_name]"
+                                    <td><select class="master-select" name="items[{{ $index }}][project_product_id]" aria-label="Project product identity"><option value="">Unlinked project product</option>@foreach($projectProductOptions as $option)<option value="{{ $option->id }}" data-product-name="{{ $option->product_name }}" data-sku="{{ $option->sku }}" data-quantity="{{ $option->quantity }}" data-unit="{{ $option->unit }}" data-value="{{ $option->total_amount }}" data-currency="{{ $option->currency }}" @selected((string)($item['project_product_id'] ?? '')===(string)$option->id)>{{ $option->project?->project_number ?: $option->project?->name }} · {{ $option->product_name }}</option>@endforeach</select><input class="master-input" name="items[{{ $index }}][product_name]"
                                             value="{{ $item['product_name'] ?? '' }}" placeholder="Product">
                                         <input class="master-input" name="items[{{ $index }}][sku]"
                                             value="{{ $item['sku'] ?? '' }}" hidden>
@@ -487,7 +499,7 @@ accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
 
 <template id="shipmentItemRowTemplate">
     <tr>
-        <td><select class="master-select" name="items[__INDEX__][project_product_id]" aria-label="Project product identity"><option value="">Unlinked project product</option>@foreach($projectProductOptions as $option)<option value="{{ $option->id }}">{{ $option->project?->project_number ?: $option->project?->name }} · {{ $option->product_name }}</option>@endforeach</select><input class="master-input" name="items[__INDEX__][product_name]" placeholder="Product"></td>
+        <td><select class="master-select" name="items[__INDEX__][project_product_id]" aria-label="Project product identity"><option value="">Unlinked project product</option>@foreach($projectProductOptions as $option)<option value="{{ $option->id }}" data-product-name="{{ $option->product_name }}" data-sku="{{ $option->sku }}" data-quantity="{{ $option->quantity }}" data-unit="{{ $option->unit }}" data-value="{{ $option->total_amount }}" data-currency="{{ $option->currency }}">{{ $option->project?->project_number ?: $option->project?->name }} · {{ $option->product_name }}</option>@endforeach</select><input class="master-input" name="items[__INDEX__][product_name]" placeholder="Product"><input type="hidden" name="items[__INDEX__][sku]"></td>
         <td><input class="master-input" name="items[__INDEX__][hs_code]"></td>
         <td><input class="master-input" type="number" step="0.001" min="0" name="items[__INDEX__][quantity]" value="1"></td>
         <td><input class="master-input" name="items[__INDEX__][unit]" value="pcs"></td>
@@ -504,6 +516,24 @@ accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
         document.getElementById('addShipmentItemRow')?.addEventListener('click', function () {
             const template = document.getElementById('shipmentItemRowTemplate').innerHTML.replaceAll('__INDEX__', shipmentItemIndex++);
             document.querySelector('#shipmentItemsTable tbody').insertAdjacentHTML('beforeend', template);
+        });
+
+        document.getElementById('shipmentItemsTable')?.addEventListener('change', function (event) {
+            const select = event.target.closest('select[name$="[project_product_id]"]');
+            if (!select) return;
+            const option = select.selectedOptions[0];
+            if (!option?.value) return;
+            const row = select.closest('tr');
+            const set = (suffix, value) => {
+                const field = row.querySelector(`[name$="[${suffix}]"]`);
+                if (field && value !== undefined && value !== null && value !== '') field.value = value;
+            };
+            set('product_name', option.dataset.productName);
+            set('sku', option.dataset.sku);
+            set('quantity', option.dataset.quantity);
+            set('unit', option.dataset.unit || 'pcs');
+            set('declared_value', option.dataset.value);
+            set('currency', option.dataset.currency);
         });
     </script>
 @endpush
