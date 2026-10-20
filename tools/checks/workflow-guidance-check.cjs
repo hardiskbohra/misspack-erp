@@ -21,7 +21,7 @@ check(guidance.includes("'procurement_ready' =>") && guidance.includes("'project
 check(guidance.includes("route('shipments.create', $context)"), 'shipment action carries workflow context');
 check(queue.includes("'guidance' => app(ProjectWorkflowGuidance::class)->forStep($step)"), 'coordinator queue receives centralized guidance');
 check(workflow.includes('workflow-action-checklist') && workflow.includes('Why it is blocked'), 'action cards explain steps and blocking reason');
-check(workflow.includes('workflowProductionModal') && workflow.includes('production_completed_quantity'), 'production can be recorded without leaving control center');
+check(workflow.includes('workflowProductionModal') && ['status','expected_ready_date','actual_ready_date','production_completed_quantity','production_evidence','notes'].every(field => workflow.includes(`name=\"${field}\"`)), 'production modal exposes every operational field needed for the next step');
 check(workflow.includes("route('projects.products.update',$action['product'])"), 'production modal uses controlled product endpoint');
 check(workflow.includes('data-workflow-open="{{ $guide[\'view\'] }}"'), 'internal guidance opens the correct focused workflow view');
 check(css.includes('.workflow-action-card') && css.includes('minmax(min(100%,430px),1fr)'), 'guided cards have responsive compact layout');

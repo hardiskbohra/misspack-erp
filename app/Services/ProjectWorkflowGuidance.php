@@ -71,7 +71,7 @@ class ProjectWorkflowGuidance
                 'Record completed production quantity',
                 'Enter the quantity actually completed and the production evidence. Partial completion remains visible and the remaining quantity stays open.',
                 'Record production', $projectProducts,
-                ['Enter completed quantity to date.', 'Add the batch, job-card or production evidence.', 'Save; readiness recalculates immediately.'],
+                ['Enter completed quantity and production evidence.', 'Keep In Production for a partial quantity.', 'For full completion, change status to QC Pending to open inspection.'],
                 'Production record', false, 'products', 'production'
             ),
             'quality_passed' => $this->recipe(
