@@ -394,7 +394,6 @@
                 </form>
             </section>
 
-            @include('shipments.partials.documents-card')
 
             <section class="master-card master-card--flat master-section">
                 <div class="master-section-head">
@@ -407,7 +406,7 @@
                 @if ($shipment->attachments->isEmpty())
                     <div class="master-empty-state">
                         <i class="fa-regular fa-images"></i>
-                        <p>No photos yet. Upload them from the paperwork checklist above.</p>
+                        <p>No shipment photos yet. Upload them while editing this shipment.</p>
                     </div>
                 @else
                     <div class="photo-grid">

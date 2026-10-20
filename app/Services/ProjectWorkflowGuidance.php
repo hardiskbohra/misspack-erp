@@ -102,16 +102,16 @@ class ProjectWorkflowGuidance
             'dispatch_approved', 'shipment_dispatched' => $planningShipment
                 ? $this->recipe(
                     'Complete and authorize '.$planningShipment->shipment_number,
-                    'A Planning shipment already exists. Review its exact packing allocation, add the named missing paperwork, then move it to dispatch.',
-                    'Open '.$planningShipment->shipment_number, route('shipments.edit', $planningShipment),
-                    ['Confirm each shipment line is allocated to its linked Packaging List quantity.', 'Attach every mandatory document named in the blocked reason.', 'Change the Planning status to the correct dispatch state.'],
-                    'Planning shipment', false, 'products'
+                    'The shipment is prepared. Workflow now checks confirmed Packaging Lists linked to it and requires every dispatch document on the Project before authorization.',
+                    'Complete document checklist', $projectWorkflow,
+                    ['Link and confirm a Packaging List for this shipment.', 'Upload every named document directly to Project attachments.', 'Workflow refreshes authorization after each upload.'],
+                    'Project dispatch documents', false, 'products', 'dispatch-documents'
                 )
                 : $this->recipe(
                     'Create the next partial shipment in Planning',
                     'Create a Planning shipment for the quantity being dispatched. Partial shipments may use one confirmed Packaging List at a time.',
                     'Create shipment', route('shipments.create', $context),
-                    ['Create the project shipment in Planning.', 'Set shipment quantities to this partial dispatch.', 'Allocate confirmed packed quantities, complete paperwork and authorize dispatch.'],
+                    ['Create the project shipment in Planning.', 'Set quantities for this partial dispatch.', 'Link a confirmed Packaging List; the workflow then opens the Project document checklist.'],
                     'Shipment', false, 'products'
                 ),
             'delivery_complete', 'delivery_reconciled' => $this->recipe(

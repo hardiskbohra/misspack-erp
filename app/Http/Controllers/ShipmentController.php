@@ -702,7 +702,6 @@ class ShipmentController extends Controller
             'delay_reason' => ['nullable', 'string', 'max:60'],
             'sales_invoice_id' => ['nullable', 'integer'],
             'notify_client' => ['nullable', 'boolean'],
-            'document_type' => ['nullable', 'string', 'max:40'],
             'shipment_cost' => ['nullable', 'numeric', 'min:0'],
             'currency' => ['required', 'in:INR,RMB,USD'],
             'cost_borne_by' => ['required', 'in:shipper,receiver,misspack'],
@@ -712,7 +711,7 @@ class ShipmentController extends Controller
             'notes' => ['nullable', 'string'],
 
             'attachment_photos' => ['nullable', 'array'],
-            'attachment_photos.*' => ['nullable', 'file', 'max:8192'],
+            'attachment_photos.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:8192'],
 
             'items' => ['nullable', 'array'],
             'items.*.project_product_id' => [Rule::requiredIf(fn () => filled($request->input('project_id'))), 'nullable', Rule::exists('project_products', 'id')->where(fn ($query) => $query->where('project_id', $request->input('project_id')))],
@@ -726,9 +725,6 @@ class ShipmentController extends Controller
             'items.*.net_weight' => ['nullable', 'numeric', 'min:0'],
             'items.*.gross_weight' => ['nullable', 'numeric', 'min:0'],
             'items.*.description' => ['nullable', 'string'],
-            'items.*.allocations' => ['nullable', 'array', 'max:100'],
-            'items.*.allocations.*.packaging_list_item_id' => ['nullable', 'integer', 'exists:packaging_list_items,id'],
-            'items.*.allocations.*.allocated_quantity' => ['nullable', 'numeric', 'gt:0'],
         ]);
     }
 
@@ -763,9 +759,6 @@ class ShipmentController extends Controller
             $mime = (string) $file->getMimeType();
 
             $shipment->attachments()->create([
-                // A document type makes it paperwork; anything else is stamped
-                // by what the file actually is (the old code called every
-                // upload a photo, including PDFs).
                 'attachment_type' => $documentType
                     ? 'document'
                     : (str_starts_with($mime, 'image/') ? 'photo' : 'document'),
@@ -791,7 +784,7 @@ class ShipmentController extends Controller
                 continue;
             }
 
-            $shipmentItem = $shipment->items()->create([
+            $shipment->items()->create([
                 'project_product_id' => $item['project_product_id'] ?? null,
                 'product_name' => $item['product_name'],
                 'sku' => $item['sku'] ?? null,
@@ -804,15 +797,6 @@ class ShipmentController extends Controller
                 'gross_weight' => $item['gross_weight'] ?? null,
                 'description' => $item['description'] ?? null,
             ]);
-            $allocations = collect($item['allocations'] ?? [])->filter(fn ($allocation) => ! empty($allocation['packaging_list_item_id']) && (float)($allocation['allocated_quantity'] ?? 0) > 0)
-                ->groupBy('packaging_list_item_id')
-                ->map(fn ($group, $packingItemId) => [
-                    'packaging_list_item_id'=>(int)$packingItemId,
-                    'project_product_id'=>(int)$shipmentItem->project_product_id,
-                    'allocated_quantity'=>round((float)$group->sum('allocated_quantity'), 3),
-                    'created_by'=>Auth::id(),
-                ])->values()->all();
-            if ($allocations) $shipmentItem->packingAllocations()->createMany($allocations);
         }
     }
 
@@ -1282,7 +1266,6 @@ class ShipmentController extends Controller
             'costTotals' => $shipment->costSummary(),
             'invoiceOptions' => $this->invoiceOptions($shipment),
             'projectProductOptions' => ProjectProduct::query()->with('project:id,name,project_number')->where('status', '!=', 'cancelled')->orderBy('project_id')->orderBy('sort_order')->limit(1000)->get(),
-            'dispatchPackingOptions' => app(ShipmentDispatchAuthorization::class)->allocationOptions($shipment),
             'shipmentItemsFrozen' => $shipment->exists && $shipment->status !== Shipment::STATUS_PLANNING,
             'dispatchAuthorizationEvaluation' => $this->dispatchAuthorizationEvaluation($shipment),
             'paymentModeOptions' => CashflowEntry::paymentModeOptions(),

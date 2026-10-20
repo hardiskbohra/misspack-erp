@@ -11,10 +11,9 @@
     @php
         $isEdit = $shipment->exists;
         $oldItems = old('items');
-        $items = $oldItems !== null ? $oldItems : $shipment->items->map(fn($item) => array_merge(
-            $item->only(['project_product_id', 'product_name', 'sku', 'hs_code', 'quantity', 'unit', 'declared_value', 'currency', 'net_weight', 'gross_weight', 'description']),
-            ['allocations' => $item->packingAllocations->map->only(['packaging_list_item_id', 'allocated_quantity'])->values()->all()]
-        ))->toArray();
+        $items = $oldItems !== null ? $oldItems : $shipment->items
+            ->map(fn($item) => $item->only(['project_product_id', 'product_name', 'sku', 'hs_code', 'quantity', 'unit', 'declared_value', 'currency', 'net_weight', 'gross_weight', 'description']))
+            ->toArray();
         if (empty($items)) {
             $items = [['product_name' => '', 'sku' => '', 'hs_code' => '', 'quantity' => 1, 'unit' => 'pcs', 'declared_value' => '', 'currency' => $shipment->currency ?: 'INR', 'net_weight' => '', 'gross_weight' => '', 'description' => '']];
         }
@@ -260,7 +259,7 @@
 
             <div class="master-section">
                 <h3 class="master-section-title">Shipment Data / Products</h3>
-                @if($shipmentItemsFrozen)<p class="master-sub">Product lines and confirmed packing allocations are frozen because dispatch has started.</p>@endif
+                @if($shipmentItemsFrozen)<p class="master-sub">Shipment product lines are frozen because dispatch has started.</p>@endif
                 <fieldset class="shipment-items-fieldset" @disabled($shipmentItemsFrozen)>
                 <div class="master-items-wrap">
                     <table class="master-items-table" id="shipmentItemsTable">
@@ -311,67 +310,12 @@
                 </fieldset>
             </div>
 
-            <div class="master-section" id="dispatchAllocationSection">
-                <div class="master-section-head"><div><h3 class="master-section-title">Confirmed packing allocation</h3><p class="master-sub">Allocate every shipment quantity to exact, confirmed Packaging List lines that pass automatic checks. Planning allocations reserve stock and are frozen when dispatch starts.</p></div>@if($dispatchAuthorizationEvaluation)<span class="master-badge is-{{ $dispatchAuthorizationEvaluation->effectiveResult() }}">{{ $dispatchAuthorizationEvaluation->resultLabel() }}</span>@endif</div>
-                @if($dispatchAuthorizationEvaluation && !empty($dispatchAuthorizationEvaluation->details['issues']))<div class="master-alert warning"><i class="fa-solid fa-triangle-exclamation"></i><span>{{ implode(' ', $dispatchAuthorizationEvaluation->details['issues']) }}</span></div>@endif
-                @if(!$isEdit)
-                    <div class="master-empty-state"><i class="fa-solid fa-boxes-packing"></i><p>Save this shipment in Planning first. Confirmed packing options will then be loaded for its selected project.</p></div>
-                @elseif($dispatchPackingOptions->isEmpty())
-                    <div class="master-empty-state"><i class="fa-solid fa-box-open"></i><p>No verified, available Packaging List quantities are linked to this project. Verify packing before dispatch allocation.</p></div>
-                @else
-                    <div class="shipment-allocation-list">
-                        @foreach($items as $itemIndex=>$item)
-                            @php
-                                $allocationRows = collect($item['allocations'] ?? [])->filter(fn($row) => !empty($row['packaging_list_item_id']));
-                                if ($allocationRows->isEmpty()) $allocationRows = collect([['packaging_list_item_id'=>'','allocated_quantity'=>'']]);
-                            @endphp
-                            <article class="shipment-allocation-card" data-dispatch-allocation data-item-index="{{ $itemIndex }}">
-                                <header><div><strong>{{ $item['product_name'] ?: 'Shipment line '.($itemIndex+1) }}</strong><span>{{ number_format((float)($item['quantity']??0),3) }} {{ $item['unit']??'pcs' }} to allocate</span></div><span class="master-badge">{{ $shipmentItemsFrozen ? 'Frozen' : 'Planning' }}</span></header>
-                                <div data-allocation-rows>
-                                    @foreach($allocationRows as $allocationIndex=>$allocation)
-                                        <div class="master-detail-grid" data-allocation-row>
-                                            <label class="master-field two"><span class="master-label">Verified Packaging List line</span><select class="master-select" name="items[{{ $itemIndex }}][allocations][{{ $allocationIndex }}][packaging_list_item_id]" @disabled($shipmentItemsFrozen)><option value="">Select packed quantity</option>
-                                                @foreach($dispatchPackingOptions as $packingItem)
-                                                    @continue((string)$packingItem->project_product_id !== (string)($item['project_product_id']??''))
-                                                    <option value="{{ $packingItem->id }}" data-project-product="{{ $packingItem->project_product_id }}" @selected((string)($allocation['packaging_list_item_id']??'')===(string)$packingItem->id)>{{ $packingItem->carton->packagingList->packing_number }} · {{ $packingItem->item_description }} · {{ number_format((float)$packingItem->dispatch_available_quantity,3) }} available{{ $packingItem->dispatch_verification_current ? '' : ' · verification stale' }}</option>
-                                                @endforeach
-                                            </select></label>
-                                            <label class="master-field"><span class="master-label">Allocated quantity</span><input class="master-input" type="number" min="0.001" step="0.001" name="items[{{ $itemIndex }}][allocations][{{ $allocationIndex }}][allocated_quantity]" value="{{ $allocation['allocated_quantity']??'' }}" @disabled($shipmentItemsFrozen)></label>
-                                            @unless($shipmentItemsFrozen)<button type="button" class="master-icon-btn is-danger" data-remove-dispatch-allocation aria-label="Remove allocation"><i class="fa-solid fa-trash"></i></button>@endunless
-                                        </div>
-                                    @endforeach
-                                </div>
-                                @unless($shipmentItemsFrozen)<button type="button" class="master-btn master-btn-soft master-btn-sm" data-add-dispatch-allocation><i class="fa-solid fa-plus"></i> Split across another packed line</button>@endunless
-                            </article>
-                        @endforeach
-                    </div>
-                @endif
-            </div>
-            
             <div class="master-section">
-                <h3 class="master-section-title">Shipment Photos &amp; Documents</h3>
-                <p class="master-sub" style="margin:-4px 0 10px;">
-                    Pick a document type to file paperwork (packing list, BOE, e-way bill…) into the shipment's
-                    checklist instead of the photo gallery.
-                </p>
+                <h3 class="master-section-title">Shipment photos</h3>
+                <p class="master-sub" style="margin:-4px 0 10px;">Operational documents belong to the project workflow checklist. Keep only shipment photographs here.</p>
                 <div class="master-photo-upload-box">
                     <div class="master-photo-upload-grid">
                 
-                        <div>
-                            <label class="master-label">Document Type (for paperwork)</label>
-
-                            <select class="master-select" name="document_type">
-                                <option value="">Photos / general files</option>
-                                @foreach ($documentTypes as $key => $label)
-                                    <option value="{{ $key }}">{{ $label }}</option>
-                                @endforeach
-                            </select>
-
-                            <div class="master-photo-help">
-                                Filing a document type adds it to the shipment's paperwork checklist.
-                            </div>
-                        </div>
-
                         <div>
                             <label class="master-label">Upload Shipment Photos</label>
                 
@@ -379,22 +323,12 @@
                                 class="master-input"
                                 type="file"
                                 name="attachment_photos[]"
-                                accept="
-                                    image/*,
-                                    .jpg,.jpeg,.png,.webp,.gif,.heic,.heif,
-                                    .pdf,
-                                    .doc,.docx,
-                                    .xls,.xlsx,
-                                    .csv,
-                                    .ppt,.pptx,
-                                    .txt
-                                "
+accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
                                 multiple>
                 
                             <div class="master-photo-help">
-                                Upload shipment photos such as package photos, dispatch photos,
-                                delivery proof, custom hold photos etc. Allowed JPG, PNG, WEBP
-                                or GIF. If document then it should be PDF, DOC, Excel file. Max 8MB each.
+                                Upload package, dispatch, delivery or exception photographs. Attach invoices,
+                                customs paperwork and dispatch documents from the Workflow Control Centre.
                             </div>
                         </div>
                 

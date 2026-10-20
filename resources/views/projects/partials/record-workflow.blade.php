@@ -82,6 +82,12 @@
                             $blockedReason = $dispatchIssues !== []
                                 ? implode(' ', $dispatchIssues)
                                 : $actionStep->blocked_reason;
+                            $documentShipment = $guide['modal'] === 'dispatch-documents'
+                                ? $project->shipments()->where('status', \App\Models\Shipment::STATUS_PLANNING)->latest('id')->first()
+                                : null;
+                            $dispatchDocuments = $documentShipment
+                                ? app(\App\Services\ShipmentDocuments::class)->summary($documentShipment)
+                                : null;
                         @endphp
                         <article class="workflow-action-card {{ $action['is_overdue']?'is-overdue':($action['is_blocked']?'is-blocked':($action['is_waiting']?'is-waiting':'')) }}">
                             <div class="workflow-action-card-head">
@@ -105,6 +111,8 @@
                                             data-invoice-currency="{{ $workflowReceiptInvoice->currency ?: 'INR' }}">
                                             <i class="fa-solid fa-indian-rupee-sign"></i> {{ $guide['label'] }}
                                         </button>
+                                    @elseif($guide['modal']==='dispatch-documents' && $documentShipment)
+                                        <button type="button" class="master-btn master-btn-primary master-btn-sm" data-modal-open="workflowDispatchDocumentsModal{{ $actionStep->id }}"><i class="fa-solid fa-file-circle-check"></i> {{ $guide['label'] }}</button>
                                     @elseif(in_array($guide['modal'],['production','quality'],true) && $action['product'])
                                         <button type="button" class="master-btn master-btn-primary master-btn-sm" data-modal-open="{{ $guide['modal']==='quality' ? 'workflowQualityModal' : 'workflowProductionModal' }}{{ $action['product']->id }}"><i class="fa-solid {{ $guide['modal']==='quality' ? 'fa-clipboard-check' : 'fa-industry' }}"></i> {{ $guide['label'] }}</button>
                                     @elseif($sameWorkflow)
@@ -169,6 +177,31 @@
                                             </div>
                                         </div>
                                         <div class="master-modal-footer"><button type="button" class="master-btn master-btn-light" data-close-modal>Cancel</button><button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-lock"></i> Record immutable inspection</button></div>
+                                    </form>
+                                </div>
+                            </div>
+                        @endif
+                        @if($guide['modal']==='dispatch-documents' && $documentShipment && $dispatchDocuments)
+                            <div class="master-modal" id="workflowDispatchDocumentsModal{{ $actionStep->id }}" aria-hidden="true" aria-labelledby="workflowDispatchDocumentsTitle{{ $actionStep->id }}">
+                                <div class="master-modal-card workflow-action-modal" role="dialog" aria-modal="true" aria-labelledby="workflowDispatchDocumentsTitle{{ $actionStep->id }}">
+                                    <form method="POST" enctype="multipart/form-data" action="{{ route('projects.attachments.store',$project) }}">@csrf
+                                        <div class="master-modal-header"><div class="master-modal-heading"><span class="master-modal-icon"><i class="fa-solid fa-file-circle-check"></i></span><div><h3 class="master-modal-title" id="workflowDispatchDocumentsTitle{{ $actionStep->id }}">Dispatch documents · {{ $documentShipment->shipment_number }}</h3><p class="master-modal-subtitle">Files are stored once in Project attachments and immediately re-evaluated against dispatch authorization.</p></div></div><button type="button" class="master-modal-close" data-close-modal aria-label="Close dispatch document checklist">×</button></div>
+                                        <div class="master-modal-body">
+                                            <div class="workflow-production-summary" aria-label="Dispatch document status"><div><span>Required</span><strong>{{ $dispatchDocuments['required'] }}</strong></div><div><span>Complete</span><strong>{{ $dispatchDocuments['completed'] }}</strong></div><div><span>Missing</span><strong>{{ count($dispatchDocuments['missing']) }}</strong></div></div>
+                                            <div class="workflow-quality-checklist"><div>
+                                                @foreach($dispatchDocuments['checklist'] as $documentItem)
+                                                    <label><i class="fa-solid {{ $documentItem['done'] ? 'fa-circle-check' : 'fa-circle' }}" style="color:{{ $documentItem['done'] ? '#15803d' : '#94a3b8' }}"></i><span>{{ $documentItem['label'] }} @if($documentItem['key']==='packing_list')<small>· confirmed linked Packaging List</small>@endif</span></label>
+                                                @endforeach
+                                            </div></div>
+                                            <div class="workflow-production-rule"><i class="fa-solid fa-link"></i><div><strong>Packing evidence is automatic</strong><span>No allocation is entered here. A confirmed Packaging List linked to this shipment must match each project product and cover this partial shipment quantity.</span></div></div>
+                                            <div class="master-modal-grid">
+                                                <label class="master-field"><span class="master-label">Document type <b>*</b></span><select class="master-select" name="category" required><option value="">Select missing document</option>@foreach(\App\Models\ProjectAttachment::dispatchDocumentCategoryOptions() as $categoryKey=>$categoryLabel)<option value="{{ $categoryKey }}">{{ $categoryLabel }}</option>@endforeach</select></label>
+                                                <label class="master-field"><span class="master-label">Files <b>*</b></span><input class="master-input" type="file" name="attachments[]" multiple required accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.webp"></label>
+                                                <label class="master-field full"><span class="master-label">Title</span><input class="master-input" name="title" maxlength="255" placeholder="Optional document title"></label>
+                                                <label class="master-field full"><span class="master-label">Notes</span><textarea class="master-textarea" name="notes" rows="2" placeholder="Reference number or dispatch note"></textarea></label>
+                                            </div>
+                                        </div>
+                                        <div class="master-modal-footer"><a class="master-btn master-btn-light" href="{{ route('shipments.edit',$documentShipment) }}"><i class="fa-solid fa-truck-fast"></i> Review shipment</a><button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-cloud-arrow-up"></i> Upload to Project</button></div>
                                     </form>
                                 </div>
                             </div>

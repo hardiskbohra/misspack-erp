@@ -56,8 +56,9 @@ class ProjectAttachmentController extends Controller
         }
 
         $this->writeLog($project, 'attachment_uploaded', 'Attachment uploaded', $count.' attachment(s) uploaded.', ['count' => $count], $request->has('is_public'));
+        $this->refreshDispatchReadiness($project);
 
-        return back()->with('success', 'Attachment uploaded successfully.');
+        return back()->with('success', 'Attachment uploaded and workflow readiness refreshed.');
     }
 
     public function update(Request $request, ProjectAttachment $projectAttachment): RedirectResponse
@@ -77,8 +78,9 @@ class ProjectAttachmentController extends Controller
         ]);
 
         $this->writeLog($projectAttachment->project, 'attachment_updated', 'Attachment updated', 'Attachment visibility/details updated.', ['attachment_id' => $projectAttachment->id], $projectAttachment->is_public);
+        $this->refreshDispatchReadiness($projectAttachment->project);
 
-        return back()->with('success', 'Attachment updated successfully.');
+        return back()->with('success', 'Attachment updated and workflow readiness refreshed.');
     }
 
     public function destroy(ProjectAttachment $projectAttachment): RedirectResponse
@@ -93,8 +95,28 @@ class ProjectAttachmentController extends Controller
         $projectAttachment->delete();
 
         $this->writeLog($project, 'attachment_deleted', 'Attachment deleted', 'An attachment was deleted.', null, false);
+        $this->refreshDispatchReadiness($project);
 
-        return back()->with('success', 'Attachment deleted successfully.');
+        return back()->with('success', 'Attachment deleted and workflow readiness refreshed.');
+    }
+
+    private function refreshDispatchReadiness(Project $project): void
+    {
+        $workflow = $project->workflow;
+        if (! $workflow) {
+            return;
+        }
+
+        $shipment = $project->shipments()
+            ->where('status', \App\Models\Shipment::STATUS_PLANNING)
+            ->latest('id')
+            ->first();
+        if (! $shipment) {
+            return;
+        }
+
+        $authorization = app(\App\Services\ShipmentDispatchAuthorization::class);
+        $authorization->evaluate($shipment, $workflow, $authorization->rowsFromShipment($shipment), Auth::id());
     }
 
     private function validateAllowedFile($file): void

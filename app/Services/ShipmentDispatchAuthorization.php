@@ -3,15 +3,13 @@
 namespace App\Services;
 
 use App\Models\PackagingList;
-use App\Models\PackagingListItem;
+use App\Models\ShipmentItem;
 use App\Models\ProjectGateEvaluation;
 use App\Models\ProjectProduct;
 use App\Models\ProjectQualityInspection;
 use App\Models\ProjectWorkflow;
 use App\Models\ProjectWorkflowStep;
 use App\Models\Shipment;
-use App\Models\ShipmentPackingAllocation;
-use Illuminate\Support\Collection;
 
 class ShipmentDispatchAuthorization
 {
@@ -28,7 +26,7 @@ class ShipmentDispatchAuthorization
         $details = $this->inspect($shipment, $workflow, $rows);
         $passed = $details['issues'] === [];
         $summary = $passed
-            ? 'Shipment quantities are allocated to confirmed packing that passes automatic checks, covered by QC and ready for dispatch.'
+            ? 'Shipment quantities are covered by confirmed linked Packaging Lists, QC, approvals and Project dispatch documents.'
             : count($details['issues']).' dispatch authorization issue(s): '.implode(' ', $details['issues']);
         $hash = hash('sha256', json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         $latest = $workflow->evaluations()->whereNull('project_product_id')->where('gate_key', self::GATE_KEY)->latest('evaluated_at')->latest('id')->first();
@@ -46,68 +44,63 @@ class ShipmentDispatchAuthorization
 
     public function inspect(Shipment $shipment, ProjectWorkflow $workflow, array $rows, bool $lockSources = false): array
     {
-        $issues = []; $lineEvidence = []; $productQuantities = []; $currentPackingTotals = [];
+        $issues = []; $lineEvidence = []; $productQuantities = [];
+        $linkedLists = PackagingList::query()
+            ->when($lockSources, fn ($query) => $query->lockForUpdate())
+            ->where('shipment_id', $shipment->id)
+            ->where('project_id', $shipment->project_id)
+            ->whereIn('status', ['confirmed', 'dispatched'])
+            ->with('cartons.items')
+            ->get();
+        $validPackingItems = collect();
+        $packingEvidence = [];
+        foreach ($linkedLists as $list) {
+            $this->packingLinker->reconcile($list);
+            $list->load('cartons.items');
+            $inspection = $this->verifier->inspect($list);
+            $checksPassed = $inspection['failed'] === 0;
+            if (! $checksPassed) {
+                $issues[] = $list->packing_number.' is linked but must pass its automatic Packaging List checks.';
+            }
+            if ($checksPassed) $validPackingItems = $validPackingItems->concat($list->cartons->flatMap->items);
+            $packingEvidence[] = [
+                'packaging_list_id'=>$list->id, 'packing_number'=>$list->packing_number,
+                'automatic_checks_passed'=>$checksPassed, 'failed_checks'=>$inspection['failed'],
+            ];
+        }
+
         foreach (array_values($rows) as $index => $row) {
             if (blank($row['product_name'] ?? null)) continue;
             $productId = (int) ($row['project_product_id'] ?? 0);
             $shipmentQuantity = round((float) ($row['quantity'] ?? 0), 3);
-            $allocations = collect($row['allocations'] ?? [])->filter(fn ($allocation) => (int) ($allocation['packaging_list_item_id'] ?? 0) > 0 && (float) ($allocation['allocated_quantity'] ?? 0) > 0)
-                ->groupBy(fn ($allocation) => (int) $allocation['packaging_list_item_id'])
-                ->map(fn (Collection $group, int $packingItemId) => ['packaging_list_item_id'=>$packingItemId, 'allocated_quantity'=>round((float)$group->sum('allocated_quantity'), 3)])
-                ->values();
-            $allocated = round((float) $allocations->sum('allocated_quantity'), 3);
+            $packed = round((float) $validPackingItems->where('project_product_id', $productId)->sum('total_quantity'), 3);
             if ($productId <= 0) $issues[] = "Line ".($index+1).' is not linked to a project product.';
             if ($shipmentQuantity <= 0) $issues[] = "Line ".($index+1).' must have a positive shipment quantity.';
-            if (abs($allocated - $shipmentQuantity) > 0.0001) $issues[] = "Line ".($index+1).' allocates '.number_format($allocated, 3).' of '.number_format($shipmentQuantity, 3).'.';
-            $allocationEvidence = [];
-            foreach ($allocations as $allocation) {
-                $packingItem = PackagingListItem::query()->when($lockSources, fn ($query) => $query->lockForUpdate())->with(['carton.packagingList', 'carton.packagingList.cartons.items'])->find($allocation['packaging_list_item_id']);
-                if (! $packingItem) {
-                    $issues[] = 'A selected Packaging List item no longer exists.';
-                    continue;
-                }
-                $list = $packingItem->carton?->packagingList;
-                $inspection = $list ? $this->verifier->inspect($list) : null;
-                $automaticChecksPassed = $list
-                    && in_array($list->status, ['confirmed', 'dispatched'], true)
-                    && $inspection['failed'] === 0;
-                $reservedElsewhere = round((float) ShipmentPackingAllocation::query()
-                    ->where('packaging_list_item_id', $packingItem->id)
-                    ->whereHas('shipmentItem.shipment', fn ($query) => $query->where('status', '!=', Shipment::STATUS_CANCELLED)->when($shipment->exists, fn ($nested) => $nested->where('id', '!=', $shipment->id)))
-                    ->sum('allocated_quantity'), 3);
-                $available = round(max((float)$packingItem->total_quantity - $reservedElsewhere, 0), 3);
-                $quantity = (float) $allocation['allocated_quantity'];
-                $currentPackingTotals[$packingItem->id] = round(($currentPackingTotals[$packingItem->id] ?? 0) + $quantity, 3);
-                if ((int)$packingItem->project_product_id !== $productId) $issues[] = 'Packing allocation product identity does not match its shipment line.';
-                if ((int)($list?->project_id) !== (int)$shipment->project_id) $issues[] = 'Packing allocation belongs to a different project.';
-                if (! $automaticChecksPassed) $issues[] = ($list?->packing_number ?: 'Packaging List').' must be confirmed and pass its automatic checks.';
-                if ($currentPackingTotals[$packingItem->id] > $available + 0.0001) $issues[] = ($list?->packing_number ?: 'Packaging List').' has only '.number_format($available, 3).' available for this item across the shipment.';
-                $allocationEvidence[] = [
-                    'packaging_list_item_id'=>$packingItem->id, 'packaging_list_id'=>$list?->id,
-                    'packing_number'=>$list?->packing_number, 'quantity'=>$quantity,
-                    'packed_quantity'=>(float)$packingItem->total_quantity, 'reserved_elsewhere'=>$reservedElsewhere,
-                    'available_quantity'=>$available, 'automatic_checks_passed'=>$automaticChecksPassed,
-                    'failed_checks'=>$inspection['failed'] ?? null,
-                ];
+            if ($packed + 0.0001 < $shipmentQuantity) {
+                $issues[] = 'Shipment line '.($index+1).' has '.number_format($packed, 3).' confirmed packed of '.number_format($shipmentQuantity, 3).' required in Packaging Lists linked to '.$shipment->shipment_number.'.';
             }
             $productQuantities[$productId] = round(($productQuantities[$productId] ?? 0) + $shipmentQuantity, 3);
             $lineEvidence[] = [
                 'line_number'=>$index+1, 'project_product_id'=>$productId,
                 'product_name'=>$row['product_name'] ?? null, 'shipment_quantity'=>$shipmentQuantity,
-                'allocated_quantity'=>$allocated, 'allocations'=>$allocationEvidence,
+                'linked_packed_quantity'=>$packed,
             ];
         }
 
         $productEvidence = [];
         foreach ($productQuantities as $productId => $currentQuantity) {
+            $linkedPackedQuantity = round((float) $validPackingItems->where('project_product_id', $productId)->sum('total_quantity'), 3);
+            if ($productId > 0 && $linkedPackedQuantity + 0.0001 < $currentQuantity) {
+                $issues[] = 'Confirmed Packaging Lists linked to this shipment cover only '.number_format($linkedPackedQuantity, 3).' of '.number_format($currentQuantity, 3).' required for a shipment product.';
+            }
             if ($productId <= 0) continue;
             $latestQc = ProjectQualityInspection::query()->where('project_product_id', $productId)->latest('inspected_at')->latest('id')->first();
             $qcSamplePassed = $latestQc && in_array($latestQc->result, ['passed', 'passed_with_observations'], true);
             $passedQc = round((float) ($latestQc?->passed_quantity ?: 0), 3);
             $qcAuthorized = $qcSamplePassed ? round((float) ProjectProduct::query()->whereKey($productId)->value('quantity'), 3) : 0.0;
-            $reservedElsewhere = round((float) ShipmentPackingAllocation::query()->where('project_product_id', $productId)
-                ->whereHas('shipmentItem.shipment', fn ($query) => $query->where('status', '!=', Shipment::STATUS_CANCELLED)->when($shipment->exists, fn ($nested) => $nested->where('id', '!=', $shipment->id)))
-                ->sum('allocated_quantity'), 3);
+            $reservedElsewhere = round((float) ShipmentItem::query()->where('project_product_id', $productId)
+                ->whereHas('shipment', fn ($query) => $query->where('status', '!=', Shipment::STATUS_CANCELLED)->when($shipment->exists, fn ($nested) => $nested->where('id', '!=', $shipment->id)))
+                ->sum('quantity'), 3);
             $steps = ProjectWorkflowStep::query()->where('project_workflow_id', $workflow->id)->where('project_product_id', $productId)->whereIn('step_key', ['artwork_approved','pps_approved'])->get()->keyBy('step_key');
             $approvalsReady = collect(['artwork_approved','pps_approved'])->every(fn ($key) => in_array($steps->get($key)?->status, ['completed','skipped'], true));
             if ($reservedElsewhere + $currentQuantity > $qcAuthorized + 0.0001) $issues[] = 'A current passing QC sample inspection is required for this shipment product.';
@@ -123,48 +116,23 @@ class ShipmentDispatchAuthorization
         }
 
         $paperwork = $this->documents->summary($shipment);
-        $hasDedicatedPacking = collect($lineEvidence)->flatMap(fn ($line) => $line['allocations'])->isNotEmpty();
-        $missingPaperwork = collect($paperwork['missing'])->reject(fn ($label) => $hasDedicatedPacking && $label === 'Packing List')->values()->all();
-        if ($missingPaperwork !== []) $issues[] = 'Mandatory shipment paperwork is incomplete: '.implode(', ', $missingPaperwork).'.';
+        $missingPaperwork = $paperwork['missing'];
+        if ($missingPaperwork !== []) $issues[] = 'Mandatory project dispatch documents are incomplete: '.implode(', ', $missingPaperwork).'.';
         $issues = array_values(array_unique($issues));
         return [
             'shipment_id'=>$shipment->id, 'shipment_number'=>$shipment->shipment_number,
             'project_id'=>$shipment->project_id, 'lines'=>$lineEvidence, 'products'=>$productEvidence,
-            'paperwork'=>['complete'=>$missingPaperwork === [], 'missing'=>$missingPaperwork, 'dedicated_packing_allocated'=>$hasDedicatedPacking],
+            'packing_lists'=>$packingEvidence, 'paperwork'=>['complete'=>$missingPaperwork === [], 'missing'=>$missingPaperwork, 'stored_on_project'=>true],
             'issues'=>$issues,
         ];
     }
 
     public function rowsFromShipment(Shipment $shipment): array
     {
-        $shipment->loadMissing('items.packingAllocations');
-        return $shipment->items->map(fn ($item) => array_merge(
-            $item->only(['project_product_id','product_name','quantity','unit']),
-            ['allocations'=>$item->packingAllocations->map->only(['packaging_list_item_id','allocated_quantity'])->values()->all()]
-        ))->values()->all();
-    }
-
-    public function allocationOptions(Shipment $shipment): Collection
-    {
-        if (! $shipment->project_id) return collect();
-        PackagingList::query()->where('project_id', $shipment->project_id)
-            ->whereIn('status', ['confirmed', 'dispatched'])->with('cartons.items')->get()
-            ->each(fn ($list) => $this->packingLinker->reconcile($list));
-        return PackagingListItem::query()
-            ->whereNotNull('project_product_id')
-            ->whereHas('carton.packagingList', fn ($query) => $query->where('project_id', $shipment->project_id)->whereIn('status', ['confirmed', 'dispatched']))
-            ->with(['carton.packagingList', 'carton.packagingList.cartons.items'])
-            ->get()
-            ->map(function ($item) use ($shipment) {
-                $list = $item->carton->packagingList;
-                $current = $this->verifier->inspect($list)['failed'] === 0;
-                $reserved = (float) ShipmentPackingAllocation::query()->where('packaging_list_item_id', $item->id)
-                    ->whereHas('shipmentItem.shipment', fn ($query) => $query->where('status', '!=', Shipment::STATUS_CANCELLED)->when($shipment->exists, fn ($nested) => $nested->where('id', '!=', $shipment->id)))
-                    ->sum('allocated_quantity');
-                $item->setAttribute('dispatch_available_quantity', round(max((float)$item->total_quantity-$reserved, 0), 3));
-                $item->setAttribute('dispatch_verification_current', $current);
-                return $item;
-            })->filter(fn ($item) => ((bool)$item->dispatch_verification_current && (float)$item->dispatch_available_quantity > 0)
-                || $shipment->items->flatMap->packingAllocations->contains('packaging_list_item_id', $item->id))->values();
+        return $shipment->items()
+            ->get(['project_product_id', 'product_name', 'quantity', 'unit'])
+            ->map->only(['project_product_id', 'product_name', 'quantity', 'unit'])
+            ->values()
+            ->all();
     }
 }
