@@ -88,6 +88,7 @@
         <form method="POST" action="{{ $isEdit ? route('sales-invoices.update', $invoice) : route('sales-invoices.store') }}"
             enctype="multipart/form-data" class="master-form" @if (! $isEdit) data-invoice-portal-confirm data-invoice-auto-gst="{{ old('_invoice_auto_gst', 'true') }}" @endif>
             @csrf
+            @if(!$isEdit && request('return_to'))<input type="hidden" name="return_to" value="{{ request('return_to') }}">@endif
             @unless ($isEdit)
                 <input type="hidden" name="_invoice_auto_gst" value="{{ old('_invoice_auto_gst', 'true') }}">
             @endunless

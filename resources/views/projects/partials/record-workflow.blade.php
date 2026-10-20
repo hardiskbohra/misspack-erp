@@ -19,7 +19,6 @@
                 $waitingActions = $currentActions->where('is_waiting', true)->count();
                 $overdueActions = $currentActions->where('is_overdue', true)->count();
                 $activeOverrides = $workflow->evaluations->filter(fn($evaluation) => $evaluation->activeOverride)->count();
-                $actionViewFor = fn($step) => in_array($step->step_key, \App\Services\ProjectApprovals::CONTROLLED_STEPS, true) || $step->project_product_id ? 'products' : (in_array($step->step_key, array_merge(\App\Services\ProjectWorkflowGates::AUTOMATED_GATES, \App\Services\ProjectFinancialClosure::CONTROLLED_STEPS, \App\Services\ProjectFeedbackClosure::CONTROLLED_STEPS), true) ? 'commercial' : 'history');
             @endphp
 
             <section class="master-card master-card--flat project-detail-card workflow-command-header" aria-labelledby="workflowCommandTitle">
@@ -67,19 +66,51 @@
             </div>
             <noscript><style>[data-workflow-view][hidden]{display:block!important}</style></noscript>
 
-            <section class="workflow-action-centre" data-workflow-view="actions" role="tabpanel" aria-labelledby="workflow-tab-actions workflowActionsTitle">
+            <section id="workflow-actions" class="workflow-action-centre" data-workflow-view="actions" role="tabpanel" aria-labelledby="workflow-tab-actions workflowActionsTitle">
                 <div class="workflow-view-heading"><div><span>Work requiring attention</span><h2 id="workflowActionsTitle">Current actions</h2><p>Only work that can move now is shown. Future controls stay out of the way.</p></div><div class="workflow-view-actions"><button type="button" class="master-btn master-btn-light master-btn-sm" data-modal-open="workflowReportModal"><i class="fa-solid fa-user-pen"></i> Coordinator report</button><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Refresh sources</button></form></div></div>
                 <div class="workflow-action-list">
                     @forelse($currentActions as $action)
                         @php
                             $actionStep = $action['step'];
                         @endphp
-                        <article class="workflow-action-row {{ $action['is_overdue']?'is-overdue':($action['is_blocked']?'is-blocked':($action['is_waiting']?'is-waiting':'')) }}">
-                            <span class="workflow-action-state"><i class="fa-solid {{ $action['is_overdue']?'fa-clock':($action['is_blocked']?'fa-circle-xmark':($action['is_waiting']?'fa-hourglass-half':'fa-circle-play')) }}"></i></span>
-                            <div class="workflow-action-copy"><div><span>{{ $action['product']?->product_name ?: 'Project control' }}</span><strong>{{ $actionStep->title }}</strong></div><p>{{ $actionStep->blocked_reason ?: $actionStep->notes ?: 'Ready for the next recorded action.' }}</p></div>
-                            <div class="workflow-action-meta"><span><i class="fa-solid fa-user"></i>{{ $action['owner']?->name ?: $action['coordinator']?->name ?: 'Unassigned' }}</span><span class="{{ $action['is_overdue']?'is-danger':'' }}"><i class="fa-regular fa-calendar"></i>{{ $action['due_date']?->format('d M Y') ?: 'No due date' }}</span><span class="master-badge">{{ $action['attention'] }}</span></div>
-                            <button type="button" class="master-btn master-btn-primary master-btn-sm" data-workflow-open="{{ $actionViewFor($actionStep) }}">Manage action</button>
+                        @php
+                            $guide = $action['guidance'];
+                            $sameWorkflow = str_contains($guide['url'], 'tab=workflow') || str_starts_with($guide['url'], '#');
+                        @endphp
+                        <article class="workflow-action-card {{ $action['is_overdue']?'is-overdue':($action['is_blocked']?'is-blocked':($action['is_waiting']?'is-waiting':'')) }}">
+                            <div class="workflow-action-card-head">
+                                <span class="workflow-action-state"><i class="fa-solid {{ $action['is_overdue']?'fa-clock':($action['is_blocked']?'fa-circle-xmark':($action['is_waiting']?'fa-hourglass-half':'fa-circle-play')) }}"></i></span>
+                                <div><span>{{ $action['product']?->product_name ?: 'Project control' }} · {{ $actionStep->title }}</span><h3>{{ $guide['title'] }}</h3></div>
+                                <span class="master-badge">{{ $action['attention'] }}</span>
+                            </div>
+                            <p class="workflow-action-instruction">{{ $guide['instruction'] }}</p>
+                            @if($actionStep->blocked_reason)<div class="workflow-action-reason"><strong>Why it is blocked</strong><span>{{ $actionStep->blocked_reason }}</span></div>@endif
+                            <ol class="workflow-action-checklist">@foreach($guide['checklist'] as $guideStep)<li><span>{{ $loop->iteration }}</span>{{ $guideStep }}</li>@endforeach</ol>
+                            <footer>
+                                <div class="workflow-action-meta"><span><i class="fa-solid fa-database"></i>{{ $guide['source'] }}</span><span><i class="fa-solid fa-user"></i>{{ $action['owner']?->name ?: $action['coordinator']?->name ?: 'Unassigned' }}</span><span class="{{ $action['is_overdue']?'is-danger':'' }}"><i class="fa-regular fa-calendar"></i>{{ $action['due_date']?->format('d M Y') ?: 'No due date' }}</span></div>
+                                <div class="workflow-action-buttons">
+                                    @if($guide['modal']==='production' && $action['product'])
+                                        <button type="button" class="master-btn master-btn-primary master-btn-sm" data-modal-open="workflowProductionModal{{ $action['product']->id }}"><i class="fa-solid fa-industry"></i> {{ $guide['label'] }}</button>
+                                    @elseif($sameWorkflow)
+                                        <button type="button" class="master-btn master-btn-primary master-btn-sm" data-workflow-open="{{ $guide['view'] }}"><i class="fa-solid fa-arrow-right"></i> {{ $guide['label'] }}</button>
+                                    @else
+                                        <a class="master-btn master-btn-primary master-btn-sm" href="{{ $guide['url'] }}" @if($guide['newTab']) target="_blank" rel="noopener" @endif><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ $guide['label'] }}</a>
+                                    @endif
+                                </div>
+                            </footer>
                         </article>
+                        @if($guide['modal']==='production' && $action['product'])
+                            <div class="master-modal" id="workflowProductionModal{{ $action['product']->id }}" aria-hidden="true" aria-labelledby="workflowProductionTitle{{ $action['product']->id }}">
+                                <div class="master-modal-card workflow-action-modal" role="dialog" aria-modal="true" aria-labelledby="workflowProductionTitle{{ $action['product']->id }}">
+                                    <form method="POST" action="{{ route('projects.products.update',$action['product']) }}">@csrf @method('PUT')
+                                        <input type="hidden" name="status" value="{{ $action['product']->status }}"><input type="hidden" name="expected_ready_date" value="{{ $action['product']->expected_ready_date?->format('Y-m-d') }}"><input type="hidden" name="actual_ready_date" value="{{ $action['product']->actual_ready_date?->format('Y-m-d') }}"><input type="hidden" name="notes" value="{{ $action['product']->notes }}">
+                                        <div class="master-modal-header"><div class="master-modal-heading"><span class="master-modal-icon"><i class="fa-solid fa-industry"></i></span><div><h3 class="master-modal-title" id="workflowProductionTitle{{ $action['product']->id }}">Record production · {{ $action['product']->product_name }}</h3><p class="master-modal-subtitle">Required {{ rtrim(rtrim(number_format((float)$action['product']->quantity,3,'.',''),'0'),'.') }} {{ $action['product']->unit }}</p></div></div><button type="button" class="master-modal-close" data-close-modal aria-label="Close production form">×</button></div>
+                                        <div class="master-modal-body"><div class="master-modal-grid"><label class="master-field"><span class="master-label">Completed quantity to date</span><input class="master-input" type="number" name="production_completed_quantity" min="0" max="{{ $action['product']->quantity }}" step="0.001" value="{{ $action['product']->production_completed_quantity ?: 0 }}" required></label><label class="master-field full"><span class="master-label">Production evidence</span><textarea class="master-textarea" name="production_evidence" rows="4" maxlength="4000" placeholder="Batch, job card, completion note or evidence reference" required>{{ $action['product']->production_evidence }}</textarea><small class="master-help">Partial quantity is allowed; the remaining balance stays as the current action.</small></label></div></div>
+                                        <div class="master-modal-footer"><button type="button" class="master-btn master-btn-light" data-close-modal>Cancel</button><button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-check"></i> Save production record</button></div>
+                                    </form>
+                                </div>
+                            </div>
+                        @endif
                     @empty
                         <div class="master-empty-state"><i class="fa-solid fa-circle-check"></i><p>No current action remains. Review closure or workflow history for completed evidence.</p></div>
                     @endforelse
@@ -95,7 +126,7 @@
 
             @include('projects.partials.workflow-matrix')
 
-            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="commercial" role="tabpanel" aria-labelledby="workflow-tab-commercial" hidden>
+            <section id="workflow-commercial" class="master-card master-card--flat master-section project-detail-card" data-workflow-view="commercial" role="tabpanel" aria-labelledby="workflow-tab-commercial" hidden>
                 <div class="master-section-head"><div><h2 class="master-section-title">Commercial and dispatch authorization gates</h2><p class="master-sub">Financial checks use the selected Proforma and receipts; dispatch authorization uses exact verified packing allocations, QC, approvals and paperwork. Material changes create a new auditable evaluation.</p></div><form method="POST" action="{{ route('projects.workflow.evaluate',$project) }}">@csrf<button class="master-btn master-btn-soft master-btn-sm" type="submit"><i class="fa-solid fa-rotate"></i> Run gate checks</button></form></div>
                 @php
                     $visibleGateKeys = array_merge(\App\Services\ProjectWorkflowGates::AUTOMATED_GATES, \App\Services\ProjectFeedbackClosure::CONTROLLED_STEPS);
@@ -136,7 +167,7 @@
                 @endif
             </section>
 
-            <section class="master-card master-card--flat master-section project-detail-card" data-workflow-view="products" role="tabpanel" aria-labelledby="workflow-tab-products" hidden>
+            <section id="workflow-products" class="master-card master-card--flat master-section project-detail-card" data-workflow-view="products" role="tabpanel" aria-labelledby="workflow-tab-products" hidden>
                 <div class="master-section-head"><div><h2 class="master-section-title">Client artwork and PPS approvals</h2><p class="master-sub">Every decision belongs to one exact file version. A revision makes the previous decision historical.</p></div></div>
                 <form method="POST" enctype="multipart/form-data" action="{{ route('projects.approvals.store',$project) }}" class="project-approval-create">@csrf
                     <label class="master-field"><span class="master-label">Product</span><select class="master-select" name="project_product_id" required><option value="">Select product</option>@foreach($project->products->where('status','!=','cancelled') as $product)<option value="{{ $product->id }}">{{ $product->product_name }}</option>@endforeach</select></label>

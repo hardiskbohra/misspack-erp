@@ -170,3 +170,11 @@ Long product readiness lanes and full workflow-history stages use progressive di
 Project deletion is now a soft delete. The project disappears from normal ERP queries and route binding, while workflow evaluations, financial closures, exception events, feedback, documents and ledger allocations retain their original project identity. This avoids violating the deliberately restrictive financial-closure and exception foreign keys and prevents a delete action from erasing audit evidence.
 
 Deleting a project runs exception synchronization so active exceptions whose source disappeared are resolved with their normal immutable event. Exception history can still display the deleted project identity but no longer links to an inaccessible workflow. Scheduled feedback automation and raw cashflow/invoice filter-label lookups explicitly ignore deleted projects. Automatic project numbering includes soft-deleted rows in both its sequence seed and collision check, so an archived `PRJ-0001` remains reserved and quick-create advances instead of violating the database unique key.
+
+## Guided current actions
+
+The Workflow Control Center presents each independently executable lane as a plain-language action card rather than exposing the full gate matrix first. Each card identifies the source record that controls the gate, explains a blocking reason, gives a short completion checklist, and offers one primary action.
+
+Source-document actions carry project and, where applicable, product context. Proforma Invoices, inward Cashflow receipts, Purchase Orders, and Shipments open preselected from the workflow and return to the same project workflow after a successful save. Return targets are restricted to local project routes. Packaging Lists remain source-generated and verified in their dedicated module.
+
+Production quantity and evidence are recorded in a focused modal inside the Control Center through the same controlled project-product endpoint used by the detailed product lane. Partial completion remains open; saved production evidence immediately recalculates operational readiness. Source records continue to own all gates—guided actions do not add manual completion shortcuts.

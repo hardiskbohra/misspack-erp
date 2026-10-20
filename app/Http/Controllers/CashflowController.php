@@ -9,6 +9,7 @@ use App\Models\CashflowAttachment;
 use App\Models\CashflowAllocation;
 use App\Models\CashflowEntry;
 use App\Models\CashflowMasterOption;
+use App\Models\Project;
 use App\Models\SavedView;
 use App\Models\User;
 use App\Services\CashflowAllocations;
@@ -126,13 +127,20 @@ class CashflowController extends Controller
 
     public function create(Request $request): View
     {
+        $project = Project::query()->with('client')->find((int) $request->query('project_id'));
+        $direction = in_array($request->query('transaction_type'), ['credit', 'debit'], true)
+            ? $request->query('transaction_type')
+            : 'debit';
         $entry = new CashflowEntry([
             'entry_date' => now()->toDateString(),
-            'transaction_type' => 'debit',
-            'currency' => 'INR',
+            'transaction_type' => $direction,
+            'currency' => $project?->currency ?: 'INR',
             'accounting_status' => 'pending',
             'payment_mode' => 'neft',
-            'related_party_type' => 'other',
+            'related_party_type' => $project ? 'client' : 'other',
+            'client_id' => $project?->client_id,
+            'project_id' => $project?->id,
+            'particular' => $project ? 'Project receipt · '.$project->project_number : null,
         ]);
 
         $fromId = (int) $request->query('from');
@@ -176,7 +184,10 @@ class CashflowController extends Controller
             return $entry;
         });
 
-        return redirect()->route('cashflows.show', $entry)->with('success', 'Cashflow entry created successfully.');
+        $returnTo = app(\App\Services\ProjectWorkflowReturn::class)->from($request);
+        return $returnTo
+            ? redirect()->to($returnTo)->with('success', 'Receipt saved. Workflow sources were recalculated.')
+            : redirect()->route('cashflows.show', $entry)->with('success', 'Cashflow entry created successfully.');
     }
 
     public function quickStore(Request $request): RedirectResponse

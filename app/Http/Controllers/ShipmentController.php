@@ -7,6 +7,7 @@ use App\Models\CashflowAccount;
 use App\Models\CashflowEntry;
 use App\Models\SalesInvoice;
 use App\Models\SavedView;
+use App\Models\Project;
 use App\Models\ProjectProduct;
 use App\Helpers\DateRanges;
 use App\Models\Shipment;
@@ -135,16 +136,19 @@ class ShipmentController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        $project = Project::query()->find((int) $request->query('project_id'));
         $shipment = new Shipment([
             'shipment_number' => $this->makeShipmentNumber(),
             'shipment_type' => Shipment::TYPE_DOMESTIC,
             'shipment_mode' => 'courier',
             'pickup_date' => now()->toDateString(),
             'status' => Shipment::STATUS_PLANNING,
-            'currency' => 'INR',
+            'currency' => $project?->currency ?: 'INR',
             'cost_borne_by' => 'misspack',
+            'project_id' => $project?->id,
+            'client_id' => $project?->client_id,
         ]);
         $shipment->setRelation('items', collect());
         $shipment->setRelation('attachments', collect());
@@ -184,9 +188,12 @@ class ShipmentController extends Controller
 
         $this->refreshProjectReadiness($shipment);
 
-        return redirect()
-            ->route('shipments.show', $shipment)
-            ->with('success', 'Shipment created successfully. Create its packaging list from the Packaging Lists module when packing details are ready.');
+        $returnTo = app(\App\Services\ProjectWorkflowReturn::class)->from($request);
+        return $returnTo
+            ? redirect()->to($returnTo)->with('success', 'Shipment saved. Workflow sources were recalculated.')
+            : redirect()
+                ->route('shipments.show', $shipment)
+                ->with('success', 'Shipment created successfully. Create its packaging list from the Packaging Lists module when packing details are ready.');
     }
 
     public function quickStore(Request $request): RedirectResponse

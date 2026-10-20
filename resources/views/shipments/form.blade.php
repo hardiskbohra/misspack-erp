@@ -32,6 +32,7 @@
             class="master-card master-card--flat master-form-card" enctype="multipart/form-data"
             data-party-lookup-url="{{ route('shipments.party-lookup') }}">
             @csrf
+            @if(!$isEdit && request('return_to'))<input type="hidden" name="return_to" value="{{ request('return_to') }}">@endif
             @if($isEdit) @method('PUT') @endif
             @if($errors->any())<div class="master-alert error"><strong>Please correct the shipment before saving.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
 

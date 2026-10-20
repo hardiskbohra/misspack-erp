@@ -171,6 +171,7 @@ class ProjectCoordinatorQueue
             'attention' => $attention,
             'attention_key' => str($attention)->slug()->toString(),
             'attention_rank' => $attentionRank,
+            'guidance' => app(ProjectWorkflowGuidance::class)->forStep($step),
         ];
     }
 }

@@ -7,6 +7,7 @@ use App\Models\CashflowAccount;
 use App\Models\CashflowEntry;
 use App\Models\Product;
 use App\Models\Project;
+use App\Models\ProjectProduct;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchaseInvoiceItem;
 use App\Models\Vendor;
@@ -277,18 +278,36 @@ class PurchaseInvoiceController extends Controller
             PurchaseInvoice::TYPE_BILL => $this->makeInvoiceNumber(PurchaseInvoice::TYPE_BILL),
         ];
 
+        $project = Project::query()->find((int) $request->query('project_id'));
+        $projectProduct = ProjectProduct::query()
+            ->where('project_id', $project?->id)
+            ->find((int) $request->query('project_product_id'));
+        $invoice = new PurchaseInvoice([
+            'invoice_type' => $type,
+            'invoice_number' => $nextNumbers[$type],
+            'currency' => $projectProduct?->currency ?: 'INR',
+            'gst_type' => 'export',
+            'discount_type' => 'amount',
+            'status' => 'draft',
+            'invoice_date' => now()->toDateString(),
+            'project_id' => $project?->id,
+            'vendor_id' => $projectProduct?->vendor_id,
+        ] + PurchaseInvoice::defaultBuyerDetails());
+        if ($projectProduct) {
+            $invoice->setRelation('items', collect([new PurchaseInvoiceItem([
+                'product_name' => $projectProduct->product_name,
+                'quantity' => $projectProduct->quantity,
+                'unit' => $projectProduct->unit,
+                'unit_price' => $projectProduct->unit_price,
+                'discount_percent' => 0,
+                'gst_percent' => 0,
+            ])]));
+        }
+
         return view('purchase_invoices.form', array_merge($this->sharedData($type), [
             'docType' => $type,
             'nextNumbers' => $nextNumbers,
-            'invoice' => new PurchaseInvoice([
-                'invoice_type' => $type,
-                'invoice_number' => $nextNumbers[$type],
-                'currency' => 'INR',
-                'gst_type' => 'export',
-                'discount_type' => 'amount',
-                'status' => 'draft',
-                'invoice_date' => now()->toDateString(),
-            ] + PurchaseInvoice::defaultBuyerDetails()),
+            'invoice' => $invoice,
             'sourceOrder' => $this->sourceOrder($request),
         ]));
     }
@@ -308,8 +327,11 @@ class PurchaseInvoiceController extends Controller
 
         $this->afterSave($invoice);
 
-        return redirect()->route($invoice->routePrefix().'.show', $invoice)
-            ->with('success', $invoice->typeLabel().' '.$invoice->invoice_number.' created.');
+        $returnTo = app(\App\Services\ProjectWorkflowReturn::class)->from($request);
+        return $returnTo
+            ? redirect()->to($returnTo)->with('success', $invoice->typeLabel().' saved. Workflow sources were recalculated.')
+            : redirect()->route($invoice->routePrefix().'.show', $invoice)
+                ->with('success', $invoice->typeLabel().' '.$invoice->invoice_number.' created.');
     }
 
     public function show(PurchaseInvoice $purchaseInvoice): View

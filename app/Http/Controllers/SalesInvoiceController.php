@@ -663,7 +663,10 @@ class SalesInvoiceController extends Controller
             return $invoice;
         });
 
-        return redirect()->route('sales-invoices.show', $invoice)->with('success', 'Sales invoice created successfully.');
+        $returnTo = app(\App\Services\ProjectWorkflowReturn::class)->from($request);
+        return $returnTo
+            ? redirect()->to($returnTo)->with('success', 'Sales invoice saved. Workflow sources were recalculated.')
+            : redirect()->route('sales-invoices.show', $invoice)->with('success', 'Sales invoice created successfully.');
     }
 
     public function show(SalesInvoice $salesInvoice): View
