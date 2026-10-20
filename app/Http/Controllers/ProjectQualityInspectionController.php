@@ -24,7 +24,7 @@ class ProjectQualityInspectionController extends Controller
             'rework_quantity'=>['required','numeric','min:0'],
             'result'=>['required', Rule::in(['passed','passed_with_observations','failed','rework_required'])],
             'notes'=>['nullable','string','max:4000'],
-            'evidence_file'=>['required','file','max:20480','mimes:jpg,jpeg,png,webp,pdf,xls,xlsx,doc,docx'],
+            'evidence_file'=>['nullable','file','max:20480','mimes:jpg,jpeg,png,webp,pdf,xls,xlsx,doc,docx'],
         ];
         foreach (array_keys(ProjectQualityInspection::CHECKS) as $check) $rules["checklist.$check"] = ['required','boolean'];
         $data = $request->validate($rules);
@@ -36,26 +36,22 @@ class ProjectQualityInspectionController extends Controller
             throw ValidationException::withMessages(['inspected_quantity'=>'Passed, rejected and rework quantities must equal the inspected quantity.']);
         }
         $checklist = collect(ProjectQualityInspection::CHECKS)->map(fn ($label, $key) => ['key'=>$key,'label'=>$label,'passed'=>(bool)data_get($data,"checklist.$key")])->values()->all();
-        if (in_array($data['result'], ['passed','passed_with_observations'], true) && ($passed !== $inspected || collect($checklist)->contains(fn ($check) => ! $check['passed']))) {
-            throw ValidationException::withMessages(['result'=>'A passed result requires the entire inspected quantity and every checklist item to pass.']);
+        if (in_array($data['result'], ['passed','passed_with_observations'], true) && $passed <= 0) {
+            throw ValidationException::withMessages(['passed_quantity'=>'A passing sample inspection must include at least one passed unit. Use Failed or Rework required when none of the sample passes.']);
         }
 
         DB::transaction(function () use ($request, $product, $project, $data, $checklist, $inspected, $passed, $rejected, $rework) {
             $locked = ProjectProduct::query()->lockForUpdate()->findOrFail($product->id);
-            $alreadyPassed = (float) $locked->qualityInspections()->sum('passed_quantity');
-            if ($alreadyPassed + $passed > (float) $locked->quantity + 0.0001) {
-                throw ValidationException::withMessages(['passed_quantity'=>'This would pass more than the product quantity. Only the remaining '.number_format(max((float)$locked->quantity-$alreadyPassed, 0), 3).' can be passed.']);
-            }
             $evidence = $request->file('evidence_file');
-            $evidenceHash = hash_file('sha256', $evidence->getRealPath());
-            $evidencePath = $evidence->store('projects/quality-inspections', 'public');
+            $evidenceHash = $evidence ? hash_file('sha256', $evidence->getRealPath()) : null;
+            $evidencePath = $evidence?->store('projects/quality-inspections', 'public');
             $payload = [
                 'project_id'=>$project->id, 'project_product_id'=>$locked->id,
                 'batch_reference'=>$data['batch_reference'] ?? null, 'inspected_quantity'=>$inspected,
                 'passed_quantity'=>$passed, 'rejected_quantity'=>$rejected, 'rework_quantity'=>$rework,
                 'result'=>$data['result'], 'checklist'=>$checklist, 'notes'=>$data['notes'] ?? null,
-                'evidence_path'=>$evidencePath, 'evidence_original_name'=>$evidence->getClientOriginalName(),
-                'evidence_mime'=>$evidence->getMimeType(), 'evidence_size'=>$evidence->getSize(),
+                'evidence_path'=>$evidencePath, 'evidence_original_name'=>$evidence?->getClientOriginalName(),
+                'evidence_mime'=>$evidence?->getMimeType(), 'evidence_size'=>$evidence?->getSize() ?: 0,
                 'evidence_hash'=>$evidenceHash, 'inspected_by'=>Auth::id(), 'inspected_at'=>now(),
             ];
             $payload['content_hash'] = hash('sha256', json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));

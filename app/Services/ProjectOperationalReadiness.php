@@ -88,8 +88,11 @@ class ProjectOperationalReadiness
         $productionStateComplete = in_array($product->status, ['qc_pending', 'ready', 'shipped', 'delivered'], true);
         $productionPassed = $required > 0 && $production + 0.0001 >= $required && $productionEvidence && $productionStateComplete;
 
-        $passedQc = round((float) $product->qualityInspections->sum('passed_quantity'), 3);
-        $qualityPassed = $required > 0 && $passedQc + 0.0001 >= $required;
+        $latestQc = $product->qualityInspections->sortByDesc('inspected_at')->first();
+        $sampledQc = round((float) ($latestQc?->inspected_quantity ?: 0), 3);
+        $passedQc = round((float) ($latestQc?->passed_quantity ?: 0), 3);
+        $qualityPassed = $required > 0 && $sampledQc > 0
+            && in_array($latestQc?->result, ['passed', 'passed_with_observations'], true);
 
         [$packed, $packingLists] = $this->verifiedPackedQuantity($product);
         $packingPassed = $required > 0 && $packed + 0.0001 >= $required;
@@ -114,11 +117,17 @@ class ProjectOperationalReadiness
                 'operational_state_complete'=>$productionStateComplete,
             ], $productionPassed, $productionPassed ? 'Recorded production quantity, evidence and operational state cover this product.' : (! $productionStateComplete ? 'Move the product to QC pending or a later operational state after production evidence is complete.' : ($productionEvidence ? 'Production remains partial: '.number_format($production, 3).' of '.number_format($required, 3).' recorded.' : 'Record production quantity and operational evidence.')), $userId),
             $this->record($workflow, $product, self::GATE_QUALITY, [
-                'required_quantity'=>$required, 'passed_quantity'=>$passedQc,
-                'remaining_quantity'=>round(max($required-$passedQc, 0), 3),
+                'required_quantity'=>$required, 'sample_inspected_quantity'=>$sampledQc, 'sample_passed_quantity'=>$passedQc,
+                'sample_rejected_quantity'=>(float) ($latestQc?->rejected_quantity ?: 0),
+                'sample_rework_quantity'=>(float) ($latestQc?->rework_quantity ?: 0),
+                'latest_inspection_id'=>$latestQc?->id, 'latest_result'=>$latestQc?->result,
                 'inspection_ids'=>$product->qualityInspections->pluck('id')->values()->all(),
                 'inspection_count'=>$product->qualityInspections->count(),
-            ], $qualityPassed, $qualityPassed ? 'Immutable passed QC quantities cover this product.' : 'QC passed '.number_format($passedQc, 3).' of '.number_format($required, 3).'; the balance remains visible.', $userId),
+            ], $qualityPassed,
+                $qualityPassed
+                    ? 'Latest QC sample passed: '.number_format($passedQc, 3).' of '.number_format($sampledQc, 3).' sampled units passed.'
+                    : ($latestQc ? 'Latest QC sample result is '.$latestQc->resultLabel().'; record a passing sample inspection to continue.' : 'Record a representative QC sample inspection to continue.'),
+                $userId),
             $this->record($workflow, $product, self::GATE_PACKING, [
                 'required_quantity'=>$required, 'verified_packed_quantity'=>$packed,
                 'remaining_quantity'=>round(max($required-$packed, 0), 3), 'packaging_lists'=>$packingLists,

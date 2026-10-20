@@ -29,6 +29,7 @@
                                                 <small>
                                                     @if($metric['type']==='money'){{ \App\Helpers\CommonHelper::amount($metric['covered'],$metric['currency']) }} / {{ \App\Helpers\CommonHelper::amount($metric['required'],$metric['currency']) }}
                                                     @elseif($metric['type']==='products'){{ number_format($metric['covered'],0) }} / {{ number_format($metric['required'],0) }} products
+                                                    @elseif($metric['type']==='sample'){{ rtrim(rtrim(number_format($metric['covered'],3,'.',''),'0'),'.') }} / {{ rtrim(rtrim(number_format($metric['required'],3,'.',''),'0'),'.') }} sample passed
                                                     @else{{ rtrim(rtrim(number_format($metric['covered'],3,'.',''),'0'),'.') }} / {{ rtrim(rtrim(number_format($metric['required'],3,'.',''),'0'),'.') }}
                                                     @endif
                                                 </small>

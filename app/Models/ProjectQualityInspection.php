@@ -31,6 +31,6 @@ class ProjectQualityInspection extends Model
     public function inspector() { return $this->belongsTo(User::class, 'inspected_by'); }
 
     public function passed(): bool { return in_array($this->result, ['passed','passed_with_observations'], true); }
-    public function evidenceUrl(): string { return \Illuminate\Support\Facades\Storage::disk('public')->url($this->evidence_path); }
+    public function evidenceUrl(): ?string { return $this->evidence_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->evidence_path) : null; }
     public function resultLabel(): string { return ['passed'=>'Passed','passed_with_observations'=>'Passed with observations','failed'=>'Failed','rework_required'=>'Rework required'][$this->result] ?? str($this->result)->headline()->toString(); }
 }

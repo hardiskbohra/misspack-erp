@@ -187,10 +187,18 @@ class ProjectWorkflowMatrix
 
     private function metric(string $key, array $details, ?string $currency): ?array
     {
+        if ($key === 'quality_passed' && array_key_exists('sample_inspected_quantity', $details)) {
+            $sampled = (float) $details['sample_inspected_quantity'];
+            $passed = (float) ($details['sample_passed_quantity'] ?? 0);
+            return [
+                'type' => 'sample', 'covered' => $passed, 'required' => $sampled,
+                'remaining' => (float) ($details['sample_rejected_quantity'] ?? 0) + (float) ($details['sample_rework_quantity'] ?? 0),
+                'percent' => $sampled > 0 ? min(100, (int) round($passed / $sampled * 100)) : 0,
+            ];
+        }
         $coveredKey = [
             'procurement_ready' => 'valid_po_quantity',
             'production_complete' => 'production_completed_quantity',
-            'quality_passed' => 'passed_quantity',
             'packing_verified' => 'verified_packed_quantity',
             'shipment_dispatched' => 'dispatched_quantity',
             'delivery_complete' => 'delivered_quantity',

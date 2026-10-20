@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\PackagingListItem;
 use App\Models\ProjectGateEvaluation;
+use App\Models\ProjectProduct;
 use App\Models\ProjectQualityInspection;
 use App\Models\ProjectWorkflow;
 use App\Models\ProjectWorkflowStep;
@@ -97,18 +98,23 @@ class ShipmentDispatchAuthorization
         $productEvidence = [];
         foreach ($productQuantities as $productId => $currentQuantity) {
             if ($productId <= 0) continue;
-            $passedQc = round((float) ProjectQualityInspection::query()->where('project_product_id', $productId)->sum('passed_quantity'), 3);
+            $latestQc = ProjectQualityInspection::query()->where('project_product_id', $productId)->latest('inspected_at')->latest('id')->first();
+            $qcSamplePassed = $latestQc && in_array($latestQc->result, ['passed', 'passed_with_observations'], true);
+            $passedQc = round((float) ($latestQc?->passed_quantity ?: 0), 3);
+            $qcAuthorized = $qcSamplePassed ? round((float) ProjectProduct::query()->whereKey($productId)->value('quantity'), 3) : 0.0;
             $reservedElsewhere = round((float) ShipmentPackingAllocation::query()->where('project_product_id', $productId)
                 ->whereHas('shipmentItem.shipment', fn ($query) => $query->where('status', '!=', Shipment::STATUS_CANCELLED)->when($shipment->exists, fn ($nested) => $nested->where('id', '!=', $shipment->id)))
                 ->sum('allocated_quantity'), 3);
             $steps = ProjectWorkflowStep::query()->where('project_workflow_id', $workflow->id)->where('project_product_id', $productId)->whereIn('step_key', ['artwork_approved','pps_approved'])->get()->keyBy('step_key');
             $approvalsReady = collect(['artwork_approved','pps_approved'])->every(fn ($key) => in_array($steps->get($key)?->status, ['completed','skipped'], true));
-            if ($reservedElsewhere + $currentQuantity > $passedQc + 0.0001) $issues[] = 'QC-passed quantity is insufficient for '.number_format($currentQuantity, 3).' units on this shipment.';
+            if ($reservedElsewhere + $currentQuantity > $qcAuthorized + 0.0001) $issues[] = 'A current passing QC sample inspection is required for this shipment product.';
             if (! $approvalsReady) $issues[] = 'Artwork and PPS approvals are not complete for a shipment product.';
             $productEvidence[] = [
                 'project_product_id'=>$productId, 'current_shipment_quantity'=>$currentQuantity,
                 'reserved_elsewhere'=>$reservedElsewhere, 'qc_passed_quantity'=>$passedQc,
-                'qc_available_quantity'=>round(max($passedQc-$reservedElsewhere, 0), 3),
+                'qc_sample_inspected_quantity'=>(float) ($latestQc?->inspected_quantity ?: 0),
+                'qc_latest_result'=>$latestQc?->result, 'qc_authorized_quantity'=>$qcAuthorized,
+                'qc_available_quantity'=>round(max($qcAuthorized-$reservedElsewhere, 0), 3),
                 'approvals_ready'=>$approvalsReady,
             ];
         }

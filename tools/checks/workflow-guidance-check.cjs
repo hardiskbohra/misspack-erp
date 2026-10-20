@@ -24,6 +24,7 @@ check(workflow.includes('workflow-action-checklist') && workflow.includes('Why i
 check(workflow.includes('workflowProductionModal') && ['status','expected_ready_date','actual_ready_date','production_completed_quantity','production_evidence','notes'].every(field => workflow.includes(`name=\"${field}\"`)), 'production modal exposes every operational field needed for the next step');
 check(guidance.includes("'QC inspection', false, 'products', 'quality'") && workflow.includes('workflowQualityModal'), 'quality action opens its focused inspection modal');
 check((workflow.match(/projects\.quality-inspections\.store/g) || []).length === 1, 'QC entry exists only in the action center while product view retains history');
+check(workflow.includes('Sample-lot inspection is allowed') && workflow.includes('Inspection evidence <small>Optional</small>'), 'QC modal supports representative samples and optional evidence');
 check(workflow.includes("route('projects.products.update',$action['product'])"), 'production modal uses controlled product endpoint');
 check(workflow.includes('data-workflow-open="{{ $guide[\'view\'] }}"'), 'internal guidance opens the correct focused workflow view');
 check(css.includes('.workflow-action-card') && css.includes('minmax(min(100%,430px),1fr)'), 'guided cards have responsive compact layout');
@@ -32,4 +33,4 @@ check((controllers.match(/ProjectWorkflowReturn::class/g) || []).length === 4, '
 check(read('app/Http/Controllers/PurchaseInvoiceController.php').includes("'project_id' => $project?->id") && read('app/Http/Controllers/PurchaseInvoiceController.php').includes("'vendor_id' => $projectProduct?->vendor_id"), 'purchase order preselects project and vendor');
 check(read('app/Http/Controllers/CashflowController.php').includes("'transaction_type' => $direction") && read('app/Http/Controllers/CashflowController.php').includes("'client_id' => $project?->client_id"), 'receipt preselects direction and client');
 check(read('app/Http/Controllers/ShipmentController.php').includes('public function create(Request $request)') && read('app/Http/Controllers/ShipmentController.php').includes("'project_id' => $project?->id"), 'shipment create preselects project');
-if (!process.exitCode) console.log(`Workflow guidance checks passed (${pass}/17).`);
+if (!process.exitCode) console.log(`Workflow guidance checks passed (${pass}/18).`);

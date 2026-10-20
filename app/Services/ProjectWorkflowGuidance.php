@@ -76,9 +76,9 @@ class ProjectWorkflowGuidance
             ),
             'quality_passed' => $this->recipe(
                 'Record the quality inspection',
-                'Reconcile inspected quantity into passed, rejected and rework quantities and attach inspection evidence.',
+                'Inspect a representative sample and reconcile it into passed, rejected and rework quantities. An evidence attachment is optional.',
                 'Record QC inspection', $projectProducts,
-                ['Open the QC form here.', 'Reconcile passed, rejected and rework quantities.', 'Complete the checklist, attach evidence and save the immutable inspection.'],
+                ['Open the QC form here.', 'Reconcile the sampled quantities and checklist observations.', 'Optionally attach evidence, then save the immutable inspection.'],
                 'QC inspection', false, 'products', 'quality'
             ),
             'packing_verified' => $this->recipe(
