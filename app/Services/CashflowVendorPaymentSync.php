@@ -177,14 +177,13 @@ class CashflowVendorPaymentSync
 
         if (Schema::hasTable('vendor_payment_entries')
             && Schema::hasColumn('vendor_payment_entries', 'cashflow_entry_id')) {
-            $mirrored = VendorPaymentEntry::query()
-                ->whereNotNull('cashflow_entry_id')
-                ->pluck('cashflow_entry_id')
-                ->all();
-
-            if ($mirrored !== []) {
-                $query->whereNotIn('id', $mirrored);
-            }
+            /* `not exists`, not a plucked list: the answer is one query whether
+               the ledger holds ten rows or ten thousand. */
+            $query->whereNotExists(function ($sub) {
+                $sub->selectRaw('1')
+                    ->from('vendor_payment_entries')
+                    ->whereColumn('vendor_payment_entries.cashflow_entry_id', 'cashflow_entries.id');
+            });
         }
 
         return $query->orderByDesc('entry_date')->orderByDesc('id')->get();
