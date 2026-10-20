@@ -477,6 +477,13 @@ expect('.master-switch', 'height', v => v.trim() === '22px',
     'the application switch has field-scale height');
 expect('.master-slider::before', 'box-shadow', v => !v || v.trim() === 'none',
     'the switch thumb is flat rather than floating');
+expect('.master-switch input:checked + .master-slider::before', 'background',
+    v => v.trim() === '#fff',
+    'the enabled switch separates its white thumb from the active track');
+expect('.master-slider::after', 'content', v => v.trim() === "'−'",
+    'the off switch carries a quiet minus state');
+expect('.master-switch input:checked + .master-slider::after', 'content', v => v.trim() === "'✓'",
+    'the enabled switch carries a clear check state');
 expect('.master-switch input:focus-visible + .master-slider', 'outline',
     v => /^2px solid var\(--/.test(v.trim()),
     'the application switch keeps a visible keyboard focus ring');
