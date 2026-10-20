@@ -311,7 +311,15 @@
                                     </span>
                                 @endforeach
                             </div>
-                            <footer><a href="{{ $receipt->evidenceUrl() }}" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip"></i> {{ $receipt->evidence_original_name }}</a><small>SHA-256 {{ substr($receipt->evidence_hash,0,12) }} · recorded by {{ $receipt->recorder?->name ?: 'System' }}</small></footer>
+                            <footer>
+                                <div class="shipment-receipt-evidence">
+                                    <a href="{{ $receipt->evidenceUrl() }}" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip"></i> {{ $receipt->evidence_original_name }}</a>
+                                    <small>SHA-256 {{ substr($receipt->evidence_hash,0,12) }} · recorded by {{ $receipt->recorder?->name ?: 'System' }}</small>
+                                </div>
+                                <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('shipments.delivery-receipts.print', [$shipment, $receipt]) }}" target="_blank" rel="noopener">
+                                    <i class="fas fa-print"></i> Print receipt
+                                </a>
+                            </footer>
                         </article>
                     @empty
                         <div class="master-empty-state"><i class="fa-solid fa-clipboard"></i><p>No line-level delivery receipt has been recorded. Shipment status alone does not complete delivered quantities.</p></div>

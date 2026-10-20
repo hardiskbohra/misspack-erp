@@ -202,6 +202,9 @@ class ProjectController extends Controller
 
         if ($this->shipmentModelAvailable()) {
             $with[] = 'shipments.items.projectProduct';
+            if (Schema::hasTable('shipment_delivery_receipts')) {
+                $with[] = 'shipments.deliveryReceipts';
+            }
         }
 
         /* The Invoices tab: the money documents the modules raised against this

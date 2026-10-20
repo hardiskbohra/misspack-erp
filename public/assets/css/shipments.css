@@ -102,6 +102,20 @@
     gap: 16px;
 }
 
+.shipment-receipt-evidence {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.shipment-receipt-evidence a {
+    overflow-wrap: anywhere;
+}
+
+.shipment-receipt-card footer > .master-btn {
+    flex: none;
+}
+
 .shipment-receipt-card header strong,
 .shipment-receipt-card header span,
 .shipment-receipt-lines span {

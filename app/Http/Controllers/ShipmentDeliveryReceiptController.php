@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 
 class ShipmentDeliveryReceiptController extends Controller
 {
@@ -95,6 +96,34 @@ class ShipmentDeliveryReceiptController extends Controller
 
         if ($workflow = $shipment->project?->workflow) app(ProjectOperationalReadiness::class)->evaluateAll($workflow, Auth::id());
         $message = 'Immutable delivery receipt '.$receipt->id.' recorded and delivery quantities reconciled.';
-        return back()->with($warnings ? 'warning' : 'success', $message.($warnings ? ' '.implode(' ', $warnings) : ''));
+        return redirect()->route('shipments.show', $shipment)->with($warnings ? 'warning' : 'success', $message.($warnings ? ' '.implode(' ', $warnings) : ''));
+    }
+
+    /**
+     * Printable delivery receipt — the signed proof of what actually arrived,
+     * kept beside the immutable record it was read from.
+     */
+    public function print(Shipment $shipment, ShipmentDeliveryReceipt $receipt): Response
+    {
+        abort_unless((int) $receipt->shipment_id === (int) $shipment->id, 404);
+
+        $receipt->load(['lines.shipmentItem', 'recorder']);
+        $shipment->load(['client', 'project']);
+
+        $viewData = [
+            'shipment' => $shipment,
+            'receipt' => $receipt,
+            'printMode' => true,
+        ];
+
+        if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+            return \Barryvdh\DomPDF\Facade\Pdf::loadView('shipments.print.delivery-receipt', $viewData)
+                ->setPaper('a4')
+                ->download('delivery-receipt-'.$receipt->id.'-'.$shipment->shipment_number.'.pdf');
+        }
+
+        return response()->view('shipments.print.delivery-receipt', $viewData + [
+            'pdfFallbackMessage' => 'Use the print dialog and choose Save as PDF to download this delivery receipt.',
+        ]);
     }
 }

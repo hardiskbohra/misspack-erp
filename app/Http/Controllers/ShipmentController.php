@@ -60,7 +60,7 @@ class ShipmentController extends Controller
         // Open shipments first, finished ones below; date is the tie-breaker
         // inside each group (see Shipment::scopePriorityOrder).
         $shipments = $this->filteredQuery($request)
-            ->with(['creator', 'latestPackagingList'])
+            ->with(['creator', 'latestPackagingList', 'latestDeliveryReceipt'])
             ->withCount('items')
             ->withCount('costs')
             ->withSum(['costs as cost_same_currency' => fn ($query) => $query->whereColumn('shipment_costs.currency', 'shipments.currency')], 'amount')

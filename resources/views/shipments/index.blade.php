@@ -413,6 +413,13 @@
                                                 </a>
                                             @endif
 
+                                            @if($shipment->latestDeliveryReceipt)
+                                                <a href="{{ route('shipments.delivery-receipts.print', [$shipment, $shipment->latestDeliveryReceipt]) }}" target="_blank" rel="noopener">
+                                                    <i class="fas fa-print"></i>
+                                                    Print Delivery Receipt
+                                                </a>
+                                            @endif
+
                                             <a href="{{ route('shipments.print', [$shipment, 'summary']) }}" target="_blank">
                                                 <i class="fas fa-print"></i>
                                                 Shipment Summary

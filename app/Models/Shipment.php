@@ -68,6 +68,11 @@ class Shipment extends Model
         return $this->hasMany(ShipmentDeliveryReceipt::class)->latest('received_at')->latest('id');
     }
 
+    public function latestDeliveryReceipt()
+    {
+        return $this->hasOne(ShipmentDeliveryReceipt::class)->latestOfMany();
+    }
+
     public function packagingLists()
     {
         return $this->hasMany(PackagingList::class);

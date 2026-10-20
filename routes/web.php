@@ -296,6 +296,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/shipments/costs/{cost}', [ShipmentController::class, 'destroyCost'])->name('shipments.costs.destroy');
         Route::post('/shipments/{shipment}/history', [ShipmentController::class, 'storeHistory'])->name('shipments.history.store');
         Route::post('/shipments/{shipment}/delivery-receipts', [ShipmentDeliveryReceiptController::class, 'store'])->name('shipments.delivery-receipts.store');
+        Route::get('/shipments/{shipment}/delivery-receipts/{receipt}/print', [ShipmentDeliveryReceiptController::class, 'print'])->name('shipments.delivery-receipts.print');
         Route::put('/shipments/history/{history}', [ShipmentController::class, 'updateHistory'])->name('shipments.history.update');
         Route::delete('/shipments/history/{history}', [ShipmentController::class, 'destroyHistory'])->name('shipments.history.destroy');
         Route::post('/shipments/{shipment}/attachments', [ShipmentController::class, 'storeAttachment'])->name('shipments.attachments.store');
