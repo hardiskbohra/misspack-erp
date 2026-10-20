@@ -176,6 +176,11 @@
                     <label class="master-label" for="allocationDocumentAmount">Document amount</label>
                     <input class="master-input" id="allocationDocumentAmount" type="number" min="0.01" step="0.01" data-modal-value="document_amount" placeholder="Required when currencies differ">
                     <p class="master-field-hint" data-document-currency-hint>Leave blank when it is the same as the cash amount.</p>
+                    @if (! empty($entry->vendor_id))
+                        {{-- The vendor's ledger is kept in their currency, and this
+                             is the figure it records for the payment. --}}
+                        <p class="master-field-hint">The vendor ledger shows the payment at this amount, in the bill's currency.</p>
+                    @endif
                 </div>
                 <div class="master-field">
                     <label class="master-label" for="allocationNote">Allocation note</label>

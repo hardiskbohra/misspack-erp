@@ -80,6 +80,9 @@
                         <label class="master-label" for="detailAllocationDocumentAmount">Document amount</label>
                         <input class="master-input" id="detailAllocationDocumentAmount" name="document_amount" type="number" min="0.01" step="0.01" value="{{ old('document_amount') }}">
                         <p class="master-field-hint" data-detail-currency-hint>Leave blank when it is the same as the cash amount.</p>
+                        @if (! empty($entry->vendor_id))
+                            <p class="master-field-hint">The vendor ledger shows the payment at this amount, in the bill's currency.</p>
+                        @endif
                     </div>
                     <div class="master-field">
                         <label class="master-label" for="detailAllocationNote">Allocation note</label>

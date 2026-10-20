@@ -383,7 +383,12 @@ class CashflowController extends Controller
         }
         $rows[] = $this->validatedAllocation($request);
 
-        DB::transaction(fn () => app(CashflowAllocations::class)->sync($cashflow, $rows));
+        DB::transaction(function () use ($cashflow, $rows) {
+            app(CashflowAllocations::class)->sync($cashflow, $rows);
+            /* A bill in the vendor's currency gives the ledger row its
+               denomination; without one it stays a rupee row. */
+            app(CashflowVendorPaymentSync::class)->sync($cashflow);
+        });
 
         return back()->with('success', 'Allocation added successfully.');
     }
@@ -396,7 +401,10 @@ class CashflowController extends Controller
             fn (CashflowAllocation $row) => $row->is($allocation) ? $replacement : $this->allocationRow($row)
         )->all();
 
-        DB::transaction(fn () => app(CashflowAllocations::class)->sync($cashflow, $rows));
+        DB::transaction(function () use ($cashflow, $rows) {
+            app(CashflowAllocations::class)->sync($cashflow, $rows);
+            app(CashflowVendorPaymentSync::class)->sync($cashflow);
+        });
 
         return back()->with('success', 'Allocation updated successfully.');
     }
@@ -407,7 +415,12 @@ class CashflowController extends Controller
         $rows = $cashflow->allocations()->where('id', '!=', $allocation->id)->get()
             ->map(fn (CashflowAllocation $row) => $this->allocationRow($row))->all();
 
-        DB::transaction(fn () => app(CashflowAllocations::class)->sync($cashflow, $rows));
+        DB::transaction(function () use ($cashflow, $rows) {
+            app(CashflowAllocations::class)->sync($cashflow, $rows);
+            /* The denomination came from the allocation; losing it puts the
+               ledger row back in rupees. */
+            app(CashflowVendorPaymentSync::class)->sync($cashflow);
+        });
 
         return back()->with('success', 'Allocation deleted successfully.');
     }

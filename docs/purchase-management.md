@@ -44,6 +44,16 @@ pair silently leaves the other half wrong.
 conflicting mirror, so the originating cashflow entry can still be allocated to a
 bill without the derived row looking like a second payment.
 
+The denomination of a derived row follows the bill it settles, not the bank it
+left from. When the cashflow entry is allocated to a purchase bill in a foreign
+currency, the allocation's **document amount** (the figure typed against the
+bill) becomes `foreign_amount`, its currency becomes `foreign_currency`, and
+`exchange_rate` is the rupee amount divided by it — a ¥8,000 bill paid with
+₹10,000 lands in the ledger as ¥8,000 @ 1.25, and `amount_in_inr` stays ₹10,000.
+Allocations are re-read whenever they change, so removing the bill puts the row
+back in rupees. A payment split across several currencies keeps the rupee
+figure rather than inventing a rate.
+
 A cashflow row the ledger cannot mirror — a vendor matched only by
 `related_party_name`, a foreign-currency row, money received back — is not
 converted. It is shown instead: in *Other cashflow activity* on the vendor's Money

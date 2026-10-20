@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\CashflowAllocation;
 use App\Models\CashflowEntry;
+use App\Models\PurchaseInvoice;
 use App\Models\Vendor;
 use App\Models\VendorPaymentEntry;
 use Illuminate\Support\Collection;
@@ -17,6 +19,16 @@ use Illuminate\Support\Facades\Schema;
  * the vendor record has never heard of. Both screens read
  * `vendor_payment_entries`, which is what makes the vendor's Money tab, the
  * payables ageing and the statement agree.
+ *
+ * Which currency the ledger row is in
+ * ------------------------------------
+ * The bank moved rupees; the vendor was invoiced in their own currency. When
+ * the entry carries a purchase-bill allocation in a foreign currency, that
+ * allocation's **document amount** is the vendor-currency figure the office
+ * typed, and it is the one the vendor ledger must show — a ¥8,000 bill settled
+ * by a ₹10,000 payment is a ¥8,000 row at the rate the two imply, not a rupee
+ * row dropped into a yen ledger. Without such an allocation there is no rate to
+ * convert at, so the row stays in rupees rather than inventing one.
  *
  * What is linked
  * --------------
@@ -90,6 +102,11 @@ class CashflowVendorPaymentSync
 
         $row = $linked ?: new VendorPaymentEntry();
         $amount = round((float) $entry->amountMoved(), 2);
+        $documented = $this->documentDenomination($entry);
+
+        /* `exchange_rate` is rupees per unit of the ledger currency, which is
+           the arithmetic the whole vendor ledger already uses. */
+        $rate = $documented ? round($amount / $documented['amount'], 6) : 1;
 
         $row->fill([
             'vendor_id' => (int) $entry->vendor_id,
@@ -97,10 +114,10 @@ class CashflowVendorPaymentSync
             'purchase_invoice_id' => null,
             'cashflow_entry_id' => (int) $entry->id,
             'transaction_date' => $entry->entry_date ?: now()->toDateString(),
-            'invoice_number' => $entry->invoice_bill_number ?: null,
-            'foreign_currency' => 'INR',
-            'foreign_amount' => $amount,
-            'exchange_rate' => 1,
+            'invoice_number' => $entry->invoice_bill_number ?: ($documented['invoice'] ?? null),
+            'foreign_currency' => $documented['currency'] ?? 'INR',
+            'foreign_amount' => $documented['amount'] ?? $amount,
+            'exchange_rate' => $rate,
             'transaction_type' => 'debit',
             'entry_category' => 'payment',
             'particular' => filled($entry->particular) ? (string) $entry->particular : 'Paid to vendor',
@@ -187,6 +204,76 @@ class CashflowVendorPaymentSync
         }
 
         return $query->orderByDesc('entry_date')->orderByDesc('id')->get();
+    }
+
+    /**
+     * The vendor-currency figure the cashflow entry documents, if it documents
+     * one.
+     *
+     * Only purchase-bill allocations count: a project slice has no currency of
+     * its own. One currency across every bill is required — a payment split
+     * between a yen and a dollar bill has no single honest denomination, and
+     * converting either half would invent a rate nobody wrote down.
+     *
+     * @return array{currency: string, amount: float, invoice: string|null}|null
+     */
+    private function documentDenomination(CashflowEntry $entry): ?array
+    {
+        if (! Schema::hasTable('cashflow_allocations') || ! class_exists(CashflowAllocation::class)) {
+            return null;
+        }
+
+        $allocations = CashflowAllocation::query()
+            ->where('cashflow_entry_id', $entry->id)
+            ->whereNotNull('purchase_invoice_id')
+            ->whereNotNull('document_currency')
+            ->get();
+
+        if ($allocations->isEmpty()) {
+            return null;
+        }
+
+        $currencies = $allocations
+            ->map(fn ($allocation) => strtoupper((string) $allocation->document_currency))
+            ->unique();
+
+        if ($currencies->count() !== 1) {
+            return null;
+        }
+
+        $currency = (string) $currencies->first();
+
+        if ($currency === '' || $currency === 'INR') {
+            return null;
+        }
+
+        $amount = round((float) $allocations->sum(
+            fn ($allocation) => (float) ($allocation->document_amount ?? $allocation->amount)
+        ), 2);
+
+        if ($amount <= 0) {
+            return null;
+        }
+
+        return [
+            'currency' => $currency,
+            'amount' => $amount,
+            'invoice' => $this->allocatedInvoiceNumber($allocations->pluck('purchase_invoice_id')->all()),
+        ];
+    }
+
+    /** The document number the ledger row should show for an allocated bill. */
+    private function allocatedInvoiceNumber(array $invoiceIds): ?string
+    {
+        $invoiceIds = array_values(array_filter($invoiceIds));
+
+        if ($invoiceIds === [] || ! Schema::hasTable('purchase_invoices') || ! class_exists(PurchaseInvoice::class)) {
+            return null;
+        }
+
+        $invoice = PurchaseInvoice::query()->whereKey($invoiceIds[0])->first();
+
+        return $invoice ? $invoice->referenceNumber() : null;
     }
 
     private function paymentMode(CashflowEntry $entry): string
