@@ -54,6 +54,9 @@ class ShipmentDispatchAuthorization
             ->get();
         $validPackingItems = collect();
         $packingEvidence = [];
+        if ($linkedLists->isEmpty()) {
+            $issues[] = 'No confirmed Packaging List is linked to '.$shipment->shipment_number.'. Create one from this shipment, or edit an existing project Packaging List, select this shipment and confirm it.';
+        }
         foreach ($linkedLists as $list) {
             $this->packingLinker->reconcile($list);
             $list->load('cartons.items');
@@ -76,9 +79,6 @@ class ShipmentDispatchAuthorization
             $packed = round((float) $validPackingItems->where('project_product_id', $productId)->sum('total_quantity'), 3);
             if ($productId <= 0) $issues[] = "Line ".($index+1).' is not linked to a project product.';
             if ($shipmentQuantity <= 0) $issues[] = "Line ".($index+1).' must have a positive shipment quantity.';
-            if ($packed + 0.0001 < $shipmentQuantity) {
-                $issues[] = 'Shipment line '.($index+1).' has '.number_format($packed, 3).' confirmed packed of '.number_format($shipmentQuantity, 3).' required in Packaging Lists linked to '.$shipment->shipment_number.'.';
-            }
             $productQuantities[$productId] = round(($productQuantities[$productId] ?? 0) + $shipmentQuantity, 3);
             $lineEvidence[] = [
                 'line_number'=>$index+1, 'project_product_id'=>$productId,
@@ -90,8 +90,9 @@ class ShipmentDispatchAuthorization
         $productEvidence = [];
         foreach ($productQuantities as $productId => $currentQuantity) {
             $linkedPackedQuantity = round((float) $validPackingItems->where('project_product_id', $productId)->sum('total_quantity'), 3);
-            if ($productId > 0 && $linkedPackedQuantity + 0.0001 < $currentQuantity) {
-                $issues[] = 'Confirmed Packaging Lists linked to this shipment cover only '.number_format($linkedPackedQuantity, 3).' of '.number_format($currentQuantity, 3).' required for a shipment product.';
+            if ($linkedLists->isNotEmpty() && $productId > 0 && $linkedPackedQuantity + 0.0001 < $currentQuantity) {
+                $productName = data_get(collect($lineEvidence)->firstWhere('project_product_id', $productId), 'product_name', 'shipment product');
+                $issues[] = ($productName ?: 'Shipment product').' has '.number_format($linkedPackedQuantity, 3).' confirmed packed of '.number_format($currentQuantity, 3).' required. Check that the linked Packaging List uses the same project product and quantity, then confirm it.';
             }
             if ($productId <= 0) continue;
             $latestQc = ProjectQualityInspection::query()->where('project_product_id', $productId)->latest('inspected_at')->latest('id')->first();

@@ -170,7 +170,7 @@ class ShipmentController extends Controller
         $data = Shipment::withDeliveryDefaults($data);
         $this->assertDeliveryDateAllowed($data['drop_date'] ?? null, $data['pickup_date'] ?? null);
         if (! empty($data['project_id']) && in_array($data['status'], Shipment::dispatchedStatuses(), true)) {
-            throw ValidationException::withMessages(['status' => 'Save the project shipment in Planning first, allocate its confirmed packing quantities, then authorize dispatch.']);
+            throw ValidationException::withMessages(['status' => 'Save the project shipment in Planning first. Then create or link and confirm its Packaging List before authorizing dispatch.']);
         }
         $probe = new Shipment(['status' => Shipment::STATUS_PLANNING, 'project_id' => $data['project_id'] ?? null]);
         $this->assertStatusChangeAllowed($probe, $data['status'], ['remarks' => $data['delay_reason'] ?? $data['notes'] ?? null]);
@@ -285,7 +285,7 @@ class ShipmentController extends Controller
             $evaluation->loadMissing('activeOverride');
             if (! in_array($evaluation->effectiveResult(), ['passed', 'overridden'], true)) {
                 throw ValidationException::withMessages([
-                    'status' => $evaluation->summary.' Save allocation or paperwork corrections in Planning, then retry dispatch.',
+                    'status' => $evaluation->summary.' Complete the named Packaging List or Project document action, then retry dispatch.',
                 ]);
             }
         }
@@ -303,7 +303,7 @@ class ShipmentController extends Controller
                 $lockedDetails = $authorization->inspect($shipment, $workflow, $authorization->rowsFromShipment($shipment), true);
                 $lockedHash = hash('sha256', json_encode($lockedDetails, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                 if (! hash_equals((string)$evaluation->content_hash, $lockedHash)) {
-                    throw ValidationException::withMessages(['status' => 'Packing availability changed while dispatch was being authorized. Review the current allocation and retry.']);
+                    throw ValidationException::withMessages(['status' => 'Linked Packaging List details changed while dispatch was being authorized. Review the current packing evidence and retry.']);
                 }
             }
             $this->storePhotoAttachments($request, $shipment, $request->boolean('is_public'));
@@ -409,7 +409,7 @@ class ShipmentController extends Controller
             $dispatchEvaluation = $authorization->evaluate($candidate, $workflow, $dispatchRows, Auth::id());
             $dispatchEvaluation->loadMissing('activeOverride');
             if (! in_array($dispatchEvaluation->effectiveResult(), ['passed','overridden'], true)) {
-                throw ValidationException::withMessages(['status' => $dispatchEvaluation->summary.' Correct the shipment allocation and paperwork before dispatch.']);
+                throw ValidationException::withMessages(['status' => $dispatchEvaluation->summary.' Complete the named Packaging List or Project document action before dispatch.']);
             }
         }
 
@@ -423,7 +423,7 @@ class ShipmentController extends Controller
                 $lockedDetails = $authorization->inspect($candidate, $workflow, $authorization->rowsFromShipment($shipment), true);
                 $lockedHash = hash('sha256', json_encode($lockedDetails, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                 if (! hash_equals((string)$dispatchEvaluation->content_hash, $lockedHash)) {
-                    throw ValidationException::withMessages(['status' => 'Packing availability changed while dispatch was being authorized. Review the current allocation and retry.']);
+                    throw ValidationException::withMessages(['status' => 'Linked Packaging List details changed while dispatch was being authorized. Review the current packing evidence and retry.']);
                 }
             }
             $shipment->histories()->create($data);
