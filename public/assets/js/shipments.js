@@ -31,6 +31,190 @@
         document.body.classList.remove('master-modal-open');
     }
 
+    /* ---------------- Delivery receipt reconciliation ----------------
+       A receipt is an equation, not a second opinion: what arrived is the
+       sum of what was accepted, damaged and rejected, and what is short is
+       the dispatched quantity that did not arrive. The operator writes only
+       the three outcome numbers; received and short are calculated from
+       them on every keystroke, so a balanced record is the only thing this
+       form can submit. The server still checks the equation — a hand-built
+       request cannot talk its way past it.
+       ------------------------------------------------------------------ */
+
+    function receiptQuantity(value) {
+        var number = parseFloat(value);
+        return isFinite(number) && number > 0 ? Math.round(number * 1000) / 1000 : 0;
+    }
+
+    function receiptText(value) {
+        return String(receiptQuantity(value));
+    }
+
+    function initDeliveryReceiptMath(modal) {
+        if (!modal) return;
+
+        var form = modal.querySelector('form');
+        var lines = Array.prototype.slice.call(modal.querySelectorAll('[data-receipt-line]'));
+        var syncers = [];
+        var alertBox = modal.querySelector('[data-receipt-client-error]');
+        var alertText = modal.querySelector('[data-receipt-client-error-text]');
+        if (!form || !lines.length) return;
+
+        function showAlert(message) {
+            if (!alertBox || !alertText) return;
+            alertText.textContent = message;
+            alertBox.hidden = !message;
+        }
+
+        lines.forEach(function (line) {
+            var remaining = parseFloat(line.getAttribute('data-remaining')) || 0;
+            var returnableBase = parseFloat(line.getAttribute('data-returnable')) || 0;
+            var accepted = line.querySelector('[data-receipt-input="accepted"]');
+            var damaged = line.querySelector('[data-receipt-input="damaged"]');
+            var rejected = line.querySelector('[data-receipt-input="rejected"]');
+            var ret = line.querySelector('[data-receipt-input="returned"]');
+            var replacement = line.querySelector('[data-receipt-input="replacement"]');
+            var shortInput = line.querySelector('[data-receipt-input="short"]');
+            var reason = line.querySelector('[data-receipt-input="reason"]');
+            var receivedOut = line.querySelector('[data-receipt-received]');
+            var receivedField = line.querySelector('[data-receipt-received-input]');
+            var status = line.querySelector('[data-receipt-status]');
+            if (!accepted || !receivedField || !shortInput) return;
+
+            function setStatus(text, tone) {
+                if (!status) return;
+                status.textContent = text;
+                status.classList.toggle('is-error', tone === 'error');
+                status.classList.toggle('is-warn', tone === 'warn');
+                status.classList.toggle('is-ok', tone === 'ok');
+            }
+
+            function sync(origin) {
+                var damagedQuantity = damaged ? receiptQuantity(damaged.value) : 0;
+                var rejectedQuantity = rejected ? receiptQuantity(rejected.value) : 0;
+                var returnedQuantity = ret ? receiptQuantity(ret.value) : 0;
+                var replacementQuantity = replacement ? receiptQuantity(replacement.value) : 0;
+                var acceptedQuantity = receiptQuantity(accepted.value);
+
+                /* Short is the dispatched quantity that never arrived, so it is
+                   the only figure that can be written directly: editing it
+                   fills in the arrival first, and the acceptance follows. */
+                var typedShort = receiptQuantity(shortInput.value);
+                var shortQuantity = Math.min(typedShort, Math.max(remaining, 0));
+                if (origin === 'short') {
+                    var arrived = Math.max(remaining - shortQuantity, 0);
+                    acceptedQuantity = Math.max(arrived - damagedQuantity - rejectedQuantity, 0);
+                    accepted.value = receiptText(acceptedQuantity);
+                    /* Leave the field alone while it is being typed in; only
+                       correct a figure larger than what was dispatched. */
+                    if (Math.abs(shortQuantity - typedShort) > 0.0001) shortInput.value = receiptText(shortQuantity);
+                } else if (origin) {
+                    var receivedNow = acceptedQuantity + damagedQuantity + rejectedQuantity;
+                    shortQuantity = Math.max(remaining - receivedNow, 0);
+                    shortInput.value = receiptText(shortQuantity);
+                }
+
+                /* Nothing can go back that was never accepted: a return may use
+                   the parent's accepted balance, a replacement is part of what
+                   this receipt accepts. */
+                var returnable = returnableBase + acceptedQuantity;
+                if (ret && returnedQuantity > returnable) {
+                    returnedQuantity = Math.max(returnable, 0);
+                    ret.value = receiptText(returnedQuantity);
+                }
+                if (replacement && replacementQuantity > acceptedQuantity) {
+                    replacementQuantity = acceptedQuantity;
+                    replacement.value = receiptText(replacementQuantity);
+                }
+
+                var received = Math.round((acceptedQuantity + damagedQuantity + rejectedQuantity) * 1000) / 1000;
+                var active = received > 0 || shortQuantity > 0 || returnedQuantity > 0 || replacementQuantity > 0;
+
+                receivedField.value = receiptText(received);
+                if (receivedOut) receivedOut.textContent = receiptText(received);
+
+                if (line.dataset.receiptError && !line.dataset.receiptDirty) {
+                    /* A message from the server stays put until this line is
+                       touched — it is the only thing that explains a refusal. */
+                    setStatus(line.dataset.receiptError, 'error');
+                } else if (!active) {
+                    setStatus(remaining <= 0
+                        ? 'Already fully received — record only a return or replacement.'
+                        : 'Nothing received on this line yet.', '');
+                } else if (shortQuantity > 0) {
+                    setStatus(receiptText(shortQuantity) + ' of ' + receiptText(remaining) + ' dispatched has not arrived — explain why in Reason.', 'warn');
+                } else if (received > remaining) {
+                    setStatus('More than the ' + receiptText(remaining) + ' dispatched — this receipt will be flagged.', 'warn');
+                } else {
+                    setStatus('Balanced · ' + receiptText(received) + ' received = ' + receiptText(acceptedQuantity) + ' accepted + ' + receiptText(damagedQuantity) + ' damaged + ' + receiptText(rejectedQuantity) + ' rejected.', 'ok');
+                }
+            }
+
+            [accepted, damaged, rejected, ret, replacement, shortInput].forEach(function (input) {
+                if (!input) return;
+                input.addEventListener('input', function () {
+                    line.dataset.receiptDirty = '1';
+                    delete line.dataset.receiptError;
+                    sync(input === shortInput ? 'short' : 'received');
+                    showAlert('');
+                });
+                input.addEventListener('change', function () {
+                    /* A cleared box means zero, not "leave it out" — every
+                       line has to arrive at the server as a number. */
+                    if (input.value.trim() === '') input.value = '0';
+                    sync(input === shortInput ? 'short' : 'received');
+                });
+            });
+
+            syncers.push(function () { sync('received'); });
+            sync();
+        });
+
+        /* After a refused save, put the offending line in front of the
+           operator instead of leaving them at the top of a long sheet. */
+        var firstError = modal.querySelector('.shipment-delivery-status.is-error');
+        if (firstError && modal.dataset.openOnLoad === 'true') {
+            requestAnimationFrame(function () {
+                firstError.scrollIntoView({ block: 'center' });
+            });
+        }
+
+        form.addEventListener('submit', function (event) {
+            var missingReason = null;
+
+            /* Never let an emptied field reach the validator as a raw key. */
+            lines.forEach(function (line) {
+                Array.prototype.forEach.call(line.querySelectorAll('input[type="number"]'), function (input) {
+                    if (input.value.trim() === '') input.value = '0';
+                });
+            });
+            syncers.forEach(function (run) { run(); });
+
+            lines.forEach(function (line) {
+                if (missingReason) return;
+                var reason = line.querySelector('[data-receipt-input="reason"]');
+                if (!reason) return;
+
+                /* Anything other than a clean acceptance is a discrepancy and
+                   has to say why, exactly as the server insists. */
+                var discrepancy = false;
+                ['short', 'damaged', 'rejected', 'returned'].forEach(function (role) {
+                    var input = line.querySelector('[data-receipt-input="' + role + '"]');
+                    if (input && receiptQuantity(input.value) > 0) discrepancy = true;
+                });
+
+                if (discrepancy && !reason.value.trim()) missingReason = reason;
+            });
+
+            if (!missingReason) return;
+
+            event.preventDefault();
+            showAlert('Explain every shortage, damage, rejection or return before recording the receipt — a receipt cannot be corrected afterwards.');
+            missingReason.focus({ preventScroll: true });
+            missingReason.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+    }
+
     /* ---------------- Listing behaviour ----------------
        Row navigation, the sticky-header shadow and the saved-view form are the
        same on every list screen, so they live in assets/js/master-list.js;
@@ -89,6 +273,7 @@
         if (deliveryReceiptModal?.dataset.openOnLoad === 'true') openModal(deliveryReceiptModal);
 
         initList('.ship-index');
+        initDeliveryReceiptMath(deliveryReceiptModal);
 
         [quickModal, deleteModal, deliveryReceiptModal].forEach(function (modal) {
             modal?.addEventListener('click', function (event) {

@@ -37,19 +37,28 @@ class ShipmentDeliveryReceiptController extends Controller
         ]);
 
         $rows = [];
+        $itemNames = ShipmentItem::query()->where('shipment_id', $shipment->id)->pluck('product_name', 'id');
+        /* Messages name the product and carry the arithmetic, so the operator
+           can see which figure to change instead of re-reading the rule. */
+        $quantity = fn ($value) => rtrim(rtrim(number_format((float) $value, 3, '.', ''), '0'), '.') ?: '0';
         foreach ($data['lines'] as $index => $line) {
             $values = collect(['received_quantity','accepted_quantity','short_quantity','damaged_quantity','rejected_quantity','returned_quantity','replacement_quantity'])
                 ->mapWithKeys(fn ($key) => [$key=>round((float)$line[$key], 3)]);
             if ($values->sum() <= 0) continue;
-            if (abs($values['received_quantity'] - ($values['accepted_quantity'] + $values['damaged_quantity'] + $values['rejected_quantity'])) > 0.0001) {
-                throw ValidationException::withMessages(["lines.$index.received_quantity"=>'Received quantity must equal accepted, damaged and rejected quantities.']);
+            $product = $itemNames[(int) ($line['shipment_item_id'] ?? 0)] ?? 'Line '.($index + 1);
+            $reconciled = round($values['accepted_quantity'] + $values['damaged_quantity'] + $values['rejected_quantity'], 3);
+            if (abs($values['received_quantity'] - $reconciled) > 0.0001) {
+                throw ValidationException::withMessages(["lines.$index.received_quantity"=>$product.': received '.$quantity($values['received_quantity'])
+                    .' must equal accepted '.$quantity($values['accepted_quantity']).' + damaged '.$quantity($values['damaged_quantity'])
+                    .' + rejected '.$quantity($values['rejected_quantity']).' = '.$quantity($reconciled)
+                    .'. Units that did not arrive belong in short — they are not part of received.']);
             }
             if ($values['replacement_quantity'] > $values['accepted_quantity'] + 0.0001) {
-                throw ValidationException::withMessages(["lines.$index.replacement_quantity"=>'Replacement quantity is part of accepted quantity and cannot be greater than it.']);
+                throw ValidationException::withMessages(["lines.$index.replacement_quantity"=>$product.': replacement '.$quantity($values['replacement_quantity']).' is part of the accepted '.$quantity($values['accepted_quantity']).' and cannot be greater than it.']);
             }
             $hasDiscrepancy = $values['short_quantity'] > 0 || $values['damaged_quantity'] > 0 || $values['rejected_quantity'] > 0 || $values['returned_quantity'] > 0;
             if ($hasDiscrepancy && blank($line['discrepancy_reason'] ?? null)) {
-                throw ValidationException::withMessages(["lines.$index.discrepancy_reason"=>'Explain the shortage, damage, rejection or return.']);
+                throw ValidationException::withMessages(["lines.$index.discrepancy_reason"=>$product.': explain the shortage, damage, rejection or return — the reason is stored with the receipt.']);
             }
             $rows[] = array_merge($values->all(), [
                 'shipment_item_id'=>(int)$line['shipment_item_id'],

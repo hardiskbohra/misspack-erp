@@ -73,12 +73,82 @@
     gap: 16px;
 }
 
+.shipment-delivery-guide {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.55;
+}
+
+.shipment-delivery-guide i {
+    margin-top: 2px;
+    color: #4f83f1;
+}
+
+.shipment-delivery-guide p {
+    margin: 0;
+}
+
 .shipment-delivery-lines table {
-    min-width: 1040px;
+    min-width: 1080px;
 }
 
 .shipment-delivery-lines .master-input {
     min-width: 88px;
+}
+
+.shipment-delivery-modal thead th small {
+    display: block;
+    margin-top: 2px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    color: var(--mc-text-3);
+    text-transform: none;
+}
+
+.shipment-delivery-computed {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 56px;
+    padding: 8px 10px;
+    border: 1px dashed var(--mc-border);
+    border-radius: 9px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.shipment-delivery-status {
+    display: block;
+    max-width: 260px;
+    margin-top: 4px;
+    color: var(--mc-text-3);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.shipment-delivery-status.is-ok {
+    color: #027a48;
+}
+
+.shipment-delivery-status.is-warn {
+    color: #b54708;
+}
+
+.shipment-delivery-status.is-error {
+    color: #b42318;
 }
 
 .shipment-receipt-history {
