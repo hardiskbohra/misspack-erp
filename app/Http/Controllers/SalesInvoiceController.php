@@ -296,6 +296,9 @@ class SalesInvoiceController extends Controller
         });
 
         $this->refreshInvoiceMoney($salesInvoice);
+        if ($workflow = $salesInvoice->project?->workflow) {
+            app(\App\Services\ProjectWorkflowGates::class)->evaluateAll($workflow, Auth::id());
+        }
 
         return back()->with('success', 'Receipt of '.number_format($entry->credit_amount, 2)
             .' recorded against '.$salesInvoice->invoice_number.'.');

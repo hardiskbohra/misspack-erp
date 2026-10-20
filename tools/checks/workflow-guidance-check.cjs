@@ -16,7 +16,7 @@ const controllers = [
 let pass = 0;
 function check(ok, label) { if (!ok) { console.error(`FAIL: ${label}`); process.exitCode = 1; } else { console.log(`PASS: ${label}`); pass++; } }
 check(guidance.includes("'production_complete' =>") && guidance.includes("'production'"), 'production uses a focused guidance recipe and modal');
-check(guidance.includes("'advance_received' =>") && guidance.includes("'transaction_type' => 'credit'"), 'advance action opens an inward receipt');
+check(guidance.includes("'advance_received' =>") && guidance.includes("'Invoice receipt', false, 'commercial', 'receipt'") && workflow.includes('data-open-payment') && workflow.includes("sales_invoices.partials.payment-modal"), 'advance and dispatch actions open the invoice receipt modal in workflow');
 check(guidance.includes("'procurement_ready' =>") && guidance.includes("'project_product_id' => $product?->id"), 'procurement action carries product context');
 check(guidance.includes("route('shipments.create', $context)"), 'shipment action carries workflow context');
 check(queue.includes("'guidance' => app(ProjectWorkflowGuidance::class)->forStep($step)"), 'coordinator queue receives centralized guidance');
@@ -32,5 +32,6 @@ check(returnService.includes("str_starts_with($return, $projectBase)"), 'return 
 check((controllers.match(/ProjectWorkflowReturn::class/g) || []).length === 4, 'four source modules return to the launching workflow');
 check(read('app/Http/Controllers/PurchaseInvoiceController.php').includes("'project_id' => $project?->id") && read('app/Http/Controllers/PurchaseInvoiceController.php').includes("'vendor_id' => $projectProduct?->vendor_id"), 'purchase order preselects project and vendor');
 check(read('app/Http/Controllers/CashflowController.php').includes("'transaction_type' => $direction") && read('app/Http/Controllers/CashflowController.php').includes("'client_id' => $project?->client_id"), 'receipt preselects direction and client');
+check(read('app/Http/Controllers/SalesInvoiceController.php').includes("ProjectWorkflowGates::class)->evaluateAll($workflow"), 'invoice receipt immediately recalculates workflow payment gates');
 check(read('app/Http/Controllers/ShipmentController.php').includes('public function create(Request $request)') && read('app/Http/Controllers/ShipmentController.php').includes("'project_id' => $project?->id"), 'shipment create preselects project');
-if (!process.exitCode) console.log(`Workflow guidance checks passed (${pass}/18).`);
+if (!process.exitCode) console.log(`Workflow guidance checks passed (${pass}/19).`);

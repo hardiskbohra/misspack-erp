@@ -75,6 +75,10 @@
                         @php
                             $guide = $action['guidance'];
                             $sameWorkflow = str_contains($guide['url'], 'tab=workflow') || str_starts_with($guide['url'], '#');
+                            $receiptEvaluation = $guide['modal'] === 'receipt'
+                                ? $workflow->evaluations->firstWhere('gate_key', $actionStep->step_key)
+                                : null;
+                            $receiptAmount = (float) data_get($receiptEvaluation?->details, 'shortfall', 0);
                         @endphp
                         <article class="workflow-action-card {{ $action['is_overdue']?'is-overdue':($action['is_blocked']?'is-blocked':($action['is_waiting']?'is-waiting':'')) }}">
                             <div class="workflow-action-card-head">
@@ -88,7 +92,17 @@
                             <footer>
                                 <div class="workflow-action-meta"><span><i class="fa-solid fa-database"></i>{{ $guide['source'] }}</span><span><i class="fa-solid fa-user"></i>{{ $action['owner']?->name ?: $action['coordinator']?->name ?: 'Unassigned' }}</span><span class="{{ $action['is_overdue']?'is-danger':'' }}"><i class="fa-regular fa-calendar"></i>{{ $action['due_date']?->format('d M Y') ?: 'No due date' }}</span></div>
                                 <div class="workflow-action-buttons">
-                                    @if(in_array($guide['modal'],['production','quality'],true) && $action['product'])
+                                    @if($guide['modal']==='receipt' && $workflowReceiptInvoice)
+                                        <button type="button" class="master-btn master-btn-primary master-btn-sm" data-open-payment
+                                            data-invoice-id="{{ $workflowReceiptInvoice->id }}"
+                                            data-invoice-number="{{ $workflowReceiptInvoice->invoice_number }}"
+                                            data-invoice-amount="{{ number_format($receiptAmount > 0 ? $receiptAmount : (float)$workflowReceiptInvoice->balanceDue(), 2, '.', '') }}"
+                                            data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($workflowReceiptInvoice->balanceDue()) }}"
+                                            data-invoice-client="{{ $workflowReceiptInvoice->client_company_name ?: $project->clientName() }}"
+                                            data-invoice-currency="{{ $workflowReceiptInvoice->currency ?: 'INR' }}">
+                                            <i class="fa-solid fa-indian-rupee-sign"></i> {{ $guide['label'] }}
+                                        </button>
+                                    @elseif(in_array($guide['modal'],['production','quality'],true) && $action['product'])
                                         <button type="button" class="master-btn master-btn-primary master-btn-sm" data-modal-open="{{ $guide['modal']==='quality' ? 'workflowQualityModal' : 'workflowProductionModal' }}{{ $action['product']->id }}"><i class="fa-solid {{ $guide['modal']==='quality' ? 'fa-clipboard-check' : 'fa-industry' }}"></i> {{ $guide['label'] }}</button>
                                     @elseif($sameWorkflow)
                                         <button type="button" class="master-btn master-btn-primary master-btn-sm" data-workflow-open="{{ $guide['view'] }}"><i class="fa-solid fa-arrow-right"></i> {{ $guide['label'] }}</button>
@@ -381,6 +395,13 @@
                     </form>
                 </div>
             </div>
+
+            @if($workflowReceiptInvoice)
+                @include('sales_invoices.partials.payment-modal', [
+                    'accounts' => $cashflowAccounts,
+                    'receiptCategories' => $cashflowCategories->where('is_active', true)->whereIn('type', ['income', 'tax', 'other']),
+                ])
+            @endif
         @endif
     </div>
 </section>

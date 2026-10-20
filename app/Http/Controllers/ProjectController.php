@@ -243,8 +243,9 @@ class ProjectController extends Controller
         }
 
         $workflow = null;
+        $workflowReceiptInvoice = null;
         if (Schema::hasTable('project_workflows')) {
-            $workflowWith = ['steps.product', 'steps.owner', 'reporter', 'commercialInvoice', 'evaluations.activeOverride.approver', 'evaluations.evaluator', 'evaluations.product', 'approvals.product', 'approvals.currentVersion.attachment', 'approvals.versions.attachment', 'approvals.versions.clientUser', 'approvals.overrides.approver'];
+            $workflowWith = ['steps.product', 'steps.owner', 'reporter', 'commercialInvoice.convertedInvoice', 'evaluations.activeOverride.approver', 'evaluations.evaluator', 'evaluations.product', 'approvals.product', 'approvals.currentVersion.attachment', 'approvals.versions.attachment', 'approvals.versions.clientUser', 'approvals.overrides.approver'];
             if (Schema::hasTable('project_financial_closures')) {
                 $workflowWith[] = 'financialClosures.approver';
             }
@@ -253,6 +254,10 @@ class ProjectController extends Controller
                 app(ProjectWorkflowExecution::class)->recalculate($workflow);
                 $publishedState = $workflow->project()->first(['status', 'stage', 'progress_percent', 'completed_at']);
                 $project->forceFill($publishedState?->only(['status', 'stage', 'progress_percent', 'completed_at']) ?? []);
+                $baselineInvoice = $workflow->commercialInvoice;
+                $workflowReceiptInvoice = $baselineInvoice?->isSuperseded()
+                    ? $baselineInvoice->convertedInvoice
+                    : $baselineInvoice;
             }
             $project->setRelation('workflow', $workflow);
         }
@@ -272,6 +277,7 @@ class ProjectController extends Controller
         return view('projects.show', array_merge($this->sharedData(), [
             'project' => $project,
             'workflow' => $workflow,
+            'workflowReceiptInvoice' => $workflowReceiptInvoice,
             'financialClosureSnapshot' => $financialClosureSnapshot,
             'projectExceptions' => $projectExceptions,
             'workflowMatrix' => $workflowMatrix,

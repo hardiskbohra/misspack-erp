@@ -186,8 +186,14 @@
 
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/projects.css') }}">
+    @if($tab === 'workflow' && $workflowReceiptInvoice)
+        <link rel="stylesheet" href="{{ $assetVer('assets/css/sales-invoices.css') }}">
+    @endif
 @endpush
 
 @push('scripts')
     <script src="{{ $assetVer('assets/js/projects.js') }}"></script>
+    @if($tab === 'workflow' && $workflowReceiptInvoice)
+        <script src="{{ $assetVer('assets/js/sales-invoices.js') }}"></script>
+    @endif
 @endpush

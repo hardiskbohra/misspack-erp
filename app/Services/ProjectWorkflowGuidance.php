@@ -42,9 +42,9 @@ class ProjectWorkflowGuidance
             'advance_received' => $this->recipe(
                 'Record and allocate the client advance',
                 'Post the inward receipt and allocate it to this project or its Proforma. The gate updates from the ledger—not from a checkbox.',
-                'Record receipt', route('cashflows.create', ['transaction_type' => 'credit'] + $context),
-                ['Record the client receipt as Inward.', 'Allocate it to this project or Proforma.', 'Refresh sources to recheck the required advance.'],
-                'Cashflow receipt', false, 'commercial'
+                'Record receipt', $commercial,
+                ['Record the client receipt against the workflow invoice.', 'The ledger entry is linked to this project automatically.', 'Workflow recalculates the required advance after saving.'],
+                'Invoice receipt', false, 'commercial', 'receipt'
             ),
             'procurement_ready' => $this->recipe(
                 'Create the vendor Purchase Order',
@@ -91,9 +91,9 @@ class ProjectWorkflowGuidance
             'dispatch_balance' => $this->recipe(
                 'Record the complete pre-dispatch balance',
                 'Allocate inward receipts until the full required balance is covered, unless a manager accepts the current risk.',
-                'Record receipt', route('cashflows.create', ['transaction_type' => 'credit'] + $context),
-                ['Record the inward client payment.', 'Allocate it to the project invoice.', 'Refresh sources to recalculate the shortfall.'],
-                'Cashflow receipt', false, 'commercial'
+                'Record receipt', $commercial,
+                ['Record the receipt against the workflow invoice.', 'The ledger entry is linked to this project automatically.', 'Workflow recalculates the dispatch shortfall after saving.'],
+                'Invoice receipt', false, 'commercial', 'receipt'
             ),
             'dispatch_approved', 'shipment_dispatched' => $this->recipe(
                 'Create the shipment in Planning',
