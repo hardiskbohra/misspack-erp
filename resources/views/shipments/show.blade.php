@@ -313,8 +313,13 @@
                             </div>
                             <footer>
                                 <div class="shipment-receipt-evidence">
-                                    <a href="{{ $receipt->evidenceUrl() }}" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip"></i> {{ $receipt->evidence_original_name }}</a>
-                                    <small>SHA-256 {{ substr($receipt->evidence_hash,0,12) }} · recorded by {{ $receipt->recorder?->name ?: 'System' }}</small>
+                                    @if($receipt->evidenceUrl())
+                                        <a href="{{ $receipt->evidenceUrl() }}" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip"></i> {{ $receipt->evidence_original_name }}</a>
+                                        <small>SHA-256 {{ substr((string) $receipt->evidence_hash,0,12) }} · recorded by {{ $receipt->recorder?->name ?: 'System' }}</small>
+                                    @else
+                                        <span class="shipment-receipt-no-evidence"><i class="fa-regular fa-file"></i> No evidence attached</span>
+                                        <small>Recorded by {{ $receipt->recorder?->name ?: 'System' }} · line quantities are the receipt</small>
+                                    @endif
                                 </div>
                                 <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('shipments.delivery-receipts.print', [$shipment, $receipt]) }}" target="_blank" rel="noopener">
                                     <i class="fas fa-print"></i> Print receipt

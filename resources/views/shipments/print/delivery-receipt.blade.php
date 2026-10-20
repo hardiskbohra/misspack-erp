@@ -48,8 +48,10 @@
             <div><span>Received at</span><strong>{{ $receipt->received_at?->format('d M Y, H:i') ?: '-' }}</strong></div>
             <div><span>Project / Client</span><strong>{{ $shipment->project->project_number ?? '-' }} · {{ $shipment->client->company_name ?? '-' }}</strong></div>
             <div><span>Recorded by</span><strong>{{ $receipt->recorder->name ?? 'System' }}</strong></div>
-            <div><span>Evidence document</span><strong>{{ $receipt->evidence_original_name ?: '-' }}</strong></div>
-            <div><span>Evidence SHA-256</span><strong>{{ $receipt->evidence_hash ? substr($receipt->evidence_hash, 0, 24).'…' : '-' }}</strong></div>
+            <div><span>Evidence document</span><strong>{{ $receipt->evidence_original_name ?: 'Not supplied (optional)' }}</strong></div>
+            @if ($receipt->evidence_hash)
+                <div><span>Evidence SHA-256</span><strong>{{ substr($receipt->evidence_hash, 0, 24) }}…</strong></div>
+            @endif
         </section>
 
         <table class="print-table print-table-compact">

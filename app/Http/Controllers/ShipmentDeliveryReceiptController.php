@@ -23,7 +23,7 @@ class ShipmentDeliveryReceiptController extends Controller
             'recipient_name'=>['required','string','max:255'],
             'received_at'=>['required','date','before_or_equal:now'],
             'notes'=>['nullable','string','max:4000'],
-            'evidence_file'=>['required','file','max:20480','mimes:jpg,jpeg,png,webp,pdf'],
+            'evidence_file'=>['nullable','file','max:20480','mimes:jpg,jpeg,png,webp,pdf'],
             'lines'=>['required','array','min:1'],
             'lines.*.shipment_item_id'=>['required','integer','distinct','exists:shipment_items,id'],
             'lines.*.received_quantity'=>['required','numeric','min:0'],
@@ -78,15 +78,18 @@ class ShipmentDeliveryReceiptController extends Controller
                 $row['project_product_id'] = $item->project_product_id;
             }
             unset($row);
+            /* The signed POD may arrive later: the line reconciliation is the
+               receipt, and the evidence file is supporting proof only. */
             $evidence = $request->file('evidence_file');
-            $evidenceHash = hash_file('sha256', $evidence->getRealPath());
-            $path = $evidence->store('shipments/delivery-receipts', 'public');
             $payload = [
                 'shipment_id'=>$lockedShipment->id, 'receipt_reference'=>$data['receipt_reference'] ?? null,
                 'recipient_name'=>$data['recipient_name'], 'received_at'=>$data['received_at'],
-                'notes'=>$data['notes'] ?? null, 'evidence_path'=>$path,
-                'evidence_original_name'=>$evidence->getClientOriginalName(), 'evidence_mime'=>$evidence->getMimeType(),
-                'evidence_size'=>$evidence->getSize(), 'evidence_hash'=>$evidenceHash, 'recorded_by'=>Auth::id(),
+                'notes'=>$data['notes'] ?? null,
+                'evidence_path'=>$evidence?->store('shipments/delivery-receipts', 'public'),
+                'evidence_original_name'=>$evidence?->getClientOriginalName(), 'evidence_mime'=>$evidence?->getMimeType(),
+                'evidence_size'=>$evidence?->getSize() ?: 0,
+                'evidence_hash'=>$evidence ? hash_file('sha256', $evidence->getRealPath()) : null,
+                'recorded_by'=>Auth::id(),
             ];
             $payload['content_hash'] = hash('sha256', json_encode(['receipt'=>$payload,'lines'=>$rows], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             $receipt = ShipmentDeliveryReceipt::create($payload);

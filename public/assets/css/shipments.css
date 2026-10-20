@@ -112,6 +112,14 @@
     overflow-wrap: anywhere;
 }
 
+.shipment-receipt-no-evidence {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--mc-text-2);
+    font-weight: 600;
+}
+
 .shipment-receipt-card footer > .master-btn {
     flex: none;
 }

@@ -21,7 +21,11 @@ class ShipmentDeliveryReceipt extends Model
     public function shipment() { return $this->belongsTo(Shipment::class); }
     public function lines() { return $this->hasMany(ShipmentDeliveryReceiptLine::class); }
     public function recorder() { return $this->belongsTo(User::class, 'recorded_by'); }
-    public function evidenceUrl(): string { return Storage::disk('public')->url($this->evidence_path); }
+    public function evidenceUrl(): ?string
+    {
+        return $this->evidence_path ? Storage::disk('public')->url($this->evidence_path) : null;
+    }
+
 
     public function hasDiscrepancy(): bool
     {

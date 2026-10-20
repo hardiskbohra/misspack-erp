@@ -17,7 +17,7 @@
                     <label class="master-field"><span class="master-label">Receipt / POD reference</span><input class="master-input" name="receipt_reference" maxlength="255" value="{{ old('receipt_reference') }}"></label>
                     <label class="master-field"><span class="master-label">Recipient name <b>*</b></span><input class="master-input" name="recipient_name" maxlength="255" value="{{ old('recipient_name') }}" required></label>
                     <label class="master-field"><span class="master-label">Received at <b>*</b></span><input class="master-input" type="datetime-local" name="received_at" value="{{ old('received_at',now()->format('Y-m-d\TH:i')) }}" required></label>
-                    <label class="master-field"><span class="master-label">POD / receipt evidence <b>*</b></span><input class="master-input" type="file" name="evidence_file" accept=".jpg,.jpeg,.png,.webp,.pdf" required></label>
+                    <label class="master-field"><span class="master-label">POD / receipt evidence <small>Optional</small></span><input class="master-input" type="file" name="evidence_file" accept=".jpg,.jpeg,.png,.webp,.pdf"><small class="master-help">Attach the signed POD, delivery note or photograph when available — the line reconciliation above is the receipt either way.</small></label>
                 </div>
 
                 @if($errors->hasAny(['receipt_reference', 'recipient_name', 'received_at', 'evidence_file', 'lines', 'lines.*']))
