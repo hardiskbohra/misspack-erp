@@ -102,11 +102,12 @@ class ProjectWorkflowExecution
         $next = $eligible->whereNotIn('status', ['completed', 'skipped'])->sortBy('sort_order')->first();
 
         $calculatedProgress = max(0, min(100, $progress));
-        $workflow->update([
+        $workflow->fill([
             'calculated_progress' => $calculatedProgress,
             'calculated_stage' => $next?->stage_key ?: 'completed',
             'status' => $next ? 'active' : 'completed',
         ]);
+        if ($workflow->isDirty()) $workflow->save();
         // Project progress, stage and ordinary execution status are read caches
         // controlled only by this workflow calculation. Financial closure and
         // cancellation are explicit terminal decisions and are never overwritten.
@@ -114,13 +115,14 @@ class ProjectWorkflowExecution
         $terminalDecision = in_array($project->status, [...Project::closureStatuses(), 'cancelled'], true);
         $projectState = [
             'progress_percent' => $calculatedProgress,
-            'stage' => $terminalDecision ? $project->stage : $this->projectStage($next?->stage_key ?: 'completed'),
+            'stage' => $terminalDecision ? $project->stage : ($next?->stage_key ?: 'completed'),
             'status' => $terminalDecision ? $project->status : ($next ? 'in_progress' : 'completed'),
             'completed_at' => $terminalDecision
                 ? $project->completed_at
                 : ($next ? null : ($project->completed_at ?: now())),
         ];
-        $project->forceFill($projectState)->save();
+        $project->forceFill($projectState);
+        if ($project->isDirty()) $project->save();
 
         return $workflow->fresh(['steps.product', 'steps.owner', 'reporter', 'commercialInvoice']);
     }
@@ -139,24 +141,6 @@ class ProjectWorkflowExecution
         ]);
 
         return $this->recalculate($step->workflow);
-    }
-
-    private function projectStage(string $workflowStage): string
-    {
-        return match ($workflowStage) {
-            'setup' => 'kickoff',
-            'commercial' => 'client_pi',
-            'procurement' => 'vendor_po',
-            'artwork' => 'artwork_design',
-            'sampling' => 'pps',
-            'production' => 'production',
-            'quality' => 'quality_check',
-            'packing' => 'packing',
-            'dispatch' => 'dispatch_ready',
-            'delivery', 'closure' => 'delivered',
-            'completed' => 'closed',
-            default => 'kickoff',
-        };
     }
 
     private function ensureStep(ProjectWorkflow $workflow, ?int $productId, array $definition, string $scope, ?int $ownerId): void

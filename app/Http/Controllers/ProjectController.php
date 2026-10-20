@@ -249,6 +249,11 @@ class ProjectController extends Controller
                 $workflowWith[] = 'financialClosures.approver';
             }
             $workflow = $project->workflow()->with($workflowWith)->first();
+            if ($workflow) {
+                app(ProjectWorkflowExecution::class)->recalculate($workflow);
+                $publishedState = $workflow->project()->first(['status', 'stage', 'progress_percent', 'completed_at']);
+                $project->forceFill($publishedState?->only(['status', 'stage', 'progress_percent', 'completed_at']) ?? []);
+            }
             $project->setRelation('workflow', $workflow);
         }
         $financialClosureSnapshot = $workflow && Schema::hasTable('project_financial_closures')

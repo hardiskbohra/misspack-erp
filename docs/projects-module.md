@@ -88,10 +88,12 @@ button. It is now the shared record page:
   `.master-modal`, closed through `[data-close-modal]`.
 - **Execution state belongs to the Workflow Control Centre.** Project status,
   stage and progress are read-only caches published by `ProjectWorkflowExecution`.
-  Project create/edit screens cannot submit them, and the record page has no
-  separate status drawer. Financial closure and reopening remain explicit,
-  audited workflow actions; health, priority and planning dates remain editable
-  project metadata.
+  The project stage stores the exact current workflow stage key, so a current
+  sampling control is displayed as **PPS approval** rather than a loosely mapped
+  legacy stage. Project create/edit screens cannot submit execution state, and
+  the record page has no separate status drawer. Financial closure and reopening
+  remain explicit, audited workflow actions; health, priority and planning dates
+  remain editable project metadata.
 - **Update URLs come from the server.** Each edit dialog carries
   `data-update-url="{{ route(...) }}"` with an `__ID__` placeholder and
   `projects.js` binds it through `bindUpdateUrl()`: a hand-built

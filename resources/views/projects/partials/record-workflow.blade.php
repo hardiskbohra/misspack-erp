@@ -213,16 +213,7 @@
             </section>
 
             <section id="workflow-products" class="master-card master-card--flat master-section project-detail-card" data-workflow-view="products" role="tabpanel" aria-labelledby="workflow-tab-products" hidden>
-                <div class="master-section-head"><div><h2 class="master-section-title">Client artwork and PPS approvals</h2><p class="master-sub">Every decision belongs to one exact file version. A revision makes the previous decision historical.</p></div></div>
-                <form method="POST" enctype="multipart/form-data" action="{{ route('projects.approvals.store',$project) }}" class="project-approval-create">@csrf
-                    <label class="master-field"><span class="master-label">Product</span><select class="master-select" name="project_product_id" required><option value="">Select product</option>@foreach($project->products->where('status','!=','cancelled') as $product)<option value="{{ $product->id }}">{{ $product->product_name }}</option>@endforeach</select></label>
-                    <label class="master-field"><span class="master-label">Approval type</span><select class="master-select" name="approval_type" required>@foreach(\App\Models\ProjectApprovalRequest::typeOptions() as $key=>$label)<option value="{{ $key }}">{{ $label }}</option>@endforeach</select></label>
-                    <label class="master-field"><span class="master-label">Title</span><input class="master-input" name="title" maxlength="255" required placeholder="Front artwork approval"></label>
-                    <label class="master-field"><span class="master-label">Response due</span><input class="master-input" type="datetime-local" name="response_due_at"></label>
-                    <label class="master-field"><span class="master-label">Approval file</span><input class="master-input" type="file" name="approval_file" required accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.ppt,.pptx,.zip"></label>
-                    <label class="master-field project-approval-instructions"><span class="master-label">Instructions</span><input class="master-input" name="instructions" maxlength="2000" placeholder="What the client should review"></label>
-                    <button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-paper-plane"></i> Send approval request</button>
-                </form>
+                <div class="master-section-head"><div><h2 class="master-section-title">Client artwork and PPS approvals</h2><p class="master-sub">Every decision belongs to one exact file version. A revision makes the previous decision historical.</p></div><button type="button" class="master-btn master-btn-primary master-btn-sm" data-modal-open="workflowApprovalModal"><i class="fa-solid fa-paper-plane"></i> New approval request</button></div>
                 <div class="project-approval-list">
                     @forelse($workflow->approvals as $approval)
                         <article class="project-approval is-{{ $approval->effectiveStatus() }}">
@@ -240,6 +231,22 @@
                     @empty
                         <div class="master-empty-state"><i class="fa-solid fa-stamp"></i><p>No artwork or PPS approval requests have been sent yet.</p></div>
                     @endforelse
+                </div>
+                <div class="master-modal" id="workflowApprovalModal" aria-hidden="true" aria-labelledby="workflowApprovalTitle" data-open-on-errors="{{ $errors->hasAny(['project_product_id','approval_type','title','response_due_at','approval_file','instructions']) ? 'true' : 'false' }}">
+                    <div class="master-modal-card workflow-approval-modal" role="dialog" aria-modal="true" aria-labelledby="workflowApprovalTitle">
+                        <form method="POST" enctype="multipart/form-data" action="{{ route('projects.approvals.store',$project) }}">@csrf
+                            <div class="master-modal-header"><div class="master-modal-heading"><span class="master-modal-icon"><i class="fa-solid fa-stamp"></i></span><div><h3 class="master-modal-title" id="workflowApprovalTitle">Send client approval request</h3><p class="master-modal-subtitle">Choose the product and exact file version the client must review.</p></div></div><button type="button" class="master-modal-close" data-close-modal aria-label="Close approval request">×</button></div>
+                            <div class="master-modal-body"><div class="master-modal-grid">
+                                <label class="master-field"><span class="master-label">Product <b>*</b></span><select class="master-select" name="project_product_id" required><option value="">Select product</option>@foreach($project->products->where('status','!=','cancelled') as $product)<option value="{{ $product->id }}" @selected((string)old('project_product_id')===(string)$product->id)>{{ $product->product_name }}</option>@endforeach</select></label>
+                                <label class="master-field"><span class="master-label">Approval type <b>*</b></span><select class="master-select" name="approval_type" required>@foreach(\App\Models\ProjectApprovalRequest::typeOptions() as $key=>$label)<option value="{{ $key }}" @selected(old('approval_type','artwork')===$key)>{{ $label }}</option>@endforeach</select></label>
+                                <label class="master-field"><span class="master-label">Title <b>*</b></span><input class="master-input" name="title" maxlength="255" value="{{ old('title') }}" required placeholder="Front artwork approval"></label>
+                                <label class="master-field"><span class="master-label">Response due</span><input class="master-input" type="datetime-local" name="response_due_at" value="{{ old('response_due_at') }}"></label>
+                                <label class="master-field full"><span class="master-label">Approval file <b>*</b></span><input class="master-input" type="file" name="approval_file" required accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.ppt,.pptx,.zip"><small class="master-help">The decision will be tied permanently to this exact version.</small></label>
+                                <label class="master-field full"><span class="master-label">Instructions</span><textarea class="master-textarea" name="instructions" rows="3" maxlength="2000" placeholder="What the client should review">{{ old('instructions') }}</textarea></label>
+                            </div></div>
+                            <div class="master-modal-footer"><button type="button" class="master-btn master-btn-light" data-close-modal>Cancel</button><button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-paper-plane"></i> Send approval request</button></div>
+                        </form>
+                    </div>
                 </div>
             </section>
 
@@ -290,7 +297,26 @@
                                     </article>
                                 @endforeach
                             </div>
-                            @if($product->qualityInspections->isNotEmpty())<details><summary>QC history ({{ $product->qualityInspections->count() }})</summary><div class="project-approval-history">@foreach($product->qualityInspections as $inspection)<span><strong>{{ $inspection->resultLabel() }} · {{ number_format((float)$inspection->passed_quantity,3) }} passed</strong><small>{{ $inspection->inspected_at?->format('d M Y, H:i') }} · {{ $inspection->inspector?->name ?: 'System' }}</small>@if($inspection->evidenceUrl())<a href="{{ $inspection->evidenceUrl() }}" target="_blank">{{ $inspection->evidence_original_name }}</a><small>Evidence SHA-256 {{ substr($inspection->evidence_hash,0,10) }}</small>@else<small>No attachment supplied</small>@endif<em>{{ $inspection->notes }}</em></span>@endforeach</div></details>@endif
+                            @if($product->qualityInspections->isNotEmpty())
+                                <details class="workflow-qc-history">
+                                    <summary><span>QC history</span><small>{{ $product->qualityInspections->count() }} immutable {{ \Illuminate\Support\Str::plural('inspection', $product->qualityInspections->count()) }}</small><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary>
+                                    <div class="project-approval-history">
+                                        @foreach($product->qualityInspections as $inspection)
+                                            <span>
+                                                <strong>{{ $inspection->resultLabel() }} · {{ number_format((float)$inspection->passed_quantity,3) }} passed</strong>
+                                                <small>{{ $inspection->inspected_at?->format('d M Y, H:i') }} · {{ $inspection->inspector?->name ?: 'System' }}</small>
+                                                @if($inspection->evidenceUrl())
+                                                    <a href="{{ $inspection->evidenceUrl() }}" target="_blank" rel="noopener">{{ $inspection->evidence_original_name }}</a>
+                                                    <small>Evidence SHA-256 {{ substr($inspection->evidence_hash,0,10) }}</small>
+                                                @else
+                                                    <small>No attachment supplied</small>
+                                                @endif
+                                                @if($inspection->notes)<em>{{ $inspection->notes }}</em>@endif
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                </details>
+                            @endif
                         </details>
                     @endforeach
                 </div>

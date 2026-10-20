@@ -400,21 +400,19 @@ class Project extends Model
     public static function stageOptions(): array
     {
         return [
-            'quote_finalised' => 'Quote Finalised',
-            'kickoff' => 'Kickoff',
-            'sampling' => 'Sampling',
-            'artwork_design' => 'Artwork / Design',
-            'vendor_po' => 'Vendor PO',
-            'client_pi' => 'Client PI',
-            'pps' => 'PPS',
-            'pps_qc' => 'PPS QC',
+            'setup' => 'Project setup',
+            'commercial' => 'Commercial readiness',
+            'procurement' => 'Procurement',
+            'artwork' => 'Artwork approval',
+            'sampling' => 'PPS approval',
             'production' => 'Production',
-            'quality_check' => 'Quality Check',
+            'quality' => 'Quality control',
             'packing' => 'Packing',
-            'dispatch_ready' => 'Dispatch Ready',
-            'shipped' => 'Shipped',
-            'delivered' => 'Delivered',
-            'closed' => 'Closed',
+            'dispatch' => 'Dispatch readiness',
+            'delivery' => 'Delivery',
+            'closure' => 'Closure',
+            'completed' => 'Completed',
+            'closed' => 'Financially closed',
         ];
     }
 

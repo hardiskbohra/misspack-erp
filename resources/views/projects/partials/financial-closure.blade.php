@@ -63,7 +63,7 @@
         </div>
 
         <details class="project-financial-sources">
-            <summary>Outstanding source detail and fingerprint</summary>
+            <summary><span><i class="fa-solid fa-database" aria-hidden="true"></i> Outstanding source detail and fingerprint</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary>
             <div class="project-financial-source-grid">
                 <div><h3>Client documents</h3>@forelse($financialClosureSnapshot['receivables'] as $row)<p><strong>{{ $row['document_number'] }}</strong><span>{{ \App\Helpers\CommonHelper::amount($row['outstanding'], $row['currency']) }} due · {{ \App\Helpers\CommonHelper::amount($row['advance'], $row['currency']) }} advance · {{ $row['status'] }}</span></p>@empty<p><span>No active sales documents.</span></p>@endforelse</div>
                 <div><h3>Vendor bills</h3>@forelse($financialClosureSnapshot['payables'] as $row)<p><strong>{{ $row['document_number'] }}</strong><span>{{ \App\Helpers\CommonHelper::amount($row['outstanding'], $row['currency']) }} due · {{ \App\Helpers\CommonHelper::amount($row['advance'], $row['currency']) }} advance · {{ $row['status'] }}</span></p>@empty<p><span>No active vendor bills.</span></p>@endforelse</div>
