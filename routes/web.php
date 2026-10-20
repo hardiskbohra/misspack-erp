@@ -28,6 +28,7 @@ use App\Http\Controllers\CashflowSettingController;
 use App\Http\Controllers\AssetSettingController;
 use App\Http\Controllers\FixedAssetController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\WorkflowSettingController;
 use App\Http\Controllers\PartyStatementController;
 use App\Http\Controllers\ClientPortalStatementController;
 use App\Http\Controllers\PriceCalculatorController;
@@ -201,6 +202,9 @@ Route::middleware('auth')->group(function () {
         // Briefings — what the office is told about, and who is emailed.
         Route::get('/settings/briefings', [OfficeBriefingSettingController::class, 'index'])->name('settings.briefings');
         Route::put('/settings/briefings', [OfficeBriefingSettingController::class, 'update'])->name('settings.briefings.update');
+
+        Route::get('/settings/workflow', [WorkflowSettingController::class, 'index'])->name('settings.workflow');
+        Route::put('/settings/workflow', [WorkflowSettingController::class, 'update'])->name('settings.workflow.update');
 
         // Leads — the dropdown master data the lead forms offer.
         Route::get('/settings/leads', [LeadSettingController::class, 'index'])->name('settings.leads');

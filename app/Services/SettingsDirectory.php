@@ -54,6 +54,7 @@ final class SettingsDirectory
     public const CASHFLOW = 'cashflow';
     public const LEADS = 'leads';
     public const FEEDBACK = 'feedback';
+    public const WORKFLOW = 'workflow';
     public const BRIEFINGS = 'briefings';
     public const ASSETS = 'assets';
 
@@ -149,6 +150,29 @@ final class SettingsDirectory
                 'keywords' => ['lead', 'status', 'source', 'priority', 'finish', 'printing', 'currency', 'incoterm', 'capacity unit', 'dropdown'],
                 'counts' => fn (): array => [
                     'Options' => $this->count('lead_master_options', fn () => LeadMasterOption::query()->count()),
+                ],
+            ],
+
+            self::WORKFLOW => [
+                'key' => self::WORKFLOW,
+                'label' => 'Workflow',
+                'icon' => 'fa-solid fa-diagram-project',
+                'blurb' => 'Organisation defaults for dispatch evidence, action deadlines and the standard quality checklist.',
+                'holds' => [
+                    'Required dispatch documents by shipment type',
+                    'Approval and exception review deadlines',
+                    'Standard QC inspection checklist',
+                ],
+                'route' => 'settings.workflow',
+                'active' => 'settings.workflow*',
+                'links' => [
+                    ['label' => 'Dispatch documents', 'route' => 'settings.workflow', 'params' => ['tab' => 'documents']],
+                    ['label' => 'Deadlines & escalation', 'route' => 'settings.workflow', 'params' => ['tab' => 'deadlines']],
+                    ['label' => 'QC checklist', 'route' => 'settings.workflow', 'params' => ['tab' => 'quality']],
+                ],
+                'keywords' => ['workflow', 'dispatch', 'documents', 'quality', 'qc', 'deadline', 'approval', 'escalation', 'packing'],
+                'counts' => fn (): array => [
+                    'Controls' => 3,
                 ],
             ],
 

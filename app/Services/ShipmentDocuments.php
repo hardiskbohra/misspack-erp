@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\OfficeSetting;
 use App\Models\PackagingList;
 use App\Models\ProjectAttachment;
 use App\Models\Shipment;
@@ -60,11 +61,11 @@ class ShipmentDocuments
      */
     public function requiredFor(Shipment $shipment): array
     {
-        $required = match ($shipment->shipment_type) {
-            Shipment::TYPE_EXPORT => ['packing_list', 'commercial_invoice', 'shipping_bill'],
-            Shipment::TYPE_IMPORT => ['packing_list', 'commercial_invoice', 'bill_of_entry'],
-            default => ['delivery_challan'],
-        };
+        $documentRules = OfficeSetting::workflow()['documents'];
+        $required = array_values(array_intersect(
+            (array) ($documentRules[$shipment->shipment_type] ?? $documentRules[Shipment::TYPE_DOMESTIC] ?? []),
+            array_keys(self::TYPES)
+        ));
 
         // Proof of delivery is only expected once the shipment says delivered.
         if ($shipment->status === Shipment::STATUS_DELIVERED) {

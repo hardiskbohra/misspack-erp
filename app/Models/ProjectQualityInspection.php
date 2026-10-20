@@ -16,6 +16,13 @@ class ProjectQualityInspection extends Model
         'packaging' => 'Packaging standard checked', 'evidence' => 'Inspection evidence attached or referenced',
     ];
 
+    public static function checks(): array
+    {
+        $enabled = \App\Models\OfficeSetting::workflow()['qc_checks'] ?? array_keys(self::CHECKS);
+
+        return collect(self::CHECKS)->only(array_values((array) $enabled))->all();
+    }
+
     protected $fillable = [
         'project_id','project_product_id','batch_reference','inspected_quantity','passed_quantity',
         'rejected_quantity','rework_quantity','result','checklist','notes','evidence_path','evidence_original_name',

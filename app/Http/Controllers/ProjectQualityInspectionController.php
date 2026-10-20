@@ -26,7 +26,7 @@ class ProjectQualityInspectionController extends Controller
             'notes'=>['nullable','string','max:4000'],
             'evidence_file'=>['nullable','file','max:20480','mimes:jpg,jpeg,png,webp,pdf,xls,xlsx,doc,docx'],
         ];
-        foreach (array_keys(ProjectQualityInspection::CHECKS) as $check) $rules["checklist.$check"] = ['required','boolean'];
+        foreach (array_keys(ProjectQualityInspection::checks()) as $check) $rules["checklist.$check"] = ['required','boolean'];
         $data = $request->validate($rules);
         $inspected = round((float) $data['inspected_quantity'], 3);
         $passed = round((float) $data['passed_quantity'], 3);
@@ -35,7 +35,7 @@ class ProjectQualityInspectionController extends Controller
         if (abs($inspected - ($passed + $rejected + $rework)) > 0.0001) {
             throw ValidationException::withMessages(['inspected_quantity'=>'Passed, rejected and rework quantities must equal the inspected quantity.']);
         }
-        $checklist = collect(ProjectQualityInspection::CHECKS)->map(fn ($label, $key) => ['key'=>$key,'label'=>$label,'passed'=>(bool)data_get($data,"checklist.$key")])->values()->all();
+        $checklist = collect(ProjectQualityInspection::checks())->map(fn ($label, $key) => ['key'=>$key,'label'=>$label,'passed'=>(bool)data_get($data,"checklist.$key")])->values()->all();
         if (in_array($data['result'], ['passed','passed_with_observations'], true) && $passed <= 0) {
             throw ValidationException::withMessages(['passed_quantity'=>'A passing sample inspection must include at least one passed unit. Use Failed or Rework required when none of the sample passes.']);
         }

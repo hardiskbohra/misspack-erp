@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\OfficeAlert;
+use App\Models\OfficeSetting;
 use App\Models\Project;
 use App\Models\ProjectApprovalOverride;
 use App\Models\ProjectException;
@@ -231,11 +232,13 @@ class ProjectExceptionRegistry
             $source['status'] = ProjectException::STATUS_OPEN;
             $source['detected_at'] = now();
             $source['escalation_level'] = 0;
-            $source['due_at'] ??= match ($source['category']) {
-                'unassigned' => now()->addDay(),
-                'blocked' => now()->addDays(2),
-                default => now()->addDays(3),
+            $deadlines = OfficeSetting::workflow()['deadlines'];
+            $reviewDays = match ($source['category']) {
+                'unassigned' => (int) $deadlines['unassigned_review_days'],
+                'blocked' => (int) $deadlines['blocked_review_days'],
+                default => (int) $deadlines['standard_review_days'],
             };
+            $source['due_at'] ??= now()->addDays(max(1, $reviewDays));
             $exception = ProjectException::query()->create($source);
             $this->event($exception, 'detected', $actorId, $exception->summary, null, ProjectException::STATUS_OPEN);
             return [$exception, true, false];
