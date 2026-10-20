@@ -75,10 +75,13 @@
                         @php
                             $guide = $action['guidance'];
                             $sameWorkflow = str_contains($guide['url'], 'tab=workflow') || str_starts_with($guide['url'], '#');
-                            $receiptEvaluation = $guide['modal'] === 'receipt'
-                                ? $workflow->evaluations->firstWhere('gate_key', $actionStep->step_key)
-                                : null;
+                            $actionEvaluation = $workflow->evaluations->firstWhere('gate_key', $actionStep->step_key);
+                            $receiptEvaluation = $guide['modal'] === 'receipt' ? $actionEvaluation : null;
                             $receiptAmount = (float) data_get($receiptEvaluation?->details, 'shortfall', 0);
+                            $dispatchIssues = (array) data_get($actionEvaluation?->details, 'issues', []);
+                            $blockedReason = $dispatchIssues !== []
+                                ? implode(' ', $dispatchIssues)
+                                : $actionStep->blocked_reason;
                         @endphp
                         <article class="workflow-action-card {{ $action['is_overdue']?'is-overdue':($action['is_blocked']?'is-blocked':($action['is_waiting']?'is-waiting':'')) }}">
                             <div class="workflow-action-card-head">
@@ -87,7 +90,7 @@
                                 <span class="master-badge">{{ $action['attention'] }}</span>
                             </div>
                             <p class="workflow-action-instruction">{{ $guide['instruction'] }}</p>
-                            @if($actionStep->blocked_reason)<div class="workflow-action-reason"><strong>Why it is blocked</strong><span>{{ $actionStep->blocked_reason }}</span></div>@endif
+                            @if($blockedReason)<div class="workflow-action-reason"><strong>Why it is blocked</strong><span>{{ $blockedReason }}</span></div>@endif
                             <ol class="workflow-action-checklist">@foreach($guide['checklist'] as $guideStep)<li><span>{{ $loop->iteration }}</span>{{ $guideStep }}</li>@endforeach</ol>
                             <footer>
                                 <div class="workflow-action-meta"><span><i class="fa-solid fa-database"></i>{{ $guide['source'] }}</span><span><i class="fa-solid fa-user"></i>{{ $action['owner']?->name ?: $action['coordinator']?->name ?: 'Unassigned' }}</span><span class="{{ $action['is_overdue']?'is-danger':'' }}"><i class="fa-regular fa-calendar"></i>{{ $action['due_date']?->format('d M Y') ?: 'No due date' }}</span></div>

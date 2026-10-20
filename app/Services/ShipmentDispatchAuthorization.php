@@ -29,7 +29,7 @@ class ShipmentDispatchAuthorization
         $passed = $details['issues'] === [];
         $summary = $passed
             ? 'Shipment quantities are allocated to confirmed packing that passes automatic checks, covered by QC and ready for dispatch.'
-            : count($details['issues']).' dispatch authorization issue(s) must be resolved or manager-overridden.';
+            : count($details['issues']).' dispatch authorization issue(s): '.implode(' ', $details['issues']);
         $hash = hash('sha256', json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         $latest = $workflow->evaluations()->whereNull('project_product_id')->where('gate_key', self::GATE_KEY)->latest('evaluated_at')->latest('id')->first();
         $evaluation = $latest && hash_equals((string) $latest->content_hash, $hash)

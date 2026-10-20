@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ProjectWorkflowStep;
+use App\Models\Shipment;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -23,6 +24,9 @@ class ProjectWorkflowGuidance
         $projectProducts = route('projects.show', ['project' => $project, 'tab' => 'workflow']).'#workflow-products';
         $commercial = route('projects.show', ['project' => $project, 'tab' => 'workflow']).'#workflow-commercial';
         $context = ['project_id' => $project->id, 'return_to' => $projectWorkflow];
+        $planningShipment = in_array($step->step_key, ['dispatch_approved', 'shipment_dispatched'], true)
+            ? $project->shipments()->where('status', Shipment::STATUS_PLANNING)->latest('id')->first()
+            : null;
 
         return match ($step->step_key) {
             'project_setup' => $this->recipe(
@@ -95,13 +99,21 @@ class ProjectWorkflowGuidance
                 ['Record the receipt against the workflow invoice.', 'The ledger entry is linked to this project automatically.', 'Workflow recalculates the dispatch shortfall after saving.'],
                 'Invoice receipt', false, 'commercial', 'receipt'
             ),
-            'dispatch_approved', 'shipment_dispatched' => $this->recipe(
-                'Create the shipment in Planning',
-                'Keep the shipment in Planning, allocate confirmed Packaging List quantities, attach mandatory paperwork and then authorize dispatch.',
-                'Create shipment', route('shipments.create', $context),
-                ['Create the project shipment in Planning.', 'Allocate exact confirmed packed quantities.', 'Complete paperwork and authorize dispatch.'],
-                'Shipment', false, 'products'
-            ),
+            'dispatch_approved', 'shipment_dispatched' => $planningShipment
+                ? $this->recipe(
+                    'Complete and authorize '.$planningShipment->shipment_number,
+                    'A Planning shipment already exists. Review its exact packing allocation, add the named missing paperwork, then move it to dispatch.',
+                    'Open '.$planningShipment->shipment_number, route('shipments.edit', $planningShipment),
+                    ['Confirm each shipment line is allocated to its linked Packaging List quantity.', 'Attach every mandatory document named in the blocked reason.', 'Change the Planning status to the correct dispatch state.'],
+                    'Planning shipment', false, 'products'
+                )
+                : $this->recipe(
+                    'Create the next partial shipment in Planning',
+                    'Create a Planning shipment for the quantity being dispatched. Partial shipments may use one confirmed Packaging List at a time.',
+                    'Create shipment', route('shipments.create', $context),
+                    ['Create the project shipment in Planning.', 'Set shipment quantities to this partial dispatch.', 'Allocate confirmed packed quantities, complete paperwork and authorize dispatch.'],
+                    'Shipment', false, 'products'
+                ),
             'delivery_complete', 'delivery_reconciled' => $this->recipe(
                 'Record the delivery receipt',
                 'Open the project shipment and record accepted, short, damaged, rejected or returned quantities with POD evidence.',

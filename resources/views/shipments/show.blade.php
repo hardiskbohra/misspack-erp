@@ -288,16 +288,7 @@
                 <div class="master-section-head"><div><h3 class="master-section-title">Delivery receipt reconciliation</h3><p class="master-sub">Accepted quantities drive project delivery readiness. Short, damaged, rejected and returned quantities remain open until replacement receipts reconcile them.</p></div><span class="master-chip">{{ $shipment->deliveryReceipts->count() }} receipt{{ $shipment->deliveryReceipts->count()===1?'':'s' }}</span></div>
                 <div class="master-table-wrap">
                     <table class="master-table"><thead><tr><th>Product</th><th class="is-num">Dispatched</th><th class="is-num">Net accepted</th><th class="is-num">Remaining</th><th>Status</th></tr></thead><tbody>
-                        @foreach($shipment->items as $item)
-                            @php
-                                $accepted = (float)$item->deliveryReceiptLines->sum('accepted_quantity');
-                                $returned = (float)$item->deliveryReceiptLines->sum('returned_quantity');
-                                $netAccepted = max($accepted-$returned,0);
-                                $remaining = max((float)$item->quantity-$netAccepted,0);
-                                $hasIssues = $item->deliveryReceiptLines->contains(fn($line) => $line->hasDiscrepancy()) && $remaining > 0;
-                            @endphp
-                            <tr><td><strong>{{ $item->product_name }}</strong></td><td class="is-num">{{ number_format((float)$item->quantity,3) }}</td><td class="is-num">{{ number_format($netAccepted,3) }}</td><td class="is-num">{{ number_format($remaining,3) }}</td><td><span class="master-badge {{ $remaining<=0 ? 'status-completed' : ($hasIssues ? 'status-delayed' : 'status-planning') }}">{{ $remaining<=0 ? 'Reconciled' : ($hasIssues ? 'Discrepancy open' : 'Awaiting receipt') }}</span></td></tr>
-                        @endforeach
+                        @each('shipments.partials.delivery-reconciliation-row', $shipment->items, 'item')
                     </tbody></table>
                 </div>
 
