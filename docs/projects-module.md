@@ -86,10 +86,12 @@ button. It is now the shared record page:
   empty blocks are `master-empty-state`, tables are `master-table` inside
   `master-table-wrap` with scoped headers, and dialogs are the shared
   `.master-modal`, closed through `[data-close-modal]`.
-- **The status form is the shared drawer.** `<x-drawer id="projectStatusDrawer">`
-  carries the four fields (`status`, `stage`, `health`, `progress_percent`) that
-  `updateStatus()` validates and posts to `projects.status.update` — the header
-  keeps one action instead of a permanently open form.
+- **Execution state belongs to the Workflow Control Centre.** Project status,
+  stage and progress are read-only caches published by `ProjectWorkflowExecution`.
+  Project create/edit screens cannot submit them, and the record page has no
+  separate status drawer. Financial closure and reopening remain explicit,
+  audited workflow actions; health, priority and planning dates remain editable
+  project metadata.
 - **Update URLs come from the server.** Each edit dialog carries
   `data-update-url="{{ route(...) }}"` with an `__ID__` placeholder and
   `projects.js` binds it through `bindUpdateUrl()`: a hand-built

@@ -88,25 +88,14 @@
 
             <div class="pf-grid pf-grid-4">
                 <div class="master-field">
-                    <label class="master-label">Status <span>*</span></label>
-                    <select class="master-select" name="status" required>
-                        @foreach ($statusOptions as $key => $label)
-                            @continue(in_array($project->status, \App\Models\Project::closureStatuses(), true) ? $key !== $project->status : in_array($key, \App\Models\Project::closureStatuses(), true))
-                            <option value="{{ $key }}"
-                                {{ old('status', $project->status) === $key ? 'selected' : '' }}>{{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
+                    <span class="master-label">Workflow status</span>
+                    <div class="master-input" aria-readonly="true">{{ $isEdit ? $project->statusLabel() : 'Starts automatically' }}</div>
+                    <small class="master-help">Calculated by Workflow Control Centre.</small>
                 </div>
                 <div class="master-field">
-                    <label class="master-label">Stage <span>*</span></label>
-                    <select class="master-select" name="stage" required>
-                        @foreach ($stageOptions as $key => $label)
-                            <option value="{{ $key }}"
-                                {{ old('stage', $project->stage) === $key ? 'selected' : '' }}>{{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
+                    <span class="master-label">Workflow stage</span>
+                    <div class="master-input" aria-readonly="true">{{ $isEdit ? $project->stageLabel() : 'Project setup' }}</div>
+                    <small class="master-help">Advances from workflow controls only.</small>
                 </div>
                 <div class="master-field">
                     <label class="master-label">Priority <span>*</span></label>

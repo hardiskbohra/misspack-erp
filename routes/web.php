@@ -417,7 +417,6 @@ Route::middleware('auth')->group(function () {
         Route::patch('/projects/exceptions/{exception}/acknowledge', [ProjectExceptionController::class, 'acknowledge'])->name('projects.exceptions.acknowledge');
         Route::patch('/projects/exceptions/{exception}/escalate', [ProjectExceptionController::class, 'escalate'])->name('projects.exceptions.escalate');
         Route::post('/projects/quick', [ProjectController::class, 'quickStore'])->name('projects.quickStore');
-        Route::patch('/projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.status.update');
         Route::post('/projects/{project}/workflow', [ProjectWorkflowController::class, 'start'])->name('projects.workflow.start');
         Route::patch('/projects/{project}/workflow/report', [ProjectWorkflowController::class, 'report'])->name('projects.workflow.report');
         Route::post('/projects/{project}/workflow/evaluate', [ProjectWorkflowController::class, 'evaluate'])->name('projects.workflow.evaluate');

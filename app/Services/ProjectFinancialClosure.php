@@ -214,11 +214,11 @@ class ProjectFinancialClosure
                 'approved_by' => $userId,
                 'closed_at' => now(),
             ]);
-            $locked->update([
+            $locked->forceFill([
                 'status' => $acceptOutstanding ? Closure::TYPE_OUTSTANDING : 'closed',
                 'stage' => 'closed',
                 'completed_at' => now(),
-            ]);
+            ])->save();
             app(ProjectWorkflowExecution::class)->recalculate($workflow);
             $this->writeAudit($locked, $userId, 'financial_closure', $acceptOutstanding ? 'Project closed with outstanding financials' : 'Project financially closed', $reason, [
                 'closure_id' => $closure->id, 'closure_type' => $type, 'content_hash' => $snapshot['content_hash'],
@@ -249,7 +249,7 @@ class ProjectFinancialClosure
                 'approved_by' => $userId,
                 'closed_at' => now(),
             ]);
-            $locked->update(['status' => 'in_progress', 'stage' => $workflow->calculated_stage ?: 'delivered', 'completed_at' => null]);
+            $locked->forceFill(['status' => 'in_progress', 'completed_at' => null])->save();
             $latestEvaluation = $workflow->evaluations()->where('gate_key', self::GATE)->latest('evaluated_at')->latest('id')->first();
             if ($latestEvaluation?->activeOverride) {
                 $latestEvaluation->activeOverride->update([

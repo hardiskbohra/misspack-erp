@@ -101,8 +101,6 @@ class ProjectController extends Controller
             'project_number' => $this->makeProjectNumber(),
             'client_id' => null,
             'name' => 'New Project',
-            'status' => 'planned',
-            'stage' => 'kickoff',
             'priority' => 'normal',
             'health' => 'green',
             'start_date' => now()->toDateString(),
@@ -120,16 +118,10 @@ class ProjectController extends Controller
     public function store(Request $request, ProjectWorkflowExecution $workflowExecution): RedirectResponse
     {
         $data = $this->validatedData($request);
-        if (in_array($data['status'], Project::closureStatuses(), true)) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['status' => 'A new project cannot start in a financial-closure status.']);
-        }
         $data['project_number'] = $data['project_number'] ?: $this->makeProjectNumber();
         $data['show_client_portal'] = $request->has('show_client_portal');
         $data['created_by'] = Auth::id();
 
-        if (($data['status'] ?? null) === 'completed' && empty($data['completed_at'])) {
-            $data['completed_at'] = now();
-        }
 
         $project = DB::transaction(function () use ($data, $workflowExecution) {
             $project = Project::create($data);
@@ -158,8 +150,6 @@ class ProjectController extends Controller
                 'project_number' => $this->makeProjectNumber(),
                 'client_id' => $data['client_id'],
                 'name' => $data['name'],
-                'status' => 'planned',
-                'stage' => 'kickoff',
                 'priority' => $data['priority'] ?? 'normal',
                 'health' => 'green',
                 'start_date' => $data['start_date'] ?? now()->toDateString(),
@@ -319,66 +309,15 @@ class ProjectController extends Controller
     public function update(Request $request, Project $project): RedirectResponse
     {
         $data = $this->validatedData($request, $project);
-        if (in_array($data['status'], Project::closureStatuses(), true) && $data['status'] !== $project->status) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['status' => 'Use the Workflow financial-closure action to apply a closed status.']);
-        }
-        if (in_array($project->status, Project::closureStatuses(), true) && $data['status'] !== $project->status) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['status' => 'Use the Workflow manager action to reopen a financially closed project.']);
-        }
         $data['show_client_portal'] = $request->has('show_client_portal');
 
-        if (($data['status'] ?? null) === 'completed' && ! $project->completed_at) {
-            $data['completed_at'] = now();
-        }
-        if (! in_array(($data['status'] ?? null), array_merge(['completed'], Project::closureStatuses()), true)) {
-            $data['completed_at'] = null;
-        }
-
         DB::transaction(function () use ($project, $data) {
-            $old = $project->only(['name', 'status', 'stage', 'priority', 'health', 'target_date']);
+            $old = $project->only(['name', 'priority', 'health', 'target_date']);
             $project->update($data);
-            $this->writeLog($project, 'updated', 'Project updated', 'Project details were updated.', $old, $project->fresh()->toArray(), false);
+            $this->writeLog($project, 'updated', 'Project updated', 'Project details were updated. Status, stage and progress remain workflow-controlled.', $old, $project->fresh()->toArray(), false);
         });
 
         return redirect()->route('projects.show', $project)->with('success', 'Project updated successfully.');
-    }
-
-    public function updateStatus(Request $request, Project $project): RedirectResponse
-    {
-        $data = $request->validate([
-            'status' => ['required', Rule::in(array_keys(Project::statusOptions()))],
-            'stage' => ['required', Rule::in(array_keys(Project::stageOptions()))],
-            'health' => ['required', Rule::in(array_keys(Project::healthOptions()))],
-        ]);
-
-        if (in_array($data['status'], Project::closureStatuses(), true) && $data['status'] !== $project->status) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['status' => 'Use the Workflow financial-closure action to close this project.']);
-        }
-        if (in_array($project->status, Project::closureStatuses(), true) && $data['status'] !== $project->status) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['status' => 'Use the Workflow manager action to reopen this project.']);
-        }
-
-        $old = $project->only(['status', 'stage', 'health', 'completed_at']);
-        if ($data['status'] === 'completed') {
-            $data['completed_at'] = $project->completed_at ?: now();
-        } elseif (! in_array($data['status'], Project::closureStatuses(), true)) {
-            $data['completed_at'] = null;
-        }
-
-        $project->update($data);
-        $this->writeLog($project, 'status_updated', 'Project status updated', 'Status, stage and health were updated. Progress remains workflow-calculated.', $old, $data, true);
-
-        /* Marking a project complete is the moment the feedback ask is worth
-           making, so the message says where it is. An offer, never automatic: a
-           project can be closed before the client has the goods in hand. */
-        if ($data['status'] === 'completed'
-            && class_exists(\App\Models\FeedbackRequest::class)
-            && Schema::hasTable('feedback_requests')
-            && ! \App\Models\FeedbackRequest::query()->forProject($project->id)->live()->exists()) {
-            return back()->with('success', 'Project completed. Ask for feedback while it is fresh — the Feedback tab on this project has the link.');
-        }
-
-        return back()->with('success', 'Project status updated successfully.');
     }
 
     public function destroy(Project $project): RedirectResponse
@@ -411,8 +350,6 @@ class ProjectController extends Controller
             'project_number' => ['nullable', 'string', 'max:255', $uniqueProjectNumber],
             'client_id' => ['required', 'integer'],
             'name' => ['required', 'string', 'max:255'],
-            'status' => ['required', Rule::in(array_keys(Project::statusOptions()))],
-            'stage' => ['required', Rule::in(array_keys(Project::stageOptions()))],
             'priority' => ['required', Rule::in(array_keys(Project::priorityOptions()))],
             'health' => ['required', Rule::in(array_keys(Project::healthOptions()))],
             'start_date' => ['nullable', 'date'],

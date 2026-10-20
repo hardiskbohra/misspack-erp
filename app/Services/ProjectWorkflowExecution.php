@@ -29,7 +29,7 @@ class ProjectWorkflowExecution
         ['sampling', 'pps_approved', 'PPS approved or not applicable', 60, 2, true],
         ['production', 'production_complete', 'Production quantity completed', 70, 4, true],
         ['quality', 'quality_passed', 'Quality inspection passed', 80, 2, true],
-        ['packing', 'packing_verified', 'Packing completed and verified', 90, 2, true],
+        ['packing', 'packing_verified', 'Packing confirmed and automatically checked', 90, 2, true],
         ['dispatch', 'shipment_dispatched', 'Required quantity dispatched', 115, 2, true],
         ['delivery', 'delivery_complete', 'Required quantity delivered', 120, 3, true],
     ];
@@ -107,9 +107,20 @@ class ProjectWorkflowExecution
             'calculated_stage' => $next?->stage_key ?: 'completed',
             'status' => $next ? 'active' : 'completed',
         ]);
-        // projects.progress_percent is a read cache for lists and dashboards;
-        // the workflow calculator is its only writer.
-        $workflow->project()->update(['progress_percent' => $calculatedProgress]);
+        // Project progress, stage and ordinary execution status are read caches
+        // controlled only by this workflow calculation. Financial closure and
+        // cancellation are explicit terminal decisions and are never overwritten.
+        $project = $workflow->project()->firstOrFail();
+        $terminalDecision = in_array($project->status, [...Project::closureStatuses(), 'cancelled'], true);
+        $projectState = [
+            'progress_percent' => $calculatedProgress,
+            'stage' => $terminalDecision ? $project->stage : $this->projectStage($next?->stage_key ?: 'completed'),
+            'status' => $terminalDecision ? $project->status : ($next ? 'in_progress' : 'completed'),
+            'completed_at' => $terminalDecision
+                ? $project->completed_at
+                : ($next ? null : ($project->completed_at ?: now())),
+        ];
+        $project->forceFill($projectState)->save();
 
         return $workflow->fresh(['steps.product', 'steps.owner', 'reporter', 'commercialInvoice']);
     }
@@ -128,6 +139,24 @@ class ProjectWorkflowExecution
         ]);
 
         return $this->recalculate($step->workflow);
+    }
+
+    private function projectStage(string $workflowStage): string
+    {
+        return match ($workflowStage) {
+            'setup' => 'kickoff',
+            'commercial' => 'client_pi',
+            'procurement' => 'vendor_po',
+            'artwork' => 'artwork_design',
+            'sampling' => 'pps',
+            'production' => 'production',
+            'quality' => 'quality_check',
+            'packing' => 'packing',
+            'dispatch' => 'dispatch_ready',
+            'delivery', 'closure' => 'delivered',
+            'completed' => 'closed',
+            default => 'kickoff',
+        };
     }
 
     private function ensureStep(ProjectWorkflow $workflow, ?int $productId, array $definition, string $scope, ?int $ownerId): void

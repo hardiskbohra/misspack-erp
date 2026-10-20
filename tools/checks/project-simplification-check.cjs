@@ -27,6 +27,7 @@ check(migration.includes("Schema::dropIfExists('project_milestones')"), 'deploym
 check(migration.includes("dropColumn('reported_progress')") && migration.includes("dropColumn('progress_percent')"), 'manual workflow and activity progress columns are removed');
 check(!projectViews.includes('name="progress_percent"') && !projectViews.includes('name="reported_progress"'), 'project UI has no manual progress input');
 check(!projectController.includes("'progress_percent' => ['") && !workflowController.includes("'reported_progress' =>") && !trackingController.includes("'progress_percent' =>"), 'controllers reject manual progress paths');
-check(execution.includes("project()->update(['progress_percent' => $calculatedProgress])"), 'workflow calculator publishes the project progress cache');
-check(!(read('app/Models/Project.php').match(/\$fillable\s*=\s*\[([\s\S]*?)\];/)?.[1] || '').includes("'progress_percent'"), 'project progress cannot be mass assigned');
+check(execution.includes("'progress_percent' => $calculatedProgress") && execution.includes("'stage' => $terminalDecision") && execution.includes("'status' => $terminalDecision"), 'workflow calculator publishes project progress, stage and status caches');
+const projectFillable = read('app/Models/Project.php').match(/\$fillable\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
+check(['progress_percent', 'status', 'stage', 'completed_at'].every(field => !projectFillable.includes(`'${field}'`)), 'workflow-controlled project state cannot be mass assigned');
 if (!process.exitCode) console.log(`Project simplification checks passed (${passed}/10).`);

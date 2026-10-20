@@ -883,13 +883,14 @@ check('the client follows a project in the login portal, not through a token lin
     && /route\('client-portal\.login'\)/.test(recordViews)
     && /where\('show_client_portal', true\)/.test(read('app/Http/Controllers/ClientPortalProjectController.php')));
 
-check('the status form keeps editable state separate from workflow progress',
-    /<x-drawer id="projectStatusDrawer"/.test(showView)
-    && /action="\{\{ route\('projects\.status\.update', \$project\) \}\}"/.test(showView)
-    && /@method\('PATCH'\)/.test(showView)
-    && ['status', 'stage', 'health'].every(name => new RegExp(`name="${name}"`).test(showView))
-    && !/name="progress_percent"/.test(showView)
-    && /Workflow progress/.test(showView));
+check('project status stage and progress are workflow-controlled only',
+    ! /projectStatusDrawer|projects\.status\.update/.test(showView)
+    && ! /name="(?:status|stage|progress_percent)"/.test(showView + read('resources/views/projects/form.blade.php'))
+    && /Workflow status/.test(read('resources/views/projects/form.blade.php'))
+    && /Workflow stage/.test(read('resources/views/projects/form.blade.php'))
+    && /'progress_percent' => \$calculatedProgress/.test(read('app/Services/ProjectWorkflowExecution.php'))
+    && /'stage' => \$terminalDecision/.test(read('app/Services/ProjectWorkflowExecution.php'))
+    && /'status' => \$terminalDecision/.test(read('app/Services/ProjectWorkflowExecution.php')));
 
 check('the record page is written down',
     /record page/i.test(read('docs/projects-module.md'))

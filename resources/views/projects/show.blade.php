@@ -74,10 +74,6 @@
                 <a href="{{ route('projects.index') }}" class="master-btn master-btn-light">
                     <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Projects
                 </a>
-                <button type="button" class="master-btn master-btn-soft" data-drawer-open="projectStatusDrawer"
-                    aria-haspopup="dialog" aria-controls="projectStatusDrawer" aria-expanded="false">
-                    <i class="fa-solid fa-sliders" aria-hidden="true"></i> Update status
-                </button>
                 <a href="{{ route('projects.edit', $project) }}" class="master-btn master-btn-primary">
                     <i class="fa-solid fa-pen" aria-hidden="true"></i> Edit project
                 </a>
@@ -185,53 +181,6 @@
             </div>
         </div>
 
-        {{-- The status form lives in the shared drawer: it is the one control on
-             this page that changes what the record says, and it does not need to
-             occupy the header for the rest of the visit. --}}
-        <x-drawer id="projectStatusDrawer" title="Update status" eyebrow="Project status"
-            subtitle="Update status, stage and health. Progress is calculated only by the Workflow Control Center." size="medium">
-            <form method="POST" action="{{ route('projects.status.update', $project) }}" id="projectStatusForm">
-                @csrf
-                @method('PATCH')
-                <section class="core-drawer-section">
-                    <h3 class="core-drawer-section-title">Where it stands</h3>
-                    <div class="project-status-form">
-                        <label class="master-field">
-                            <span class="master-label">Status</span>
-                            <select class="master-select" name="status">
-                                @foreach ($statusOptions as $key => $label)
-                                    @continue(in_array($project->status, \App\Models\Project::closureStatuses(), true) ? $key !== $project->status : in_array($key, \App\Models\Project::closureStatuses(), true))
-                                    <option value="{{ $key }}" @selected($project->status === $key)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </label>
-                        <label class="master-field">
-                            <span class="master-label">Stage</span>
-                            <select class="master-select" name="stage">
-                                @foreach ($stageOptions as $key => $label)
-                                    <option value="{{ $key }}" @selected($project->stage === $key)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </label>
-                        <label class="master-field">
-                            <span class="master-label">Health</span>
-                            <select class="master-select" name="health">
-                                @foreach ($healthOptions as $key => $label)
-                                    <option value="{{ $key }}" @selected($project->health === $key)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </label>
-                        <div class="master-field"><span class="master-label">Workflow progress</span><div class="master-input" aria-readonly="true">{{ $progress }}% calculated</div><small class="master-help">Complete workflow controls to advance this value.</small></div>
-                    </div>
-                </section>
-                <x-slot:footer>
-                    <button type="button" class="master-btn master-btn-light" data-drawer-close>Cancel</button>
-                    <button class="master-btn master-btn-primary" type="submit">
-                        <i class="fa-solid fa-check" aria-hidden="true"></i> Update status
-                    </button>
-                </x-slot:footer>
-            </form>
-        </x-drawer>
     </div>
 @endsection
 

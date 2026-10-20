@@ -56,7 +56,7 @@ node tools/checks/projects-check.cjs  # the projects list is the shared master-l
                                       # shell — while the client portal's classes stay put — and
                                       # the record page: the shared shell and tab links, one list
                                       # of tab names behind both the strip and the URL, one panel
-                                      # per request, the status form in the shared drawer, update
+                                      # per request, workflow-owned project state, update
                                       # URLs the server writes, the shell's facts, tables and empty
                                       # states, well-formed panels, a tone for every state the
                                       # models offer — light and dark, the feedback tab drawn as
