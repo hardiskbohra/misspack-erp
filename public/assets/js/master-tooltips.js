@@ -133,6 +133,7 @@
     document.addEventListener('keydown', event => {
         if (event.key === 'Escape' && active) close(active);
     });
+    document.addEventListener('pointerdown', () => active && close(active), true);
     window.addEventListener('resize', () => active && position(active));
     window.addEventListener('scroll', () => active && close(active), true);
 

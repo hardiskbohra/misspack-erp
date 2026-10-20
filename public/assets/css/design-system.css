@@ -487,8 +487,10 @@ body[data-ui-shell] :is(.master-tabs-panels, .client-detail-panels, .cf-panel, .
 .ui-tooltip {
     position: fixed;
     z-index: var(--ui-z-tooltip);
-    inset: auto auto 0 0;
-    max-width: min(280px, calc(100vw - 24px));
+    top: 0;
+    left: 0;
+    width: max-content;
+    max-width: min(260px, calc(100vw - 24px));
     padding: 7px 9px;
     border: 1px solid color-mix(in srgb, var(--ui-card-surface) 18%, transparent);
     border-radius: 7px;

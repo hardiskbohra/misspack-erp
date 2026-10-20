@@ -82,6 +82,8 @@ check('the custom tooltip is themed, non-intercepting and motion considerate',
     /background:\s*var\(--ui-text\)/.test(tooltipCss)
     && /color:\s*var\(--ui-card-surface\)/.test(tooltipCss)
     && /pointer-events:\s*none/.test(tooltipCss)
+    && /width:\s*max-content/.test(tooltipCss)
+    && !/inset:\s*auto\s+auto\s+0\s+0/.test(tooltipCss)
     && /prefers-reduced-motion/.test(tooltipCss));
 check('drawer field rows stay top-aligned and collapse to one column on phones',
     /align-content:\s*start/.test(drawerCss)
