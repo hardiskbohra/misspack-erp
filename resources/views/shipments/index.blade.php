@@ -406,6 +406,13 @@
                                                 </a>
                                             @endif
 
+                                            @if(in_array($shipment->status, \App\Models\Shipment::dispatchedStatuses(), true))
+                                                <a href="{{ route('shipments.show', ['shipment'=>$shipment,'record_delivery_receipt'=>1]) }}">
+                                                    <i class="fa-solid fa-clipboard-check"></i>
+                                                    Record Delivery Receipt
+                                                </a>
+                                            @endif
+
                                             <a href="{{ route('shipments.print', [$shipment, 'summary']) }}" target="_blank">
                                                 <i class="fas fa-print"></i>
                                                 Shipment Summary

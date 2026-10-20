@@ -293,21 +293,8 @@
                 </div>
 
                 @if(in_array($shipment->status, \App\Models\Shipment::dispatchedStatuses(), true))
-                    <details class="shipment-receipt-entry"><summary class="master-btn master-btn-soft"><i class="fa-solid fa-clipboard-check"></i> Record delivery receipt</summary>
-                        <form method="POST" enctype="multipart/form-data" action="{{ route('shipments.delivery-receipts.store',$shipment) }}" class="master-form-card">@csrf
-                            <div class="master-detail-grid">
-                                <label class="master-field"><span class="master-label">Receipt / POD reference</span><input class="master-input" name="receipt_reference" maxlength="255" aria-label="Receipt or POD reference"></label>
-                                <label class="master-field"><span class="master-label">Recipient name</span><input class="master-input" name="recipient_name" maxlength="255" required aria-label="Recipient name"></label>
-                                <label class="master-field"><span class="master-label">Received at</span><input class="master-input" type="datetime-local" name="received_at" value="{{ now()->format('Y-m-d\TH:i') }}" required aria-label="Received at"></label>
-                                <label class="master-field"><span class="master-label">POD / receipt evidence</span><input class="master-input" type="file" name="evidence_file" accept=".jpg,.jpeg,.png,.webp,.pdf" required></label>
-                            </div>
-                            <div class="master-table-wrap"><table class="master-table"><thead><tr><th>Product</th><th>Received</th><th>Accepted</th><th>Short</th><th>Damaged</th><th>Rejected</th><th>Returned</th><th>Replacement</th><th>Reason</th></tr></thead><tbody>
-                                @foreach($shipment->items as $index=>$item)<tr><td><input type="hidden" name="lines[{{ $index }}][shipment_item_id]" value="{{ $item->id }}"><strong>{{ $item->product_name }}</strong><span class="master-sub">Dispatched {{ number_format((float)$item->quantity,3) }}</span></td>@foreach(['received_quantity','accepted_quantity','short_quantity','damaged_quantity','rejected_quantity','returned_quantity','replacement_quantity'] as $field)<td><input class="master-input" type="number" min="0" step="0.001" name="lines[{{ $index }}][{{ $field }}]" value="0" aria-label="{{ str($field)->headline() }} for {{ $item->product_name }}"></td>@endforeach<td><input class="master-input" name="lines[{{ $index }}][discrepancy_reason]" maxlength="2000" aria-label="Discrepancy reason for {{ $item->product_name }}"></td></tr>@endforeach
-                            </tbody></table></div>
-                            <label class="master-field"><span class="master-label">Receipt notes</span><textarea class="master-textarea" name="notes" rows="3" maxlength="4000" aria-label="Receipt notes"></textarea></label>
-                            <div class="master-form-actions"><button class="master-btn master-btn-primary" type="submit">Record immutable receipt</button></div>
-                        </form>
-                    </details>
+                    <div class="shipment-receipt-action"><button type="button" class="master-btn master-btn-primary" data-delivery-receipt-open><i class="fa-solid fa-clipboard-check"></i> Record delivery receipt</button></div>
+                    @include('shipments.partials.delivery-receipt-modal')
                 @endif
 
                 <div class="shipment-receipt-history">

@@ -48,6 +48,7 @@
         var deleteModal = document.getElementById('deleteShipmentModal');
         var deleteForm = document.getElementById('deleteShipmentForm');
         var deleteDesc = document.getElementById('deleteShipmentDesc');
+        var deliveryReceiptModal = document.querySelector('[data-delivery-receipt-modal]');
 
         /* The primary action is yielded into the page header, and the empty
            state carries a copy of it, so it is bound by attribute. The old id
@@ -79,9 +80,17 @@
             closeModal(deleteModal);
         });
 
+        document.querySelectorAll('[data-delivery-receipt-open]').forEach(function (button) {
+            button.addEventListener('click', function () { openModal(deliveryReceiptModal); });
+        });
+        document.querySelectorAll('[data-delivery-receipt-close]').forEach(function (button) {
+            button.addEventListener('click', function () { closeModal(deliveryReceiptModal); });
+        });
+        if (deliveryReceiptModal?.dataset.openOnLoad === 'true') openModal(deliveryReceiptModal);
+
         initList('.ship-index');
 
-        [quickModal, deleteModal].forEach(function (modal) {
+        [quickModal, deleteModal, deliveryReceiptModal].forEach(function (modal) {
             modal?.addEventListener('click', function (event) {
                 if (event.target === modal) closeModal(modal);
             });
@@ -91,6 +100,7 @@
             if (event.key !== 'Escape') return;
             closeModal(quickModal);
             closeModal(deleteModal);
+            closeModal(deliveryReceiptModal);
         });
     });
 
