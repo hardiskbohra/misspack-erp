@@ -260,7 +260,7 @@
 
             <div class="master-section">
                 <h3 class="master-section-title">Shipment Data / Products</h3>
-                @if($shipmentItemsFrozen)<p class="master-sub">Product lines and verified packing allocations are frozen because dispatch has started.</p>@endif
+                @if($shipmentItemsFrozen)<p class="master-sub">Product lines and confirmed packing allocations are frozen because dispatch has started.</p>@endif
                 <fieldset class="shipment-items-fieldset" @disabled($shipmentItemsFrozen)>
                 <div class="master-items-wrap">
                     <table class="master-items-table" id="shipmentItemsTable">
@@ -312,10 +312,10 @@
             </div>
 
             <div class="master-section" id="dispatchAllocationSection">
-                <div class="master-section-head"><div><h3 class="master-section-title">Verified packing allocation</h3><p class="master-sub">Allocate every shipment quantity to exact, currently verified Packaging List lines. Planning allocations reserve stock and are frozen when dispatch starts.</p></div>@if($dispatchAuthorizationEvaluation)<span class="master-badge is-{{ $dispatchAuthorizationEvaluation->effectiveResult() }}">{{ $dispatchAuthorizationEvaluation->resultLabel() }}</span>@endif</div>
+                <div class="master-section-head"><div><h3 class="master-section-title">Confirmed packing allocation</h3><p class="master-sub">Allocate every shipment quantity to exact, confirmed Packaging List lines that pass automatic checks. Planning allocations reserve stock and are frozen when dispatch starts.</p></div>@if($dispatchAuthorizationEvaluation)<span class="master-badge is-{{ $dispatchAuthorizationEvaluation->effectiveResult() }}">{{ $dispatchAuthorizationEvaluation->resultLabel() }}</span>@endif</div>
                 @if($dispatchAuthorizationEvaluation && !empty($dispatchAuthorizationEvaluation->details['issues']))<div class="master-alert warning"><i class="fa-solid fa-triangle-exclamation"></i><span>{{ implode(' ', $dispatchAuthorizationEvaluation->details['issues']) }}</span></div>@endif
                 @if(!$isEdit)
-                    <div class="master-empty-state"><i class="fa-solid fa-boxes-packing"></i><p>Save this shipment in Planning first. Verified packing options will then be loaded for its selected project.</p></div>
+                    <div class="master-empty-state"><i class="fa-solid fa-boxes-packing"></i><p>Save this shipment in Planning first. Confirmed packing options will then be loaded for its selected project.</p></div>
                 @elseif($dispatchPackingOptions->isEmpty())
                     <div class="master-empty-state"><i class="fa-solid fa-box-open"></i><p>No verified, available Packaging List quantities are linked to this project. Verify packing before dispatch allocation.</p></div>
                 @else

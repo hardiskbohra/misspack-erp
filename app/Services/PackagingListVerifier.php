@@ -7,14 +7,6 @@ use Illuminate\Support\Carbon;
 
 class PackagingListVerifier
 {
-    public const MANUAL_CHECKS = [
-        'contents_match' => 'Contents match the packing instructions and source document',
-        'quantities_counted' => 'Item quantities were physically counted',
-        'cartons_intact' => 'Cartons are sealed, intact and suitable for dispatch',
-        'weights_verified' => 'Net and gross weights were checked',
-        'labels_applied' => 'Carton labels and handling marks are applied and readable',
-    ];
-
     public function inspect(PackagingList $list): array
     {
         $list->loadMissing('cartons.items');
@@ -60,6 +52,16 @@ class PackagingListVerifier
             $invalidItems->isEmpty()
                 ? 'Every item line has a description and positive quantity.'
                 : $invalidItems->count().' item line(s) need a description or positive quantity.'
+        );
+
+        $unlinkedProjectItems = $list->project_id ? $items->whereNull('project_product_id') : collect();
+        $checks[] = $this->check(
+            'project_identity',
+            'Project product identity',
+            $unlinkedProjectItems->isEmpty() ? 'pass' : 'fail',
+            $unlinkedProjectItems->isEmpty()
+                ? ($list->project_id ? 'Every item line is matched to a project product.' : 'This list is not marked for a project.')
+                : $unlinkedProjectItems->count().' item line(s) cannot be matched unambiguously to a project product.'
         );
 
         $serials = [];

@@ -82,10 +82,10 @@ class ProjectWorkflowGuidance
                 'QC inspection', false, 'products', 'quality'
             ),
             'packing_verified' => $this->recipe(
-                'Create and verify the Packaging List',
-                'Pack the project quantities, save the list, then run verification. Only the current successful fingerprint clears this control.',
+                'Create and confirm the Packaging List',
+                'Pack the project quantities and mark the list Confirmed. Workflow checks the current carton and item details automatically.',
                 'Open Packaging Lists', route('packaging-lists.index', ['search' => $project->project_number]),
-                ['Generate a list from the project invoice or shipment.', 'Allocate items into carton groups.', 'Run verification after saving.'],
+                ['Generate or create a list for this project.', 'Allocate items into carton groups.', 'Resolve any automatic check issues and mark the list Confirmed.'],
                 'Packaging List', true, 'products'
             ),
             'dispatch_balance' => $this->recipe(
@@ -97,9 +97,9 @@ class ProjectWorkflowGuidance
             ),
             'dispatch_approved', 'shipment_dispatched' => $this->recipe(
                 'Create the shipment in Planning',
-                'Keep the shipment in Planning, allocate verified Packaging List quantities, attach mandatory paperwork and then authorize dispatch.',
+                'Keep the shipment in Planning, allocate confirmed Packaging List quantities, attach mandatory paperwork and then authorize dispatch.',
                 'Create shipment', route('shipments.create', $context),
-                ['Create the project shipment in Planning.', 'Allocate exact verified packed quantities.', 'Complete paperwork and authorize dispatch.'],
+                ['Create the project shipment in Planning.', 'Allocate exact confirmed packed quantities.', 'Complete paperwork and authorize dispatch.'],
                 'Shipment', false, 'products'
             ),
             'delivery_complete', 'delivery_reconciled' => $this->recipe(

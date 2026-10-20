@@ -167,7 +167,7 @@ class ShipmentController extends Controller
         $data = Shipment::withDeliveryDefaults($data);
         $this->assertDeliveryDateAllowed($data['drop_date'] ?? null, $data['pickup_date'] ?? null);
         if (! empty($data['project_id']) && in_array($data['status'], Shipment::dispatchedStatuses(), true)) {
-            throw ValidationException::withMessages(['status' => 'Save the project shipment in Planning first, allocate its verified packing quantities, then authorize dispatch.']);
+            throw ValidationException::withMessages(['status' => 'Save the project shipment in Planning first, allocate its confirmed packing quantities, then authorize dispatch.']);
         }
         $probe = new Shipment(['status' => Shipment::STATUS_PLANNING, 'project_id' => $data['project_id'] ?? null]);
         $this->assertStatusChangeAllowed($probe, $data['status'], ['remarks' => $data['delay_reason'] ?? $data['notes'] ?? null]);

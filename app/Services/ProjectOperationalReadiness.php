@@ -29,7 +29,10 @@ class ProjectOperationalReadiness
     ];
     public const CONTROLLED_STEPS = [...self::PRODUCT_CONTROLLED_STEPS, self::GATE_DELIVERY_RECONCILED];
 
-    public function __construct(private readonly PackagingListVerifier $packingVerifier) {}
+    public function __construct(
+        private readonly PackagingListVerifier $packingVerifier,
+        private readonly PackagingListProjectLinker $packingLinker,
+    ) {}
 
     public function evaluateAll(ProjectWorkflow $workflow, ?int $userId = null): array
     {
@@ -131,7 +134,7 @@ class ProjectOperationalReadiness
             $this->record($workflow, $product, self::GATE_PACKING, [
                 'required_quantity'=>$required, 'verified_packed_quantity'=>$packed,
                 'remaining_quantity'=>round(max($required-$packed, 0), 3), 'packaging_lists'=>$packingLists,
-            ], $packingPassed, $packingPassed ? 'Current verified Packaging Lists cover this product.' : 'Verified packing covers '.number_format($packed, 3).' of '.number_format($required, 3).'; the balance remains open.', $userId),
+            ], $packingPassed, $packingPassed ? 'Confirmed Packaging Lists pass automatic checks and cover this product.' : 'Confirmed packing that passes automatic checks covers '.number_format($packed, 3).' of '.number_format($required, 3).'; the balance remains open.', $userId),
             $this->record($workflow, $product, self::GATE_SHIPMENT, [
                 'required_quantity'=>$required, 'dispatched_quantity'=>$dispatched,
                 'remaining_quantity'=>round(max($required-$dispatched, 0), 3),
@@ -149,18 +152,23 @@ class ProjectOperationalReadiness
     {
         $lists = PackagingList::query()
             ->where('project_id', $product->project_id)
-            ->where('status', '!=', 'cancelled')
-            ->whereHas('cartons.items', fn ($query) => $query->where('project_product_id', $product->id))
-            ->with(['cartons.items', 'latestVerification'])
+            ->whereIn('status', ['confirmed', 'dispatched'])
+            ->with('cartons.items')
             ->get();
         $quantity = 0.0; $evidence = [];
         foreach ($lists as $list) {
-            $verification = $list->latestVerification;
-            $current = $verification && $verification->passed()
-                && hash_equals((string) $verification->content_hash, $this->packingVerifier->fingerprint($list));
+            $linking = $this->packingLinker->reconcile($list);
+            $inspection = $this->packingVerifier->inspect($list);
+            $automaticChecksPassed = $inspection['failed'] === 0;
             $listQuantity = round((float) $list->cartons->flatMap->items->where('project_product_id', $product->id)->sum('total_quantity'), 3);
-            $evidence[] = ['packaging_list_id'=>$list->id, 'packing_number'=>$list->packing_number, 'quantity'=>$listQuantity, 'verification_id'=>$verification?->id, 'verification_current'=>$current];
-            if ($current) $quantity += $listQuantity;
+            $evidence[] = [
+                'packaging_list_id'=>$list->id, 'packing_number'=>$list->packing_number,
+                'status'=>$list->status, 'quantity'=>$listQuantity,
+                'automatic_checks_passed'=>$automaticChecksPassed,
+                'failed_checks'=>$inspection['failed'], 'warning_checks'=>$inspection['warnings'],
+                'project_items_linked'=>$linking['linked'], 'unresolved_project_items'=>$linking['unresolved'],
+            ];
+            if ($automaticChecksPassed) $quantity += $listQuantity;
         }
         return [round($quantity, 3), $evidence];
     }

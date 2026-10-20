@@ -44,7 +44,7 @@ class ProjectGateEvaluation extends Model
             'procurement_ready' => 'Procurement readiness',
             'production_complete' => 'Production readiness',
             'quality_passed' => 'Quality readiness',
-            'packing_verified' => 'Verified packing',
+            'packing_verified' => 'Packing ready',
             'shipment_dispatched' => 'Quantity dispatched',
             'delivery_complete' => 'Quantity delivered',
             'delivery_reconciled' => 'Project delivery reconciliation',
