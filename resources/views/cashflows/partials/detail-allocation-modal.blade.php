@@ -1,3 +1,10 @@
+@php
+    /* The mirror of a vendor payment is the bank side of that payment; its bill
+       is settled in the vendor ledger. Locking the purchase select here keeps
+       the operator out of the "counted twice" validation error entirely. */
+    $mirrorPayment = $linkedVendorPayment ?? null;
+    $purchaseLocked = ! empty($mirrorPayment);
+@endphp
 <div class="master-modal" id="detailAllocationModal" aria-hidden="true" data-entry-amount="{{ $entry->amountMoved() }}" data-allocated-amount="{{ $entry->allocatedAmount() }}" data-currency="{{ $entry->currency ?: 'INR' }}">
     <div class="master-modal-card is-wide cf-allocation-modal" role="dialog" aria-modal="true" aria-labelledby="detailAllocationModalTitle">
         <form method="POST" action="{{ route('cashflows.allocations.store', $entry) }}" data-detail-allocation-form>
@@ -23,6 +30,21 @@
                         @foreach($errors->all() as $message)<div>{{ $message }}</div>@endforeach
                     </div>
                 @endif
+                @if($purchaseLocked)
+                    <div class="cf-allocation-mirror" role="note">
+                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                        <div>
+                            <strong>Bank mirror of vendor payment #{{ $mirrorPayment->id }}@if($mirrorPayment->vendor) · {{ $mirrorPayment->vendor->vendor_name }}@endif</strong>
+                            <p>The bill is already settled by that payment in the vendor ledger, so this row allocates to a project only.
+                                @if (\Illuminate\Support\Facades\Route::has('vendors.show'))
+                                    <a href="{{ route('vendors.show', $mirrorPayment->vendor_id) }}#payments">Open the vendor payment</a> to change which bill it settles.
+                                @else
+                                    Open the vendor payment to change which bill it settles.
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                @endif
                 <div class="cf-allocation-modal-grid">
                     <div class="master-field">
                         <label class="master-label" for="detailAllocationProject">Project</label>
@@ -40,10 +62,15 @@
                     </div>
                     <div class="master-field">
                         <label class="master-label" for="detailAllocationPurchase">Purchase order / bill</label>
-                        <select class="master-select" id="detailAllocationPurchase" name="purchase_invoice_id" data-detail-purchase>
-                            <option value="">No purchase document</option>
-                            @foreach($purchaseInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}" @selected((string) old('purchase_invoice_id') === (string) $invoice->id)>{{ $invoice->invoice_number }} · {{ $invoice->typeLabel() }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
+                        <select class="master-select" id="detailAllocationPurchase" name="purchase_invoice_id" data-detail-purchase @disabled($purchaseLocked)>
+                            <option value="">{{ $purchaseLocked ? 'Settled by the vendor payment' : 'No purchase document' }}</option>
+                            @unless($purchaseLocked)
+                                @foreach($purchaseInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}" @selected((string) old('purchase_invoice_id') === (string) $invoice->id)>{{ $invoice->invoice_number }} · {{ $invoice->typeLabel() }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
+                            @endunless
                         </select>
+                        @if($purchaseLocked)
+                            <p class="master-field-hint">Bills are paid in Vendors → Payments against vendor payment #{{ $mirrorPayment->id }}.</p>
+                        @endif
                     </div>
                     <div class="master-field">
                         <label class="master-label" for="detailAllocationAmount">Cash amount <span class="master-required">*</span></label>

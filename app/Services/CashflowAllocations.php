@@ -116,11 +116,31 @@ class CashflowAllocations
                 .' exceeds the cashflow entry amount '.number_format($entry->amountMoved(), 2).'.';
         }
 
+        /* A vendor payment and its cashflow mirror are the same money. The
+           vendor ledger already counts that payment against its bill, so a
+           second bill allocation on the mirror would pay the invoice twice
+           while only one bank entry exists. The message names the payment and
+           the bill so the operator can see which record to correct. */
         if (array_filter(array_column($prepared, 'purchase_invoice_id'))
             && Schema::hasTable('vendor_payment_entries')
-            && Schema::hasColumn('vendor_payment_entries', 'cashflow_entry_id')
-            && VendorPaymentEntry::query()->where('cashflow_entry_id', $entry->id)->exists()) {
-            $errors['allocations'] = 'This cashflow row mirrors a vendor-ledger payment. Remove that mirror or allocate the original vendor payment; linking it again would count the same payment twice.';
+            && Schema::hasColumn('vendor_payment_entries', 'cashflow_entry_id')) {
+            $mirrorPayment = VendorPaymentEntry::query()
+                ->with('vendor')
+                ->where('cashflow_entry_id', $entry->id)
+                ->first();
+
+            if ($mirrorPayment) {
+                $vendorName = $mirrorPayment->vendor?->vendor_name;
+                $bill = $mirrorPayment->purchase_invoice_id && Schema::hasTable('purchase_invoices')
+                    ? PurchaseInvoice::query()->whereKey($mirrorPayment->purchase_invoice_id)->value('invoice_number')
+                    : null;
+                $errors['allocations'] = 'This cashflow row is only the bank mirror of vendor payment #'.$mirrorPayment->id
+                    .($vendorName ? ' ('.$vendorName.')' : '')
+                    .'. That payment is already the record that settles the bill'
+                    .($bill ? ' ('.$bill.')' : '')
+                    .' in the vendor ledger, so adding a purchase document here would count the same money twice. '
+                    .'Keep this row on a project allocation, or change the bill on the vendor payment in Vendors → Payments.';
+            }
         }
 
         if ($errors) {

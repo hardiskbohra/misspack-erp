@@ -497,6 +497,63 @@
     font-weight: 700;
 }
 
+/* A mirrored vendor payment explains itself where the allocation is chosen,
+   instead of refusing the save afterwards. */
+.cf-allocation-mirror {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, #4f83f1 32%, var(--mc-border));
+    border-radius: 10px;
+    background: color-mix(in srgb, #4f83f1 7%, var(--mc-card));
+    color: var(--mc-text-2);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.cf-allocation-mirror > i {
+    margin-top: 2px;
+    color: #4f83f1;
+}
+
+.cf-allocation-mirror strong {
+    display: block;
+    color: var(--mc-text);
+    font-size: 12px;
+}
+
+.cf-allocation-mirror p {
+    margin: 4px 0 0;
+}
+
+.cf-allocation-mirror a {
+    color: #4f83f1;
+    font-weight: 700;
+}
+
+.cf-allocation-mirror-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    color: var(--master-orange, #d97706);
+    font-weight: 650;
+}
+
+.cf-allocation-mirror-warning i {
+    margin-top: 3px;
+}
+
+.cf-allocation-mirror + .cf-allocation-modal-grid,
+.master-modal-body > .cf-allocation-mirror + .cf-allocation-modal-grid {
+    margin-top: 4px;
+}
+
+.cf-allocation-mirror + .master-table-wrap {
+    margin-top: 4px;
+}
+
 .cf-sync-chip {
     display: inline-block;
     margin: 3px 0 2px;

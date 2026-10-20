@@ -2,6 +2,14 @@
     $projectOptions = $projects->keyBy('id');
     $salesOptions = $salesInvoices->keyBy('id');
     $purchaseOptions = $purchaseInvoices->keyBy('id');
+
+    /* A cashflow row that mirrors a vendor payment is only the bank side of
+       that payment: the bill it settles is recorded in the vendor ledger, so a
+       purchase document chosen here would pay the same bill twice. Offer the
+       project slice and point at the payment instead of letting the operator
+       discover the rule after submitting. */
+    $mirrorPayment = $linkedVendorPayment ?? null;
+    $purchaseLocked = ! empty($mirrorPayment);
 @endphp
 
 <section class="master-section cf-allocation-section" data-allocation-builder>
@@ -29,6 +37,26 @@
         </div>
     </div>
     @error('allocations')<div class="master-error">{{ $message }}</div>@enderror
+
+    @if($purchaseLocked)
+        <div class="cf-allocation-mirror" role="note">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            <div>
+                <strong>Bank mirror of vendor payment #{{ $mirrorPayment->id }}@if($mirrorPayment->vendor) · {{ $mirrorPayment->vendor->vendor_name }}@endif</strong>
+                <p>The vendor ledger already counts this payment against its bill, so a purchase document is not selected here —
+                    @if (\Illuminate\Support\Facades\Route::has('vendors.show'))
+                        change the bill on the <a href="{{ route('vendors.show', $mirrorPayment->vendor_id) }}#payments">vendor payment</a>.
+                    @else
+                        change the bill on the vendor payment.
+                    @endif
+                    This breakdown carries the project share only.</p>
+                @if($allocationRows && collect($allocationRows)->contains(fn ($row) => filled($row['purchase_invoice_id'] ?? null)))
+                    <p class="cf-allocation-mirror-warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                        A purchase document is still attached to a line below. Saving this form removes it, because the same payment cannot be counted twice.</p>
+                @endif
+            </div>
+        </div>
+    @endif
 
     <div class="master-table-wrap cf-allocation-table-wrap">
         <table class="master-table cf-allocation-table">
@@ -130,10 +158,15 @@
                 </div>
                 <div class="master-field">
                     <label class="master-label" for="allocationPurchase">Purchase order / bill</label>
-                    <select class="master-select" id="allocationPurchase" data-modal-value="purchase_invoice_id" data-allocation-purchase>
-                        <option value="">No purchase document</option>
-                        @foreach($purchaseInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}">{{ $invoice->invoice_number }} · {{ $invoice->typeLabel() }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
+                    <select class="master-select" id="allocationPurchase" data-modal-value="purchase_invoice_id" data-allocation-purchase @disabled($purchaseLocked)>
+                        <option value="">{{ $purchaseLocked ? 'Settled by the vendor payment' : 'No purchase document' }}</option>
+                        @unless($purchaseLocked)
+                            @foreach($purchaseInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}">{{ $invoice->invoice_number }} · {{ $invoice->typeLabel() }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
+                        @endunless
                     </select>
+                    @if($purchaseLocked)
+                        <p class="master-field-hint">The bill is settled in Vendors → Payments against vendor payment #{{ $mirrorPayment->id }}.</p>
+                    @endif
                 </div>
                 <div class="master-field">
                     <label class="master-label" for="allocationCashAmount">Cash amount <span class="master-required">*</span></label>
@@ -311,6 +344,9 @@ document.addEventListener('DOMContentLoaded', function () {
     modal.querySelector('[data-save-allocation]').addEventListener('click', function () {
         var values = {};
         ['project_id', 'sales_invoice_id', 'purchase_invoice_id', 'amount', 'document_amount', 'note'].forEach(function (key) { values[key] = field(key).value.trim(); });
+        /* On a vendor-payment mirror the bill is settled in the vendor ledger;
+           the disabled select cannot contribute a purchase document. */
+        if (field('purchase_invoice_id').disabled) values.purchase_invoice_id = '';
         var error = modal.querySelector('[data-allocation-modal-error]');
         var documentSelect = values.sales_invoice_id ? field('sales_invoice_id') : field('purchase_invoice_id');
         var documentOption = documentSelect.options[documentSelect.selectedIndex];
