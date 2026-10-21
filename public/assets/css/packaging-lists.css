@@ -59,3 +59,10 @@
 .pl-print-column input{width:18px;height:18px;flex:0 0 auto;accent-color:var(--mc-primary,#2563eb)}
 .pl-print-column:focus-within{outline:2px solid var(--mc-primary,#2563eb);outline-offset:3px;border-radius:4px}
 .pl-print-columns>legend{padding:0;margin-bottom:8px;font-size:13px;font-weight:600;color:var(--mc-text)}
+
+.pl-label-batch{display:grid;gap:14px;padding:16px;margin-bottom:16px;border:1px solid var(--mc-border);border-radius:10px;background:var(--mc-card-soft)}
+.pl-label-batch .master-sub{margin:4px 0 0}
+.pl-label-batch-controls{display:grid;grid-template-columns:minmax(150px,.7fr) minmax(180px,1fr) auto;gap:12px;align-items:end}
+.pl-label-batch-controls label{display:grid;gap:6px;font-size:13px;font-weight:600;min-width:0}
+.pl-label-batch-controls label .master-sub{display:inline;margin:0;font-weight:400}
+@media(max-width:760px){.pl-label-batch-controls{grid-template-columns:minmax(0,1fr)}.pl-label-batch{padding:14px}}

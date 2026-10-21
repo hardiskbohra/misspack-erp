@@ -102,6 +102,35 @@ Deployment: run `php artisan migrate` to add the nullable `print_columns` JSON
 column. Omitted settings in older integrations preserve the existing choice;
 an explicitly empty or unknown selection is rejected.
 
+### Printing or downloading every carton label
+
+On the packaging-list detail page, **Carton labels → All carton labels** has a
+page-type selector (**A4**, **A5**, **100 × 150 mm label**) and one **Print /
+download all labels** button. A4/A5 use the existing landscape label designs;
+100 × 150 mm uses the existing portrait thermal design. An optional reprint
+reason applies to the whole run. Individual group printing remains available.
+
+The CSRF-protected POST opens a single document with one page per **physical
+carton**, in stored group order. For groups of 2 and 3 cartons it produces five
+labels, numbered 1/5 through 5/5, carrying each group's own contents, weights,
+handling marks and QR destination. It does not print just one label per group.
+The batch and individual paths share the same label partial and paper rules.
+
+The print dialog opens automatically after QR generation and fonts are ready.
+Choose a printer or **Save as PDF** to download one PDF for the entire list;
+there is no server-side PDF renderer. A **Print / save PDF** button remains if
+the browser blocks automatic printing or the dialog is cancelled. QR failure
+prevents automatic printing and displays a visible error. Disable browser
+headers/footers and use the selected paper size at 100% scale when printing.
+
+Each group records an audit row with its selected format, physical carton count,
+reason, actor and time, in one transaction. These record requested output, not
+proof that a printer finished or a PDF was saved. Validation and batch assembly
+happen before audit writes. A run is limited to 10,000 physical cartons to bound
+the HTML/QR workload; larger lists must use the existing per-group action.
+Empty lists and invalid counts are rejected, never silently omitted. No new
+migration is needed for batch printing.
+
 ### Print-page layout settings
 
 Only `/packaging-lists/{id}/print` offers **Orientation** (A4 portrait or

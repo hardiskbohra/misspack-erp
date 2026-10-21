@@ -320,6 +320,32 @@ class PackagingListController extends Controller
         $list->recalculate();
     }
 
+    public function labels(PackagingList $packagingList, Request $request, \App\Services\PackagingListLabels $labels): View
+    {
+        $data = $request->validate([
+            'format' => ['required', Rule::in(['a4','a5','thermal'])],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+        $labelBatches = $labels->batches($packagingList);
+        $copies = array_sum(array_column($labelBatches, 'copies'));
+        // Use the loaded physical count for every n/N caption, including legacy lists.
+        $packagingList->total_cartons = $copies;
+        DB::transaction(function () use ($labelBatches, $data) {
+            foreach ($labelBatches as $batch) {
+                $batch['carton']->labelPrints()->create([
+                    'label_format' => $data['format'], 'copies' => $batch['copies'],
+                    'reason' => $data['reason'] ?? null, 'printed_by' => Auth::id(), 'printed_at' => now(),
+                ]);
+            }
+        });
+
+        return view('packaging_lists.label', [
+            'labelBatches' => $labelBatches, 'format' => $data['format'], 'copies' => $copies,
+            'labelTitle' => $packagingList->packing_number.' · All carton labels',
+            'autoPrint' => true, 'backUrl' => route('packaging-lists.show', $packagingList),
+        ]);
+    }
+
     public function label(PackagingListCarton $carton, Request $request): View
     {
         $data = $request->validate(['format'=>['required',Rule::in(['a4','a5','thermal'])],'copies'=>['required','integer','min:1','max:100000'],'reason'=>['nullable','string','max:255']]);

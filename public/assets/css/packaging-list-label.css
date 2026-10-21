@@ -101,3 +101,9 @@ body{margin:0;background:#e5e7eb;color:#000;font:12pt/1.35 "Inter","Segoe UI",Ro
 .format-thermal .label-handling-note{padding:1.5mm}
 
 @media print{body{background:#fff}.label-toolbar{display:none}.carton-label{margin:0;box-shadow:none}.format-thermal .carton-label{page-break-after:always}}
+
+.label-toolbar{flex-wrap:wrap;align-items:center;max-width:297mm;padding:0 12px;font-size:13px}
+.label-toolbar p{flex:1 1 100%;margin:0}
+.label-toolbar a{color:inherit;font-size:13px}
+.label-toolbar [data-label-print-error]{color:#9f1239}
+@media print{.label-page .carton-label:last-of-type{page-break-after:auto;break-after:auto}.carton-label{break-inside:avoid}}

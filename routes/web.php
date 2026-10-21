@@ -308,6 +308,7 @@ Route::middleware('auth')->group(function () {
         // Packaging Lists — printable carton/item manifests linked to shipments.
         Route::patch('/packaging-lists/{packagingList}/print-settings', [PackagingListController::class, 'updatePrintSettings'])->name('packaging-lists.print-settings');
         Route::get('/packaging-lists/{packagingList}/print', [PackagingListController::class, 'print'])->name('packaging-lists.print');
+        Route::post('/packaging-lists/{packagingList}/labels', [PackagingListController::class, 'labels'])->name('packaging-lists.labels');
         Route::post('/packaging-lists/{packagingList}/duplicate', [PackagingListController::class, 'duplicate'])->name('packaging-lists.duplicate');
         Route::patch('/packaging-lists/{packagingList}/status', [PackagingListController::class, 'updateStatus'])->name('packaging-lists.status');
         Route::post('/packaging-list-cartons/{carton}/label', [PackagingListController::class, 'label'])->name('packaging-lists.cartons.label');
