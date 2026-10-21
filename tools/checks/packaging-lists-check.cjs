@@ -116,9 +116,25 @@ const handlingSymbols=read('resources/views/packaging_lists/partials/handling-sy
 check('a label fills its page instead of leaving a blank bottom', labelCss.includes('.carton-label{width:297mm;height:210mm')&&labelCss.includes('display:flex;flex-direction:column')&&labelCss.includes('.label-items{flex:1 1 auto;display:flex;min-height:0;overflow:hidden}')&&labelCss.includes('height:100%;min-height:100%;border-collapse:collapse')&&labelCss.includes('.carton-label>*{flex:0 0 auto}'));
 check('A5 label content is eleven point, two points up on the old nine', labelCss.includes('.format-a5 .carton-label{width:210mm;height:148mm;padding:7mm;gap:0;font-size:11pt}')&&labelCss.includes('.label-identity strong{font-size:1.42em}')&&labelCss.includes('.carton-label h1{margin:1.5mm 0 0;font-size:1.6em'));
 
-/* A label is one ruled form: every band shares an edge with the band above it,
-   so no line is doubled, missing, or interrupted by a gap. */
-check('the label bands share edges instead of breaking the frame', ['.label-identity{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.7fr) minmax(0,.65fr) minmax(0,.65fr);border:1px solid #000;border-bottom:0}','.label-parties{display:grid;grid-template-columns:1fr 1fr;border:1px solid #000;border-top:0;border-bottom:0}','.label-physical{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #000;border-top:0}'].every(x=>labelCss.includes(x))&&!labelCss.includes('flex-direction:column;gap:4mm')&&!labelCss.includes('gap:2mm;font-size:11pt}'));
+/* A label is one ruled form, and every seam inside it is drawn exactly once —
+   by the bottom rule of the band above. A seam where both neighbours drop their
+   edge is a row with no bottom border at all, which is what the printed label
+   showed: the carton number sat in an open-ended strip. */
+const labelBandEdges = (sel) => {
+    const rule = labelCss.match(new RegExp(sel.replace('.', '\\.') + '\\{[^}]*\\}'));
+    if (!rule) return null;
+    return {top: /border-top:0/.test(rule[0]) ? 0 : 1, bottom: /border-bottom:0/.test(rule[0]) ? 0 : 1};
+};
+const identityEdges = labelBandEdges('.label-identity');
+const partyEdges = labelBandEdges('.label-parties');
+const weightEdges = labelBandEdges('.label-physical');
+check('the carton-number row draws a bottom border', !!identityEdges && identityEdges.top === 1 && identityEdges.bottom === 1);
+check('every seam between label bands is drawn exactly once',
+    !!identityEdges && !!partyEdges && !!weightEdges
+    && identityEdges.bottom + partyEdges.top === 1
+    && partyEdges.bottom + (labelCss.includes('.label-items th{border-top:0}') ? 0 : 1) === 1
+    && weightEdges.top === 0
+    && !labelCss.includes('flex-direction:column;gap:4mm') && !labelCss.includes('gap:2mm;font-size:11pt}'));
 check('every label cell has room to breathe', labelCss.includes('.carton-label th,.carton-label td{padding:3.5mm 4mm;')&&labelCss.includes('.label-identity>div{padding:3.5mm 4mm;')&&labelCss.includes('.label-parties>div{padding:3.5mm 4mm;')&&labelCss.includes('.label-physical>div{padding:3.5mm 4mm;')&&labelCss.includes('.format-a5 .label-identity>div,.format-a5 .label-parties>div,.format-a5 .label-physical>div,.format-a5 .carton-label th,.format-a5 .carton-label td{padding:3mm 3.5mm}'));
 check('the label prints the carton barcode under its QR', label.includes('class="label-qr-code"')&&label.includes('{{ $carton->barcode }}')&&label.includes('data-ship-qr-caption'));
 check('carton label ink is pure black and its rules are solid black', ['color:#000','border:1px solid #000','border-bottom:3px solid #000','border-right:1px solid #000'].every(x=>labelCss.includes(x))&&!/#111|#222|#333/.test(labelCss));

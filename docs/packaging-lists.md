@@ -130,11 +130,14 @@ products inside it would be a guess.
   black rules rather than `#111`, because a label is read at a metre under
   warehouse light.
 - **A label is one ruled form.** The identity, party, item and weight bands sit
-  edge to edge in a column with no flex gap; each band drops the edge it shares
-  with the band above, so the frame is drawn by single 1 px rules — no seam, no
-  doubled line, no missing side. The item table fills its band and its own cells
-  draw every edge (a border on the wrapper would sit beside theirs and double
-  the vertical rules). Cells pad 3.5 × 4 mm on A4, 3 × 3.5 mm on A5 and
+  edge to edge in a column with no flex gap, and every seam between them is
+  drawn exactly once — by the bottom rule of the band above. So each band
+  between two others drops only its *top* edge; dropping both neighbours' edges
+  is how a row ends up with no bottom border, which is what a printed label
+  showed when the carton-number strip was left open-ended. The item table fills
+  its band and its own cells draw every edge (a border on the wrapper would sit
+  beside theirs and double the vertical rules), so its header row loses only its
+  top border, which the party band already draws. Cells pad 3.5 × 4 mm on A4, 3 × 3.5 mm on A5 and
   1.5 × 1.8 mm on the thermal roll, so even a two-line address does not touch a
   rule. Only the handling pictograms stand apart, on their own 3 mm margin,
   because they are marks rather than rows of the form.

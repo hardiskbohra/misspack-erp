@@ -30,14 +30,15 @@ body{margin:0;background:#e5e7eb;color:#000;font:12pt/1.35 "Inter","Segoe UI",Ro
 .carton-label small{line-height:1.25}
 
 /* The identity, party, item and weight bands are one ruled block, not four
-   cards: each band loses the edge it shares with the band above it, so the block
-   is drawn by single 1px rules with no seam, gap or double line anywhere. */
-.label-identity{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.7fr) minmax(0,.65fr) minmax(0,.65fr);border:1px solid #000;border-bottom:0}
+   cards. Every band between two others drops only its top edge, so each seam is
+   drawn by exactly one rule — the bottom of the band above. Dropping both sides
+   of a seam is what leaves a row with no bottom border. */
+.label-identity{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.7fr) minmax(0,.65fr) minmax(0,.65fr);border:1px solid #000}
 .label-identity>div{padding:3.5mm 4mm;border-right:1px solid #000;min-width:0;display:flex;flex-direction:column;justify-content:center}
 .label-identity>div:last-child{border-right:0}
 .label-identity strong{font-size:1.42em}
 
-.label-parties{display:grid;grid-template-columns:1fr 1fr;border:1px solid #000;border-top:0;border-bottom:0}
+.label-parties{display:grid;grid-template-columns:1fr 1fr;border:1px solid #000;border-top:0}
 .label-parties>div{padding:3.5mm 4mm;border-right:1px solid #000;min-width:0}
 .label-parties>div:last-child{border:0}
 .label-parties strong{font-size:1.05em}
@@ -52,6 +53,9 @@ body{margin:0;background:#e5e7eb;color:#000;font:12pt/1.35 "Inter","Segoe UI",Ro
 .carton-label table{width:100%;height:100%;min-height:100%;border-collapse:collapse;font-size:1em}
 .carton-label th,.carton-label td{padding:3.5mm 4mm;border:1px solid #000;text-align:left;vertical-align:top;overflow-wrap:anywhere}
 .carton-label th{background:#e5e7eb;font-size:.82em;letter-spacing:.06em;vertical-align:middle}
+/* The header row sits directly on the party band's bottom rule; a top border
+   here would draw the same seam a second time. */
+.label-items th{border-top:0}
 .carton-label td small{display:block;margin-top:.6mm;color:#000}
 .label-col-item{width:36%}.label-col-batch{width:27%}.label-col-qty{width:17%}.label-col-origin{width:20%}
 
