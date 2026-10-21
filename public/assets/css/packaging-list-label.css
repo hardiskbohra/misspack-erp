@@ -1,1 +1,87 @@
-*{box-sizing:border-box}body{margin:0;background:#e5e7eb;color:#111827;font:12px/1.35 Arial,sans-serif}.label-toolbar{max-width:210mm;margin:12px auto;display:flex;justify-content:flex-end;gap:8px}.label-toolbar button{border:0;border-radius:5px;background:#1d4ed8;color:#fff;padding:9px 14px;font-weight:700}.label-toolbar button+button{background:#475569}.carton-label{width:210mm;min-height:148mm;margin:0 auto 14px;padding:10mm;background:#fff;page-break-after:always}.carton-label header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #111827;padding-bottom:8px}.carton-label header p{margin:0;font-size:10px;letter-spacing:.12em}.carton-label h1{margin:3px 0;font-size:24px}.label-qr{width:126px;text-align:center}.label-qr svg{display:block;margin:auto}.label-qr small{font-size:8px}.label-identity,.label-physical{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #111827;border-top:0}.label-identity div,.label-physical div{padding:7px;border-right:1px solid #111827}.label-identity div:last-child,.label-physical div:last-child{border:0}.carton-label span{display:block;font-size:8px;color:#4b5563;letter-spacing:.08em}.carton-label strong{display:block;margin-top:2px}.label-identity strong{font-size:18px}.label-parties{display:grid;grid-template-columns:1fr 1fr;border:1px solid #111827;border-top:0}.label-parties>div{padding:8px;border-right:1px solid #111827;min-height:52px}.label-parties>div:last-child{border:0}.label-parties p{margin:2px 0}.carton-label table{width:100%;border-collapse:collapse;margin-top:9px}.carton-label th,.carton-label td{padding:6px;border:1px solid #111827;text-align:left;vertical-align:top}.carton-label th{background:#e5e7eb;font-size:9px}.carton-label td small{display:block;color:#4b5563}.label-physical{grid-template-columns:repeat(3,1fr);border-top:1px solid #111827;margin-top:9px}.label-handling{display:grid;grid-template-columns:repeat(auto-fit,minmax(60px,1fr));gap:7px;margin-top:9px}.label-handling-symbol{min-height:76px;padding:6px 4px;border:2px solid #111827;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.label-handling-symbol svg{width:48px;height:48px;fill:none;stroke:#111827;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.label-handling-symbol strong{margin:2px 0 0;font-size:9px;line-height:1.05}.label-handling-note{grid-column:1/-1;margin:0;padding:6px 8px;border:1px solid #111827}.label-handling-note span{margin-bottom:2px}.format-a4 .label-toolbar{max-width:297mm}.format-a4 .carton-label{width:297mm;min-height:210mm;padding:12mm}.format-a5 .label-toolbar{max-width:210mm}.format-a5 .carton-label{width:210mm;height:148mm;min-height:0;padding:7mm;overflow:hidden}.format-a5 .carton-label h1{font-size:21px}.format-a5 .label-qr svg{width:96px;height:96px}.format-a5 .label-handling-symbol{min-height:62px}.format-a5 .label-handling-symbol svg{width:38px;height:38px}.format-thermal .label-toolbar{max-width:100mm}.format-thermal .carton-label{width:100mm;height:150mm;min-height:0;padding:4mm;overflow:hidden}.format-thermal .carton-label header{padding-bottom:3px}.format-thermal .carton-label header p{font-size:6px}.format-thermal .carton-label h1{font-size:13px}.format-thermal .label-qr{width:76px}.format-thermal .label-qr svg{width:68px;height:68px}.format-thermal .label-qr small{font-size:5px}.format-thermal .label-identity{grid-template-columns:repeat(4,minmax(0,1fr))}.format-thermal .label-physical{grid-template-columns:repeat(3,minmax(0,1fr))}.format-thermal .label-identity div,.format-thermal .label-physical div{padding:3px}.format-thermal .label-identity strong{font-size:9px}.format-thermal .carton-label span{font-size:5.5px}.format-thermal .label-parties{grid-template-columns:1fr 1fr}.format-thermal .label-parties>div{min-height:0;padding:3px;border-bottom:0}.format-thermal .label-parties p{font-size:7px;line-height:1.15}.format-thermal .carton-label table{margin-top:4px}.format-thermal .carton-label th,.format-thermal .carton-label td{padding:2px}.format-thermal .label-handling{grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}.format-thermal .label-handling{margin-top:4px}.format-thermal .label-handling-symbol{min-height:36px;padding:2px 1px;border-radius:4px}.format-thermal .label-handling-symbol svg{width:21px;height:21px;stroke-width:4.5}.format-thermal .label-handling-symbol strong{font-size:5.5px}.format-thermal .label-physical{margin-top:4px}.format-thermal table{font-size:6.5px}@media print{body{background:#fff}.label-toolbar{display:none}.carton-label{margin:0;box-shadow:none}.format-thermal .carton-label{page-break-after:always}}
+/* Carton labels: A4, A5 and 100 × 150 mm thermal, laid out on the paper in
+   millimetres and set in points, so what prints is what was designed. Every
+   label is a flex column that fills its page — the item table takes whatever
+   height the rest leaves, so a one-line carton does not leave a blank half-page
+   at the bottom. Sizes are in `em`, so each format scales from one base size. */
+*{box-sizing:border-box}
+body{margin:0;background:#e5e7eb;color:#111;font:12pt/1.35 Arial,Helvetica,sans-serif}
+.label-toolbar{max-width:210mm;margin:12px auto;display:flex;justify-content:flex-end;gap:8px}
+.label-toolbar button{border:0;border-radius:5px;background:#111;color:#fff;padding:9px 14px;font-weight:700;cursor:pointer}
+.label-toolbar button+button{background:#4b4b4b}
+
+.carton-label{width:297mm;height:210mm;margin:0 auto 14px;padding:12mm;background:#fff;page-break-after:always;display:flex;flex-direction:column;gap:4mm;overflow:hidden;font-size:12pt}
+
+.carton-label>*{flex:0 0 auto}
+.carton-label header{display:flex;justify-content:space-between;align-items:flex-start;gap:5mm;border-bottom:3px solid #111;padding-bottom:2.5mm}
+.label-title{min-width:0}
+.carton-label header p{margin:0;font-size:.72em;font-weight:700;letter-spacing:.14em}
+.carton-label h1{margin:1.5mm 0 0;font-size:1.6em;line-height:1.12;overflow-wrap:anywhere}
+.label-qr{flex:0 0 auto;width:32mm;text-align:center}
+.label-qr-code svg{display:block;width:32mm;height:32mm;margin:0 auto}
+.label-qr small{display:block;margin-top:1mm;font-size:.68em;line-height:1.2;letter-spacing:.04em;overflow-wrap:anywhere;color:#222}
+
+.carton-label span.label-key{display:block;font-size:.72em;font-weight:700;letter-spacing:.09em;color:#333;line-height:1.25}
+.carton-label strong{display:block;margin-top:1mm;line-height:1.2;overflow-wrap:anywhere}
+.carton-label small{line-height:1.25}
+
+.label-identity{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.7fr) minmax(0,.65fr) minmax(0,.65fr);border:1px solid #111;border-top:0}
+.label-identity>div{padding:2.5mm 3mm;border-right:1px solid #111;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.label-identity>div:last-child{border-right:0}
+.label-identity strong{font-size:1.42em}
+
+.label-parties{display:grid;grid-template-columns:1fr 1fr;border:1px solid #111;border-top:0}
+.label-parties>div{padding:2.5mm 3mm;border-right:1px solid #111;min-width:0}
+.label-parties>div:last-child{border:0}
+.label-parties strong{font-size:1.05em}
+.label-parties p{margin:1mm 0 0;font-size:.88em;line-height:1.3}
+
+/* The item table takes the height the other bands leave. If a carton really
+   holds more lines than the paper allows, the overflow is clipped here so the
+   weights and handling marks below it always print. */
+.label-items{flex:1 1 auto;display:flex;min-height:0;overflow:hidden}
+.carton-label table{width:100%;height:100%;min-height:100%;border-collapse:collapse;font-size:1em}
+.carton-label th,.carton-label td{padding:2.5mm 3mm;border:1px solid #111;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+.carton-label th{background:#e5e7eb;font-size:.82em;letter-spacing:.06em;vertical-align:middle}
+.carton-label td small{display:block;margin-top:.6mm;color:#333}
+.label-col-item{width:36%}.label-col-batch{width:27%}.label-col-qty{width:17%}.label-col-origin{width:20%}
+
+.label-physical{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #111}
+.label-physical>div{padding:2.5mm 3mm;border-right:1px solid #111;min-width:0}
+.label-physical>div:last-child{border-right:0}
+.label-physical strong{font-size:1.25em}
+
+.label-handling{display:grid;grid-template-columns:repeat(auto-fit,minmax(24mm,1fr));gap:2.5mm;flex:0 0 auto}
+.label-handling-symbol{height:22mm;padding:1mm;border:2px solid #111;border-radius:2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.label-handling-symbol svg{width:13mm;height:13mm;fill:none;stroke:#111;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.label-handling-symbol strong{margin:.5mm 0 0;font-size:.74em;line-height:1.1}
+.label-handling-note{grid-column:1/-1;margin:0;padding:2mm 3mm;border:1px solid #111}
+.label-handling-note .label-key{margin-bottom:.5mm}
+
+.format-a4 .carton-label{width:297mm;height:210mm;padding:12mm;gap:4mm;font-size:12pt}
+.format-a5 .carton-label{width:210mm;height:148mm;padding:7mm;gap:2mm;font-size:11pt}
+.format-a5 .label-qr{width:24mm}
+.format-a5 .label-qr-code svg{width:24mm;height:24mm}
+.format-a5 .label-handling-symbol{height:15mm}
+.format-a5 .label-handling-symbol svg{width:9mm;height:9mm}
+.format-a5 .label-identity>div,.format-a5 .label-parties>div,.format-a5 .label-physical>div,.format-a5 .carton-label th,.format-a5 .carton-label td{padding:2mm 2.5mm}
+.format-a5 .label-parties p{font-size:.84em}
+
+.format-thermal .carton-label{width:100mm;height:150mm;padding:3.5mm;gap:1.5mm;font-size:5.6pt}
+.format-thermal .carton-label header{gap:2mm;padding-bottom:1mm;border-bottom-width:2px}
+.format-thermal .label-qr{width:19mm}
+.format-thermal .label-qr-code svg{width:19mm;height:19mm}
+.format-thermal .carton-label h1{font-size:1.35em}
+.format-thermal .label-identity{grid-template-columns:repeat(4,minmax(0,1fr))}
+.format-thermal .label-identity>div{padding:1mm 1.2mm}
+.format-thermal .label-identity strong{font-size:1.15em}
+.format-thermal .label-parties>div{padding:1mm 1.2mm}
+.format-thermal .label-parties p{font-size:.8em}
+.format-thermal .carton-label th,.format-thermal .carton-label td{padding:1mm 1.2mm}
+.format-thermal .label-physical>div{padding:1mm 1.2mm}
+.format-thermal .label-physical strong{font-size:1.15em}
+.format-thermal .label-handling{grid-template-columns:repeat(4,minmax(0,1fr));gap:1mm}
+.format-thermal .label-handling-symbol{height:11mm;padding:.5mm;border-width:1.5px;border-radius:1mm}
+.format-thermal .label-handling-symbol svg{width:6.5mm;height:6.5mm;stroke-width:5}
+.format-thermal .label-handling-note{padding:1mm}
+
+@media print{body{background:#fff}.label-toolbar{display:none}.carton-label{margin:0;box-shadow:none}.format-thermal .carton-label{page-break-after:always}}

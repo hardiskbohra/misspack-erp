@@ -88,6 +88,14 @@ products inside it would be a guess.
   while a list drawn from a vendor's bill prints without our logo. With no
   sender typed, a list that links a vendor is the vendor's and one that does
   not is ours.
+- **Carton labels** (`packaging_lists/label`) are A4, A5 landscape or
+  100 × 150 mm thermal, laid out on the paper in millimetres and set in points.
+  The label is a flex column that fills its page: the item table takes whatever
+  height the identity, parties, weights and handling bands leave, so a carton
+  holding one product does not print half a page of white. A5 is set at 11 pt
+  (body, quantity and item text) with 15.6 pt packing group and 17.6 pt
+  destination — two points up on the old 9 pt — and carries the carton's
+  barcode under the QR it scans to.
 - **Show** (`packaging_lists/show`) is the working screen: the same sections and
   the same spanning, plus chargeable weight per carton and the `#carton-N`
   anchor each carton's printed QR points at.
