@@ -6,6 +6,11 @@
 /* The grid owns vertical rhythm; inherited stat/card margins must not add a second gap. */
 .packaging-list-page.master-list>.master-stats,.packaging-list-page.master-list>.master-card{margin:0}
 .packaging-list-table tbody tr[data-href]{cursor:pointer}
+/* Match the shipment list's primary identifier: blue, bold, with a quiet secondary line. */
+.packaging-list-table .pl-list-number,.packaging-list-table .pl-list-number:visited{display:block;font-size:13.5px;font-weight:700;line-height:20px;color:var(--master-primary);text-decoration:none}
+.packaging-list-table tr[data-href]:hover .pl-list-number,.packaging-list-table .pl-list-number:focus-visible{text-decoration:underline}
+.packaging-list-table .pl-list-number:focus-visible{outline:2px solid var(--master-primary);outline-offset:3px}
+
 .pl-address-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--master-space-4,16px)}
 .pl-address-card{padding-right:var(--master-space-4,16px);border-right:1px solid var(--mc-border);display:grid;align-content:start;gap:var(--master-space-3,12px);min-width:0}
 .pl-address-card:last-child{padding-right:0;border-right:0}

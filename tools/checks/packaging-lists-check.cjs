@@ -101,6 +101,7 @@ check('row clicks navigate while links, action menus and text selection remain i
     click({target: {closest: () => null}});
     return window.location.href === '/packaging-lists';
 })());
+check('packaging list identifiers match shipment identifiers with theme-blue bold links', index.includes('class="pl-list-number"') && /\.pl-list-number:visited\{[^}]*font-size:13\.5px;[^}]*font-weight:700;[^}]*color:var\(--master-primary\);text-decoration:none/.test(css) && css.includes('tr[data-href]:hover .pl-list-number') && css.includes('.pl-list-number:focus-visible'));
 check('list search includes linked project number and name', controller.includes("orWhereHas('project'")&&controller.includes("where('project_number', 'like'")&&controller.includes("orWhere('name', 'like'")&&index.includes('PL number, project, invoice or party'));
 check('list row menu offers view, print, edit, clone, status and delete actions', ['fa-eye','fa-print','fa-pen','fa-clone','packaging-lists.status','packaging-lists.destroy'].every(x=>index.includes(x))&&controller.includes('function updateStatus'));
 check('form is one flat surface divided into shared sections', form.includes('master-card master-card--flat master-form-card')&&(form.match(/master-form-card/g)||[]).length===1&&form.includes('master-section'));
