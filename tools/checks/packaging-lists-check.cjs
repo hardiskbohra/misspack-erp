@@ -64,7 +64,21 @@ check('packaging quantities display as whole numbers', [print,show].every(view=>
 const packagingDisplayViews=[print,show,read('resources/views/packaging_lists/label.blade.php'),form,index];
 check('displayed packaging decimals use one digit instead of three', packagingDisplayViews.every(view=>!view.includes(',3)')) && !js.includes('toFixed(3)') && js.includes('toFixed(1)'));
 check('a multi-page sheet repeats its header and never splits a carton block', ['.pl-document-table thead{display:table-header-group}','.pl-document-table tfoot{display:table-footer-group}','.pl-document-table tr{break-inside:avoid;page-break-inside:avoid}','.pl-document-table .pl-print-group-title th{break-after:avoid;page-break-after:avoid}'].every(x=>css.includes(x)));
-check('print table text is twelve pixels, not the old ten', sheetCss.includes('.pl-document-table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:18px;font-size:12px}')&&!css.includes('.pl-document-table{font-size:10px}')&&!css.includes('font-size:10px}.pl-col-serial'));
+check('print table text is twelve pixels, not the old ten', sheetCss.includes('.pl-document-table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:4mm;font-size:12px}')&&!css.includes('.pl-document-table{font-size:10px}')&&!css.includes('font-size:10px}.pl-col-serial'));
+
+/* A4 fit: the sheet is laid out in the page's own units, so what the browser
+   sends to the printer is the page and not a 1120px design scaled to fit. */
+const printCss=css.slice(css.indexOf('@media print'));
+const printCols=[...sheetCss.matchAll(/\.pl-col-([a-z-]+)\{width:([\d.]+)%\}/g)];
+check('the sheet is laid out to an A4 landscape page in millimetres', printCss.includes('@page{size:A4 landscape;margin:10mm}')&&printCss.includes('.pl-document{width:277mm;max-width:100%;margin:0;padding:0;box-shadow:none}')&&sheetCss.includes('.pl-document{width:min(277mm,calc(100% - 32px));margin:0 auto 24px;background:#fff;box-sizing:border-box;padding:10mm 12mm'));
+check('print type is set in points, so the browser does not rescale the page', printCss.includes('.pl-print-body{background:#fff;font-size:9pt}')&&printCss.includes('.pl-document-table{font-size:9pt}')&&!printCss.includes('font-size:12px'));
+check('the eleven column widths add up to the page and leave Carton Size narrow', printCols.length===11&&printCols.reduce((sum,m)=>sum+Number(m[2]),0)===100&&sheetCss.includes('.pl-col-size{width:9%}'));
+
+/* The logo is our letterhead, not the vendor's: a sheet drawn from a vendor's
+   bill prints on that vendor's paper. */
+check('the logo prints only when the sheet is ours', print.includes('@if ($onLetterhead)')&&print.includes("$organisation->logoUrl('print')")&&controller.includes("'onLetterhead' => $packagingList->issuedByUs($organisation)"));
+const packagingListModel=read('app/Models/PackagingList.php');
+check('issuing party is read from the sender name, with the vendor as the tie-break', ['function issuedByUs(','normaliseName','return ! $this->vendor_id;','legal_name','trade_name'].every(x=>packagingListModel.includes(x)));
 check('record cards and stats use one shared vertical rhythm', css.includes('.packaging-list-show>.master-section,.packaging-list-show>.pl-breakdown{padding:24px}')&&css.includes('gap:var(--master-space-4,16px)')&&css.includes('.packaging-list-show>.master-header,.packaging-list-show>.master-stats'));
 check('a carton label is not repeated when it is the section heading', show.includes("strcasecmp(trim($carton->carton_label), trim($section['label']))")&&!print.includes('carton_label'));
 check('duplicate and delete actions live in the application top bar', show.includes("@section('page-actions')")&&show.indexOf("packaging-lists.duplicate")<show.indexOf("@section('content')")&&show.indexOf("packaging-lists.destroy")<show.indexOf("@section('content')")&&!show.includes('emp-card-foot'));

@@ -65,6 +65,63 @@ class PackagingList extends Model
         return ['air' => 'Air', 'sea' => 'Sea', 'road' => 'Road', 'rail' => 'Rail', 'courier' => 'Courier'];
     }
 
+    /**
+     * Is this sheet issued by us, or by the vendor who packed the goods?
+     *
+     * A packaging list documents a packing run, and the party who packed issues
+     * it: our own export leaves "MissPack India Pvt Ltd" in the From block and
+     * is printed on our letterhead; a list drawn from a vendor's bill (or typed
+     * with the vendor's name) belongs to that vendor's letterhead and must not
+     * carry our logo.
+     *
+     * The test is the sender name against the organisation's own names — the
+     * same strings a sales invoice puts there (`seller_company_name`). Legal
+     * boilerplate differs between screens ("Private Limited" here, "Pvt Ltd"
+     * there), so a name matches when one contains the other, and failing that
+     * when the first word does. With no sender typed at all, a list with a
+     * vendor is the vendor's and a list without one is ours.
+     */
+    public function issuedByUs(?Organisation $organisation = null): bool
+    {
+        $sender = self::normaliseName($this->from_name);
+
+        if ($sender === '') {
+            return ! $this->vendor_id;
+        }
+
+        $organisation ??= Organisation::current();
+        $names = array_filter([
+            self::normaliseName($organisation->legal_name),
+            self::normaliseName($organisation->trade_name),
+        ]);
+
+        foreach ($names as $name) {
+            if ($name === '') {
+                continue;
+            }
+            if (str_contains(" {$sender} ", " {$name} ") || str_contains(" {$name} ", " {$sender} ")) {
+                return true;
+            }
+        }
+
+        foreach ($names as $name) {
+            $first = explode(' ', $name)[0];
+            if (mb_strlen($first) >= 3 && str_contains(" {$sender} ", " {$first} ")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** A name reduced to the words that identify it: "MissPack India Pvt. Ltd." → "misspack india pvt ltd". */
+    private static function normaliseName(?string $value): string
+    {
+        $value = mb_strtolower(trim((string) $value));
+
+        return trim(preg_replace('/[^a-z0-9]+/', ' ', $value) ?? '');
+    }
+
     public function totalChargeableWeight(): float
     {
         $cartons = $this->relationLoaded('cartons') ? $this->cartons : $this->cartons()->get();

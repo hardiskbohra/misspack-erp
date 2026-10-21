@@ -170,10 +170,15 @@ class PackagingListController extends Controller
     public function print(PackagingList $packagingList): View
     {
         $packagingList->load(['cartons.items.product', 'vendor', 'client', 'project', 'shipment']);
+        $organisation = Organisation::current();
+
         return view('packaging_lists.print', [
             'list' => $packagingList,
             'sections' => $packagingList->sections(),
-            'organisation' => Organisation::current(),
+            'organisation' => $organisation,
+            /* Our logo goes on our own letterhead only. A sheet drawn from a
+               vendor's bill is the vendor's document and prints without it. */
+            'onLetterhead' => $packagingList->issuedByUs($organisation),
         ]);
     }
 

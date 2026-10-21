@@ -1,7 +1,14 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ $list->packing_number }} · Packaging List</title><link rel="stylesheet" href="{{ $assetVer('assets/css/packaging-lists.css') }}"></head><body class="pl-print-body">
-<div class="pl-print-actions"><button onclick="window.print()">Print / save PDF</button><button onclick="window.close()">Close</button></div>
+<div class="pl-print-actions"><p class="pl-print-hint">A4 landscape · 10 mm margins · scale 100%</p><button onclick="window.print()">Print / save PDF</button><button onclick="window.close()">Close</button></div>
 <main class="pl-document">
-<header class="pl-document-head"><div><p>PACKAGING LIST</p><h1>{{ $list->packing_number }}</h1></div><dl><div><dt>Date</dt><dd>{{ $list->packing_date?->format('d M Y') }}</dd></div><div><dt>Invoice No.</dt><dd>{{ $list->invoice_number ?: '—' }}</dd></div><div><dt>Mode</dt><dd>{{ strtoupper($list->modeLabel()) }}</dd></div></dl></header>
+<header class="pl-document-head">
+<div class="pl-document-brand">
+@if ($onLetterhead)
+<img class="pl-document-logo" src="{{ $organisation->logoUrl('print') }}" alt="{{ $organisation->legal_name }}">
+@endif
+<div><p>PACKAGING LIST</p><h1>{{ $list->packing_number }}</h1></div>
+</div>
+<dl><div><dt>Date</dt><dd>{{ $list->packing_date?->format('d M Y') }}</dd></div><div><dt>Invoice No.</dt><dd>{{ $list->invoice_number ?: '—' }}</dd></div><div><dt>Mode</dt><dd>{{ strtoupper($list->modeLabel()) }}</dd></div></dl></header>
 <section class="pl-document-parties"><div><h2>FROM</h2><strong>{{ $list->from_name }}</strong><p>{!! nl2br(e($list->from_address)) !!}</p>@if($list->from_contact)<p>Contact: {{ $list->from_contact }}</p>@endif @if($list->from_email)<p>{{ $list->from_email }}</p>@endif</div><div><h2>BILL TO</h2><strong>{{ $list->bill_to_name }}</strong><p>{!! nl2br(e($list->bill_to_address)) !!}</p></div><div><h2>SHIP TO</h2><strong>{{ $list->ship_to_name }}</strong><p>{!! nl2br(e($list->ship_to_address)) !!}</p></div></section>
 @php
     /* The sheet is read in sections, and a section is a set of carton blocks:

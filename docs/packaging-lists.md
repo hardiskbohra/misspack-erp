@@ -77,6 +77,17 @@ products inside it would be a guess.
   same on an office laser as on screen — including with "background graphics"
   switched off. Table body text is 12 px, not the old 10 px, and dimensions
   print as `50 × 34 × 30` rather than `50.00 × 34.00 × 30.00`.
+- **It is laid out to the page, not to the screen.** A4 landscape, 10 mm
+  margins, the document box is 277 mm wide (297 − 2 × 10) and print type is set
+  in points, so the browser sends the page to the printer at scale 100% instead
+  of shrinking a 1120 px design. The Carton Size column is 9% — wide enough for
+  `120 × 80 × 65` on one line, narrow enough to give the description its space.
+- **The logo is the issuer's.** `PackagingList::issuedByUs()` compares the From
+  name with the organisation's legal and trade names (with "Pvt Ltd" against
+  "Private Limited" ignored), so our own export prints on MissPack letterhead
+  while a list drawn from a vendor's bill prints without our logo. With no
+  sender typed, a list that links a vendor is the vendor's and one that does
+  not is ours.
 - **Show** (`packaging_lists/show`) is the working screen: the same sections and
   the same spanning, plus chargeable weight per carton and the `#carton-N`
   anchor each carton's printed QR points at.
