@@ -80,10 +80,16 @@ products inside it would be a guess.
   card radius, 9.5 px uppercase field labels and 12 px table values, all driven
   off the shared `--pdf-*` tokens. A customer receiving an invoice and a packing
   list sees one house style, not two printouts from two systems.
-- **It is black and white.** Text is `--pdf-ink` on white, bands are
-  `--pdf-surface-soft`, and no colour carries meaning, so it prints the same on
-  an office laser — including with "background graphics" switched off.
-  Dimensions print as `50 × 34 × 30` rather than `50.00 × 34.00 × 30.00`.
+- **It is black and white, and dark enough to print.** Every word on the sheet
+  is pure `#000` — headings, labels, values and the footnote alike — and the
+  rules are `#6b7280` (card and table outlines) and `#b6bcc7` (row dividers)
+  instead of the screen's near-invisible `#dfe5ef`. An office laser renders the
+  screen values as nothing, so hierarchy is carried by size, weight,
+  letter-spacing and case rather than by grey: a 9.5 px uppercase label reads as
+  secondary next to a 12 px value even in the same black. The only light fills
+  left are the band backgrounds, and nothing stops being readable if a printer
+  drops them. Dimensions print as `50 × 34 × 30` rather than
+  `50.00 × 34.00 × 30.00`.
 - **It is A4 landscape at 12 mm,** the one place the packing sheet departs from
   the invoice's portrait page: eleven columns of figures need the width. The
   shared shell still owns the paper, so screen and print agree. The Carton Size
@@ -104,7 +110,9 @@ products inside it would be a guess.
   destination — two points up on the old 9 pt — and carries the carton's
   barcode under the QR it scans to. Labels use the app's Inter stack too: a
   carton label is part of the same paperwork as the invoice and the packing
-  list, so it is set in the same type.
+  list, so it is set in the same type — and in the same pure black, with solid
+  black rules rather than `#111`, because a label is read at a metre under
+  warehouse light.
 - **Show** (`packaging_lists/show`) is the working screen: the same sections and
   the same spanning, plus chargeable weight per carton and the `#carton-N`
   anchor each carton's printed QR points at.

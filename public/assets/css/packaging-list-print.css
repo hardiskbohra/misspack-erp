@@ -5,17 +5,25 @@
    This file owns the content layout only, and deliberately repeats the invoice's
    rhythm — letterhead, facts strip, party cards, line table, summary, sign-off,
    footer note — so a customer receiving both documents reads one house style.
-   Everything is token-driven off --pdf-*, so the two can never drift in colour,
-   type or paper spacing without the shared shell moving first.
+   Type, paper and spacing come from the shared shell; colour deliberately does
+   not — this sheet is printed, and its ink and rules are chosen for a laser
+   rather than inherited from the screen (see the token block below).
    ======================================================================== */
 
+/* Printing decisions live here, not in the on-screen theme. An office laser at
+   600 dpi renders the screen's #dfe5ef rule as nothing, and its #667085 labels
+   as washed-out grey — so every word on this sheet is pure black and every rule
+   is dark enough to survive the printer. Hierarchy is still legible because it
+   is carried by size, weight, letter-spacing and case instead of by colour.
+   Only the fills behind a band stay light, and they are decorative: nothing
+   stops being readable if a printer drops them. */
 :root {
-    --pl-ink: var(--pdf-ink, #1b2a41);
-    --pl-body: var(--pdf-body, #344054);
-    --pl-muted: var(--pdf-muted, #667085);
-    --pl-border: var(--pdf-border, #dfe5ef);
-    --pl-border-soft: var(--pdf-border-soft, #e9edf4);
-    --pl-surface-soft: var(--pdf-surface-soft, #f7f9fc);
+    --pl-ink: #000;
+    --pl-body: #000;
+    --pl-muted: #000;
+    --pl-border: #6b7280;
+    --pl-border-soft: #b6bcc7;
+    --pl-surface-soft: #f2f4f7;
     --pl-font: var(--pdf-font-family, "Inter", "Segoe UI", Roboto, Arial, sans-serif);
 }
 
@@ -295,6 +303,7 @@
 }
 
 .pl-items thead th {
+    border-bottom: 2px solid var(--pl-ink);
     background: var(--pl-surface-soft);
     color: var(--pl-ink);
     font-size: 9.5px;
@@ -518,6 +527,12 @@
     @page {
         size: A4 landscape;
         margin: 12mm;
+    }
+
+    /* document-print.css forces --pdf-ink on .pdf-sheet at print time; this
+       sheet is deliberately pure black, so it says so once more, later. */
+    html body.pdf-preview .pl-sheet {
+        color: #000 !important;
     }
 
     .pl-top,
