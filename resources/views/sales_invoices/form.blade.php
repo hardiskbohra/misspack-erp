@@ -41,13 +41,13 @@
            the preview is handed the same figure the server will use. */
         $ledgerReceived = $isEdit ? round($invoice->receivedAmount() - (float) $invoice->amount_paid, 2) : 0;
     @endphp
-    <div class="si-form">
+    <div class="si-form" data-si-cash="{{ old('invoice_type', $invoice->invoice_type) === 'cash' ? 'true' : 'false' }}" data-invoice-edit="{{ $isEdit ? 'true' : 'false' }}" data-default-terms="{{ $defaultTerms }}" data-cash-terms="{{ \App\Models\SalesInvoice::defaultTerms(true) }}">
         {{-- The header every office screen wears: a card, the title, the way
              back, and — on a saved invoice — the state it is in. --}}
         <div class="master-card master-header">
             <div>
                 <h1>{{ $isEdit ? 'Edit' : 'Create' }}
-                    {{ $invoice->invoice_type === 'tax' ? 'Tax Invoice' : 'Proforma Invoice' }}</h1>
+                    <span data-invoice-type-label>{{ $invoice->typeLabel() }}</span></h1>
                 <div class="master-breadcrumb"><a href="{{ url('/') }}">Home</a><span>•</span><a
                         href="{{ route('sales-invoices.index') }}">Invoices</a><span>•</span><span
                         class="active">{{ $isEdit ? 'Edit' : 'New' }}</span></div>
@@ -152,7 +152,7 @@
                     </div>
                 </div>
 
-                <p class="master-section-label">Tax & reference</p>
+                <p class="master-section-label">Currency & reference</p>
                 <div class="master-form-grid is-three">
                     <div class="master-field"><label class="master-label" for="invoiceCurrency">Currency</label><select
                             class="master-select" id="invoiceCurrency" name="currency">
@@ -169,7 +169,7 @@
                             placeholder="1">
                         <p class="master-help">Only for a foreign-currency invoice.</p>
                     </div>
-                    <div class="master-field"><label class="master-label" for="gstType">GST Type</label><select
+                    <div class="master-field" data-si-tax><label class="master-label" for="gstType">GST Type</label><select
                             class="master-select" id="gstType" name="gst_type">
                             @foreach ($gstTypeOptions as $key => $label)
                                 <option value="{{ $key }}"
@@ -179,7 +179,7 @@
                         </select>
                         <p class="master-help">An export invoice carries no GST on its lines.</p>
                     </div>
-                    <div class="master-field"><label class="master-label" for="placeOfSupply">Place of Supply</label><input
+                    <div class="master-field" data-si-tax><label class="master-label" for="placeOfSupply">Place of Supply</label><input
                             class="master-input" id="placeOfSupply" name="place_of_supply"
                             value="{{ old('place_of_supply', $invoice->place_of_supply) }}"></div>
                     <div class="master-field"><label class="master-label" for="poNumber">PO Number</label><input
@@ -231,7 +231,7 @@
                                     {{ $client->company_name }}</option>
                             @endforeach
                         </select>
-                        <p class="master-help">Picking a client brings its GSTIN, PAN, contact and both addresses
+                        <p class="master-help">Picking a client brings its contact details and both addresses
                             onto the invoice, in the fields below. The invoice keeps its own copy, so a later edit
                             to the client record never rewrites a sent invoice.</p>
                     </div>
@@ -265,10 +265,10 @@
                     <div class="master-field"><label class="master-label" for="client_mobile">Mobile</label><input
                             class="master-input" name="client_mobile" id="client_mobile"
                             value="{{ old('client_mobile', $invoice->client_mobile) }}"></div>
-                    <div class="master-field"><label class="master-label" for="client_gstin">GSTIN</label><input
+                    <div class="master-field" data-si-tax><label class="master-label" for="client_gstin">GSTIN</label><input
                             class="master-input" name="client_gstin" id="client_gstin"
                             value="{{ old('client_gstin', $invoice->client_gstin) }}"></div>
-                    <div class="master-field"><label class="master-label" for="client_pan">PAN</label><input
+                    <div class="master-field" data-si-tax><label class="master-label" for="client_pan">PAN</label><input
                             class="master-input" name="client_pan" id="client_pan"
                             value="{{ old('client_pan', $invoice->client_pan) }}"></div>
                 </div>
@@ -339,7 +339,7 @@
                         <p class="master-eyebrow">Items</p>
                         <h2>Invoice Products</h2>
                         <p class="master-sub">One line per product. Rate is per unit; the line amount is what the
-                            client is charged for it, GST included.</p>
+                            client is charged for it.</p>
                     </div><button type="button" class="master-btn master-btn-soft" id="addItemRow"><i
                             class="fas fa-plus" aria-hidden="true"></i> Add Product</button>
                 </div>
@@ -348,12 +348,12 @@
                         <thead>
                             <tr>
                                 <th width="28%">Product</th>
-                                <th width="10%">HSN/SAC</th>
+                                <th width="10%" data-si-tax>HSN/SAC</th>
                                 <th width="9%" class="is-num">Qty</th>
                                 <th width="8%">Unit</th>
                                 <th width="12%" class="is-num">Rate</th>
                                 <th width="9%" class="is-num">Disc %</th>
-                                <th width="9%" class="is-num">GST %</th>
+                                <th width="9%" class="is-num" data-si-tax>GST %</th>
                                 <th width="12%" class="is-num">Amount</th>
                                 <th></th>
                             </tr>
@@ -476,7 +476,7 @@
                             <div class="si-total-row" id="rowInvoiceDiscount" hidden>
                                 <span>Invoice discount</span><strong id="previewInvoiceDiscount">₹ 0.00</strong>
                             </div>
-                            <div class="si-total-row" id="rowTaxable">
+                            <div class="si-total-row" id="rowTaxable" data-si-tax>
                                 <span>Taxable value</span><strong id="previewTaxable">₹ 0.00</strong>
                             </div>
                             <div class="si-total-row" id="rowCgst" hidden>

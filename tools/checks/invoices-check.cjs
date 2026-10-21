@@ -118,8 +118,8 @@ const definedSi = new Set(sheetRules.flatMap(rule =>
 
 const usedSi = new Set();
 Object.values(screens).forEach(text =>
-    [...text.matchAll(/\bsi-[a-z0-9-]+/g)].forEach(m => usedSi.add(m[0])));
-[...js.matchAll(/['"]?(si-[a-z0-9-]+)['"]?/g)].forEach(m => usedSi.add(m[1]));
+    [...text.matchAll(/(?<![\w-])si-[a-z0-9-]+/g)].forEach(m => usedSi.add(m[0])));
+[...js.matchAll(/(?<![\w-])(si-[a-z0-9-]+)/g)].forEach(m => usedSi.add(m[1]));
 
 const undefinedSi = [...usedSi].filter(name => ! definedSi.has(name));
 
@@ -287,9 +287,9 @@ check('a value the module does not know widens the list',
     'an unknown filter is a filter that failed — showing everything is the honest answer');
 
 check('the money filter asks the money, not a stored word',
-    /whereDoesntHave\('payments'\)/.test(service)
+    /whereRaw\("\{\$received\} <= 0\.01"\)/.test(service)
     && /whereRaw\("\{\$received\} > 0\.01"\)/.test(service)
-    && /whereRaw\("\{\$received\} >= sales_invoices\.total_amount - 0\.01"\)/.test(service),
+    && /whereRaw\("\{\$received\} >= \{\$invoiceTotal\} - 0\.01"\)/.test(service),
     'an invoice marked paid a year ago, whose receipt was deleted, is not paid');
 
 /* ---- 4. the list wears the shared chrome ------------------------------- */
@@ -473,7 +473,7 @@ const owedClauses = [...controller.matchAll(/coalesce\(sum\(case when ([\s\S]{0,
 check('still owed is the Balance column, summed — a draft is money too',
     owedClauses.length === 2
     && owedClauses.every(clause => /RECEIVED_SQL/.test(clause)
-        && /total_amount - 0\.01/.test(clause)
+        && /invoiceTotal/.test(clause)
         && /status <> 'cancelled'/.test(clause)
         && ! /'draft'/.test(clause))
     && /The Balance column, added up/.test(view),
@@ -543,7 +543,7 @@ check('a converted proforma is out of sales, out of the ageing and out of the st
 check('sales and potential revenue are two figures, and one document is never in both',
     /'sales' => \(float\) \(\$figures->sales \?\? 0\)/.test(controller)
     && /'potential' => \(float\) \(\$figures->potential \?\? 0\)/.test(controller)
-    && /invoice_type = \\'tax\\'/.test(controller)
+    && /invoice_type in \(\\'tax\\', \\'cash\\'\)/.test(controller)
     && (controller.match(/converted_invoice_id is null/g) || []).length >= 2
     && /Sales \(filtered\)/.test(view)
     && /Potential revenue \(filtered\)/.test(view),
@@ -778,7 +778,7 @@ check('the sweep keeps every promise the bar makes',
     /private const BULK_ACTIONS = \[/.test(controller)
     && ['remind', 'mark_sent', 'portal_on', 'portal_off', 'delete_drafts']
         .every(action => new RegExp("'" + action + "' =>").test(controller))
-    && /case 'delete_drafts':[\s\S]{0,220}?if \(\$invoice->status === 'draft'\)/.test(controller)
+    && /case 'delete_drafts':[\s\S]{0,220}?if \(\$invoice->status === 'draft' && ! \$invoice->hasMonetaryConversions\(\)\)/.test(controller)
     /* a cancelled document is not dragged back to sent by a sweep of the page */
     && /case 'mark_sent':[\s\S]{0,240}?if \(\$invoice->status === 'cancelled'\)/.test(controller)
     && /\$skipped\+\+;/.test(controller)

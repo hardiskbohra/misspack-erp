@@ -32,10 +32,13 @@ class SalesInvoice extends Model
         'igst_amount', 'freight_amount', 'packing_amount', 'other_charges', 'round_off',
         'total_amount', 'amount_paid', 'balance_amount', 'amount_in_words', 'terms_conditions',
         'notes', 'internal_notes', 'show_client_portal', 'sent_at', 'accepted_at', 'cancelled_at',
-        'created_by',
+        'created_by', 'source_proforma_id', 'conversion_base_amount', 'conversion_total_amount',
+        'cash_converted_base_amount', 'cash_converted_total_amount',
     ];
 
     protected $casts = [
+        'conversion_base_amount' => 'decimal:2', 'conversion_total_amount' => 'decimal:2',
+        'cash_converted_base_amount' => 'decimal:2', 'cash_converted_total_amount' => 'decimal:2',
         'invoice_date' => 'date',
         'due_date' => 'date',
         'valid_until' => 'date',
@@ -72,6 +75,58 @@ class SalesInvoice extends Model
                 $invoice->public_token = Str::random(48);
             }
         });
+    }
+
+    public const RECEIVABLE_TOTAL_SQL = '(sales_invoices.total_amount - coalesce(sales_invoices.cash_converted_total_amount, 0))';
+
+    public function isCash(): bool
+    {
+        return $this->invoice_type === 'cash';
+    }
+
+    public function conversionSource()
+    {
+        return $this->belongsTo(self::class, 'source_proforma_id');
+    }
+
+    public function cashInvoices()
+    {
+        return $this->hasMany(self::class, 'source_proforma_id')->where('invoice_type', 'cash');
+    }
+
+    public function hasMonetaryConversions(): bool
+    {
+        return (float) $this->cash_converted_base_amount > 0 || (int) $this->source_proforma_id > 0;
+    }
+
+    /** Original document less the gross value already replaced by cash invoices. */
+    public function receivableTotal(): float
+    {
+        return round(max((float) $this->total_amount - (float) $this->cash_converted_total_amount, 0), 2);
+    }
+
+    public function cashConvertibleTotal(): float
+    {
+        return round(max((float) $this->total_amount - (float) $this->cgst_amount - (float) $this->sgst_amount - (float) $this->igst_amount, 0), 2);
+    }
+
+    public function cashConvertibleRemaining(): float
+    {
+        return round(max($this->cashConvertibleTotal() - (float) $this->cash_converted_base_amount, 0), 2);
+    }
+
+    /** All monetary claims/credits continuing a baseline PI, each exactly once. */
+    public function settlementDocuments(): \Illuminate\Support\Collection
+    {
+        if ($this->invoice_type === 'proforma' && $this->hasMonetaryConversions()) {
+            $documents = self::where('source_proforma_id', $this->id)->orderBy('id')->get();
+            if (! $this->isSuperseded()) {
+                $documents->push($this);
+            }
+            return $documents;
+        }
+
+        return collect([$this->isSuperseded() ? $this->convertedInvoice : $this])->filter();
     }
 
     public function items()
@@ -150,10 +205,10 @@ class SalesInvoice extends Model
             ->orWhereNull('converted_invoice_id'));
     }
 
-    /** Sales: tax invoices, cancellations aside. A proforma is never sales. */
+    /** Sales: tax and cash invoices, cancellations aside. A proforma is never sales. */
     public function scopeSales(Builder $query): Builder
     {
-        return $query->where('invoice_type', 'tax')->where('status', '!=', 'cancelled');
+        return $query->whereIn('invoice_type', ['tax', 'cash'])->where('status', '!=', 'cancelled');
     }
 
     /** Potential revenue: proformas no tax invoice has been raised from yet. */
@@ -302,7 +357,7 @@ class SalesInvoice extends Model
             return 0.0;
         }
 
-        return round(max((float) $this->total_amount - $this->clientPortalReceivedAmount(), 0), 2);
+        return round(max($this->receivableTotal() - $this->clientPortalReceivedAmount(), 0), 2);
     }
 
     public function clientPortalStateKey(?\DateTimeInterface $today = null): string
@@ -322,7 +377,7 @@ class SalesInvoice extends Model
         }
 
         $received = $this->clientPortalReceivedAmount();
-        if ((float) $this->total_amount > 0 && $received >= (float) $this->total_amount - 0.01) {
+        if ($this->receivableTotal() > 0 && $received >= $this->receivableTotal() - 0.01) {
             return 'paid';
         }
         if ($received > 0.01) {
@@ -359,18 +414,18 @@ class SalesInvoice extends Model
             return 0.0;
         }
 
-        return round(max((float) $this->total_amount - $this->receivedAmount(), 0), 2);
+        return round(max($this->receivableTotal() - $this->receivedAmount(), 0), 2);
     }
 
     public function advanceAmount(): float
     {
-        return round(max($this->receivedAmount() - (float) $this->total_amount, 0), 2);
+        return round(max($this->receivedAmount() - $this->receivableTotal(), 0), 2);
     }
 
     /** unpaid | partial | paid — read from the money, never from a stored word. */
     public function paymentState(): string
     {
-        $total = round((float) $this->total_amount, 2);
+        $total = $this->receivableTotal();
         $received = $this->receivedAmount();
 
         if ($total > 0 && $received >= $total - 0.01) {
@@ -629,7 +684,7 @@ class SalesInvoice extends Model
 
         $lines[] = 'Invoice '.$this->invoice_number
             .($this->invoice_date ? ' dated '.$this->invoice_date->format('d M Y') : '')
-            .' for '.$currency((float) $this->total_amount).'.';
+            .' for '.$currency($this->receivableTotal()).'.';
 
         if ($balance > 0.01) {
             $lines[] = $currency($balance).' is still outstanding'
@@ -691,6 +746,7 @@ class SalesInvoice extends Model
         return [
             'proforma' => 'Proforma Invoice',
             'tax' => 'Tax Invoice',
+            'cash' => 'Cash Invoice',
         ];
     }
 
@@ -727,17 +783,17 @@ class SalesInvoice extends Model
         return Organisation::current()->sellerDetails();
     }
 
-    public static function defaultTerms(): string
+    public static function defaultTerms(bool $cash = false): string
     {
         return implode("\n", [
             '1. This invoice is subject to Ahmedabad, Gujarat jurisdiction only.',
             '2. Payment terms will be as mentioned in this invoice. Goods will be dispatched after payment confirmation where advance payment is applicable.',
             '3. Prices are valid only up to the invoice validity date and are subject to change after expiry.',
-            '4. Taxes, freight, packing, insurance, duties and any government charges are extra unless specifically mentioned.',
+            $cash ? '4. Freight, packing, insurance and other charges apply only as mentioned in this invoice.' : '4. Taxes, freight, packing, insurance, duties and any government charges are extra unless specifically mentioned.',
             '5. Production, dispatch and delivery timelines are indicative and depend on payment, artwork approval, sample approval and material availability.',
             '6. Any product customization, printing, artwork or packaging changes after approval may affect price and timeline.',
             '7. Goods once sold/customized/printed will not be returned or exchanged unless there is a proven manufacturing defect.',
-            '8. Please verify product name, quantity, capacity, color, artwork, shipping address and GST details before confirmation.',
+            $cash ? '8. Please verify product name, quantity, capacity, color, artwork and shipping address before confirmation.' : '8. Please verify product name, quantity, capacity, color, artwork, shipping address and GST details before confirmation.',
             '9. Bank charges, forex fluctuation, logistics charges and third-party charges are to be borne by the buyer unless agreed otherwise.',
             '10. This is a computer-generated document and does not require a physical signature unless specifically requested.',
         ]);

@@ -160,7 +160,8 @@ check('discounted invoice line amounts reconcile to the stored tax and taxable t
     && /\$money\(\$line\['tax_amount'\]\)/.test(invoiceView)
     && /lineFiguresUnavailable/.test(invoiceView)
     && !/Total discount|discount_amount/.test(invoiceItemsTable)
-    && (invoiceItemsTable.match(/<col style=/g) || []).length === 6
+    && (invoiceItemsTable.match(/@else([\s\S]*?)@endif/)?.[1].match(/<col style=/g) || []).length === 6
+    && (invoiceItemsTable.match(/@if \(\$cashInvoice\)([\s\S]*?)@else/)?.[1].match(/<col style=/g) || []).length === 4
     && !/\$money\(\$item->(?:cgst|sgst|igst)_amount\)/.test(invoiceView));
 
 check('party GSTIN and PAN use unboxed address text',

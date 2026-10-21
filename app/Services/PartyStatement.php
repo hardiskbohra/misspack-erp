@@ -379,14 +379,14 @@ class PartyStatement
                 /* A proforma that has become a tax invoice is not a second
                    receivable: the tax invoice stands for that money. */
                 ->notSuperseded()
-                ->selectRaw('client_id, currency, invoice_date, total_amount')
+                ->selectRaw('client_id, currency, invoice_date, total_amount, cash_converted_total_amount')
                 ->chunk(500, function ($invoices) use ($add) {
                     foreach ($invoices as $invoice) {
                         $add(
                             (int) $invoice->client_id,
                             strtoupper((string) ($invoice->currency ?: 'INR')),
                             (string) $invoice->invoice_date,
-                            (float) $invoice->total_amount,
+                            $invoice->receivableTotal(),
                             0.0,
                             1
                         );
@@ -642,7 +642,7 @@ class PartyStatement
                 'particular' => 'Sales invoice'.($invoice->invoice_type ? ' ('.$invoice->invoice_type.')' : ''),
                 'reference' => $invoice->invoice_number,
                 'status' => method_exists($invoice, 'statusLabel') ? $invoice->statusLabel() : null,
-                'debit' => (float) $invoice->total_amount,
+                'debit' => $invoice->receivableTotal(),
                 'credit' => 0.0,
                 'kind' => 'invoice',
             ];
@@ -938,7 +938,7 @@ class PartyStatement
             $collect($invoices->map(fn ($invoice) => [
                 'currency' => strtoupper((string) ($invoice->currency ?: 'INR')),
                 'date' => $invoice->invoice_date,
-                'debit' => (float) $invoice->total_amount,
+                'debit' => $invoice->receivableTotal(),
                 'credit' => 0.0,
             ])->all());
 
@@ -970,7 +970,7 @@ class PartyStatement
                     ->map(fn ($invoice) => [
                         'currency' => strtoupper((string) ($invoice->currency ?: 'INR')),
                         'date' => $invoice->invoice_date,
-                        'debit' => (float) $invoice->total_amount,
+                        'debit' => $invoice->receivableTotal(),
                         'credit' => 0.0,
                     ])->all());
 
@@ -1064,7 +1064,7 @@ class PartyStatement
                 continue;
             }
 
-            $balance = (float) $invoice->balance_amount;
+            $balance = $invoice->balanceDue();
             if ($balance <= 0) {
                 continue;
             }

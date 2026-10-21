@@ -274,24 +274,23 @@ class SalesInvoiceFilters
            invoice is not a draft or a cancellation, and the money rule is short
            of the total. Written once here, and `SalesInvoice::balanceDue()`
            asks it of a single row. */
+        $invoiceTotal = SalesInvoice::RECEIVABLE_TOTAL_SQL;
         $open = fn (Builder $q) => $q
             ->whereNotIn('status', ['draft', 'cancelled'])
-            ->whereRaw(SalesInvoice::RECEIVED_SQL.' < sales_invoices.total_amount - 0.01');
+            ->whereRaw(SalesInvoice::RECEIVED_SQL.' < '.$invoiceTotal.' - 0.01');
 
         return $query
             ->when($set('portal'), fn (Builder $q) => $q->where('show_client_portal', $value('portal') === 'visible'))
             /* the money filter: the ledger's receipts plus the opening figure */
-            ->when(in_array((string) $value('payment'), self::PAYMENT_KEYS, true), function (Builder $q) use ($value) {
+            ->when(in_array((string) $value('payment'), self::PAYMENT_KEYS, true), function (Builder $q) use ($value, $invoiceTotal) {
                 $received = SalesInvoice::RECEIVED_SQL;
 
                 return match ((string) $value('payment')) {
-                    'unpaid' => $q->where(fn (Builder $inner) => $inner
-                        ->whereNull('amount_paid')->orWhere('amount_paid', '<=', 0.01))
-                        ->whereDoesntHave('payments'),
+                    'unpaid' => $q->whereRaw("{$received} <= 0.01"),
                     'partial' => $q->whereRaw("{$received} > 0.01")
-                        ->whereRaw("{$received} < sales_invoices.total_amount - 0.01"),
-                    'paid' => $q->whereRaw("sales_invoices.total_amount > 0")
-                        ->whereRaw("{$received} >= sales_invoices.total_amount - 0.01"),
+                        ->whereRaw("{$received} < {$invoiceTotal} - 0.01"),
+                    'paid' => $q->whereRaw("{$invoiceTotal} > 0")
+                        ->whereRaw("{$received} >= {$invoiceTotal} - 0.01"),
                 };
             })
             /* how late, in the buckets `SalesInvoice::ageingBuckets()` names */

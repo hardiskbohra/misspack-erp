@@ -11,7 +11,7 @@ every rule below.
 An invoice's received figure is **not** a column the office maintains by hand. It is:
 
 ```
-opening received  +  every ledger line linked to the invoice
+opening received  +  direct net receipts  +  allocated document-currency receipts
 ```
 
 - `sales_invoices.amount_paid` is the **opening** figure — money that arrived before
@@ -24,15 +24,15 @@ opening received  +  every ledger line linked to the invoice
   payment filter).
 - `SalesInvoice::receivedAmount()` computes it on a loaded model;
   `scopeWithReceived()` adds it as `received_credit` / `received_debit` for a list;
-  `balanceDue()` is `total_amount − receivedAmount()`, floored at zero.
+  `balanceDue()` is `receivableTotal() − receivedAmount()`, floored at zero.
 - `balance_amount` is **written from** `receivedAmount()` (`refreshInvoiceMoney()`),
-  never the other way round, because `PartyStatement` prints that column on a client's
-  statement and the statement has to agree with the invoice.
+  never the other way round. Statement ageing reads `balanceDue()` too, so a later
+  allocation change cannot leave it reading an obsolete stored balance.
 
 Two consequences the list leans on:
 
 - the payment filter asks the money, not a stored word: *Nothing received* is
-  `amount_paid ≤ 0.01` **and** no ledger lines — an invoice marked `paid` a year ago
+  `receivedAmount() ≤ 0.01` (including allocations) — an invoice marked `paid` a year ago
   whose receipt was deleted is not paid;
 - `amount_paid` is never double counted. A receipt recorded from *Record payment*
   lives in the ledger only.
@@ -364,3 +364,53 @@ the figure.
   listener otherwise): a DOM `change` listener is the one binding select2 never
   fires, and the fields stayed empty until the invoice was saved and the server
   copied the same snapshot. The item rows' product list is bound the same way.
+
+
+## Cash invoices and partial PI conversion
+
+- **New Cash** creates a normal, initially unpaid invoice in the `MP/CI/<financial-year>/` series.
+  Cash is an invoice type, not a fabricated receipt. Server calculations force GST to zero
+  and discard GSTIN/PAN/place-of-supply and item HSN data. Form, record, portal and print
+  suppress tax details; cash documents are excluded from the GST export.
+- Open a PI and use **Cash invoices from this PI**. Choose an amount or a percentage of
+  the **remaining GST-exclusive value**, including proportionate charges/round-off.
+  Choose how much existing money to transfer, including zero. Several cash invoices can
+  reference the same PI. Its original lines and total are historical facts, not rewritten
+  physical quantities. Only its uninvoiced remainder remains a receivable.
+- Example: PI 100 + GST 18. Cash-invoice 50 → cash document 50, original PI gross consumed
+  59, remaining PI 59. Effective total claims are **109**, not 168 or 118. A subsequent
+  cash invoice for all remaining base is 50; a subsequent tax invoice for the remainder
+  is 59. Cumulative proportional rounding consumes the last cent on the final conversion.
+- `source_proforma_id` links children; `conversion_base_amount` / `conversion_total_amount`
+  record the GST-exclusive value and original gross value each cash conversion consumed.
+  The PI's `cash_converted_*` caches determine `receivableTotal()` / `RECEIVABLE_TOTAL_SQL`.
+  List totals, filters, statements, project value and financial closure use that same basis.
+- Transfer reassigns opening credit or existing receipt links/allocations, **never writes
+  another bank entry**. A partially transferred same-currency direct receipt becomes two
+  slices of that same entry. FX allocations split native and document amounts without
+  changing their combined totals or exchange rate. Direct mixed/FX receipts must first be
+  allocated explicitly in Cashflow; an unsupported transfer rolls back the whole conversion.
+  Refunds remain intact, and only net receipts can be transferred.
+- Untransferred money stays against the PI, including when its remaining invoice value is
+  zero: it is then a retained client advance. Such a PI remains in credit/statement queries.
+  Fully cash-invoiced PIs without retained credit are superseded. Neither can be invoiced again.
+- Linked source/child financial documents are locked against editing, cancellation and
+  deletion (including bulk deletion). Reversal is not implemented. Receipts, portal visibility
+  and reminders remain available. A draft duplicate is unlinked; amount-summary children
+  are detached from the project so they cannot create fictitious physical products.
+- Workflow advance/dispatch gates aggregate the complete PI settlement family, not only the
+  last child, so an unpaid earlier cash invoice cannot disappear from the dispatch check.
+
+### Deployment and verification
+
+Run `php artisan migrate --force` to apply `2026_10_21_130000_add_cash_invoice_conversions`.
+No existing invoice values or bank transactions are rewritten by this migration. Once cash
+invoices/conversions exist, schema rollback is refused: dropping the links would duplicate
+receivables. Use a consistent pre-feature backup for rollback after use.
+
+`php artisan test --filter=CashInvoiceConversionTest` covers direct GST-free creation,
+partial/full/percentage conversion, chosen retained credit, native/FX receipts, refunds,
+atomic rollback, rounding, tax remainder, immutable links, statement reconciliation,
+project product/value isolation and family-wide workflow gates. Its SQLite module fixture
+runs the relevant real migrations; it deliberately avoids the unrelated legacy quote-removal
+migration, which currently fails on an indexed column during a fresh SQLite installation.

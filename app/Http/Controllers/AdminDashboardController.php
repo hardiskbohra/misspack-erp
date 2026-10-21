@@ -372,16 +372,11 @@ class AdminDashboardController extends Controller
            documents aside. The monthly series below is the ledger's, which is
            why the two read different tables and mean different things — one is
            what was sold, the other what was received. */
-        $estimatedProjectValue = $this->sum(\App\Models\SalesInvoice::class, 'sales_invoices', 'total_amount', function ($query) {
-            $query->whereNotNull('project_id')
-                ->where('status', '!=', 'cancelled')
-                ->where(function ($query) {
-                    $query->where('invoice_type', 'tax')
-                        ->orWhere(function ($query) {
-                            $query->where('invoice_type', 'proforma')->whereNull('converted_invoice_id');
-                        });
-                });
-        });
+        $estimatedProjectValue = $this->tableColumn('sales_invoices', 'cash_converted_total_amount')
+            ? (float) \App\Models\SalesInvoice::query()->whereNotNull('project_id')
+                ->where('status', '!=', 'cancelled')->notSuperseded()
+                ->sum(DB::raw(\App\Models\SalesInvoice::RECEIVABLE_TOTAL_SQL))
+            : 0.0;
         /* A project's money is the ledger's money: the project-payment rows
            that used to carry a second copy of it are gone. A credit is inward,
            a debit outward, and both are counted where they are tagged. */
@@ -509,7 +504,11 @@ class AdminDashboardController extends Controller
     private function invoiceFilter($query, string $table, string $moneyType): void
     {
         if (Schema::hasColumn($table, 'invoice_type')) {
-            $query->where($table.'.invoice_type', $moneyType);
+            if ($table === 'sales_invoices' && $moneyType === 'tax') {
+                $query->whereIn($table.'.invoice_type', ['tax', 'cash']);
+            } else {
+                $query->where($table.'.invoice_type', $moneyType);
+            }
         }
 
         if (Schema::hasColumn($table, 'status')) {
@@ -765,7 +764,7 @@ class AdminDashboardController extends Controller
 
         if (Schema::hasTable('clients') && Schema::hasColumn('sales_invoices', 'client_id')) {
             $query->leftJoin('clients', 'sales_invoices.client_id', '=', 'clients.id')
-                ->selectRaw("COALESCE(clients.company_name, sales_invoices.client_company_name, 'Unknown Client') as label, SUM(sales_invoices.total_amount) as total");
+                ->selectRaw("COALESCE(clients.company_name, sales_invoices.client_company_name, 'Unknown Client') as label, SUM(sales_invoices.total_amount - coalesce(sales_invoices.cash_converted_total_amount, 0)) as total");
         } else {
             $query->selectRaw("COALESCE(client_company_name, 'Unknown Client') as label, SUM(total_amount) as total");
         }
@@ -1123,11 +1122,11 @@ class AdminDashboardController extends Controller
            sums row by row, written once here because this list is a report
            over every client and cannot load each project's documents. */
         $valueSelect = $this->tableColumn('sales_invoices', 'total_amount')
-            ? DB::raw('coalesce((select sum(si.total_amount) from sales_invoices si'
+            ? DB::raw('coalesce((select sum(si.total_amount - coalesce(si.cash_converted_total_amount, 0)) from sales_invoices si'
                 .' join projects sp on sp.id = si.project_id'
                 .' where sp.client_id = projects.client_id'
                 .' and si.status <> \'cancelled\''
-                .' and (si.invoice_type = \'tax\' or (si.invoice_type = \'proforma\' and si.converted_invoice_id is null))), 0) as total_value')
+                .' and (si.invoice_type in (\'tax\', \'cash\') or (si.invoice_type = \'proforma\' and si.converted_invoice_id is null))), 0) as total_value')
             : DB::raw('0 as total_value');
 
         return \App\Models\Project::query()

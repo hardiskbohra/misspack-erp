@@ -38,7 +38,7 @@ class ProjectFinancialClosure
             'document_type' => $invoice->invoice_type,
             'status' => $invoice->status,
             'currency' => strtoupper((string) ($invoice->currency ?: 'INR')),
-            'document_total' => round((float) $invoice->total_amount, 2),
+            'document_total' => $invoice->receivableTotal(),
             'allocated_receipts' => round($invoice->receivedAmount(), 2),
             'outstanding' => round($invoice->balanceDue(), 2),
             'advance' => round($invoice->advanceAmount(), 2),

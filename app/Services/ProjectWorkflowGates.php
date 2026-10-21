@@ -19,12 +19,14 @@ class ProjectWorkflowGates
     public function evaluateAll(ProjectWorkflow $workflow, ?int $userId = null): array
     {
         return DB::transaction(function () use ($workflow, $userId) {
-            $workflow->loadMissing('commercialInvoice.convertedInvoice');
+            $workflow->load('commercialInvoice.convertedInvoice');
             $baseline = $workflow->commercialInvoice;
             $invoice = $baseline?->isSuperseded() ? $baseline->convertedInvoice : $baseline;
-            $invoiceUsable = $baseline && $baseline->status !== 'cancelled' && $invoice && $invoice->status !== 'cancelled';
-            $received = $invoice ? $invoice->clientPortalReceivedAmount() : 0.0;
-            $invoiceTotal = $invoice ? (float) $invoice->total_amount : 0.0;
+            $documents = $baseline?->settlementDocuments() ?? collect();
+            $invoiceUsable = $baseline && $baseline->status !== 'cancelled' && $documents->isNotEmpty()
+                && $documents->every(fn ($document) => $document->status !== 'cancelled');
+            $received = round((float) $documents->sum(fn ($document) => $document->clientPortalReceivedAmount()), 2);
+            $invoiceTotal = round((float) $documents->sum(fn ($document) => $document->receivableTotal()), 2);
             $tolerance = $baseline ? (float) $baseline->payment_tolerance : 0.0;
             $advancePercentage = $workflow->advance_percentage_override !== null
                 ? (float) $workflow->advance_percentage_override
@@ -40,6 +42,7 @@ class ProjectWorkflowGates
                 'settlement_invoice_status' => $invoice?->status,
                 'invoice_usable' => $invoiceUsable,
                 'invoice_total' => $invoiceTotal,
+                'settlement_invoice_ids' => $documents->pluck('id')->all(),
                 'invoice_updated_at' => $invoice?->updated_at?->toISOString(),
             ], $invoiceUsable ? 'passed' : 'blocked', $invoiceUsable
                 ? 'Commercial baseline '.$baseline->invoice_number.' is selected'.($baseline->isSuperseded() ? ' and continues as '.$invoice->invoice_number.'.' : '.')
@@ -52,6 +55,7 @@ class ProjectWorkflowGates
                 'invoice_status' => $invoice?->status,
                 'invoice_usable' => $invoiceUsable,
                 'invoice_total' => $invoiceTotal,
+                'settlement_invoice_ids' => $documents->pluck('id')->all(),
                 'advance_percentage' => $advancePercentage,
                 'advance_source' => $workflow->advance_percentage_override !== null ? 'project_override' : 'proforma_terms',
                 'required_amount' => $advanceRequired,
@@ -73,6 +77,7 @@ class ProjectWorkflowGates
                 'invoice_status' => $invoice?->status,
                 'invoice_usable' => $invoiceUsable,
                 'invoice_total' => $invoiceTotal,
+                'settlement_invoice_ids' => $documents->pluck('id')->all(),
                 'complete_balance_required' => $requiresBalance,
                 'required_amount' => $balanceRequired,
                 'received_amount' => $received,

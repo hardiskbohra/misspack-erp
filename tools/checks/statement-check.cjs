@@ -146,7 +146,7 @@ check('a party is matched on its own id column — never both',
     /where\(\$type === 'vendor' \? 'vendor_id' : 'client_id', \$partyId\)/.test(service)
     && /one's money on the other's statement/.test(prose(service)));
 check('a client is aged on the invoice balance, from its due date',
-    /\(float\) \$invoice->balance_amount/.test(service) && /due_date \?: \$invoice->invoice_date/.test(service));
+    /\$invoice->balanceDue\(\)/.test(service) && /due_date \?: \$invoice->invoice_date/.test(service));
 check('a vendor is aged from the bill date, and the statement says so',
     /Aged from the bill date/.test(prose(service)) && /in_array\(\$entry->status, \['pending', 'booked'\]/.test(service));
 check('a bill that was paid is not outstanding',

@@ -198,7 +198,13 @@
            office learns not to trust either figure. */
         function calculateTotals() {
             var gstType = fieldText('gstType');
-            var exportSale = gstType === 'export';
+            var cashInvoice = fieldText('invoiceType') === 'cash';
+            var exportSale = cashInvoice || gstType === 'export';
+            var invoiceRoot = document.querySelector('.si-form');
+            if (invoiceRoot) invoiceRoot.dataset.siCash = cashInvoice ? 'true' : 'false';
+            var typeSelect = document.getElementById('invoiceType');
+            var typeLabel = document.querySelector('[data-invoice-type-label]');
+            if (typeLabel && typeSelect && typeSelect.selectedIndex >= 0) typeLabel.textContent = typeSelect.options[typeSelect.selectedIndex].text;
 
             var gross = 0;
             var taxable = 0;
@@ -303,12 +309,12 @@
                 '        <input class="master-input" name="items[' + i + '][product_name]" value="' + esc(val(item.product_name, '')) + '" placeholder="Product name">',
                 '        <textarea class="master-textarea" rows="3" name="items[' + i + '][description]" placeholder="Description">' + esc(val(item.description, '')) + '</textarea>',
                 '    </td>',
-                '    <td><input class="master-input" name="items[' + i + '][hsn_sac]" value="' + esc(val(item.hsn_sac, '')) + '" placeholder="HSN"></td>',
+                '    <td data-si-tax><input class="master-input" name="items[' + i + '][hsn_sac]" value="' + esc(val(item.hsn_sac, '')) + '" placeholder="HSN"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.001" min="0" name="items[' + i + '][quantity]" value="' + esc(val(item.quantity, 1)) + '"></td>',
                 '    <td><input class="master-input" name="items[' + i + '][unit]" value="' + esc(val(item.unit, 'pcs')) + '"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.01" min="0" name="items[' + i + '][unit_price]" value="' + esc(val(item.unit_price, 0)) + '"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.01" min="0" name="items[' + i + '][discount_percent]" value="' + esc(val(item.discount_percent, 0)) + '"></td>',
-                '    <td class="is-num"><input class="master-input calc" type="number" step="0.05" min="0" name="items[' + i + '][gst_percent]" value="' + esc(val(item.gst_percent, 18)) + '"></td>',
+                '    <td class="is-num" data-si-tax><input class="master-input calc" type="number" step="0.05" min="0" name="items[' + i + '][gst_percent]" value="' + esc(val(item.gst_percent, 18)) + '"></td>',
                 '    <td class="is-num"><strong class="line-total">₹ 0.00</strong>',
                 '        <input type="hidden" name="items[' + i + '][remarks]" value="' + esc(val(item.remarks, '')) + '"></td>',
                 '    <td class="is-num"><button type="button" class="master-btn master-btn-ghost master-remove" aria-label="Remove this line"><i class="fas fa-xmark" aria-hidden="true"></i></button></td>',
@@ -362,6 +368,15 @@
         ].forEach(function (id) {
             var el = document.getElementById(id);
             if (el) el.addEventListener('input', calculateTotals);
+        });
+        onChange(document.getElementById('invoiceType'), function () {
+            calculateTotals();
+            var root = document.querySelector('.si-form');
+            var terms = document.querySelector('[name=terms_conditions]');
+            if (root && terms && (!terms.value || terms.value === root.dataset.defaultTerms || terms.value === root.dataset.cashTerms)) {
+                terms.value = fieldText('invoiceType') === 'cash' ? root.dataset.cashTerms : root.dataset.defaultTerms;
+            }
+            if (root && root.dataset.invoiceEdit === 'false') document.getElementById('invoiceNumber').value = '';
         });
         ['discountType', 'gstType'].forEach(function (id) {
             var el = document.getElementById(id);
@@ -808,6 +823,24 @@
         }
 
         sync();
+    });
+
+    onReady(function () {
+        var card = document.getElementById('cashInvoiceConversion');
+        if (!card) return;
+        var mode = document.getElementById('cashConversionMode');
+        var value = document.getElementById('cashConversionValue');
+        if (!mode || !value) return;
+        function setLimit(reset) {
+            value.max = mode.value === 'percent' ? '100' : card.dataset.convertible;
+            if (reset) value.value = value.max;
+        }
+        if (window.jQuery && window.jQuery.fn) {
+            window.jQuery(mode).on('change', function () { setLimit(true); });
+        } else {
+            mode.addEventListener('change', function () { setLimit(true); });
+        }
+        setLimit(false);
     });
 
     /* A failed save comes back with the input kept and the errors on the bag:

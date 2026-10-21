@@ -382,6 +382,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/sales-invoices/{salesInvoice}/portal', [SalesInvoiceController::class, 'togglePortal'])->name('sales-invoices.portal');
         Route::post('/sales-invoices/{salesInvoice}/payments', [SalesInvoiceController::class, 'recordPayment'])->name('sales-invoices.payments.store');
         Route::post('/sales-invoices/{salesInvoice}/duplicate', [SalesInvoiceController::class, 'duplicate'])->name('sales-invoices.duplicate');
+        Route::post('/sales-invoices/{salesInvoice}/convert-cash', [SalesInvoiceController::class, 'convertCash'])->name('sales-invoices.convert-cash');
         Route::post('/sales-invoices/{salesInvoice}/convert', [SalesInvoiceController::class, 'convert'])->name('sales-invoices.convert');
         Route::delete('/sales-invoice-attachments/{attachment}', [SalesInvoiceController::class, 'destroyAttachment'])->name('sales-invoices.attachments.destroy');
         Route::resource('sales-invoices', SalesInvoiceController::class);

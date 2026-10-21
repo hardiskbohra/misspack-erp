@@ -612,7 +612,7 @@ check('the invoices tab draws each document from its own relation',
     /* Each family reads its own type off the model, not a word this module
        invented: the tax invoices are `tax`, the proformas `proforma`, and the
        two purchase documents are the model's own type constants. */
-    && /public function taxInvoices\(\)[\s\S]{0,220}?where\('invoice_type', 'tax'\)/.test(read('app/Models/Project.php'))
+    && /public function taxInvoices\(\)[\s\S]{0,220}?whereIn\('invoice_type', \['tax', 'cash'\]\)/.test(read('app/Models/Project.php'))
     && /public function proformaInvoices\(\)[\s\S]{0,220}?where\('invoice_type', 'proforma'\)/.test(read('app/Models/Project.php'))
     && /public function purchaseOrders\(\)[\s\S]{0,260}?TYPE_ORDER/.test(read('app/Models/Project.php'))
     && /public function bills\(\)[\s\S]{0,260}?TYPE_BILL/.test(read('app/Models/Project.php'))
@@ -739,7 +739,7 @@ check('the value and the budget are the documents\', not columns on the project'
     && /\$this->relationLoaded\(\$relation\) \? \$this->\{\$relation\} : \$this->\{\$relation\}\(\)->get\(\)/.test(projectModel)
     /* The value a document contributes is the document's own total, in the
        project's currency. */
-    && /\$value = \(float\) \$document->total_amount;/.test(projectModel)
+    && /\$value = \$document instanceof[\s\S]{0,65}?\$document->receivableTotal\(\) : \(float\) \$document->total_amount;/.test(projectModel)
     && /\$value \* \(float\) \(\$document->exchange_rate \?: 1\)/.test(projectModel)
     /* One predicate per side, on the model that owns the document. */
     && /public function countsTowardsProject\(\): bool\s*\{\s*return \$this->status !== 'cancelled' && ! \$this->isSuperseded\(\);/.test(read('app/Models/SalesInvoice.php'))

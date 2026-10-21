@@ -35,8 +35,8 @@ class ModuleDashboard
 
     private function sales(array $period): array
     {
-        $sales = fn (Carbon $start, Carbon $end) => $this->sumRange('sales_invoices', 'invoice_date', 'total_amount', $start, $end, fn ($query) => $query->where('invoice_type', 'tax')->where('status', '!=', 'cancelled'));
-        $invoiceCount = fn (Carbon $start, Carbon $end) => $this->countRange('sales_invoices', 'invoice_date', $start, $end, fn ($query) => $query->where('invoice_type', 'tax')->where('status', '!=', 'cancelled'));
+        $sales = fn (Carbon $start, Carbon $end) => $this->sumRange('sales_invoices', 'invoice_date', 'total_amount', $start, $end, fn ($query) => $query->whereIn('invoice_type', ['tax', 'cash'])->where('status', '!=', 'cancelled'));
+        $invoiceCount = fn (Carbon $start, Carbon $end) => $this->countRange('sales_invoices', 'invoice_date', $start, $end, fn ($query) => $query->whereIn('invoice_type', ['tax', 'cash'])->where('status', '!=', 'cancelled'));
         $leadCount = fn (Carbon $start, Carbon $end) => $this->countRange('leads', 'created_at', $start, $end);
         $converted = fn (Carbon $start, Carbon $end) => $this->countRange('leads', 'updated_at', $start, $end, fn ($query) => $query->whereIn('status', ['converted', 'won', 'closed_won']));
         $invoices = Schema::hasTable('sales_invoices') ? SalesInvoice::query()->with(['payments', 'cashflowAllocations'])->where('status', '!=', 'cancelled')->get() : collect();
@@ -52,10 +52,10 @@ class ModuleDashboard
                 $this->pointMetric('Receivables', $receivable, 'money', 'Open across all active client documents', 'orange', $this->url('sales-invoices.index')),
                 $this->pointMetric('Overdue invoices', $overdue->count(), 'number', 'Past due with a live balance', $overdue->isNotEmpty() ? 'red' : 'green', $this->url('sales-invoices.index')),
             ],
-            'trend' => $this->series('sales_invoices', 'invoice_date', 'total_amount', $period, fn ($query) => $query->where('invoice_type', 'tax')->where('status', '!=', 'cancelled')),
+            'trend' => $this->series('sales_invoices', 'invoice_date', 'total_amount', $period, fn ($query) => $query->whereIn('invoice_type', ['tax', 'cash'])->where('status', '!=', 'cancelled')),
             'trend_label' => 'Tax invoice value', 'trend_format' => 'money',
             'breakdowns' => [
-                ['title' => 'Invoice status', 'items' => $this->breakdown('sales_invoices', 'status', fn ($query) => $query->where('invoice_type', 'tax'))],
+                ['title' => 'Invoice status', 'items' => $this->breakdown('sales_invoices', 'status', fn ($query) => $query->whereIn('invoice_type', ['tax', 'cash']))],
                 ['title' => 'Lead pipeline', 'items' => $this->breakdown('leads', 'status')],
             ],
             'alerts' => $overdue->sortByDesc(fn ($invoice) => $invoice->balanceDue())->take(8)->map(fn ($invoice) => [

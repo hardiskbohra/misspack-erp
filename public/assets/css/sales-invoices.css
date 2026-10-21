@@ -500,6 +500,7 @@
 
 .si-type.type-proforma { --tone-bg: rgba(123, 97, 255, .16); --tone-fg: #6d4bd8; }
 .si-type.type-tax { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
+.si-type.type-cash { --tone-bg: rgba(18, 203, 183, .18); --tone-fg: #0f766e; }
 .si-type.type-order { --tone-bg: rgba(123, 97, 255, .16); --tone-fg: #6d4bd8; }
 .si-type.type-bill { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
 
@@ -517,6 +518,7 @@
 
 :root[data-theme="dark"] .si-type.type-proforma { --tone-fg: #c4b5fd; }
 :root[data-theme="dark"] .si-type.type-tax { --tone-fg: #93b4ff; }
+:root[data-theme="dark"] .si-type.type-cash { --tone-fg: #5eead4; }
 :root[data-theme="dark"] .si-type.type-order { --tone-fg: #c4b5fd; }
 :root[data-theme="dark"] .si-type.type-bill { --tone-fg: #93b4ff; }
 
@@ -964,3 +966,6 @@
     .si-account-balance { grid-template-columns:1fr; gap:6px; }
     .si-account-balance > i { display:none; }
 }
+
+/* Cash invoices use the same form without tax-identification or tax-rate controls. */
+.si-form[data-si-cash="true"] [data-si-tax] { display:none !important; }

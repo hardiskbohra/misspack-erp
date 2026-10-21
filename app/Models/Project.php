@@ -133,7 +133,7 @@ class Project extends Model
     public function taxInvoices()
     {
         return $this->hasMany(\App\Models\SalesInvoice::class, 'project_id')
-            ->where('invoice_type', 'tax')
+            ->whereIn('invoice_type', ['tax', 'cash'])
             ->latest('invoice_date')
             ->latest('id');
     }
@@ -302,7 +302,7 @@ class Project extends Model
      */
     private function documentValue(Model $document): float
     {
-        $value = (float) $document->total_amount;
+        $value = $document instanceof \App\Models\SalesInvoice ? $document->receivableTotal() : (float) $document->total_amount;
 
         return (string) $document->currency === (string) $this->currency
             ? $value

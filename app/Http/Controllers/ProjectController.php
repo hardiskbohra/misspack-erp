@@ -262,6 +262,11 @@ class ProjectController extends Controller
                 $workflowReceiptInvoice = $baselineInvoice?->isSuperseded()
                     ? $baselineInvoice->convertedInvoice
                     : $baselineInvoice;
+                if ($baselineInvoice?->hasMonetaryConversions()) {
+                    $documents = $baselineInvoice->settlementDocuments()->where('status', '!=', 'cancelled');
+                    $workflowReceiptInvoice = $documents->first(fn ($document) => $document->balanceDue() > 0.01)
+                        ?? $documents->first();
+                }
             }
             $project->setRelation('workflow', $workflow);
         }
