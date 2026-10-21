@@ -182,6 +182,23 @@ class PackagingListController extends Controller
         ]);
     }
 
+    public function updatePrintSettings(Request $request, PackagingList $packagingList): RedirectResponse
+    {
+        // Presentation only: never recreate cartons, reverify packing, or change workflow state.
+        $settings = $request->validate([
+            'orientation' => ['required', Rule::in(['portrait', 'landscape'])],
+            'header_text' => ['nullable', 'string', 'max:160'],
+            'footer_text' => ['nullable', 'string', 'max:240'],
+            'show_page_numbers' => ['required', 'boolean'],
+        ]);
+        $settings['header_text'] = $settings['header_text'] ?? '';
+        $settings['footer_text'] = $settings['footer_text'] ?? '';
+        $settings['show_page_numbers'] = $request->boolean('show_page_numbers');
+        $packagingList->update(['print_settings' => $settings]);
+
+        return redirect()->route('packaging-lists.print', $packagingList)->with('success', 'Print settings saved for this packaging list.');
+    }
+
     public function duplicate(PackagingList $packagingList): RedirectResponse
     {
         $copy = DB::transaction(function () use ($packagingList) {

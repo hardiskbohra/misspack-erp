@@ -1,3 +1,18 @@
+@php
+    $printSettings = $list->printSettings();
+    foreach (['orientation', 'header_text', 'footer_text'] as $setting) {
+        $previous = old($setting);
+        if ($setting !== 'orientation' && session()->hasOldInput($setting) && $previous === null) {
+            $previous = '';
+        }
+        if (is_string($previous) && ($setting !== 'orientation' || in_array($previous, ['portrait', 'landscape'], true))) {
+            $printSettings[$setting] = $previous;
+        }
+    }
+    if (in_array(old('show_page_numbers'), ['0', '1', 0, 1, false, true], true)) {
+        $printSettings['show_page_numbers'] = (bool) old('show_page_numbers');
+    }
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 
@@ -10,23 +25,84 @@
     <title>{{ $list->packing_number }} · Packaging List</title>
     <link rel="stylesheet" href="{{ asset('assets/css/document-print.css') }}">
     <link rel="stylesheet" href="{{ $assetVer('assets/css/packaging-list-print.css') }}">
-    {{-- Portrait is the shared paper (document-print.css), so this sheet states
-         no page of its own: selected columns share the 186 mm a portrait
-         A4 leaves inside its 12 mm margins, and one document never carries two
-         paper sizes. --}}
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/packaging-list-print-settings.css') }}">
+    {{-- This document owns its selected paper. Keep this last so shared A4 portrait cannot override it. --}}
+    <style id="plPageStyle">
+        @page {
+            size: A4 {{ $printSettings['orientation'] }};
+            margin: 16mm 12mm;
+            @top-center {
+                content: {!! \App\Support\PrintCss::text($printSettings['header_text']) !!};
+                font: 9px "Inter", sans-serif;
+                color: #000;
+                white-space: pre-wrap;
+                vertical-align: middle;
+            }
+            @bottom-left {
+                content: {!! \App\Support\PrintCss::text($printSettings['footer_text']) !!};
+                font: 9px "Inter", sans-serif;
+                color: #000;
+                white-space: pre-wrap;
+                width: 80%;
+                vertical-align: middle;
+            }
+            @bottom-right {
+                content: @if ($printSettings['show_page_numbers']) "Page " counter(page) " of " counter(pages) @else none @endif;
+                font: 9px "Inter", sans-serif;
+                color: #000;
+                white-space: nowrap;
+                vertical-align: middle;
+            }
+        }
+    </style>
 </head>
 
-<body class="pdf-preview pl-standalone">
+<body class="pdf-preview pl-standalone" data-orientation="{{ $printSettings['orientation'] }}">
     <div class="pdf-toolbar pdf-toolbar--spread no-print">
         <a class="pdf-action pdf-action--secondary" href="{{ route('packaging-lists.show', $list) }}">Back to list</a>
         <div class="pdf-toolbar-group">
-            <button class="pdf-action pdf-action--primary" type="button" onclick="window.print()">
+            <button class="pdf-action pdf-action--primary" type="button" data-print-document>
                 Print / save PDF
             </button>
         </div>
     </div>
 
+    <section class="pl-print-settings no-print" aria-labelledby="plPrintSettingsTitle">
+        <details open>
+            <summary id="plPrintSettingsTitle">Print settings</summary>
+            <form method="POST" action="{{ route('packaging-lists.print-settings', $list) }}" data-print-settings>
+                @csrf
+                @method('PATCH')
+                <p class="pl-settings-hint">Preview changes immediately. Save settings to remember them for this packaging list.</p>
+                @if (session('success'))<p class="pl-settings-status" role="status">{{ session('success') }}</p>@endif
+                @if ($errors->any())<div class="pl-settings-errors" role="alert"><ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+                <div class="pl-settings-grid">
+                    <label>Orientation
+                        <select name="orientation">
+                            <option value="portrait" @selected($printSettings['orientation'] === 'portrait')>A4 · Portrait</option>
+                            <option value="landscape" @selected($printSettings['orientation'] === 'landscape')>A4 · Landscape</option>
+                        </select>
+                    </label>
+                    <label>Header text <span class="pl-settings-hint">Optional · repeats on every page</span>
+                        <textarea name="header_text" rows="2" maxlength="160">{{ $printSettings['header_text'] }}</textarea>
+                    </label>
+                    <label>Footer text <span class="pl-settings-hint">Optional · repeats on every page</span>
+                        <textarea name="footer_text" rows="2" maxlength="240">{{ $printSettings['footer_text'] }}</textarea>
+                    </label>
+                </div>
+                <div class="pl-settings-actions">
+                    <input type="hidden" name="show_page_numbers" value="0">
+                    <label class="pl-page-number-toggle"><input type="checkbox" name="show_page_numbers" value="1" role="switch" @checked($printSettings['show_page_numbers'])><span class="pl-switch-track" aria-hidden="true"></span><span>Show page numbers</span></label>
+                    <button type="submit" class="pdf-action pdf-action--secondary">Save settings</button>
+                </div>
+                <p class="pl-settings-hint">Repeating text and page numbers require a recent Chrome or Edge. In the print dialog, turn off the browser’s “Headers and footers” to avoid extra URLs and dates. The screen preview shows sample page numbering; actual numbers are calculated when printing.</p>
+                <p class="pl-settings-hint" data-print-settings-status role="status" aria-live="polite"></p>
+            </form>
+        </details>
+    </section>
+
     <main class="pdf-sheet pl-sheet">
+        <div class="pl-running-header no-print" data-preview-header @if ($printSettings['header_text'] === '') hidden @endif>{{ $printSettings['header_text'] }}</div>
         {{-- The letterhead is the invoice's: issuer and mark on the left, document
              identity on the right. A sheet drawn from a vendor's bill is that
              vendor's document, so it prints without our logo. --}}
@@ -241,10 +317,12 @@
             </div>
         </section>
 
-        <footer class="pl-footer">
-            This is a computer-generated packaging list. The cartons listed above are packed as stated.
+        <footer class="pl-footer" data-preview-footer>
+            <span data-preview-footer-text>{{ $printSettings['footer_text'] }}</span>
+            <span data-preview-page-number @if (!$printSettings['show_page_numbers']) hidden @endif>Page 1 of …</span>
         </footer>
     </main>
+    <script src="{{ $assetVer('assets/js/packaging-list-print.js') }}" defer></script>
 </body>
 
 </html>

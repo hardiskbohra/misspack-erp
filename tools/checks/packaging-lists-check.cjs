@@ -47,14 +47,14 @@ const index=read('resources/views/packaging_lists/index.blade.php'), css=read('p
 /* The sheet is a document like the invoice: same paper shell, same toolbar, the
    same Inter stack and the same portrait A4 page, so the two read as one house
    style rather than two printouts from two systems. */
-check('the packaging sheet prints on the shared portrait document shell, not its own paper CSS', print.includes("assets/css/document-print.css")&&print.includes("assets/css/packaging-list-print.css")&&print.includes('class="pdf-preview pl-standalone"')&&print.includes('class="pdf-sheet pl-sheet"')&&print.includes('class="pdf-toolbar pdf-toolbar--spread no-print"')&&print.includes('pdf-action pdf-action--secondary')&&print.includes('pdf-action pdf-action--primary'));
+check('the packaging sheet uses the shared document shell and toolbar', print.includes("assets/css/document-print.css")&&print.includes("assets/css/packaging-list-print.css")&&print.includes('class="pdf-preview pl-standalone"')&&print.includes('class="pdf-sheet pl-sheet"')&&print.includes('class="pdf-toolbar pdf-toolbar--spread no-print"')&&print.includes('pdf-action pdf-action--secondary')&&print.includes('pdf-action pdf-action--primary'));
 check('print uses the app Inter stack and the shared type ramp', print.includes('family=Inter:wght@400;500;600;700')&&sheetPrint.includes('--pl-font: var(--pdf-font-family')&&sheetPrint.includes('@media print')&&!sheetPrint.includes('Arial,Helvetica'));
-/* Portrait A4 is the shared paper. The sheet states no page of its own, in the
-   view or in the stylesheet, so nothing it carries can put eleven columns on a
-   landscape sheet again — or a portrait sheet on landscape paper. */
-check('the packing sheet rides the shared portrait paper and declares none of its own',
+/* Each packing sheet owns its selected paper; the rule follows shared CSS. */
+check('the packing sheet applies its selected orientation after the shared paper rule',
     !/@page/.test(plainPrint)
-    && !/pdf-sheet--landscape|pdf-toolbar--landscape/.test(print)
+    && print.indexOf('id="plPageStyle"') > print.indexOf('packaging-list-print.css')
+    && print.indexOf('id="plPageStyle"') < print.indexOf('</head>')
+    && print.includes("size: A4 {{ $printSettings['orientation'] }}")
     && print.includes('class="pdf-sheet pl-sheet"'));
 check('the eleven columns are fitted to a portrait A4, not a landscape one', (() => {
     /* 186 mm of content between the 12 mm margins, at 96 dpi. */

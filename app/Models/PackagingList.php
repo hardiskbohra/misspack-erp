@@ -18,7 +18,7 @@ class PackagingList extends Model
         'bill_to_name', 'bill_to_address', 'ship_to_name', 'ship_to_address',
         'declaration', 'customer_signature', 'supplier_signature', 'notes',
         'total_cartons', 'total_net_weight', 'total_gross_weight', 'total_cbm', 'created_by',
-        'packing_owner_id', 'auto_generated', 'packing_warnings', 'print_columns',
+        'packing_owner_id', 'auto_generated', 'packing_warnings', 'print_columns', 'print_settings',
     ];
 
     protected $casts = [
@@ -29,7 +29,19 @@ class PackagingList extends Model
         'auto_generated' => 'boolean',
         'packing_warnings' => 'array',
         'print_columns' => 'array',
+        'print_settings' => 'array',
     ];
+
+    public function printSettings(): array
+    {
+        $settings = $this->print_settings ?? [];
+        return [
+            'orientation' => in_array($settings['orientation'] ?? '', ['portrait', 'landscape'], true) ? $settings['orientation'] : 'portrait',
+            'header_text' => (string) ($settings['header_text'] ?? ''),
+            'footer_text' => (string) ($settings['footer_text'] ?? 'This is a computer-generated packaging list. The cartons listed above are packed as stated.'),
+            'show_page_numbers' => (bool) ($settings['show_page_numbers'] ?? false),
+        ];
+    }
 
     /** Canonical print order; saved selections never change packing calculations. */
     public static function printColumnOptions(): array

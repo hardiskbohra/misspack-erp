@@ -90,7 +90,7 @@ not to the user or browser; duplication copies it. Existing records (null JSON)
 and new records default to the original eleven columns, excluding CBM/carton.
 
 The print view emits only selected headers, cells and totals. Column weights
-are normalized to 100% of portrait A4; section bands span the selected count.
+are normalized to 100% of the selected A4 orientation; section bands span the selected count.
 Carton-level values still span all item lines within a shared carton. CBM/carton
 is calculated from dimensions, not entered again. Only carton count, total qty,
 net weight, gross weight and total CBM are summed in the foot; per-carton values
@@ -101,6 +101,37 @@ though fewer columns make a more readable portrait sheet.
 Deployment: run `php artisan migrate` to add the nullable `print_columns` JSON
 column. Omitted settings in older integrations preserve the existing choice;
 an explicitly empty or unknown selection is rejected.
+
+### Print-page layout settings
+
+Only `/packaging-lists/{id}/print` offers **Orientation** (A4 portrait or
+landscape), **Header text**, **Footer text** and **Show page numbers**. These are
+not packing fields and do not appear in the create/edit form. Changes preview
+immediately; **Save settings** persists them on that list via a CSRF-protected
+PATCH route requiring Operations manage permission. Printing without saving
+uses the current preview. Duplicating a list copies its saved print settings.
+
+Existing lists default to portrait, the original footer note, blank header and
+page numbers hidden. Header/footer can be cleared deliberately. The print view
+places the document's own `@page` rule last in its head; it switches both the
+screen sheet and the actual paper orientation, with 12 mm side margins and
+16 mm top/bottom margins reserved for running text. Page-margin boxes repeat
+the header and footer on every printed page, and optionally print **Page N of
+M**, using real `page` / `pages` counters rather than a fixed “Page 1”. The
+screen preview shows sample numbering, not a pagination estimate. Running text
+is plain text, CSS-escaped server-side and client-side; it cannot inject HTML
+or CSS. The body preview copies are suppressed in print to avoid duplicates.
+
+**Browser support:** repeating margin text and counters require a recent Chrome
+or Edge with CSS page-margin-box support (Chromium 131+). Firefox/older browsers
+may omit them. Disable the browser's own **Headers and footers** in its print
+dialog to avoid added URLs/dates. The app cannot control that browser preference.
+No other ERP document's paper or page margins are changed.
+
+Deployment also requires `php artisan migrate` for the nullable `print_settings`
+JSON column. This presentation-only endpoint does not recreate carton rows,
+change status, or bypass packing checks; even frozen packing can change its
+print presentation without modifying shipment allocations.
 
 ## 2. What the two surfaces show
 
@@ -129,15 +160,14 @@ an explicitly empty or unknown selection is rejected.
   left are the band backgrounds, and nothing stops being readable if a printer
   drops them. Dimensions print as `50 × 34 × 30` rather than
   `50.00 × 34.00 × 30.00`.
-- **It is A4 portrait at 12 mm,** the same paper as every other document, and it
-  declares no `@page` of its own: portrait is the shared default, so a second
-  statement could only ever fight the shell. Eleven columns are fitted into the
-  186 mm that leaves. The widths are set from the figures rather than the prose —
-  Carton Size takes 14% because `150 × 100 × 90` needs 83 px on one line, the
-  per-carton weights 7.5% each because `N.W. / CARTON` wraps to two short words,
-  and the description keeps 21.5% (about 37 mm). Side padding drops to 5 px so
-  eleven columns still read as a ruled table rather than a grid of gaps, while
-  the row height stays at 6 px and the body text stays at 12 px.
+- **A4 portrait by default, with landscape selectable on the print page.**
+  A final document-local page rule overrides the shared default only for this
+  printout. Side margins stay 12 mm (186 mm portrait / 273 mm landscape);
+  top/bottom margins reserve 16 mm for running text and page numbers. The
+  eleven-column default retains its original relative weights: Carton Size
+  14%, per-carton weights 7.5% each, and description 21.5%. Selecting different
+  columns normalizes their weights to the available width. Table padding is
+  6 px vertically / 5 px horizontally and body text remains 12 px.
 - **The letterhead stacks downwards:** the mark on top, the issuer name and
   address beneath it. Side by side, a long registered address broke mid-street
   against the logo; stacked, both read in one column and the document identity

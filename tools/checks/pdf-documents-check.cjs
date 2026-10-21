@@ -179,10 +179,11 @@ check('cashflow reports use the shared paper shell but keep their landscape data
     && /class="pdf-sheet pdf-sheet--landscape"/.test(cashflowView)
     && /@page\s*\{\s*size:\s*A4 landscape;\s*margin:\s*12mm/.test(cashflowCss));
 
-check('the packaging list is a portrait document on the same paper and toolbar', /class="pdf-preview pl-standalone"/.test(packagingView)
+check('the packaging list uses the shared shell with a print-page orientation setting', /class="pdf-preview pl-standalone"/.test(packagingView)
     && /class="pdf-sheet pl-sheet"/.test(packagingView)
     && /pdf-toolbar pdf-toolbar--spread no-print/.test(packagingView)
-    && !/--landscape/.test(packagingView)
+    && packagingView.includes('id="plPageStyle"')
+    && packagingView.includes("size: A4 {{ $printSettings['orientation'] }}")
     && (/assets\/css\/packaging-list-print\.css/.test(packagingView)));
 
 check('the packaging sheet follows the invoice hierarchy on the same tokens', (() => {
