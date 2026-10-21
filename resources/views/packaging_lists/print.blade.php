@@ -10,22 +10,14 @@
     <title>{{ $list->packing_number }} · Packaging List</title>
     <link rel="stylesheet" href="{{ asset('assets/css/document-print.css') }}">
     <link rel="stylesheet" href="{{ $assetVer('assets/css/packaging-list-print.css') }}">
-    {{-- Page geometry is stated here, after both stylesheets, rather than in the
-         sheet's CSS: document-print.css declares A4 portrait for the rest of the
-         paperwork, and a print engine resolves `@page size` by document order.
-         Last in the document, landscape cannot be overridden by a stylesheet
-         that loads earlier or arrives stale from cache. The carton label sets
-         its own @page the same way. --}}
-    <style>
-        @page {
-            size: A4 landscape;
-            margin: 12mm;
-        }
-    </style>
+    {{-- Portrait is the shared paper (document-print.css), so this sheet states
+         no page of its own: eleven columns are fitted to the 186 mm a portrait
+         A4 leaves inside its 12 mm margins, and one document never carries two
+         paper sizes. --}}
 </head>
 
 <body class="pdf-preview pl-standalone">
-    <div class="pdf-toolbar pdf-toolbar--spread pdf-toolbar--landscape no-print">
+    <div class="pdf-toolbar pdf-toolbar--spread no-print">
         <a class="pdf-action pdf-action--secondary" href="{{ route('packaging-lists.show', $list) }}">Back to list</a>
         <div class="pdf-toolbar-group">
             <button class="pdf-action pdf-action--primary" type="button" onclick="window.print()">
@@ -34,7 +26,7 @@
         </div>
     </div>
 
-    <main class="pdf-sheet pdf-sheet--landscape pl-sheet">
+    <main class="pdf-sheet pl-sheet">
         {{-- The letterhead is the invoice's: issuer and mark on the left, document
              identity on the right. A sheet drawn from a vendor's bill is that
              vendor's document, so it prints without our logo. --}}

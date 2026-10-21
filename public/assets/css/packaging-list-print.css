@@ -1,5 +1,5 @@
 /* ========================================================================
-   PACKAGING LIST — the invoice document language on a landscape packing sheet
+   PACKAGING LIST — the invoice document language on an A4 packing sheet
    ------------------------------------------------------------------------
    paper, toolbar, print reset and the Inter stack come from document-print.css.
    This file owns the content layout only, and deliberately repeats the invoice's
@@ -283,21 +283,24 @@ html body.pdf-preview .pdf-sheet.pl-sheet {
     table-layout: fixed;
 }
 
-.pl-col-serial { width: 4%; }
-.pl-col-item { width: 22%; }
-.pl-col-cartons { width: 6%; }
-.pl-col-qty { width: 9%; }
-.pl-col-total-qty { width: 9%; }
-.pl-col-size { width: 9%; }
-.pl-col-nw { width: 8%; }
-.pl-col-net { width: 9%; }
-.pl-col-gw { width: 8%; }
-.pl-col-gross { width: 9%; }
-.pl-col-total-cbm { width: 7%; }
+/* Eleven columns on a portrait A4 leave 186 mm inside the page margins. The
+   figures set the widths, not the prose: 5 px of side padding and one column
+   per figure, so no number is ever clipped and the description keeps 40 mm. */
+.pl-col-serial { width: 4.5%; }
+.pl-col-item { width: 21.5%; }
+.pl-col-cartons { width: 5.5%; }
+.pl-col-qty { width: 7.5%; }
+.pl-col-total-qty { width: 8%; }
+.pl-col-size { width: 14%; }
+.pl-col-nw { width: 7.5%; }
+.pl-col-net { width: 7.5%; }
+.pl-col-gw { width: 7.5%; }
+.pl-col-gross { width: 7.5%; }
+.pl-col-total-cbm { width: 9%; }
 
 .pl-items th,
 .pl-items td {
-    padding: 6px 7px;
+    padding: 6px 5px;
     border-right: 1px solid var(--pl-border-soft);
     border-bottom: 1px solid var(--pl-border-soft);
     color: var(--pl-body);

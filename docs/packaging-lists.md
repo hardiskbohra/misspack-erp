@@ -90,27 +90,25 @@ products inside it would be a guess.
   left are the band backgrounds, and nothing stops being readable if a printer
   drops them. Dimensions print as `50 × 34 × 30` rather than
   `50.00 × 34.00 × 30.00`.
-- **It is A4 landscape at 12 mm,** the one place the packing sheet departs from
-  the invoice's portrait page: eleven columns of figures need the width. The
-  page is declared in the view's own `<head>`, **after** both stylesheets —
-  `document-print.css` sets A4 portrait for the rest of the paperwork, and a
-  print engine resolves `@page size` by document order, so the last statement in
-  the document is the one that prints. Declaring it only in
-  `packaging-list-print.css` left the outcome dependent on stylesheet order and
-  on a cached copy of the shared sheet; the sheet's CSS deliberately declares no
-  page at all now, so one document can never carry two paper sizes. The carton
-  label sets its `@page` the same way. The Carton Size column is 9% — wide
-  enough for `120 × 80 × 65` on one line, narrow enough to give the description
-  its space.
+- **It is A4 portrait at 12 mm,** the same paper as every other document, and it
+  declares no `@page` of its own: portrait is the shared default, so a second
+  statement could only ever fight the shell. Eleven columns are fitted into the
+  186 mm that leaves. The widths are set from the figures rather than the prose —
+  Carton Size takes 14% because `150 × 100 × 90` needs 83 px on one line, the
+  per-carton weights 7.5% each because `N.W. / CARTON` wraps to two short words,
+  and the description keeps 21.5% (about 37 mm). Side padding drops to 5 px so
+  eleven columns still read as a ruled table rather than a grid of gaps, while
+  the row height stays at 6 px and the body text stays at 12 px.
 - **The letterhead stacks downwards:** the mark on top, the issuer name and
   address beneath it. Side by side, a long registered address broke mid-street
   against the logo; stacked, both read in one column and the document identity
   stays top-right.
 - **Column headings wrap, figures do not.** Only `td` values are held on one
-  line; a heading that cannot wrap prints straight out of a 9% column, so the
+  line; a heading that cannot wrap prints straight out of a narrow column, so the
   header cells are `white-space: normal` and set a shade tighter (9.5 px, 1.25
-  line-height) — the tallest heading takes three short lines and no column ever
-  spills into its neighbour.
+  line-height) — `N.W. / CARTON` takes two short lines and no column ever spills
+  into its neighbour. A portrait A4 is why there is no slack for a heading that
+  refuses to wrap.
 - **It reads as one ruled form, not a set of cards.** The facts strip, the three
   party cards, the table and the declaration/summary/sign-off blocks butt
   together: no gaps, no margins, neighbouring borders collapsed with a −1 px

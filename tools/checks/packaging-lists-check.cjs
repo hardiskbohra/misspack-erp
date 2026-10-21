@@ -13,6 +13,7 @@ const routes=read('routes/web.php');
 const form=read('resources/views/packaging_lists/form.blade.php');
 const print=read('resources/views/packaging_lists/print.blade.php');
 const sheetPrint=read('public/assets/css/packaging-list-print.css');
+const plainPrint=sheetPrint.replace(/\/\*[\s\S]*?\*\//g,'');
 const js=read('public/assets/js/packaging-lists.js');
 let passed=0,failed=0;
 function check(label,value){if(value){passed++;console.log(`PASS ${label}`)}else{failed++;console.error(`FAIL ${label}`)}}
@@ -44,21 +45,27 @@ check('print document contains business fields', ['Packaging List','From','Bill 
 const index=read('resources/views/packaging_lists/index.blade.php'), css=read('public/assets/css/packaging-lists.css'), show=read('resources/views/packaging_lists/show.blade.php');
 
 /* The sheet is a document like the invoice: same paper shell, same toolbar, the
-   same Inter stack and the same A4-landscape page, so the two read as one house
+   same Inter stack and the same portrait A4 page, so the two read as one house
    style rather than two printouts from two systems. */
-check('the packaging sheet prints on the shared document shell, not its own paper CSS', print.includes("assets/css/document-print.css")&&print.includes("assets/css/packaging-list-print.css")&&print.includes('class="pdf-preview pl-standalone"')&&print.includes('class="pdf-sheet pdf-sheet--landscape pl-sheet"')&&print.includes('class="pdf-toolbar pdf-toolbar--spread pdf-toolbar--landscape no-print"')&&print.includes('pdf-action pdf-action--secondary')&&print.includes('pdf-action pdf-action--primary'));
+check('the packaging sheet prints on the shared portrait document shell, not its own paper CSS', print.includes("assets/css/document-print.css")&&print.includes("assets/css/packaging-list-print.css")&&print.includes('class="pdf-preview pl-standalone"')&&print.includes('class="pdf-sheet pl-sheet"')&&print.includes('class="pdf-toolbar pdf-toolbar--spread no-print"')&&print.includes('pdf-action pdf-action--secondary')&&print.includes('pdf-action pdf-action--primary'));
 check('print uses the app Inter stack and the shared type ramp', print.includes('family=Inter:wght@400;500;600;700')&&sheetPrint.includes('--pl-font: var(--pdf-font-family')&&sheetPrint.includes('@media print')&&!sheetPrint.includes('Arial,Helvetica'));
-/* The sheet is A4 landscape, and the statement of that lives at the end of the
-   view's head — after both stylesheets — because document-print.css declares A4
-   portrait for the rest of the paperwork and a print engine resolves `@page
-   size` by document order. Two paper sizes in one document is the bug this
-   catches, so the sheet CSS must not declare a page at all. */
-check('the packing sheet declares A4 landscape last in the document', /@page\s*\{\s*\n?\s*size:\s*A4 landscape;\s*\n?\s*margin:\s*12mm;/.test(print)
-    && print.lastIndexOf('<style>') > print.indexOf('document-print.css')
-    && print.lastIndexOf('<style>') > print.indexOf('packaging-list-print.css')
-    && print.lastIndexOf('<style>') < print.indexOf('</head>'));
-check('only the view states the paper, so no second page size competes with it',
-    !/@page/.test(sheetPrint.replace(/\/\*[\s\S]*?\*\//g, '')));
+/* Portrait A4 is the shared paper. The sheet states no page of its own, in the
+   view or in the stylesheet, so nothing it carries can put eleven columns on a
+   landscape sheet again — or a portrait sheet on landscape paper. */
+check('the packing sheet rides the shared portrait paper and declares none of its own',
+    !/@page/.test(plainPrint)
+    && !/pdf-sheet--landscape|pdf-toolbar--landscape/.test(print)
+    && print.includes('class="pdf-sheet pl-sheet"'));
+check('the eleven columns are fitted to a portrait A4, not a landscape one', (() => {
+    /* 186 mm of content between the 12 mm margins, at 96 dpi. */
+    const contentPx = 186 / 25.4 * 96;
+    const widths = [...plainPrint.matchAll(/\.pl-col-([a-z-]+) \{ width: ([\d.]+)%; \}/g)];
+    const pad = /padding: 6px 5px/.test(plainPrint) ? 10 : 14;
+    const narrowest = { serial: '21.6', item: '0', cartons: '23.6', qty: '37.6', 'total-qty': '39.6', size: '83', nw: '37.6', net: '37.6', gw: '37.6', gross: '37.6', 'total-cbm': '43.2' };
+    return widths.length === 11
+        && widths.reduce((sum, m) => sum + Number(m[2]), 0) === 100
+        && widths.every(m => (contentPx * Number(m[2]) / 100 - pad) >= Number(narrowest[m[1]]));
+})());
 check('the document hierarchy follows the invoice: letterhead, facts, parties, lines, summary, sign-off, footer', ['class="pl-top"','class="pl-facts"','class="pl-parties"','class="pl-items"','class="pl-bottom"','class="pl-footer"'].map(marker=>print.indexOf(marker)).every((position,index,all)=>position>-1&&(index===0||position>all[index-1]))&&print.indexOf('class="pl-summary"')<print.indexOf('class="pl-signature"'));
 check('the letterhead, facts strip, party cards and summary reuse the invoice treatment', sheetPrint.includes('grid-template-columns: minmax(0, 1fr) minmax(180px, 225px)')&&sheetPrint.includes('border-bottom: 2px solid var(--pl-ink)')&&sheetPrint.includes('grid-template-columns: repeat(5, minmax(0, 1fr))')&&sheetPrint.includes('.pl-party h2')&&sheetPrint.includes('.pl-summary tr.pl-grand-total td'));
 check('the sheet prints black on white, with no colour carrying meaning', !/color:\s*#fff/i.test(sheetPrint)&&!/(#(?:2563eb|17233d|eff6ff|dbeafe|1d4ed8|475569))|hsla?\(/i.test(sheetPrint)&&sheetPrint.includes('background: var(--pl-surface-soft)')&&sheetPrint.includes('border-bottom: 2px solid var(--pl-ink)'));
@@ -97,7 +104,7 @@ check('the sheet is square-cornered throughout', [...sheetPrint.matchAll(/border
 
 /* Column widths are percentages of the sheet's own table, and still total 100. */
 const printCols=[...sheetPrint.matchAll(/\.pl-col-([a-z-]+) \{ width: ([\d.]+)%; \}/g)];
-check('the eleven column widths add up to the page and leave Carton Size narrow', printCols.length===11&&printCols.reduce((sum,m)=>sum+Number(m[2]),0)===100&&sheetPrint.includes('.pl-col-size { width: 9%; }'));
+check('the eleven column widths add up to the page and give Carton Size its 83 px', printCols.length===11&&printCols.reduce((sum,m)=>sum+Number(m[2]),0)===100&&sheetPrint.includes('.pl-col-size { width: 14%; }'));
 
 /* The logo is our letterhead, not the vendor's: a sheet drawn from a vendor's
    bill prints on that vendor's paper. */

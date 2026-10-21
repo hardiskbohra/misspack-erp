@@ -179,9 +179,10 @@ check('cashflow reports use the shared paper shell but keep their landscape data
     && /class="pdf-sheet pdf-sheet--landscape"/.test(cashflowView)
     && /@page\s*\{\s*size:\s*A4 landscape;\s*margin:\s*12mm/.test(cashflowCss));
 
-check('the packaging list is a landscape document on the same paper and toolbar', /class="pdf-preview pl-standalone"/.test(packagingView)
-    && /class="pdf-sheet pdf-sheet--landscape pl-sheet"/.test(packagingView)
-    && /pdf-toolbar pdf-toolbar--spread pdf-toolbar--landscape no-print/.test(packagingView)
+check('the packaging list is a portrait document on the same paper and toolbar', /class="pdf-preview pl-standalone"/.test(packagingView)
+    && /class="pdf-sheet pl-sheet"/.test(packagingView)
+    && /pdf-toolbar pdf-toolbar--spread no-print/.test(packagingView)
+    && !/--landscape/.test(packagingView)
     && (/assets\/css\/packaging-list-print\.css/.test(packagingView)));
 
 check('the packaging sheet follows the invoice hierarchy on the same tokens', (() => {
@@ -195,15 +196,17 @@ check('the packaging sheet follows the invoice hierarchy on the same tokens', ((
         && /\.pl-items th,\s*\n?\.pl-items td \{[^}]*font-size:\s*12px/.test(css);
 })());
 
-check('a landscape document states its own paper at the end of its head', (() => {
-    const css = plain(read('public/assets/css/packaging-list-print.css'));
-    const pageAt = packagingView.lastIndexOf('<style>');
-    return /@page\s*\{\s*\n?\s*size:\s*A4 landscape;\s*\n?\s*margin:\s*12mm;/.test(packagingView)
-        && pageAt > packagingView.indexOf('document-print.css')
-        && pageAt > packagingView.indexOf('packaging-list-print.css')
-        && pageAt < packagingView.indexOf('</head>')
-        && !/@page/.test(css);
-})());
+/* A document that is not on the shared A4 paper states the page itself, in its
+   own head and after its stylesheet link — a print engine takes the last
+   `@page size` in document order, so anywhere earlier is a coin toss. */
+check('a document with its own paper declares it after its stylesheet, inside the head',
+    (() => {
+        const pageAt = packagingLabelView.indexOf('<style>@page');
+        return pageAt > packagingLabelView.indexOf('packaging-list-label.css')
+            && pageAt < packagingLabelView.indexOf('</head>')
+            && /@page\{size:\{/.test(packagingLabelView);
+    })()
+    && !/@page/.test(plain(read('public/assets/css/packaging-list-print.css'))));
 
 check('carton labels ride the same Inter stack as the rest of the paperwork', /family=Inter:wght@400;500;600;700/.test(packagingLabelView)
     && /font:12pt\/1\.35 "Inter","Segoe UI",Roboto,Arial,sans-serif/.test(packagingLabelCss)
