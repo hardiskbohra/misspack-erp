@@ -10,6 +10,18 @@
     <title>{{ $list->packing_number }} · Packaging List</title>
     <link rel="stylesheet" href="{{ asset('assets/css/document-print.css') }}">
     <link rel="stylesheet" href="{{ $assetVer('assets/css/packaging-list-print.css') }}">
+    {{-- Page geometry is stated here, after both stylesheets, rather than in the
+         sheet's CSS: document-print.css declares A4 portrait for the rest of the
+         paperwork, and a print engine resolves `@page size` by document order.
+         Last in the document, landscape cannot be overridden by a stylesheet
+         that loads earlier or arrives stale from cache. The carton label sets
+         its own @page the same way. --}}
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 12mm;
+        }
+    </style>
 </head>
 
 <body class="pdf-preview pl-standalone">

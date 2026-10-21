@@ -554,11 +554,9 @@ html body.pdf-preview .pdf-sheet.pl-sheet {
 /* -------------------------------------------------------------- print / PDF */
 
 @media print {
-    /* The shared shell declares A4 portrait; a packing sheet is landscape. */
-    @page {
-        size: A4 landscape;
-        margin: 12mm;
-    }
+    /* The paper is declared in the view's own head, after this stylesheet — see
+       the @page block in packaging_lists/print.blade.php. Restating it here
+       would put two page sizes in the cascade for one document. */
 
     /* document-print.css forces --pdf-ink on .pdf-sheet at print time; this
        sheet is deliberately pure black, so it says so once more, later. */

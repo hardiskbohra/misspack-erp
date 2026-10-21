@@ -92,9 +92,16 @@ products inside it would be a guess.
   `50.00 × 34.00 × 30.00`.
 - **It is A4 landscape at 12 mm,** the one place the packing sheet departs from
   the invoice's portrait page: eleven columns of figures need the width. The
-  shared shell still owns the paper, so screen and print agree. The Carton Size
-  column is 9% — wide enough for `120 × 80 × 65` on one line, narrow enough to
-  give the description its space.
+  page is declared in the view's own `<head>`, **after** both stylesheets —
+  `document-print.css` sets A4 portrait for the rest of the paperwork, and a
+  print engine resolves `@page size` by document order, so the last statement in
+  the document is the one that prints. Declaring it only in
+  `packaging-list-print.css` left the outcome dependent on stylesheet order and
+  on a cached copy of the shared sheet; the sheet's CSS deliberately declares no
+  page at all now, so one document can never carry two paper sizes. The carton
+  label sets its `@page` the same way. The Carton Size column is 9% — wide
+  enough for `120 × 80 × 65` on one line, narrow enough to give the description
+  its space.
 - **The letterhead stacks downwards:** the mark on top, the issuer name and
   address beneath it. Side by side, a long registered address broke mid-street
   against the logo; stacked, both read in one column and the document identity

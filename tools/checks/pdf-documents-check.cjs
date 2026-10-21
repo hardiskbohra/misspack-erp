@@ -192,8 +192,17 @@ check('the packaging sheet follows the invoice hierarchy on the same tokens', ((
     return order.every((position, index) => position > -1 && (index === 0 || position > order[index - 1]))
         && /--pl-font:\s*var\(--pdf-font-family/.test(css)
         && /\.pl-facts\s*\{[^}]*grid-template-columns:\s*repeat\(5/.test(css)
-        && /\.pl-items th,\s*\n?\.pl-items td \{[^}]*font-size:\s*12px/.test(css)
-        && /@page\s*\{\s*size:\s*A4 landscape;\s*margin:\s*12mm/.test(css);
+        && /\.pl-items th,\s*\n?\.pl-items td \{[^}]*font-size:\s*12px/.test(css);
+})());
+
+check('a landscape document states its own paper at the end of its head', (() => {
+    const css = plain(read('public/assets/css/packaging-list-print.css'));
+    const pageAt = packagingView.lastIndexOf('<style>');
+    return /@page\s*\{\s*\n?\s*size:\s*A4 landscape;\s*\n?\s*margin:\s*12mm;/.test(packagingView)
+        && pageAt > packagingView.indexOf('document-print.css')
+        && pageAt > packagingView.indexOf('packaging-list-print.css')
+        && pageAt < packagingView.indexOf('</head>')
+        && !/@page/.test(css);
 })());
 
 check('carton labels ride the same Inter stack as the rest of the paperwork', /family=Inter:wght@400;500;600;700/.test(packagingLabelView)

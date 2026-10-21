@@ -47,7 +47,18 @@ const index=read('resources/views/packaging_lists/index.blade.php'), css=read('p
    same Inter stack and the same A4-landscape page, so the two read as one house
    style rather than two printouts from two systems. */
 check('the packaging sheet prints on the shared document shell, not its own paper CSS', print.includes("assets/css/document-print.css")&&print.includes("assets/css/packaging-list-print.css")&&print.includes('class="pdf-preview pl-standalone"')&&print.includes('class="pdf-sheet pdf-sheet--landscape pl-sheet"')&&print.includes('class="pdf-toolbar pdf-toolbar--spread pdf-toolbar--landscape no-print"')&&print.includes('pdf-action pdf-action--secondary')&&print.includes('pdf-action pdf-action--primary'));
-check('print uses the app Inter stack and the shared page size', print.includes('family=Inter:wght@400;500;600;700')&&sheetPrint.includes('--pl-font: var(--pdf-font-family')&&sheetPrint.includes('@media print')&&sheetPrint.includes('size: A4 landscape')&&sheetPrint.includes('margin: 12mm')&&!sheetPrint.includes('Arial,Helvetica'));
+check('print uses the app Inter stack and the shared type ramp', print.includes('family=Inter:wght@400;500;600;700')&&sheetPrint.includes('--pl-font: var(--pdf-font-family')&&sheetPrint.includes('@media print')&&!sheetPrint.includes('Arial,Helvetica'));
+/* The sheet is A4 landscape, and the statement of that lives at the end of the
+   view's head — after both stylesheets — because document-print.css declares A4
+   portrait for the rest of the paperwork and a print engine resolves `@page
+   size` by document order. Two paper sizes in one document is the bug this
+   catches, so the sheet CSS must not declare a page at all. */
+check('the packing sheet declares A4 landscape last in the document', /@page\s*\{\s*\n?\s*size:\s*A4 landscape;\s*\n?\s*margin:\s*12mm;/.test(print)
+    && print.lastIndexOf('<style>') > print.indexOf('document-print.css')
+    && print.lastIndexOf('<style>') > print.indexOf('packaging-list-print.css')
+    && print.lastIndexOf('<style>') < print.indexOf('</head>'));
+check('only the view states the paper, so no second page size competes with it',
+    !/@page/.test(sheetPrint.replace(/\/\*[\s\S]*?\*\//g, '')));
 check('the document hierarchy follows the invoice: letterhead, facts, parties, lines, summary, sign-off, footer', ['class="pl-top"','class="pl-facts"','class="pl-parties"','class="pl-items"','class="pl-bottom"','class="pl-footer"'].map(marker=>print.indexOf(marker)).every((position,index,all)=>position>-1&&(index===0||position>all[index-1]))&&print.indexOf('class="pl-summary"')<print.indexOf('class="pl-signature"'));
 check('the letterhead, facts strip, party cards and summary reuse the invoice treatment', sheetPrint.includes('grid-template-columns: minmax(0, 1fr) minmax(180px, 225px)')&&sheetPrint.includes('border-bottom: 2px solid var(--pl-ink)')&&sheetPrint.includes('grid-template-columns: repeat(5, minmax(0, 1fr))')&&sheetPrint.includes('.pl-party h2')&&sheetPrint.includes('.pl-summary tr.pl-grand-total td'));
 check('the sheet prints black on white, with no colour carrying meaning', !/color:\s*#fff/i.test(sheetPrint)&&!/(#(?:2563eb|17233d|eff6ff|dbeafe|1d4ed8|475569))|hsla?\(/i.test(sheetPrint)&&sheetPrint.includes('background: var(--pl-surface-soft)')&&sheetPrint.includes('border-bottom: 2px solid var(--pl-ink)'));
