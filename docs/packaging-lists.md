@@ -66,11 +66,17 @@ products inside it would be a guess.
 ## 2. What the two surfaces show
 
 - **Print** (`packaging_lists/print`) is the sheet the supplier and the customer
-  read, in the supplier's own column order: Sr. No., Item Description, Carton,
-  Qty/Carton, Total Qty, Carton Size, NW/Carton, Net Weight, GW/Carton, Gross
-  Weight, CBM/Carton, Total CBM. Item lines are numbered continuously across
-  sections, and the foot is the document's own totals — so a section can never
-  disagree with the total.
+  read: Sr. No., Item Description, Carton, Qty/Carton, Total Qty, Carton Size,
+  NW/Carton, Net Weight, GW/Carton, Gross Weight, Total CBM — eleven columns.
+  Volume is carried as a total for the packing run only; the per-carton CBM was
+  a twelfth column nobody priced freight from. Item lines are numbered
+  continuously across sections, and the foot is the document's own totals — so a
+  section can never disagree with the total.
+- **The sheet is black and white.** Every rule, band and fill is grey or black,
+  body text is black on white, and no colour carries meaning, so it prints the
+  same on an office laser as on screen — including with "background graphics"
+  switched off. Table body text is 12 px, not the old 10 px, and dimensions
+  print as `50 × 34 × 30` rather than `50.00 × 34.00 × 30.00`.
 - **Show** (`packaging_lists/show`) is the working screen: the same sections and
   the same spanning, plus chargeable weight per carton and the `#carton-N`
   anchor each carton's printed QR points at.

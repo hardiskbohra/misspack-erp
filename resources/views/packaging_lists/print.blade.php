@@ -8,15 +8,20 @@
        one block is one carton configuration — a size, a weight per carton and a
        count — and it may hold more than one item (a bottle and its hook in the
        same box). Those items share the carton, so the carton's own columns are
-       printed once and span its lines; only the two quantity columns repeat. */
+       printed once and span its lines; only the two quantity columns repeat.
+
+       The sheet is printed black and white on a plain office printer: every
+       fill is a light grey screen, headers are black, and no colour carries
+       meaning. CBM is printed as volume for the whole packing run only — the
+       per-carton figure is the line the forwarder never reads. */
     $serial = 0;
 @endphp
 <table class="pl-document-table">
-<colgroup><col class="pl-col-serial"><col class="pl-col-item"><col class="pl-col-cartons"><col class="pl-col-qty"><col class="pl-col-total-qty"><col class="pl-col-size"><col class="pl-col-nw"><col class="pl-col-net"><col class="pl-col-gw"><col class="pl-col-gross"><col class="pl-col-cbm"><col class="pl-col-total-cbm"></colgroup>
-<thead><tr><th>Sr. No.</th><th>Item Description</th><th>Carton</th><th>Qty/Carton</th><th>Total Qty</th><th>Carton Size</th><th>NW/Carton</th><th>Net Weight</th><th>GW/Carton</th><th>Gross Weight</th><th>CBM/Carton</th><th>Total CBM</th></tr></thead>
+<colgroup><col class="pl-col-serial"><col class="pl-col-item"><col class="pl-col-cartons"><col class="pl-col-qty"><col class="pl-col-total-qty"><col class="pl-col-size"><col class="pl-col-nw"><col class="pl-col-net"><col class="pl-col-gw"><col class="pl-col-gross"><col class="pl-col-total-cbm"></colgroup>
+<thead><tr><th>Sr. No.</th><th>Item Description</th><th>Carton</th><th>Qty/Carton</th><th>Total Qty</th><th>Carton Size (cm)</th><th>NW/Carton (kg)</th><th>Net Weight (kg)</th><th>GW/Carton (kg)</th><th>Gross Weight (kg)</th><th>Total CBM</th></tr></thead>
 <tbody>
 @foreach ($sections as $section)
-<tr class="pl-print-group-title"><th colspan="12">{{ $section['label'] }}</th></tr>
+<tr class="pl-print-group-title"><th colspan="11">{{ $section['label'] }}</th></tr>
 @foreach ($section['cartons'] as $carton)
 @php($span = max(1, $carton->items->count()))
 @foreach ($carton->items as $item)
@@ -35,7 +40,6 @@
 <td rowspan="{{ $span }}">{{ number_format($carton->totalNetWeight(),1) }}</td>
 <td rowspan="{{ $span }}">{{ number_format((float) $carton->gross_weight_per_carton,1) }}</td>
 <td rowspan="{{ $span }}">{{ number_format($carton->totalGrossWeight(),1) }}</td>
-<td rowspan="{{ $span }}">{{ number_format($carton->cbmPerCarton(),4) }}</td>
 <td rowspan="{{ $span }}">{{ number_format($carton->totalCbm(),4) }}</td>
 @endif
 </tr>
@@ -43,7 +47,7 @@
 @endforeach
 @endforeach
 </tbody>
-<tfoot><tr><th colspan="2">Total</th><th>{{ number_format($list->total_cartons) }}</th><th></th><th>{{ number_format($list->totalQuantity(),0) }}</th><th></th><th></th><th>{{ number_format((float)$list->total_net_weight,1) }}</th><th></th><th>{{ number_format((float)$list->total_gross_weight,1) }}</th><th></th><th>{{ number_format((float)$list->total_cbm,4) }}</th></tr></tfoot>
+<tfoot><tr><th colspan="2">Total</th><th>{{ number_format($list->total_cartons) }}</th><th></th><th>{{ number_format($list->totalQuantity(),0) }}</th><th></th><th></th><th>{{ number_format((float)$list->total_net_weight,1) }}</th><th></th><th>{{ number_format((float)$list->total_gross_weight,1) }}</th><th>{{ number_format((float)$list->total_cbm,4) }}</th></tr></tfoot>
 </table>
 <section class="pl-declaration"><h2>DECLARATION</h2><p>{{ $list->declaration }}</p></section>
 <footer class="pl-document-footer"><div><span>Customer's signature</span><strong>{{ $list->customer_signature }}</strong></div><div><span>For {{ $list->from_name }}</span><strong>{{ $list->supplier_signature }}</strong><small>Authorised signatory</small></div></footer>

@@ -45,5 +45,19 @@ class PackagingListCarton extends Model
     public function volumetricWeightPerCarton(): float { return round($this->cbmPerCarton() * 164, 3); }
     public function chargeableWeightPerCarton(): float { return max(round((float) $this->gross_weight_per_carton, 3), $this->volumetricWeightPerCarton()); }
     public function totalChargeableWeight(): float { return round($this->chargeableWeightPerCarton() * (int) $this->carton_count, 3); }
-    public function dimensionsLabel(): string { return $this->length_cm.' × '.$this->width_cm.' × '.$this->height_cm.' cm'; }
+    /**
+     * "50 × 34 × 30 cm" — the columns are decimals, but a carton is not packed
+     * to a hundredth of a centimetre, and "50.00 × 34.00 × 30.00" is noise on a
+     * sheet someone reads at arm's length. Whole numbers stay whole; a real
+     * fraction (12.5 cm) is kept.
+     */
+    public function dimensionsLabel(): string
+    {
+        $numbers = array_map(
+            fn ($value): string => rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.'),
+            [$this->length_cm, $this->width_cm, $this->height_cm]
+        );
+
+        return implode(' × ', $numbers).' cm';
+    }
 }
