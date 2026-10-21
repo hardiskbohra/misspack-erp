@@ -116,7 +116,7 @@ class PackagingListController extends Controller
             'list' => $packagingList,
             /* The same product can sit in several carton groups; the screen and
                the printed document read it as one product with one total. */
-            'productGroups' => $packagingList->productGroups(),
+            'sections' => $packagingList->sections(),
             'verificationInspection' => $verifier->inspect($packagingList),
         ]);
     }
@@ -172,7 +172,7 @@ class PackagingListController extends Controller
         $packagingList->load(['cartons.items.product', 'vendor', 'client', 'project', 'shipment']);
         return view('packaging_lists.print', [
             'list' => $packagingList,
-            'productGroups' => $packagingList->productGroups(),
+            'sections' => $packagingList->sections(),
             'organisation' => Organisation::current(),
         ]);
     }
@@ -219,6 +219,7 @@ class PackagingListController extends Controller
             'supplier_signature' => ['nullable', 'string', 'max:255'], 'notes' => ['nullable', 'string'],
             'cartons' => ['required', 'array', 'min:1', 'max:200'],
             'cartons.*.carton_label' => ['nullable', 'string', 'max:100'],
+            'cartons.*.packing_group' => ['nullable', 'string', 'max:120'],
             'cartons.*.packing_mode' => ['required', Rule::in(['grouped','individual'])],
             'cartons.*.carton_number' => ['nullable', 'string', 'max:100'],
             'cartons.*.carton_type' => ['required', 'string', 'max:40'],

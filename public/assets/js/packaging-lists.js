@@ -73,7 +73,13 @@
       if (volumetricOutput) volumetricOutput.textContent = `${volumetricPerCarton.toFixed(1)} kg`;
       if (chargeableOutput) chargeableOutput.textContent = `${chargeablePerCarton.toFixed(1)} kg`;
       if (chargeableBasis) chargeableBasis.textContent = volumetricPerCarton > grossPerCarton ? 'Volumetric weight' : 'Gross weight';
-      if (summary) summary.textContent = `Carton no. ${index + 1} · ${count || 0} carton${count === 1 ? '' : 's'} · ${length || 0} × ${width || 0} × ${height || 0} cm`;
+      if (summary) {
+        const group = carton.querySelector('[data-packing-group]')?.value.trim();
+        const items = carton.querySelectorAll('[data-item]').length;
+        summary.textContent = `${count || 0} carton${count === 1 ? '' : 's'} · ${length || 0} × ${width || 0} × ${height || 0} cm`
+          + ` · ${items} item${items === 1 ? '' : 's'}`
+          + (group ? ` · under “${group}”` : '');
+      }
       const itemCount = carton.querySelectorAll('[data-item]').length;
       itemLines += itemCount;
       const itemCountOutput = carton.querySelector('[data-item-count]');
@@ -96,9 +102,11 @@
     });
     const panels = [...cartonList.querySelectorAll('[data-carton]')];
     if (cartonTabs) cartonTabs.innerHTML = panels.map((panel, index) => {
-      /* A tab named "Carton group 3" says nothing when the same product is packed
-         in three carton sizes; the first product in the group names it. */
-      const label = panel.querySelector('[name$="[carton_label]"]')?.value.trim()
+      /* The tab is named by what the block prints under: its packing group,
+         then its carton label, then its first product — "Carton group 3" says
+         nothing when three blocks of the same product sit side by side. */
+      const label = panel.querySelector('[data-packing-group]')?.value.trim()
+        || panel.querySelector('[name$="[carton_label]"]')?.value.trim()
         || panel.querySelector('[data-item] [name$="[item_description]"]')?.value.trim()
         || `Carton group ${index + 1}`;
       const count = number(panel.querySelector('[data-carton-count]')?.value);
@@ -191,7 +199,7 @@
     const next=event.key==='Home'?0:event.key==='End'?count-1:event.key==='ArrowRight'?(activeCarton+1)%count:(activeCarton-1+count)%count;
     activateCarton(next,true);
   });
-  root.addEventListener('input', event => { if (event.target.matches('[data-carton-count],[data-length],[data-width],[data-height],[data-net],[data-gross],[data-qty],[name$="[carton_label]"],[name$="[item_description]"],[name="from_name"],[name="ship_to_name"]')) update(); });
+  root.addEventListener('input', event => { if (event.target.matches('[data-carton-count],[data-length],[data-width],[data-height],[data-net],[data-gross],[data-qty],[name$="[carton_label]"],[data-packing-group],[name$="[item_description]"],[name="from_name"],[name="ship_to_name"]')) update(); });
   root.addEventListener('invalid', event => {
     const panel = event.target.closest('[data-carton]');
     if (panel) activateCarton([...cartonList.querySelectorAll('[data-carton]')].indexOf(panel));

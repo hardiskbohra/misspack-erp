@@ -72,136 +72,96 @@ class PackagingList extends Model
     }
 
     /**
-     * The packing lines grouped by the product they carry.
+     * The list as sections — the way the printed sheet is read.
      *
-     * One carton group is one packing configuration — a size, a weight per
-     * carton, and how many cartons of it — and it may hold several items. But a
-     * product is regularly packed in several configurations at once: 10 cartons
-     * of 336, 2 cartons of 340 and 3 cartons of 300 are all the same 50ml spray
-     * bottle, and that is what the receiving side reads: 15 cartons, 4,940
-     * pieces, and one weight and CBM for the product.
+     * A packaging list is stored as carton blocks, because a carton is what has
+     * a size and a weight. But the sheet that comes back from the supplier is
+     * not a list of cartons: it is a set of headings — "50ml Empty Spray
+     * Bottle", "Silicone Ring Case" — and under each heading the carton blocks
+     * packed for it. Two different products can sit under one heading, and one
+     * block can hold two products in the same carton (a bottle and its hook).
      *
-     * Read carton by carton that product appears three times and nothing adds
-     * it up. This is that sum, derived from the rows already stored — no extra
-     * column to keep in step.
+     * The heading is `packing_group`, typed on the block. Blocks sharing a
+     * heading form one section, in the order they were entered. A block with no
+     * heading is its own section, titled by its carton label and then by its
+     * first item — so an existing list reads exactly as it printed before.
      *
-     * Carton-level figures (cartons, weight, CBM) are counted for a group only
-     * when the carton belongs to that product alone. A carton shared by two
-     * products has its row in both groups, marked `shared`, and contributes to
-     * neither group's weight — splitting one carton's weight between products
-     * would be a guess. `shared_cartons` tells the view to say so.
+     * Derived on read: there is no section table to keep in step.
      *
      * @return \Illuminate\Support\Collection<int, array<string, mixed>>
      */
-    public function productGroups(): Collection
+    public function sections(): Collection
     {
         $cartons = $this->relationLoaded('cartons') ? $this->cartons : $this->cartons()->with('items')->get();
-        $groups = [];
+        /* A caller that loaded only the cartons must not cost one query per
+           block here; a relation that is already set is left alone. */
+        $cartons->each(fn (PackagingListCarton $carton) => $carton->loadMissing('items'));
+        $sections = [];
 
         foreach ($cartons as $carton) {
-            $items = $carton->items;
-            $exclusive = $items->count() === 1;
-            $count = (int) $carton->carton_count;
+            $heading = trim((string) $carton->packing_group);
+            $key = $heading !== '' ? 'group:'.$heading : 'block:'.$carton->id;
 
-            foreach ($items as $item) {
-                $key = $this->productKey($item);
-
-                if (! isset($groups[$key])) {
-                    $groups[$key] = [
-                        'key' => $key,
-                        'label' => $this->productLabel($item),
-                        'sku' => trim((string) $item->sku),
-                        'unit' => trim((string) $item->unit) ?: 'pcs',
-                        'rows' => [],
-                        'cartons' => 0,
-                        'quantity' => 0.0,
-                        'net' => 0.0,
-                        'gross' => 0.0,
-                        'cbm' => 0.0,
-                        'chargeable' => 0.0,
-                        'shared_cartons' => 0,
-                    ];
-                }
-
-                $groups[$key]['rows'][] = [
-                    'carton' => $carton,
-                    'item' => $item,
-                    'cartons' => $count,
-                    'quantity_per_carton' => (float) $item->quantity_per_carton,
-                    'quantity' => (float) $item->total_quantity,
-                    'net_per_carton' => (float) $carton->net_weight_per_carton,
-                    'gross_per_carton' => (float) $carton->gross_weight_per_carton,
-                    'cbm_per_carton' => $carton->cbmPerCarton(),
-                    'net' => $exclusive ? $carton->totalNetWeight() : 0.0,
-                    'gross' => $exclusive ? $carton->totalGrossWeight() : 0.0,
-                    'cbm' => $exclusive ? $carton->totalCbm() : 0.0,
-                    'shared' => ! $exclusive,
+            if (! isset($sections[$key])) {
+                $sections[$key] = [
+                    'key' => $key,
+                    'label' => $heading !== '' ? $heading : $this->blockLabel($carton),
+                    'cartons' => [],
+                    'cartons_count' => 0,
+                    'quantity' => 0.0,
+                    'net' => 0.0,
+                    'gross' => 0.0,
+                    'cbm' => 0.0,
+                    'chargeable' => 0.0,
                 ];
-
-                $groups[$key]['quantity'] += (float) $item->total_quantity;
-
-                if ($exclusive) {
-                    $groups[$key]['cartons'] += $count;
-                    $groups[$key]['net'] += $carton->totalNetWeight();
-                    $groups[$key]['gross'] += $carton->totalGrossWeight();
-                    $groups[$key]['cbm'] += $carton->totalCbm();
-                    $groups[$key]['chargeable'] += $carton->totalChargeableWeight();
-                } else {
-                    $groups[$key]['shared_cartons']++;
-                }
             }
+
+            $sections[$key]['cartons'][] = $carton;
+            $sections[$key]['cartons_count'] += (int) $carton->carton_count;
+            $sections[$key]['quantity'] += (float) $carton->items->sum(fn ($item) => (float) $item->total_quantity);
+            $sections[$key]['net'] += $carton->totalNetWeight();
+            $sections[$key]['gross'] += $carton->totalGrossWeight();
+            $sections[$key]['cbm'] += $carton->totalCbm();
+            $sections[$key]['chargeable'] += $carton->totalChargeableWeight();
         }
 
-        return collect($groups)->map(function (array $group) {
-            $group['net'] = round($group['net'], 3);
-            $group['gross'] = round($group['gross'], 3);
-            $group['cbm'] = round($group['cbm'], 4);
-            $group['chargeable'] = round($group['chargeable'], 3);
+        return collect($sections)->map(function (array $section) {
+            $section['net'] = round($section['net'], 3);
+            $section['gross'] = round($section['gross'], 3);
+            $section['cbm'] = round($section['cbm'], 4);
+            $section['chargeable'] = round($section['chargeable'], 3);
 
-            return $group;
+            return $section;
         })->values();
+    }
+
+    /** What a block with no heading is called: its label, then its first item. */
+    private function blockLabel(PackagingListCarton $carton): string
+    {
+        $label = trim((string) $carton->carton_label);
+
+        if ($label !== '') {
+            return $label;
+        }
+
+        $first = trim((string) $carton->items->first()?->item_description);
+
+        if ($first !== '') {
+            return $first;
+        }
+
+        $number = trim((string) $carton->carton_number);
+
+        return $number !== '' ? 'Carton '.$number : 'Unnamed packing group';
     }
 
     /** Every packed unit on the list, whichever carton it sits in. */
     public function totalQuantity(): float
     {
         $cartons = $this->relationLoaded('cartons') ? $this->cartons : $this->cartons()->with('items')->get();
+        $cartons->each(fn (PackagingListCarton $carton) => $carton->loadMissing('items'));
 
         return round((float) $cartons->flatMap->items->sum(fn ($item) => (float) $item->total_quantity), 3);
-    }
-
-    /**
-     * What makes two lines the same product: the link if there is one, the name
-     * otherwise — and never across units, because 10 pieces and 10 kilograms
-     * are not 20 of anything.
-     */
-    private function productKey(PackagingListItem $item): string
-    {
-        $unit = Str::lower(trim((string) $item->unit));
-
-        if ($item->product_id) {
-            return 'product:'.$item->product_id.'|'.$unit;
-        }
-
-        $description = (string) Str::of((string) $item->item_description)
-            ->lower()
-            ->replaceMatches('/[^\pL\pN]+/u', ' ')
-            ->squish();
-
-        return 'description:'.($description !== '' ? $description : 'line-'.$item->id).'|'.$unit;
-    }
-
-    private function productLabel(PackagingListItem $item): string
-    {
-        $description = trim((string) $item->item_description);
-
-        if ($description !== '') {
-            return $description;
-        }
-
-        $name = trim((string) $item->product?->name);
-
-        return $name !== '' ? $name : 'Unnamed item';
     }
 
     public function recalculate(): void

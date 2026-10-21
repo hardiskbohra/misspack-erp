@@ -11,7 +11,7 @@
     $cartonRows = old('cartons');
     if ($cartonRows === null) {
         $cartonRows = $list->relationLoaded('cartons') ? $list->cartons->map(fn($carton) => [
-            'carton_label'=>$carton->carton_label, 'packing_mode'=>$carton->packing_mode, 'carton_number'=>$carton->carton_number,
+            'carton_label'=>$carton->carton_label, 'packing_group'=>$carton->packing_group, 'packing_mode'=>$carton->packing_mode, 'carton_number'=>$carton->carton_number,
             'carton_type'=>$carton->carton_type, 'shipping_mark'=>$carton->shipping_mark, 'material'=>$carton->material,
             'pallet_number'=>$carton->pallet_number, 'seal_number'=>$carton->seal_number, 'carton_count'=>$carton->carton_count,
             'length_cm'=>$carton->length_cm, 'width_cm'=>$carton->width_cm, 'height_cm'=>$carton->height_cm,
@@ -78,7 +78,7 @@
         </dialog>
 
         <div class="master-section pl-cartons-section">
-            <div class="master-section-head"><div><h2 class="master-section-title">Cartons and items</h2><p class="master-sub">Each carton group can contain multiple product lines sharing the same size and weight.</p></div><button type="button" class="master-btn master-btn-soft master-btn-sm" data-add-carton><i class="fa-solid fa-plus"></i> Add carton group</button></div>
+            <div class="master-section-head"><div><h2 class="master-section-title">Cartons and items</h2><p class="master-sub">One carton group per packing configuration — 10 cartons of 50 × 34 × 39 cm is one group. Give groups the same <strong>packing group</strong> heading and they print together under it, so bottles and caps can share a heading. Add a second item to a group when both products ship in the same carton.</p></div><button type="button" class="master-btn master-btn-soft master-btn-sm" data-add-carton><i class="fa-solid fa-plus"></i> Add carton group</button></div>
             <div class="master-tabs pl-carton-tabs" role="tablist" aria-label="Carton groups" data-carton-tabs></div>
             <div class="pl-carton-panels" data-carton-list>
                 @foreach($cartonRows as $cartonIndex=>$carton)

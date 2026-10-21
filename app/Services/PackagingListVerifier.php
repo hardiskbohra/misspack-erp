@@ -129,7 +129,7 @@ class PackagingListVerifier
         $payload = [
             'list' => $list->only(['shipment_id', 'sales_invoice_id', 'purchase_invoice_id', 'total_cartons', 'total_net_weight', 'total_gross_weight', 'total_cbm', 'packing_warnings']),
             'cartons' => $list->cartons->map(fn ($carton) => [
-                'attributes' => $carton->only(['carton_label', 'packing_mode', 'carton_number', 'carton_type', 'carton_count', 'length_cm', 'width_cm', 'height_cm', 'net_weight_per_carton', 'gross_weight_per_carton', 'barcode', 'public_token', 'shipping_mark', 'pallet_number', 'seal_number', 'is_fragile', 'keep_dry', 'this_side_up', 'is_hazardous', 'handling_instructions']),
+                'attributes' => $carton->only(['carton_label', 'packing_group', 'packing_mode', 'carton_number', 'carton_type', 'carton_count', 'length_cm', 'width_cm', 'height_cm', 'net_weight_per_carton', 'gross_weight_per_carton', 'barcode', 'public_token', 'shipping_mark', 'pallet_number', 'seal_number', 'is_fragile', 'keep_dry', 'this_side_up', 'is_hazardous', 'handling_instructions']),
                 'items' => $carton->items->map(fn ($item) => $item->only(['project_product_id', 'item_description', 'sku', 'customer_item_code', 'hs_code', 'quantity_per_carton', 'total_quantity', 'serial_numbers', 'batch_number', 'manufactured_at', 'expires_at', 'country_of_origin', 'unit_net_weight', 'unit_gross_weight', 'packing_instructions']))->values()->all(),
             ])->values()->all(),
         ];

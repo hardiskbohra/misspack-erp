@@ -10,7 +10,7 @@ class PackagingListCarton extends Model
     use HasFactory;
 
     protected $fillable = [
-        'packaging_list_id', 'carton_label', 'packing_mode', 'carton_number', 'carton_type', 'barcode',
+        'packaging_list_id', 'carton_label', 'packing_group', 'packing_mode', 'carton_number', 'carton_type', 'barcode',
         'public_token', 'shipping_mark', 'material', 'pallet_number', 'seal_number', 'carton_count',
         'length_cm', 'width_cm', 'height_cm', 'net_weight_per_carton', 'gross_weight_per_carton',
         'tare_weight', 'is_fragile', 'keep_dry', 'this_side_up', 'is_stackable', 'is_hazardous',

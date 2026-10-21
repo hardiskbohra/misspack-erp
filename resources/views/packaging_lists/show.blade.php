@@ -21,55 +21,45 @@
         <section class="master-card master-card--flat master-section"><h2 class="master-section-title">Parties</h2><div class="master-facts"><div class="master-info"><span>From</span><strong>{{ $list->from_name }}</strong></div><div class="master-info"><span>Bill to</span><strong>{{ $list->bill_to_name }}</strong></div><div class="master-info"><span>Ship to</span><strong>{{ $list->ship_to_name }}</strong></div></div></section>
     </div>
     <section class="master-card master-card--flat master-table-card pl-breakdown">
-        <div class="master-section-head"><div><h2 class="master-section-title">Packing breakdown</h2><p class="master-sub">{{ $productGroups->count() }} {{ \Illuminate\Support\Str::plural('product', $productGroups->count()) }} across {{ $list->cartons->count() }} carton {{ \Illuminate\Support\Str::plural('group',$list->cartons->count()) }} — a product packed in several carton sizes is listed once and added up.</p></div></div>
+        <div class="master-section-head"><div><h2 class="master-section-title">Packing breakdown</h2><p class="master-sub">{{ $sections->count() }} packing {{ \Illuminate\Support\Str::plural('group', $sections->count()) }} across {{ $list->cartons->count() }} carton {{ \Illuminate\Support\Str::plural('block', $list->cartons->count()) }}. Lines in the same carton share its size and weight, so those columns appear once.</p></div></div>
+        {{-- Row-spanned block cells do not survive the mobile card layout, so
+             this table scrolls instead. --}}
         <div class="master-table-wrap"><table class="master-table">
-            <thead><tr><th scope="col">Product</th><th scope="col" class="is-num">Cartons</th><th scope="col" class="is-num">Qty/carton</th><th scope="col" class="is-num">Total qty</th><th scope="col">Size</th><th scope="col" class="is-num">Net weight</th><th scope="col" class="is-num">Gross weight</th><th scope="col" class="is-num">Chargeable</th><th scope="col" class="is-num">Total CBM</th></tr></thead>
-            <tbody>@php($anchored = [])
-            @foreach($productGroups as $group)
-                <tr class="pl-product-group-row">
-                    <th scope="rowgroup">Group({{ $group['label'] }})<span>{{ count($group['rows']) }} carton {{ \Illuminate\Support\Str::plural('size', count($group['rows'])) }}@if ($group['sku']) · {{ $group['sku'] }}@endif · group total</span></th>
-                    <td class="is-num">{{ number_format($group['cartons']) }}</td>
-                    <td></td>
-                    <td class="is-num">{{ number_format($group['quantity'],0) }} {{ $group['unit'] }}</td>
-                    <td></td>
-                    <td class="is-num">{{ number_format($group['net'],1) }} kg</td>
-                    <td class="is-num">{{ number_format($group['gross'],1) }} kg</td>
-                    <td class="is-num">{{ number_format($group['chargeable'],1) }} kg</td>
-                    <td class="is-num">{{ number_format($group['cbm'],4) }}</td>
-                </tr>
-                @foreach($group['rows'] as $row)
-                    @php($anchor = ! isset($anchored[$row['carton']->id]))
-                    <tr class="pl-carton-item-row" @if($anchor) id="carton-{{ $row['carton']->id }}" @endif>
-                        <td data-label="Carton">
-                            <strong>Carton {{ $row['carton']->carton_number ?: '—' }}</strong>
-                            @if($row['carton']->carton_label && strcasecmp(trim($row['carton']->carton_label), 'Carton '.($row['carton']->carton_number ?: '—')) !== 0)
-                                <span class="master-sub">{{ $row['carton']->carton_label }}</span>
+            <thead><tr><th scope="col">Item description</th><th scope="col" class="is-num">Carton</th><th scope="col" class="is-num">Qty/carton</th><th scope="col" class="is-num">Total qty</th><th scope="col">Carton size</th><th scope="col" class="is-num">Net weight</th><th scope="col" class="is-num">Gross weight</th><th scope="col" class="is-num">Chargeable</th><th scope="col" class="is-num">Total CBM</th></tr></thead>
+            <tbody>
+            @foreach ($sections as $section)
+                <tr class="pl-section-row"><th scope="rowgroup" colspan="9">{{ $section['label'] }}<span>{{ number_format($section['cartons_count']) }} {{ \Illuminate\Support\Str::plural('carton', (int) $section['cartons_count']) }} · {{ number_format($section['quantity'],0) }} units · {{ number_format($section['gross'],1) }} kg gross</span></th></tr>
+                @foreach ($section['cartons'] as $carton)
+                    @php($span = max(1, $carton->items->count()))
+                    @foreach ($carton->items as $item)
+                        <tr class="pl-carton-item-row" @if ($loop->first) id="carton-{{ $carton->id }}" @endif>
+                            <td data-label="Item description">
+                                <strong>{{ $item->item_description }}</strong>
+                                @if ($loop->first && $carton->carton_label && strcasecmp(trim($carton->carton_label), trim($section['label'])) !== 0)
+                                    <span class="master-sub">{{ $carton->carton_label }}</span>
+                                @endif
+                                @if ($loop->first && $span > 1)
+                                    <span class="master-sub">Shares this carton with {{ $span - 1 }} more {{ \Illuminate\Support\Str::plural('line', $span - 1) }}</span>
+                                @endif
+                            </td>
+                            @if ($loop->first)
+                                <td data-label="Carton" rowspan="{{ $span }}" class="is-num">{{ number_format($carton->carton_count) }}</td>
                             @endif
-                            @if($row['shared'])
-                                <span class="master-chip pl-shared-carton-chip">Shared carton</span>
+                            <td data-label="Qty/carton" class="is-num">{{ number_format((float) $item->quantity_per_carton,0) }} {{ $item->unit }}</td>
+                            <td data-label="Total qty" class="is-num"><strong>{{ number_format((float) $item->total_quantity,0) }} {{ $item->unit }}</strong></td>
+                            @if ($loop->first)
+                                <td data-label="Carton size" rowspan="{{ $span }}">{{ $carton->dimensionsLabel() }}</td>
+                                <td data-label="Net weight" rowspan="{{ $span }}" class="is-num">{{ number_format($carton->totalNetWeight(),1) }} kg<span class="master-sub">{{ number_format((float) $carton->net_weight_per_carton,1) }} / carton</span></td>
+                                <td data-label="Gross weight" rowspan="{{ $span }}" class="is-num">{{ number_format($carton->totalGrossWeight(),1) }} kg<span class="master-sub">{{ number_format((float) $carton->gross_weight_per_carton,1) }} / carton</span></td>
+                                <td data-label="Chargeable" rowspan="{{ $span }}" class="is-num">{{ number_format($carton->totalChargeableWeight(),1) }} kg</td>
+                                <td data-label="Total CBM" rowspan="{{ $span }}" class="is-num"><span>{{ number_format($carton->cbmPerCarton(),4) }}/carton</span><strong>{{ number_format($carton->totalCbm(),4) }} total</strong></td>
                             @endif
-                        </td>
-                        <td data-label="Cartons" class="is-num">{{ number_format($row['cartons']) }}</td>
-                        <td data-label="Qty/carton" class="is-num">{{ number_format($row['quantity_per_carton'],0) }} {{ $group['unit'] }}</td>
-                        <td data-label="Total qty" class="is-num"><strong>{{ number_format($row['quantity'],0) }} {{ $group['unit'] }}</strong></td>
-                        <td data-label="Size">{{ $row['carton']->dimensionsLabel() }}</td>
-                        <td data-label="Net weight" class="is-num">{{ $row['shared'] ? 'Shared' : number_format($row['net'],1).' kg' }}</td>
-                        <td data-label="Gross weight" class="is-num">{{ $row['shared'] ? 'Shared' : number_format($row['gross'],1).' kg' }}</td>
-                        <td data-label="Chargeable" class="is-num">{{ $row['shared'] ? 'Shared' : number_format($row['carton']->totalChargeableWeight(),1).' kg' }}</td>
-                        <td data-label="Total CBM" class="is-num">
-                            @if ($row['shared'])
-                                Shared
-                            @else
-                                <span>{{ number_format($row['cbm_per_carton'],4) }}/carton</span>
-                                <strong>{{ number_format($row['cbm'],4) }} total</strong>
-                            @endif
-                        </td>
-                    </tr>
-                    @php($anchored[$row['carton']->id] = true)
+                        </tr>
+                    @endforeach
                 @endforeach
             @endforeach
             </tbody>
-            <tfoot><tr><td><strong>Total</strong><span class="master-sub">{{ $list->cartons->count() }} carton {{ \Illuminate\Support\Str::plural('group', $list->cartons->count()) }}</span></td><td class="is-num"><strong>{{ number_format($list->total_cartons) }}</strong></td><td></td><td class="is-num"><strong>{{ number_format($list->totalQuantity(),0) }}</strong></td><td></td><td class="is-num"><strong>{{ number_format((float)$list->total_net_weight,1) }} kg</strong></td><td class="is-num"><strong>{{ number_format((float)$list->total_gross_weight,1) }} kg</strong></td><td class="is-num"><strong>{{ number_format($list->totalChargeableWeight(),1) }} kg</strong></td><td class="is-num"><strong>{{ number_format((float)$list->total_cbm,4) }}</strong></td></tr></tfoot>
+            <tfoot><tr><td><strong>Total</strong><span class="master-sub">{{ $list->cartons->count() }} carton {{ \Illuminate\Support\Str::plural('block', $list->cartons->count()) }}</span></td><td class="is-num"><strong>{{ number_format($list->total_cartons) }}</strong></td><td></td><td class="is-num"><strong>{{ number_format($list->totalQuantity(),0) }}</strong></td><td></td><td class="is-num"><strong>{{ number_format((float)$list->total_net_weight,1) }} kg</strong></td><td class="is-num"><strong>{{ number_format((float)$list->total_gross_weight,1) }} kg</strong></td><td class="is-num"><strong>{{ number_format($list->totalChargeableWeight(),1) }} kg</strong></td><td class="is-num"><strong>{{ number_format((float)$list->total_cbm,4) }}</strong></td></tr></tfoot>
         </table></div>
     </section>
     <section class="master-card master-card--flat master-section pl-verification-card">
