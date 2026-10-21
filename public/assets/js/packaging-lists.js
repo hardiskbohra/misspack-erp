@@ -96,7 +96,11 @@
     });
     const panels = [...cartonList.querySelectorAll('[data-carton]')];
     if (cartonTabs) cartonTabs.innerHTML = panels.map((panel, index) => {
-      const label = panel.querySelector('[name$="[carton_label]"]')?.value.trim() || `Carton group ${index + 1}`;
+      /* A tab named "Carton group 3" says nothing when the same product is packed
+         in three carton sizes; the first product in the group names it. */
+      const label = panel.querySelector('[name$="[carton_label]"]')?.value.trim()
+        || panel.querySelector('[data-item] [name$="[item_description]"]')?.value.trim()
+        || `Carton group ${index + 1}`;
       const count = number(panel.querySelector('[data-carton-count]')?.value);
       const dimensions = [panel.querySelector('[data-length]')?.value, panel.querySelector('[data-width]')?.value, panel.querySelector('[data-height]')?.value].filter(Boolean).join(' × ') || 'Dimensions pending';
       return `<button type="button" class="master-tab pl-carton-tab" role="tab" id="plCartonTab${index}" aria-controls="plCartonPanel${index}" data-carton-tab="${index}"><b>${index + 1}</b><span><strong>${escapeHtml(label)}</strong><small>${count || 0} carton${count === 1 ? '' : 's'} · ${escapeHtml(dimensions)}</small></span></button>`;
@@ -187,7 +191,7 @@
     const next=event.key==='Home'?0:event.key==='End'?count-1:event.key==='ArrowRight'?(activeCarton+1)%count:(activeCarton-1+count)%count;
     activateCarton(next,true);
   });
-  root.addEventListener('input', event => { if (event.target.matches('[data-carton-count],[data-length],[data-width],[data-height],[data-net],[data-gross],[data-qty],[name$="[carton_label]"],[name="from_name"],[name="ship_to_name"]')) update(); });
+  root.addEventListener('input', event => { if (event.target.matches('[data-carton-count],[data-length],[data-width],[data-height],[data-net],[data-gross],[data-qty],[name$="[carton_label]"],[name$="[item_description]"],[name="from_name"],[name="ship_to_name"]')) update(); });
   root.addEventListener('invalid', event => {
     const panel = event.target.closest('[data-carton]');
     if (panel) activateCarton([...cartonList.querySelectorAll('[data-carton]')].indexOf(panel));

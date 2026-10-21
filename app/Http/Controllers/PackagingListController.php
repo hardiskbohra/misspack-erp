@@ -114,6 +114,9 @@ class PackagingListController extends Controller
         $linker->reconcile($packagingList);
         return view('packaging_lists.show', [
             'list' => $packagingList,
+            /* The same product can sit in several carton groups; the screen and
+               the printed document read it as one product with one total. */
+            'productGroups' => $packagingList->productGroups(),
             'verificationInspection' => $verifier->inspect($packagingList),
         ]);
     }
@@ -166,8 +169,12 @@ class PackagingListController extends Controller
 
     public function print(PackagingList $packagingList): View
     {
-        $packagingList->load(['cartons.items', 'vendor', 'client', 'project', 'shipment']);
-        return view('packaging_lists.print', ['list' => $packagingList, 'organisation' => Organisation::current()]);
+        $packagingList->load(['cartons.items.product', 'vendor', 'client', 'project', 'shipment']);
+        return view('packaging_lists.print', [
+            'list' => $packagingList,
+            'productGroups' => $packagingList->productGroups(),
+            'organisation' => Organisation::current(),
+        ]);
     }
 
     public function duplicate(PackagingList $packagingList): RedirectResponse

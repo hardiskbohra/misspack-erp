@@ -134,9 +134,14 @@ check('a vendor statement is the vendor currency ledger',
     && /vendor currency ledger: bills raised and payments made/.test(service));
 check('a vendor with only cashflow rows still gets a statement, and it says so',
     /no vendor-currency rows filed yet/.test(service)
-    /* and the fallback is a live branch, not a comment about one */
-    && /if \(\$rows === \[\] && ! \$hasVendorLedger && Schema::hasTable\('cashflow_entries'\)\)/.test(service)
-    && /\$this->partyCashflow\(\$vendor->id, 'vendor'/.test(service));
+    /* the cashflow rows are appended to the vendor ledger always, not only when
+       the ledger is empty: a vendor can have both, and a rupee row filed
+       against a foreign-currency ledger is still the vendor's money */
+    && /foreach \(app\(CashflowVendorPaymentSync::class\)->unlinkedCashflow\(\$vendor\) as \$entry\)/.test(service));
+check('a mirrored payment is never printed twice on the statement',
+    /->whereNotExists\(function \(\$sub\)/.test(read('app/Services/CashflowVendorPaymentSync.php'))
+    && /'source'/.test(read('app/Services/CashflowVendorPaymentSync.php'))
+    && /unlinkedCashflow/.test(read('app/Services/PartyStatement.php')));
 check('a party is matched on its own id column — never both',
     /where\(\$type === 'vendor' \? 'vendor_id' : 'client_id', \$partyId\)/.test(service)
     && /one's money on the other's statement/.test(prose(service)));
