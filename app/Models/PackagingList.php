@@ -18,7 +18,7 @@ class PackagingList extends Model
         'bill_to_name', 'bill_to_address', 'ship_to_name', 'ship_to_address',
         'declaration', 'customer_signature', 'supplier_signature', 'notes',
         'total_cartons', 'total_net_weight', 'total_gross_weight', 'total_cbm', 'created_by',
-        'packing_owner_id', 'auto_generated', 'packing_warnings',
+        'packing_owner_id', 'auto_generated', 'packing_warnings', 'print_columns',
     ];
 
     protected $casts = [
@@ -28,7 +28,41 @@ class PackagingList extends Model
         'total_cbm' => 'decimal:4',
         'auto_generated' => 'boolean',
         'packing_warnings' => 'array',
+        'print_columns' => 'array',
     ];
+
+    /** Canonical print order; saved selections never change packing calculations. */
+    public static function printColumnOptions(): array
+    {
+        return [
+            'serial' => 'Sr. no.', 'item' => 'Item description', 'cartons' => 'Carton',
+            'qty' => 'Qty / carton', 'total_qty' => 'Total qty', 'size' => 'Carton size (cm)',
+            'nw' => 'N.W. / carton', 'net' => 'Net weight', 'gw' => 'G.W. / carton',
+            'gross' => 'Gross weight', 'cbm' => 'CBM/carton', 'total_cbm' => 'Total CBM',
+        ];
+    }
+
+    public static function defaultPrintColumns(): array
+    {
+        // Preserve the existing eleven-column layout for old and newly created lists.
+        return array_values(array_diff(array_keys(static::printColumnOptions()), ['cbm']));
+    }
+
+    public function selectedPrintColumns(): array
+    {
+        $selected = array_values(array_intersect(array_keys(static::printColumnOptions()), $this->print_columns ?? static::defaultPrintColumns()));
+        return $selected ?: static::defaultPrintColumns();
+    }
+
+    public function printColumnWidths(): array
+    {
+        $weights = ['serial' => 4.5, 'item' => 21.5, 'cartons' => 5.5, 'qty' => 7.5,
+            'total_qty' => 8, 'size' => 14, 'nw' => 7.5, 'net' => 7.5, 'gw' => 7.5,
+            'gross' => 7.5, 'cbm' => 9, 'total_cbm' => 9];
+        $weights = array_intersect_key($weights, array_flip($this->selectedPrintColumns()));
+        $total = array_sum($weights);
+        return array_map(fn ($weight) => $weight / $total * 100, $weights);
+    }
 
     public function cartons() { return $this->hasMany(PackagingListCarton::class)->orderBy('sort_order')->orderBy('id'); }
     public function verifications() { return $this->hasMany(PackagingListVerification::class)->latest('verified_at')->latest('id'); }

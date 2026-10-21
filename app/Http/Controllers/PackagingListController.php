@@ -220,6 +220,8 @@ class PackagingListController extends Controller
             'from_contact' => ['nullable', 'string', 'max:255'], 'from_email' => ['nullable', 'email', 'max:255'],
             'bill_to_name' => ['required', 'string', 'max:255'], 'bill_to_address' => ['nullable', 'string'],
             'ship_to_name' => ['required', 'string', 'max:255'], 'ship_to_address' => ['nullable', 'string'],
+            'print_columns' => ['sometimes', 'required', 'array', 'min:1', 'max:12'],
+            'print_columns.*' => ['required', 'string', 'distinct', Rule::in(array_keys(PackagingList::printColumnOptions()))],
             'declaration' => ['nullable', 'string'], 'customer_signature' => ['nullable', 'string', 'max:255'],
             'supplier_signature' => ['nullable', 'string', 'max:255'], 'notes' => ['nullable', 'string'],
             'cartons' => ['required', 'array', 'min:1', 'max:200'],

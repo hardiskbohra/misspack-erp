@@ -88,6 +88,20 @@
             <div class="pl-final-summary"><div class="pl-final-summary-head"><div><h3>Final packing summary</h3><p>Combined totals across every carton-group tab.</p></div><span data-summary-completeness>Complete carton details to finalise the PL</span></div><div class="pl-live-totals"><div><span>Carton groups</span><strong data-total-groups>0</strong></div><div><span>Item lines</span><strong data-total-items>0</strong></div><div><span>Total cartons</span><strong data-total-cartons>0</strong></div><div><span>Net weight</span><strong data-total-net>0.0 kg</strong></div><div><span>Gross weight</span><strong data-total-gross>0.0 kg</strong></div><div><span>Total CBM</span><strong data-total-cbm>0.0000</strong></div><div><span>Chargeable weight</span><strong data-total-chargeable>0.0 kg</strong></div></div></div>
         </div>
 
+        <section class="master-section" aria-labelledby="plPrintColumnsTitle">
+            <h2 class="master-section-title" id="plPrintColumnsTitle">Print columns</h2>
+            <p class="master-sub" id="plPrintColumnsHelp">Choose the table columns to print for this packaging list. Select at least one. Packing calculations and carton labels are unchanged.</p>
+            <input type="hidden" name="print_columns" value="">
+            <fieldset class="pl-print-columns" aria-describedby="plPrintColumnsHelp">
+                <legend>Columns to include</legend>
+                @foreach (\App\Models\PackagingList::printColumnOptions() as $column => $label)
+                    <label class="pl-print-column"><input type="checkbox" name="print_columns[]" value="{{ $column }}" @checked(in_array($column, (array) old('print_columns', $list->selectedPrintColumns()), true))><span>{{ $label }}</span></label>
+                @endforeach
+            </fieldset>
+            @error('print_columns')<p class="master-error" role="alert">{{ $message }}</p>@enderror
+            @error('print_columns.*')<p class="master-error" role="alert">{{ $message }}</p>@enderror
+        </section>
+
         <div class="master-section pl-compact-section"><div class="master-section-head"><div><h2 class="master-section-title">Certification and notes</h2><p class="master-sub">Declaration, signature names and internal notes</p></div><button type="button" class="master-btn master-btn-soft master-btn-sm" data-open-pl-modal="plCertificationModal"><i class="fa-solid fa-pen"></i> Edit certification</button></div></div>
         <dialog class="pl-modal" id="plCertificationModal" aria-labelledby="plCertificationTitle"><div class="master-modal-card pl-modal-card"><header class="master-modal-header pl-modal-head"><div><p class="master-eyebrow">Packaging list</p><h2 id="plCertificationTitle">Certification and notes</h2><p>These details appear at the end of the printable document, except internal notes.</p></div><button type="button" class="master-modal-close" data-close-pl-modal aria-label="Close"><i class="fa-solid fa-xmark"></i></button></header><div class="master-modal-body pl-modal-body"><div class="master-field"><label class="master-label">Declaration</label><textarea class="master-textarea" name="declaration" rows="4">{{ old('declaration',$list->declaration) }}</textarea></div><div class="master-detail-grid"><div class="master-field"><label class="master-label">Customer signature name</label><input class="master-input" name="customer_signature" value="{{ old('customer_signature',$list->customer_signature) }}"></div><div class="master-field"><label class="master-label">Supplier signature name</label><input class="master-input" name="supplier_signature" value="{{ old('supplier_signature',$list->supplier_signature) }}"></div></div><div class="master-field"><label class="master-label">Internal notes</label><textarea class="master-textarea" name="notes" rows="4">{{ old('notes',$list->notes) }}</textarea></div></div><footer class="master-modal-footer pl-modal-foot"><button type="button" class="master-btn master-btn-primary" data-close-pl-modal>Done</button></footer></div></dialog>
     </form>

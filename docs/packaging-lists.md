@@ -80,13 +80,35 @@ Opening a group — by click, arrow key, or "Add carton group" — scrolls its t
 into view, because a selected tab that sits off-screen is a tab the user cannot
 find again.
 
+### Per-list print columns
+
+Create/edit has a **Print columns** section with twelve checkboxes in document
+order: Sr. no., Item description, Carton, Qty / carton, Total qty, Carton size
+(cm), N.W. / carton, Net weight, G.W. / carton, Gross weight, CBM/carton, Total
+CBM. Select at least one and save. This setting belongs to the packaging list,
+not to the user or browser; duplication copies it. Existing records (null JSON)
+and new records default to the original eleven columns, excluding CBM/carton.
+
+The print view emits only selected headers, cells and totals. Column weights
+are normalized to 100% of portrait A4; section bands span the selected count.
+Carton-level values still span all item lines within a shared carton. CBM/carton
+is calculated from dimensions, not entered again. Only carton count, total qty,
+net weight, gross weight and total CBM are summed in the foot; per-carton values
+are never summed. Packing calculations, workflow checks, labels and the packing
+summary below the table are unaffected. All twelve columns can be selected,
+though fewer columns make a more readable portrait sheet.
+
+Deployment: run `php artisan migrate` to add the nullable `print_columns` JSON
+column. Omitted settings in older integrations preserve the existing choice;
+an explicitly empty or unknown selection is rejected.
+
 ## 2. What the two surfaces show
 
 - **Print** (`packaging_lists/print`) is the sheet the supplier and the customer
   read: Sr. No., Item Description, Carton, Qty/Carton, Total Qty, Carton Size,
-  NW/Carton, Net Weight, GW/Carton, Gross Weight, Total CBM — eleven columns.
-  Volume is carried as a total for the packing run only; the per-carton CBM was
-  a twelfth column nobody priced freight from. Item lines are numbered
+  NW/Carton, Net Weight, GW/Carton, Gross Weight, optional CBM/carton, Total CBM — up to twelve columns.
+  Volume is shown as a packing-run total by default; per-carton CBM can be
+  enabled in Print columns. Item lines are numbered
   continuously across sections, and the foot is the document's own totals — so a
   section can never disagree with the total.
 - **It is a document like the invoice, not a separate design.** The sheet loads

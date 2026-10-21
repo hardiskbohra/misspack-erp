@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="{{ asset('assets/css/document-print.css') }}">
     <link rel="stylesheet" href="{{ $assetVer('assets/css/packaging-list-print.css') }}">
     {{-- Portrait is the shared paper (document-print.css), so this sheet states
-         no page of its own: eleven columns are fitted to the 186 mm a portrait
+         no page of its own: selected columns share the 186 mm a portrait
          A4 leaves inside its 12 mm margins, and one document never carries two
          paper sizes. --}}
 </head>
@@ -125,54 +125,51 @@
                Those items share the carton, so the carton's own columns print once
                and span its lines; only the two quantity columns repeat. */
             $serial = 0;
+            $columns = $list->selectedPrintColumns();
+            $columnLabels = \App\Models\PackagingList::printColumnOptions();
+            $columnWidths = $list->printColumnWidths();
+            $showColumn = fn ($column) => in_array($column, $columns, true);
         @endphp
 
         <div class="pl-items-wrap">
             <table class="pl-items">
                 <colgroup>
-                    <col class="pl-col-serial"><col class="pl-col-item"><col class="pl-col-cartons"><col class="pl-col-qty">
-                    <col class="pl-col-total-qty"><col class="pl-col-size"><col class="pl-col-nw"><col class="pl-col-net">
-                    <col class="pl-col-gw"><col class="pl-col-gross"><col class="pl-col-total-cbm">
+                    @foreach ($columns as $column)
+                        <col class="pl-col-{{ str_replace('_', '-', $column) }}" style="width: {{ $columnWidths[$column] }}%">
+                    @endforeach
                 </colgroup>
                 <thead>
                     <tr>
-                        <th>Sr. no.</th>
-                        <th>Item description</th>
-                        <th class="right">Carton</th>
-                        <th class="right">Qty / carton</th>
-                        <th class="right">Total qty</th>
-                        <th class="right">Carton size (cm)</th>
-                        <th class="right">N.W. / carton</th>
-                        <th class="right">Net weight</th>
-                        <th class="right">G.W. / carton</th>
-                        <th class="right">Gross weight</th>
-                        <th class="right">Total CBM</th>
+                        @foreach ($columns as $column)
+                            <th @class(['right' => !in_array($column, ['serial', 'item'], true)])>{{ $columnLabels[$column] }}</th>
+                        @endforeach
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($sections as $section)
                         <tr class="pl-section-band">
-                            <th colspan="11">{{ $section['label'] }}</th>
+                            <th colspan="{{ count($columns) }}">{{ $section['label'] }}</th>
                         </tr>
                         @foreach ($section['cartons'] as $carton)
                             @php($span = max(1, $carton->items->count()))
                             @foreach ($carton->items as $item)
                                 @php($serial++)
                                 <tr>
-                                    <td class="right pl-serial">{{ $serial }}</td>
-                                    <td class="pl-item-description">{{ $item->item_description }}</td>
+                                    @if ($showColumn('serial'))<td class="right pl-serial">{{ $serial }}</td>@endif
+                                    @if ($showColumn('item'))<td class="pl-item-description">{{ $item->item_description }}</td>@endif
                                     @if ($loop->first)
-                                        <td class="right" rowspan="{{ $span }}">{{ number_format($carton->carton_count) }}</td>
+                                        @if ($showColumn('cartons'))<td class="right" rowspan="{{ $span }}">{{ number_format($carton->carton_count) }}</td>@endif
                                     @endif
-                                    <td class="right">{{ number_format((float) $item->quantity_per_carton,0) }} {{ $item->unit }}</td>
-                                    <td class="right">{{ number_format((float) $item->total_quantity,0) }} {{ $item->unit }}</td>
+                                    @if ($showColumn('qty'))<td class="right">{{ number_format((float) $item->quantity_per_carton,0) }} {{ $item->unit }}</td>@endif
+                                    @if ($showColumn('total_qty'))<td class="right">{{ number_format((float) $item->total_quantity,0) }} {{ $item->unit }}</td>@endif
                                     @if ($loop->first)
-                                        <td class="right" rowspan="{{ $span }}">{{ str_replace(' cm', '', $carton->dimensionsLabel()) }}</td>
-                                        <td class="right" rowspan="{{ $span }}">{{ number_format((float) $carton->net_weight_per_carton,1) }}</td>
-                                        <td class="right" rowspan="{{ $span }}">{{ number_format($carton->totalNetWeight(),1) }}</td>
-                                        <td class="right" rowspan="{{ $span }}">{{ number_format((float) $carton->gross_weight_per_carton,1) }}</td>
-                                        <td class="right" rowspan="{{ $span }}">{{ number_format($carton->totalGrossWeight(),1) }}</td>
-                                        <td class="right" rowspan="{{ $span }}">{{ number_format($carton->totalCbm(),4) }}</td>
+                                        @if ($showColumn('size'))<td class="right pl-carton-dimensions" rowspan="{{ $span }}">{{ str_replace(' cm', '', $carton->dimensionsLabel()) }}</td>@endif
+                                        @if ($showColumn('nw'))<td class="right" rowspan="{{ $span }}">{{ number_format((float) $carton->net_weight_per_carton,1) }}</td>@endif
+                                        @if ($showColumn('net'))<td class="right" rowspan="{{ $span }}">{{ number_format($carton->totalNetWeight(),1) }}</td>@endif
+                                        @if ($showColumn('gw'))<td class="right" rowspan="{{ $span }}">{{ number_format((float) $carton->gross_weight_per_carton,1) }}</td>@endif
+                                        @if ($showColumn('gross'))<td class="right" rowspan="{{ $span }}">{{ number_format($carton->totalGrossWeight(),1) }}</td>@endif
+                                        @if ($showColumn('cbm'))<td class="right" rowspan="{{ $span }}">{{ number_format($carton->cbmPerCarton(),4) }}</td>@endif
+                                        @if ($showColumn('total_cbm'))<td class="right" rowspan="{{ $span }}">{{ number_format($carton->totalCbm(),4) }}</td>@endif
                                     @endif
                                 </tr>
                             @endforeach
@@ -180,16 +177,19 @@
                     @endforeach
                 </tbody>
                 <tfoot>
+                    <tr><th colspan="{{ count($columns) }}">Total</th></tr>
                     <tr>
-                        <th colspan="2">Total</th>
-                        <th class="right">{{ number_format($list->total_cartons) }}</th>
-                        <th></th>
-                        <th class="right">{{ number_format($list->totalQuantity(),0) }}</th>
-                        <th colspan="2"></th>
-                        <th class="right">{{ number_format((float) $list->total_net_weight,1) }}</th>
-                        <th></th>
-                        <th class="right">{{ number_format((float) $list->total_gross_weight,1) }}</th>
-                        <th class="right">{{ number_format((float) $list->total_cbm,4) }}</th>
+                        @foreach ($columns as $column)
+                            <th class="right">
+                                @switch($column)
+                                    @case('cartons') {{ number_format($list->total_cartons) }} @break
+                                    @case('total_qty') {{ number_format($list->totalQuantity(),0) }} @break
+                                    @case('net') {{ number_format((float) $list->total_net_weight,1) }} @break
+                                    @case('gross') {{ number_format((float) $list->total_gross_weight,1) }} @break
+                                    @case('total_cbm') {{ number_format((float) $list->total_cbm,4) }} @break
+                                @endswitch
+                            </th>
+                        @endforeach
                     </tr>
                 </tfoot>
             </table>

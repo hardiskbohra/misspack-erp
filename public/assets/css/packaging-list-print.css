@@ -283,9 +283,8 @@ html body.pdf-preview .pdf-sheet.pl-sheet {
     table-layout: fixed;
 }
 
-/* Eleven columns on a portrait A4 leave 186 mm inside the page margins. The
-   figures set the widths, not the prose: 5 px of side padding and one column
-   per figure, so no number is ever clipped and the description keeps 40 mm. */
+/* Legacy eleven-column proportions on portrait A4. The view normalizes these
+   weights across the selected columns, including optional CBM/carton. */
 .pl-col-serial { width: 4.5%; }
 .pl-col-item { width: 21.5%; }
 .pl-col-cartons { width: 5.5%; }
@@ -333,8 +332,7 @@ html body.pdf-preview .pdf-sheet.pl-sheet {
     hyphens: none;
 }
 
-.pl-items thead th:nth-child(1),
-.pl-items thead th:nth-child(2) {
+.pl-items thead th:not(.right) {
     text-align: left;
 }
 
@@ -659,4 +657,10 @@ html body.pdf-preview .pdf-sheet.pl-sheet {
     .pl-facts {
         grid-template-columns: minmax(0, 1fr);
     }
+}
+
+/* Long dimensions may wrap when all twelve columns are included on portrait A4. */
+.pl-items td.pl-carton-dimensions {
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
