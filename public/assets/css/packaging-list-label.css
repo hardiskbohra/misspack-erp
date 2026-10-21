@@ -4,7 +4,10 @@
    height the rest leaves, so a one-line carton does not leave a blank half-page
    at the bottom. Sizes are in `em`, so each format scales from one base size. */
 *{box-sizing:border-box}
-body{margin:0;background:#e5e7eb;color:#111;font:12pt/1.35 Arial,Helvetica,sans-serif}
+/* The ERP's own type, so a label reads as part of the same paperwork as the
+   invoice and the packing list rather than as a foreign printout. Fallbacks are
+   the app's: Inter, then the system UI faces. */
+body{margin:0;background:#e5e7eb;color:#111;font:12pt/1.35 "Inter","Segoe UI",Roboto,Arial,sans-serif;font-variant-numeric:tabular-nums}
 .label-toolbar{max-width:210mm;margin:12px auto;display:flex;justify-content:flex-end;gap:8px}
 .label-toolbar button{border:0;border-radius:5px;background:#111;color:#fff;padding:9px 14px;font-weight:700;cursor:pointer}
 .label-toolbar button+button{background:#4b4b4b}

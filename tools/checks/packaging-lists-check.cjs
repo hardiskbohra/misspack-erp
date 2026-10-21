@@ -12,6 +12,7 @@ const controller=read('app/Http/Controllers/PackagingListController.php');
 const routes=read('routes/web.php');
 const form=read('resources/views/packaging_lists/form.blade.php');
 const print=read('resources/views/packaging_lists/print.blade.php');
+const sheetPrint=read('public/assets/css/packaging-list-print.css');
 const js=read('public/assets/js/packaging-lists.js');
 let passed=0,failed=0;
 function check(label,value){if(value){passed++;console.log(`PASS ${label}`)}else{failed++;console.error(`FAIL ${label}`)}}
@@ -39,23 +40,29 @@ check('packaging numbers use a financial-year MP/PL sequence', controller.includ
 check('form includes address snapshots, links and nested editors', ['from_name','bill_to_name','ship_to_name','data-carton-list','plItemTemplate'].every(x=>form.includes(x)));
 check('live calculator derives total quantity and CBM', js.includes('quantity * count')&&js.includes('/ 1000000'));
 check('editor protects minimum carton and item counts', js.includes('at least one item')&&js.includes('at least one carton group'));
-check('print document contains business fields', ['PACKAGING LIST','FROM','BILL TO','SHIP TO','Item Description','Carton Size','Net Weight','Gross Weight','DECLARATION','Authorised signatory'].every(x=>print.includes(x)));
-check('print uses print media and an A4 landscape page', read('public/assets/css/packaging-lists.css').includes('@media print')&&read('public/assets/css/packaging-lists.css').includes('size:A4 landscape'));
+check('print document contains business fields', ['Packaging List','From','Bill to','Ship to','Item description','Carton size','Net weight','Gross weight','Declaration','Authorised Signatory'].every(x=>print.includes(x)));
 const index=read('resources/views/packaging_lists/index.blade.php'), css=read('public/assets/css/packaging-lists.css'), show=read('resources/views/packaging_lists/show.blade.php');
-const sheetCss=css.slice(css.indexOf('.pl-document{'),css.indexOf('@media print'));
-check('the sheet prints black on white with no colour carrying meaning', !/color:#fff/i.test(sheetCss)&&!/print-color-adjust/i.test(sheetCss)&&!/(#(?:2563eb|17233d|eff6ff|dbeafe|1d4ed8|475569))|rgb\(|hsla?\(/i.test(sheetCss)&&sheetCss.includes('background:#e6e6e6')&&sheetCss.includes('background:#f2f2f2')&&sheetCss.includes('border-bottom:3px solid #000'));
+
+/* The sheet is a document like the invoice: same paper shell, same toolbar, the
+   same Inter stack and the same A4-landscape page, so the two read as one house
+   style rather than two printouts from two systems. */
+check('the packaging sheet prints on the shared document shell, not its own paper CSS', print.includes("assets/css/document-print.css")&&print.includes("assets/css/packaging-list-print.css")&&print.includes('class="pdf-preview pl-standalone"')&&print.includes('class="pdf-sheet pdf-sheet--landscape pl-sheet"')&&print.includes('class="pdf-toolbar pdf-toolbar--spread pdf-toolbar--landscape no-print"')&&print.includes('pdf-action pdf-action--secondary')&&print.includes('pdf-action pdf-action--primary'));
+check('print uses the app Inter stack and the shared page size', print.includes('family=Inter:wght@400;500;600;700')&&sheetPrint.includes('--pl-font: var(--pdf-font-family')&&sheetPrint.includes('@media print')&&sheetPrint.includes('size: A4 landscape')&&sheetPrint.includes('margin: 12mm')&&!sheetPrint.includes('Arial,Helvetica'));
+check('the document hierarchy follows the invoice: letterhead, facts, parties, lines, summary, sign-off, footer', ['class="pl-top"','class="pl-facts"','class="pl-parties"','class="pl-items"','class="pl-bottom"','class="pl-footer"'].map(marker=>print.indexOf(marker)).every((position,index,all)=>position>-1&&(index===0||position>all[index-1]))&&print.indexOf('class="pl-summary"')<print.indexOf('class="pl-signature"'));
+check('the letterhead, facts strip, party cards and summary reuse the invoice treatment', sheetPrint.includes('grid-template-columns: minmax(0, 1fr) minmax(180px, 225px)')&&sheetPrint.includes('border-bottom: 2px solid var(--pl-ink)')&&sheetPrint.includes('grid-template-columns: repeat(5, minmax(0, 1fr))')&&sheetPrint.includes('.pl-party h2')&&sheetPrint.includes('.pl-summary tr.pl-grand-total td'));
+check('the sheet prints black on white, with no colour carrying meaning', !/color:\s*#fff/i.test(sheetPrint)&&!/(#(?:2563eb|17233d|eff6ff|dbeafe|1d4ed8|475569))|hsla?\(/i.test(sheetPrint)&&sheetPrint.includes('background: var(--pl-surface-soft)')&&sheetPrint.includes('border-bottom: 2px solid var(--pl-ink)'));
 check('list follows shared page-action, flat-card, filter-drawer and applied-filter patterns', index.includes("@section('page-actions')")&&index.includes('master-card master-card--flat')&&index.includes('<x-filter-trigger')&&index.includes('master-list-applied'));
 check('list search includes linked project number and name', controller.includes("orWhereHas('project'")&&controller.includes("where('project_number', 'like'")&&controller.includes("orWhere('name', 'like'")&&index.includes('PL number, project, invoice or party'));
 check('list row menu offers view, print, edit, clone, status and delete actions', ['fa-eye','fa-print','fa-pen','fa-clone','packaging-lists.status','packaging-lists.destroy'].every(x=>index.includes(x))&&controller.includes('function updateStatus'));
 check('form is one flat surface divided into shared sections', form.includes('master-card master-card--flat master-form-card')&&(form.match(/master-form-card/g)||[]).length===1&&form.includes('master-section'));
 check('create and edit save from the application top bar', form.includes("@section('page-actions')")&&form.includes('form="packagingListForm"')&&form.includes('id="packagingListForm"')&&form.indexOf('Save packaging list')<form.indexOf("@section('content')")&&!form.includes('master-form-actions'));
-check('print puts a full-width section heading over its carton blocks', print.includes('class="pl-print-group-title"')&&print.includes('colspan="11"')&&print.includes("{{ $section['label'] }}")&&print.includes("@foreach ($section['cartons'] as $carton)"));
+check('print puts a full-width section heading over its carton blocks', print.includes('class="pl-section-band"')&&print.includes('colspan="11"')&&print.includes("{{ $section['label'] }}")&&print.includes("@foreach ($section['cartons'] as $carton)"));
 check('a multi-item carton prints its carton columns once and spans them', print.includes('rowspan="{{ $span }}"')&&print.includes('@php($span = max(1, $carton->items->count()))')&&print.includes('@if ($loop->first)'));
-check('only the two quantity columns repeat inside a shared carton', print.indexOf('<td>{{ $item->item_description }}</td>')<print.indexOf('rowspan="{{ $span }}"')&&print.includes('<td>{{ number_format((float) $item->quantity_per_carton,0) }} {{ $item->unit }}</td>')&&print.includes('<td>{{ number_format((float) $item->total_quantity,0) }} {{ $item->unit }}</td>'));
-check('print numbers the item lines continuously across sections', print.includes('@php($serial++)')&&print.includes('<td>{{ $serial }}</td>')&&print.includes('$serial = 0;'));
-check('print totals are the document\'s own, so a section can never disagree with the foot', print.includes('$list->total_cartons')&&print.includes('$list->totalQuantity()')&&print.includes('(float)$list->total_net_weight')&&!print.includes('Group total'));
+check('only the two quantity columns repeat inside a shared carton', print.indexOf('<td class="pl-item-description">{{ $item->item_description }}</td>')<print.indexOf('rowspan="{{ $span }}"')&&print.includes('<td class="right">{{ number_format((float) $item->quantity_per_carton,0) }} {{ $item->unit }}</td>')&&print.includes('<td class="right">{{ number_format((float) $item->total_quantity,0) }} {{ $item->unit }}</td>'));
+check('print numbers the item lines continuously across sections', print.includes('@php($serial++)')&&print.includes('{{ $serial }}')&&print.includes('$serial = 0;'));
+check('print totals are the document\'s own, so a section can never disagree with the foot', print.includes('$list->total_cartons')&&print.includes('$list->totalQuantity()')&&print.includes('(float) $list->total_net_weight')&&!print.includes('Group total'));
 const printHead=print.slice(print.indexOf('<thead>'),print.indexOf('</thead>'));
-check('the sheet carries the eleven columns left after dropping per-box CBM', ['Sr. No.','Item Description','Carton','Qty/Carton','Total Qty','Carton Size (cm)','NW/Carton (kg)','Net Weight (kg)','GW/Carton (kg)','Gross Weight (kg)','Total CBM'].every(x=>printHead.includes(x))&&(printHead.match(/<th>/g)||[]).length===11&&(print.match(/<col class=/g)||[]).length===11);
+check('the sheet carries the eleven columns left after dropping per-box CBM', ['Sr. no.','Item description','Carton','Qty / carton','Total qty','Carton size (cm)','N.W. / carton','Net weight','G.W. / carton','Gross weight','Total CBM'].every(x=>printHead.includes(x))&&(printHead.match(/<th[ >]/g)||[]).length===11&&(print.match(/<col class=/g)||[]).length===11);
 check('print carries volume as a total only and leaves chargeable weight to the screen', print.includes('Total CBM')&&!print.includes('CBM/Carton')&&!print.includes('cbmPerCarton()')&&!print.includes('Chargeable weight')&&!print.includes('totalChargeableWeight'));
 check('screen keeps a section heading row before its carton rows', show.includes('class="pl-section-row"')&&show.includes('scope="rowgroup"')&&show.includes('pl-section-row')&&show.indexOf('pl-section-row')<show.indexOf('pl-carton-item-row'));
 check('screen spans a shared carton\'s cells the same way the sheet does', show.includes('rowspan="{{ $span }}"')&&show.includes('@php($span = max(1, $carton->items->count()))'));
@@ -63,16 +70,12 @@ check('carton rows keep the label anchor the printed QR points at', show.include
 check('packaging quantities display as whole numbers', [print,show].every(view=>view.includes('number_format((float) $item->quantity_per_carton,0)')&&view.includes('number_format((float) $item->total_quantity,0)')));
 const packagingDisplayViews=[print,show,read('resources/views/packaging_lists/label.blade.php'),form,index];
 check('displayed packaging decimals use one digit instead of three', packagingDisplayViews.every(view=>!view.includes(',3)')) && !js.includes('toFixed(3)') && js.includes('toFixed(1)'));
-check('a multi-page sheet repeats its header and never splits a carton block', ['.pl-document-table thead{display:table-header-group}','.pl-document-table tfoot{display:table-footer-group}','.pl-document-table tr{break-inside:avoid;page-break-inside:avoid}','.pl-document-table .pl-print-group-title th{break-after:avoid;page-break-after:avoid}'].every(x=>css.includes(x)));
-check('print table text is twelve pixels, not the old ten', sheetCss.includes('.pl-document-table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:4mm;font-size:12px}')&&!css.includes('.pl-document-table{font-size:10px}')&&!css.includes('font-size:10px}.pl-col-serial'));
+check('a multi-page sheet repeats its header and never splits a carton block', ['.pl-items thead {\n        display: table-header-group;','.pl-items tfoot {\n        display: table-footer-group;','.pl-items tr {\n        break-inside: avoid;','.pl-section-band th {\n        break-after: avoid;'].every(x=>sheetPrint.includes(x)));
+check('print table text is twelve pixels, matching the invoice line table', /\.pl-items th,\n\.pl-items td \{[^}]*font-size: 12px/.test(sheetPrint)&&/\.pl-items thead th \{[^}]*font-size: 9\.5px/.test(sheetPrint)&&/\.pl-items th,\n\.pl-items td \{[^}]*font-size: 9px/.test(sheetPrint)===false);
 
-/* A4 fit: the sheet is laid out in the page's own units, so what the browser
-   sends to the printer is the page and not a 1120px design scaled to fit. */
-const printCss=css.slice(css.indexOf('@media print'));
-const printCols=[...sheetCss.matchAll(/\.pl-col-([a-z-]+)\{width:([\d.]+)%\}/g)];
-check('the sheet is laid out to an A4 landscape page in millimetres', printCss.includes('@page{size:A4 landscape;margin:10mm}')&&printCss.includes('.pl-document{width:277mm;max-width:100%;margin:0;padding:0;box-shadow:none}')&&sheetCss.includes('.pl-document{width:min(277mm,calc(100% - 32px));margin:0 auto 24px;background:#fff;box-sizing:border-box;padding:10mm 12mm'));
-check('print type is set in points, so the browser does not rescale the page', printCss.includes('.pl-print-body{background:#fff;font-size:9pt}')&&printCss.includes('.pl-document-table{font-size:9pt}')&&!printCss.includes('font-size:12px'));
-check('the eleven column widths add up to the page and leave Carton Size narrow', printCols.length===11&&printCols.reduce((sum,m)=>sum+Number(m[2]),0)===100&&sheetCss.includes('.pl-col-size{width:9%}'));
+/* Column widths are percentages of the sheet's own table, and still total 100. */
+const printCols=[...sheetPrint.matchAll(/\.pl-col-([a-z-]+) \{ width: ([\d.]+)%; \}/g)];
+check('the eleven column widths add up to the page and leave Carton Size narrow', printCols.length===11&&printCols.reduce((sum,m)=>sum+Number(m[2]),0)===100&&sheetPrint.includes('.pl-col-size { width: 9%; }'));
 
 /* The logo is our letterhead, not the vendor's: a sheet drawn from a vendor's
    bill prints on that vendor's paper. */
@@ -84,7 +87,7 @@ check('a carton label is not repeated when it is the section heading', show.incl
 check('duplicate and delete actions live in the application top bar', show.includes("@section('page-actions')")&&show.indexOf("packaging-lists.duplicate")<show.indexOf("@section('content')")&&show.indexOf("packaging-lists.destroy")<show.indexOf("@section('content')")&&!show.includes('emp-card-foot'));
 check('manual verification action is absent from detail and listing views', !show.includes('packaging-list-verification.js')&&!show.includes('plVerificationModal')&&!index.includes('Run verification'));
 check('detail UI explains and shows automatic workflow checks', ['Automatic workflow checks','checks run automatically','pl-automated-checks'].every(x=>show.includes(x))&&css.includes('.pl-verification-summary'));
-check('screen surfaces use theme tokens rather than fixed light fills', css.slice(0,css.indexOf('.pl-print-body')).includes('var(--mc-card)')&&!/#(?:fff|f8fafc|eff6ff|dbeafe)/i.test(css.slice(0,css.indexOf('.pl-print-body'))));
+check('screen surfaces use theme tokens rather than fixed light fills', css.includes('var(--mc-card)')&&!/#(?:fff|f8fafc|eff6ff|dbeafe)/i.test(css)&&!css.includes('.pl-print-body'));
 const expansion=read('database/migrations/2026_10_17_120000_expand_packaging_lists_for_source_packing_and_labels.php');
 const source=read('app/Services/PackagingListSource.php'), label=read('resources/views/packaging_lists/label.blade.php');
 check('sales, purchase bill and shipment sources preserve source-line identity', ['sales_invoice','purchase_invoice','shipment','source_item_id','source_quantity'].every(x=>source.includes(x))&&expansion.includes("purchase_invoice_id"));

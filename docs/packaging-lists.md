@@ -72,16 +72,23 @@ products inside it would be a guess.
   a twelfth column nobody priced freight from. Item lines are numbered
   continuously across sections, and the foot is the document's own totals — so a
   section can never disagree with the total.
-- **The sheet is black and white.** Every rule, band and fill is grey or black,
-  body text is black on white, and no colour carries meaning, so it prints the
-  same on an office laser as on screen — including with "background graphics"
-  switched off. Table body text is 12 px, not the old 10 px, and dimensions
-  print as `50 × 34 × 30` rather than `50.00 × 34.00 × 30.00`.
-- **It is laid out to the page, not to the screen.** A4 landscape, 10 mm
-  margins, the document box is 277 mm wide (297 − 2 × 10) and print type is set
-  in points, so the browser sends the page to the printer at scale 100% instead
-  of shrinking a 1120 px design. The Carton Size column is 9% — wide enough for
-  `120 × 80 × 65` on one line, narrow enough to give the description its space.
+- **It is a document like the invoice, not a separate design.** The sheet loads
+  `document-print.css` for the paper, actions, print reset and Inter stack, and
+  `packaging-list-print.css` for content only. It repeats the invoice's
+  hierarchy in the same order — letterhead, facts strip, party cards, line
+  table, summary, sign-off, footer note — with the same 12 mm margins, 8 px
+  card radius, 9.5 px uppercase field labels and 12 px table values, all driven
+  off the shared `--pdf-*` tokens. A customer receiving an invoice and a packing
+  list sees one house style, not two printouts from two systems.
+- **It is black and white.** Text is `--pdf-ink` on white, bands are
+  `--pdf-surface-soft`, and no colour carries meaning, so it prints the same on
+  an office laser — including with "background graphics" switched off.
+  Dimensions print as `50 × 34 × 30` rather than `50.00 × 34.00 × 30.00`.
+- **It is A4 landscape at 12 mm,** the one place the packing sheet departs from
+  the invoice's portrait page: eleven columns of figures need the width. The
+  shared shell still owns the paper, so screen and print agree. The Carton Size
+  column is 9% — wide enough for `120 × 80 × 65` on one line, narrow enough to
+  give the description its space.
 - **The logo is the issuer's.** `PackagingList::issuedByUs()` compares the From
   name with the organisation's legal and trade names (with "Pvt Ltd" against
   "Private Limited" ignored), so our own export prints on MissPack letterhead
@@ -95,7 +102,9 @@ products inside it would be a guess.
   holding one product does not print half a page of white. A5 is set at 11 pt
   (body, quantity and item text) with 15.6 pt packing group and 17.6 pt
   destination — two points up on the old 9 pt — and carries the carton's
-  barcode under the QR it scans to.
+  barcode under the QR it scans to. Labels use the app's Inter stack too: a
+  carton label is part of the same paperwork as the invoice and the packing
+  list, so it is set in the same type.
 - **Show** (`packaging_lists/show`) is the working screen: the same sections and
   the same spanning, plus chargeable weight per carton and the `#carton-N`
   anchor each carton's printed QR points at.
