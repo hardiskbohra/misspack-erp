@@ -75,6 +75,15 @@ check('displayed packaging decimals use one digit instead of three', packagingDi
 check('a multi-page sheet repeats its header and never splits a carton block', ['.pl-items thead {\n        display: table-header-group;','.pl-items tfoot {\n        display: table-footer-group;','.pl-items tr {\n        break-inside: avoid;','.pl-section-band th {\n        break-after: avoid;'].every(x=>sheetPrint.includes(x)));
 check('print table text is twelve pixels, matching the invoice line table', /\.pl-items th,\n\.pl-items td \{[^}]*font-size: 12px/.test(sheetPrint)&&/\.pl-items thead th \{[^}]*font-size: 9\.5px/.test(sheetPrint)&&/\.pl-items th,\n\.pl-items td \{[^}]*font-size: 9px/.test(sheetPrint)===false);
 
+check('the letterhead stacks the mark above the issuer block', /<div class="pl-seller">\s*@if \(\$onLetterhead\)\s*<img class="pl-brand-logo"/.test(print)&&sheetPrint.includes('grid-template-columns: minmax(0, 1fr);\n    align-items: start;\n    gap: 7px;')&&!print.includes('pl-seller--text'));
+check('table headings wrap inside their column, figures do not', /\.pl-items thead th \{[^}]*white-space: normal/.test(sheetPrint)&&/\.pl-items td\.right,\n\.pl-items tfoot th\.right \{[^}]*white-space: nowrap/.test(sheetPrint)&&!/\.pl-items \.right \{/.test(sheetPrint));
+
+/* The document reads as one ruled form: neighbouring boxes share a rule instead
+   of standing apart with a gap, and nothing is rounded. */
+check('bordered sections butt together instead of leaving gaps', ['.pl-facts {\n    display: grid;\n    grid-template-columns: repeat(5, minmax(0, 1fr));\n    gap: 0;\n    margin-top: 0;','.pl-parties {\n    display: grid;\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n    gap: 0;\n    margin-top: -1px;','.pl-party + .pl-party {\n    margin-left: -1px;','.pl-items-wrap {\n    width: 100%;\n    margin-top: -1px;','.pl-bottom {\n    display: grid;\n    grid-template-columns: minmax(0, 1fr) minmax(0, .92fr);\n    align-items: start;\n    gap: 0;\n    margin-top: -1px;'].every(x=>sheetPrint.includes(x))&&/\.pl-bottom-left > \* \+ \*,\n\.pl-bottom-right > \* \+ \* \{\n    margin-top: -1px;/.test(sheetPrint));
+check('the paper corner is squared too, not just the boxes on it', sheetPrint.includes('html body.pdf-preview .pdf-sheet.pl-sheet {')&&/html body\.pdf-preview \.pdf-sheet\.pl-sheet \{[^}]*border-radius: 0;/.test(sheetPrint));
+check('the sheet is square-cornered throughout', [...sheetPrint.matchAll(/border-radius:\s*([^;]+);/g)].length>0&&[...sheetPrint.matchAll(/border-radius:\s*([^;]+);/g)].every(m=>m[1].trim()==='0'));
+
 /* Column widths are percentages of the sheet's own table, and still total 100. */
 const printCols=[...sheetPrint.matchAll(/\.pl-col-([a-z-]+) \{ width: ([\d.]+)%; \}/g)];
 check('the eleven column widths add up to the page and leave Carton Size narrow', printCols.length===11&&printCols.reduce((sum,m)=>sum+Number(m[2]),0)===100&&sheetPrint.includes('.pl-col-size { width: 9%; }'));

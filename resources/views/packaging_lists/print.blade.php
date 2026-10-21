@@ -27,7 +27,7 @@
              identity on the right. A sheet drawn from a vendor's bill is that
              vendor's document, so it prints without our logo. --}}
         <header class="pl-top">
-            <div class="pl-seller{{ $onLetterhead ? '' : ' pl-seller--text' }}">
+            <div class="pl-seller">
                 @if ($onLetterhead)
                     <img class="pl-brand-logo" src="{{ $organisation->logoUrl('print') }}"
                         alt="{{ $organisation->legal_name }}">

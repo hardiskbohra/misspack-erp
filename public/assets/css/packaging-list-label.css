@@ -56,7 +56,7 @@ body{margin:0;background:#e5e7eb;color:#000;font:12pt/1.35 "Inter","Segoe UI",Ro
 .label-physical strong{font-size:1.25em}
 
 .label-handling{display:grid;grid-template-columns:repeat(auto-fit,minmax(24mm,1fr));gap:2.5mm;flex:0 0 auto}
-.label-handling-symbol{height:22mm;padding:1mm;border:2px solid #000;border-radius:2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.label-handling-symbol{height:22mm;padding:1mm;border:2px solid #000;border-radius:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .label-handling-symbol svg{width:13mm;height:13mm;fill:none;stroke:#000;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
 .label-handling-symbol strong{margin:.5mm 0 0;font-size:.74em;line-height:1.1}
 .label-handling-note{grid-column:1/-1;margin:0;padding:2mm 3mm;border:1px solid #000}
@@ -85,7 +85,7 @@ body{margin:0;background:#e5e7eb;color:#000;font:12pt/1.35 "Inter","Segoe UI",Ro
 .format-thermal .label-physical>div{padding:1mm 1.2mm}
 .format-thermal .label-physical strong{font-size:1.15em}
 .format-thermal .label-handling{grid-template-columns:repeat(4,minmax(0,1fr));gap:1mm}
-.format-thermal .label-handling-symbol{height:11mm;padding:.5mm;border-width:1.5px;border-radius:1mm}
+.format-thermal .label-handling-symbol{height:11mm;padding:.5mm;border-width:1.5px;border-radius:0}
 .format-thermal .label-handling-symbol svg{width:6.5mm;height:6.5mm;stroke-width:5}
 .format-thermal .label-handling-note{padding:1mm}
 

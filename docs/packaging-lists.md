@@ -95,6 +95,22 @@ products inside it would be a guess.
   shared shell still owns the paper, so screen and print agree. The Carton Size
   column is 9% — wide enough for `120 × 80 × 65` on one line, narrow enough to
   give the description its space.
+- **The letterhead stacks downwards:** the mark on top, the issuer name and
+  address beneath it. Side by side, a long registered address broke mid-street
+  against the logo; stacked, both read in one column and the document identity
+  stays top-right.
+- **Column headings wrap, figures do not.** Only `td` values are held on one
+  line; a heading that cannot wrap prints straight out of a 9% column, so the
+  header cells are `white-space: normal` and set a shade tighter (9.5 px, 1.25
+  line-height) — the tallest heading takes three short lines and no column ever
+  spills into its neighbour.
+- **It reads as one ruled form, not a set of cards.** The facts strip, the three
+  party cards, the table and the declaration/summary/sign-off blocks butt
+  together: no gaps, no margins, neighbouring borders collapsed with a −1 px
+  margin so two boxes share one rule instead of drawing two. Corners are square
+  throughout (`border-radius: 0`), including the paper itself on screen — the
+  shared shell rounds `.pdf-sheet`, so the packaging sheet re-states the square
+  corner at matching specificity.
 - **The logo is the issuer's.** `PackagingList::issuedByUs()` compares the From
   name with the organisation's legal and trade names (with "Pvt Ltd" against
   "Private Limited" ignored), so our own export prints on MissPack letterhead
