@@ -56,6 +56,9 @@ check('the packing sheet applies its selected orientation after the shared paper
     && print.indexOf('id="plPageStyle"') < print.indexOf('</head>')
     && print.includes("size: A4 {{ $printSettings['orientation'] }}")
     && print.includes('class="pdf-sheet pl-sheet"'));
+check('print keeps the final border inside the fractional printable-width clip in either orientation',
+    /@media print\s*\{[\s\S]*html body\.pdf-preview \.pdf-sheet\.pl-sheet\s*\{\s*width: calc\(100% - 1px\) !important;/.test(plainPrint)
+    && !/width: (186|273)mm/.test(plainPrint));
 check('the eleven columns are fitted to a portrait A4, not a landscape one', (() => {
     /* 186 mm of content between the 12 mm margins, at 96 dpi. */
     const contentPx = 186 / 25.4 * 96;

@@ -102,6 +102,26 @@ Deployment: run `php artisan migrate` to add the nullable `print_columns` JSON
 column. Omitted settings in older integrations preserve the existing choice;
 an explicitly empty or unknown selection is rejected.
 
+### Continuous right-edge borders in print/PDF
+
+The printed `.pdf-sheet.pl-sheet` is one CSS pixel narrower than the printable
+width (`calc(100% - 1px)`). Chromium can round an auto-width sheet onto the
+printable-area clip and lose the entire right border: the status badge, facts,
+party cards, items and summary all ended at that same clipped coordinate.
+This print-only safety inset follows either orientation, preserves the flush
+section seams, and does not change other documents or screen layout. It must
+override the shared print shell's `width: auto !important`. Regression coverage
+should inspect actual PDF output, not just screen computed styles: the borders
+were present in computed CSS even when absent from the exported PDF.
+
+`node tools/checks/packaging-print-borders-browser.cjs` is an optional real
+Chromium/PDF raster regression (requires `playwright-core`, a Chromium executable
+via `CHROMIUM_EXECUTABLE_PATH`, and Python `pymupdf`; temporary installs can use
+`NODE_PATH`, `PYTHONPATH`, and any platform library paths). It checks right-edge
+pixels at the status, facts, ship-to, item rows, summary and signature in both
+orientations, on single- and multi-page documents. A negative control restores
+the old auto width and must fail. Generated PDFs are temporary and removed.
+
 ### Printing or downloading every carton label
 
 On the packaging-list detail page, **Carton labels → All carton labels** has a

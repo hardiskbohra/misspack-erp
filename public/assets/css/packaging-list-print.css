@@ -565,6 +565,16 @@ html body.pdf-preview .pdf-sheet.pl-sheet {
         color: #000 !important;
     }
 
+    /* Chromium rounds the printable width to device pixels. An auto-width sheet
+       can land its final border on the page clip (including the status badge,
+       parties and table), cutting that entire right edge from print/PDF output.
+       Keep one CSS pixel inside that boundary. The specificity and !important
+       override document-print.css's auto width, without touching other documents
+       or the screen preview. Percentages follow either selected orientation. */
+    html body.pdf-preview .pdf-sheet.pl-sheet {
+        width: calc(100% - 1px) !important;
+    }
+
     .pl-top,
     .pl-facts,
     .pl-parties,
