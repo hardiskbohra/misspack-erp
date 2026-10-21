@@ -70,3 +70,5 @@
     </section>
 </div>
 @endsection
+
+@push('scripts')<script src="{{ $assetVer('assets/js/packaging-lists.js') }}"></script>@endpush

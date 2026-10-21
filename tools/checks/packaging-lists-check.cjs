@@ -75,6 +75,32 @@ check('the sheet prints black on white, with no colour carrying meaning', !/colo
 check('every word on the sheet prints pure black, not screen grey', ['--pl-ink: #000;','--pl-body: #000;','--pl-muted: #000;'].every(x=>sheetPrint.includes(x))&&!/color:\s*var\(--pdf-(?:ink|body|muted)/.test(sheetPrint)&&sheetPrint.includes('color: #000 !important'));
 check('rules are dark enough to survive an office laser', sheetPrint.includes('--pl-border: #6b7280;')&&sheetPrint.includes('--pl-border-soft: #b6bcc7;')&&!/var\(--pdf-border/.test(sheetPrint)&&sheetPrint.includes('border-bottom: 2px solid var(--pl-ink)'));
 check('list follows shared page-action, flat-card, filter-drawer and applied-filter patterns', index.includes("@section('page-actions')")&&index.includes('master-card master-card--flat')&&index.includes('<x-filter-trigger')&&index.includes('master-list-applied'));
+check('the index loads shared row navigation before the editor-only guard', index.includes("assets/js/packaging-lists.js") && index.includes('data-href=') && js.includes("window.MasterList.rowNavigation({root: '.packaging-list-page'})") && js.indexOf('window.MasterList.rowNavigation') < js.indexOf('if (!root) return;'));
+check('the index grid owns card spacing without stacked inherited margins', css.includes('.packaging-list-page.master-list>.master-stats,.packaging-list-page.master-list>.master-card{margin:0}') && css.includes('.packaging-list-page{display:grid;gap:var(--master-space-4,16px)}'));
+check('row clicks navigate while links, action menus and text selection remain independent', (() => {
+    const vm = require('vm');
+    let click, selection = '';
+    const row = {dataset: {href: '/packaging-lists/13'}, addEventListener: (name, listener) => { if (name === 'click') click = listener; }};
+    const window = {location: {href: '/packaging-lists'}, getSelection: () => selection};
+    const document = {
+        querySelector: selector => selector === '.packaging-list-page' ? {} : null,
+        querySelectorAll: selector => selector === '.packaging-list-page tbody tr[data-href]' ? [row] : [],
+    };
+    const context = vm.createContext({window, document});
+    vm.runInContext(read('public/assets/js/master-list.js'), context);
+    vm.runInContext(js, context);
+    if (typeof click !== 'function') return false;
+    click({target: {closest: () => null}});
+    if (window.location.href !== row.dataset.href) return false;
+    window.location.href = '/packaging-lists';
+    for (const control of ['a', 'button', 'input', 'select', 'textarea', 'label', 'form', '.master-dropdown']) {
+        click({target: {closest: selectors => selectors.split(', ').includes(control) ? {} : null}});
+        if (window.location.href !== '/packaging-lists') return false;
+    }
+    selection = 'MP/PL/26-27/001';
+    click({target: {closest: () => null}});
+    return window.location.href === '/packaging-lists';
+})());
 check('list search includes linked project number and name', controller.includes("orWhereHas('project'")&&controller.includes("where('project_number', 'like'")&&controller.includes("orWhere('name', 'like'")&&index.includes('PL number, project, invoice or party'));
 check('list row menu offers view, print, edit, clone, status and delete actions', ['fa-eye','fa-print','fa-pen','fa-clone','packaging-lists.status','packaging-lists.destroy'].every(x=>index.includes(x))&&controller.includes('function updateStatus'));
 check('form is one flat surface divided into shared sections', form.includes('master-card master-card--flat master-form-card')&&(form.match(/master-form-card/g)||[]).length===1&&form.includes('master-section'));

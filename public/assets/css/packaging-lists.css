@@ -3,6 +3,9 @@
 .packaging-list-show>.master-header,.packaging-list-show>.master-stats,.packaging-list-show>.master-section,.packaging-list-show>.master-table-card,.packaging-list-show>.master-grid>.master-section{margin:0}
 .packaging-list-show>.master-section,.packaging-list-show>.pl-breakdown{padding:24px}
 .packaging-list-page{display:grid;gap:var(--master-space-4,16px)}
+/* The grid owns vertical rhythm; inherited stat/card margins must not add a second gap. */
+.packaging-list-page.master-list>.master-stats,.packaging-list-page.master-list>.master-card{margin:0}
+.packaging-list-table tbody tr[data-href]{cursor:pointer}
 .pl-address-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--master-space-4,16px)}
 .pl-address-card{padding-right:var(--master-space-4,16px);border-right:1px solid var(--mc-border);display:grid;align-content:start;gap:var(--master-space-3,12px);min-width:0}
 .pl-address-card:last-child{padding-right:0;border-right:0}

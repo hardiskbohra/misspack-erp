@@ -63,6 +63,16 @@ A 60 × 40 × 40 box carrying 600 bottles and 5,000 hooks is **one carton** with
 This is the only honest reading: splitting one carton's weight between the
 products inside it would be a guess.
 
+### List navigation and spacing
+
+The list grid owns a single standard 16 px vertical gap between its statistics
+and table card; inherited card/stat margins are reset rather than added to the
+grid gap. Click a row's non-interactive area to open that packaging list. The
+shared `MasterList.rowNavigation` helper leaves links, menus, form controls and
+text selection alone. The packaging-number link remains the keyboard-accessible
+route to the record. The index loads the module script, which initializes list
+behaviour before its editor-only guard.
+
 ### Editing many carton groups
 
 The editor keeps one carton group on screen at a time, behind a strip of summary

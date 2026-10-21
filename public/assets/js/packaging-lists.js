@@ -1,5 +1,11 @@
 (() => {
   'use strict';
+  // Index rows already carry data-href; opt into the shared navigation contract.
+  // Do this before the editor-only guard so the list can initialize without a form.
+  if (document.querySelector('.packaging-list-page') && window.MasterList) {
+    window.MasterList.rowNavigation({root: '.packaging-list-page'});
+    window.MasterList.gridShadow({root: '.packaging-list-page'});
+  }
   const root = document.querySelector('[data-packaging-form]');
   if (!root) return;
   const cartonList = root.querySelector('[data-carton-list]');
