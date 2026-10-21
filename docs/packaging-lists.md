@@ -63,6 +63,23 @@ A 60 × 40 × 40 box carrying 600 bottles and 5,000 hooks is **one carton** with
 This is the only honest reading: splitting one carton's weight between the
 products inside it would be a guess.
 
+### Editing many carton groups
+
+The editor keeps one carton group on screen at a time, behind a strip of summary
+tabs — a group's packing heading, its carton count and its dimensions, so the
+right tab is recognisable without opening it. A list can hold a dozen groups,
+which is more tabs than any window shows, so **the strip scrolls inside its
+card**: it never wraps (a wrapped strip moves the fields down every time a group
+is added) and never widens the page. That second part is not free — the form is
+a grid, and a grid item defaults to `min-width: auto`, its min-content width, so
+eighteen 210 px tabs used to stretch the card and the whole page past the window
+instead of scrolling. `minmax(0, 1fr)` on the form column and `min-width: 0` on
+its sections is what lets the strip be narrower than the tabs it holds.
+
+Opening a group — by click, arrow key, or "Add carton group" — scrolls its tab
+into view, because a selected tab that sits off-screen is a tab the user cannot
+find again.
+
 ## 2. What the two surfaces show
 
 - **Print** (`packaging_lists/print`) is the sheet the supplier and the customer

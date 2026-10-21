@@ -17,9 +17,16 @@
   let nextItem = Date.now();
   let activeCarton = 0;
 
+  /* With a dozen groups the strip is wider than the card, so the tab for the
+     group you are opening — by click, arrow key or "Add carton group" — has to
+     be scrolled into view, or the selection happens somewhere off-screen. */
+  const revealTab = index => cartonTabs?.querySelector(`[data-carton-tab="${index}"]`)?.scrollIntoView({block:'nearest',inline:'nearest'});
+
   function activateCarton(index, focusTab = false) {
     const panels = [...cartonList.querySelectorAll('[data-carton]')];
-    activeCarton = Math.max(0, Math.min(index, panels.length - 1));
+    const next = Math.max(0, Math.min(index, panels.length - 1));
+    const moved = next !== activeCarton;
+    activeCarton = next;
     panels.forEach((panel, panelIndex) => {
       panel.hidden = panelIndex !== activeCarton;
       panel.setAttribute('role', 'tabpanel');
@@ -32,7 +39,9 @@
       tab.setAttribute('aria-selected', selected ? 'true' : 'false');
       tab.tabIndex = selected ? 0 : -1;
     });
-    if (focusTab) cartonTabs?.querySelector(`[data-carton-tab="${activeCarton}"]`)?.focus();
+    const activeTab = cartonTabs?.querySelector(`[data-carton-tab="${activeCarton}"]`);
+    if (activeTab && (moved || focusTab)) revealTab(activeCarton);
+    if (focusTab) activeTab?.focus({preventScroll:true});
   }
 
   function update() {
@@ -173,6 +182,7 @@
       cartonList.insertAdjacentHTML('beforeend', cartonTemplate.innerHTML.replaceAll('__CARTON__', String(nextCarton++)));
       activeCarton = cartonList.querySelectorAll('[data-carton]').length - 1;
       update();
+      revealTab(activeCarton);
       cartonList.querySelector('[data-carton]:last-child input')?.focus(); return;
     }
     const add = event.target.closest('[data-add-item]');

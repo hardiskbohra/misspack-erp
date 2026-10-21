@@ -163,6 +163,20 @@ check('label quantities are whole per-carton values', label.includes("quantity_p
 check('labels omit chargeable weight and CBM details', !label.includes('CHARGEABLE')&&!label.includes('data-chargeable')&&!label.includes('cbmPerCarton'));
 check('labels support fitted A4, A5 and 100 × 150 mm formats', controller.includes("Rule::in(['a4','a5','thermal'])")&&label.includes("'A5 landscape'")&&label.includes("'100mm 150mm'")&&labelCss.includes('.format-a5 .carton-label{width:210mm;height:148mm')&&labelCss.includes('.format-thermal .carton-label{width:100mm;height:150mm'));
 check('source document screens offer packing actions', read('resources/views/sales_invoices/show.blade.php').includes('Pack items')&&read('resources/views/purchase_invoices/show.blade.php').includes('Pack items')&&read('resources/views/shipments/show.blade.php').includes('Create Packaging List'));
+/* A list can hold a dozen carton groups. The strip scrolls inside its card, and
+   the form must not be allowed to size itself to the tabs: a grid item defaults
+   to `min-width: auto` — its min-content width — so eighteen 210 px tabs pushed
+   the card and the page past the window instead of scrolling. */
+check('the carton-group strip scrolls inside its card instead of widening the page',
+    /\.pl-carton-tabs\{[^}]*overflow-x:auto[^}]*min-width:0[^}]*max-width:100%/.test(css)
+    && /\.pl-carton-tab\{[^}]*flex:0 0 auto/.test(css)
+    && /\.packaging-list-form\{grid-template-columns:minmax\(0,1fr\)\}/.test(css)
+    && /\.packaging-list-form>\*\{min-width:0\}/.test(css));
+check('opening a carton group scrolls its tab into view',
+    js.includes('const revealTab = index =>')
+    && js.includes("scrollIntoView({block:'nearest',inline:'nearest'})")
+    && js.includes('if (activeTab && (moved || focusTab)) revealTab(activeCarton);')
+    && js.includes("update();\n      revealTab(activeCarton);"));
 check('carton groups use accessible summary tabs and adding a group activates its new tab', form.includes('data-carton-tabs')&&form.includes('role="tablist"')&&js.includes('activateCarton')&&js.includes("activeCarton = cartonList.querySelectorAll('[data-carton]').length - 1"));
 check('a carton tab is named by its packing group, then its label, then its product', js.includes('[data-packing-group]')&&js.includes('|| panel.querySelector(\'[data-item]'));
 check('the packing group is an editable field on each carton block', read('resources/views/packaging_lists/partials/carton-editor.blade.php').includes('data-packing-group')&&form.includes("'packing_group'=>\$carton->packing_group")&&controller.includes("'cartons.*.packing_group' => ['nullable', 'string', 'max:120']"));
