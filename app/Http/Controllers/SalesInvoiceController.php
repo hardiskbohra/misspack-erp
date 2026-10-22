@@ -469,23 +469,53 @@ class SalesInvoiceController extends Controller
     private function remainderTaxInvoice(SalesInvoice $pi): SalesInvoice
     {
         $ratio = $pi->cashConvertibleRemaining() / $pi->cashConvertibleTotal();
+        $items = $pi->items()->get();
+        if ($items->isEmpty()) {
+            throw ValidationException::withMessages(['invoice' => 'This PI has no item lines to prorate. Ask Accounts to check the PI before converting it.']);
+        }
         $tax = $pi->replicate(['created_at', 'updated_at', 'converted_invoice_id', 'cash_converted_base_amount', 'cash_converted_total_amount']);
         $tax->fill(['invoice_type' => 'tax', 'invoice_number' => $this->makeInvoiceNumber('tax'), 'public_token' => null,
-            'source_proforma_id' => $pi->id, 'amount_paid' => 0, 'discount_type' => 'amount', 'discount_value' => 0,
-            'discount_amount' => 0, 'created_by' => Auth::id()]);
-        foreach (['taxable_amount', 'cgst_amount', 'sgst_amount', 'igst_amount', 'freight_amount', 'packing_amount', 'other_charges'] as $field) $tax->$field = round((float) $pi->$field * $ratio, 2);
-        $tax->subtotal = $tax->taxable_amount;
+            'source_proforma_id' => $pi->id, 'amount_paid' => 0, 'created_by' => Auth::id()]);
+        foreach (['discount_amount', 'cgst_amount', 'sgst_amount', 'igst_amount', 'freight_amount', 'packing_amount', 'other_charges'] as $field) {
+            $tax->$field = round((float) $pi->$field * $ratio, 2);
+        }
+        // Preserve percentage discounts; a fixed discount reduces with the claim.
+        if ($tax->discount_type !== 'percent') $tax->discount_value = $tax->discount_amount;
         $tax->total_amount = $pi->receivableTotal();
-        $tax->round_off = round((float) $tax->total_amount - (float) $tax->taxable_amount - (float) $tax->cgst_amount - (float) $tax->sgst_amount - (float) $tax->igst_amount - (float) $tax->freight_amount - (float) $tax->packing_amount - (float) $tax->other_charges, 2);
         $tax->balance_amount = $tax->total_amount;
         $tax->amount_in_words = $this->amountInWords((float) $tax->total_amount, $tax->currency);
         $tax->save();
-        $tax->items()->create(['product_name' => 'Remaining amount against '.$pi->invoice_number, 'quantity' => 1, 'unit' => 'lot',
-            'unit_price' => $tax->taxable_amount, 'gross_amount' => $tax->taxable_amount, 'taxable_amount' => $tax->taxable_amount,
-            'gst_percent' => (float) $tax->taxable_amount > 0 ? round(((float) $tax->cgst_amount + (float) $tax->sgst_amount + (float) $tax->igst_amount) / (float) $tax->taxable_amount * 100, 2) : 0,
-            'cgst_amount' => $tax->cgst_amount, 'sgst_amount' => $tax->sgst_amount, 'igst_amount' => $tax->igst_amount,
-            'line_total' => round((float) $tax->taxable_amount + (float) $tax->cgst_amount + (float) $tax->sgst_amount + (float) $tax->igst_amount, 2),
-            'discount_percent' => 0, 'discount_amount' => 0, 'sort_order' => 1]);
+
+        // Keep the ordered product identity, quantities, units, HSN, descriptions,
+        // GST rates and project-product references. This is a financial proration,
+        // not a new physical order: do not sync the reduced rates into the project.
+        // Carry cents across rows rather than independently rounding every row.
+        $running = $scaled = array_fill_keys(['taxable_amount', 'discount_amount', 'cgst_amount', 'sgst_amount', 'igst_amount'], 0.0);
+        $subtotal = $lineTaxable = 0.0;
+        foreach ($items as $item) {
+            $line = $item->replicate(['created_at', 'updated_at']);
+            $line->sales_invoice_id = $tax->id;
+            $line->unit_price = round((float) $item->unit_price * $ratio, 2);
+            foreach (array_keys($running) as $field) {
+                $running[$field] += (float) $item->$field;
+                $next = round($running[$field] * $ratio, 2);
+                $line->$field = round($next - $scaled[$field], 2);
+                $scaled[$field] = $next;
+            }
+            $line->gross_amount = round((float) $line->taxable_amount + (float) $line->discount_amount, 2);
+            $line->line_total = round((float) $line->taxable_amount + (float) $line->cgst_amount + (float) $line->sgst_amount + (float) $line->igst_amount, 2);
+            $line->save();
+            $subtotal += (float) $line->gross_amount;
+            $lineTaxable += (float) $line->taxable_amount;
+        }
+        $tax->subtotal = round($subtotal, 2);
+        $tax->taxable_amount = round($lineTaxable - (float) $tax->discount_amount, 2);
+        // Preserve the exact outstanding claim, including original round-off and
+        // cumulative cash-conversion rounding. Never bill the cash portion twice.
+        $tax->round_off = round((float) $tax->total_amount - (float) $tax->taxable_amount
+            - (float) $tax->cgst_amount - (float) $tax->sgst_amount - (float) $tax->igst_amount
+            - (float) $tax->freight_amount - (float) $tax->packing_amount - (float) $tax->other_charges, 2);
+        $tax->save();
         return $tax;
     }
 

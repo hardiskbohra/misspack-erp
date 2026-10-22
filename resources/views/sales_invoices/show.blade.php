@@ -218,10 +218,10 @@
         </header>
 
         @if ($invoice->source_proforma_id)
-            <div class="master-alert"><strong>From proforma</strong> <a href="{{ route('sales-invoices.show', $invoice->source_proforma_id) }}">{{ $invoice->conversionSource?->invoice_number }}</a>. @if ($invoice->isConvertedCash()) Financial edits are locked. Delete reverses this cash conversion and returns its value and receipts to the PI, unless the remainder already has a tax invoice. @else This conversion is locked against editing/deletion. @endif Receipts can still be recorded.</div>
+            <div class="master-alert"><strong>From proforma</strong> <a href="{{ route('sales-invoices.show', $invoice->source_proforma_id) }}">{{ $invoice->conversionSource?->invoice_number }}</a>. @if ($invoice->isConvertedCash()) Financial edits are locked. Delete reverses this cash conversion and returns its value and receipts to the PI, unless the remainder already has a tax invoice. @else This conversion is locked against editing/deletion. Unit rates are rounded; line amounts preserve the proportional PI remainder. @endif Receipts can still be recorded.</div>
         @endif
         @if ($invoice->invoice_type === 'proforma')
-            <section class="master-card master-section" id="cashInvoiceConversion" data-convertible="{{ $invoice->cashConvertibleRemaining() }}">
+            <section class="master-card master-section" id="cashInvoiceConversion" data-convertible="{{ $invoice->cashConvertibleRemaining() }}" data-received="{{ max($receivedAmount, 0) }}" data-currency="{{ $invoice->currency }}">
                 <h2 class="master-section-title">Cash invoices from this PI</h2>
                 <p class="master-sub">Amount available without GST: {{ \App\Helpers\CommonHelper::amount($invoice->cashConvertibleRemaining(), $invoice->currency) }}. Percentages apply to this remaining amount, including charges. The corresponding original GST is removed from the PI remainder.</p>
                 @if ($invoice->hasMonetaryConversions())<p>Original PI: {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }} · Remaining PI value: {{ \App\Helpers\CommonHelper::amount($invoice->receivableTotal(), $invoice->currency) }}</p>@endif
@@ -237,9 +237,10 @@
                         <div class="master-form-grid is-three">
                             <div class="master-field"><label class="master-label" for="cashConversionMode">Convert by</label><select class="master-select" id="cashConversionMode" name="conversion_mode"><option value="amount">Amount ({{ $invoice->currency }})</option><option value="percent" @selected(old('conversion_mode') === 'percent')>Percentage of remainder</option></select></div>
                             <div class="master-field"><label class="master-label" for="cashConversionValue">Amount / percentage</label><input class="master-input" id="cashConversionValue" name="conversion_value" type="number" min="0.01" step="0.01" required value="{{ old('conversion_value', $invoice->cashConvertibleRemaining()) }}"></div>
-                            <div class="master-field"><label class="master-label" for="cashTransferReceived">Recorded receipts to transfer ({{ $invoice->currency }})</label><input class="master-input" id="cashTransferReceived" name="transfer_received" type="number" min="0" step="0.01" max="{{ $receivedAmount }}" required value="{{ old('transfer_received', $receivedAmount) }}"></div>
+                            <div class="master-field"><label class="master-label" for="cashTransferReceived">Recorded receipts to transfer ({{ $invoice->currency }})</label><input class="master-input" id="cashTransferReceived" name="transfer_received" type="number" min="0" step="0.01" max="{{ min(max($receivedAmount, 0), $invoice->cashConvertibleRemaining()) }}" required data-preserve-transfer="{{ old('transfer_received') !== null ? 'true' : 'false' }}" value="{{ old('transfer_received', min(max($receivedAmount, 0), $invoice->cashConvertibleRemaining())) }}"></div>
                         </div>
-                        <p class="master-help">This does not record a new payment. Choose how much of the PI's existing receipts to apply. Untransferred receipts stay as a PI advance, even if its entire value is cash invoiced.</p>
+                        <p class="master-help">This does not record a new payment. Choose how much of the PI's existing receipts to apply, up to this Cash Invoice's value. Cash-mode / cash-account receipts are used first, then opening credit and other receipts. Untransferred receipts stay as a PI advance, even if its entire value is cash invoiced.</p>
+                        <p id="cashTransferSummary" class="master-help" role="status" aria-live="polite"></p>
                         <button class="master-btn master-btn-primary" type="submit">Create cash invoice</button>
                     </form>
                 @endif

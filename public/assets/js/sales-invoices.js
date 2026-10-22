@@ -830,10 +830,33 @@
         if (!card) return;
         var mode = document.getElementById('cashConversionMode');
         var value = document.getElementById('cashConversionValue');
-        if (!mode || !value) return;
+        var transfer = document.getElementById('cashTransferReceived');
+        if (!mode || !value || !transfer) return;
+        var manualTransfer = transfer.dataset.preserveTransfer === 'true';
+        function updateTransfer() {
+            var remainder = Math.max(Number(card.dataset.convertible) || 0, 0);
+            var amount = Number(value.value) || 0;
+            if (mode.value === 'percent') amount = remainder * amount / 100;
+            amount = Math.round(Math.max(0, Math.min(amount, remainder)) * 100) / 100;
+            var limit = Math.min(amount, Math.max(Number(card.dataset.received) || 0, 0));
+            transfer.max = limit.toFixed(2);
+            if (!manualTransfer) transfer.value = limit.toFixed(2);
+            var summary = document.getElementById('cashTransferSummary');
+            if (summary) {
+                var chosen = Number(transfer.value);
+                var format = function (money) { return money.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + card.dataset.currency; };
+                summary.textContent = Number.isFinite(chosen) && chosen >= 0 && chosen <= limit
+                    ? format(chosen) + ' to Cash Invoice; ' + format(Math.max(Number(card.dataset.received) - chosen, 0)) + ' stays with PI.'
+                    : 'Choose a transfer between 0 and ' + format(limit) + '. Excess receipts stay with the PI.';
+            }
+        }
+        transfer.addEventListener('input', function () { manualTransfer = true; updateTransfer(); });
+        value.addEventListener('input', updateTransfer);
+        value.addEventListener('change', updateTransfer);
         function setLimit(reset) {
             value.max = mode.value === 'percent' ? '100' : card.dataset.convertible;
             if (reset) value.value = value.max;
+            updateTransfer();
         }
         if (window.jQuery && window.jQuery.fn) {
             window.jQuery(mode).on('change', function () { setLimit(true); });

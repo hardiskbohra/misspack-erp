@@ -324,6 +324,10 @@
             </table>
         </div>
 
+        @if ($invoice->invoice_type === 'tax' && $invoice->source_proforma_id)
+            <p class="line-tax-note">This invoice covers the proportional PI remainder. Unit rates are rounded to two decimals; line amounts use the unrounded proportion.</p>
+        @endif
+
         @if (!$cashInvoice && $lineFiguresUnavailable)
             <p class="line-tax-note">Some line-level figures could not be allocated for this record. The invoice totals below remain authoritative.</p>
         @endif

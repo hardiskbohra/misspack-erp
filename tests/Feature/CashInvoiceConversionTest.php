@@ -10,6 +10,7 @@ use App\Models\Project;
 use App\Models\ProjectProduct;
 use App\Models\SalesInvoice;
 use App\Services\CashInvoiceConversion;
+use App\Services\CashflowLedger;
 use App\Services\SalesInvoiceFilters;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -83,6 +84,256 @@ class CashInvoiceConversionTest extends TestCase
             'transaction_type' => 'credit', 'credit_amount' => $credit, 'debit_amount' => 0,
             'currency' => $currency, 'account_id' => $account->id, 'accounting_status' => 'booked',
             'sales_invoice_id' => $pi?->id, 'project_id' => $pi?->project_id]);
+    }
+
+    private function pricedPi(array $items, array $attributes = []): SalesInvoice
+    {
+        (new SalesInvoiceController)->store(Request::create('/', 'POST', array_merge([
+            'invoice_number' => null, 'invoice_type' => 'proforma', 'status' => 'sent', 'currency' => 'INR',
+            'gst_type' => 'export', 'items' => $items,
+        ], $attributes)));
+        return SalesInvoice::where('invoice_type', 'proforma')->latest('id')->firstOrFail();
+    }
+
+    private function cashReceipt(SalesInvoice $pi, float $amount): CashflowEntry
+    {
+        $account = CashflowAccount::firstOrCreate(['account_name' => 'Cash drawer'], ['account_type' => 'cash', 'currency' => 'INR']);
+        $entry = $this->receipt($pi, $amount);
+        $entry->update(['account_id' => $account->id, 'payment_mode' => 'cash']);
+        return $entry;
+    }
+
+    public function test_three_lakh_pi_keeps_the_bank_receipt_and_prorates_items_on_the_tax_remainder(): void
+    {
+        $pi = $this->pricedPi([
+            ['product_name' => 'Bottles', 'quantity' => 100, 'unit' => 'pcs', 'unit_price' => 1000],
+            ['product_name' => 'Cartons', 'quantity' => 100, 'unit' => 'pcs', 'unit_price' => 2000],
+        ]);
+        $this->assertSame(300000.0, (float) $pi->total_amount);
+        // Deliberately record the bank receipt first: insertion order must not
+        // consume that receipt instead of the cash payment.
+        $bank = $this->receipt($pi, 50000);
+        $cashReceipt = $this->cashReceipt($pi, 100000);
+        foreach ([$bank->account_id, $cashReceipt->account_id] as $id) CashflowLedger::recalculateAccount($id);
+        $balances = CashflowAccount::orderBy('id')->pluck('current_balance', 'id')->all();
+        $cash = $this->convert($pi, 100000, 100000);
+        $this->assertSame(100000.0, $cash->receivedAmount());
+        $this->assertSame(0.0, $cash->balanceDue());
+        $this->assertSame(0.0, $cash->advanceAmount());
+        $this->assertSame(50000.0, $pi->fresh()->receivedAmount());
+        $this->assertSame($pi->id, $bank->fresh()->sales_invoice_id);
+        $this->assertSame($cash->id, $cashReceipt->fresh()->sales_invoice_id);
+        (new SalesInvoiceController)->convert(Request::create('/', 'POST'), $pi->fresh());
+        $tax = SalesInvoice::where('invoice_type', 'tax')->firstOrFail();
+        $this->assertSame(200000.0, (float) $tax->total_amount);
+        $this->assertSame(50000.0, $tax->receivedAmount());
+        $this->assertSame(150000.0, $tax->balanceDue());
+        $this->assertSame(100000.0, $cash->fresh()->receivedAmount());
+        $this->assertSame($tax->id, $bank->fresh()->sales_invoice_id);
+        $this->assertSame(['Bottles', 'Cartons'], $tax->items->pluck('product_name')->all());
+        $this->assertSame(['100.000', '100.000'], $tax->items->pluck('quantity')->all());
+        $this->assertSame(['666.67', '1333.33'], $tax->items->pluck('unit_price')->all());
+        $this->assertSame(200000.0, (float) $tax->items->sum('line_total'));
+        $this->assertSame(2, CashflowEntry::count());
+        $this->assertSame(150000.0, (float) CashflowEntry::sum('credit_amount'));
+        $this->assertSame($balances, CashflowAccount::orderBy('id')->pluck('current_balance', 'id')->all());
+        $this->assertSame(300000.0, (float) SalesInvoice::notSuperseded()->sum(SalesInvoice::raw(SalesInvoice::RECEIVABLE_TOTAL_SQL)));
+        $print = view('sales_invoices.print', ['invoice' => $tax, 'publicMode' => false])->render();
+        $this->assertStringContainsString('Bottles', $print);
+        $this->assertStringContainsString('Cartons', $print);
+        $this->assertStringContainsString('unrounded proportion', $print);
+        $this->assertStringNotContainsString('Remaining amount against', $print);
+        $this->assertSame(['1000.00', '2000.00'], $pi->fresh()->items->pluck('unit_price')->all());
+    }
+
+    public function test_excess_transfer_is_rejected_atomically_even_when_the_pi_has_enough_receipts(): void
+    {
+        $pi = $this->pricedPi([['product_name' => 'Bottles', 'quantity' => 100, 'unit_price' => 3000]]);
+        $bank = $this->receipt($pi, 50000);
+        $cash = $this->cashReceipt($pi, 100000);
+        try {
+            $this->convert($pi, 100000, 150000);
+            $this->fail('Cash Invoice must not be overpaid by conversion.');
+        } catch (ValidationException $error) {
+            $this->assertStringContainsString('Cash Invoice value', $error->errors()['transfer_received'][0]);
+        }
+        $this->assertSame(1, SalesInvoice::count());
+        $this->assertSame(150000.0, $pi->fresh()->receivedAmount());
+        $this->assertSame(0.0, (float) $pi->cash_converted_base_amount);
+        $this->assertSame($pi->id, $cash->fresh()->sales_invoice_id);
+        $this->assertSame($pi->id, $bank->fresh()->sales_invoice_id);
+    }
+
+    public function test_percentage_conversion_caps_transfers_and_splits_only_the_cash_receipt(): void
+    {
+        $pi = $this->pricedPi([['product_name' => 'Bottles', 'quantity' => 100, 'unit_price' => 3000]]);
+        $bank = $this->receipt($pi, 50000);
+        $entry = $this->cashReceipt($pi, 100000);
+        try {
+            $this->convert($pi, 20, 100000, 'percent');
+            $this->fail('20 percent is only 60,000, not 100,000.');
+        } catch (ValidationException $error) {
+            $this->assertArrayHasKey('transfer_received', $error->errors());
+        }
+        $cash = $this->convert($pi, 20, 60000, 'percent');
+        $this->assertSame(60000.0, (float) $cash->total_amount);
+        $this->assertSame(60000.0, $cash->receivedAmount());
+        $this->assertSame(90000.0, $pi->fresh()->receivedAmount());
+        $this->assertSame($pi->id, $bank->fresh()->sales_invoice_id);
+        $this->assertSame(100000.0, (float) $entry->fresh()->credit_amount);
+        $this->assertSame(100000.0, (float) $entry->allocations()->sum('amount'));
+        $this->assertSame(40000.0, (float) $entry->allocations()->where('sales_invoice_id', $pi->id)->sum('document_amount'));
+    }
+
+    public function test_cash_allocation_precedes_direct_bank_receipts_and_opening_credit(): void
+    {
+        $pi = $this->pi(['amount_paid' => 10]);
+        $bank = $this->receipt($pi, 50);
+        $cashReceipt = $this->cashReceipt($pi, 40);
+        $cashReceipt->update(['sales_invoice_id' => null]);
+        $slice = $cashReceipt->allocations()->create(['sales_invoice_id' => $pi->id, 'amount' => 40,
+            'document_amount' => 40, 'currency' => 'INR', 'document_currency' => 'INR']);
+        $cash = $this->convert($pi, 50, 40);
+        $this->assertSame($cash->id, $slice->fresh()->sales_invoice_id);
+        $this->assertSame($pi->id, $bank->fresh()->sales_invoice_id);
+        $this->assertSame(10.0, (float) $pi->fresh()->amount_paid);
+        $this->assertSame(60.0, $pi->receivedAmount());
+        $this->assertSame(40.0, $cash->receivedAmount());
+    }
+
+    public function test_cash_payment_mode_is_prioritised_even_without_a_cash_account_type(): void
+    {
+        $pi = $this->pi();
+        $bank = $this->receipt($pi, 50);
+        $cashReceipt = $this->receipt($pi, 40);
+        $cashReceipt->update(['payment_mode' => 'cash']);
+        $cash = $this->convert($pi, 50, 40);
+        $this->assertSame($cash->id, $cashReceipt->fresh()->sales_invoice_id);
+        $this->assertSame($pi->id, $bank->fresh()->sales_invoice_id);
+    }
+
+    public function test_gst_inclusive_three_lakh_pi_restores_only_the_actual_taxable_remainder(): void
+    {
+        $pi = $this->pricedPi([['product_name' => 'Bottles', 'quantity' => 1, 'unit_price' => 254237.29,
+            'gst_percent' => 18, 'hsn_sac' => '3923']], ['gst_type' => 'intra_state', 'round_off' => -0.01]);
+        $this->assertSame(300000.0, (float) $pi->total_amount);
+        $this->receipt($pi, 50000);
+        $this->cashReceipt($pi, 100000);
+        $cash = $this->convert($pi, 100000, 100000);
+        $expected = $pi->fresh()->receivableTotal();
+        (new SalesInvoiceController)->convert(Request::create('/', 'POST'), $pi->fresh());
+        $tax = SalesInvoice::where('invoice_type', 'tax')->firstOrFail();
+        $this->assertSame(182000.0, $expected);
+        $this->assertSame($expected, (float) $tax->total_amount);
+        $this->assertSame(50000.0, $tax->receivedAmount());
+        $this->assertSame(100000.0, $cash->fresh()->receivedAmount());
+        $this->assertSame('Bottles', $tax->items->first()->product_name);
+        $this->assertSame('3923', $tax->items->first()->hsn_sac);
+        $this->assertSame(18.0, (float) $tax->items->first()->gst_percent);
+    }
+
+    public function test_tax_remainder_keeps_metadata_discounts_gst_and_project_quantities(): void
+    {
+        $pi = $this->pricedPi([
+            ['product_name' => 'Bottles', 'description' => 'Amber glass', 'hsn_sac' => '7010', 'quantity' => 100,
+                'unit' => 'pcs', 'unit_price' => 1000, 'discount_percent' => 10, 'gst_percent' => 18, 'remarks' => 'Keep this remark'],
+            ['product_name' => 'Cartons', 'description' => 'Printed cartons', 'hsn_sac' => '4819', 'quantity' => 50,
+                'unit' => 'box', 'unit_price' => 2000, 'discount_percent' => 0, 'gst_percent' => 5],
+        ], ['gst_type' => 'inter_state', 'discount_type' => 'percent', 'discount_value' => 10,
+            'freight_amount' => 1000, 'packing_amount' => 500, 'other_charges' => 250, 'round_off' => 0.07]);
+        $client = \App\Models\Client::create(['client_number' => 'CLIENT-P', 'company_name' => 'Buyer']);
+        $project = new Project(['client_id' => $client->id, 'project_number' => 'PRJ-P', 'name' => 'Proration', 'currency' => 'INR']);
+        $project->forceFill(['public_token' => 'proration'])->save();
+        $product = ProjectProduct::create(['project_id' => $project->id, 'product_name' => 'Bottles', 'quantity' => 100,
+            'unit' => 'pcs', 'unit_price' => 1000]);
+        $pi->update(['project_id' => $project->id]);
+        $pi->items()->first()->update(['project_product_id' => $product->id, 'product_id' => 123]);
+        $originalItems = $pi->items()->get();
+        $this->convert($pi, 50000);
+        $pi->refresh();
+        $ratio = $pi->cashConvertibleRemaining() / $pi->cashConvertibleTotal();
+        $expected = $pi->receivableTotal();
+        (new SalesInvoiceController)->convert(Request::create('/', 'POST'), $pi->fresh());
+        $tax = SalesInvoice::where('invoice_type', 'tax')->firstOrFail();
+        $this->assertSame($expected, (float) $tax->total_amount);
+        $this->assertSame('percent', $tax->discount_type);
+        $this->assertSame(10.0, (float) $tax->discount_value);
+        $this->assertSame(round((float) $pi->discount_amount * $ratio, 2), (float) $tax->discount_amount);
+        $this->assertSame(round((float) $pi->igst_amount * $ratio, 2), (float) $tax->igst_amount);
+        foreach ($tax->items as $index => $line) {
+            foreach (['product_name', 'description', 'hsn_sac', 'quantity', 'unit', 'gst_percent', 'discount_percent', 'remarks', 'product_id', 'project_product_id', 'sort_order'] as $field) {
+                $this->assertSame($originalItems[$index]->$field, $line->$field, $field);
+            }
+            $this->assertSame(round((float) $originalItems[$index]->unit_price * $ratio, 2), (float) $line->unit_price);
+            $this->assertSame(round((float) $line->gross_amount - (float) $line->discount_amount, 2), (float) $line->taxable_amount);
+        }
+        $this->assertSame((float) $tax->subtotal, (float) $tax->items->sum('gross_amount'));
+        $this->assertSame((float) $tax->taxable_amount, round((float) $tax->items->sum('taxable_amount') - (float) $tax->discount_amount, 2));
+        $this->assertSame((float) $tax->total_amount, round((float) $tax->taxable_amount + (float) $tax->igst_amount
+            + (float) $tax->freight_amount + (float) $tax->packing_amount + (float) $tax->other_charges + (float) $tax->round_off, 2));
+        $this->assertSame(1, ProjectProduct::count());
+        $this->assertSame(100.0, (float) $product->fresh()->quantity);
+        $this->assertSame(1000.0, (float) $product->unit_price);
+    }
+
+    public function test_fixed_discounts_and_subcent_lines_reconcile_on_the_remainder(): void
+    {
+        $pi = $this->pricedPi([
+            ['product_name' => 'A', 'quantity' => 1, 'unit_price' => 0.01],
+            ['product_name' => 'B', 'quantity' => 1, 'unit_price' => 0.01],
+            ['product_name' => 'C', 'quantity' => 1, 'unit_price' => 0.01],
+        ], ['discount_type' => 'amount', 'discount_value' => 0.01]);
+        $this->convert($pi, 0.01);
+        (new SalesInvoiceController)->convert(Request::create('/', 'POST'), $pi->fresh());
+        $tax = SalesInvoice::where('invoice_type', 'tax')->firstOrFail();
+        $this->assertCount(3, $tax->items);
+        $this->assertSame(0.02, round((float) $tax->items->sum('taxable_amount'), 2));
+        $this->assertSame(0.01, (float) $tax->discount_amount);
+        $this->assertSame(0.01, (float) $tax->discount_value);
+        $this->assertSame(0.01, (float) $tax->taxable_amount);
+        $this->assertSame(0.01, (float) $tax->total_amount);
+        $this->assertSame(0.0, (float) $tax->round_off);
+    }
+
+    public function test_several_partial_cash_conversions_leave_an_exact_itemised_tax_claim(): void
+    {
+        $pi = $this->pricedPi([
+            ['product_name' => 'Bottles', 'quantity' => 3, 'unit_price' => 11.11, 'gst_percent' => 18],
+            ['product_name' => 'Cartons', 'quantity' => 2, 'unit_price' => 22.22, 'gst_percent' => 5],
+        ], ['gst_type' => 'intra_state', 'discount_type' => 'percent', 'discount_value' => 12.5,
+            'freight_amount' => 2.03, 'round_off' => 0.01]);
+        $first = $this->convert($pi, 15.01);
+        $second = $this->convert($pi, 15.01);
+        $pi->refresh();
+        $remaining = $pi->receivableTotal();
+        (new SalesInvoiceController)->convert(Request::create('/', 'POST'), $pi);
+        $tax = SalesInvoice::where('invoice_type', 'tax')->firstOrFail();
+        $this->assertCount(2, $tax->items);
+        $this->assertSame($remaining, (float) $tax->total_amount);
+        $this->assertSame((float) $pi->total_amount, round((float) $first->conversion_total_amount
+            + (float) $second->conversion_total_amount + (float) $tax->total_amount, 2));
+        $this->assertSame((float) $tax->total_amount, round((float) $tax->taxable_amount + (float) $tax->cgst_amount
+            + (float) $tax->sgst_amount + (float) $tax->freight_amount + (float) $tax->round_off, 2));
+        $this->assertSame((float) $tax->subtotal, round((float) $tax->items->sum('gross_amount'), 2));
+        $this->assertSame(['3.000', '2.000'], $tax->items->pluck('quantity')->all());
+        $print = view('sales_invoices.print', ['invoice' => $tax, 'publicMode' => false])->render();
+        $this->assertStringNotContainsString('could not be allocated', $print);
+    }
+
+    public function test_a_pi_without_item_lines_does_not_fabricate_a_tax_remainder(): void
+    {
+        $pi = $this->pi(['amount_paid' => 20]);
+        $this->convert($pi, 50);
+        $pi->items()->delete();
+        try {
+            (new SalesInvoiceController)->convert(Request::create('/', 'POST'), $pi->fresh());
+            $this->fail('A tax invoice needs the original item lines.');
+        } catch (ValidationException $error) {
+            $this->assertArrayHasKey('invoice', $error->errors());
+        }
+        $this->assertSame(0, SalesInvoice::where('invoice_type', 'tax')->count());
+        $this->assertNull($pi->fresh()->converted_invoice_id);
+        $this->assertSame(20.0, $pi->receivedAmount());
     }
 
     public function test_partial_conversion_removes_gst_and_keeps_only_the_uninvoiced_pi_remainder(): void

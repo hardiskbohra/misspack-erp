@@ -374,7 +374,10 @@ the figure.
   suppress tax details; cash documents are excluded from the GST export.
 - Open a PI and use **Cash invoices from this PI**. Choose an amount or a percentage of
   the **remaining GST-exclusive value**, including proportionate charges/round-off.
-  Choose how much existing money to transfer, including zero. Several cash invoices can
+  Choose how much existing money to transfer, including zero, **up to the Cash Invoice
+  value and available PI receipts**. The default updates when the amount/percentage changes;
+  an explicitly entered transfer is kept and validated, not silently increased. A live summary
+  shows what will stay on the PI. Several cash invoices can
   reference the same PI. Its original lines and total are historical facts, not rewritten
   physical quantities. Only its uninvoiced remainder remains a receivable.
 - Example: PI 100 + GST 18. Cash-invoice 50 → cash document 50, original PI gross consumed
@@ -386,11 +389,29 @@ the figure.
   The PI's `cash_converted_*` caches determine `receivableTotal()` / `RECEIVABLE_TOTAL_SQL`.
   List totals, filters, statements, project value and financial closure use that same basis.
 - Transfer reassigns opening credit or existing receipt links/allocations, **never writes
-  another bank entry**. A partially transferred same-currency direct receipt becomes two
+  another bank entry**. Cash-mode/cash-account receipts are applied first (even if bank
+  receipts were recorded earlier), followed by opening credit, then other receipts. For a
+  ₹3,00,000 PI with ₹1,00,000 cash received and ₹50,000 bank received, a ₹1,00,000 cash
+  conversion transfers only ₹1,00,000 and leaves the ₹50,000 bank receipt on the PI.
+  That retained bank receipt moves to the tax invoice only when its remainder is converted.
+  A partially transferred same-currency direct receipt becomes two
   slices of that same entry. FX allocations split native and document amounts without
   changing their combined totals or exchange rate. Direct mixed/FX receipts must first be
   allocated explicitly in Cashflow; an unsupported transfer rolls back the whole conversion.
   Refunds remain intact, and only net receipts can be transferred.
+- A tax invoice for the remainder keeps **all original item lines and quantities**, including
+  their descriptions, units, HSN, GST rates, discounts, remarks and product references. Unit
+  rates and monetary amounts are prorated by `remaining GST-exclusive value / original
+  GST-exclusive value`; they are not replaced by a single “remaining amount” line. Unit rates
+  display two decimals while proportional line amounts carry rounding cents across rows;
+  the print explains this distinction. Invoice discounts and charges reduce proportionately,
+  and round-off preserves the exact uninvoiced claim. Project quantities/rates are not rewritten.
+  GST stays on the tax remainder only: for a GST-inclusive ₹3,00,000 PI at 18%, a ₹1,00,000
+  cash conversion consumes ₹1,18,000 of the original gross claim, leaving ₹1,82,000 to tax-invoice.
+- Existing invoices/allocations are **not rewritten automatically** by this fix. If an older
+  Cash Invoice received too much, use its audited Delete/reversal and recreate the conversion
+  with the correct transfer **before issuing a tax remainder**. If a tax remainder already
+  exists, the deletion guard still applies; Accounts needs a separately authorised correction.
 - Untransferred money stays against the PI, including when its remaining invoice value is
   zero: it is then a retained client advance. Such a PI remains in credit/statement queries.
   Fully cash-invoiced PIs without retained credit are superseded. Neither can be invoiced again.
@@ -441,7 +462,10 @@ receivables. Use a consistent pre-feature backup for rollback after use.
 `php artisan test --filter='CashInvoice(Conversion|Deletion)Test'` covers direct GST-free creation,
 partial/full/percentage conversion, chosen retained credit, native/FX receipts, refunds,
 atomic rollback, rounding, tax remainder, immutable links, statement reconciliation,
-project product/value isolation and family-wide workflow gates. Deletion coverage adds
+project product/value isolation, itemised/prorated tax remainders (including mixed GST,
+discounts and rounding), cash-first capped transfers, and family-wide workflow gates.
+`node tools/checks/cash-conversion-check.cjs` audits the form and optionally exercises the
+amount/percentage defaults, manual choices and caps in Chromium. Deletion coverage adds
 partial/full/sibling reversal, restored receipts/FX/refunds, reserved numbers, tax-remainder
 protection, audit/delete rollback, permissions/CSRF, rendered controls and workflow restoration.
 The SQLite module fixtures run the relevant real migrations; they deliberately avoid the
