@@ -313,3 +313,25 @@ never carry our logo. FROM and SHIP TO labels, names and addresses are each **2 
 than their previous format-specific size. The item band absorbs the changed height so
 weights, handling marks and continuous borders stay on the label. Batch printing waits
 for the logo image as well as fonts and QR codes before opening the print dialog.
+
+### Global carton-label QR destination
+
+Open **Settings → Packaging lists**, enter the **QR code link → Destination URL**,
+and save. Use a complete `https://` (or `http://`) URL, up to 200 UTF-8 bytes, without
+embedded usernames/passwords. A short link is best for the small thermal QR code.
+The configured URL is encoded exactly, including query parameters and fragments;
+no carton identifiers or tracking values are appended. It applies to all senders,
+A4/A5/100 × 140 mm stock, and both single-group and all-carton batch output.
+
+Clear the field and save to restore the existing ERP link to the relevant carton
+on its packaging-list record (login required). Settings are read once per generated
+label page, not once per physical copy. Changes affect newly generated/reprinted
+labels; existing physical labels and saved PDFs keep their original payload.
+Barcode text, numbering, label geometry and print auditing are unchanged. No new
+database migration is required; the setting uses the existing `office_settings`
+table. Missing settings tables and invalid manually stored URLs safely fall back
+to the existing ERP link.
+
+`php artisan test --filter=PackagingQrSettingsTest` exercises settings persistence,
+permissions, URL safety/length, default reset, all label formats/senders, batch
+copies and the once-per-page lookup.

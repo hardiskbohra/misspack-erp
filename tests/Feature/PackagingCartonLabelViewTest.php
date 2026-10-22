@@ -39,7 +39,7 @@ class PackagingCartonLabelViewTest extends TestCase
         ]));
 
         return view('packaging_lists.label', [
-            'carton' => $carton, 'format' => $format, 'copies' => 1, 'startCartonNumber' => 1,
+            'labelQrUrl' => '', 'carton' => $carton, 'format' => $format, 'copies' => 1, 'startCartonNumber' => 1,
             'organisation' => $organisation ?? new Organisation(['legal_name' => 'MissPack India Pvt Ltd', 'trade_name' => 'MissPack']),
         ])->render();
     }

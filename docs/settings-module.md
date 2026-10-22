@@ -260,3 +260,18 @@ holds the parts that are easy to lose:
   renders them, and the two module sheets no longer style them;
 - a setting is findable by the words people use, and the search box says so;
 - the boundary rule is written down — this file.
+
+### Packaging lists (`packaging`)
+
+**Settings → Packaging lists → QR code link** configures the global destination
+for carton-label scans. The area is registered once in `SettingsDirectory`, so it
+appears on the hub, every settings rail and settings search. Reading and saving
+requires the existing `settings.manage` permission, not just Operations access.
+`PackagingListSettingController` owns validation and writes; `OfficeSetting` stores
+it under the `packaging` key in the existing `office_settings` table.
+
+A blank destination preserves the per-carton ERP record link. A custom HTTP/HTTPS
+URL is used exactly, for every sender and all A4/A5/thermal single/batch labels.
+URLs with credentials, other schemes and values above 200 UTF-8 bytes are rejected;
+the byte limit keeps the payload within the label encoder’s QR capacity. This is
+not a redirect endpoint and the server never fetches the configured destination.

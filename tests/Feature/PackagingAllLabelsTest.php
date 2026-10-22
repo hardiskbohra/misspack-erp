@@ -20,6 +20,7 @@ class PackagingAllLabelsTest extends TestCase
     {
         parent::setUp();
         // Brand fixture: rendering must not depend on an installed organisation database.
+        view()->share('labelQrUrl', '');
         view()->share('organisation', new \App\Models\Organisation([
             'legal_name' => 'MissPack India Pvt Ltd', 'trade_name' => 'MissPack',
         ]));

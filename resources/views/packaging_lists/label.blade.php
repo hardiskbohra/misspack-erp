@@ -6,6 +6,7 @@
     <p role="alert" data-label-print-error hidden></p>
 </div>
 @php($organisation = $organisation ?? \App\Models\Organisation::current())
+@php($labelQrUrl = $labelQrUrl ?? \App\Services\PackagingLabelQr::configuredUrl())
 @php($labelBatches = $labelBatches ?? [['carton' => $carton, 'copies' => $copies, 'startCartonNumber' => $startCartonNumber]])
 @foreach ($labelBatches as $batch)
     @for ($copy = 0; $copy < $batch['copies']; $copy++)

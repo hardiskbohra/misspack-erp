@@ -182,6 +182,9 @@ Route::middleware('auth')->group(function () {
            redirects where the old routes were.
            ===================================================================== */
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+        Route::get('/settings/packaging', [\App\Http\Controllers\PackagingListSettingController::class, 'index'])->name('settings.packaging');
+        Route::put('/settings/packaging', [\App\Http\Controllers\PackagingListSettingController::class, 'update'])->name('settings.packaging.update');
+
 
         // Organisation — the company record every document prints from.
         Route::get('/settings/organisation', [OrganisationController::class, 'index'])->name('settings.organisation');

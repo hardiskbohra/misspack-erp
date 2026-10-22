@@ -65,7 +65,7 @@ const userMenu = blade(read('resources/views/layouts/partials/user-menu.blade.ph
 const search = plain(read('app/Services/GlobalSearch.php'));
 const docs = read('docs/settings-module.md');
 
-const areas = ['organisation', 'cashflow', 'leads', 'workflow', 'feedback', 'briefings', 'assets'];
+const areas = ['organisation', 'cashflow', 'leads', 'workflow', 'feedback', 'briefings', 'assets', 'packaging'];
 const areaView = key => `resources/views/settings/${key}.blade.php`;
 
 /* ------------------------------------------------------------- one list */
@@ -112,7 +112,7 @@ check('the page the office opens owns no setting of its own',
 check('every area screen wears the same rail, with its own key',
     areas.filter((key, index) => index >= 0)
         .every(key => has(blade(read(areaView(key))), `@include('settings.partials.nav', ['current' => '${key}'])`))
-    && areas.length === 7);
+    && areas.length === 8);
 
 check('the hub marks no area, because the hub is not one',
     has(hub, "@include('settings.partials.nav', ['current' => null])")

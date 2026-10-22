@@ -21,6 +21,20 @@ class OfficeSetting extends Model
 
     public const BRIEFINGS = 'briefings';
     public const WORKFLOW = 'workflow';
+    public const PACKAGING = 'packaging';
+
+    public static function packaging(): array
+    {
+        $value = Schema::hasTable('office_settings')
+            ? static::query()->find(self::PACKAGING)?->value : [];
+
+        return ['label_qr_url' => is_string($value['label_qr_url'] ?? null) ? trim($value['label_qr_url']) : ''];
+    }
+
+    public static function putPackaging(array $value): void
+    {
+        static::query()->updateOrCreate(['key' => self::PACKAGING], ['value' => $value]);
+    }
 
     public static function workflowDefaults(): array
     {

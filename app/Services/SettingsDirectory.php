@@ -57,6 +57,7 @@ final class SettingsDirectory
     public const WORKFLOW = 'workflow';
     public const BRIEFINGS = 'briefings';
     public const ASSETS = 'assets';
+    public const PACKAGING = 'packaging';
 
     /**
      * Every area of the settings module, in the order the rail shows them.
@@ -103,6 +104,19 @@ final class SettingsDirectory
                     'Contacts' => $this->count('organisation_contacts', fn () => OrganisationContact::query()->count()),
                     'Socials' => $this->count('organisation_socials', fn () => OrganisationSocial::query()->count()),
                 ],
+            ],
+
+            self::PACKAGING => [
+                'key' => self::PACKAGING,
+                'label' => 'Packaging lists',
+                'icon' => 'fa-solid fa-boxes-stacked',
+                'blurb' => 'The QR destination used by every carton label, across all packaging lists and paper formats.',
+                'holds' => ['Global carton-label QR code link', 'Default link back to each carton’s packaging list'],
+                'route' => 'settings.packaging',
+                'active' => 'settings.packaging*',
+                'links' => [],
+                'keywords' => ['packaging', 'packing list', 'carton', 'label', 'qr', 'qr code', 'link', 'scan'],
+                'counts' => fn (): array => ['Controls' => 1],
             ],
 
             self::CASHFLOW => [
