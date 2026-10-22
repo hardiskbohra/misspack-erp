@@ -395,40 +395,7 @@
             </section>
 
 
-            <section class="master-card master-card--flat master-section">
-                <div class="master-section-head">
-                    <h3 class="master-section-title">Shipment Photos</h3>
-                    @if ($shipment->attachments->isNotEmpty())
-                        <span class="master-chip">{{ $shipment->attachments->count() }}</span>
-                    @endif
-                </div>
-
-                @if ($shipment->attachments->isEmpty())
-                    <div class="master-empty-state">
-                        <i class="fa-regular fa-images"></i>
-                        <p>No shipment photos yet. Upload them while editing this shipment.</p>
-                    </div>
-                @else
-                    <div class="photo-grid">
-                        @foreach ($shipment->attachments as $attachment)
-                            <a class="photo-card" href="{{ asset('storage/'.$attachment->file_path) }}" target="_blank">
-                                @if (str_starts_with($attachment->mime_type, 'image/'))
-                                    <img src="{{ asset('storage/'.$attachment->file_path) }}" alt="{{ $attachment->title ?: $attachment->original_name }}">
-                                @else
-                                    <div class="file-card"><i class="file-icon fa-solid fa-file"></i></div>
-                                @endif
-
-                                <div class="photo-card-body">
-                                    <div class="photo-name">{{ $attachment->original_name }}</div>
-                                    <div class="photo-meta">
-                                        <span class="master-chip">{{ $attachment->is_public ? 'Public' : 'Internal' }}</span>
-                                    </div>
-                                </div>
-                            </a>
-                        @endforeach
-                    </div>
-                @endif
-            </section>
+            @include('shipments.partials.attachments-card')
 
             <section class="master-card master-card--flat master-section">
                 <div class="master-section-head">

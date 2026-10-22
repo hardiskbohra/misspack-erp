@@ -184,3 +184,20 @@ Production quantity and evidence are recorded in a focused modal inside the Cont
 Project progress is the weighted `calculated_progress` produced by the standard workflow. The calculator publishes that value to `projects.progress_percent` only as a list/dashboard cache. Project forms, status controls, activity updates, financial closure, and coordinator reporting cannot submit or write a separate percentage. A coordinator may still report the observed stage and reason, but that narrative does not alter calculated progress.
 
 The former project timeline feature has been retired. Its office and client tabs, routes, controller, model, views, scripts, styles, relationships, and source migration are removed. Deployment migration `2026_10_20_140000_remove_milestones_and_manual_progress.php` drops the obsolete table and the two manual-progress columns, then aligns existing project progress caches to their workflow values.
+
+
+## Shipment detail attachments
+
+The shipment detail page has a **Shipment Attachments** card with a direct, multi-file
+**Upload attachments** form. It posts to the existing `shipments.attachments.store` endpoint
+without entering Edit or resubmitting shipment fields, then returns to the same shipment's
+attachment card. Files are internal by default; **Visible to client / public tracking** is
+an explicit opt-in. The form is shown only to users with `operations.manage`; read-only
+operations users can still view the existing gallery.
+
+The existing 8 MB per-file limit and JPG/JPEG/PNG/WEBP/GIF/HEIC/HEIF/XLS/XLSX/PDF/DOC
+allowlist apply. These are shipment photos/supporting files, not workflow checklist evidence:
+operational dispatch documents still belong to the project's Workflow Control Centre.
+No migration or new permissions are needed. `ShipmentAttachmentUploadTest` covers rendered
+controls, multiple uploads, visibility, validation, unchanged shipment fields, permission
+checks and CSRF protection.

@@ -551,7 +551,8 @@ class ShipmentController extends Controller
 
         $this->storePhotoAttachments($request, $shipment, $request->boolean('is_public'));
 
-        return back()->with('success', 'Shipment photo attachment uploaded successfully.');
+        return redirect()->route('shipments.show', $shipment)->withFragment('shipmentAttachments')
+            ->with('success', 'Shipment attachments uploaded successfully.');
     }
 
     public function updateAttachment(Request $request, ShipmentAttachment $attachment): RedirectResponse

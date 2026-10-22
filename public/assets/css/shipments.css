@@ -1882,3 +1882,8 @@
     font-size: 14px;
 }
 
+
+/* Detail-page attachments reuse the shared upload row without crowding the gallery. */
+.ship-attachments .ship-doc-upload {
+    margin-bottom: 16px;
+}
