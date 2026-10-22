@@ -543,14 +543,16 @@
                                                     <i class="fas fa-copy" aria-hidden="true"></i> Duplicate as draft
                                                 </button>
                                             </form>
+                                            @if (!$invoice->hasMonetaryConversions() || $invoice->isConvertedCash())
                                             <form method="POST" action="{{ route('sales-invoices.destroy', $invoice) }}"
-                                                data-confirm="Delete {{ $invoice->invoice_number }}?">
+                                                data-confirm="{{ $invoice->deleteConfirmation() }}">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="danger">
                                                     <i class="fas fa-trash" aria-hidden="true"></i> Delete
                                                 </button>
                                             </form>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>

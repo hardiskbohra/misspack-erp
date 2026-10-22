@@ -201,23 +201,23 @@
                                 <i class="fas fa-copy" aria-hidden="true"></i> Duplicate as draft
                             </button>
                         </form>
-                        @if (!$invoice->hasMonetaryConversions())
-<form method="POST" action="{{ route('sales-invoices.destroy', $invoice) }}"
-                            data-confirm="Delete {{ $invoice->invoice_number }}?">
+                        @if (!$invoice->hasMonetaryConversions() || $invoice->isConvertedCash())
+                        <form method="POST" action="{{ route('sales-invoices.destroy', $invoice) }}"
+                            data-confirm="{{ $invoice->deleteConfirmation() }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="danger">
                                 <i class="fas fa-trash" aria-hidden="true"></i> Delete
                             </button>
                         </form>
-@endif
+                        @endif
                     </div>
                 </div>
             </div>
         </header>
 
         @if ($invoice->source_proforma_id)
-            <div class="master-alert"><strong>From proforma</strong> <a href="{{ route('sales-invoices.show', $invoice->source_proforma_id) }}">{{ $invoice->conversionSource?->invoice_number }}</a>. This amount-based conversion is locked against editing/deletion; receipts can still be recorded.</div>
+            <div class="master-alert"><strong>From proforma</strong> <a href="{{ route('sales-invoices.show', $invoice->source_proforma_id) }}">{{ $invoice->conversionSource?->invoice_number }}</a>. @if ($invoice->isConvertedCash()) Financial edits are locked. Delete reverses this cash conversion and returns its value and receipts to the PI, unless the remainder already has a tax invoice. @else This conversion is locked against editing/deletion. @endif Receipts can still be recorded.</div>
         @endif
         @if ($invoice->invoice_type === 'proforma')
             <section class="master-card master-section" id="cashInvoiceConversion" data-convertible="{{ $invoice->cashConvertibleRemaining() }}">

@@ -220,22 +220,21 @@ class CashInvoiceConversionTest extends TestCase
         }
     }
 
-    public function test_converted_sources_and_children_cannot_be_edited_or_deleted(): void
+    public function test_converted_sources_cannot_be_deleted_and_linked_documents_cannot_be_edited(): void
     {
         $pi = $this->pi();
         $cash = $this->convert($pi, 50);
-        foreach ([$pi->fresh(), $cash] as $invoice) {
-            foreach (['update', 'destroy'] as $action) {
-                try {
-                    $controller = new SalesInvoiceController;
-                    $action === 'destroy' ? $controller->destroy($invoice) : $controller->update(Request::create('/', 'PATCH'), $invoice);
-                    $this->fail('Conversion accounting must be immutable.');
-                } catch (ValidationException) {
-                    $this->assertModelExists($invoice);
-                }
+        foreach ([[$pi->fresh(), 'update'], [$cash, 'update'], [$pi->fresh(), 'destroy']] as [$invoice, $action]) {
+            try {
+                $controller = new SalesInvoiceController;
+                $action === 'destroy' ? $controller->destroy($invoice) : $controller->update(Request::create('/', 'PATCH'), $invoice);
+                $this->fail('Linked edits and original PI deletion must stay blocked.');
+            } catch (ValidationException) {
+                $this->assertModelExists($invoice);
             }
         }
     }
+
     public function test_direct_cash_creation_ignores_forged_tax_fields_and_uses_its_own_number_series(): void
     {
         $request = Request::create('/', 'POST', [

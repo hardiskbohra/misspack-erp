@@ -84,6 +84,18 @@ class SalesInvoice extends Model
         return $this->invoice_type === 'cash';
     }
 
+    public function isConvertedCash(): bool
+    {
+        return $this->isCash() && (int) $this->source_proforma_id > 0;
+    }
+
+    public function deleteConfirmation(): string
+    {
+        return $this->isConvertedCash()
+            ? 'Delete '.$this->invoice_number.' and reverse its cash conversion? The converted value, including the PI’s original GST, and all opening credit/receipts will return to the original PI. Bank balances will not change.'
+            : 'Delete '.$this->invoice_number.'?';
+    }
+
     public function conversionSource()
     {
         return $this->belongsTo(self::class, 'source_proforma_id');

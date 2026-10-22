@@ -25,6 +25,7 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Services\CashflowLedger;
 use App\Services\CashInvoiceConversion;
+use App\Services\CashInvoiceDeletion;
 use App\Services\ClientInvoiceSnapshot;
 use App\Services\ProjectProducts;
 use App\Services\SalesInvoiceFilters;
@@ -814,6 +815,12 @@ class SalesInvoiceController extends Controller
 
     public function destroy(SalesInvoice $salesInvoice): RedirectResponse
     {
+        if ($salesInvoice->isConvertedCash()) {
+            $pi = app(CashInvoiceDeletion::class)->delete($salesInvoice);
+
+            return redirect()->route('sales-invoices.show', $pi)->with('success',
+                'Cash Invoice deleted and conversion reversed. Its value and all linked receipts are back on '.$pi->invoice_number.'. Bank balances are unchanged.');
+        }
         $this->assertEditable($salesInvoice);
         DB::transaction(function () use ($salesInvoice) {
             $salesInvoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
@@ -868,7 +875,13 @@ class SalesInvoiceController extends Controller
     {
         if ($request->input('invoice_type') === 'cash') $request->merge(['gst_type' => 'none']);
         return $request->validate([
-            'invoice_number' => ['nullable', 'string', 'max:255', 'unique:sales_invoices,invoice_number,'.($invoice ? $invoice->id : 'NULL')],
+            'invoice_number' => ['bail', 'nullable', 'string', 'max:255', 'unique:sales_invoices,invoice_number,'.($invoice ? $invoice->id : 'NULL'),
+                function ($attribute, $value, $fail) {
+                    if (CashInvoiceDeletion::numberWasReversed($value)) {
+                        $fail('This invoice number is reserved in the cash reversal audit history. Leave it blank to generate a new number.');
+                    }
+                },
+            ],
             'invoice_type' => ['required', 'in:proforma,tax,cash'],
             'status' => ['required', Rule::in(array_keys(SalesInvoice::statusOptions()))],
             'client_id' => ['nullable', 'integer'],
@@ -1198,7 +1211,8 @@ class SalesInvoiceController extends Controller
         
         $number = $prefix.$next;
 
-        while (SalesInvoice::where('invoice_number', $number)->exists()) {
+        while (SalesInvoice::where('invoice_number', $number)->exists()
+            || ($type === 'cash' && CashInvoiceDeletion::numberWasReversed($number))) {
             $next = str_pad((string) ((int) $next + 1), 3, '0', STR_PAD_LEFT);
             $number = $prefix.$next;
         }
@@ -1379,7 +1393,7 @@ class SalesInvoiceController extends Controller
 
         if ($skipped) {
             $why = $data['action'] === 'delete_drafts'
-                ? 'left alone — already past draft, so the client holds it'
+                ? 'left alone — not an unlinked draft; linked Cash Invoices need individual deletion to reverse their conversion safely'
                 : 'left alone — cancelled';
 
             $message .= ' '.$skipped.' '.Str::plural('invoice', $skipped).' '.$why.'.';

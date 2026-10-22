@@ -394,12 +394,42 @@ the figure.
 - Untransferred money stays against the PI, including when its remaining invoice value is
   zero: it is then a retained client advance. Such a PI remains in credit/statement queries.
   Fully cash-invoiced PIs without retained credit are superseded. Neither can be invoiced again.
-- Linked source/child financial documents are locked against editing, cancellation and
-  deletion (including bulk deletion). Reversal is not implemented. Receipts, portal visibility
+- Linked source/child financial documents remain locked against financial editing and
+  cancellation. The original PI and linked tax invoices cannot be deleted while their
+  conversions exist. Bulk deletion does not reverse conversions. Receipts, portal visibility
   and reminders remain available. A draft duplicate is unlinked; amount-summary children
   are detached from the project so they cannot create fictitious physical products.
+
 - Workflow advance/dispatch gates aggregate the complete PI settlement family, not only the
   last child, so an unpaid earlier cash invoice cannot disappear from the dispatch check.
+
+### Delete a converted Cash Invoice
+
+Use **Delete** on the Cash Invoice or its invoice-list row, then confirm the reversal.
+This is an individual, permission-checked action, not a general financial-edit unlock.
+After deletion the ERP opens the original PI so Accounts can check the restored balance.
+
+- The PI regains this conversion's original base and gross value, **including its original
+  GST**. A fully converted PI reopens. Other Cash Invoices and their consumed values stay
+  intact, including their previously rounded amounts.
+- All opening credit and current receipt links/allocations on the deleted Cash Invoice
+  return to the PI, including later receipts, overpayments, refunds and FX allocations.
+  No bank entry is created or removed. Native amounts, document amounts and exchange
+  rates do not change, so bank balances are unchanged.
+- A workflow using this Cash Invoice as its commercial baseline returns to the original
+  PI. Payment gates are re-evaluated against the restored settlement family; dispatch may
+  become blocked if the restored GST-inclusive claim is no longer fully paid.
+- **A linked tax invoice for the PI remainder blocks cash deletion.** Deleting only the
+  cash portion would otherwise restore value already represented by that tax invoice.
+  Tax-conversion reversal is not implemented by this action; no money changes on rejection.
+- The invoice, item and attachment metadata and returned financial links are captured in
+  the immutable audit register. Public-access tokens are excluded. Attachment files remain
+  as audit evidence even though the document and its dependent rows are removed. Deleted
+  Cash Invoice numbers stay reserved, including against manually entered replacements.
+- PI and child locks, receipt reassignment, cached balances, workflow updates, audit and
+  document deletion are one transaction. Missing audit schema, inconsistent conversion
+  totals, or a failed delete aborts the entire reversal. No new migration is required if
+  the existing cash-conversion and audit migrations are already installed.
 
 ### Deployment and verification
 
@@ -408,12 +438,14 @@ No existing invoice values or bank transactions are rewritten by this migration.
 invoices/conversions exist, schema rollback is refused: dropping the links would duplicate
 receivables. Use a consistent pre-feature backup for rollback after use.
 
-`php artisan test --filter=CashInvoiceConversionTest` covers direct GST-free creation,
+`php artisan test --filter='CashInvoice(Conversion|Deletion)Test'` covers direct GST-free creation,
 partial/full/percentage conversion, chosen retained credit, native/FX receipts, refunds,
 atomic rollback, rounding, tax remainder, immutable links, statement reconciliation,
-project product/value isolation and family-wide workflow gates. Its SQLite module fixture
-runs the relevant real migrations; it deliberately avoids the unrelated legacy quote-removal
-migration, which currently fails on an indexed column during a fresh SQLite installation.
+project product/value isolation and family-wide workflow gates. Deletion coverage adds
+partial/full/sibling reversal, restored receipts/FX/refunds, reserved numbers, tax-remainder
+protection, audit/delete rollback, permissions/CSRF, rendered controls and workflow restoration.
+The SQLite module fixtures run the relevant real migrations; they deliberately avoid the
+unrelated legacy quote-removal migration, which currently fails on an indexed column during a fresh SQLite installation.
 
 
 ## Create a client without leaving the invoice
