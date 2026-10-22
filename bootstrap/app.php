@@ -26,6 +26,8 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is('api/*')
+                // Inline client creation must receive validation/auth errors, not an HTML redirect.
+                || ($request->routeIs('clients.quickStore') && $request->expectsJson()),
         );
     })->create();

@@ -220,7 +220,13 @@
 
                 <p class="master-section-label">Who it is for</p>
                 <div class="master-form-grid is-three">
-                    <div class="master-field"><label class="master-label" for="clientSelect">Client</label><select
+                    <div class="master-field">
+                        <div class="si-client-picker-head">
+                            <label class="master-label" for="clientSelect">Client</label>
+                            <button type="button" class="master-btn master-btn-soft master-btn-sm" data-create-invoice-client
+                                aria-haspopup="dialog" aria-controls="invoiceClientModal"><i class="fas fa-plus" aria-hidden="true"></i> Add client</button>
+                        </div>
+                        <select
                             class="master-select" name="client_id" id="clientSelect"
                             data-snapshot-fields="{{ json_encode($clientSnapshotFields) }}">
                             <option value="">Select Client</option>
@@ -231,6 +237,7 @@
                                     {{ $client->company_name }}</option>
                             @endforeach
                         </select>
+                        <p class="master-help" role="status" data-invoice-client-status hidden></p>
                         <p class="master-help">Picking a client brings its contact details and both addresses
                             onto the invoice, in the fields below. The invoice keeps its own copy, so a later edit
                             to the client record never rewrites a sent invoice.</p>
@@ -555,6 +562,7 @@
                     type="submit"><i class="fas fa-floppy-disk" aria-hidden="true"></i>
                     {{ $isEdit ? 'Update Invoice' : 'Create Invoice' }}</button></div>
         </form>
+        @include('sales_invoices.partials.client-create-modal')
     </div>
 
 
@@ -564,5 +572,6 @@
 
 @push('scripts')
     <script src="{{ $assetVer('assets/js/sales-invoices.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/invoice-client-create.js') }}"></script>
 @endpush
 @endsection

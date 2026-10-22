@@ -969,3 +969,19 @@
 
 /* Cash invoices use the same form without tax-identification or tax-rate controls. */
 .si-form[data-si-cash="true"] [data-si-tax] { display:none !important; }
+
+/* Client creation stays beside the picker; the shared modal owns its chrome. */
+.si-client-picker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.si-client-picker-head .master-label { margin: 0; }
+.si-client-create-modal .si-address-pair { margin-top: 20px; }
+.si-client-address-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.si-client-create-toggle { margin: 0 0 12px; }
+.si-client-create-modal [aria-invalid="true"] { border-color: var(--master-red, #ef4770); }
+.si-client-create-modal [data-client-field-error] { color: var(--master-red, #ef4770); }

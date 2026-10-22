@@ -414,3 +414,33 @@ atomic rollback, rounding, tax remainder, immutable links, statement reconciliat
 project product/value isolation and family-wide workflow gates. Its SQLite module fixture
 runs the relevant real migrations; it deliberately avoids the unrelated legacy quote-removal
 migration, which currently fails on an indexed column during a fresh SQLite installation.
+
+
+## Create a client without leaving the invoice
+
+On the invoice create/edit form, choose **Add client** beside the Client selector.
+Enter the company and optional primary contact, GSTIN/PAN, and billing address.
+Shipping defaults to **Same as billing address**; untick it to enter a separate
+shipping address, including city, state, country and postal code.
+
+**Save client & use on invoice** saves a normal draft client immediately, selects
+it in the invoice’s searchable picker, and fills the invoice contact and address
+fields. Product rows, quantities, prices, project and other unsaved invoice values
+stay in place. Cancelling the dialog makes no request; an error keeps the dialog
+values and invoice entries available to correct/retry. The new client remains in
+Clients even if the invoice is later cancelled. This does not approve KYC or grant
+client-portal access.
+
+The existing authenticated `clients.quickStore` endpoint accepts the address fields
+and returns HTTP 201 with `{client: {id, company_name, client_number, snapshot}}` for
+JSON requests. Its ordinary client-list form still redirects to the new client.
+Validation/authentication/CSRF errors for JSON quick-create requests remain JSON;
+the existing office/sales-manage permission and CSRF guards are unchanged.
+`ClientInvoiceSnapshot::from()` is the single mapping used by preselected clients,
+existing selector options, inline creation, and server-side invoice saving. The field
+contract is populated even when no clients exist yet.
+
+Verification: `php artisan test --filter=InvoiceClientCreationTest` covers creation,
+both address modes, validation, legacy redirects, JSON authentication/CSRF failures,
+permission checks, snapshot fallbacks, first-client behaviour and form separation.
+No database migration is needed for inline client creation.

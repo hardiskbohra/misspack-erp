@@ -25,6 +25,7 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Services\CashflowLedger;
 use App\Services\CashInvoiceConversion;
+use App\Services\ClientInvoiceSnapshot;
 use App\Services\ProjectProducts;
 use App\Services\SalesInvoiceFilters;
 use App\Services\SavedViews;
@@ -1137,26 +1138,7 @@ class SalesInvoiceController extends Controller
        value the office cannot see is a value it cannot correct before it prints. */
     private function clientSnapshot($client): array
     {
-        return [
-            'client_company_name' => $client->company_name ?? null,
-            'client_brand_name' => $client->brand_name ?? null,
-            'client_contact_name' => $client->account_person_name ?: ($client->ceo_name ?? null),
-            'client_email' => $client->account_person_email ?: ($client->ceo_email ?? null),
-            'client_mobile' => $client->account_person_contact ?: ($client->ceo_contact ?? null),
-            'client_gstin' => $client->gstin ?? null,
-            'client_pan' => $client->pan ?? null,
-            'billing_address' => $client->billing_address ?? null,
-            'billing_city' => $client->billing_city ?? null,
-            'billing_state' => $client->billing_state ?? null,
-            'billing_country' => $client->billing_country ?? null,
-            'billing_pincode' => $client->billing_pincode ?? null,
-            'shipping_address' => $client->shipping_address ?: ($client->billing_address ?? null),
-            'shipping_city' => $client->shipping_city ?: ($client->billing_city ?? null),
-            'shipping_state' => $client->shipping_state ?: ($client->billing_state ?? null),
-            'shipping_country' => $client->shipping_country ?: ($client->billing_country ?? null),
-            'shipping_pincode' => $client->shipping_pincode ?: ($client->billing_pincode ?? null),
-            'place_of_supply' => $client->billing_state ?? null,
-        ];
+        return ClientInvoiceSnapshot::from($client);
     }
 
     private function itemsFromSource($project = null): array
@@ -1534,9 +1516,7 @@ class SalesInvoiceController extends Controller
                holds travels; the field list below keeps its shape either way, so
                changing client clears what the last one had. */
             'clientSnapshots' => $this->clientSnapshots($clients),
-            'clientSnapshotFields' => $clients->isNotEmpty()
-                ? array_keys($this->clientSnapshot($clients->first()))
-                : [],
+            'clientSnapshotFields' => array_keys($this->clientSnapshot(new \App\Models\Client)),
             'projects' => $this->projects(),
             'products' => $this->products(),
             'typeOptions' => SalesInvoice::typeOptions(),

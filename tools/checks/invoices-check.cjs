@@ -944,15 +944,33 @@ check('the module explains itself where the next person will look',
    values in the same fields, and the script applies it **by field name** —
    a hand-written list in the script is the same list twice, and the second copy
    is what silently stops filling a column somebody adds. */
-const snapshotBody = controller.slice(
-    controller.indexOf('private function clientSnapshot('),
-    controller.indexOf('private function itemsFromSource(')
-);
+const snapshotBody = read('app/Services/ClientInvoiceSnapshot.php');
 const snapshotFields = [...snapshotBody.matchAll(/'([a-z_]+)' => \$client->/g)].map(m => m[1]);
 const clientBlock = js.slice(
     js.indexOf('var clientSelect = document.getElementById'),
     js.indexOf('/* ============================================================ the list')
 );
+
+const clientCreator = read('public/assets/js/invoice-client-create.js');
+const clientModal = read('resources/views/sales_invoices/partials/client-create-modal.blade.php');
+const quickClientController = read('app/Http/Controllers/ClientController.php');
+check('inline creation shares the existing snapshot and works before the first client',
+    controller.includes('ClientInvoiceSnapshot::from($client)')
+    && quickClientController.includes('ClientInvoiceSnapshot::from($client)')
+    && controller.includes("'clientSnapshotFields' => array_keys($this->clientSnapshot(new \\App\\Models\\Client))"));
+check('inline client form stays separate and carries contact and both address blocks',
+    form.includes("</form>\n        @include('sales_invoices.partials.client-create-modal')")
+    && clientModal.includes("route('clients.quickStore')")
+    && clientModal.includes('shipping_same_as_billing')
+    && clientModal.includes("'billing' => 'Billing address', 'shipping' => 'Shipping address'")
+    && clientModal.includes('data-client-create-error'));
+check('inline client saves do not submit the invoice and use the existing Select2 change pipeline',
+    clientCreator.includes('event.preventDefault()') && clientCreator.includes('if (busy || !form.reportValidity()) return')
+    && clientCreator.includes("Accept: 'application/json'") && clientCreator.includes('new FormData(form)')
+    && clientCreator.includes('option.dataset.snapshot = JSON.stringify(client.snapshot)')
+    && clientCreator.includes("window.jQuery(select).trigger('change')")
+    && clientCreator.includes("select.dispatchEvent(new Event('change'")
+    && !clientCreator.includes('innerHTML'));
 
 check('every part of the client snapshot has a field on the form',
     snapshotFields.length >= 18

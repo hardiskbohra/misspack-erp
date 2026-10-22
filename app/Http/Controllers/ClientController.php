@@ -11,8 +11,10 @@ use App\Models\ClientPortalNotification;
 use App\Models\ClientPortalUser;
 use App\Models\SavedView;
 use App\Models\SalesInvoice;
+use App\Services\ClientInvoiceSnapshot;
 use App\Services\PartyStatement;
 use App\Services\SavedViews;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -179,7 +181,7 @@ class ClientController extends Controller
             ->with('success', 'Client created successfully.');
     }
 
-    public function quickStore(Request $request): RedirectResponse
+    public function quickStore(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'company_name' => ['required', 'string', 'max:255'],
@@ -194,10 +196,25 @@ class ClientController extends Controller
             'gstin' => ['nullable', 'string', 'max:30'],
             'pan' => ['nullable', 'string', 'max:20'],
             'notes' => ['nullable', 'string'],
+            'billing_address' => ['nullable', 'string', 'max:5000'],
+            'billing_city' => ['nullable', 'string', 'max:255'],
+            'billing_state' => ['nullable', 'string', 'max:255'],
+            'billing_country' => ['nullable', 'string', 'max:255'],
+            'billing_pincode' => ['nullable', 'string', 'max:30'],
+            'shipping_address' => ['nullable', 'string', 'max:5000'],
+            'shipping_city' => ['nullable', 'string', 'max:255'],
+            'shipping_state' => ['nullable', 'string', 'max:255'],
+            'shipping_country' => ['nullable', 'string', 'max:255'],
+            'shipping_pincode' => ['nullable', 'string', 'max:30'],
+            'shipping_same_as_billing' => ['nullable', 'boolean'],
         ]);
+
+        $data['shipping_same_as_billing'] = $request->boolean('shipping_same_as_billing');
+        $this->copyBillingToShippingIfNeeded($data);
 
         $client = Client::create([
             ...$data,
+            'client_type' => $data['client_type'] ?? 'customer',
             'client_number' => $this->makeClientNumber(),
             'public_token' => Str::random(48),
             'preferred_currency' => 'INR',
@@ -205,6 +222,15 @@ class ClientController extends Controller
             'created_by' => Auth::id(),
             'kyc_submitted_at' => null,
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json(['client' => [
+                'id' => $client->id,
+                'company_name' => $client->company_name,
+                'client_number' => $client->client_number,
+                'snapshot' => ClientInvoiceSnapshot::from($client),
+            ]], 201);
+        }
 
         return redirect()
             ->route('clients.show', $client)
