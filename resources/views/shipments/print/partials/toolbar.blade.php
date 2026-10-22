@@ -3,7 +3,7 @@
     <a class="pdf-action pdf-action--secondary" href="{{ route('shipments.show', $shipment) }}">← Back to shipment</a>
 
     <span class="pdf-toolbar-group print-toolbar-links">
-        @foreach (['packing-list' => 'Packing list', 'delivery-challan' => 'Challan', 'summary' => 'Summary'] as $key => $label)
+        @foreach (['delivery-challan' => 'Challan', 'summary' => 'Summary'] as $key => $label)
             <a class="pdf-action {{ $document === $key ? 'pdf-action--selected' : '' }}"
                 href="{{ route('shipments.print', [$shipment, $key]) }}">{{ $label }}</a>
         @endforeach

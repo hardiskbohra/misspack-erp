@@ -145,6 +145,19 @@ class OfficeBriefing
             ->delete();
     }
 
+    /**
+     * Raise a source-controlled workflow notice through the same deduplicated,
+     * acknowledged and watcher-emailed channel as the rest of the office inbox.
+     */
+    public function workflowNotice(array $data): ?OfficeAlert
+    {
+        if (! $this->sourceOn('workflow')) {
+            return null;
+        }
+
+        return $this->raise($data, email: true);
+    }
+
     public function runScheduled(): array
     {
         $raised = [];

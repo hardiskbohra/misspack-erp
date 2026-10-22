@@ -26,7 +26,6 @@ class ProjectTrackingController extends Controller
         $data['occurred_at'] = $data['occurred_at'] ?? now();
 
         $tracking = ProjectTrackingUpdate::create($data);
-        $this->syncProjectProgress($project, $tracking);
 
         $this->writeLog($project, 'tracking_added', 'Tracking update added', $tracking->title, ['tracking_id' => $tracking->id], $tracking->is_public, $tracking->project_product_id);
 
@@ -39,7 +38,6 @@ class ProjectTrackingController extends Controller
         $data['is_public'] = $request->has('is_public');
         $old = $trackingUpdate->toArray();
         $trackingUpdate->update($data);
-        $this->syncProjectProgress($trackingUpdate->project, $trackingUpdate);
 
         $this->writeLog($trackingUpdate->project, 'tracking_updated', 'Tracking update updated', $trackingUpdate->title, ['old' => $old, 'new' => $trackingUpdate->fresh()->toArray()], $trackingUpdate->is_public, $trackingUpdate->project_product_id);
 
@@ -61,31 +59,11 @@ class ProjectTrackingController extends Controller
             'project_product_id' => ['nullable', 'integer'],
             'title' => ['required', 'string', 'max:255'],
             'status' => ['required', Rule::in(array_keys(ProjectTrackingUpdate::statusOptions()))],
-            'progress_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
             'location' => ['nullable', 'string', 'max:255'],
             'occurred_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
             'is_public' => ['nullable', 'boolean'],
         ]);
-    }
-
-    private function syncProjectProgress(Project $project, ProjectTrackingUpdate $tracking): void
-    {
-        if ($tracking->progress_percent === null) {
-            return;
-        }
-
-        $data = ['progress_percent' => $tracking->progress_percent];
-        if ($project->status === 'planned' && $tracking->progress_percent > 0) {
-            $data['status'] = 'in_progress';
-        }
-        if ((int) $tracking->progress_percent >= 100) {
-            $data['status'] = 'completed';
-            $data['stage'] = 'closed';
-            $data['completed_at'] = $project->completed_at ?: now();
-        }
-
-        $project->update($data);
     }
 
     private function writeLog(Project $project, string $eventType, string $title, ?string $description = null, ?array $newValues = null, bool $isPublic = false, ?int $projectProductId = null): void

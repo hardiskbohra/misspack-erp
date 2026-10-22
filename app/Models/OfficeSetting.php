@@ -20,6 +20,47 @@ class OfficeSetting extends Model
     ];
 
     public const BRIEFINGS = 'briefings';
+    public const WORKFLOW = 'workflow';
+
+    public static function workflowDefaults(): array
+    {
+        return [
+            'documents' => [
+                'export' => ['packing_list', 'commercial_invoice', 'shipping_bill'],
+                'import' => ['packing_list', 'commercial_invoice', 'bill_of_entry'],
+                'domestic' => ['delivery_challan'],
+            ],
+            'deadlines' => [
+                'approval_response_days' => 5,
+                'unassigned_review_days' => 1,
+                'blocked_review_days' => 2,
+                'standard_review_days' => 3,
+            ],
+            'qc_checks' => array_keys(\App\Models\ProjectQualityInspection::CHECKS),
+        ];
+    }
+
+    public static function workflow(): array
+    {
+        $defaults = self::workflowDefaults();
+        if (! Schema::hasTable('office_settings')) {
+            return $defaults;
+        }
+
+        $value = static::query()->find(self::WORKFLOW)?->value;
+        $value = is_array($value) ? $value : [];
+
+        return [
+            'documents' => array_merge($defaults['documents'], is_array($value['documents'] ?? null) ? $value['documents'] : []),
+            'deadlines' => array_merge($defaults['deadlines'], is_array($value['deadlines'] ?? null) ? $value['deadlines'] : []),
+            'qc_checks' => is_array($value['qc_checks'] ?? null) ? $value['qc_checks'] : $defaults['qc_checks'],
+        ];
+    }
+
+    public static function putWorkflow(array $value): void
+    {
+        static::query()->updateOrCreate(['key' => self::WORKFLOW], ['value' => $value]);
+    }
 
     public static function briefingDefaults(): array
     {

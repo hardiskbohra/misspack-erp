@@ -9,6 +9,7 @@
 @section('page-actions')
     <a class="master-btn master-btn-primary" href="{{ route('sales-invoices.create', ['type' => 'tax']) }}">+ New Tax Invoice</a>
     <a class="master-btn master-btn-soft" href="{{ route('sales-invoices.create', ['type' => 'proforma']) }}">New Proforma</a>
+    <a class="master-btn master-btn-soft" href="{{ route('sales-invoices.create', ['type' => 'cash']) }}">New Cash Invoice</a>
     <a class="master-btn master-btn-ghost desktop-only" href="{{ route('sales-invoices.export', request()->query()) }}">Export CSV</a>
 @endsection
 
@@ -30,6 +31,7 @@
             && blank($dateFrom) && blank($dateTo),
         'proforma' => $type === 'proforma',
         'tax' => $type === 'tax',
+        'cash' => $type === 'cash',
         'draft' => $status === 'draft',
     ];
 
@@ -111,6 +113,7 @@
                     href="{{ route('sales-invoices.index', $chipBase->all() + ['invoice_type' => 'tax']) }}">
                     Tax <span class="master-list-chip-count">{{ $chipCounts['tax'] }}</span>
                 </a>
+                <a class="master-list-chip {{ $chipActive['cash'] ? 'is-active' : '' }}" href="{{ route('sales-invoices.index', $chipBase->all() + ['invoice_type' => 'cash']) }}">Cash <span class="master-list-chip-count">{{ $chipCounts['cash'] }}</span></a>
                 <a class="master-list-chip {{ $chipActive['draft'] ? 'is-active' : '' }}"
                     href="{{ route('sales-invoices.index', $chipBase->all() + ['status' => 'draft']) }}">
                     Drafts <span class="master-list-chip-count">{{ $chipCounts['draft'] }}</span>
@@ -402,7 +405,7 @@
                             </td>
                             <td data-label="Client">
                                 <span class="si-client">{{ $invoice->client_company_name ?: 'No client' }}</span>
-                                <span class="master-sub ui-mobile-secondary">{{ $invoice->client_gstin ?: 'No GSTIN on file' }}</span>
+                                <span class="master-sub ui-mobile-secondary">@if (!$invoice->isCash()){{ $invoice->client_gstin ?: 'No GSTIN on file' }}@endif</span>
                             </td>
                             <td data-label="Project" class="ui-mobile-secondary">
                                 @if ($invoice->project?->project_number)
@@ -413,16 +416,17 @@
                                 @endif
                             </td>
                             <td data-label="Total" class="is-num">
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->total_amount) }}</strong>
+                                <strong>{{ \App\Helpers\CommonHelper::amount($invoice->receivableTotal(), $invoice->currency) }}</strong>
                                 <span class="master-sub">
                                     {{ $invoice->items->count() }} {{ \Illuminate\Support\Str::plural('item', $invoice->items->count()) }}
                                 </span>
                             </td>
                             <td data-label="Received" class="is-num ui-mobile-secondary">
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($received) }}</strong>
+                                <strong>{{ \App\Helpers\CommonHelper::amount($received, $invoice->currency) }}</strong>
                                 <span class="master-sub">
-                                    @if ($invoice->payments_count > 0)
-                                        {{ $invoice->payments_count }} {{ \Illuminate\Support\Str::plural('receipt', $invoice->payments_count) }}
+                                    @php($receiptCount = (int) $invoice->payments_count + (int) ($invoice->cashflow_allocations_count ?? 0))
+                                    @if ($receiptCount > 0)
+                                        {{ $receiptCount }} {{ \Illuminate\Support\Str::plural('receipt', $receiptCount) }}
                                     @else
                                         {{ $invoice->amount_paid > 0 ? 'Opening figure' : 'Nothing recorded' }}
                                     @endif
@@ -433,7 +437,7 @@
                                     <span class="master-sub">Moved to {{ $invoice->convertedInvoice?->invoice_number }}</span>
                                 @else
                                     <strong class="si-balance {{ $balance > 0 ? ($invoice->isOverdue() ? 'is-due' : '') : 'is-clear' }}">
-                                        {{ \App\Helpers\CommonHelper::indianCurrency($balance) }}
+                                        {{ \App\Helpers\CommonHelper::amount($balance, $invoice->currency) }}
                                     </strong>
                                 @endif
                             </td>
@@ -486,7 +490,9 @@
                                                     data-invoice-id="{{ $invoice->id }}"
                                                     data-invoice-number="{{ $invoice->invoice_number }}"
                                                     data-invoice-amount="{{ number_format($balance, 2, '.', '') }}"
-                                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balance) }}">
+                                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balance, $invoice->currency) }}"
+                                                    data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
+                                                    data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
                                                     <i class="fas fa-indian-rupee-sign" aria-hidden="true"></i> Record payment
                                                 </button>
                                             @endif

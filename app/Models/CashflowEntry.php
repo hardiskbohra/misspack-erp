@@ -26,6 +26,15 @@ class CashflowEntry extends Model
         'balance' => 'decimal:2',
     ];
 
+    protected static function booted(): void
+    {
+        static::deleting(function (CashflowEntry $entry) {
+            if (Schema::hasTable('cashflow_allocations')) {
+                $entry->allocations()->delete();
+            }
+        });
+    }
+
     public function account()
     {
         return $this->belongsTo(CashflowAccount::class, 'account_id');
@@ -43,6 +52,26 @@ class CashflowEntry extends Model
     public function attachments()
     {
         return $this->hasMany(CashflowAttachment::class, 'cashflow_entry_id');
+    }
+
+    /** Monetary slices linked to projects and sales/purchase documents. */
+    public function allocations()
+    {
+        return $this->hasMany(CashflowAllocation::class, 'cashflow_entry_id')->orderBy('id');
+    }
+
+    public function allocatedAmount(): float
+    {
+        $total = $this->relationLoaded('allocations')
+            ? $this->allocations->sum('amount')
+            : $this->allocations()->sum('amount');
+
+        return round((float) $total, 2);
+    }
+
+    public function unallocatedAmount(): float
+    {
+        return round(max($this->amountMoved() - $this->allocatedAmount(), 0), 2);
     }
 
     /**

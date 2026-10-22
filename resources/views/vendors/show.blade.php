@@ -3,6 +3,10 @@
 @section('title', $vendor->vendor_name)
 @section('page-title', 'Vendor record')
 
+@push('styles')
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/vendor-portal.css') }}">
+@endpush
+
 @section('content')
 
 @php
@@ -59,13 +63,20 @@
                 <i class="fa-solid fa-pen" aria-hidden="true"></i> Edit vendor
             </a>
             {{-- The manual ledger is the vendor-currency view; this is the same
-                 account as a statement the vendor can be sent. --}}
-            <a href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id, 'currency' => $vendorCurrency, 'period' => 'all']) }}"
+                 account as a statement the vendor can be sent. No currency in
+                 the link: the statement opens on the currency that actually has
+                 rows, which is not always the quoted one. --}}
+            <a href="{{ route('cashflows.statements.show', ['partyType' => 'vendor', 'party' => $vendor->id, 'period' => 'all']) }}"
                 class="master-btn master-btn-soft">
                 <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Full statement of account
             </a>
         </nav>
     </header>
+
+    @include('cashflows.partials.unallocated-party-alert', [
+        'unallocatedTitle' => 'Unallocated vendor advance',
+        'unallocatedDescription' => 'Cash has been paid to this vendor but is still available to assign to purchase orders, bills or projects.',
+    ])
 
     <div class="master-stats desktop-only" aria-label="Vendor figures">
         <div class="master-stat master-stat--flat blue">
@@ -164,6 +175,7 @@
                     <div class="vendor-blocks">
                         @include('vendors.partials.payables')
                         @include('vendors.partials.payments')
+                        @include('vendors.partials.cashflow')
                     </div>
                 </section>
             @elseif ($tab === 'documents')
@@ -172,6 +184,8 @@
                         @include('vendors.partials.attachments')
                     </div>
                 </section>
+            @elseif ($tab === 'portal')
+                @include('vendors.partials.portal')
             @elseif ($tab === 'comments')
                 @include('vendors.partials.comments')
             @endif

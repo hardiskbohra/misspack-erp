@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ProjectProductController extends Controller
 {
@@ -31,12 +32,36 @@ class ProjectProductController extends Controller
             'status' => ['required', Rule::in(array_keys(ProjectProduct::statusOptions()))],
             'expected_ready_date' => ['nullable', 'date'],
             'actual_ready_date' => ['nullable', 'date'],
+            'production_completed_quantity' => ['required', 'numeric', 'min:0', 'max:'.$projectProduct->quantity],
+            'production_evidence' => [Rule::requiredIf(fn () => (float) $request->input('production_completed_quantity') > 0), 'nullable', 'string', 'max:4000'],
             'notes' => ['nullable', 'string'],
         ]);
 
+        if ($data['status'] === 'in_production' && $projectProduct->status !== 'in_production') {
+            $workflow = $projectProduct->project?->workflow;
+            if ($workflow) {
+                $evaluations = app(\App\Services\ProjectWorkflowGates::class)->evaluateAll($workflow, Auth::id());
+                $advanceGate = collect($evaluations)->firstWhere('gate_key', \App\Services\ProjectWorkflowGates::GATE_ADVANCE);
+                $advanceGate?->loadMissing('activeOverride');
+                if (! $advanceGate || ! in_array($advanceGate->effectiveResult(), ['passed', 'overridden'], true)) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Production is blocked until the required Proforma advance is received or a manager records a current workflow override.',
+                    ]);
+                }
+            }
+        }
+
         $old = $projectProduct->toArray();
+        if ((float) $projectProduct->production_completed_quantity !== (float) $data['production_completed_quantity']
+            || (string) $projectProduct->production_evidence !== (string) ($data['production_evidence'] ?? '')) {
+            $data['production_recorded_by'] = Auth::id();
+            $data['production_recorded_at'] = now();
+        }
         $projectProduct->update($data);
         $this->writeLog($projectProduct->project, 'product_updated', 'Product updated', $projectProduct->product_name.' details were updated.', ['old' => $old, 'new' => $projectProduct->fresh()->toArray()], $projectProduct->id);
+        if ($workflow = $projectProduct->project?->workflow) {
+            app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($workflow, Auth::id());
+        }
 
         return back()->with('success', 'Project product updated successfully.');
     }

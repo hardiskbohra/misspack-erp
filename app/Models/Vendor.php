@@ -17,7 +17,8 @@ class Vendor extends Model
     public const STATUS_BLACKLISTED = 'blacklisted';
 
     protected $fillable = [
-        'vendor_number', 'vendor_name', 'brand_name', 'vendor_type', 'category', 'status', 'image_path',
+        'vendor_number', 'vendor_name', 'brand_name', 'vendor_type', 'category', 'status', 'portal_enabled',
+        'portal_enabled_at', 'portal_last_shared_at', 'image_path',
         'contact_person_name', 'contact_person_email', 'contact_person_mobile', 'whatsapp_number', 'alternate_contact',
         'website', 'alibaba_link', 'country', 'state', 'city', 'pincode', 'address',
         'gstin', 'pan', 'tax_id', 'import_export_code',
@@ -29,6 +30,9 @@ class Vendor extends Model
         'minimum_order_value' => 'decimal:2',
         'lead_time_days' => 'integer',
         'rating' => 'integer',
+        'portal_enabled' => 'boolean',
+        'portal_enabled_at' => 'datetime',
+        'portal_last_shared_at' => 'datetime',
     ];
 
     public function creator()
@@ -110,5 +114,35 @@ class Vendor extends Model
     public static function currencyOptions(): array
     {
         return ['INR' => 'INR', 'USD' => 'USD', 'RMB' => 'RMB'];
+    }
+
+    public function packagingLists()
+    {
+        return $this->hasMany(PackagingList::class);
+    }
+
+    public function purchaseInvoices()
+    {
+        return $this->hasMany(PurchaseInvoice::class);
+    }
+
+    public function shipments()
+    {
+        return $this->hasMany(Shipment::class);
+    }
+
+    public function portalUsers()
+    {
+        return $this->hasMany(VendorPortalUser::class);
+    }
+
+    public function shareLinks()
+    {
+        return $this->hasMany(VendorShareLink::class);
+    }
+
+    public function collaborationUpdates()
+    {
+        return $this->hasMany(VendorCollaborationUpdate::class);
     }
 }

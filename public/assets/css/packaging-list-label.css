@@ -1,0 +1,114 @@
+/* Carton labels: A4, A5 and 100 × 140 mm thermal, laid out on the paper in
+   millimetres and set in points, so what prints is what was designed. Every
+   label is a flex column that fills its page — the item table takes whatever
+   height the rest leaves, so a one-line carton does not leave a blank half-page
+   at the bottom. Sizes scale from each format’s base; party details add a
+   fixed 2 pt so that readability increase is identical on every paper size. */
+*{box-sizing:border-box}
+/* The ERP's own type, so a label reads as part of the same paperwork as the
+   invoice and the packing list rather than as a foreign printout. Fallbacks are
+   the app's: Inter, then the system UI faces. */
+body{margin:0;background:#e5e7eb;color:#000;font:12pt/1.35 "Inter","Segoe UI",Roboto,Arial,sans-serif;font-variant-numeric:tabular-nums}
+/* Print ink is pure black and rules are solid black: a label is read at a metre
+   under warehouse light, so nothing is left at screen-grey. */
+.label-toolbar{max-width:210mm;margin:12px auto;display:flex;justify-content:flex-end;gap:8px}
+.label-toolbar button{border:0;border-radius:5px;background:#000;color:#fff;padding:9px 14px;font-weight:700;cursor:pointer}
+.label-toolbar button+button{background:#4b4b4b}
+
+.carton-label{width:297mm;height:210mm;margin:0 auto 14px;padding:12mm;background:#fff;page-break-after:always;display:flex;flex-direction:column;gap:0;overflow:hidden;font-size:12pt}
+
+.carton-label>*{flex:0 0 auto}
+.carton-label header{display:flex;justify-content:space-between;align-items:flex-start;gap:5mm;border-bottom:3px solid #000;padding-bottom:2.5mm;margin-bottom:3mm}
+.label-title{min-width:0}
+.label-brand-logo{display:block;width:auto;height:14mm;max-width:70mm;object-fit:contain;object-position:left center;margin-bottom:1.5mm}
+.carton-label header p{margin:0;font-size:.72em;font-weight:700;letter-spacing:.14em}
+.carton-label h1{margin:1.5mm 0 0;font-size:1.6em;line-height:1.12;overflow-wrap:anywhere}
+.label-qr{flex:0 0 auto;width:32mm;text-align:center}
+.label-qr-code svg{display:block;width:32mm;height:32mm;margin:0 auto}
+.label-qr small{display:block;margin-top:1mm;font-size:.68em;line-height:1.2;letter-spacing:.04em;overflow-wrap:anywhere;color:#000}
+
+.carton-label span.label-key{display:block;font-size:.72em;font-weight:700;letter-spacing:.09em;color:#000;line-height:1.25}
+.carton-label strong{display:block;margin-top:1mm;line-height:1.2;overflow-wrap:anywhere}
+.carton-label small{line-height:1.25}
+
+/* The identity, party, item and weight bands are one ruled block, not four
+   cards. Every band between two others drops only its top edge, so each seam is
+   drawn by exactly one rule — the bottom of the band above. Dropping both sides
+   of a seam is what leaves a row with no bottom border. */
+.label-identity{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.7fr) minmax(0,.65fr) minmax(0,.65fr);border:1px solid #000}
+.label-identity>div{padding:3.5mm 4mm;border-right:1px solid #000;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.label-identity>div:last-child{border-right:0}
+.label-identity strong{font-size:1.42em}
+
+.label-parties{display:grid;grid-template-columns:1fr 1fr;border:1px solid #000;border-top:0}
+.label-parties>div{padding:3.5mm 4mm;border-right:1px solid #000;min-width:0}
+.label-parties>div:last-child{border:0}
+.label-parties span.label-key{font-size:calc(.72em + 2pt)}
+.label-parties strong{font-size:calc(1.05em + 2pt)}
+.label-parties p{margin:1mm 0 0;font-size:calc(.88em + 2pt);line-height:1.3}
+
+/* The item table takes the height the other bands leave. If a carton really
+   holds more lines than the paper allows, the overflow is clipped here so the
+   weights and handling marks below it always print. The table fills the band
+   and its own cells draw every edge — a border on this wrapper would sit beside
+   theirs and double the vertical rules. */
+.label-items{flex:1 1 auto;display:flex;min-height:0;overflow:hidden}
+.carton-label table{width:100%;height:100%;min-height:100%;border-collapse:collapse;font-size:1em}
+.carton-label th,.carton-label td{padding:3.5mm 4mm;border:1px solid #000;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+.carton-label th{background:#e5e7eb;font-size:.82em;letter-spacing:.06em;vertical-align:middle}
+/* The header row sits directly on the party band's bottom rule; a top border
+   here would draw the same seam a second time. */
+.label-items th{border-top:0}
+.carton-label td small{display:block;margin-top:.6mm;color:#000}
+.label-col-item{width:36%}.label-col-batch{width:27%}.label-col-qty{width:17%}.label-col-origin{width:20%}
+
+.label-physical{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #000;border-top:0}
+.label-physical>div{padding:3.5mm 4mm;border-right:1px solid #000;min-width:0}
+.label-physical>div:last-child{border-right:0}
+.label-physical strong{font-size:1.25em}
+
+.label-handling{display:grid;grid-template-columns:repeat(auto-fit,minmax(24mm,1fr));gap:2.5mm;flex:0 0 auto;margin-top:3mm}
+.label-handling-symbol{height:22mm;padding:1mm;border:2px solid #000;border-radius:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.label-handling-symbol svg{width:13mm;height:13mm;fill:none;stroke:#000;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.label-handling-symbol strong{margin:.5mm 0 0;font-size:.74em;line-height:1.1}
+.label-handling-note{grid-column:1/-1;margin:0;padding:2.5mm 3.5mm;border:1px solid #000}
+.label-handling-note .label-key{margin-bottom:.5mm}
+
+.format-a4 .carton-label{width:297mm;height:210mm;padding:12mm;gap:0;font-size:12pt}
+.format-a5 .carton-label{width:210mm;height:148mm;padding:7mm;gap:0;font-size:11pt}
+.format-a5 .label-brand-logo{height:10mm;max-width:55mm}
+.format-a5 .label-qr{width:24mm}
+.format-a5 .label-qr-code svg{width:24mm;height:24mm}
+.format-a5 .label-handling-symbol{height:15mm}
+.format-a5 .label-handling-symbol svg{width:9mm;height:9mm}
+.format-a5 .carton-label header{margin-bottom:2mm}
+.format-a5 .label-identity>div,.format-a5 .label-parties>div,.format-a5 .label-physical>div,.format-a5 .carton-label th,.format-a5 .carton-label td{padding:3mm 3.5mm}
+.format-a5 .label-handling{margin-top:2mm}
+.format-a5 .label-parties p{font-size:calc(.84em + 2pt)}
+
+.format-thermal .carton-label{width:100mm;height:140mm;padding:3.5mm;gap:0;font-size:5.6pt}
+.format-thermal .carton-label header{gap:2mm;padding-bottom:1mm;border-bottom-width:2px;margin-bottom:1.5mm}
+.format-thermal .label-brand-logo{height:8mm;max-width:45mm;margin-bottom:1mm}
+.format-thermal .label-qr{width:19mm}
+.format-thermal .label-qr-code svg{width:19mm;height:19mm}
+.format-thermal .carton-label h1{font-size:1.35em}
+.format-thermal .label-identity{grid-template-columns:repeat(4,minmax(0,1fr))}
+.format-thermal .label-identity>div{padding:1.5mm 1.8mm}
+.format-thermal .label-identity strong{font-size:1.15em}
+.format-thermal .label-parties>div{padding:1.5mm 1.8mm}
+.format-thermal .label-parties p{font-size:calc(.8em + 2pt)}
+.format-thermal .carton-label th,.format-thermal .carton-label td{padding:1.5mm 1.8mm}
+.format-thermal .label-physical>div{padding:1.5mm 1.8mm}
+.format-thermal .label-physical strong{font-size:1.15em}
+.format-thermal .label-handling{grid-template-columns:repeat(4,minmax(0,1fr));gap:1mm;margin-top:1.5mm}
+.format-thermal .label-handling-symbol{height:11mm;padding:.5mm;border-width:1.5px;border-radius:0}
+.format-thermal .label-handling-symbol svg{width:6.5mm;height:6.5mm;stroke-width:5}
+.format-thermal .label-handling-note{padding:1.5mm}
+
+@media print{body{background:#fff}.label-toolbar{display:none}.carton-label{margin:0;box-shadow:none}.format-thermal .carton-label{page-break-after:always}}
+
+.label-toolbar{flex-wrap:wrap;align-items:center;max-width:297mm;padding:0 12px;font-size:13px}
+.label-toolbar p{flex:1 1 100%;margin:0}
+.label-toolbar a{color:inherit;font-size:13px}
+.label-toolbar [data-label-print-error]{color:#9f1239}
+@media print{.label-page .carton-label:last-of-type{page-break-after:auto;break-after:auto}.carton-label{break-inside:avoid}}

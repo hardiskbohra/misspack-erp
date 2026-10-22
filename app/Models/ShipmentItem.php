@@ -10,7 +10,7 @@ class ShipmentItem extends Model
     use HasFactory;
 
     protected $fillable = [
-        'shipment_id', 'product_name', 'sku', 'hs_code', 'quantity', 'unit', 'declared_value', 'currency',
+        'shipment_id', 'project_product_id', 'product_name', 'sku', 'hs_code', 'quantity', 'unit', 'declared_value', 'currency',
         'net_weight', 'gross_weight', 'description',
     ];
 
@@ -24,5 +24,27 @@ class ShipmentItem extends Model
     public function shipment()
     {
         return $this->belongsTo(Shipment::class);
+    }
+
+    public function projectProduct()
+    {
+        return $this->belongsTo(ProjectProduct::class);
+    }
+
+    public function packingAllocations()
+    {
+        return $this->hasMany(ShipmentPackingAllocation::class);
+    }
+
+    public function deliveryReceiptLines()
+    {
+        return $this->hasMany(ShipmentDeliveryReceiptLine::class);
+    }
+
+    public function acceptedDeliveryQuantity(): float
+    {
+        $accepted = (float) $this->deliveryReceiptLines()->sum('accepted_quantity');
+        $returned = (float) $this->deliveryReceiptLines()->sum('returned_quantity');
+        return round(max($accepted - $returned, 0), 3);
     }
 }

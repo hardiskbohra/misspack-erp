@@ -9,11 +9,28 @@
        different balances on two screens (`SalesInvoice::receivedAmount()`). */
     $receivedAmount = $invoice->receivedAmount();
     $balanceAmount = $invoice->balanceDue();
+    $advanceAmount = $invoice->advanceAmount();
     $taxAmount = (float) $invoice->cgst_amount + (float) $invoice->sgst_amount + (float) $invoice->igst_amount;
     $chargesAmount = (float) $invoice->freight_amount + (float) $invoice->packing_amount + (float) $invoice->other_charges;
 
-    /* Newest receipt first: the one that just landed is the one being read for. */
-    $receipts = $invoice->payments->sortByDesc('entry_date');
+    /* Newest receipt first. Allocated slices are cloned only for display so the
+       row opens the original cashflow entry while showing this invoice's share,
+       not the entry's full bank amount. */
+    $allocatedReceipts = $invoice->relationLoaded('cashflowAllocations')
+        ? $invoice->cashflowAllocations->map(function ($allocation) {
+            if (! $allocation->cashflowEntry) return null;
+            $payment = clone $allocation->cashflowEntry;
+            $amount = $allocation->documentAmount();
+            /* An allocation is the positive amount applied to this document.
+               The cashflow direction describes the account movement; it must
+               not turn an explicitly applied invoice payment into a refund. */
+            $payment->credit_amount = $amount;
+            $payment->debit_amount = 0;
+            $payment->particular = $allocation->note ?: $payment->particular;
+            return $payment;
+        })->filter()
+        : collect();
+    $receipts = $invoice->payments->concat($allocatedReceipts)->sortByDesc('entry_date');
 
     $stateKey = $invoice->stateKey();
     $daysLate = $invoice->daysOverdue();
@@ -101,16 +118,20 @@
                 <a href="{{ route('sales-invoices.index') }}" class="master-btn master-btn-light">
                     <i class="fas fa-arrow-left" aria-hidden="true"></i> Back
                 </a>
-                <a href="{{ route('sales-invoices.edit', $invoice) }}" class="master-btn master-btn-light">
+                @if (!$invoice->hasMonetaryConversions())
+<a href="{{ route('sales-invoices.edit', $invoice) }}" class="master-btn master-btn-light">
                     <i class="fas fa-pen" aria-hidden="true"></i> Edit
                 </a>
+@endif
 
                 @if ($balanceAmount > 0)
                     <button type="button" class="master-btn master-btn-soft" data-open-payment
                         data-invoice-id="{{ $invoice->id }}"
                         data-invoice-number="{{ $invoice->invoice_number }}"
                         data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
-                        data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}">
+                        data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}"
+                        data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
+                        data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
                         <i class="fas fa-indian-rupee-sign" aria-hidden="true"></i> Record payment
                     </button>
                 @endif
@@ -121,6 +142,10 @@
                     data-invoice-message="{{ $invoice->reminderMessage() }}">
                     <i class="fas fa-bell" aria-hidden="true"></i> Log reminder
                 </button>
+
+                <a href="{{ route('packaging-lists.create', ['sales_invoice'=>$invoice->id]) }}" class="master-btn master-btn-soft">
+                    <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> Pack items
+                </a>
 
                 <a href="{{ route('sales-invoices.print', $invoice) }}" target="_blank"
                     class="master-btn master-btn-primary">
@@ -161,12 +186,12 @@
                                 {{ $invoice->show_client_portal ? 'Hide from portal' : 'Show in portal' }}
                             </button>
                         </form>
-                        @if ($invoice->invoice_type === 'proforma' && ! $invoice->isSuperseded())
+                        @if ($invoice->invoice_type === 'proforma' && ! $invoice->isSuperseded() && $invoice->cashConvertibleRemaining() > 0)
                             <form method="POST" action="{{ route('sales-invoices.convert', $invoice) }}"
                                 data-confirm="Create a tax invoice from {{ $invoice->invoice_number }}? The advance and every receipt on it will move to the new tax invoice.">
                                 @csrf
                                 <button type="submit">
-                                    <i class="fas fa-file-invoice" aria-hidden="true"></i> Convert to tax invoice
+                                    <i class="fas fa-file-invoice" aria-hidden="true"></i> {{ $invoice->hasMonetaryConversions() ? 'Convert remainder to tax invoice' : 'Convert to tax invoice' }}
                                 </button>
                             </form>
                         @endif
@@ -176,7 +201,8 @@
                                 <i class="fas fa-copy" aria-hidden="true"></i> Duplicate as draft
                             </button>
                         </form>
-                        <form method="POST" action="{{ route('sales-invoices.destroy', $invoice) }}"
+                        @if (!$invoice->hasMonetaryConversions())
+<form method="POST" action="{{ route('sales-invoices.destroy', $invoice) }}"
                             data-confirm="Delete {{ $invoice->invoice_number }}?">
                             @csrf
                             @method('DELETE')
@@ -184,10 +210,40 @@
                                 <i class="fas fa-trash" aria-hidden="true"></i> Delete
                             </button>
                         </form>
+@endif
                     </div>
                 </div>
             </div>
         </header>
+
+        @if ($invoice->source_proforma_id)
+            <div class="master-alert"><strong>From proforma</strong> <a href="{{ route('sales-invoices.show', $invoice->source_proforma_id) }}">{{ $invoice->conversionSource?->invoice_number }}</a>. This amount-based conversion is locked against editing/deletion; receipts can still be recorded.</div>
+        @endif
+        @if ($invoice->invoice_type === 'proforma')
+            <section class="master-card master-section" id="cashInvoiceConversion" data-convertible="{{ $invoice->cashConvertibleRemaining() }}">
+                <h2 class="master-section-title">Cash invoices from this PI</h2>
+                <p class="master-sub">Amount available without GST: {{ \App\Helpers\CommonHelper::amount($invoice->cashConvertibleRemaining(), $invoice->currency) }}. Percentages apply to this remaining amount, including charges. The corresponding original GST is removed from the PI remainder.</p>
+                @if ($invoice->hasMonetaryConversions())<p>Original PI: {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }} · Remaining PI value: {{ \App\Helpers\CommonHelper::amount($invoice->receivableTotal(), $invoice->currency) }}</p>@endif
+                @if ($invoice->cashConvertibleRemaining() <= 0 && !$invoice->isSuperseded())
+                    <p class="master-help">Fully cash invoiced. No uninvoiced remainder; retained receipts remain an advance against this PI.</p>
+                @endif
+                @foreach ($invoice->cashInvoices as $cash)
+                    <p><a href="{{ route('sales-invoices.show', $cash) }}">{{ $cash->invoice_number }}</a> · {{ \App\Helpers\CommonHelper::amount($cash->total_amount, $cash->currency) }}</p>
+                @endforeach
+                @if (!$invoice->isSuperseded() && $invoice->status !== 'cancelled' && $invoice->cashConvertibleRemaining() > 0)
+                    <form method="POST" action="{{ route('sales-invoices.convert-cash', $invoice) }}">
+                        @csrf
+                        <div class="master-form-grid is-three">
+                            <div class="master-field"><label class="master-label" for="cashConversionMode">Convert by</label><select class="master-select" id="cashConversionMode" name="conversion_mode"><option value="amount">Amount ({{ $invoice->currency }})</option><option value="percent" @selected(old('conversion_mode') === 'percent')>Percentage of remainder</option></select></div>
+                            <div class="master-field"><label class="master-label" for="cashConversionValue">Amount / percentage</label><input class="master-input" id="cashConversionValue" name="conversion_value" type="number" min="0.01" step="0.01" required value="{{ old('conversion_value', $invoice->cashConvertibleRemaining()) }}"></div>
+                            <div class="master-field"><label class="master-label" for="cashTransferReceived">Recorded receipts to transfer ({{ $invoice->currency }})</label><input class="master-input" id="cashTransferReceived" name="transfer_received" type="number" min="0" step="0.01" max="{{ $receivedAmount }}" required value="{{ old('transfer_received', $receivedAmount) }}"></div>
+                        </div>
+                        <p class="master-help">This does not record a new payment. Choose how much of the PI's existing receipts to apply. Untransferred receipts stay as a PI advance, even if its entire value is cash invoiced.</p>
+                        <button class="master-btn master-btn-primary" type="submit">Create cash invoice</button>
+                    </form>
+                @endif
+            </section>
+        @endif
 
         {{-- Five figures, each one a fact the page was opened for: what was
              asked, what came back, the tax in it, what is still open and when
@@ -198,7 +254,7 @@
                 <span class="icon" aria-hidden="true"><i class="fas fa-file-invoice"></i></span>
                 <div>
                     <p class="master-stat-title">Invoice total</p>
-                    <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($invoice->total_amount) }}</p>
+                    <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</p>
                     <p class="master-sub">
                         {{ $invoice->items->count() }} {{ \Illuminate\Support\Str::plural('line', $invoice->items->count()) }}
                         @if ($invoice->currency !== 'INR')
@@ -212,10 +268,12 @@
                 <span class="icon" aria-hidden="true"><i class="fas fa-indian-rupee-sign"></i></span>
                 <div>
                     <p class="master-stat-title">Received</p>
-                    <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($receivedAmount) }}</p>
+                    <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($receivedAmount, $invoice->currency) }}</p>
                     <p class="master-sub">
                         @if ($invoice->isSuperseded())
                             Moved to {{ $invoice->convertedInvoice?->invoice_number }}
+                        @elseif ($receipts->isEmpty() && (float) $invoice->amount_paid > 0)
+                            Opening / transferred advance
                         @elseif ($receipts->isEmpty())
                             Nothing received yet
                         @else
@@ -225,23 +283,25 @@
                 </div>
             </div>
 
+            @if (!$invoice->isCash())
             <div class="master-stat master-stat--flat purple">
                 <span class="icon" aria-hidden="true"><i class="fas fa-percent"></i></span>
                 <div>
                     <p class="master-stat-title">GST</p>
-                    <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($taxAmount) }}</p>
-                    <p class="master-sub">{{ $invoice->gstTypeLabel() }}</p>
+                    <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($taxAmount, $invoice->currency) }}</p>
+                    <p class="master-sub">@if (!$invoice->isCash()){{ $invoice->gstTypeLabel() }}@endif</p>
                 </div>
             </div>
 
+            @endif
             <div class="master-stat master-stat--flat {{ $balanceTone }}">
                 <span class="icon" aria-hidden="true"><i class="fas fa-scale-balanced"></i></span>
                 <div>
                     <p class="master-stat-title">Balance due</p>
-                    <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}</p>
+                    <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}</p>
                     <p class="master-sub">
                         @if ($invoice->isSuperseded())
-                            Moved to the tax invoice
+                            Moved to the converted invoice
                         @elseif ($balanceAmount <= 0)
                             Received in full
                         @else
@@ -277,7 +337,7 @@
             <div class="master-section-head">
                 <div>
                     <h2 class="master-section-title">Products</h2>
-                    <p class="master-sub">What was sold, taxed per line as the invoice books it</p>
+                    <p class="master-sub">Line items and amounts as recorded on this invoice</p>
                 </div>
                 <div class="master-section-meta">
                     <span class="master-chip">
@@ -290,7 +350,9 @@
                 <div class="master-empty-state">
                     <i class="fas fa-box-open"></i>
                     <p>No line items on this invoice yet. They are entered on <strong>Edit</strong>.</p>
-                    <a href="{{ route('sales-invoices.edit', $invoice) }}" class="master-btn master-btn-light">Add items</a>
+                    @if (!$invoice->hasMonetaryConversions())
+<a href="{{ route('sales-invoices.edit', $invoice) }}" class="master-btn master-btn-light">Add items</a>
+@endif
                 </div>
             @else
                 <div class="master-table-wrap">
@@ -301,8 +363,8 @@
                                 <th width="31%">Product</th>
                                 <th width="12%" class="is-num">Qty</th>
                                 <th width="13%" class="is-num">Rate</th>
-                                <th width="13%" class="is-num">Taxable</th>
-                                <th width="9%" class="is-num">GST</th>
+                                <th width="13%" class="is-num">{{ $invoice->isCash() ? 'Amount' : 'Taxable' }}</th>
+                                @if (!$invoice->isCash())<th width="9%" class="is-num">GST</th>@endif
                                 <th width="18%" class="is-num">Line total</th>
                             </tr>
                         </thead>
@@ -315,13 +377,13 @@
                                         @if (filled($item->description))
                                             <span class="master-sub">{!! nl2br(e($item->description)) !!}</span>
                                         @endif
-                                        <span class="master-sub">HSN/SAC {{ $item->hsn_sac ?: 'not set' }}</span>
+                                        @if (!$invoice->isCash())<span class="master-sub">HSN/SAC {{ $item->hsn_sac ?: 'not set' }}</span>@endif
                                     </td>
                                     <td data-label="Qty" class="is-num">{{ $figure($item->quantity) }} {{ $item->unit }}</td>
-                                    <td data-label="Rate" class="is-num">{{ \App\Helpers\CommonHelper::indianCurrency($item->unit_price) }}</td>
-                                    <td data-label="Taxable" class="is-num">{{ \App\Helpers\CommonHelper::indianCurrency($item->taxable_amount) }}</td>
-                                    <td data-label="GST" class="is-num">{{ $figure($item->gst_percent) }}%</td>
-                                    <td data-label="Line total" class="is-num">{{ \App\Helpers\CommonHelper::indianCurrency($item->line_total) }}</td>
+                                    <td data-label="Rate" class="is-num">{{ \App\Helpers\CommonHelper::amount($item->unit_price, $invoice->currency) }}</td>
+                                    <td data-label="{{ $invoice->isCash() ? 'Amount' : 'Taxable' }}" class="is-num">{{ \App\Helpers\CommonHelper::amount($item->taxable_amount, $invoice->currency) }}</td>
+                                    @if (!$invoice->isCash())<td data-label="GST" class="is-num">{{ $figure($item->gst_percent) }}%</td>@endif
+                                    <td data-label="Line total" class="is-num">{{ \App\Helpers\CommonHelper::amount($item->line_total, $invoice->currency) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -357,7 +419,8 @@
                                 <span class="master-empty-value">No client recorded</span>
                             @endif
                         </div>
-                        <div class="master-info">
+                        @if (!$invoice->isCash())
+<div class="master-info">
                             <span>GSTIN</span>
                             @if (filled($invoice->client_gstin))
                                 <strong>{{ $invoice->client_gstin }}</strong>
@@ -365,7 +428,9 @@
                                 <span class="master-empty-value">Not on file</span>
                             @endif
                         </div>
-                        <div class="master-info">
+@endif
+                        @if (!$invoice->isCash())
+<div class="master-info">
                             <span>PAN</span>
                             @if (filled($invoice->client_pan))
                                 <strong>{{ $invoice->client_pan }}</strong>
@@ -373,6 +438,8 @@
                                 <span class="master-empty-value">Not on file</span>
                             @endif
                         </div>
+@endif
+                        @if (!$invoice->isCash())
                         <div class="master-info">
                             <span>Place of supply</span>
                             @if (filled($invoice->place_of_supply) || filled($invoice->billing_state))
@@ -381,6 +448,7 @@
                                 <span class="master-empty-value">Not on file</span>
                             @endif
                         </div>
+                        @endif
                         <div class="master-info is-wide">
                             <span>Contact</span>
                             @if (filled($invoice->client_contact_name) || filled($invoice->client_email) || filled($invoice->client_mobile))
@@ -428,7 +496,8 @@
                         <div>
                             <h2 class="master-section-title">Summary</h2>
                             <p class="master-sub">
-                                {{ $invoice->gstTypeLabel() }}@if ($invoice->currency !== 'INR') · {{ $invoice->currency }}@endif
+                                @if (!$invoice->isCash()){{ $invoice->gstTypeLabel() }}@endif
+                                @if ($invoice->currency !== 'INR') · {{ $invoice->currency }}@endif
                             </p>
                         </div>
                         @if ($invoice->valid_until)
@@ -443,36 +512,36 @@
 
                     <div class="si-total-row">
                         <span>Subtotal</span>
-                        <strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->subtotal) }}</strong>
+                        <strong>{{ \App\Helpers\CommonHelper::amount($invoice->subtotal, $invoice->currency) }}</strong>
                     </div>
                     <div class="si-total-row">
                         <span>Discount{{ $invoice->discount_type === 'percent' && (float) $invoice->discount_value > 0 ? ' ('.$figure($invoice->discount_value).'%)' : '' }}</span>
                         @if ((float) $invoice->discount_amount > 0)
-                            <strong>− {{ \App\Helpers\CommonHelper::indianCurrency($invoice->discount_amount) }}</strong>
+                            <strong>− {{ \App\Helpers\CommonHelper::amount($invoice->discount_amount, $invoice->currency) }}</strong>
                         @else
                             <span class="master-empty-value">None</span>
                         @endif
                     </div>
 
-                    @if ((float) $invoice->cgst_amount > 0)
+                    @if (!$invoice->isCash() && (float) $invoice->cgst_amount > 0)
                         <div class="si-total-row">
                             <span>CGST</span>
-                            <strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->cgst_amount) }}</strong>
+                            <strong>{{ \App\Helpers\CommonHelper::amount($invoice->cgst_amount, $invoice->currency) }}</strong>
                         </div>
                     @endif
-                    @if ((float) $invoice->sgst_amount > 0)
+                    @if (!$invoice->isCash() && (float) $invoice->sgst_amount > 0)
                         <div class="si-total-row">
                             <span>SGST</span>
-                            <strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->sgst_amount) }}</strong>
+                            <strong>{{ \App\Helpers\CommonHelper::amount($invoice->sgst_amount, $invoice->currency) }}</strong>
                         </div>
                     @endif
-                    @if ((float) $invoice->igst_amount > 0)
+                    @if (!$invoice->isCash() && (float) $invoice->igst_amount > 0)
                         <div class="si-total-row">
                             <span>IGST</span>
-                            <strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->igst_amount) }}</strong>
+                            <strong>{{ \App\Helpers\CommonHelper::amount($invoice->igst_amount, $invoice->currency) }}</strong>
                         </div>
                     @endif
-                    @if ($taxAmount <= 0)
+                    @if (!$invoice->isCash() && $taxAmount <= 0)
                         <div class="si-total-row">
                             <span>GST</span>
                             <span class="master-empty-value">No tax charged</span>
@@ -483,19 +552,19 @@
                         @if ((float) $invoice->freight_amount > 0)
                             <div class="si-total-row">
                                 <span>Freight</span>
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->freight_amount) }}</strong>
+                                <strong>{{ \App\Helpers\CommonHelper::amount($invoice->freight_amount, $invoice->currency) }}</strong>
                             </div>
                         @endif
                         @if ((float) $invoice->packing_amount > 0)
                             <div class="si-total-row">
                                 <span>Packing</span>
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->packing_amount) }}</strong>
+                                <strong>{{ \App\Helpers\CommonHelper::amount($invoice->packing_amount, $invoice->currency) }}</strong>
                             </div>
                         @endif
                         @if ((float) $invoice->other_charges > 0)
                             <div class="si-total-row">
                                 <span>Other charges</span>
-                                <strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->other_charges) }}</strong>
+                                <strong>{{ \App\Helpers\CommonHelper::amount($invoice->other_charges, $invoice->currency) }}</strong>
                             </div>
                         @endif
                     @else
@@ -508,14 +577,18 @@
                     @if ((float) $invoice->round_off != 0)
                         <div class="si-total-row">
                             <span>Round off</span>
-                            <strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->round_off) }}</strong>
+                            <strong>{{ \App\Helpers\CommonHelper::amount($invoice->round_off, $invoice->currency) }}</strong>
                         </div>
                     @endif
 
                     <div class="si-total-row is-grand">
-                        <span>Grand total</span>
-                        <strong>{{ \App\Helpers\CommonHelper::indianCurrency($invoice->total_amount) }}</strong>
+                        <span>{{ (float) $invoice->cash_converted_total_amount > 0 ? 'Original PI total' : 'Grand total' }}</span>
+                        <strong>{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</strong>
                     </div>
+                    @if ((float) $invoice->cash_converted_total_amount > 0)
+                        <div class="si-total-row"><span>Less cash conversions (including removed GST)</span><strong>− {{ \App\Helpers\CommonHelper::amount($invoice->cash_converted_total_amount, $invoice->currency) }}</strong></div>
+                        <div class="si-total-row is-grand"><span>Remaining PI value</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->receivableTotal(), $invoice->currency) }}</strong></div>
+                    @endif
 
                     @if (filled($invoice->amount_in_words))
                         <p class="si-words">{{ $invoice->amount_in_words }}</p>
@@ -541,7 +614,9 @@
                                     data-invoice-id="{{ $invoice->id }}"
                                     data-invoice-number="{{ $invoice->invoice_number }}"
                                     data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
-                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}">
+                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}"
+                                    data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
+                                    data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
                                     <i class="fas fa-plus" aria-hidden="true"></i> Record
                                 </button>
                             </div>
@@ -551,20 +626,26 @@
                     @if ($invoice->isSuperseded())
                         <div class="master-empty-state">
                             <i class="fas fa-arrow-right-arrow-left"></i>
-                            <p>This proforma became {{ $invoice->convertedInvoice?->invoice_number }}. The advance and every receipt filed against it moved to that tax invoice — one document, one claim on the money.</p>
+                            <p>This proforma became {{ $invoice->convertedInvoice?->invoice_number }}. The advance and every receipt filed against it moved to the linked invoices — one claim on each amount.</p>
                             <a href="{{ route('sales-invoices.show', $invoice->convertedInvoice) }}"
-                                class="master-btn master-btn-light">Open the tax invoice</a>
+                                class="master-btn master-btn-light">Open the invoice</a>
                         </div>
                     @elseif ($receipts->isEmpty())
                         <div class="master-empty-state">
                             <i class="fas fa-receipt"></i>
-                            <p>Nothing received against this invoice yet. Book the receipt here and the ledger, the client statement and this balance all read the same number.</p>
+                            @if ((float) $invoice->amount_paid > 0)
+                                <p>Opening / transferred advance: {{ \App\Helpers\CommonHelper::amount($invoice->amount_paid, $invoice->currency) }}. No new ledger receipt was created for this existing money.</p>
+                            @else
+                                <p>Nothing received against this invoice yet. Book the receipt here and the ledger, the client statement and this balance all read the same number.</p>
+                            @endif
                             @if ($balanceAmount > 0)
                                 <button type="button" class="master-btn master-btn-light" data-open-payment
                                     data-invoice-id="{{ $invoice->id }}"
                                     data-invoice-number="{{ $invoice->invoice_number }}"
                                     data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
-                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}">
+                                    data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}"
+                                    data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
+                                    data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
                                     Record payment
                                 </button>
                             @endif
@@ -601,7 +682,7 @@
                                         </a>
                                     </div>
                                     <strong class="si-payment-amount {{ $netReceipt < 0 ? 'si-due' : 'si-clear' }}">
-                                        {{ \App\Helpers\CommonHelper::indianCurrency($netReceipt) }}
+                                        {{ \App\Helpers\CommonHelper::amount($netReceipt, $invoice->currency) }}
                                     </strong>
                                 </div>
                             @endforeach
@@ -611,14 +692,17 @@
                     <div class="si-pay-foot">
                         <div>
                             <span>Received</span>
-                            <strong class="si-clear">{{ \App\Helpers\CommonHelper::indianCurrency($receivedAmount) }}</strong>
+                            <strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($receivedAmount, $invoice->currency) }}</strong>
                         </div>
                         <div>
                             <span>Still open</span>
                             <strong class="{{ $balanceAmount > 0 ? 'si-due' : 'si-clear' }}">
-                                {{ \App\Helpers\CommonHelper::indianCurrency($balanceAmount) }}
+                                {{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}
                             </strong>
                         </div>
+                        @if($advanceAmount > 0.009)
+                            <div><span>Advance / overpayment</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($advanceAmount, $invoice->currency) }}</strong></div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -697,9 +781,11 @@
                             <p class="master-sub">What the client is told, and what stays in the office</p>
                         </div>
                         <div class="master-section-meta">
-                            <a href="{{ route('sales-invoices.edit', $invoice) }}" class="master-btn master-btn-light">
+                            @if (!$invoice->hasMonetaryConversions())
+<a href="{{ route('sales-invoices.edit', $invoice) }}" class="master-btn master-btn-light">
                                 <i class="fas fa-pen" aria-hidden="true"></i> Edit
                             </a>
+@endif
                         </div>
                     </div>
 
@@ -769,7 +855,9 @@
                         <div class="master-empty-state">
                             <i class="fas fa-note-sticky"></i>
                             <p>No terms and no notes on this invoice. The office fills them in on <strong>Edit</strong> — they are what prints on the copy the client keeps.</p>
-                            <a href="{{ route('sales-invoices.edit', $invoice) }}" class="master-btn master-btn-light">Add terms</a>
+                            @if (!$invoice->hasMonetaryConversions())
+<a href="{{ route('sales-invoices.edit', $invoice) }}" class="master-btn master-btn-light">Add terms</a>
+@endif
                         </div>
                     @endif
                 </div>
@@ -786,17 +874,21 @@
                             <p class="master-sub">{{ $invoice->attachments->count() }} {{ \Illuminate\Support\Str::plural('file', $invoice->attachments->count()) }} filed with this invoice</p>
                         </div>
                         <div class="master-section-meta">
-                            <a href="{{ route('sales-invoices.edit', $invoice) }}" class="master-btn master-btn-light">
+                            @if (!$invoice->hasMonetaryConversions())
+<a href="{{ route('sales-invoices.edit', $invoice) }}" class="master-btn master-btn-light">
                                 <i class="fas fa-paperclip" aria-hidden="true"></i> Manage files
                             </a>
+@endif
                         </div>
                     </div>
 
                     @if ($invoice->attachments->isEmpty())
                         <div class="master-empty-state">
                             <i class="fas fa-folder-open"></i>
-                            <p>No files filed with this invoice. Attach the signed copy, the e-way bill or the payment advice from <strong>Edit</strong>.</p>
-                            <a href="{{ route('sales-invoices.edit', $invoice) }}" class="master-btn master-btn-light">Add a file</a>
+                            <p>No files filed with this invoice.@if (!$invoice->hasMonetaryConversions()) Attach the signed copy or payment advice from <strong>Edit</strong>.@endif</p>
+                            @if (!$invoice->hasMonetaryConversions())
+<a href="{{ route('sales-invoices.edit', $invoice) }}" class="master-btn master-btn-light">Add a file</a>
+@endif
                         </div>
                     @else
                         <div class="si-file-list">

@@ -63,6 +63,26 @@ class Shipment extends Model
         return $this->hasMany(ShipmentItem::class);
     }
 
+    public function deliveryReceipts()
+    {
+        return $this->hasMany(ShipmentDeliveryReceipt::class)->latest('received_at')->latest('id');
+    }
+
+    public function latestDeliveryReceipt()
+    {
+        return $this->hasOne(ShipmentDeliveryReceipt::class)->latestOfMany();
+    }
+
+    public function packagingLists()
+    {
+        return $this->hasMany(PackagingList::class);
+    }
+
+    public function latestPackagingList()
+    {
+        return $this->hasOne(PackagingList::class)->latestOfMany();
+    }
+
     public function histories()
     {
         return $this->hasMany(ShipmentTrackingHistory::class)->latest('event_time')->latest('id');
@@ -217,6 +237,14 @@ class Shipment extends Model
      * Statuses that mean the shipment is still moving. Everything else is
      * either finished (delivered / cancelled) or not yet dispatched.
      */
+    public static function dispatchedStatuses(): array
+    {
+        return [
+            self::STATUS_PICKED_UP, self::STATUS_IN_TRANSIT, self::STATUS_CUSTOM_HOLD,
+            self::STATUS_DELAYED, self::STATUS_OUT_DELIVERY, self::STATUS_DELIVERED,
+        ];
+    }
+
     public static function closedStatuses(): array
     {
         return [self::STATUS_DELIVERED, self::STATUS_CANCELLED];

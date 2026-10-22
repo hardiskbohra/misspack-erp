@@ -18,7 +18,7 @@
         <div class="master-stat master-stat--flat green">
             <span class="icon">₹</span>
             <div>
-                <p class="master-stat-title">Paid in {{ $year }}</p>
+                <p class="master-stat-title">Paid {{ $salaryPeriodLabel }}</p>
                 <p class="master-stat-value">{{ \App\Helpers\CommonHelper::indianCurrency($total['total']) }}</p>
                 <p class="master-sub">
                     {{ $total['payments'] }} {{ \Illuminate\Support\Str::plural('payment', $total['payments']) }}
@@ -35,7 +35,7 @@
                 <p class="master-stat-title">Ledger entries</p>
                 <p class="master-stat-value">{{ $total['entries'] }}</p>
                 <p class="master-sub">
-                    filed against you in {{ $year }}
+                    filed against you {{ $salaryPeriodLabel }}
                     @if ($total['pending'] > 0)
                         · {{ $total['pending'] }} still pending
                     @endif
@@ -47,8 +47,10 @@
     <div class="master-card master-card--flat">
         <div class="master-list-bar">
             <div class="master-list-chips">
+                <a class="master-list-chip {{ $showAllSalary ? 'is-active' : '' }}"
+                    href="{{ route('my.salary', ['year' => 'all']) }}">All history</a>
                 @foreach ($years as $option)
-                    <a class="master-list-chip {{ (int) $option === (int) $year ? 'is-active' : '' }}"
+                    <a class="master-list-chip {{ ! $showAllSalary && (int) $option === (int) $year ? 'is-active' : '' }}"
                         href="{{ route('my.salary', ['year' => $option]) }}">{{ $option }}</a>
                 @endforeach
             </div>
@@ -57,9 +59,11 @@
             </p>
         </div>
 
-        <div class="emp-months-wrap">
-            @include('employees.partials.pay-months', ['months' => $months, 'currency' => 'INR'])
-        </div>
+        @if (! $showAllSalary)
+            <div class="emp-months-wrap">
+                @include('employees.partials.pay-months', ['months' => $months, 'currency' => 'INR'])
+            </div>
+        @endif
     </div>
 
     {{-- One table: the months the office paid, and the payslip of each month on
@@ -69,7 +73,7 @@
     <div class="master-card master-table-card master-card--flat" id="payslips">
         <div class="master-list-toolbar">
             <p class="master-list-hint">
-                {{ $total['entries'] }} {{ \Illuminate\Support\Str::plural('entry', $total['entries']) }} in {{ $year }}
+                {{ $total['entries'] }} {{ \Illuminate\Support\Str::plural('entry', $total['entries']) }} {{ $salaryPeriodLabel }}
                 · net <strong>{{ \App\Helpers\CommonHelper::indianCurrency($total['total']) }}</strong>
                 · {{ $payslips->count() }} {{ \Illuminate\Support\Str::plural('payslip', $payslips->count()) }} issued
             </p>

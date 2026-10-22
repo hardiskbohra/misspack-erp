@@ -1,0 +1,229 @@
+'use strict';
+const fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'../..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const migration=read('database/migrations/2026_10_17_100000_create_packaging_lists_table.php');
+const verificationMigration=read('database/migrations/2026_10_18_160000_create_packaging_list_verifications_table.php');
+const verificationModel=read('app/Models/PackagingListVerification.php');
+const verificationService=read('app/Services/PackagingListVerifier.php');
+const model=read('app/Models/PackagingListCarton.php');
+const listModel=read('app/Models/PackagingList.php');
+const controller=read('app/Http/Controllers/PackagingListController.php');
+const routes=read('routes/web.php');
+const form=read('resources/views/packaging_lists/form.blade.php');
+const print=read('resources/views/packaging_lists/print.blade.php');
+const sheetPrint=read('public/assets/css/packaging-list-print.css');
+const plainPrint=sheetPrint.replace(/\/\*[\s\S]*?\*\//g,'');
+const js=read('public/assets/js/packaging-lists.js');
+let passed=0,failed=0;
+function check(label,value){if(value){passed++;console.log(`PASS ${label}`)}else{failed++;console.error(`FAIL ${label}`)}}
+check('three normalized packaging tables', ['packaging_lists','packaging_list_cartons','packaging_list_items'].every(x=>migration.includes(`Schema::create('${x}'`)));
+check('verification attempts have an auditable normalized table', verificationMigration.includes("Schema::create('packaging_list_verifications'")&&['automated_checks','manual_checks','content_hash','verified_by','verified_at'].every(x=>verificationMigration.includes(`'${x}'`))&&verificationMigration.includes('cascadeOnDelete'));
+check('verification model exposes pass, warning and fail states', ['STATUS_PASSED','STATUS_WARNING','STATUS_FAILED','function passed','function statusLabel'].every(x=>verificationModel.includes(x)));
+check('linked records use nullable foreign keys', ['vendor_id','client_id','project_id','shipment_id','sales_invoice_id'].every(x=>migration.includes(`foreignId('${x}')->nullable()`)));
+check('cartons and items cascade with document', (migration.match(/cascadeOnDelete\(\)/g)||[]).length>=2);
+check('CBM uses cubic centimetres to cubic metres', model.includes('/ 1000000'));
+check('sections are derived from the stored rows, not a second table to keep in step', listModel.includes('function sections')&&listModel.includes('function blockLabel')&&!migration.includes('packaging_list_sections'));
+check('a block with no heading is titled by its label, then its first item', listModel.includes("trim((string) $carton->carton_label)")&&listModel.includes('$carton->items->first()?->item_description'));
+check('blocks typed with the same heading are one section, in entry order', listModel.includes("'group:'.$heading")&&listModel.includes("'block:'.$carton->id"));
+check('the section heading is a column, so two products can share one heading', read('database/migrations/2026_10_21_100000_add_packing_group_to_packaging_list_cartons.php').includes("string('packing_group'")&&read('app/Models/PackagingListCarton.php').includes("'packing_group'"));
+check('screen and print read the same grouping', (controller.match(/'sections' => \$packagingList->sections\(\)/g)||[]).length===2);
+check('aggregate weight, CBM and chargeable weight multiply by carton count', ['totalCbm','totalNetWeight','totalGrossWeight','totalChargeableWeight'].every(x=>model.includes(`function ${x}`)));
+check('chargeable weight is the greater of gross weight or CBM × 164', model.includes('cbmPerCarton() * 164')&&model.includes('max(round((float) $this->gross_weight_per_carton'));
+check('nested input has bounds and at least one carton/item', /cartons.*min:1.*max:200/.test(controller)&&/cartons\.\*\.items.*min:1.*max:200/.test(controller));
+check('nested persistence and aggregate recalculation are transactional', controller.includes('DB::transaction')&&controller.includes('$list->recalculate()'));
+check('server derives total quantity instead of trusting the browser', controller.includes("$item['total_quantity'] = round")&&read('resources/views/packaging_lists/partials/item-editor.blade.php').includes('data-total-qty readonly'));
+check('CRUD, print, duplicate and status routes exist without a manual verification endpoint', routes.includes("Route::resource('packaging-lists'")&&routes.includes("'packaging-lists.print'")&&routes.includes("'packaging-lists.duplicate'")&&routes.includes("'packaging-lists.status'")&&!routes.includes("'packaging-lists.verify'"));
+check('packing runs structured automatic content and project-identity checks', ['carton_specs','item_quantities','project_identity','serials','traceability','source_allocation','label_identity'].every(x=>verificationService.includes(`'${x}'`))&&!verificationService.includes('MANUAL_CHECKS'));
+check('current packing content is inspected automatically rather than fingerprint-approved manually', verificationService.includes('function inspect')&&controller.includes('$verifier->inspect($list)')&&controller.includes('assertReadyForStatus')&&!controller.includes('assertVerifiedForStatus'));
+check('confirmed and dispatched states run automatic structural checks', controller.includes("in_array($status, ['confirmed', 'dispatched']")&&controller.includes("$inspection['failed'] > 0")&&controller.includes('Automatic packing checks found issues'));
+check('packaging numbers use a financial-year MP/PL sequence', controller.includes("$prefix = 'MP/PL/'.$financialYear.'/'")&&controller.includes("str_pad((string) ($lastSequence + 1), 3")&&controller.includes("regex:/^MP\\/PL\\/\\d{2}-\\d{2}\\/\\d{3,}$/"));
+check('form includes address snapshots, links and nested editors', ['from_name','bill_to_name','ship_to_name','data-carton-list','plItemTemplate'].every(x=>form.includes(x)));
+check('live calculator derives total quantity and CBM', js.includes('quantity * count')&&js.includes('/ 1000000'));
+check('editor protects minimum carton and item counts', js.includes('at least one item')&&js.includes('at least one carton group'));
+check('print document contains business fields', ['Packaging List','From','Bill to','Ship to','Declaration','Authorised Signatory'].every(x=>print.includes(x)));
+const index=read('resources/views/packaging_lists/index.blade.php'), css=read('public/assets/css/packaging-lists.css'), show=read('resources/views/packaging_lists/show.blade.php');
+
+/* The sheet is a document like the invoice: same paper shell, same toolbar, the
+   same Inter stack and the same portrait A4 page, so the two read as one house
+   style rather than two printouts from two systems. */
+check('the packaging sheet uses the shared document shell and toolbar', print.includes("assets/css/document-print.css")&&print.includes("assets/css/packaging-list-print.css")&&print.includes('class="pdf-preview pl-standalone"')&&print.includes('class="pdf-sheet pl-sheet"')&&print.includes('class="pdf-toolbar pdf-toolbar--spread no-print"')&&print.includes('pdf-action pdf-action--secondary')&&print.includes('pdf-action pdf-action--primary'));
+check('print uses the app Inter stack and the shared type ramp', print.includes('family=Inter:wght@400;500;600;700')&&sheetPrint.includes('--pl-font: var(--pdf-font-family')&&sheetPrint.includes('@media print')&&!sheetPrint.includes('Arial,Helvetica'));
+/* Each packing sheet owns its selected paper; the rule follows shared CSS. */
+check('the packing sheet applies its selected orientation after the shared paper rule',
+    !/@page/.test(plainPrint)
+    && print.indexOf('id="plPageStyle"') > print.indexOf('packaging-list-print.css')
+    && print.indexOf('id="plPageStyle"') < print.indexOf('</head>')
+    && print.includes("size: A4 {{ $printSettings['orientation'] }}")
+    && print.includes('class="pdf-sheet pl-sheet"'));
+check('print keeps the final border inside the fractional printable-width clip in either orientation',
+    /@media print\s*\{[\s\S]*html body\.pdf-preview \.pdf-sheet\.pl-sheet\s*\{\s*width: calc\(100% - 1px\) !important;/.test(plainPrint)
+    && !/width: (186|273)mm/.test(plainPrint));
+check('the eleven columns are fitted to a portrait A4, not a landscape one', (() => {
+    /* 186 mm of content between the 12 mm margins, at 96 dpi. */
+    const contentPx = 186 / 25.4 * 96;
+    const widths = [...plainPrint.matchAll(/\.pl-col-([a-z-]+) \{ width: ([\d.]+)%; \}/g)];
+    const pad = /padding: 6px 5px/.test(plainPrint) ? 10 : 14;
+    const narrowest = { serial: '21.6', item: '0', cartons: '23.6', qty: '37.6', 'total-qty': '39.6', size: '83', nw: '37.6', net: '37.6', gw: '37.6', gross: '37.6', 'total-cbm': '43.2' };
+    return widths.length === 11
+        && widths.reduce((sum, m) => sum + Number(m[2]), 0) === 100
+        && widths.every(m => (contentPx * Number(m[2]) / 100 - pad) >= Number(narrowest[m[1]]));
+})());
+check('the document hierarchy follows the invoice: letterhead, facts, parties, lines, summary, sign-off, footer', ['class="pl-top"','class="pl-facts"','class="pl-parties"','class="pl-items"','class="pl-bottom"','class="pl-footer"'].map(marker=>print.indexOf(marker)).every((position,index,all)=>position>-1&&(index===0||position>all[index-1]))&&print.indexOf('class="pl-summary"')<print.indexOf('class="pl-signature"'));
+check('the letterhead, facts strip, party cards and summary reuse the invoice treatment', sheetPrint.includes('grid-template-columns: minmax(0, 1fr) minmax(180px, 225px)')&&sheetPrint.includes('border-bottom: 2px solid var(--pl-ink)')&&sheetPrint.includes('grid-template-columns: repeat(5, minmax(0, 1fr))')&&sheetPrint.includes('.pl-party h2')&&sheetPrint.includes('.pl-summary tr.pl-grand-total td'));
+check('the sheet prints black on white, with no colour carrying meaning', !/color:\s*#fff/i.test(sheetPrint)&&!/(#(?:2563eb|17233d|eff6ff|dbeafe|1d4ed8|475569))|hsla?\(/i.test(sheetPrint)&&sheetPrint.includes('background: var(--pl-surface-soft)')&&sheetPrint.includes('border-bottom: 2px solid var(--pl-ink)'));
+check('every word on the sheet prints pure black, not screen grey', ['--pl-ink: #000;','--pl-body: #000;','--pl-muted: #000;'].every(x=>sheetPrint.includes(x))&&!/color:\s*var\(--pdf-(?:ink|body|muted)/.test(sheetPrint)&&sheetPrint.includes('color: #000 !important'));
+check('rules are dark enough to survive an office laser', sheetPrint.includes('--pl-border: #6b7280;')&&sheetPrint.includes('--pl-border-soft: #b6bcc7;')&&!/var\(--pdf-border/.test(sheetPrint)&&sheetPrint.includes('border-bottom: 2px solid var(--pl-ink)'));
+check('list follows shared page-action, flat-card, filter-drawer and applied-filter patterns', index.includes("@section('page-actions')")&&index.includes('master-card master-card--flat')&&index.includes('<x-filter-trigger')&&index.includes('master-list-applied'));
+check('the index loads shared row navigation before the editor-only guard', index.includes("assets/js/packaging-lists.js") && index.includes('data-href=') && js.includes("window.MasterList.rowNavigation({root: '.packaging-list-page'})") && js.indexOf('window.MasterList.rowNavigation') < js.indexOf('if (!root) return;'));
+check('the index grid owns card spacing without stacked inherited margins', css.includes('.packaging-list-page.master-list>.master-stats,.packaging-list-page.master-list>.master-card{margin:0}') && css.includes('.packaging-list-page{display:grid;gap:var(--master-space-4,16px)}'));
+check('row clicks navigate while links, action menus and text selection remain independent', (() => {
+    const vm = require('vm');
+    let click, selection = '';
+    const row = {dataset: {href: '/packaging-lists/13'}, addEventListener: (name, listener) => { if (name === 'click') click = listener; }};
+    const window = {location: {href: '/packaging-lists'}, getSelection: () => selection};
+    const document = {
+        querySelector: selector => selector === '.packaging-list-page' ? {} : null,
+        querySelectorAll: selector => selector === '.packaging-list-page tbody tr[data-href]' ? [row] : [],
+    };
+    const context = vm.createContext({window, document});
+    vm.runInContext(read('public/assets/js/master-list.js'), context);
+    vm.runInContext(js, context);
+    if (typeof click !== 'function') return false;
+    click({target: {closest: () => null}});
+    if (window.location.href !== row.dataset.href) return false;
+    window.location.href = '/packaging-lists';
+    for (const control of ['a', 'button', 'input', 'select', 'textarea', 'label', 'form', '.master-dropdown']) {
+        click({target: {closest: selectors => selectors.split(', ').includes(control) ? {} : null}});
+        if (window.location.href !== '/packaging-lists') return false;
+    }
+    selection = 'MP/PL/26-27/001';
+    click({target: {closest: () => null}});
+    return window.location.href === '/packaging-lists';
+})());
+check('packaging list identifiers match shipment identifiers with theme-blue bold links', index.includes('class="pl-list-number"') && /\.pl-list-number:visited\{[^}]*font-size:13\.5px;[^}]*font-weight:700;[^}]*color:var\(--master-primary\);text-decoration:none/.test(css) && css.includes('tr[data-href]:hover .pl-list-number') && css.includes('.pl-list-number:focus-visible'));
+check('list search includes linked project number and name', controller.includes("orWhereHas('project'")&&controller.includes("where('project_number', 'like'")&&controller.includes("orWhere('name', 'like'")&&index.includes('PL number, project, invoice or party'));
+check('list row menu offers view, print, edit, clone, status and delete actions', ['fa-eye','fa-print','fa-pen','fa-clone','packaging-lists.status','packaging-lists.destroy'].every(x=>index.includes(x))&&controller.includes('function updateStatus'));
+check('form is one flat surface divided into shared sections', form.includes('master-card master-card--flat master-form-card')&&(form.match(/master-form-card/g)||[]).length===1&&form.includes('master-section'));
+check('create and edit save from the application top bar', form.includes("@section('page-actions')")&&form.includes('form="packagingListForm"')&&form.includes('id="packagingListForm"')&&form.indexOf('Save packaging list')<form.indexOf("@section('content')")&&!form.includes('master-form-actions'));
+check('print puts a full-width section heading over its carton blocks', print.includes('class="pl-section-band"')&&print.includes('colspan="{{ count($columns) }}"')&&print.includes("{{ $section['label'] }}")&&print.includes("@foreach ($section['cartons'] as $carton)"));
+check('a multi-item carton prints its carton columns once and spans them', print.includes('rowspan="{{ $span }}"')&&print.includes('@php($span = max(1, $carton->items->count()))')&&print.includes('@if ($loop->first)'));
+check('only the two quantity columns repeat inside a shared carton', print.indexOf('<td class="pl-item-description">{{ $item->item_description }}</td>')<print.indexOf('rowspan="{{ $span }}"')&&print.includes('<td class="right">{{ number_format((float) $item->quantity_per_carton,0) }} {{ $item->unit }}</td>')&&print.includes('<td class="right">{{ number_format((float) $item->total_quantity,0) }} {{ $item->unit }}</td>'));
+check('print numbers the item lines continuously across sections', print.includes('@php($serial++)')&&print.includes('{{ $serial }}')&&print.includes('$serial = 0;'));
+check('print totals are the document\'s own, so a section can never disagree with the foot', print.includes('$list->total_cartons')&&print.includes('$list->totalQuantity()')&&print.includes('(float) $list->total_net_weight')&&!print.includes('Group total'));
+const printHead=print.slice(print.indexOf('<thead>'),print.indexOf('</thead>'));
+check('all twelve print columns are available in canonical order', ['Sr. no.','Item description','Carton','Qty / carton','Total qty','Carton size (cm)','N.W. / carton','Net weight','G.W. / carton','Gross weight','CBM/carton','Total CBM'].every(x=>listModel.includes(x)) && printHead.includes('@foreach ($columns as $column)') && printHead.includes('$columnLabels[$column]'));
+check('per-carton CBM is optional and chargeable weight stays off the print table', print.includes("$showColumn('cbm')") && print.includes('cbmPerCarton(),4') && !print.includes('Chargeable weight') && !print.includes('totalChargeableWeight'));
+check('column selections persist per list with a legacy default and twelve allowed keys', listModel.includes("'print_columns' => 'array'") && listModel.includes('function selectedPrintColumns()') && listModel.includes('function defaultPrintColumns()') && controller.includes("'print_columns.*' =>") && controller.includes('Rule::in(array_keys(PackagingList::printColumnOptions()))') && read('database/migrations/2026_10_21_110000_add_print_columns_to_packaging_lists.php').includes("json('print_columns')->nullable()"));
+check('editor restores saved columns and validation errors, including an empty selection', form.includes('name="print_columns" value=""') && form.includes('name="print_columns[]"') && form.includes("old('print_columns', $list->selectedPrintColumns())") && form.includes("@error('print_columns')"));
+check('all twelve body columns are conditional and widths are renormalized', ['serial','item','cartons','qty','total_qty','size','nw','net','gw','gross','cbm','total_cbm'].every(key=>print.includes(`$showColumn('${key}')`)) && print.includes('$list->printColumnWidths()') && listModel.includes('$weight / $total * 100') && print.includes('$columnWidths[$column]'));
+check('totals follow selected columns and never add per-carton values', print.includes('@switch($column)') && print.includes("@case('total_cbm')") && !print.includes("@case('cbm')") && !print.includes("@case('nw')") && !print.includes("@case('gw')"));
+check('screen keeps a section heading row before its carton rows', show.includes('class="pl-section-row"')&&show.includes('scope="rowgroup"')&&show.includes('pl-section-row')&&show.indexOf('pl-section-row')<show.indexOf('pl-carton-item-row'));
+check('screen spans a shared carton\'s cells the same way the sheet does', show.includes('rowspan="{{ $span }}"')&&show.includes('@php($span = max(1, $carton->items->count()))'));
+check('carton rows keep the label anchor the printed QR points at', show.includes('id="carton-{{ $carton->id }}"')&&show.includes('@if ($loop->first) id="carton-'));
+check('packaging quantities display as whole numbers', [print,show].every(view=>view.includes('number_format((float) $item->quantity_per_carton,0)')&&view.includes('number_format((float) $item->total_quantity,0)')));
+const packagingDisplayViews=[print,show,read('resources/views/packaging_lists/label.blade.php'),form,index];
+check('displayed packaging decimals use one digit instead of three', packagingDisplayViews.every(view=>!view.includes(',3)')) && !js.includes('toFixed(3)') && js.includes('toFixed(1)'));
+check('a multi-page sheet repeats its header and never splits a carton block', ['.pl-items thead {\n        display: table-header-group;','.pl-items tfoot {\n        display: table-footer-group;','.pl-items tr {\n        break-inside: avoid;','.pl-section-band th {\n        break-after: avoid;'].every(x=>sheetPrint.includes(x)));
+check('print table text is twelve pixels, matching the invoice line table', /\.pl-items th,\n\.pl-items td \{[^}]*font-size: 12px/.test(sheetPrint)&&/\.pl-items thead th \{[^}]*font-size: 9\.5px/.test(sheetPrint)&&/\.pl-items th,\n\.pl-items td \{[^}]*font-size: 9px/.test(sheetPrint)===false);
+
+check('the letterhead stacks the mark above the issuer block', /<div class="pl-seller">\s*@if \(\$onLetterhead\)\s*<img class="pl-brand-logo"/.test(print)&&sheetPrint.includes('grid-template-columns: minmax(0, 1fr);\n    align-items: start;\n    gap: 7px;')&&!print.includes('pl-seller--text'));
+check('table headings wrap inside their column, figures do not', /\.pl-items thead th \{[^}]*white-space: normal/.test(sheetPrint)&&/\.pl-items td\.right,\n\.pl-items tfoot th\.right \{[^}]*white-space: nowrap/.test(sheetPrint)&&!/\.pl-items \.right \{/.test(sheetPrint));
+
+/* The document reads as one ruled form: neighbouring boxes share a rule instead
+   of standing apart with a gap, and nothing is rounded. */
+check('bordered sections butt together instead of leaving gaps', ['.pl-facts {\n    display: grid;\n    grid-template-columns: repeat(5, minmax(0, 1fr));\n    gap: 0;\n    margin-top: 0;','.pl-parties {\n    display: grid;\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n    gap: 0;\n    margin-top: -1px;','.pl-party + .pl-party {\n    margin-left: -1px;','.pl-items-wrap {\n    width: 100%;\n    margin-top: -1px;','.pl-bottom {\n    display: grid;\n    grid-template-columns: minmax(0, 1fr) minmax(0, .92fr);\n    align-items: start;\n    gap: 0;\n    margin-top: -1px;'].every(x=>sheetPrint.includes(x))&&/\.pl-bottom-left > \* \+ \*,\n\.pl-bottom-right > \* \+ \* \{\n    margin-top: -1px;/.test(sheetPrint));
+check('the paper corner is squared too, not just the boxes on it', sheetPrint.includes('html body.pdf-preview .pdf-sheet.pl-sheet {')&&/html body\.pdf-preview \.pdf-sheet\.pl-sheet \{[^}]*border-radius: 0;/.test(sheetPrint));
+check('the sheet is square-cornered throughout', [...sheetPrint.matchAll(/border-radius:\s*([^;]+);/g)].length>0&&[...sheetPrint.matchAll(/border-radius:\s*([^;]+);/g)].every(m=>m[1].trim()==='0'));
+
+/* Column widths are percentages of the sheet's own table, and still total 100. */
+const printCols=[...sheetPrint.matchAll(/\.pl-col-([a-z-]+) \{ width: ([\d.]+)%; \}/g)];
+check('the eleven column widths add up to the page and give Carton Size its 83 px', printCols.length===11&&printCols.reduce((sum,m)=>sum+Number(m[2]),0)===100&&sheetPrint.includes('.pl-col-size { width: 14%; }'));
+
+/* The logo is our letterhead, not the vendor's: a sheet drawn from a vendor's
+   bill prints on that vendor's paper. */
+check('the logo prints only when the sheet is ours', print.includes('@if ($onLetterhead)')&&print.includes("$organisation->logoUrl('print')")&&controller.includes("'onLetterhead' => $packagingList->issuedByUs($organisation)"));
+const packagingListModel=read('app/Models/PackagingList.php');
+check('issuing party is read from the sender name, with the vendor as the tie-break', ['function issuedByUs(','normaliseName','return ! $this->vendor_id;','legal_name','trade_name'].every(x=>packagingListModel.includes(x)));
+check('record cards and stats use one shared vertical rhythm', css.includes('.packaging-list-show>.master-section,.packaging-list-show>.pl-breakdown{padding:24px}')&&css.includes('gap:var(--master-space-4,16px)')&&css.includes('.packaging-list-show>.master-header,.packaging-list-show>.master-stats'));
+check('a carton label is not repeated when it is the section heading', show.includes("strcasecmp(trim($carton->carton_label), trim($section['label']))")&&!print.includes('carton_label'));
+check('duplicate and delete actions live in the application top bar', show.includes("@section('page-actions')")&&show.indexOf("packaging-lists.duplicate")<show.indexOf("@section('content')")&&show.indexOf("packaging-lists.destroy")<show.indexOf("@section('content')")&&!show.includes('emp-card-foot'));
+check('manual verification action is absent from detail and listing views', !show.includes('packaging-list-verification.js')&&!show.includes('plVerificationModal')&&!index.includes('Run verification'));
+check('detail UI explains and shows automatic workflow checks', ['Automatic workflow checks','checks run automatically','pl-automated-checks'].every(x=>show.includes(x))&&css.includes('.pl-verification-summary'));
+check('screen surfaces use theme tokens rather than fixed light fills', css.includes('var(--mc-card)')&&!/#(?:fff|f8fafc|eff6ff|dbeafe)/i.test(css)&&!css.includes('.pl-print-body'));
+const expansion=read('database/migrations/2026_10_17_120000_expand_packaging_lists_for_source_packing_and_labels.php');
+const source=read('app/Services/PackagingListSource.php'), label=read('resources/views/packaging_lists/label.blade.php')+read('resources/views/packaging_lists/partials/carton-label.blade.php');
+check('sales, purchase bill and shipment sources preserve source-line identity', ['sales_invoice','purchase_invoice','shipment','source_item_id','source_quantity'].every(x=>source.includes(x))&&expansion.includes("purchase_invoice_id"));
+check('source service computes previously packed and remaining quantities', source.includes('previously_packed_quantity')&&source.includes("whereNotIn('status',['cancelled'])")&&source.includes('$remaining=max(0,$source-$previous)'));
+const shipmentController=read('app/Http/Controllers/ShipmentController.php'), shipmentShow=read('resources/views/shipments/show.blade.php'), shipmentIndex=read('resources/views/shipments/index.blade.php');
+check('shipment creation leaves packaging lists to the dedicated module', !source.includes('createAutomaticFromShipment')&&!shipmentController.includes('preparePackagingList')&&!shipmentController.includes("'packing-list' => 'shipments.print.packing-list'"));
+check('shipment screens link to module packaging lists instead of a duplicate print feature', [shipmentShow,shipmentIndex].every(view=>view.includes("route('packaging-lists.create'")&&view.includes('latestPackagingList'))&&!shipmentShow.includes("[$shipment, 'packing-list']")&&!shipmentIndex.includes("[$shipment, 'packing-list']"));
+check('advanced carton identity and handling fields are persisted', ['packing_mode','carton_number','carton_type','barcode','shipping_mark','pallet_number','seal_number','is_fragile','keep_dry','this_side_up','is_hazardous'].every(x=>expansion.includes(`'${x}'`)));
+check('advanced item traceability fields are persisted', ['sku','customer_item_code','hs_code','batch_number','serial_numbers','manufactured_at','expires_at','country_of_origin'].every(x=>expansion.includes(`'${x}'`)));
+check('overpacking remains saveable but is calculated and surfaced as a warning', controller.includes('packingWarnings')&&controller.includes("'type'=>'overpacked'")&&read('resources/views/packaging_lists/show.blade.php').includes('Quantity warnings'));
+check('carton label has QR, contents, batch, serial, physical and handling data', ['data-ship-qr','item_description','batch_number','serial_numbers','dimensionsLabel','is_fragile'].every(x=>label.includes(x)));
+check('carton label names the packing group it belongs to', label.includes('PACKING GROUP')&&label.includes('$carton->packing_group'));
+check('a label lists every product packed in the carton', /@foreach\(\$carton->items as \$item\)/.test(label));
+const handlingSymbols=read('resources/views/packaging_lists/partials/handling-symbol.blade.php'), labelCss=read('public/assets/css/packaging-list-label.css');
+check('a label fills its page instead of leaving a blank bottom', labelCss.includes('.carton-label{width:297mm;height:210mm')&&labelCss.includes('display:flex;flex-direction:column')&&labelCss.includes('.label-items{flex:1 1 auto;display:flex;min-height:0;overflow:hidden}')&&labelCss.includes('height:100%;min-height:100%;border-collapse:collapse')&&labelCss.includes('.carton-label>*{flex:0 0 auto}'));
+check('A5 label content is eleven point, two points up on the old nine', labelCss.includes('.format-a5 .carton-label{width:210mm;height:148mm;padding:7mm;gap:0;font-size:11pt}')&&labelCss.includes('.label-identity strong{font-size:1.42em}')&&labelCss.includes('.carton-label h1{margin:1.5mm 0 0;font-size:1.6em'));
+
+/* A label is one ruled form, and every seam inside it is drawn exactly once —
+   by the bottom rule of the band above. A seam where both neighbours drop their
+   edge is a row with no bottom border at all, which is what the printed label
+   showed: the carton number sat in an open-ended strip. */
+const labelBandEdges = (sel) => {
+    const rule = labelCss.match(new RegExp(sel.replace('.', '\\.') + '\\{[^}]*\\}'));
+    if (!rule) return null;
+    return {top: /border-top:0/.test(rule[0]) ? 0 : 1, bottom: /border-bottom:0/.test(rule[0]) ? 0 : 1};
+};
+const identityEdges = labelBandEdges('.label-identity');
+const partyEdges = labelBandEdges('.label-parties');
+const weightEdges = labelBandEdges('.label-physical');
+check('the carton-number row draws a bottom border', !!identityEdges && identityEdges.top === 1 && identityEdges.bottom === 1);
+check('every seam between label bands is drawn exactly once',
+    !!identityEdges && !!partyEdges && !!weightEdges
+    && identityEdges.bottom + partyEdges.top === 1
+    && partyEdges.bottom + (labelCss.includes('.label-items th{border-top:0}') ? 0 : 1) === 1
+    && weightEdges.top === 0
+    && !labelCss.includes('flex-direction:column;gap:4mm') && !labelCss.includes('gap:2mm;font-size:11pt}'));
+check('every label cell has room to breathe', labelCss.includes('.carton-label th,.carton-label td{padding:3.5mm 4mm;')&&labelCss.includes('.label-identity>div{padding:3.5mm 4mm;')&&labelCss.includes('.label-parties>div{padding:3.5mm 4mm;')&&labelCss.includes('.label-physical>div{padding:3.5mm 4mm;')&&labelCss.includes('.format-a5 .label-identity>div,.format-a5 .label-parties>div,.format-a5 .label-physical>div,.format-a5 .carton-label th,.format-a5 .carton-label td{padding:3mm 3.5mm}'));
+check('the label prints the carton barcode under its QR', label.includes('class="label-qr-code"')&&label.includes('{{ $carton->barcode }}')&&label.includes('data-ship-qr-caption'));
+check('carton label ink is pure black and its rules are solid black', ['color:#000','border:1px solid #000','border-bottom:3px solid #000','border-right:1px solid #000'].every(x=>labelCss.includes(x))&&!/#111|#222|#333/.test(labelCss));
+check('label handling flags render printable pictograms', ['FRAGILE','HANDLE WITH CARE','KEEP DRY','THIS SIDE UP','HAZARDOUS'].every(x=>handlingSymbols.includes(x))&&label.includes("['type'=>'care']")&&labelCss.includes('.label-handling-symbol svg'));
+check('label printing records format, copies, actor and time', expansion.includes("Schema::create('packaging_list_label_prints'")&&controller.includes("'printed_by'=>Auth::id()")&&controller.includes("'printed_at'=>now()"));
+check('physical carton labels increment across groups against the list total', controller.includes('$startCartonNumber += (int) $group->carton_count')&&label.includes("$batch['startCartonNumber'] + $copy")&&label.includes("$cartonNumber }}/{{ $carton->packagingList->total_cartons"));
+check('label quantities are whole per-carton values', label.includes("quantity_per_carton,0")&&!label.includes("total_quantity,3"));
+check('labels omit chargeable weight and CBM details', !label.includes('CHARGEABLE')&&!label.includes('data-chargeable')&&!label.includes('cbmPerCarton'));
+check('labels support fitted A4, A5 and 100 × 140 mm formats', controller.includes("Rule::in(['a4','a5','thermal'])")&&label.includes("'A5 landscape'")&&label.includes("'100mm 140mm'")&&labelCss.includes('.format-a5 .carton-label{width:210mm;height:148mm')&&labelCss.includes('.format-thermal .carton-label{width:100mm;height:140mm'));
+check('carton headings name the sender and use conditional organisation print branding', label.includes('->issuedByUs($organisation)')&&label.includes("$senderName = $carton->packagingList->from_name")&&label.includes('@if ($senderIsMissPack)')&&label.includes("->logoUrl('print')")&&label.includes('<h1>{{ $senderName }}</h1>')&&!label.includes('shipping_mark ?:'));
+check('party details add exactly two points to every existing format-specific size', ['.72','1.05','.88','.84','.8'].every(size=>labelCss.includes(`font-size:calc(${size}em + 2pt)`)));
+check('source document screens offer packing actions', read('resources/views/sales_invoices/show.blade.php').includes('Pack items')&&read('resources/views/purchase_invoices/show.blade.php').includes('Pack items')&&read('resources/views/shipments/show.blade.php').includes('Create Packaging List'));
+/* A list can hold a dozen carton groups. The strip scrolls inside its card, and
+   the form must not be allowed to size itself to the tabs: a grid item defaults
+   to `min-width: auto` — its min-content width — so eighteen 210 px tabs pushed
+   the card and the page past the window instead of scrolling. */
+check('the carton-group strip scrolls inside its card instead of widening the page',
+    /\.pl-carton-tabs\{[^}]*overflow-x:auto[^}]*min-width:0[^}]*max-width:100%/.test(css)
+    && /\.pl-carton-tab\{[^}]*flex:0 0 auto/.test(css)
+    && /\.packaging-list-form\{grid-template-columns:minmax\(0,1fr\)\}/.test(css)
+    && /\.packaging-list-form>\*\{min-width:0\}/.test(css));
+check('opening a carton group scrolls its tab into view',
+    js.includes('const revealTab = index =>')
+    && js.includes("scrollIntoView({block:'nearest',inline:'nearest'})")
+    && js.includes('if (activeTab && (moved || focusTab)) revealTab(activeCarton);')
+    && js.includes("update();\n      revealTab(activeCarton);"));
+check('carton groups use accessible summary tabs and adding a group activates its new tab', form.includes('data-carton-tabs')&&form.includes('role="tablist"')&&js.includes('activateCarton')&&js.includes("activeCarton = cartonList.querySelectorAll('[data-carton]').length - 1"));
+check('a carton tab is named by its packing group, then its label, then its product', js.includes('[data-packing-group]')&&js.includes('|| panel.querySelector(\'[data-item]'));
+check('the packing group is an editable field on each carton block', read('resources/views/packaging_lists/partials/carton-editor.blade.php').includes('data-packing-group')&&form.includes("'packing_group'=>\$carton->packing_group")&&controller.includes("'cartons.*.packing_group' => ['nullable', 'string', 'max:120']"));
+check('the obsolete copy-source-lines action is removed', !js.includes('data-copy-source-items')&&!read('resources/views/packaging_lists/partials/carton-editor.blade.php').includes('Copy source lines'));
+check('individual carton mode is structurally limited to one carton', controller.includes("packing_mode'] ?? 'grouped') === 'individual'")&&js.includes("value === 'individual'"));
+check('carton number is assigned incrementally on both browser and server', controller.includes("$carton['carton_number'] = (string) ($cartonIndex + 1)")&&js.includes("cartonNumber.value = String(index + 1)"));
+check('native modal dropdowns opt out of body-parented Select2', (read('resources/views/packaging_lists/partials/carton-editor.blade.php').match(/data-no-select2/g)||[]).length>=2&&form.includes('data-no-select2 name="vendor_id"'));
+check('duplicate serial numbers are refused before persistence', controller.includes('Serial number $serial appears more than once'));
+check('manual rows cannot write null into numeric packing defaults', controller.includes("$item['previously_packed_quantity'] = (float) ($item['previously_packed_quantity'] ?? 0)")&&read('app/Models/PackagingListItem.php').includes('$item->previously_packed_quantity ??= 0')&&read('app/Models/PackagingListCarton.php').includes('$carton->tare_weight ??= 0'));
+check('complex party, certification, carton and item details live in shared accessible modals', ['plPartiesModal','plCertificationModal','master-modal-card','master-modal-header','master-modal-body','master-modal-footer'].every(x=>form.includes(x))&&read('resources/views/packaging_lists/partials/carton-editor.blade.php').includes('plCartonModal')&&read('resources/views/packaging_lists/partials/item-editor.blade.php').includes('plItemModal')&&form.includes('aria-labelledby'));
+check('modal UX supports backdrop, close controls, focus and invalid-field recovery', js.includes("event.target.matches('dialog.pl-modal')")&&js.includes('data-close-pl-modal')&&js.includes("root.addEventListener('invalid'")&&js.includes('requestAnimationFrame'));
+check('main carton and item rows keep only essential packing inputs visible', !read('resources/views/packaging_lists/partials/carton-editor.blade.php').includes('<details')&&!read('resources/views/packaging_lists/partials/item-editor.blade.php').includes('<details')&&read('resources/views/packaging_lists/partials/carton-editor.blade.php').includes('pl-carton-fields--identity'));
+check('final summary sits outside tab panels and totals groups, items, cartons, weights and CBM', form.indexOf('pl-final-summary')>form.indexOf('data-carton-list')&&['data-total-groups','data-total-items','data-total-cartons','data-total-net','data-total-gross','data-total-cbm','data-total-chargeable'].every(x=>form.includes(x)));
+console.log(`\nPackaging lists: ${passed} passed, ${failed} failed`);process.exitCode=failed?1:0;

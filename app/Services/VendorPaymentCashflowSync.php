@@ -116,7 +116,19 @@ class VendorPaymentCashflowSync
         }
 
         if (Schema::hasColumn('cashflow_entries', 'project_id')) {
-            $mirror->project_id = $entry->project_id;
+            $hasProjectAllocation = $mirror->exists
+                && Schema::hasTable('cashflow_allocations')
+                && $mirror->allocations()->whereNotNull('project_id')->exists();
+            $mirror->project_id = $hasProjectAllocation ? null : $entry->project_id;
+            if ($hasProjectAllocation) {
+                /* A full-form edit upgraded the legacy project link to an
+                   allocation. Keep that slice in step with the vendor payment
+                   without restoring the old column and counting it twice. */
+                $mirror->allocations()
+                    ->whereNull('sales_invoice_id')
+                    ->whereNull('purchase_invoice_id')
+                    ->update(['project_id' => $entry->project_id]);
+            }
         }
 
         $mirror->save();
@@ -173,9 +185,29 @@ class VendorPaymentCashflowSync
             return null;
         }
 
+        /* Only a payment the ledger owns. A row this entry generated itself
+           (`source = cashflow`) is its mirror, not its source — showing it as
+           "generated from vendor payment #N" would explain the entry backwards. */
         return VendorPaymentEntry::query()
             ->with('vendor')
             ->where('cashflow_entry_id', $cashflow->id)
+            ->when(Schema::hasColumn('vendor_payment_entries', 'source'), fn ($query) => $query->where(function ($query) {
+                $query->whereNull('source')->orWhere('source', '!=', CashflowVendorPaymentSync::SOURCE);
+            }))
+            ->first();
+    }
+
+    /** The vendor ledger row this cashflow entry posted, if it posted one. */
+    public function derivedPaymentFor(CashflowEntry $cashflow): ?VendorPaymentEntry
+    {
+        if (! $this->available() || ! Schema::hasColumn('vendor_payment_entries', 'source')) {
+            return null;
+        }
+
+        return VendorPaymentEntry::query()
+            ->with('vendor')
+            ->where('cashflow_entry_id', $cashflow->id)
+            ->where('source', CashflowVendorPaymentSync::SOURCE)
             ->first();
     }
 

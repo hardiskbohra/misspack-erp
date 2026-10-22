@@ -80,6 +80,7 @@ class AdminDashboardController extends Controller
         $moduleHealth = $this->moduleHealth();
         $routes = $this->routes();
         $availableYears = $this->availableYears();
+        $comparisons = $this->comparisons($period);
 
         return view('dashboard.index', compact(
             'range',
@@ -94,14 +95,15 @@ class AdminDashboardController extends Controller
             'attention',
             'moduleHealth',
             'routes',
-            'availableYears'
+            'availableYears',
+            'comparisons'
         ));
     }
 
     private function periodContext(Request $request): array
     {
         $type = (string) $request->query('period_type', 'year');
-        if (! in_array($type, ['range', 'quarter', 'half', 'year', 'multi_year'], true)) {
+        if (! in_array($type, ['range', 'month', 'quarter', 'half', 'year', 'multi_year'], true)) {
             $type = 'year';
         }
 
@@ -123,6 +125,29 @@ class AdminDashboardController extends Controller
                 'type' => $type,
                 'label' => 'Last '.$range.' Days',
                 'year' => $year,
+                'quarter' => null,
+                'half' => null,
+                'range' => $range,
+                'start' => $start,
+                'end' => $end,
+                'group' => 'day',
+                'labels' => $this->dateLabels($start, $end),
+            ];
+        }
+
+        if ($type === 'month') {
+            $month = (int) $request->query('month', now()->month);
+            if ($month < 1 || $month > 12) {
+                $month = now()->month;
+            }
+            $start = Carbon::create($year, $month, 1)->startOfDay();
+            $end = $start->copy()->endOfMonth()->endOfDay();
+
+            return [
+                'type' => $type,
+                'label' => $start->format('F Y'),
+                'year' => $year,
+                'month' => $month,
                 'quarter' => null,
                 'half' => null,
                 'range' => $range,
@@ -222,6 +247,114 @@ class AdminDashboardController extends Controller
         ];
     }
 
+    /**
+     * Side-by-side performance context. Month-to-date and year-to-date use the
+     * same elapsed number of days in the prior period, so an unfinished October
+     * is never compared with all of September or a partial year with a full one.
+     */
+    private function comparisons(array $period): array
+    {
+        $today = now()->endOfDay();
+        $monthStart = $today->copy()->startOfMonth();
+        $previousMonthStart = $monthStart->copy()->subMonthNoOverflow();
+        $previousMonthEnd = $previousMonthStart->copy()
+            ->addDays(min($today->day, $previousMonthStart->daysInMonth) - 1)
+            ->endOfDay();
+
+        $yearStart = $today->copy()->startOfYear();
+        $previousYearStart = $yearStart->copy()->subYear();
+        $previousYearEnd = $today->copy()->subYear()->endOfDay();
+
+        $selectedDays = max(1, (int) $period['start']->diffInDays($period['end']) + 1);
+        $selectedPreviousEnd = $period['start']->copy()->subSecond();
+        $selectedPreviousStart = $selectedPreviousEnd->copy()->subDays($selectedDays - 1)->startOfDay();
+
+        return [
+            'month' => $this->comparisonBlock(
+                'This month vs last month',
+                $this->periodTotals($monthStart, $today),
+                $this->periodTotals($previousMonthStart, $previousMonthEnd)
+            ),
+            'year' => $this->comparisonBlock(
+                'This year vs last year',
+                $this->periodTotals($yearStart, $today),
+                $this->periodTotals($previousYearStart, $previousYearEnd)
+            ),
+            'selected' => $this->comparisonBlock(
+                $period['label'].' vs previous period',
+                $this->periodTotals($period['start'], $period['end']),
+                $this->periodTotals($selectedPreviousStart, $selectedPreviousEnd)
+            ),
+        ];
+    }
+
+    private function comparisonBlock(string $label, array $current, array $previous): array
+    {
+        $metrics = [];
+        foreach ($current as $key => $value) {
+            $prior = (float) ($previous[$key] ?? 0);
+            $change = $prior == 0.0 ? ($value == 0.0 ? 0.0 : 100.0) : (($value - $prior) / abs($prior)) * 100;
+            $metrics[$key] = [
+                'current' => round((float) $value, 2),
+                'previous' => round($prior, 2),
+                'change' => round($change, 1),
+            ];
+        }
+
+        return ['label' => $label, 'metrics' => $metrics];
+    }
+
+    private function periodTotals(Carbon $start, Carbon $end): array
+    {
+        $sales = $this->rangeSum('sales_invoices', ['invoice_date', 'created_at'], 'total_amount', $start, $end, 'tax');
+        $purchase = $this->rangeSum('purchase_invoices', ['invoice_date', 'created_at'], 'total_amount', $start, $end, 'bill');
+        $income = $this->rangeSum('cashflow_entries', ['entry_date', 'created_at'], 'credit_amount', $start, $end);
+        $expense = $this->rangeSum('cashflow_entries', ['entry_date', 'created_at'], 'debit_amount', $start, $end);
+
+        return [
+            'sales' => $sales,
+            'purchase' => $purchase,
+            'margin' => $sales - $purchase,
+            'income' => $income,
+            'expense' => $expense,
+            'net' => $income - $expense,
+            'leads' => $this->rangeCount('leads', ['created_at'], $start, $end),
+            'projects' => $this->rangeCount('projects', ['start_date', 'created_at'], $start, $end),
+            'shipments' => $this->rangeCount('shipments', ['pickup_date', 'created_at'], $start, $end),
+        ];
+    }
+
+    private function rangeSum(string $table, array $dateColumns, string $amountColumn, Carbon $start, Carbon $end, ?string $moneyType = null): float
+    {
+        $dateColumn = $this->dateColumn($table, $dateColumns);
+        if (! $dateColumn || ! $this->tableColumn($table, $amountColumn)) {
+            return 0;
+        }
+
+        $query = DB::table($table)->whereBetween($table.'.'.$dateColumn, [
+            $this->dateBoundary($start, $dateColumn),
+            $this->dateBoundary($end, $dateColumn, true),
+        ]);
+        if ($moneyType !== null) {
+            $this->invoiceFilter($query, $table, $moneyType);
+        }
+
+        return (float) $query->sum($table.'.'.$amountColumn);
+    }
+
+    private function rangeCount(string $table, array $dateColumns, Carbon $start, Carbon $end): int
+    {
+        $dateColumn = $this->dateColumn($table, $dateColumns);
+        if (! $dateColumn) {
+            return 0;
+        }
+
+        return (int) DB::table($table)->whereBetween($dateColumn, [
+            $this->dateBoundary($start, $dateColumn),
+            $this->dateBoundary($end, $dateColumn, true),
+        ])->count();
+    }
+
     private function metrics(array $period, array $charts): array
     {
         $start = $period['start'];
@@ -239,16 +372,11 @@ class AdminDashboardController extends Controller
            documents aside. The monthly series below is the ledger's, which is
            why the two read different tables and mean different things — one is
            what was sold, the other what was received. */
-        $estimatedProjectValue = $this->sum(\App\Models\SalesInvoice::class, 'sales_invoices', 'total_amount', function ($query) {
-            $query->whereNotNull('project_id')
-                ->where('status', '!=', 'cancelled')
-                ->where(function ($query) {
-                    $query->where('invoice_type', 'tax')
-                        ->orWhere(function ($query) {
-                            $query->where('invoice_type', 'proforma')->whereNull('converted_invoice_id');
-                        });
-                });
-        });
+        $estimatedProjectValue = $this->tableColumn('sales_invoices', 'cash_converted_total_amount')
+            ? (float) \App\Models\SalesInvoice::query()->whereNotNull('project_id')
+                ->where('status', '!=', 'cancelled')->notSuperseded()
+                ->sum(DB::raw(\App\Models\SalesInvoice::RECEIVABLE_TOTAL_SQL))
+            : 0.0;
         /* A project's money is the ledger's money: the project-payment rows
            that used to carry a second copy of it are gone. A credit is inward,
            a debit outward, and both are counted where they are tagged. */
@@ -376,7 +504,11 @@ class AdminDashboardController extends Controller
     private function invoiceFilter($query, string $table, string $moneyType): void
     {
         if (Schema::hasColumn($table, 'invoice_type')) {
-            $query->where($table.'.invoice_type', $moneyType);
+            if ($table === 'sales_invoices' && $moneyType === 'tax') {
+                $query->whereIn($table.'.invoice_type', ['tax', 'cash']);
+            } else {
+                $query->where($table.'.invoice_type', $moneyType);
+            }
         }
 
         if (Schema::hasColumn($table, 'status')) {
@@ -415,7 +547,20 @@ class AdminDashboardController extends Controller
             return $this->zeroSeries($period);
         }
 
-        return $this->sumSeries('cashflow_entries', $dateColumn, $amountColumn, $period);
+        return $this->sumSeries('cashflow_entries', $dateColumn, $amountColumn, $period, function ($query) {
+            /* A contra/internal-transfer pair moves money between our own
+               accounts. Counting its debit as expense and credit as income
+               doubles turnover without changing profit. It remains visible in
+               the cash book and account balances, but not in P&L figures. */
+            if (Schema::hasTable('cashflow_categories')) {
+                $query->whereNotExists(function ($categories) {
+                    $categories->selectRaw('1')
+                        ->from('cashflow_categories')
+                        ->whereColumn('cashflow_categories.id', 'cashflow_entries.category_id')
+                        ->where('cashflow_categories.type', 'transfer');
+                });
+            }
+        });
     }
 
     /** Money tagged to a project: `credit_amount` is inward, `debit_amount` out. */
@@ -619,7 +764,7 @@ class AdminDashboardController extends Controller
 
         if (Schema::hasTable('clients') && Schema::hasColumn('sales_invoices', 'client_id')) {
             $query->leftJoin('clients', 'sales_invoices.client_id', '=', 'clients.id')
-                ->selectRaw("COALESCE(clients.company_name, sales_invoices.client_company_name, 'Unknown Client') as label, SUM(sales_invoices.total_amount) as total");
+                ->selectRaw("COALESCE(clients.company_name, sales_invoices.client_company_name, 'Unknown Client') as label, SUM(sales_invoices.total_amount - coalesce(sales_invoices.cash_converted_total_amount, 0)) as total");
         } else {
             $query->selectRaw("COALESCE(client_company_name, 'Unknown Client') as label, SUM(total_amount) as total");
         }
@@ -671,11 +816,16 @@ class AdminDashboardController extends Controller
 
         $this->invoiceFilter($query, 'purchase_invoices', 'bill');
 
-        if (Schema::hasTable('vendors') && Schema::hasColumn('purchase_invoices', 'vendor_id')) {
+        $hasInvoiceVendorName = Schema::hasColumn('purchase_invoices', 'vendor_company_name');
+        $invoiceVendorName = $hasInvoiceVendorName ? 'purchase_invoices.vendor_company_name' : "'Vendor'";
+
+        if (Schema::hasTable('vendors')
+            && Schema::hasColumn('vendors', 'vendor_name')
+            && Schema::hasColumn('purchase_invoices', 'vendor_id')) {
             $query->leftJoin('vendors', 'purchase_invoices.vendor_id', '=', 'vendors.id')
-                ->selectRaw("COALESCE(vendors.company_name, purchase_invoices.vendor_company_name, 'Vendor') as label, SUM(purchase_invoices.total_amount) as total");
+                ->selectRaw("COALESCE(vendors.vendor_name, {$invoiceVendorName}, 'Vendor') as label, SUM(purchase_invoices.total_amount) as total");
         } else {
-            $query->selectRaw("COALESCE(vendor_company_name, 'Vendor') as label, SUM(total_amount) as total");
+            $query->selectRaw("COALESCE({$invoiceVendorName}, 'Vendor') as label, SUM(purchase_invoices.total_amount) as total");
         }
 
         return $query->groupBy('label')->orderByDesc('total')->limit(8)->pluck('total', 'label')
@@ -972,11 +1122,11 @@ class AdminDashboardController extends Controller
            sums row by row, written once here because this list is a report
            over every client and cannot load each project's documents. */
         $valueSelect = $this->tableColumn('sales_invoices', 'total_amount')
-            ? DB::raw('coalesce((select sum(si.total_amount) from sales_invoices si'
+            ? DB::raw('coalesce((select sum(si.total_amount - coalesce(si.cash_converted_total_amount, 0)) from sales_invoices si'
                 .' join projects sp on sp.id = si.project_id'
                 .' where sp.client_id = projects.client_id'
                 .' and si.status <> \'cancelled\''
-                .' and (si.invoice_type = \'tax\' or (si.invoice_type = \'proforma\' and si.converted_invoice_id is null))), 0) as total_value')
+                .' and (si.invoice_type in (\'tax\', \'cash\') or (si.invoice_type = \'proforma\' and si.converted_invoice_id is null))), 0) as total_value')
             : DB::raw('0 as total_value');
 
         return \App\Models\Project::query()

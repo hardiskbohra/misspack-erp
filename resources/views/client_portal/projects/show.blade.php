@@ -7,34 +7,27 @@
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('assets/css/client-portal-project-show.css') }}">
-    <div id="projectShowRoot" data-project-id="{{ $project->id }}" hidden></div>
 @endpush
+<div id="projectShowRoot" data-project-id="{{ $project->id }}" hidden></div>
 
-    @php
-        $statusClass = 'projects-chip-status-' . $project->status;
-    @endphp
-    
-<div class="master-card master-header" style="margin-bottom:15px;border:1px solid white;background: linear-gradient(135deg, #34d399, #6ee7b7);box-shadow: 0 18px 45px rgba(79, 131, 241, .22);">
-    <div class="pd-status-left">
-        <div class="pd-progress-ring">
-            <strong>{{ $project->progress_percent }}%</strong>
-            <span>Progress</span>
-        </div>
-        <div>
-            <p class="cp-eyebrow" style="color:white">{{ $project->project_number }}</p>
-            <h1>{{ $project->name }}</h1>
-            <p><span style="color:white"><i class="fa-solid fa-calendar-days"></i> &nbsp; Start:
-                    {{ optional($project->start_date)->format('d M Y') ?: 'Not set' }}</span></p>
-        </div>
-    </div>
+@php
+    $statusClass = 'projects-chip-status-' . $project->status;
+@endphp
+
+<div class="cp-page-head cp-record-head">
     <div>
-        <a href="{{ route('client-portal.projects.index') }}" class="master-btn master-btn-light" style="padding:8px 15px;">Back</a>&nbsp;
-        <button type="button" class="master-btn master-btn-primary" id="openAddCommentModal2"><i class="fas fa-plus"></i> Add Comment</button>
-        <button type="button" class="master-btn master-btn-primary" id="openAddAttachmentModal2"><i class="fas fa-plus"></i> Add Attachment</button>
+        <a class="cp-back-link" href="{{ route('client-portal.projects.index') }}"><i class="fa-solid fa-arrow-left"></i> Projects</a>
+        <p class="cp-eyebrow">{{ $project->project_number }}</p>
+        <h1>{{ $project->name }}</h1>
+        <p><i class="fa-regular fa-calendar"></i> Started {{ optional($project->start_date)->format('d M Y') ?: 'not set' }} · {{ $project->stageLabel() }}</p>
+    </div>
+    <div class="cp-record-actions">
+        <button type="button" class="master-btn master-btn-soft" id="openAddCommentModal2"><i class="fa-regular fa-comment"></i> Add comment</button>
+        <button type="button" class="master-btn master-btn-primary" id="openAddAttachmentModal2"><i class="fa-solid fa-cloud-arrow-up"></i> Upload file</button>
     </div>
 </div>
 
-<div class="pd-metrics cp-project-detail-metrics" style="margin-bottom:15px;">
+<div class="pd-metrics cp-project-detail-metrics">
     <div class="pd-metric"><span>Status</span><strong>{{ $project->statusLabel() }}</strong></div>
     <div class="pd-metric"><span>Stage</span><strong>{{ $project->stageLabel() }}</strong></div>
     <div class="pd-metric"><span>Target date</span><strong>{{ optional($project->target_date)->format('d M Y') ?: 'Not set' }}</strong></div>
@@ -47,8 +40,8 @@
         <button type="button" class="pd-tab-btn active" data-tab="overview" role="tab" aria-selected="true">Overview</button>
         <button type="button" class="pd-tab-btn" data-tab="products" role="tab" aria-selected="false">Products
             <span>{{ $project->products->count() }}</span></button>
-        <button type="button" class="pd-tab-btn" data-tab="milestones" role="tab" aria-selected="false">
-            Milestones <span>{{ $project->publicMilestones->count() }}</span></button>
+        <button type="button" class="pd-tab-btn" data-tab="approvals" role="tab" aria-selected="false">
+            Approvals <span>{{ $project->approvalRequests->where('status','open')->count() }}</span></button>
         <button type="button" class="pd-tab-btn" data-tab="comments" role="tab" aria-selected="false">
             Comments <span>{{ $project->publicComments->count() }}</span></button>
         <button type="button" class="pd-tab-btn" data-tab="attachments" role="tab" aria-selected="false">Attachments
@@ -113,21 +106,21 @@
                         </div>
                     </div>
                     <div class="pd-summary-list">
-                        <button type="button" class="pd-summary-item" data-tab-jump="products" style="background:#eaf2ff">
+                        <button type="button" class="pd-summary-item cp-tone-blue" data-tab-jump="products">
                             <i class="fa-solid fa-boxes-stacked"></i>
                             <span><strong>{{ $project->products->count() }} Products</strong><small>View
                                     product-wise execution and invoices</small></span>
                         </button>
-                        <button type="button" class="pd-summary-item" data-tab-jump="tracking" style="background:#e8fff3">
+                        <button type="button" class="pd-summary-item cp-tone-green" data-tab-jump="tracking">
                             <i class="fa-solid fa-location-dot"></i>
                             <span><strong>{{ $project->publicTrackingUpdates->count() }} Activity
                                     Updates</strong><small>Published project updates</small></span>
                         </button>
-                        <button type="button" class="pd-summary-item" data-tab-jump="attachments" style="background:#fff7e6">
+                        <button type="button" class="pd-summary-item cp-tone-orange" data-tab-jump="attachments">
                             <i class="fa-solid fa-paperclip"></i>
                             <span><strong>{{ $project->clientPortalAttachments->count() + $portalDocuments->count() }} Attachments</strong><small>Project files, packing lists, artwork, and photos</small></span>
                         </button>
-                        <button type="button" class="pd-summary-item" data-tab-jump="payments" style="background:#fff1f3">
+                        <button type="button" class="pd-summary-item cp-tone-red" data-tab-jump="payments">
                             <i class="fa-solid fa-indian-rupee-sign"></i>
                             <span><strong>{{ $project->projectReceipts->count() }} receipts</strong><small>Money received against this project</small></span>
                         </button>
@@ -138,7 +131,7 @@
 
         <!--Product-->
         <section class="pd-tab-panel" id="pd-tab-products" data-tab-panel="products" role="tabpanel">
-            <div class="pd-section-head" style="padding:5px;">
+            <div class="pd-section-head">
                 <div>
                     <p class="pd-eyebrow">Products</p>
                     <h2>Project Products</h2>
@@ -148,7 +141,7 @@
                 </div>
             </div>
                                 
-            <div class="master-table-wrap master-card" style="padding:0px;box-shadow:none;">
+            <div class="master-table-wrap master-card cp-table-card">
                 <table class="master-table">
                     <thead>
                         <tr>
@@ -174,7 +167,7 @@
                                 </td>
                                 <td>
                                     <strong>{{ $projectProduct->product_name }}</strong>
-                                    <div class="master-sub" style="margin-bottom:5px;">{{ $projectProduct->product->product_number }}</div>
+                                    <div class="master-sub cp-sub-spaced">{{ $projectProduct->product->product_number }}</div>
                                 </td>
                                 <td><strong>{{ number_format($projectProduct->quantity) }} {{ $projectProduct->unit }}</strong></td>
                                 <td><span class="pd-chip pd-status-{{ $projectProduct->status }}">{{ $projectProduct->statusLabel() }}</span></td>
@@ -193,72 +186,34 @@
             </div>
         </section>
         
-        @php
-            $milestones = $project->publicMilestones;
-            $milestoneTotal = $milestones->count();
-            $milestoneCompleted = $milestones->where('status', 'completed')->count();
-            $milestonePublic = $milestoneTotal;
-            $milestoneOverdue = $milestones
-                ->filter(function ($milestone) {
-                    return method_exists($milestone, 'isOverdue') && $milestone->isOverdue();
-                })
-                ->count();
-            $milestoneProgress = $milestoneTotal ? (int) round($milestones->avg('progress_percent')) : 0;
-            $productsWithMilestones = $project->products;
-            $projectLevelMilestones = $milestones->whereNull('project_product_id')->values();
-        @endphp
-        
-        <section class="pd-tab-panel" id="pd-tab-milestones" data-tab-panel="milestones" role="tabpanel">
-            <div class="pmile-page">
-                <div class="pmile-stats">
-                    <div><span>Total Milestones</span><strong>{{ $milestoneTotal }}</strong></div>
-                    <div><span>Completed</span><strong class="green">{{ $milestoneCompleted }}</strong></div>
-                    <div><span>Milestones visible to you</span><strong class="blue">{{ $milestonePublic }}</strong></div>
-                    <div><span>Overdue / Attention</span><strong class="red">{{ $milestoneOverdue }}</strong></div>
-                    <div><span>Average Progress</span><strong>{{ $milestoneProgress }}%</strong></div>
-                </div>
-        
-                <div class="pmile-actions-card">
-                    <div class="pd-section-head">
-                        <div>
-                            <p class="pd-eyebrow">Product Timeline</p>
-                            <h2>Project Milestone Timelines</h2>
-                        </div>
-                    </div>
-                </div>
-        
-                <div class="pmile-product-list">
-                    @if ($projectLevelMilestones->count())
-                        @include('client_portal.projects.partials.milestone-product-block', [
-                            'title' => 'Project Level Milestones',
-                            'productMilestones' => $projectLevelMilestones,
-                            'projectProduct' => null,
-                        ])
-                    @endif
-        
-                    @forelse($productsWithMilestones as $projectProduct)
-
-                        @php($productMilestones = $milestones->where('project_product_id', $projectProduct->id)->values())
-                        @include('client_portal.projects.partials.milestone-product-block', [
-                            'title' => $projectProduct->product_name,
-                            'productMilestones' => $productMilestones,
-                            'projectProduct' => $projectProduct,
-                        ])
-
-                    @empty
-                        @if (!$projectLevelMilestones->count())
-                            <div class="pd-empty">Add products first, then generate product-wise milestone timelines.</div>
+        <section class="pd-tab-panel" id="pd-tab-approvals" data-tab-panel="approvals" role="tabpanel">
+            <div class="pd-section-head"><div><p class="pd-eyebrow">Decisions</p><h2>Artwork and PPS approvals</h2><p>Each decision applies only to the exact file version shown.</p></div><span class="pd-count">{{ $project->approvalRequests->count() }} requests</span></div>
+            <div class="cp-approval-list">
+                @forelse($project->approvalRequests as $approval)
+                    <article class="cp-approval-card is-{{ $approval->effectiveStatus() }}">
+                        <header><div><strong>{{ $approval->title }}</strong><span>{{ $approval->typeLabel() }} · {{ $approval->product?->product_name }} · version {{ $approval->current_version_number }}</span></div><span class="master-badge">{{ $approval->statusLabel() }}</span></header>
+                        @if($approval->isOverdue())<div class="cp-approval-overdue"><i class="fa-solid fa-triangle-exclamation"></i> The requested response date has passed, but this approval remains open.</div>@endif
+                        <div class="cp-approval-file"><i class="fa-solid fa-file-shield"></i><div><span>File for your decision</span><a href="{{ route('client-portal.projects.attachments.file',[$project->id,$approval->currentVersion->attachment]) }}" target="_blank">{{ $approval->currentVersion->attachment->original_name }}</a><small>Version {{ $approval->current_version_number }} · submitted {{ $approval->currentVersion->submitted_at?->format('d M Y, H:i') }}</small></div></div>
+                        @if($approval->instructions)<p class="cp-approval-instructions">{{ $approval->instructions }}</p>@endif
+                        @if($approval->status==='open')
+                            <form method="POST" action="{{ route('client-portal.projects.approvals.decision',[$project->id,$approval]) }}" class="cp-approval-decision">@csrf
+                                <label><span>Comment</span><textarea name="client_comment" rows="3" maxlength="2000" placeholder="Required when requesting changes or rejecting"></textarea></label>
+                                <div><button class="master-btn master-btn-primary" type="submit" name="decision" value="approved"><i class="fa-solid fa-check"></i> Approve version {{ $approval->current_version_number }}</button><button class="master-btn master-btn-soft" type="submit" name="decision" value="changes_requested">Request changes</button><button class="master-btn master-btn-light" type="submit" name="decision" value="rejected">Reject</button></div>
+                            </form>
+                        @elseif($approval->currentVersion?->client_comment)
+                            <div class="cp-approval-response"><strong>Your response</strong><p>{{ $approval->currentVersion->client_comment }}</p><small>{{ $approval->currentVersion->decided_at?->format('d M Y, H:i') }}</small></div>
                         @endif
-                    @endforelse
-                </div>
+                        <details class="cp-approval-history"><summary>Version history</summary><div>@foreach($approval->versions as $version)<span><strong>Version {{ $version->version_number }} · {{ $version->statusLabel() }}</strong><small>{{ $version->submitted_at?->format('d M Y, H:i') }}</small>@if($version->client_comment)<em>{{ $version->client_comment }}</em>@endif</span>@endforeach</div></details>
+                    </article>
+                @empty
+                    <div class="master-empty"><i class="fa-solid fa-stamp"></i><p>No artwork or PPS approvals are waiting for you.</p></div>
+                @endforelse
             </div>
-        
         </section>
-
 
         <!--Tracking-->
         <section class="pd-tab-panel" id="pd-tab-tracking" data-tab-panel="tracking" role="tabpanel">
-            <div class="pd-section-head" style="padding:5px;">
+            <div class="pd-section-head">
                 <div>
                     <p class="pd-eyebrow">Logs</p>
                     <h2>Activity</h2>
@@ -268,7 +223,7 @@
                 </div>
             </div>
             
-            <div class="master-table-wrap master-card" style="padding:0px;box-shadow:none;">
+            <div class="master-table-wrap master-card cp-table-card">
                 <table class="master-table">
                     <thead>
                         <tr>
@@ -308,7 +263,7 @@
 
         <!--Comment-->
         <section class="pd-tab-panel" id="pd-tab-comments" data-tab-panel="comments" role="tabpanel">
-            <div class="pd-section-head" style="padding:5px;">
+            <div class="pd-section-head">
                 <div>
                     <p class="pd-eyebrow">Conversation</p>
                     <h2>Comments</h2>
@@ -320,7 +275,7 @@
             </div>
             <div class="pd-comments-list">
                 @forelse($project->publicComments as $comment)
-                    <div class="pd-comment {{ $comment->is_pinned ? 'pd-pinned' : '' }}" style="line-height:1;">
+                    <div class="pd-comment {{ $comment->is_pinned ? 'pd-pinned' : '' }}">
                         <div class="pd-comment-head">
                             <strong>{{ $comment->authorName() }}</strong>
                             <div>
@@ -336,7 +291,7 @@
                         @endif
                             {{ $comment->created_at->format('d M Y, h:i A') }}
                         </div>
-                        <p class="master-sub" style="padding:15px;font-size:14px;color:#000;font-weight:400;">{{ $comment->body }}</p>
+                        <p class="master-sub cp-comment-body">{{ $comment->body }}</p>
                     </div>
                 @empty
                     <div class="pd-empty">No comments yet.</div>
@@ -346,7 +301,7 @@
         
         <!--Add Comment-->
         <div class="master-modal" id="addCommentModal" aria-hidden="true">
-            <div class="master-modal-card" style="max-width:900px;">
+            <div class="master-modal-card cp-modal-wide">
                 <form method="POST" action="{{ route('client-portal.projects.comments.store', $project->id) }}">
                     @csrf
                     <div class="master-modal-header">
@@ -359,7 +314,7 @@
                     </div>
                     <div class="master-modal-body">
                         <div>
-                            <div class="master-field" style="margin-bottom:15px;">
+                            <div class="master-field cp-field-spaced">
                                 <label class="master-label">Product (optional)</label>
                                 <select class="master-select" name="project_product_id">
                                     <option value="">Project level</option>
@@ -386,7 +341,7 @@
         
         <!--Update Comment-->
         <div class="master-modal" id="editCommentModal">
-            <div class="master-modal-card" style="max-width:900px;">
+            <div class="master-modal-card cp-modal-wide">
                 <form id="editCommentForm" method="POST">
                     @csrf
                     @method('PUT')
@@ -400,7 +355,7 @@
                     </div>
                     <div class="master-modal-body">
                         <div>
-                            <div class="master-field" style="margin-bottom:15px;">
+                            <div class="master-field cp-field-spaced">
                                 <label class="master-label">Product (optional)</label>
                                 <select class="master-select" name="project_product_id">
                                     <option value="">Project level</option>
@@ -427,7 +382,7 @@
         <!--Attachment-->
         <section class="pd-tab-panel" id="pd-tab-attachments" data-tab-panel="attachments" role="tabpanel">
             <div>
-                <div class="pd-section-head" style="padding:5px;">
+                <div class="pd-section-head">
                     <div>
                         <p class="pd-eyebrow">Files</p>
                         <h2>Attachments</h2>
@@ -438,7 +393,7 @@
                     </div>
                 </div>
                 
-                <div class="pd-attachment-grid pd-card" style="padding:0px;">
+                <div class="pd-attachment-grid pd-card cp-card-plain">
                     @forelse($project->clientPortalAttachments as $attachment)
                         <div class="pd-attachment">
                             @if (in_array(strtolower((string) $attachment->extension), ['jpg', 'jpeg', 'png', 'webp', 'gif'], true) && str_starts_with(strtolower((string) $attachment->mime_type), 'image/'))
@@ -464,7 +419,7 @@
                     @endforelse
                 </div>
                 @if($portalDocuments->isNotEmpty())
-                    <div class="pd-card" style="padding:18px;margin-top:14px;">
+                    <div class="pd-card cp-upload-panel">
                         <div class="pd-section-head">
                             <div><p class="pd-eyebrow">Project workspace</p><h3>Files shared with MissPack</h3></div>
                         </div>
@@ -491,7 +446,7 @@
                 
         <!--Add Attachment-->
         <div class="master-modal" id="addAttachmentModal" aria-hidden="true">
-            <div class="master-modal-card" style="max-width:900px;">
+            <div class="master-modal-card cp-modal-wide">
                 <form method="POST" enctype="multipart/form-data" action="{{ route('client-portal.projects.documents.store', $project->id) }}">
                     @csrf
                     <div class="master-modal-header">
@@ -551,7 +506,7 @@
         <!--Payments-->
         <section class="pd-tab-panel" id="pd-tab-payments" data-tab-panel="payments" role="tabpanel">
             <div>
-                <div class="pd-section-head" style="padding:5px;">
+                <div class="pd-section-head">
                     <div>
                         <p class="pd-eyebrow">Finance</p>
                         <h2>Receipts</h2>
@@ -559,7 +514,7 @@
                     </div>
                     <span class="pd-count">{{ $project->projectReceipts->count() }} receipts</span>
                 </div>
-                <div class="master-table-wrap master-card" style="padding:0px;box-shadow:none;">
+                <div class="master-table-wrap master-card cp-table-card">
                     <table class="master-table">
                         <thead>
                             <tr>
@@ -589,7 +544,7 @@
         <!--Shipments-->
         <section class="pd-tab-panel" id="pd-tab-shipments" data-tab-panel="shipments" role="tabpanel">
             <div>
-                <div class="pd-section-head" style="padding:5px;">
+                <div class="pd-section-head">
                     <div>
                         <p class="pd-eyebrow">Logistics</p>
                         <h2>Shipment</h2>
@@ -598,7 +553,7 @@
                         <span class="pd-count">{{ $project->publicShipments->count() }} Shipments</span> &nbsp;
                     </div>
                 </div>
-                <div class="master-table-wrap master-card" style="padding:0px;box-shadow:none;">
+                <div class="master-table-wrap master-card cp-table-card">
                     <table class="master-table">
                         <thead>
                             <tr>
@@ -613,8 +568,8 @@
                         <tbody>
                                 @forelse($project->publicShipments as $shipment)
                                 @php($statusClass = str_replace('_', '-', $shipment->status))
-                                <tr style="line-height:1.5">
-                                    <td style="font-weight:500">
+                                <tr>
+                                    <td>
                                         {{ $shipment->pickup_date ? $shipment->pickup_date->format('d M') : '-' }}
                                     </td>
                                     <td>
@@ -622,14 +577,14 @@
                                         <span class="master-id">{{ $shipment->identity_name }}</span>
                                     </td>
                                     <td class="master-route">
-                                        <strong style="font-weight:500">{{ $shipment->from_name ?: 'Origin' }} → {{ $shipment->to_name ?: 'Destination' }}</strong>
+                                        <strong>{{ $shipment->from_name ?: 'Origin' }} → {{ $shipment->to_name ?: 'Destination' }}</strong>
                                         <span class="master-sub desktop-only">{{ $shipment->from_city ?: '-' }} to {{ $shipment->to_city ?: '-' }}</span>
                                     </td>
-                                    <td style="font-weight:500">
+                                    <td>
                                         {{ $shipment->logistic_partner ?: '-' }}
                                         <span class="master-sub">{{ $shipment->tracking_number ?: 'No tracking' }}</span>
                                     </td>
-                                    <td style="font-weight:500"><span class="master-badge status-{{ $statusClass }}">{{ $shipment->statusLabel() }}</span></td>
+                                    <td><span class="master-badge status-{{ $statusClass }}">{{ $shipment->statusLabel() }}</span></td>
                                 </tr>
                             @empty
                                 <tr>

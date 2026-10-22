@@ -4,7 +4,41 @@
 
 @section('content')
 
-@php($isEdit = $entry->exists)
+@push('styles')
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/cashflows.css') }}">
+@endpush
+
+@php
+    $isEdit = $entry->exists;
+    $allocationRows = old('allocations');
+    if ($allocationRows === null) {
+        $allocationRows = $entry->relationLoaded('allocations')
+            ? $entry->allocations->map(fn ($allocation) => [
+                'project_id' => $allocation->project_id,
+                'sales_invoice_id' => $allocation->sales_invoice_id,
+                'purchase_invoice_id' => $allocation->purchase_invoice_id,
+                'amount' => $allocation->amount,
+                'document_amount' => $allocation->document_amount,
+                'note' => $allocation->note,
+            ])->all()
+            : [];
+
+        /* An untouched legacy entry still has its single project/invoice
+           columns. Present it as one allocation so the first edit upgrades it
+           without losing the link. */
+        if ($allocationRows === [] && ($entry->project_id || $entry->sales_invoice_id)) {
+            $allocationRows[] = [
+                'project_id' => $entry->project_id,
+                'sales_invoice_id' => $entry->sales_invoice_id,
+                'purchase_invoice_id' => null,
+                'amount' => $entry->amountMoved(),
+                'document_amount' => $entry->sales_invoice_id ? $entry->amountMoved() : null,
+                'note' => null,
+            ];
+        }
+    }
+    $allocationRows = array_values($allocationRows ?: []);
+@endphp
 
 <div class="master-form">
     <div class="master-card master-header">
@@ -14,6 +48,22 @@
                 class="active">{{ $isEdit ? 'Edit' : 'Add' }}</span></div>
     </div>
     
+    @if ($isEdit && ! empty($derivedVendorPayment))
+        <div class="master-card master-section cf-sync-note">
+            <p style="margin:0;font-weight:700;">
+                Posted to the vendor ledger as payment #{{ $derivedVendorPayment->id }}
+                ({{ $derivedVendorPayment->vendor?->vendor_name ?: 'Vendor' }}).
+                Amount, date, reference, mode and account are this entry's own —
+                @if (\Illuminate\Support\Facades\Route::has('vendors.show'))
+                    <a href="{{ route('vendors.show', $derivedVendorPayment->vendor_id) }}#payments">open the vendor ledger</a>
+                @else
+                    open the vendor ledger
+                @endif
+                to see the row; it follows every change made here.
+            </p>
+        </div>
+    @endif
+
     @if ($isEdit && ! empty($linkedVendorPayment))
         <div class="master-card master-section cf-sync-note">
             <p style="margin:0;font-weight:700;">
@@ -32,6 +82,7 @@
     <form method="POST" action="{{ $isEdit ? route('cashflows.update', $entry) : route('cashflows.store') }}"
         class="master-card master-form-card">
         @csrf
+            @if(!$isEdit && request('return_to'))<input type="hidden" name="return_to" value="{{ request('return_to') }}">@endif
         @if($isEdit) @method('PUT') @endif
 
         <div class="master-section">
@@ -76,17 +127,6 @@
                         name="currency">@foreach($currencyOptions as $key => $label)<option value="{{ $key }}"
                             @selected(old('currency', $entry->currency) === $key)>{{ $label }}</option>
                         @endforeach</select></div>
-                <div class="master-field">
-                    <label class="master-label">Project / Deal</label>
-                    <select name="project_id" class="master-select">
-                        <option value="">No project mapping</option>
-                        @foreach(\App\Models\Project::query()->latest('id')->get() as $project)
-                            <option value="{{ $project->id }}" {{ (string) old('project_id', $entry->project_id ?? '') === (string) $project->id ? 'selected' : '' }}>
-                                {{ $project->project_number }} - {{ $project->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
                 <div class="master-field"><label class="master-label">Particular <span
                             class="master-required">*</span></label><input class="master-input" name="particular"
                         value="{{ old('particular', $entry->particular) }}" required
@@ -112,17 +152,6 @@
                     @enderror
                 </div>
                 
-                <div class="master-field">
-                    <label class="master-label">Invoice</label>
-                    <select name="sales_invoice_id" class="master-select">
-                        <option value="">No invoice mapping</option>
-                        @foreach(\App\Models\SalesInvoice::query()->latest('id')->get() as $invoice)
-                            <option value="{{ $invoice->id }}" {{ (string) old('sales_invoice_id', $entry->sales_invoice_id ?? '') === (string) $invoice->id ? 'selected' : '' }}>
-                                {{ $invoice->invoice_number }} - {{ $invoice->client->company_name ?? '-' }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
                 
                 <div class="master-field"><label class="master-label">Paid / Received Account <span
                             class="master-required">*</span></label><select class="master-select" name="account_id" required>
@@ -138,6 +167,8 @@
                 </div>
             </div>
         </div>
+
+        @include('cashflows.partials.allocation-builder')
 
         <div class="master-section">
             <h3 class="master-section-title">Account & Accounting Classification</h3>
@@ -214,4 +245,5 @@
                 class="master-btn master-btn-primary">{{ $isEdit ? 'Update Entry' : 'Create Entry' }}</button></div>
     </form>
 </div>
+
 @endsection

@@ -36,6 +36,9 @@
                                 <td data-label="Shipment">
                                     <strong>{{ $shipment->shipment_number }}</strong>
                                     <span class="project-fact-note">{{ $shipment->identity_name ?: 'No reference' }}</span>
+                                    @foreach($shipment->items->whereNotNull('project_product_id')->take(3) as $line)
+                                        <span class="project-fact-note">{{ $line->projectProduct?->product_name ?: $line->product_name }} · {{ number_format((float)$line->quantity,3) }} {{ $line->unit }}</span>
+                                    @endforeach
                                 </td>
                                 <td data-label="Route">
                                     {{ $shipment->from_name ?: 'Origin' }} → {{ $shipment->to_name ?: 'Destination' }}
@@ -56,6 +59,17 @@
                                     <div class="master-row-actions">
                                         <a class="master-icon-btn" href="{{ route('shipments.show', $shipment) }}"
                                             aria-label="Open {{ $shipment->shipment_number }}" title="Open shipment"><i class="far fa-eye" aria-hidden="true"></i></a>
+                                        @if(in_array($shipment->status, \App\Models\Shipment::dispatchedStatuses(), true))
+                                            <a class="master-icon-btn" href="{{ route('shipments.show', ['shipment'=>$shipment,'record_delivery_receipt'=>1]) }}"
+                                                aria-label="Record delivery receipt for {{ $shipment->shipment_number }}"
+                                                title="Record delivery receipt"><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i></a>
+                                        @endif
+                                        @php($latestReceipt = $shipment->relationLoaded('deliveryReceipts') ? $shipment->deliveryReceipts->first() : null)
+                                        @if($latestReceipt)
+                                            <a class="master-icon-btn edit" href="{{ route('shipments.delivery-receipts.print', [$shipment, $latestReceipt]) }}"
+                                                target="_blank" rel="noopener" aria-label="Print delivery receipt for {{ $shipment->shipment_number }}"
+                                                title="Print delivery receipt"><i class="fas fa-print" aria-hidden="true"></i></a>
+                                        @endif
                                         <a class="master-icon-btn green" href="{{ route('shipments.publicTrack', $shipment->public_token) }}"
                                             target="_blank" rel="noopener" aria-label="Public tracking for {{ $shipment->shipment_number }}"
                                             title="Public tracking page"><i class="fa-solid fa-link" aria-hidden="true"></i></a>

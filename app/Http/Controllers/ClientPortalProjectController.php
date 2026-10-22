@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClientPortalDocument;
+use App\Models\ProjectApprovalRequest;
 use App\Models\ProjectAttachment;
 use App\Services\ClientPortalNotifier;
+use App\Services\ProjectApprovals;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -23,6 +25,7 @@ class ClientPortalProjectController extends ClientPortalBaseController
         $projects = collect();
         if ($this->projectsAvailable()) {
             $projects = \App\Models\Project::query()
+                ->with('workflow:id,project_id,calculated_progress')
                 ->where('client_id', $client->id)
                 ->where('show_client_portal', true)
                 ->when($search, function ($query) use ($search) {
@@ -50,14 +53,24 @@ class ClientPortalProjectController extends ClientPortalBaseController
         $project = $this->findProjectForClient($request, $project);
 
         $load = [
+            'workflow:id,project_id,calculated_progress',
             'products',
             'publicTrackingUpdates.product',
             'clientPortalAttachments.product',
             'publicComments.user',
             'publicComments.product',
-            'publicMilestones',
             'projectReceipts',
         ];
+
+        if (Schema::hasTable('cashflow_allocations')) {
+            $load[] = 'cashflowAllocations.cashflowEntry';
+        }
+        if (Schema::hasTable('project_approval_requests')) {
+            $load[] = 'approvalRequests.currentVersion.attachment';
+            $load[] = 'approvalRequests.versions.attachment';
+            $load[] = 'approvalRequests.versions.clientUser';
+            $load[] = 'approvalRequests.overrides.approver';
+        }
 
         if (class_exists(\App\Models\Shipment::class)
             && Schema::hasTable('shipments')
@@ -68,6 +81,23 @@ class ClientPortalProjectController extends ClientPortalBaseController
         }
 
         $project->load($load);
+        if ($project->relationLoaded('cashflowAllocations')) {
+            $allocatedReceipts = $project->cashflowAllocations
+                ->filter(fn ($allocation) => $allocation->cashflowEntry
+                    && $allocation->cashflowEntry->transaction_type === 'credit'
+                    && in_array($allocation->cashflowEntry->accounting_status, ['booked', 'reconciled'], true))
+                ->map(function ($allocation) {
+                    $receipt = clone $allocation->cashflowEntry;
+                    $receipt->credit_amount = $allocation->amount;
+                    $receipt->debit_amount = 0;
+                    $receipt->particular = $allocation->note ?: $receipt->particular;
+                    return $receipt;
+                });
+            $project->setRelation('projectReceipts', $project->projectReceipts
+                ->concat($allocatedReceipts)
+                ->sortByDesc('entry_date')
+                ->values());
+        }
         $portalDocuments = ClientPortalDocument::query()
             ->where('client_id', $this->client($request)->id)
             ->where('related_type', 'project')
@@ -80,6 +110,9 @@ class ClientPortalProjectController extends ClientPortalBaseController
         if (! $project->relationLoaded('publicShipments')) {
             $project->setRelation('publicShipments', collect());
         }
+        if (! $project->relationLoaded('approvalRequests')) {
+            $project->setRelation('approvalRequests', collect());
+        }
 
         $portalComments = \App\Models\ClientPortalComment::where('client_id', $this->client($request)->id)
             ->where('related_type', 'project')
@@ -90,6 +123,19 @@ class ClientPortalProjectController extends ClientPortalBaseController
             ->get();
 
         return view('client_portal.projects.show', compact('project', 'portalComments', 'portalDocuments'));
+    }
+
+    public function decideApproval(Request $request, int $project, ProjectApprovalRequest $approval, ProjectApprovals $approvals): RedirectResponse
+    {
+        $visibleProject = $this->findProjectForClient($request, $project);
+        abort_unless($approval->project_id === $visibleProject->id, 404);
+        $data = $request->validate([
+            'decision' => ['required', \Illuminate\Validation\Rule::in(['approved','rejected','changes_requested'])],
+            'client_comment' => ['nullable', 'string', 'max:2000'],
+        ]);
+        $approvals->decide($approval, $data['decision'], $data['client_comment'] ?? null, $this->portalUser($request));
+
+        return back()->with('success', $data['decision'] === 'approved' ? 'Approval recorded successfully.' : 'Your decision and comments were sent to the project coordinator.');
     }
 
     public function attachmentFile(Request $request, int $project, ProjectAttachment $attachment)

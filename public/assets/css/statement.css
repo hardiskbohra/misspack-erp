@@ -244,8 +244,9 @@
 }
 
 .stmt-num {
-    text-align: center;
+    text-align: right;
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 .stmt-num-strong {

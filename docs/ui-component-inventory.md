@@ -24,7 +24,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Sidebar menu | Shared | `.sidebar-nav`, `.sidebar-item`; portal uses `.cp-nav` / `.cp-nav-link` |
 | Nested menu | Partial | Menu groups and active items exist; no consistent nested disclosure contract |
 | Tabs | Shared | `.master-tabs` / `.master-tab`; Cashflows `.cf-tabs` / `.cf-tab`; core aliases in `components/tabs.css` |
-| Stepper | Partial | Shipment tracking and project milestone steppers are page-specific (`shipments.css`, `projects.css`) |
+| Stepper | Partial | Shipment tracking and project workflow control steppers are page-specific (`shipments.css`, `projects.css`) |
 | Pagination | Shared | Laravel paginator partial and `.master-pagination` / `.cp-pagination`; `resources/views/components/pagination.blade.php` |
 | Secondary navigation | Partial | Record tabs and portal sub-navigation, no standalone shared secondary-nav component |
 
@@ -103,7 +103,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Drawer | Shared | `<x-drawer>` plus `master-drawer.js` provides theme-aware, responsive panels, focus trapping, Escape/backdrop/close handling, and focus restoration; vendor/project quick details and module filter panels demonstrate the pattern |
 | Dropdown | Shared | `.master-dropdown`, user-menu and Select2 dropdowns |
 | Popover | Partial | Tooltips and anchored helper patterns exist; no shared popover primitive |
-| Tooltip | Partial | Tooltip containers in lists and finance summaries; not consistently accessible/initialized |
+| Tooltip | Shared | `master-tooltips.js` promotes native `title` text into the themed `.ui-tooltip` surface across office, portal and public layouts; supports hover, keyboard focus, Escape, viewport positioning and dynamic content |
 | Context menu | Gap | No common context-menu component found |
 
 ## Business components
@@ -116,8 +116,8 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Payment summary | Partial | Invoice, portal, and Cashflow payment summaries use separate markup |
 | Invoice summary | Partial | Sales invoice show/list and portal invoice detail cards |
 | Shipment tracker | Shared, domain-specific | Shipment detail tracker plus public tracking/stepper (`shipments.css`, `shipment-public.css`) |
-| Project timeline | Partial | Project activity/milestone chronology and client-portal timeline (`projects.css`, `client-portal-project-show.css`) |
-| Milestone tracker | Shared, domain-specific | Project milestone stepper and editor (`projects.css`) |
+| Project timeline | Partial | Project activity/workflow control chronology and client-portal timeline (`projects.css`, `client-portal-project-show.css`) |
+| Workflow control tracker | Shared, domain-specific | Project workflow control stepper and editor (`projects.css`) |
 | Activity feed | Gap | Chronological entries exist, but no normalized event/feed API or component |
 | Document attachment | Shared, domain-specific | Master, vendor, project, shipment, and portal attachment cards/grids |
 | Approval flow | Partial | Client KYC review/approval states; no reusable multi-step approval flow |

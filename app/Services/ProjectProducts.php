@@ -35,8 +35,8 @@ use Illuminate\Support\Facades\Schema;
  *
  * Two things this class deliberately does not do:
  *
- * - it never deletes. A project product carries milestones, comments and
- *   attachments; a line removed from a draft invoice must not take the job's
+ * - it never deletes. A project product carries comments and attachments;
+ *   a line removed from a draft invoice must not take the job's
  *   work with it — and the products tab has no remove door either, on purpose;
  * - it never writes `total_amount`. The quantity × rate rule is
  *   `ProjectProduct::saving`'s, on the model, and a second arithmetic here is
@@ -98,8 +98,8 @@ class ProjectProducts
         $touched = 0;
 
         foreach ($lines as $line) {
-            /* `project_products.product_name` is what the products tab (and a
-               milestone, and a document) names the row by, and the column is
+            /* `project_products.product_name` is what the products tab and a
+               document name the row by, and the column is
                not nullable: a line with no name at all is not a product. */
             $name = trim((string) ($line->product_name ?: $line->product?->name ?: ''));
 
@@ -117,7 +117,23 @@ class ProjectProducts
                the model's defaults are the vocabulary for a project product,
                and the office moves it along from the products tab. */
             $row->save();
+            if ((int) $line->project_product_id !== (int) $row->id) {
+                $line->forceFill(['project_product_id' => $row->id])->saveQuietly();
+            }
             $touched++;
+        }
+
+        if ($touched > 0 && Schema::hasTable('project_workflows')) {
+            $workflow = \App\Models\ProjectWorkflow::query()->where('project_id', $projectId)->first();
+            if ($workflow) {
+                $project = $workflow->project()->with('products')->firstOrFail();
+                $execution = app(ProjectWorkflowExecution::class);
+                $execution->sync($workflow, $project);
+                $execution->recalculate($workflow);
+                if (Schema::hasTable('project_quality_inspections')) {
+                    app(ProjectOperationalReadiness::class)->evaluateAll($workflow->fresh(), auth()->id());
+                }
+            }
         }
 
         return $touched;

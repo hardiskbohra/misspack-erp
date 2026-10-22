@@ -23,3 +23,41 @@ supplier's own bill number are the purchase side's half of that row).
 
 Screens: `resources/views/purchase_invoices/` — list, form, record, print.
 A PO converts to a bill; the bill posts into the vendor ledger via `PurchaseBillLedger`.
+
+## One payment, one owner
+
+A rupee payment can be recorded in two places, and only one of them owns it:
+
+| Written in | Ledger row | Owner |
+| --- | --- | --- |
+| Vendor ledger (`vendors.payments.*`) | `vendor_payment_entries`, `source` null | the ledger; `VendorPaymentCashflowSync` mirrors it to a cashflow entry |
+| Cashflow (`cashflows.*`, `vendor_id` set, debit, INR) | `vendor_payment_entries`, `source = 'cashflow'` | the cashflow row; `CashflowVendorPaymentSync` keeps the ledger row in step and deletes it with the entry |
+
+The link column is `vendor_payment_entries.cashflow_entry_id` in both directions,
+so the pair can always be found from either side. A row with `source = 'cashflow'`
+is read-only in the vendor module — the Money tab shows a *From cashflow* chip and
+a *Change in cashflow* link instead of Edit and Delete, and the controller refuses
+`updatePayment()`/`destroyPayment()` on it, because changing one half of a mirrored
+pair silently leaves the other half wrong.
+
+`CashflowAllocations` ignores `source = 'cashflow'` rows when it looks for a
+conflicting mirror, so the originating cashflow entry can still be allocated to a
+bill without the derived row looking like a second payment.
+
+The denomination of a derived row follows the bill it settles, not the bank it
+left from. When the cashflow entry is allocated to a purchase bill in a foreign
+currency, the allocation's **document amount** (the figure typed against the
+bill) becomes `foreign_amount`, its currency becomes `foreign_currency`, and
+`exchange_rate` is the rupee amount divided by it — a ¥8,000 bill paid with
+₹10,000 lands in the ledger as ¥8,000 @ 1.25, and `amount_in_inr` stays ₹10,000.
+Allocations are re-read whenever they change, so removing the bill puts the row
+back in rupees. A payment split across several currencies keeps the rupee
+figure rather than inventing a rate.
+
+A cashflow row the ledger cannot mirror — a vendor matched only by
+`related_party_name`, a foreign-currency row, money received back — is not
+converted. It is shown instead: in *Other cashflow activity* on the vendor's Money
+tab, and appended to the vendor statement of account in its own currency, which is
+why `PartyStatement::currencies()` reads `cashflow_entries.currency` as well as
+`vendor_payment_entries.foreign_currency`. Recurring rules post through the same
+sync, so a scheduled vendor payment lands on both ledgers at once.

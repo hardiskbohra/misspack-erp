@@ -88,24 +88,14 @@
 
             <div class="pf-grid pf-grid-4">
                 <div class="master-field">
-                    <label class="master-label">Status <span>*</span></label>
-                    <select class="master-select" name="status" required>
-                        @foreach ($statusOptions as $key => $label)
-                            <option value="{{ $key }}"
-                                {{ old('status', $project->status) === $key ? 'selected' : '' }}>{{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
+                    <span class="master-label">Workflow status</span>
+                    <div class="master-input" aria-readonly="true">{{ $isEdit ? $project->statusLabel() : 'Starts automatically' }}</div>
+                    <small class="master-help">Calculated by Workflow Control Centre.</small>
                 </div>
                 <div class="master-field">
-                    <label class="master-label">Stage <span>*</span></label>
-                    <select class="master-select" name="stage" required>
-                        @foreach ($stageOptions as $key => $label)
-                            <option value="{{ $key }}"
-                                {{ old('stage', $project->stage) === $key ? 'selected' : '' }}>{{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
+                    <span class="master-label">Workflow stage</span>
+                    <div class="master-input" aria-readonly="true">{{ $isEdit ? $project->stageLabel() : 'Project setup' }}</div>
+                    <small class="master-help">Advances from workflow controls only.</small>
                 </div>
                 <div class="master-field">
                     <label class="master-label">Priority <span>*</span></label>
@@ -134,11 +124,6 @@
                 <div class="master-field">
                     <label class="master-label">Target Date</label>
                     <input class="master-input" type="date" name="target_date" value="{{ $targetValue }}">
-                </div>
-                <div class="master-field">
-                    <label class="master-label">Progress %</label>
-                    <input class="master-input" type="number" min="0" max="100" name="progress_percent"
-                        value="{{ old('progress_percent', $project->progress_percent) }}">
                 </div>
                 <div class="master-field">
                     <label class="master-label">Currency <span>*</span></label>

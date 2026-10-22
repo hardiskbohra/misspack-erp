@@ -69,6 +69,8 @@
            belongs to, so a cashflow settings page that stopped being a cashflow
            page would lose the treatment its own rows were designed with. The
            hub, which belongs to no single area, is the settings module. */
+        request()->routeIs('dashboard', 'dashboards.*') => 'dashboard',
+        request()->routeIs('audit.*') => 'audit',
         request()->routeIs('settings.cashflow*') => 'cashflows',
         request()->routeIs('settings.organisation*') => 'users',
         request()->routeIs('settings.leads*') => 'leads',
@@ -106,61 +108,72 @@
             ['label' => 'Notes', 'route' => 'notes.index', 'active' => 'notes.*', 'icon' => 'fa-regular fa-note-sticky'],
         ];
 
+        /* Office navigation follows the work, not the database tables:
+           orient first, execute projects, serve customers, procure, account,
+           then administer. Frequently used operational doors stay near the top;
+           low-frequency governance stays together at the end. */
         $sidebarItems = Auth::user() && Auth::user()->isEmployee() ? $employeeItems : [
-            ['section' => 'Management'],
+            ['section' => 'Overview'],
+            ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'fa-solid fa-gauge-high'],
+            ['label' => 'Module dashboards', 'route' => 'dashboards.index', 'active' => 'dashboards.*', 'icon' => 'fa-solid fa-chart-column'],
+
+            ['section' => 'Project execution'],
+            ['label' => 'Coordinator queue', 'route' => 'projects.work-queue.index', 'active' => 'projects.work-queue.*', 'icon' => 'fa-solid fa-list-check'],
+            ['label' => 'Projects', 'route' => 'projects.index', 'active' => 'projects.*', 'except' => ['projects.work-queue.*', 'projects.exceptions.*'], 'icon' => 'fa-solid fa-briefcase'],
             ['label' => 'Tasks', 'route' => 'tasks.index', 'active' => 'tasks.*', 'icon' => 'fa-solid fa-layer-group'],
-            ['label' => 'Products', 'route' => 'products.index', 'active' => 'products.*', 'icon' => 'fas fa-box-open'],
+            ['label' => 'Exceptions', 'route' => 'projects.exceptions.index', 'active' => 'projects.exceptions.*', 'icon' => 'fa-solid fa-triangle-exclamation'],
+            ['label' => 'Packaging lists', 'route' => 'packaging-lists.index', 'active' => 'packaging-lists.*', 'icon' => 'fa-solid fa-boxes-stacked'],
             ['label' => 'Shipments', 'route' => 'shipments.index', 'active' => 'shipments.*', 'icon' => 'fas fa-truck'],
-            /* What clients said when the project closed. Management, not Sales:
-               the queue is a thing to work, and the person who works it is not
-               always the person who sold it. The public form is excluded so a
-               user testing a link does not light the office item. */
             ['label' => 'Feedback', 'route' => 'feedback.index', 'active' => 'feedback.*', 'except' => ['feedback.public.*'], 'icon' => 'fa-regular fa-comment-dots'],
-            ['section' => 'Sales'],
+
+            ['section' => 'Sales & catalogue'],
             ['label' => 'Clients', 'route' => 'clients.index', 'active' => 'clients.*', 'icon' => 'fa-solid fa-users'],
-            ['label' => 'Projects', 'route' => 'projects.index', 'active' => 'projects.*', 'icon' => 'fa-solid fa-briefcase'],
+            ['label' => 'Products', 'route' => 'products.index', 'active' => 'products.*', 'icon' => 'fas fa-box-open'],
             ['label' => 'Invoices', 'route' => 'sales-invoices.index', 'active' => 'sales-invoices.*', 'icon' => 'fa-solid fa-file-invoice-dollar'],
-            ['section' => 'Purchase'],
+
+            ['section' => 'Procurement'],
             ['label' => 'Vendors', 'route' => 'vendors.index', 'active' => 'vendors.*', 'icon' => 'fa-solid fa-user-gear'],
-            ['label' => 'Office services', 'route' => 'office-services.index', 'active' => 'office-services.*', 'icon' => 'fas fa-hands-helping'],
-            /* One list, two documents — a purchase order and the bill it
-               becomes — the same way Invoices holds a proforma and a tax invoice. */
             ['label' => 'Purchases', 'route' => 'purchase-invoices.index', 'active' => 'purchase-invoices.*', 'icon' => 'fas fa-file-invoice'],
-            ['section' => 'Accounts'],
+            ['label' => 'Office services', 'route' => 'office-services.index', 'active' => 'office-services.*', 'icon' => 'fas fa-hands-helping'],
+
+            ['section' => 'Finance'],
             ['label' => 'Cashflow', 'route' => 'cashflows.index', 'active' => 'cashflows.*', 'except' => ['cashflows.documents', 'cashflows.statements', 'cashflows.statements.*', 'cashflows.recurring', 'cashflows.recurring.*'], 'icon' => 'fa-solid fa-scale-balanced'],
-            /* The standing payments. Next to Cashflow and not inside it: this is
-               a list you work from (today's approvals), not a page you visit to
-               look at the ledger. */
-            ['label' => 'Recurring', 'route' => 'cashflows.recurring.index', 'active' => 'cashflows.recurring.*', 'icon' => 'fa-solid fa-arrows-rotate'],
-            /* The archive is a page of the module, not a second module: it sits
-               here so a month's paperwork is one click from anywhere, and the
-               Cashflow item above stays dark while it is open. */
-            ['label' => 'Document Archive', 'route' => 'cashflows.documents', 'active' => 'cashflows.documents', 'icon' => 'fa-regular fa-folder-open'],
-            /* And the other half of what leaves the building: the party's own
-               account, in the currency their statement is kept in. */
+            ['label' => 'Recurring payments', 'route' => 'cashflows.recurring.index', 'active' => 'cashflows.recurring.*', 'icon' => 'fa-solid fa-arrows-rotate'],
             ['label' => 'Statements', 'route' => 'cashflows.statements', 'active' => 'cashflows.statements*', 'icon' => 'fa-solid fa-file-invoice'],
-            /* The register: what the company owns, on the other side of the
-               balance sheet from the money the ledger counts. Its classes are a
-               setting and sit in Settings with the other five areas — the assets
-               themselves are records, and records have modules. */
+            ['label' => 'Document archive', 'route' => 'cashflows.documents', 'active' => 'cashflows.documents', 'icon' => 'fa-regular fa-folder-open'],
             ['label' => 'Fixed assets', 'route' => 'assets.index', 'active' => 'assets.*', 'icon' => 'fa-solid fa-industry'],
+
+            ['section' => 'Administration'],
             ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'icon' => 'fas fa-users-cog'],
-            /* One door for every rule in the ERP. The module-wise menu is the
-               rail *inside* Settings, where the reader is already looking for a
-               setting and the five areas sit next to what they change; a second
-               tree here would be the same five links in two places, and the day
-               the two disagree is the day one of them is wrong. */
+            ['label' => 'Audit register', 'route' => 'audit.index', 'active' => 'audit.*', 'icon' => 'fa-solid fa-shield-halved'],
             ['label' => 'Settings', 'route' => 'settings.index', 'active' => 'settings.*', 'icon' => 'fas fa-sliders'],
-            /* Personal, not management: the office's own notes are private to
-               the office's own login, exactly as an employee's are to theirs. */
-            ['section' => 'Personal'],
-            ['label' => 'Notes', 'route' => 'notes.index', 'active' => 'notes.*', 'icon' => 'fa-regular fa-note-sticky'],
         ];
+        if (Auth::user() && Auth::user()->isAdmin() && (Auth::user()->access_profile ?: 'full') === 'custom') {
+            $matrix = app(\App\Services\PermissionMatrix::class);
+            $sidebarItems = collect($sidebarItems)->filter(function ($item) use ($matrix) {
+                if (isset($item['section'])) return true;
+                $required = $matrix->requiredForRoute($item['route']);
+                return $required === null || Auth::user()->hasPermission($required);
+            })->values()->all();
+        }
+
+        /* Permission filtering must not leave headings with no destinations.
+           Hold each heading until its first permitted item is encountered. */
+        $visibleSidebarItems = [];
+        $pendingSidebarSection = null;
+        foreach ($sidebarItems as $sidebarItem) {
+            if (isset($sidebarItem['section'])) {
+                $pendingSidebarSection = $sidebarItem;
+                continue;
+            }
+            if ($pendingSidebarSection) {
+                $visibleSidebarItems[] = $pendingSidebarSection;
+                $pendingSidebarSection = null;
+            }
+            $visibleSidebarItems[] = $sidebarItem;
+        }
+        $sidebarItems = $visibleSidebarItems;
     @endphp
-    
-    
-            <!--['label' => 'Leads', 'route' => 'leads.index', 'active' => 'leads.*', 'icon' => 'fa-solid fa-people-group'],-->
-            <!--['label' => 'Price Calculator', 'route' => 'price-calculator.index', 'active' => 'price-calculator.*', 'icon' => 'fa-solid fa-calculator'],-->
 
     {{-- Sidebar --}}
     <aside class="sidebar" id="sidebar" aria-label="Main sidebar">
@@ -184,7 +197,8 @@
                     @endphp
                     <a href="{{ route($item['route']) }}"
                        class="sidebar-item {{ $itemActive ? 'active' : '' }}"
-                       aria-label="{{ $item['label'] }}" title="{{ $item['label'] }}">
+                       aria-label="{{ $item['label'] }}" title="{{ $item['label'] }}"
+                       @if($itemActive) aria-current="page" @endif>
                         <i class="{{ $item['icon'] }}"></i>
                         <span class="sidebar-text">{{ $item['label'] }}</span>
                     </a>

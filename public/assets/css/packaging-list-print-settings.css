@@ -1,0 +1,44 @@
+/* Print-page controls only. The edit form never owns orientation or running text. */
+.pl-standalone[data-orientation="landscape"] {
+    --pdf-sheet-width: 297mm;
+    --pdf-sheet-height: 210mm;
+}
+.pl-print-settings {
+    width: var(--pdf-sheet-width);
+    max-width: 100%;
+    margin: 0 auto 18px;
+    padding: 16px 20px;
+    border: 1px solid var(--pdf-border);
+    border-radius: 10px;
+    background: var(--pdf-paper);
+}
+.pl-print-settings summary { cursor: pointer; font-size: 14px; font-weight: 600; }
+.pl-settings-grid { display: grid; grid-template-columns: minmax(140px, .7fr) repeat(2, minmax(0, 1fr)); gap: 16px; margin: 14px 0; }
+.pl-settings-grid label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.pl-settings-grid :is(select, textarea) { width: 100%; min-height: 40px; padding: 9px 10px; border: 1px solid var(--pdf-border); border-radius: 6px; background: #fff; color: #000; font: inherit; }
+.pl-settings-grid textarea { resize: vertical; }
+.pl-print-settings :is(select, textarea, button, summary):focus-visible { outline: 2px solid var(--pdf-accent); outline-offset: 3px; }
+.pl-settings-hint { margin: 10px 0 0; color: var(--pdf-muted); font-size: 12px; font-weight: 400; }
+label .pl-settings-hint { margin: 0; }
+.pl-settings-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.pl-settings-errors { color: #9f1239; }
+.pl-settings-status { color: #166534; }
+.pl-page-number-toggle { display: inline-flex; align-items: center; gap: 10px; position: relative; cursor: pointer; min-height: 40px; }
+.pl-page-number-toggle input { position: absolute; opacity: 0; width: 40px; height: 24px; margin: 0; }
+.pl-switch-track { position: relative; width: 40px; height: 24px; flex-shrink: 0; border: 1px solid #cbd5e1; border-radius: 20px; background: #e8edf4; }
+.pl-switch-track::before { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0002; }
+.pl-page-number-toggle input:checked + .pl-switch-track { background: #2563eb; border-color: #2563eb; }
+.pl-page-number-toggle input:checked + .pl-switch-track::before { transform: translateX(16px); }
+.pl-page-number-toggle input:checked + .pl-switch-track::after { content: "✓"; position: absolute; left: 5px; top: 1px; color: #fff; font-size: 13px; font-weight: 700; }
+.pl-page-number-toggle input:focus-visible + .pl-switch-track { outline: 2px solid var(--pdf-accent); outline-offset: 3px; }
+.pl-running-header { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 10px; text-align: center; margin-bottom: 10px; }
+.pl-footer [data-preview-footer-text] { white-space: pre-wrap; overflow-wrap: anywhere; }
+.pl-footer [data-preview-page-number] { margin-left: 12px; white-space: nowrap; }
+@media screen and (max-width: 760px) {
+    .pl-settings-grid { grid-template-columns: minmax(0, 1fr); }
+    .pl-print-settings { padding: 16px; }
+}
+
+@media print {
+    .pl-footer { display: none !important; }
+}

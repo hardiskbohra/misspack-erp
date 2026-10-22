@@ -53,6 +53,11 @@
         </nav>
     </header>
 
+    @include('cashflows.partials.unallocated-party-alert', [
+        'unallocatedTitle' => 'Unallocated client advance',
+        'unallocatedDescription' => 'Cash has been received from this client but is still available to assign to invoices or projects.',
+    ])
+
     <div class="master-tabs-card client-detail-tabs-card">
         <nav class="master-tabs" role="tablist" aria-label="Client profile sections">
             @foreach($tabs as $key => $label)

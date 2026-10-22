@@ -48,6 +48,11 @@ class ProjectAttachment extends Model
         return $this->belongsTo(User::class, 'uploaded_by');
     }
 
+    public function approvalVersions()
+    {
+        return $this->hasMany(ProjectApprovalVersion::class, 'project_attachment_id');
+    }
+
     public function fileUrl(): string
     {
         return Storage::disk('public')->url($this->file_path);
@@ -67,6 +72,15 @@ class ProjectAttachment extends Model
         return self::categoryOptions()[$this->category] ?? Str::headline((string) $this->category);
     }
 
+    public static function dispatchDocumentCategoryOptions(): array
+    {
+        return collect(self::categoryOptions())->only([
+            'commercial_invoice', 'shipping_bill', 'bill_of_entry', 'bill_of_lading',
+            'awb', 'certificate_of_origin', 'insurance', 'eway_bill', 'cha_checklist',
+            'delivery_challan', 'pod',
+        ])->all();
+    }
+
     public static function categoryOptions(): array
     {
         return [
@@ -78,6 +92,17 @@ class ProjectAttachment extends Model
             'proforma_invoice' => 'Proforma Invoice',
             'purchase_order' => 'Purchase Order',
             'packaging_list' => 'Packaging List',
+            'commercial_invoice' => 'Commercial Invoice',
+            'shipping_bill' => 'Shipping Bill',
+            'bill_of_entry' => 'Bill of Entry',
+            'bill_of_lading' => 'Bill of Lading',
+            'awb' => 'Air Waybill (AWB)',
+            'certificate_of_origin' => 'Certificate of Origin',
+            'insurance' => 'Insurance Certificate',
+            'eway_bill' => 'e-Way Bill',
+            'cha_checklist' => 'CHA Checklist',
+            'delivery_challan' => 'Delivery Challan',
+            'pod' => 'Proof of Delivery (POD)',
             'artwork' => 'Artwork / Design',
             'qc_report' => 'QC Report',
             'payment_proof' => 'Payment Proof',

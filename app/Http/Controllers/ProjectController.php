@@ -6,7 +6,7 @@ use App\Models\Project;
 use App\Models\ProjectLog;
 use App\Models\ProjectProduct;
 use App\Models\User;
-use App\Models\ProjectMilestone;
+use App\Services\ProjectWorkflowExecution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,8 +26,8 @@ class ProjectController extends Controller
      */
     private const SHOW_TABS = [
         'overview' => 'Overview',
+        'workflow' => 'Workflow',
         'products' => 'Products',
-        'milestones' => 'Milestones',
         'payments' => 'Payments',
         'shipments' => 'Shipments',
         'attachments' => 'Documents',
@@ -50,7 +50,10 @@ class ProjectController extends Controller
            is worth and may spend — so the list loads the cashflow entries and
            the four document relations, one query each instead of a query per
            project per figure. The row's quick view reads the same totals. */
-        $with = ['products', 'products.milestones', 'cashflowEntries', 'assignedUser'];
+        $with = ['products', 'workflow', 'cashflowEntries', 'assignedUser'];
+        if (Schema::hasTable('cashflow_allocations')) {
+            $with[] = 'cashflowAllocations.cashflowEntry';
+        }
         foreach (array_keys($this->documentRelations()) as $relation) {
             $with[] = $relation;
         }
@@ -61,7 +64,8 @@ class ProjectController extends Controller
         $projects = Project::query()
             ->with($with)
             ->search($search)
-            ->when($status !== 'all', function ($q) use ($status) { $q->where('status', $status); })
+            ->when($status === 'waiting', fn ($q) => $q->whereIn('status', ['waiting_client', 'waiting_vendor']))
+            ->when(! in_array($status, ['all', 'waiting'], true), fn ($q) => $q->where('status', $status))
             ->when($clientId !== 'all', function ($q) use ($clientId) { $q->where('client_id', $clientId); })
             ->when($health !== 'all', function ($q) use ($health) { $q->where('health', $health); })
             ->latest('id')
@@ -84,7 +88,7 @@ class ProjectController extends Controller
             'total' => (int) $statusCounts->sum(),
             'in_progress' => (int) ($statusCounts['in_progress'] ?? 0),
             'waiting' => (int) ($statusCounts['waiting_client'] ?? 0) + (int) ($statusCounts['waiting_vendor'] ?? 0),
-            'completed' => (int) ($statusCounts['completed'] ?? 0),
+            'completed' => (int) ($statusCounts['completed'] ?? 0) + (int) ($statusCounts['closed'] ?? 0) + (int) ($statusCounts['closed_with_outstanding_financials'] ?? 0),
         ];
 
         return view('projects.index', array_merge($this->sharedData(), compact(
@@ -98,14 +102,11 @@ class ProjectController extends Controller
             'project_number' => $this->makeProjectNumber(),
             'client_id' => null,
             'name' => 'New Project',
-            'status' => 'planned',
-            'stage' => 'kickoff',
             'priority' => 'normal',
             'health' => 'green',
             'start_date' => now()->toDateString(),
             'target_date' => now()->addDays(30)->toDateString(),
             'currency' => 'INR',
-            'progress_percent' => 0,
             'show_client_portal' => true,
         ]);
 
@@ -115,22 +116,18 @@ class ProjectController extends Controller
         ]));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, ProjectWorkflowExecution $workflowExecution): RedirectResponse
     {
         $data = $this->validatedData($request);
         $data['project_number'] = $data['project_number'] ?: $this->makeProjectNumber();
         $data['show_client_portal'] = $request->has('show_client_portal');
         $data['created_by'] = Auth::id();
 
-        if (($data['status'] ?? null) === 'completed' && empty($data['completed_at'])) {
-            $data['completed_at'] = now();
-            $data['progress_percent'] = 100;
-        }
 
-        $project = DB::transaction(function () use ($data) {
+        $project = DB::transaction(function () use ($data, $workflowExecution) {
             $project = Project::create($data);
-
-            $this->writeLog($project, 'created', 'Project created', 'Project was created from the deal/project form.', null, $project->toArray(), false);
+            $workflowExecution->start($project, Auth::id());
+            $this->writeLog($project, 'created', 'Project created', 'Project was created with the standard execution workflow.', null, $project->toArray(), false);
 
             return $project;
         });
@@ -138,7 +135,7 @@ class ProjectController extends Controller
         return redirect()->route('projects.show', $project)->with('success', 'Project created successfully.');
     }
 
-    public function quickStore(Request $request): RedirectResponse
+    public function quickStore(Request $request, ProjectWorkflowExecution $workflowExecution): RedirectResponse
     {
         $data = $request->validate([
             'client_id' => ['required', 'integer'],
@@ -149,25 +146,23 @@ class ProjectController extends Controller
             'priority' => ['nullable', Rule::in(array_keys(Project::priorityOptions()))],
         ]);
 
-        $project = DB::transaction(function () use ($data) {
+        $project = DB::transaction(function () use ($data, $workflowExecution) {
             $project = Project::create([
                 'project_number' => $this->makeProjectNumber(),
                 'client_id' => $data['client_id'],
                 'name' => $data['name'],
-                'status' => 'planned',
-                'stage' => 'kickoff',
                 'priority' => $data['priority'] ?? 'normal',
                 'health' => 'green',
                 'start_date' => $data['start_date'] ?? now()->toDateString(),
                 'target_date' => $data['target_date'] ?? now()->addDays(30)->toDateString(),
                 'currency' => 'INR',
-                'progress_percent' => 0,
                 'show_client_portal' => true,
                 'assigned_to' => $data['assigned_to'] ?? null,
                 'created_by' => Auth::id(),
             ]);
 
-            $this->writeLog($project, 'created', 'Quick project created', 'Project was created from quick create modal.', null, $project->toArray(), false);
+            $workflowExecution->start($project, Auth::id());
+            $this->writeLog($project, 'created', 'Quick project created', 'Project and its standard execution workflow were created from quick create.', null, $project->toArray(), false);
 
             return $project;
         });
@@ -187,24 +182,29 @@ class ProjectController extends Controller
             'trackingUpdates.product', 'trackingUpdates.creator',
             'logs.user', 'logs.product', 'assignedUser', 'creator',
         ];
-        if (class_exists(\App\Models\ProjectMilestone::class) && Schema::hasTable('project_milestones')) {
-            $with[] = 'milestones.product';
-            $with[] = 'milestones.owner';
-            $with[] = 'milestones.creator';
-        }
-
         if ($this->clientModelAvailable()) {
             $with[] = 'client';
         }
         if ($this->productModelAvailable()) {
             $with[] = 'products.product';
+            if (Schema::hasTable('project_quality_inspections')) $with[] = 'products.qualityInspections.inspector';
         }
         if ($this->cashflowEntryModelAvailable() && Schema::hasColumn('cashflow_entries', 'project_id')) {
             $with[] = 'cashflowEntries';
         }
+        if (Schema::hasTable('cashflow_allocations')) {
+            $with[] = 'cashflowAllocations.cashflowEntry';
+        }
+        if (Schema::hasTable('project_exceptions')) {
+            $with[] = 'exceptions.owner';
+            $with[] = 'exceptions.product';
+        }
 
         if ($this->shipmentModelAvailable()) {
-            $with[] = 'shipments';
+            $with[] = 'shipments.items.projectProduct';
+            if (Schema::hasTable('shipment_delivery_receipts')) {
+                $with[] = 'shipments.deliveryReceipts';
+            }
         }
 
         /* The Invoices tab: the money documents the modules raised against this
@@ -231,14 +231,14 @@ class ProjectController extends Controller
         }
 
         $project->load($with);
-        if (! $project->relationLoaded('milestones')) {
-            $project->setRelation('milestones', collect());
-        }
         if (! $project->relationLoaded('shipments')) {
             $project->setRelation('shipments', collect());
         }
         if (! $project->relationLoaded('feedbackRequests')) {
             $project->setRelation('feedbackRequests', collect());
+        }
+        if (! $project->relationLoaded('exceptions')) {
+            $project->setRelation('exceptions', collect());
         }
         foreach (array_keys($this->documentRelations()) as $relation) {
             if (! $project->relationLoaded($relation)) {
@@ -246,15 +246,58 @@ class ProjectController extends Controller
             }
         }
 
+        $workflow = null;
+        $workflowReceiptInvoice = null;
+        if (Schema::hasTable('project_workflows')) {
+            $workflowWith = ['steps.product', 'steps.owner', 'reporter', 'commercialInvoice.convertedInvoice', 'evaluations.activeOverride.approver', 'evaluations.evaluator', 'evaluations.product', 'approvals.product', 'approvals.currentVersion.attachment', 'approvals.versions.attachment', 'approvals.versions.clientUser', 'approvals.overrides.approver'];
+            if (Schema::hasTable('project_financial_closures')) {
+                $workflowWith[] = 'financialClosures.approver';
+            }
+            $workflow = $project->workflow()->with($workflowWith)->first();
+            if ($workflow) {
+                app(ProjectWorkflowExecution::class)->recalculate($workflow);
+                $publishedState = $workflow->project()->first(['status', 'stage', 'progress_percent', 'completed_at']);
+                $project->forceFill($publishedState?->only(['status', 'stage', 'progress_percent', 'completed_at']) ?? []);
+                $baselineInvoice = $workflow->commercialInvoice;
+                $workflowReceiptInvoice = $baselineInvoice?->isSuperseded()
+                    ? $baselineInvoice->convertedInvoice
+                    : $baselineInvoice;
+                if ($baselineInvoice?->hasMonetaryConversions()) {
+                    $documents = $baselineInvoice->settlementDocuments()->where('status', '!=', 'cancelled');
+                    $workflowReceiptInvoice = $documents->first(fn ($document) => $document->balanceDue() > 0.01)
+                        ?? $documents->first();
+                }
+            }
+            $project->setRelation('workflow', $workflow);
+        }
+        $financialClosureSnapshot = $workflow && Schema::hasTable('project_financial_closures')
+            ? app(\App\Services\ProjectFinancialClosure::class)->snapshot($project)
+            : null;
+        $projectExceptions = $project->exceptions->whereIn('status', [\App\Models\ProjectException::STATUS_OPEN, \App\Models\ProjectException::STATUS_ACKNOWLEDGED])->values();
+        $workflowMatrix = $workflow && $tab === 'workflow'
+            ? app(\App\Services\ProjectWorkflowMatrix::class)->build($workflow, $projectExceptions)
+            : null;
+
         $cashflowCount = $project->relationLoaded('cashflowEntries') ? $project->cashflowEntries->count() : 0;
+        if ($project->relationLoaded('cashflowAllocations')) {
+            $cashflowCount += $project->cashflowAllocations->count();
+        }
 
         return view('projects.show', array_merge($this->sharedData(), [
             'project' => $project,
+            'workflow' => $workflow,
+            'workflowReceiptInvoice' => $workflowReceiptInvoice,
+            'financialClosureSnapshot' => $financialClosureSnapshot,
+            'projectExceptions' => $projectExceptions,
+            'workflowMatrix' => $workflowMatrix,
+            'workflowStages' => ProjectWorkflowExecution::stageOptions(),
+            'workflowStepStatuses' => \App\Models\ProjectWorkflowStep::statusOptions(),
+            'unallocatedCash' => app(\App\Services\UnallocatedCashflows::class)->forProject($project->id),
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
             'tabCounts' => [
+                'workflow' => ($workflow?->steps?->whereNotIn('status', ['completed', 'skipped'])->count() ?? 0) + $projectExceptions->count(),
                 'products' => $project->products->count(),
-                'milestones' => $project->milestones->count(),
                 'payments' => $cashflowCount,
                 'shipments' => $project->shipments->count(),
                 'attachments' => $project->attachments->count(),
@@ -288,80 +331,32 @@ class ProjectController extends Controller
         $data = $this->validatedData($request, $project);
         $data['show_client_portal'] = $request->has('show_client_portal');
 
-        if (($data['status'] ?? null) === 'completed' && ! $project->completed_at) {
-            $data['completed_at'] = now();
-            $data['progress_percent'] = 100;
-        }
-        if (($data['status'] ?? null) !== 'completed') {
-            $data['completed_at'] = null;
-        }
-
         DB::transaction(function () use ($project, $data) {
-            $old = $project->only(['name', 'status', 'stage', 'priority', 'health', 'progress_percent', 'target_date']);
+            $old = $project->only(['name', 'priority', 'health', 'target_date']);
             $project->update($data);
-            $this->writeLog($project, 'updated', 'Project updated', 'Project details were updated.', $old, $project->fresh()->toArray(), false);
+            $this->writeLog($project, 'updated', 'Project updated', 'Project details were updated. Status, stage and progress remain workflow-controlled.', $old, $project->fresh()->toArray(), false);
         });
 
         return redirect()->route('projects.show', $project)->with('success', 'Project updated successfully.');
     }
 
-    public function updateStatus(Request $request, Project $project): RedirectResponse
-    {
-        $data = $request->validate([
-            'status' => ['required', Rule::in(array_keys(Project::statusOptions()))],
-            'stage' => ['required', Rule::in(array_keys(Project::stageOptions()))],
-            'health' => ['required', Rule::in(array_keys(Project::healthOptions()))],
-            'progress_percent' => ['required', 'integer', 'min:0', 'max:100'],
-        ]);
-
-        $old = $project->only(['status', 'stage', 'health', 'progress_percent', 'completed_at']);
-        if ($data['status'] === 'completed') {
-            $data['progress_percent'] = 100;
-            $data['completed_at'] = $project->completed_at ?: now();
-        } else {
-            $data['completed_at'] = null;
-        }
-
-        $project->update($data);
-        $this->writeLog($project, 'status_updated', 'Project status updated', 'Status/stage/progress was updated.', $old, $data, true);
-
-        /* Marking a project complete is the moment the feedback ask is worth
-           making, so the message says where it is. An offer, never automatic: a
-           project can be closed before the client has the goods in hand. */
-        if ($data['status'] === 'completed'
-            && class_exists(\App\Models\FeedbackRequest::class)
-            && Schema::hasTable('feedback_requests')
-            && ! \App\Models\FeedbackRequest::query()->forProject($project->id)->live()->exists()) {
-            return back()->with('success', 'Project completed. Ask for feedback while it is fresh — the Feedback tab on this project has the link.');
-        }
-
-        return back()->with('success', 'Project status updated successfully.');
-    }
-
     public function destroy(Project $project): RedirectResponse
     {
-        DB::transaction(function () use ($project) {
+        /*
+         * Projects own immutable workflow, closure and exception evidence.
+         * Hard deletion conflicts with those deliberately restrictive foreign
+         * keys and, more importantly, would erase the audit trail. Soft delete
+         * removes the project from normal ERP work while retaining every source
+         * record and ledger allocation under the original project identity.
+         */
+        DB::transaction(fn () => $project->delete());
+        if (Schema::hasTable('project_exceptions')) {
+            app(\App\Services\ProjectExceptionRegistry::class)->synchronize(Auth::id());
+        }
 
-            // Delete child records
-            $project->comments()->delete();
-            $project->attachments()->delete();
-            $project->trackingUpdates()->delete();
-            $project->logs()->delete();
-    
-            // If cashflow relation exists
-            if (method_exists($project, 'cashflowEntries')) {
-                $project->cashflowEntries()->update([
-                    'project_id' => null,
-                ]);
-            }
-    
-            // Finally delete project
-            $project->delete();
-        });
-    
         return redirect()
             ->route('projects.index')
-            ->with('success', 'Project deleted successfully.');
+            ->with('success', 'Project deleted. Workflow, financial and audit evidence has been retained.');
     }
 
     private function validatedData(Request $request, ?Project $project = null): array
@@ -375,8 +370,6 @@ class ProjectController extends Controller
             'project_number' => ['nullable', 'string', 'max:255', $uniqueProjectNumber],
             'client_id' => ['required', 'integer'],
             'name' => ['required', 'string', 'max:255'],
-            'status' => ['required', Rule::in(array_keys(Project::statusOptions()))],
-            'stage' => ['required', Rule::in(array_keys(Project::stageOptions()))],
             'priority' => ['required', Rule::in(array_keys(Project::priorityOptions()))],
             'health' => ['required', Rule::in(array_keys(Project::healthOptions()))],
             'start_date' => ['nullable', 'date'],
@@ -385,7 +378,6 @@ class ProjectController extends Controller
             /* The value and the budget are the documents' — see
                `Project::estimatedValue()` and `Project::budgetAmount()`. The
                form has no field for either, so neither is validated here. */
-            'progress_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
             'scope_summary' => ['nullable', 'string'],
             'deliverables' => ['nullable', 'string'],
             'client_notes' => ['nullable', 'string'],
@@ -410,18 +402,20 @@ class ProjectController extends Controller
             'productStatusOptions' => \App\Models\ProjectProduct::statusOptions(),
             'attachmentCategoryOptions' => \App\Models\ProjectAttachment::categoryOptions(),
             'trackingStatusOptions' => \App\Models\ProjectTrackingUpdate::statusOptions(),
-            'milestoneOptions' => class_exists(\App\Models\ProjectMilestone::class) ? \App\Models\ProjectMilestone::milestoneOptions() : [],
-            'milestoneStatusOptions' => class_exists(\App\Models\ProjectMilestone::class) ? \App\Models\ProjectMilestone::statusOptions() : [],
         ];
     }
 
     private function makeProjectNumber(): string
     {
         $prefix = 'PRJ-';
-        $next = str_pad((string) (Project::whereDate('created_at', today())->count() + 1), 4, '0', STR_PAD_LEFT);
+        /* Soft-deleted projects still own their number as audit identity. They
+           must participate in both the starting sequence and collision check,
+           otherwise deleting PRJ-0001 makes quick-create attempt PRJ-0001 again
+           and the database's unique key correctly rejects it. */
+        $next = str_pad((string) (Project::withTrashed()->whereDate('created_at', today())->count() + 1), 4, '0', STR_PAD_LEFT);
         $number = $prefix.$next;
 
-        while (Project::where('project_number', $number)->exists()) {
+        while (Project::withTrashed()->where('project_number', $number)->exists()) {
             $next = str_pad((string) ((int) $next + 1), 4, '0', STR_PAD_LEFT);
             $number = $prefix.$next;
         }
