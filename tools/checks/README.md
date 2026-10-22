@@ -14,6 +14,7 @@ node tools/checks/blade-check.cjs     # templates parse: directives, includes, c
 node tools/checks/mark-check.cjs      # shipping-mark geometry + QR payloads
 node tools/checks/list-check.cjs      # one index page: chips, columns, toolbar, row actions,
                                       # applied filters, the pinned grid
+node tools/checks/confirmation-dialog-check.cjs # ERP confirmation labels + optional Chromium behavior
 node tools/checks/ui-components-check.cjs # shared Drawer/DataTable API, persistence, a11y, and inventory
 node tools/checks/status-check.cjs    # the rules a shipment status change keeps: the delivery
                                       # date it fills in, the hold/delay reason it still refuses

@@ -195,7 +195,8 @@
         if (!options.title) options.title = 'Are you sure?';
         if (!options.type) options.type = 'confirm';
         if (options.danger == null) options.danger = true;
-        if (!options.confirmText) options.confirmText = 'Confirm';
+        // A generic confirmation answers the question; never assume it deletes.
+        if (!options.confirmText) options.confirmText = 'Yes';
         if (options.cancelText == null) options.cancelText = 'Cancel';
         return dialog(options);
     }
@@ -220,7 +221,7 @@
             form.getAttribute('data-confirm') || 'Are you sure?',
             {
                 title: form.getAttribute('data-confirm-title') || 'Are you sure?',
-                confirmText: form.getAttribute('data-confirm-text') || 'Delete',
+                confirmText: form.getAttribute('data-confirm-text') || 'Yes',
                 danger: confirmDanger(form)
             }
         ).then(function (ok) {
@@ -249,7 +250,7 @@
             btn.getAttribute('data-confirm') || 'Are you sure?',
             {
                 title: btn.getAttribute('data-confirm-title') || 'Are you sure?',
-                confirmText: btn.getAttribute('data-confirm-text') || 'Delete',
+                confirmText: btn.getAttribute('data-confirm-text') || 'Yes',
                 danger: confirmDanger(btn)
             }
         ).then(function (ok) {

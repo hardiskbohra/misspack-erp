@@ -530,7 +530,8 @@
                                             </form>
                                             @if ($invoice->invoice_type === 'proforma' && ! $invoice->isSuperseded())
                                                 <form method="POST" action="{{ route('sales-invoices.convert', $invoice) }}"
-                                                    data-confirm="Create a tax invoice from {{ $invoice->invoice_number }}? The advance and every receipt on it will move to the new tax invoice.">
+                                                    data-confirm="Create a tax invoice from {{ $invoice->invoice_number }}? The advance and every receipt on it will move to the new tax invoice."
+                                                    data-confirm-text="Yes" data-confirm-danger="false">
                                                     @csrf
                                                     <button type="submit">
                                                         <i class="fas fa-file-invoice" aria-hidden="true"></i> Convert to tax invoice

@@ -42,6 +42,21 @@ This is the shared visual contract for the ERP application shell and its modules
 - Use an 8 px spacing rhythm: 12–16 px between related controls, 16 px between cards, and 20–24 px for outer card padding where the content permits.
 - Controls and buttons should remain 40–44 px tall and retain visible keyboard focus states.
 
+## Confirmation dialogs
+
+- Use the shared `MasterAlert.confirm()` or `data-confirm` form/button handler. The generic
+  answer is **Yes** with **Cancel**; never assume a confirmation means deletion. Informational
+  alerts retain **OK**.
+- An explicit action label is allowed when it matches the question (for example, **Convert
+  to bill**, **Mark received**, or **Remove**). Set `confirmText` in JavaScript or
+  `data-confirm-text` in markup. Preserve deliberate **Yes / No** choice dialogs.
+- Creation, conversion and completion confirmations use `danger: false` or
+  `data-confirm-danger="false"`, so they do not look like deletion. Destructive actions
+  retain danger styling and a clear warning about consequences.
+- Run `node tools/checks/confirmation-dialog-check.cjs` after changing shared confirmation
+  handling. Its source audit covers ERP declarations; optional Chromium checks exercise
+  labels, submit/cancel behavior and explicit overrides at desktop and mobile sizes.
+
 ## Tables and tabs
 
 - Tables sit inside a white/theme card with a single `--mc-border` row divider. Headers use the shared table-head token, 11 px uppercase text at weight 600; values use 13 px text at weight 400–500. Keep numeric columns right-aligned and tabular.
