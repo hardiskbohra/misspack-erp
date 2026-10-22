@@ -135,9 +135,9 @@ the old auto width and must fail. Generated PDFs are temporary and removed.
 ### Printing or downloading every carton label
 
 On the packaging-list detail page, **Carton labels → All carton labels** has a
-page-type selector (**A4**, **A5**, **100 × 150 mm label**) and one **Print /
+page-type selector (**A4**, **A5**, **100 × 140 mm label**) and one **Print /
 download all labels** button. A4/A5 use the existing landscape label designs;
-100 × 150 mm uses the existing portrait thermal design. An optional reprint
+100 × 140 mm uses the existing portrait thermal design. An optional reprint
 reason applies to the whole run. Individual group printing remains available.
 
 The CSRF-protected POST opens a single document with one page per **physical
@@ -251,12 +251,12 @@ print presentation without modifying shipment allocations.
   sender typed, a list that links a vendor is the vendor's and one that does
   not is ours.
 - **Carton labels** (`packaging_lists/label`) are A4, A5 landscape or
-  100 × 150 mm thermal, laid out on the paper in millimetres and set in points.
+  100 × 140 mm thermal, laid out on the paper in millimetres and set in points.
   The label is a flex column that fills its page: the item table takes whatever
   height the identity, parties, weights and handling bands leave, so a carton
   holding one product does not print half a page of white. A5 is set at 11 pt
   (body, quantity and item text) with 15.6 pt packing group and 17.6 pt
-  destination — two points up on the old 9 pt — and carries the carton's
+  sender heading — two points up on the old 9 pt — and carries the carton's
   barcode under the QR it scans to. Labels use the app's Inter stack too: a
   carton label is part of the same paperwork as the invoice and the packing
   list, so it is set in the same type — and in the same pure black, with solid
@@ -302,3 +302,14 @@ The three automatic checks that matter here: *carton dimensions and weights*
 (every line has a description and a positive quantity) and *source quantity
 allocation* (nothing is packed beyond what the linked invoice or shipment
 carried).
+
+### Carton-label sender branding and 100 × 140 mm stock
+
+Thermal labels use **100 × 140 mm** in both the CSS page size and the label frame;
+single-group and all-carton selectors use that same size. A4/A5 paper sizes are unchanged.
+The heading names the **sender**, not the shipping mark or recipient. MissPack-origin
+labels use the organisation’s print logo above the sender heading; vendor-origin labels
+never carry our logo. FROM and SHIP TO labels, names and addresses are each **2 pt larger**
+than their previous format-specific size. The item band absorbs the changed height so
+weights, handling marks and continuous borders stay on the label. Batch printing waits
+for the logo image as well as fonts and QR codes before opening the print dialog.

@@ -1,8 +1,9 @@
-/* Carton labels: A4, A5 and 100 × 150 mm thermal, laid out on the paper in
+/* Carton labels: A4, A5 and 100 × 140 mm thermal, laid out on the paper in
    millimetres and set in points, so what prints is what was designed. Every
    label is a flex column that fills its page — the item table takes whatever
    height the rest leaves, so a one-line carton does not leave a blank half-page
-   at the bottom. Sizes are in `em`, so each format scales from one base size. */
+   at the bottom. Sizes scale from each format’s base; party details add a
+   fixed 2 pt so that readability increase is identical on every paper size. */
 *{box-sizing:border-box}
 /* The ERP's own type, so a label reads as part of the same paperwork as the
    invoice and the packing list rather than as a foreign printout. Fallbacks are
@@ -19,6 +20,7 @@ body{margin:0;background:#e5e7eb;color:#000;font:12pt/1.35 "Inter","Segoe UI",Ro
 .carton-label>*{flex:0 0 auto}
 .carton-label header{display:flex;justify-content:space-between;align-items:flex-start;gap:5mm;border-bottom:3px solid #000;padding-bottom:2.5mm;margin-bottom:3mm}
 .label-title{min-width:0}
+.label-brand-logo{display:block;width:auto;height:14mm;max-width:70mm;object-fit:contain;object-position:left center;margin-bottom:1.5mm}
 .carton-label header p{margin:0;font-size:.72em;font-weight:700;letter-spacing:.14em}
 .carton-label h1{margin:1.5mm 0 0;font-size:1.6em;line-height:1.12;overflow-wrap:anywhere}
 .label-qr{flex:0 0 auto;width:32mm;text-align:center}
@@ -41,8 +43,9 @@ body{margin:0;background:#e5e7eb;color:#000;font:12pt/1.35 "Inter","Segoe UI",Ro
 .label-parties{display:grid;grid-template-columns:1fr 1fr;border:1px solid #000;border-top:0}
 .label-parties>div{padding:3.5mm 4mm;border-right:1px solid #000;min-width:0}
 .label-parties>div:last-child{border:0}
-.label-parties strong{font-size:1.05em}
-.label-parties p{margin:1mm 0 0;font-size:.88em;line-height:1.3}
+.label-parties span.label-key{font-size:calc(.72em + 2pt)}
+.label-parties strong{font-size:calc(1.05em + 2pt)}
+.label-parties p{margin:1mm 0 0;font-size:calc(.88em + 2pt);line-height:1.3}
 
 /* The item table takes the height the other bands leave. If a carton really
    holds more lines than the paper allows, the overflow is clipped here so the
@@ -73,6 +76,7 @@ body{margin:0;background:#e5e7eb;color:#000;font:12pt/1.35 "Inter","Segoe UI",Ro
 
 .format-a4 .carton-label{width:297mm;height:210mm;padding:12mm;gap:0;font-size:12pt}
 .format-a5 .carton-label{width:210mm;height:148mm;padding:7mm;gap:0;font-size:11pt}
+.format-a5 .label-brand-logo{height:10mm;max-width:55mm}
 .format-a5 .label-qr{width:24mm}
 .format-a5 .label-qr-code svg{width:24mm;height:24mm}
 .format-a5 .label-handling-symbol{height:15mm}
@@ -80,10 +84,11 @@ body{margin:0;background:#e5e7eb;color:#000;font:12pt/1.35 "Inter","Segoe UI",Ro
 .format-a5 .carton-label header{margin-bottom:2mm}
 .format-a5 .label-identity>div,.format-a5 .label-parties>div,.format-a5 .label-physical>div,.format-a5 .carton-label th,.format-a5 .carton-label td{padding:3mm 3.5mm}
 .format-a5 .label-handling{margin-top:2mm}
-.format-a5 .label-parties p{font-size:.84em}
+.format-a5 .label-parties p{font-size:calc(.84em + 2pt)}
 
-.format-thermal .carton-label{width:100mm;height:150mm;padding:3.5mm;gap:0;font-size:5.6pt}
+.format-thermal .carton-label{width:100mm;height:140mm;padding:3.5mm;gap:0;font-size:5.6pt}
 .format-thermal .carton-label header{gap:2mm;padding-bottom:1mm;border-bottom-width:2px;margin-bottom:1.5mm}
+.format-thermal .label-brand-logo{height:8mm;max-width:45mm;margin-bottom:1mm}
 .format-thermal .label-qr{width:19mm}
 .format-thermal .label-qr-code svg{width:19mm;height:19mm}
 .format-thermal .carton-label h1{font-size:1.35em}
@@ -91,7 +96,7 @@ body{margin:0;background:#e5e7eb;color:#000;font:12pt/1.35 "Inter","Segoe UI",Ro
 .format-thermal .label-identity>div{padding:1.5mm 1.8mm}
 .format-thermal .label-identity strong{font-size:1.15em}
 .format-thermal .label-parties>div{padding:1.5mm 1.8mm}
-.format-thermal .label-parties p{font-size:.8em}
+.format-thermal .label-parties p{font-size:calc(.8em + 2pt)}
 .format-thermal .carton-label th,.format-thermal .carton-label td{padding:1.5mm 1.8mm}
 .format-thermal .label-physical>div{padding:1.5mm 1.8mm}
 .format-thermal .label-physical strong{font-size:1.15em}

@@ -1,6 +1,14 @@
+@php
+    $senderIsMissPack = $carton->packagingList->issuedByUs($organisation);
+    $senderName = $carton->packagingList->from_name ?: ($senderIsMissPack ? ($organisation->legal_name ?: $organisation->trade_name) : 'Sender not specified');
+@endphp
 <main class="carton-label">
 <header>
-<div class="label-title"><p>PACKAGING LIST · {{ $carton->packagingList->packing_number }}@if ($carton->packagingList->packing_date) · {{ $carton->packagingList->packing_date->format('d M Y') }}@endif</p><h1>{{ $carton->shipping_mark ?: $carton->packagingList->ship_to_name }}</h1></div>
+<div class="label-title">
+@if ($senderIsMissPack)
+    <img class="label-brand-logo" src="{{ $organisation->logoUrl('print') }}" alt="{{ $organisation->trade_name ?: $organisation->legal_name }} logo">
+@endif
+<p>PACKAGING LIST · {{ $carton->packagingList->packing_number }}@if ($carton->packagingList->packing_date) · {{ $carton->packagingList->packing_date->format('d M Y') }}@endif</p><h1>{{ $senderName }}</h1></div>
 <div class="label-qr"><div class="label-qr-code" data-ship-qr="{{ route('packaging-lists.show',$carton->packagingList).'#carton-'.$carton->id }}" data-ship-qr-size="160" data-ship-qr-ecl="M" data-ship-qr-caption="{{ $carton->barcode }} · {{ $cartonNumber }}/{{ $carton->packagingList->total_cartons }}"></div><small>{{ $carton->barcode }}</small></div>
 </header>
 <section class="label-identity"><div><span class="label-key">CARTON NUMBER</span><strong>{{ $cartonNumber }}/{{ $carton->packagingList->total_cartons }}</strong></div><div><span class="label-key">PACKING GROUP</span><strong>{{ $carton->packing_group ?: ($carton->carton_label ?: 'Group '.$carton->carton_number) }}</strong></div><div><span class="label-key">TYPE</span><strong>{{ strtoupper($carton->carton_type) }}</strong></div><div><span class="label-key">MODE</span><strong>{{ strtoupper($carton->packagingList->modeLabel()) }}</strong></div></section>

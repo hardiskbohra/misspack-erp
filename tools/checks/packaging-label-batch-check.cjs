@@ -15,7 +15,7 @@ async function check(name, callback) {
   catch (error) { console.error(`FAIL ${name}: ${error.message}`); failed++; }
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
-function setup({ auto = true, ready = 'complete', qr = true, fonts } = {}) {
+function setup({ auto = true, ready = 'complete', qr = true, fonts, logos = [] } = {}) {
   const button = { disabled: false, addEventListener(event, callback) { this.click = callback; } };
   const error = { hidden: true, textContent: '' }, events = {};
   let prints = 0;
@@ -23,7 +23,7 @@ function setup({ auto = true, ready = 'complete', qr = true, fonts } = {}) {
     readyState: ready, body: { dataset: { autoPrint: String(auto) } },
     fonts: { ready: fonts || Promise.resolve() },
     querySelector: selector => selector === '[data-print-labels]' ? button : error,
-    querySelectorAll: () => [{ querySelector: () => qr ? {} : null, classList: { contains: () => !qr } }],
+    querySelectorAll: selector => selector === '.label-brand-logo' ? logos : [{ querySelector: () => qr ? {} : null, classList: { contains: () => !qr } }],
     addEventListener: (event, callback) => { events[event] = callback; },
   };
   vm.runInNewContext(script, { document, window: { print() { prints++; } }, requestAnimationFrame: callback => callback() });
@@ -71,6 +71,23 @@ function setup({ auto = true, ready = 'complete', qr = true, fonts } = {}) {
     assert.equal(run.prints, 1);
     assert.equal(run.button.disabled, false);
     assert.equal(run.error.hidden, true);
+  });
+  await check('auto-print waits for the sender logo to decode', async () => {
+    let resolveLogo;
+    const decoded = new Promise(resolve => { resolveLogo = resolve; });
+    const run = setup({ logos: [{ naturalWidth: 240, decode: () => decoded }] });
+    await flush(); assert.equal(run.prints, 0);
+    resolveLogo(); await flush();
+    assert.equal(run.prints, 1);
+    assert.equal(run.error.hidden, true);
+  });
+  await check('a missing sender logo blocks printing instead of producing an unbranded label', async () => {
+    const run = setup({ logos: [{ naturalWidth: 0, decode: () => Promise.reject(new Error('not found')) }] });
+    await flush();
+    assert.equal(run.prints, 0);
+    assert.equal(run.error.hidden, false);
+    assert(run.error.textContent.includes('sender logo'));
+    assert.equal(run.button.disabled, false);
   });
   await check('deferred scripts wait for DOMContentLoaded and QR rendering', async () => {
     const run = setup({ ready: 'interactive' });

@@ -16,6 +16,15 @@ use Tests\TestCase;
 
 class PackagingAllLabelsTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Brand fixture: rendering must not depend on an installed organisation database.
+        view()->share('organisation', new \App\Models\Organisation([
+            'legal_name' => 'MissPack India Pvt Ltd', 'trade_name' => 'MissPack',
+        ]));
+    }
+
     public function test_all_formats_render_each_physical_carton_with_correct_data_and_audit_counts(): void
     {
         foreach (['a4', 'a5', 'thermal'] as $format) {
@@ -51,7 +60,7 @@ class PackagingAllLabelsTest extends TestCase
             $this->assertStringContainsString('format-'.$format, $html);
             $this->assertStringContainsString('data-auto-print="true"', $html);
             $this->assertStringContainsString('Save as PDF', $html);
-            $paper = ['a4' => 'A4 landscape', 'a5' => 'A5 landscape', 'thermal' => '100mm 150mm'][$format];
+            $paper = ['a4' => 'A4 landscape', 'a5' => 'A5 landscape', 'thermal' => '100mm 140mm'][$format];
             $this->assertStringContainsString('@page{size:'.$paper, $html);
             $this->assertSame(3, substr_count($html, 'data-ship-qr="'));
         }
