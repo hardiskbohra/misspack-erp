@@ -27,7 +27,7 @@
                     <label class="master-label" for="packagingLabelQrUrl">Destination URL</label>
                     <input class="master-input" type="url" id="packagingLabelQrUrl" name="label_qr_url" maxlength="200"
                         value="{{ old('label_qr_url', $settings['label_qr_url']) }}" placeholder="https://your-website.example/packaging" aria-describedby="packagingQrHelp packagingQrError" @error('label_qr_url') aria-invalid="true" @enderror>
-                    <p class="master-help" id="packagingQrHelp">Leave blank to open each carton’s own packaging-list record in the ERP (login required). A custom URL is used exactly as entered for all cartons, including vendor-sender labels, on A4, A5 and 100 × 140 mm labels, in single and batch prints.</p>
+                    <p class="master-help" id="packagingQrHelp">Leave blank to open each carton’s own packaging-list record in the ERP (login required). A custom URL is used exactly as entered for all cartons, including vendor-sender labels, on A4, A5, 100 × 140 mm and 100 × 150 mm labels, in single and batch prints.</p>
                     <p class="master-help">Use a short HTTP or HTTPS link, up to 200 bytes (normally 200 characters), so it fits the printed QR code. No carton number or tracking data is appended.</p>
                     <p class="master-field-error" id="packagingQrError">@error('label_qr_url'){{ $message }}@enderror</p>
                 </div>

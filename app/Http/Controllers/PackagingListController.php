@@ -323,7 +323,7 @@ class PackagingListController extends Controller
     public function labels(PackagingList $packagingList, Request $request, \App\Services\PackagingListLabels $labels): View
     {
         $data = $request->validate([
-            'format' => ['required', Rule::in(['a4','a5','thermal'])],
+            'format' => ['required', Rule::in(['a4','a5','thermal','thermal150'])],
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
         $labelBatches = $labels->batches($packagingList);
@@ -348,7 +348,7 @@ class PackagingListController extends Controller
 
     public function label(PackagingListCarton $carton, Request $request): View
     {
-        $data = $request->validate(['format'=>['required',Rule::in(['a4','a5','thermal'])],'copies'=>['required','integer','min:1','max:100000'],'reason'=>['nullable','string','max:255']]);
+        $data = $request->validate(['format'=>['required',Rule::in(['a4','a5','thermal','thermal150'])],'copies'=>['required','integer','min:1','max:100000'],'reason'=>['nullable','string','max:255']]);
         $carton->load('packagingList.client', 'packagingList.cartons', 'items.product');
         $format = $data['format'];
         $copies = (int) $data['copies'];

@@ -52,9 +52,19 @@ class PackagingCartonLabelViewTest extends TestCase
         $this->assertStringNotContainsString('150mm', $html);
     }
 
+    public function test_100_by_150_is_an_additional_thermal_format_without_changing_140(): void
+    {
+        $html = $this->renderLabel('MissPack', 'thermal150');
+        $this->assertStringContainsString('@page{size:100mm 150mm;margin:0}', $html);
+        $this->assertStringContainsString('100 × 150 mm', $html);
+        $this->assertStringContainsString('format-thermal150 format-thermal', $html);
+        $this->assertStringNotContainsString('100mm 140mm', $html);
+        $this->assertStringContainsString('@page{size:100mm 140mm;margin:0}', $this->renderLabel('MissPack', 'thermal'));
+    }
+
     public function test_misspack_sender_is_the_heading_and_has_our_print_logo_in_every_format(): void
     {
-        foreach (['a4', 'a5', 'thermal'] as $format) {
+        foreach (['a4', 'a5', 'thermal', 'thermal150'] as $format) {
             $html = $this->renderLabel('MissPack India Pvt Ltd', $format);
             $this->assertStringContainsString('<h1>MissPack India Pvt Ltd</h1>', $html);
             $this->assertSame(1, substr_count($html, 'class="label-brand-logo"'));
@@ -69,7 +79,7 @@ class PackagingCartonLabelViewTest extends TestCase
 
     public function test_vendor_sender_has_its_own_heading_and_never_our_logo(): void
     {
-        foreach (['a4', 'a5', 'thermal'] as $format) {
+        foreach (['a4', 'a5', 'thermal', 'thermal150'] as $format) {
             $html = $this->renderLabel('Solo Beauty Packaging Co., Ltd', $format, 3);
             $this->assertStringContainsString('<h1>Solo Beauty Packaging Co., Ltd</h1>', $html);
             $this->assertStringNotContainsString('class="label-brand-logo"', $html);

@@ -83,7 +83,7 @@ class PackagingQrSettingsTest extends TestCase
     {
         $url = 'https://example.test/packaging?source=carton&lang=en#details';
         OfficeSetting::putPackaging(['label_qr_url' => $url]);
-        foreach (['a4', 'a5', 'thermal'] as $format) {
+        foreach (['a4', 'a5', 'thermal', 'thermal150'] as $format) {
             foreach (['MissPack', 'Vendor Packaging Ltd'] as $sender) {
                 $html = $this->labels($format, 3, $sender);
                 $this->assertSame(3, substr_count($html, 'data-ship-qr="'.e($url).'"'));

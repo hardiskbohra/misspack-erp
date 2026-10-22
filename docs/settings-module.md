@@ -271,7 +271,7 @@ requires the existing `settings.manage` permission, not just Operations access.
 it under the `packaging` key in the existing `office_settings` table.
 
 A blank destination preserves the per-carton ERP record link. A custom HTTP/HTTPS
-URL is used exactly, for every sender and all A4/A5/thermal single/batch labels.
+URL is used exactly, for every sender and all A4/A5/100 × 140 mm/100 × 150 mm single/batch labels.
 URLs with credentials, other schemes and values above 200 UTF-8 bytes are rejected;
 the byte limit keeps the payload within the label encoder’s QR capacity. This is
 not a redirect endpoint and the server never fetches the configured destination.

@@ -30,12 +30,12 @@ function setup({ auto = true, ready = 'complete', qr = true, fonts, logos = [] }
   return { button, error, events, get prints() { return prints; } };
 }
 (async () => {
-  await check('one CSRF-protected batch button offers all three page types', () => {
+  await check('one CSRF-protected batch button offers all four page types', () => {
     assert(show.includes("route('packaging-lists.labels', $list)"));
     assert(show.includes('Print / download all labels'));
     const form = show.slice(show.indexOf('class="pl-label-batch"'), show.indexOf('<div class="pl-label-list">'));
     assert(form.includes('@csrf'));
-    for (const type of ['a4', 'a5', 'thermal']) assert(form.includes(`value="${type}"`));
+    for (const type of ['a4', 'a5', 'thermal', 'thermal150']) assert(form.includes(`value="${type}"`));
     assert(read('routes/web.php').includes("Route::post('/packaging-lists/{packagingList}/labels'"));
   });
   await check('all groups and all physical cartons use the shared label partial in order', () => {
@@ -51,7 +51,7 @@ function setup({ auto = true, ready = 'complete', qr = true, fonts, logos = [] }
   });
   await check('a validated batch is audited atomically, once per group with actual copies', () => {
     const method = controller.slice(controller.indexOf('public function labels('), controller.indexOf('public function label('));
-    assert(method.includes("Rule::in(['a4','a5','thermal'])"));
+    assert(method.includes("Rule::in(['a4','a5','thermal','thermal150'])"));
     assert(method.indexOf('$labels->batches') < method.indexOf('DB::transaction'));
     assert(method.includes("'copies' => $batch['copies']"));
     assert(method.includes("'printed_by' => Auth::id()") && method.includes("'printed_at' => now()"));

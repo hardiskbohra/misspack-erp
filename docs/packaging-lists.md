@@ -135,7 +135,7 @@ the old auto width and must fail. Generated PDFs are temporary and removed.
 ### Printing or downloading every carton label
 
 On the packaging-list detail page, **Carton labels → All carton labels** has a
-page-type selector (**A4**, **A5**, **100 × 140 mm label**) and one **Print /
+page-type selector (**A4**, **A5**, **100 × 140 mm label**, **100 × 150 mm label**) and one **Print /
 download all labels** button. A4/A5 use the existing landscape label designs;
 100 × 140 mm uses the existing portrait thermal design. An optional reprint
 reason applies to the whole run. Individual group printing remains available.
@@ -321,7 +321,7 @@ and save. Use a complete `https://` (or `http://`) URL, up to 200 UTF-8 bytes, w
 embedded usernames/passwords. A short link is best for the small thermal QR code.
 The configured URL is encoded exactly, including query parameters and fragments;
 no carton identifiers or tracking values are appended. It applies to all senders,
-A4/A5/100 × 140 mm stock, and both single-group and all-carton batch output.
+A4/A5/100 × 140 mm/100 × 150 mm stock, and both single-group and all-carton batch output.
 
 Clear the field and save to restore the existing ERP link to the relevant carton
 on its packaging-list record (login required). Settings are read once per generated
@@ -335,3 +335,14 @@ to the existing ERP link.
 `php artisan test --filter=PackagingQrSettingsTest` exercises settings persistence,
 permissions, URL safety/length, default reset, all label formats/senders, batch
 copies and the once-per-page lookup.
+
+### Additional 100 × 150 mm thermal stock
+
+Both the **All carton labels** selector and individual group selectors offer
+**100 × 150 mm label**, in addition to the existing **100 × 140 mm label**, A4
+and A5. The new format is stored in print audits as `thermal150`; existing
+`thermal` links and audit history still mean 100 × 140 mm. Both thermal sizes
+share sender branding, larger party fonts, QR settings and continuous borders.
+Only the physical frame and CSS `@page` height change; the item band absorbs
+the extra 10 mm. Single and batch output keep one label per page. No migration
+is required.
