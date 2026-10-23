@@ -6,6 +6,7 @@
 @section('content')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/clients.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/client-account-summary.css') }}">
 @endpush
 
 @php
@@ -52,6 +53,8 @@
             @endif
         </nav>
     </header>
+
+    @include('clients.partials.account-summary')
 
     @include('cashflows.partials.unallocated-party-alert', [
         'unallocatedTitle' => 'Unallocated client advance',

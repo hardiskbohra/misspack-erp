@@ -306,6 +306,7 @@ class ClientController extends Controller
             'notifications' => $notifications,
             'supportCount' => $supportCount,
             'unallocatedCash' => app(\App\Services\UnallocatedCashflows::class)->forClient($client->id),
+            'accountSummary' => app(\App\Services\ClientAccountSummary::class)->forClient($client),
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
             ...$invoiceData,
@@ -313,6 +314,17 @@ class ClientController extends Controller
             ...$statementData,
             ...$this->clientFeedbackData($client, $tab),
         ]);
+    }
+
+    /** Read-only account position for the PI/invoice client picker. */
+    public function paymentSummary(Client $client, \App\Services\ClientAccountSummary $summary): JsonResponse
+    {
+        return response()->json([
+            'client_id' => $client->id,
+            'html' => view('clients.partials.account-summary', [
+                'client' => $client, 'accountSummary' => $summary->forClient($client),
+            ])->render(),
+        ])->header('Cache-Control', 'no-store, private');
     }
 
     /**

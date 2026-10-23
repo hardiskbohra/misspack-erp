@@ -254,6 +254,23 @@
                     </div>
                 </div>
 
+                <div class="si-client-account" data-invoice-client-account
+                    data-summary-url="{{ route('clients.paymentSummary', ['client' => '__CLIENT__'], false) }}" hidden aria-live="polite" aria-atomic="true">
+                    <div class="si-client-account-status" data-client-account-status hidden>
+                        <span data-client-account-message></span>
+                        <button type="button" class="master-btn master-btn-soft master-btn-sm" data-client-account-retry hidden>Retry</button>
+                    </div>
+                    <div data-client-account-content></div>
+                </div>
+                @once
+                    @push('styles')
+                        <link rel="stylesheet" href="{{ $assetVer('assets/css/client-account-summary.css') }}">
+                    @endpush
+                    @push('scripts')
+                        <script src="{{ $assetVer('assets/js/invoice-client-account.js') }}"></script>
+                    @endpush
+                @endonce
+
                 <p class="master-section-label">Copied onto the invoice</p>
                 <div class="master-form-grid is-three">
                     <div class="master-field"><label class="master-label" for="client_company_name">Client

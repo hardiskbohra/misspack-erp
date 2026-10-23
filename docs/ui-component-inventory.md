@@ -68,6 +68,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Text | Shared | `.core-text-input`, `.master-input` |
 | Number | Shared | Native number input with shared field styles |
 | Currency | Partial | Money helpers and currency-prefixed/amount controls in finance modules |
+| Client account summary | Shared | `clients.partials.account-summary`, `ClientAccountSummary`, and `invoice-client-account.js`; client profile and PI/invoice picker share all-time, per-currency invoice values, net payments, balances and unapplied credits. Selection fetches fresh figures with stale-response protection; never applies an advance automatically. |
 | Allocation payment position | Shared | `cashflows.partials.document-payment-summary` and `cashflow-document-balance.js`; both allocation dialogs show saved document-currency total, paid and balance on selection, with canonical eager-loaded ledger sums and explicit order advance capacity |
 | Select | Shared | `.core-select`, `.master-select` |
 | Multi-select | Partial | Select2 multi-select on selected screens; not an app-wide default |

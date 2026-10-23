@@ -323,6 +323,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/clients/saved-views/{savedView}', [ClientController::class, 'destroySavedView'])->name('clients.saved-views.destroy');
         Route::patch('/clients/{client}/send-kyc', [ClientController::class, 'sendKyc'])->name('clients.sendKyc');
         Route::patch('/clients/{client}/status', [ClientController::class, 'updateStatus'])->name('clients.status.update');
+        Route::get('/clients/{client}/payment-summary', [ClientController::class, 'paymentSummary'])->name('clients.paymentSummary');
         Route::resource('clients', ClientController::class);
 
         // Vendor Management
