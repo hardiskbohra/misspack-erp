@@ -236,6 +236,7 @@
             <div class="topbar-spacer"></div>
 
             <div class="topbar-actions">
+                @include('layouts.partials.quick-menu')
                 @if (auth()->user()?->isAdmin())
                     <button type="button" class="topbar-btn" data-gs-open aria-label="Search" title="Search (Ctrl+/Cmd+K)">
                         <i class="fas fa-search"></i>

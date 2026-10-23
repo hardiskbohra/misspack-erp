@@ -21,6 +21,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 
 | Component | Status | Current implementation |
 | --- | --- | --- |
+| Topbar quick menu | Shared | `layouts.partials.quick-menu`; permission-filtered frequent modules reuse sidebar destinations and the shared portaled dropdown in `app-layout.js`. Supports arrow keys, Home/End, Escape and Tab, with an icon-only trigger on smaller screens. |
 | Sidebar menu | Shared | `.sidebar-nav`, `.sidebar-item`; portal uses `.cp-nav` / `.cp-nav-link` |
 | Nested menu | Partial | Menu groups and active items exist; no consistent nested disclosure contract |
 | Tabs | Shared | `.master-tabs` / `.master-tab`; Cashflows `.cf-tabs` / `.cf-tab`; core aliases in `components/tabs.css` |
