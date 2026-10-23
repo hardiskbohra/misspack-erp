@@ -54,15 +54,18 @@ class PackagingListVerifier
                 : $invalidItems->count().' item line(s) need a description or positive quantity.'
         );
 
-        $unlinkedProjectItems = $list->project_id ? $items->whereNull('project_product_id') : collect();
+        $comparison = app(PackagingListProjectComparison::class)->inspect($list);
+        $unmatched = collect($comparison['rows'])->where('status', 'fail');
         $checks[] = $this->check(
-            'project_identity',
-            'Project product identity',
-            $unlinkedProjectItems->isEmpty() ? 'pass' : 'fail',
-            $unlinkedProjectItems->isEmpty()
-                ? ($list->project_id ? 'Every item line is matched to a project product.' : 'This list is not marked for a project.')
-                : $unlinkedProjectItems->count().' item line(s) cannot be matched unambiguously to a project product.'
+            'project_identity', 'Project product identity',
+            $comparison['unresolved'] > 0 ? 'fail' : ($comparison['review'] > 0 ? 'warning' : 'pass'),
+            $comparison['unresolved'] > 0
+                ? $comparison['unresolved'].' packing line(s) need attention: '.$unmatched->take(6)->pluck('packing_description')->implode(', ').'. Compare Packing list product and Linked project product in the Project product comparison, then correct the mapping in Edit. You can save a draft while reviewing.'
+                : ($comparison['review'] > 0
+                    ? $comparison['review'].' packing label(s) differ from the linked project product. Review the side-by-side comparison; valid explicit links do not block confirmation.'
+                    : ($list->project_id ? 'Every item line is matched to an active product in this project.' : 'This list is not marked for a project.'))
         );
+        $checks[array_key_last($checks)]['unmatched_item_ids'] = $unmatched->pluck('item_id')->all();
 
         $serials = [];
         $duplicateSerials = [];
@@ -117,6 +120,7 @@ class PackagingListVerifier
 
         return [
             'checks' => $checks,
+            'project_comparison' => $comparison,
             'failed' => collect($checks)->where('status', 'fail')->count(),
             'warnings' => collect($checks)->where('status', 'warning')->count(),
             'passed' => collect($checks)->where('status', 'pass')->count(),
@@ -127,7 +131,7 @@ class PackagingListVerifier
     {
         $list->loadMissing('cartons.items');
         $payload = [
-            'list' => $list->only(['shipment_id', 'sales_invoice_id', 'purchase_invoice_id', 'total_cartons', 'total_net_weight', 'total_gross_weight', 'total_cbm', 'packing_warnings']),
+            'list' => $list->only(['project_id', 'shipment_id', 'sales_invoice_id', 'purchase_invoice_id', 'total_cartons', 'total_net_weight', 'total_gross_weight', 'total_cbm', 'packing_warnings']),
             'cartons' => $list->cartons->map(fn ($carton) => [
                 'attributes' => $carton->only(['carton_label', 'packing_group', 'packing_mode', 'carton_number', 'carton_type', 'carton_count', 'length_cm', 'width_cm', 'height_cm', 'net_weight_per_carton', 'gross_weight_per_carton', 'barcode', 'public_token', 'shipping_mark', 'pallet_number', 'seal_number', 'is_fragile', 'keep_dry', 'this_side_up', 'is_hazardous', 'handling_instructions']),
                 'items' => $carton->items->map(fn ($item) => $item->only(['project_product_id', 'item_description', 'sku', 'customer_item_code', 'hs_code', 'quantity_per_carton', 'total_quantity', 'serial_numbers', 'batch_number', 'manufactured_at', 'expires_at', 'country_of_origin', 'unit_net_weight', 'unit_gross_weight', 'packing_instructions']))->values()->all(),

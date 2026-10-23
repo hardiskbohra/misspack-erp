@@ -346,3 +346,30 @@ share sender branding, larger party fonts, QR settings and continuous borders.
 Only the physical frame and CSS `@page` height change; the item band absorbs
 the extra 10 mm. Single and batch output keep one label per page. No migration
 is required.
+
+
+## Visible project-product comparison
+
+Project-linked lists show **Project product comparison** above the packing breakdown, not
+only an error count after confirmation. Each row shows its carton/line, actual packing
+label, selected catalog product and SKU, packed quantity/unit, and the actual linked
+project product's name, ID, SKU and ordered quantity/unit. Missing, foreign-project and
+cancelled links are highlighted with a concrete next action; the expandable **Actual
+products in this project** list provides the real project names for comparison.
+
+Different labels/catalog products/SKUs/units on an otherwise valid explicit project link
+are highlighted as **Review difference** warnings, not confirmation blockers. Missing or
+invalid identities still prevent confirmation/dispatch; **drafts remain saveable**. Viewing
+the comparison does not guess or replace links. Existing unambiguous reconciliation rules
+remain unchanged.
+
+Use **Review / correct mapping** to open the corresponding item in Edit. Each row now has
+a visible **Project product** choice, scoped to active products in the selected project,
+with a live packing-versus-project description. New carton/item rows receive the same
+choices. Invalid old links are shown explicitly rather than silently replaced. Validation
+points to the affected row, including dynamically generated form keys. No migration or
+new permission is needed; existing Operations view/manage permissions apply.
+
+`PackagingProjectComparisonTest` covers the six-unmatched-line case, actual names/SKUs,
+valid label differences, invalid/cancelled links, confirmation and draft saves, dynamic
+row errors, explicit mapping, and output escaping.

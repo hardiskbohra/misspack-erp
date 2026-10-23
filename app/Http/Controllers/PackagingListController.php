@@ -8,6 +8,7 @@ use App\Models\PackagingList;
 use App\Models\PackagingListCarton;
 use App\Models\Product;
 use App\Models\Project;
+use App\Models\ProjectProduct;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
 use App\Services\PackagingListSource;
@@ -100,7 +101,7 @@ class PackagingListController extends Controller
             $list = PackagingList::create($data);
             $this->syncCartons($list, $cartons);
             $linker->reconcile($list);
-            $this->assertReadyForStatus($list, $data['status'], $verifier);
+            $this->assertReadyForStatus($list, $data['status'], $verifier, $cartons);
             return $list;
         });
 
@@ -139,7 +140,7 @@ class PackagingListController extends Controller
             $packagingList->cartons()->delete();
             $this->syncCartons($packagingList, $cartons);
             $linker->reconcile($packagingList);
-            $this->assertReadyForStatus($packagingList->fresh(), $data['status'], $verifier);
+            $this->assertReadyForStatus($packagingList->fresh(), $data['status'], $verifier, $cartons);
         });
 
         $this->refreshProjectReadiness($packagingList->fresh());
@@ -262,7 +263,7 @@ class PackagingListController extends Controller
             'cartons.*.is_hazardous' => ['nullable', 'boolean'], 'cartons.*.handling_instructions' => ['nullable', 'string'],
             'cartons.*.items' => ['required', 'array', 'min:1', 'max:200'],
             'cartons.*.items.*.product_id' => ['nullable', 'exists:products,id'],
-            'cartons.*.items.*.project_product_id' => ['nullable', Rule::exists('project_products', 'id')->where(fn ($query) => $query->where('project_id', $request->input('project_id')))],
+            'cartons.*.items.*.project_product_id' => ['nullable', Rule::exists('project_products', 'id')->where(fn ($query) => $query->where('project_id', $request->input('project_id'))->where('status', '!=', 'cancelled'))],
             'cartons.*.items.*.source_type' => ['nullable', Rule::in(['sales_invoice','purchase_invoice','shipment'])],
             'cartons.*.items.*.source_item_id' => ['nullable', 'integer'],
             'cartons.*.items.*.source_quantity' => ['nullable', 'numeric', 'min:0'],
@@ -387,16 +388,25 @@ class PackagingListController extends Controller
         return $warnings;
     }
 
-    private function assertReadyForStatus(PackagingList $list, string $status, PackagingListVerifier $verifier): void
+    private function assertReadyForStatus(PackagingList $list, string $status, PackagingListVerifier $verifier, array $submittedCartons = []): void
     {
         if (! in_array($status, ['confirmed', 'dispatched'], true)) return;
 
         $inspection = $verifier->inspect($list);
         if ($inspection['failed'] > 0) {
             $failed = collect($inspection['checks'])->where('status', 'fail')->pluck('message')->implode(' ');
-            throw ValidationException::withMessages([
-                'status' => 'Automatic packing checks found issues: '.$failed,
-            ]);
+            $messages = ['status' => 'Automatic packing checks found issues: '.$failed];
+            $identity = collect($inspection['checks'])->firstWhere('key', 'project_identity');
+            foreach ($list->cartons->values() as $cartonIndex => $carton) {
+                foreach ($carton->items->values() as $itemIndex => $item) {
+                    if (in_array($item->id, $identity['unmatched_item_ids'] ?? [])) {
+                        $cartonKey = array_keys($submittedCartons)[$cartonIndex] ?? $cartonIndex;
+                        $itemKey = array_keys($submittedCartons[$cartonKey]['items'] ?? [])[$itemIndex] ?? $itemIndex;
+                        $messages["cartons.$cartonKey.items.$itemKey.project_product_id"] = 'Select the matching active project product for '.$item->item_description.'.';
+                    }
+                }
+            }
+            throw ValidationException::withMessages($messages);
         }
     }
 
@@ -429,6 +439,8 @@ class PackagingListController extends Controller
             'purchaseInvoices' => PurchaseInvoice::where('invoice_type', PurchaseInvoice::TYPE_BILL)->latest('invoice_date')->limit(500)->get(),
             'prefillCartons' => $prefillCartons,
             'products' => Product::where('status', 'active')->orderBy('name')->get(),
+            'projectProducts' => ProjectProduct::where('status', '!=', 'cancelled')->orderBy('sort_order')->orderBy('id')
+                ->get(['id', 'project_id', 'product_id', 'product_name', 'sku', 'unit']),
             'statusOptions' => PackagingList::statusOptions(), 'modeOptions' => PackagingList::transportModeOptions(),
         ];
     }

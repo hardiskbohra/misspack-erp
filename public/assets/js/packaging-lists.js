@@ -50,7 +50,37 @@
     if (focusTab) activeTab?.focus({preventScroll:true});
   }
 
+  let projectProducts = [];
+  try { projectProducts = JSON.parse(root.dataset.projectProducts || '[]'); } catch (_) { /* server validation remains authoritative */ }
+  function syncProjectProducts() {
+    const projectId = root.querySelector('[data-pl-project]')?.value || '';
+    const available = projectProducts.filter(product => String(product.project_id) === projectId);
+    cartonList.querySelectorAll('[data-project-product]').forEach(select => {
+      select.closest('[data-project-product-field]').hidden = !projectId;
+      select.disabled = !projectId;
+      if (select.dataset.project !== projectId) {
+        const chosen = select.value;
+        select.replaceChildren(new Option('Automatic match — select here if unresolved', ''));
+        available.forEach(product => select.add(new Option(`${product.product_name} · ${product.sku || 'No SKU'} · ${product.unit} · #${product.id}`, product.id)));
+        if (chosen && !available.some(product => String(product.id) === chosen)) {
+          select.add(new Option(`Unavailable link #${chosen} — choose an active product in this project`, chosen));
+        }
+        if (chosen) select.value = chosen;
+        select.dataset.project = projectId;
+      }
+      const item = select.closest('[data-item]');
+      const packingName = item.querySelector('[name$="[item_description]"]')?.value || 'Unnamed packing line';
+      const chosen = available.find(product => String(product.id) === select.value);
+      const help = item.querySelector('[data-project-product-help]');
+      if (help) help.textContent = chosen
+        ? `Packing list: ${packingName}. Linked project product: ${chosen.product_name} (#${chosen.id}). Review any intentional label differences.`
+        : select.value ? `Packing list: ${packingName}. Link #${select.value} is unavailable in this project; choose an active project product.`
+        : (available.length ? `Packing list: ${packingName}. No explicit project product selected; automatic matching runs on save. Choose here if the check cannot match it.` : 'This project has no active products. Add its products before mapping the packing lines.');
+    });
+  }
+
   function update() {
+    syncProjectProducts();
     let cartons = 0, net = 0, gross = 0, cbm = 0, chargeable = 0, itemLines = 0, completeGroups = 0;
     const sourceGroups = new Map();
     cartonList.querySelectorAll('[data-carton]').forEach((carton, index) => {
@@ -241,6 +271,12 @@
     update();
   });
   update();
+  const mappingAnchor = document.getElementById(window.location.hash.slice(1));
+  if (mappingAnchor?.matches('[data-project-product]')) {
+    const panel = mappingAnchor.closest('[data-carton]');
+    activateCarton([...cartonList.querySelectorAll('[data-carton]')].indexOf(panel));
+    mappingAnchor.focus();
+  }
   try {
     const errorFields = JSON.parse(root.dataset.errorFields || '[]');
     const first = errorFields[0];

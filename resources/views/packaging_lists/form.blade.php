@@ -24,7 +24,7 @@
     }
     if (!$cartonRows) $cartonRows = [['carton_label'=>'Carton 1','packing_mode'=>'grouped','carton_number'=>'1','carton_type'=>'box','carton_count'=>1,'length_cm'=>'','width_cm'=>'','height_cm'=>'','net_weight_per_carton'=>'','gross_weight_per_carton'=>'','tare_weight'=>0,'is_stackable'=>1,'items'=>[['product_id'=>'','item_description'=>'','quantity_per_carton'=>'','total_quantity'=>'','unit'=>'pcs']]]];
 @endphp
-<div class="master-form packaging-list-form" data-packaging-form data-error-fields="{{ json_encode($errors->keys()) }}">
+<div class="master-form packaging-list-form" data-packaging-form data-project-products="{{ ($projectProducts ?? collect())->toJson() }}" data-error-fields="{{ json_encode($errors->keys()) }}">
     <header class="master-card master-card--flat master-header">
         <div><h1>{{ $list->exists ? 'Edit Packaging List' : 'New Packaging List' }}</h1><div class="master-breadcrumb"><a href="{{ url('/') }}">Home</a><span>•</span><a href="{{ route('packaging-lists.index') }}">Packaging Lists</a><span>•</span><span class="active">{{ $list->exists ? $list->packing_number : 'New' }}</span></div></div>
     </header>

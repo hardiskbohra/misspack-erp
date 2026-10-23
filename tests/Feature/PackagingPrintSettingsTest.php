@@ -50,7 +50,7 @@ class PackagingPrintSettingsTest extends TestCase
             $list->setRelation('cartons', new \Illuminate\Support\Collection);
             $list->setRelation('shipment', null);
             $list->setRelation('project', null);
-            $html = view('packaging_lists.print', ['list' => $list, 'sections' => collect(), 'organisation' => null, 'onLetterhead' => false])->render();
+            $html = view('packaging_lists.print', ['list' => $list, 'sections' => collect(), 'organisation' => null, 'onLetterhead' => false, 'errors' => new \Illuminate\Support\ViewErrorBag])->render();
             $this->assertStringContainsString('data-orientation="'.$orientation.'"', $html);
             $this->assertStringContainsString('size: A4 '.$orientation, $html);
             $this->assertStringContainsString('counter(page) " of " counter(pages)', $html);

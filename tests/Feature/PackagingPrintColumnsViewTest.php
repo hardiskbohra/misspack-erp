@@ -47,7 +47,7 @@ class PackagingPrintColumnsViewTest extends TestCase
             $list->setRelation('shipment', null);
             $list->setRelation('project', null);
             $html = view('packaging_lists.print', [
-                'list' => $list, 'sections' => $list->sections(), 'onLetterhead' => false,
+                'list' => $list, 'sections' => $list->sections(), 'onLetterhead' => false, 'errors' => new \Illuminate\Support\ViewErrorBag,
                 'organisation' => null, 'assetVer' => fn ($path) => asset($path),
             ])->render();
 
