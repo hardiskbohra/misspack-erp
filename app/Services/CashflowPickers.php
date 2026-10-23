@@ -118,14 +118,14 @@ class CashflowPickers
     public function salesInvoices()
     {
         return class_exists(\App\Models\SalesInvoice::class) && Schema::hasTable('sales_invoices')
-            ? \App\Models\SalesInvoice::query()->where('status', '<>', 'cancelled')->orderByDesc('invoice_date')->orderByDesc('id')->get()
+            ? \App\Models\SalesInvoice::query()->withReceived()->where('status', '<>', 'cancelled')->orderByDesc('invoice_date')->orderByDesc('id')->get()
             : collect();
     }
 
     public function purchaseInvoices()
     {
         return class_exists(\App\Models\PurchaseInvoice::class) && Schema::hasTable('purchase_invoices')
-            ? \App\Models\PurchaseInvoice::query()->where('status', '<>', 'cancelled')->orderByDesc('invoice_date')->orderByDesc('id')->get()
+            ? \App\Models\PurchaseInvoice::query()->withPaid()->where('status', '<>', 'cancelled')->orderByDesc('invoice_date')->orderByDesc('id')->get()
             : collect();
     }
 

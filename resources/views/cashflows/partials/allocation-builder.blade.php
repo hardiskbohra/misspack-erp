@@ -153,7 +153,7 @@
                     <label class="master-label" for="allocationSales">Sales invoice / proforma</label>
                     <select class="master-select" id="allocationSales" data-modal-value="sales_invoice_id" data-allocation-sales>
                         <option value="">No sales document</option>
-                        @foreach($salesInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}">{{ $invoice->invoice_number }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
+                        @foreach($salesInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}" @include('cashflows.partials.document-payment-option-data')>{{ $invoice->invoice_number }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
                     </select>
                 </div>
                 <div class="master-field">
@@ -161,7 +161,7 @@
                     <select class="master-select" id="allocationPurchase" data-modal-value="purchase_invoice_id" data-allocation-purchase @disabled($purchaseLocked)>
                         <option value="">{{ $purchaseLocked ? 'Settled by the vendor payment' : 'No purchase document' }}</option>
                         @unless($purchaseLocked)
-                            @foreach($purchaseInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}">{{ $invoice->invoice_number }} · {{ $invoice->typeLabel() }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
+                            @foreach($purchaseInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}" @include('cashflows.partials.document-payment-option-data')>{{ $invoice->invoice_number }} · {{ $invoice->typeLabel() }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
                         @endunless
                     </select>
                     @if($purchaseLocked)
@@ -172,6 +172,7 @@
                     <label class="master-label" for="allocationCashAmount">Cash amount <span class="master-required">*</span></label>
                     <input class="master-input" id="allocationCashAmount" type="number" min="0.01" step="0.01" data-modal-value="amount" placeholder="Amount from this bank entry">
                 </div>
+                @include('cashflows.partials.document-payment-summary')
                 <div class="master-field">
                     <label class="master-label" for="allocationDocumentAmount">Document amount</label>
                     <input class="master-input" id="allocationDocumentAmount" type="number" min="0.01" step="0.01" data-modal-value="document_amount" placeholder="Required when currencies differ">
@@ -316,6 +317,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updateCurrencyHint() {
+        window.CashflowDocumentBalance.refresh(modal, field('sales_invoice_id'), field('purchase_invoice_id'));
         var select = field('sales_invoice_id').value ? field('sales_invoice_id') : field('purchase_invoice_id');
         var option = select.options[select.selectedIndex];
         var documentCurrency = option ? option.getAttribute('data-currency') : '';
@@ -336,14 +338,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (event.target.closest('[data-remove-allocation]')) { row.remove(); reindex(); totals(); }
     });
 
-    modal.addEventListener('change', function (event) {
-        if (!event.target.matches('[data-allocation-sales], [data-allocation-purchase]')) return;
+    function documentChanged(event) {
         var opposite = event.target.matches('[data-allocation-sales]') ? field('purchase_invoice_id') : field('sales_invoice_id');
         if (event.target.value && opposite.value) { opposite.value = ''; notifySelect(opposite); }
         var option = event.target.options[event.target.selectedIndex];
         var projectId = option ? option.getAttribute('data-project') : '';
         if (projectId && !field('project_id').value) { field('project_id').value = projectId; notifySelect(field('project_id')); }
         updateCurrencyHint();
+    }
+    // Handle Select2's jQuery events as well as native select changes.
+    if (window.jQuery) window.jQuery(modal).on('change.cfAllocation', '[data-allocation-sales], [data-allocation-purchase]', documentChanged);
+    else modal.addEventListener('change', function (event) {
+        if (event.target.matches('[data-allocation-sales], [data-allocation-purchase]')) documentChanged(event);
     });
 
     modal.querySelector('[data-save-allocation]').addEventListener('click', function () {

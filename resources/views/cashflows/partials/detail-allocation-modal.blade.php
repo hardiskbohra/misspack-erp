@@ -57,7 +57,7 @@
                         <label class="master-label" for="detailAllocationSales">Sales invoice / proforma</label>
                         <select class="master-select" id="detailAllocationSales" name="sales_invoice_id" data-detail-sales>
                             <option value="">No sales document</option>
-                            @foreach($salesInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}" @selected((string) old('sales_invoice_id') === (string) $invoice->id)>{{ $invoice->invoice_number }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
+                            @foreach($salesInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}" @include('cashflows.partials.document-payment-option-data') @selected((string) old('sales_invoice_id') === (string) $invoice->id)>{{ $invoice->invoice_number }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
                         </select>
                     </div>
                     <div class="master-field">
@@ -65,7 +65,7 @@
                         <select class="master-select" id="detailAllocationPurchase" name="purchase_invoice_id" data-detail-purchase @disabled($purchaseLocked)>
                             <option value="">{{ $purchaseLocked ? 'Settled by the vendor payment' : 'No purchase document' }}</option>
                             @unless($purchaseLocked)
-                                @foreach($purchaseInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}" @selected((string) old('purchase_invoice_id') === (string) $invoice->id)>{{ $invoice->invoice_number }} · {{ $invoice->typeLabel() }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
+                                @foreach($purchaseInvoices as $invoice)<option value="{{ $invoice->id }}" data-currency="{{ $invoice->currency }}" data-project="{{ $invoice->project_id }}" @include('cashflows.partials.document-payment-option-data') @selected((string) old('purchase_invoice_id') === (string) $invoice->id)>{{ $invoice->invoice_number }} · {{ $invoice->typeLabel() }} · {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</option>@endforeach
                             @endunless
                         </select>
                         @if($purchaseLocked)
@@ -76,6 +76,7 @@
                         <label class="master-label" for="detailAllocationAmount">Cash amount <span class="master-required">*</span></label>
                         <input class="master-input" id="detailAllocationAmount" name="amount" type="number" min="0.01" step="0.01" value="{{ old('amount') }}" required>
                     </div>
+                    @include('cashflows.partials.document-payment-summary')
                     <div class="master-field">
                         <label class="master-label" for="detailAllocationDocumentAmount">Document amount</label>
                         <input class="master-input" id="detailAllocationDocumentAmount" name="document_amount" type="number" min="0.01" step="0.01" value="{{ old('document_amount') }}">
@@ -132,6 +133,7 @@ document.addEventListener('DOMContentLoaded', function () {
         modal.querySelector('[data-detail-available-total]').textContent = formatAllocationMoney(Math.max(entryTotal - other, 0));
     }
     function currencyHint() {
+        window.CashflowDocumentBalance.refresh(modal, sales, purchase);
         var selected = sales.value ? sales.options[sales.selectedIndex] : (purchase.value ? purchase.options[purchase.selectedIndex] : null);
         var documentCurrency = selected ? selected.dataset.currency : '';
         modal.querySelector('[data-detail-currency-hint]').textContent = documentCurrency && documentCurrency !== currency
@@ -180,14 +182,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.querySelectorAll('[data-detail-allocation-add]').forEach(function (button) { button.addEventListener('click', addMode); });
     document.querySelectorAll('[data-detail-allocation-edit]').forEach(function (button) { button.addEventListener('click', function () { editMode(button); }); });
-    sales.addEventListener('change', function () {
-        if (sales.value) { setValue(purchase, ''); var option = sales.options[sales.selectedIndex]; if (!project.value && option.dataset.project) setValue(project, option.dataset.project); }
+    function documentChanged(event) {
+        var control = event.target;
+        var opposite = control === sales ? purchase : sales;
+        if (control.value && opposite.value) setValue(opposite, '');
+        var option = control.options[control.selectedIndex];
+        if (option && option.getAttribute('data-project') && !project.value) setValue(project, option.getAttribute('data-project'));
         currencyHint();
-    });
-    purchase.addEventListener('change', function () {
-        if (purchase.value) { setValue(sales, ''); var option = purchase.options[purchase.selectedIndex]; if (!project.value && option.dataset.project) setValue(project, option.dataset.project); }
-        currencyHint();
-    });
+    }
+    // Select2 emits jQuery change events; native-only listeners do not see them.
+    if (window.jQuery) window.jQuery(sales).add(purchase).on('change.cfDetailAllocation', documentChanged);
+    else [sales, purchase].forEach(function (control) { control.addEventListener('change', documentChanged); });
     form.addEventListener('submit', function (event) {
         var available = entryTotal - Math.max(allocatedTotal - activeAmount, 0);
         if (!project.value && !sales.value && !purchase.value) { event.preventDefault(); window.alert('Select a project or document.'); return; }

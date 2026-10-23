@@ -68,6 +68,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Text | Shared | `.core-text-input`, `.master-input` |
 | Number | Shared | Native number input with shared field styles |
 | Currency | Partial | Money helpers and currency-prefixed/amount controls in finance modules |
+| Allocation payment position | Shared | `cashflows.partials.document-payment-summary` and `cashflow-document-balance.js`; both allocation dialogs show saved document-currency total, paid and balance on selection, with canonical eager-loaded ledger sums and explicit order advance capacity |
 | Select | Shared | `.core-select`, `.master-select` |
 | Multi-select | Partial | Select2 multi-select on selected screens; not an app-wide default |
 | Search select | Shared | Select2 theme and shared select initialization |
