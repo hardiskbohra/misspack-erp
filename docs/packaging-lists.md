@@ -373,3 +373,16 @@ new permission is needed; existing Operations view/manage permissions apply.
 `PackagingProjectComparisonTest` covers the six-unmatched-line case, actual names/SKUs,
 valid label differences, invalid/cancelled links, confirmation and draft saves, dynamic
 row errors, explicit mapping, and output escaping.
+
+
+### Draft confirmation reminder
+
+The Packaging List detail page shows a warning icon and **Packaging list not confirmed**
+notice directly below its header while the list is a draft. It explains that the products,
+quantities and cartons need review before confirmation and that confirming does not dispatch
+a shipment. The review link jumps to product mapping issues when present, otherwise to the
+automatic checks. Failed-check and nonblocking-warning counts are shown before the action.
+Operations managers can **Mark as Confirmed** directly from this notice, using the existing
+status endpoint and a non-destructive **Yes** dialog. Server-side checks and access
+permissions remain authoritative; view-only staff see guidance but no confirmation action.
+The notice disappears for confirmed, dispatched and cancelled lists.

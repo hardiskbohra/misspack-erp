@@ -97,3 +97,10 @@
 
 .pl-comparison-scroll-hint { display: none; }
 @media (max-width: 640px) { .pl-comparison-scroll-hint { display: block; margin-top: 12px; } }
+
+/* Keep the draft-to-confirmed action visible on the detail page, not only in Edit. */
+.pl-confirmation-notice { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 12px; border-left: 3px solid var(--master-orange); }
+.pl-confirmation-icon { color: var(--master-orange); font-size: 18px; margin-top: 2px; }
+.pl-confirmation-notice .master-sub { margin: 8px 0 0; }
+.pl-confirmation-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pl-confirmation-actions form { margin: 0; }

@@ -238,6 +238,76 @@ class PackagingProjectComparisonTest extends TestCase
         $this->assertSame([], app(PackagingListProjectComparison::class)->inspect($list)['rows']);
     }
 
+    public function test_draft_detail_warns_and_can_confirm_directly_without_opening_edit(): void
+    {
+        $list = $this->list(null);
+        $this->line($list, 'Packed bottle');
+        $this->get(route('packaging-lists.show', $list))->assertOk()
+            ->assertSee('Packaging list not confirmed')->assertSee('fa-triangle-exclamation', false)
+            ->assertSee('Confirmation does not dispatch the shipment.')
+            ->assertSee('Mark as Confirmed')->assertSee('data-confirm-text="Yes"', false)
+            ->assertSee('data-confirm-danger="false"', false)->assertSee('href="#plWorkflowChecks"', false);
+        $this->assertSame('draft', $list->fresh()->status);
+        $this->from(route('packaging-lists.show', $list))
+            ->patch(route('packaging-lists.status', $list), ['status' => 'confirmed'])
+            ->assertRedirect(route('packaging-lists.show', $list))->assertSessionHasNoErrors();
+        $this->assertSame('confirmed', $list->fresh()->status);
+    }
+
+    public function test_confirmation_notice_is_hidden_for_confirmed_dispatched_and_cancelled_lists(): void
+    {
+        $list = $this->list(null);
+        $this->line($list, 'Packed bottle');
+        foreach (['confirmed', 'dispatched', 'cancelled'] as $status) {
+            $list->update(['status' => $status]);
+            $this->get(route('packaging-lists.show', $list))->assertOk()
+                ->assertDontSee('id="plConfirmationTitle"', false)->assertDontSee('Mark as Confirmed');
+        }
+    }
+
+    public function test_confirmation_warning_points_to_mapping_issues_and_keeps_server_validation(): void
+    {
+        $project = $this->project();
+        $this->projectProduct($project, 'First bottle');
+        $this->projectProduct($project, 'Second bottle');
+        $list = $this->list($project);
+        $this->line($list, 'Unresolved packing label');
+        $this->get(route('packaging-lists.show', $list))->assertOk()
+            ->assertSee('attention before confirmation.')->assertSee('href="#projectProductComparison"', false)
+            ->assertSee('Review product mapping');
+        $this->from(route('packaging-lists.show', $list))
+            ->patch(route('packaging-lists.status', $list), ['status' => 'confirmed'])->assertSessionHasErrors('status');
+        $this->assertSame('draft', $list->fresh()->status);
+    }
+
+    public function test_confirmation_notice_explains_review_warnings_do_not_block_confirmation(): void
+    {
+        $project = $this->project();
+        $linked = $this->projectProduct($project, 'Ordered bottle');
+        $list = $this->list($project);
+        $this->line($list, 'Custom packing description', $linked);
+        $this->get(route('packaging-lists.show', $list))->assertOk()
+            ->assertSee('warnings alone do not prevent confirmation.')
+            ->assertSee('href="#projectProductComparison"', false)->assertSee('Mark as Confirmed');
+        $this->from(route('packaging-lists.show', $list))
+            ->patch(route('packaging-lists.status', $list), ['status' => 'confirmed'])->assertSessionHasNoErrors();
+        $this->assertSame('confirmed', $list->fresh()->status);
+    }
+
+    public function test_view_only_staff_see_the_warning_but_cannot_confirm(): void
+    {
+        $viewer = User::create(['name' => 'Viewer', 'email' => 'viewer@example.test', 'password' => 'password',
+            'role' => 'admin', 'access_profile' => 'custom', 'permissions' => ['operations.view']]);
+        $this->actingAs($viewer);
+        $list = $this->list(null);
+        $this->line($list, 'Packed bottle');
+        $this->get(route('packaging-lists.show', $list))->assertOk()
+            ->assertSee('Packaging list not confirmed')->assertSee('Ask an Operations manager')
+            ->assertDontSee('Mark as Confirmed')->assertDontSee('data-confirm-title="Confirm packaging list"', false);
+        $this->patch(route('packaging-lists.status', $list), ['status' => 'confirmed'])->assertForbidden();
+        $this->assertSame('draft', $list->fresh()->status);
+    }
+
     private function payload(PackagingList $list, array $ids): array
     {
         return ['packing_number' => $list->packing_number, 'packing_date' => now()->toDateString(),
