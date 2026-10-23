@@ -486,7 +486,7 @@
                                                 Edit Entry
                                             </a>
                                             <form method="POST" action="{{ route('cashflows.destroy', $entry) }}"
-                                                data-confirm="Delete this cashflow entry?">
+                                                data-confirm="Delete this cashflow entry? Any linked vendor payment will be cancelled and its purchase document balance recalculated. Shipment costs will be unlinked.">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="danger">

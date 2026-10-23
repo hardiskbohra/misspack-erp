@@ -254,7 +254,7 @@
             }
 
             if (action && action.value === 'delete') {
-                var ok = window.confirm('Delete the selected cashflow entries? Linked vendor payments and shipment costs will be unlinked.');
+                var ok = window.confirm('Delete the selected cashflow entries? Linked vendor payments will be cancelled and their purchase document balances recalculated. Shipment costs will be unlinked.');
                 if (!ok) event.preventDefault();
             }
         });

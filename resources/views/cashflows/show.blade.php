@@ -312,7 +312,7 @@
                             @csrf
                             <button type="submit" class="master-btn master-btn-soft">Duplicate as new entry</button>
                         </form>
-                        <form method="POST" action="{{ route('cashflows.destroy', $entry) }}" onsubmit="return confirm('Delete this cashflow entry?');">
+                        <form method="POST" action="{{ route('cashflows.destroy', $entry) }}" onsubmit="return confirm('Delete this cashflow entry? Any linked vendor payment will be cancelled and its purchase document balance recalculated. Shipment costs will be unlinked.');">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="master-btn master-btn-light">Delete</button>

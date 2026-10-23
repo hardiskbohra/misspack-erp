@@ -193,13 +193,6 @@ class CashflowAllocations
             $invoice->forceFill(['balance_amount' => $invoice->balanceDue()])->saveQuietly();
         });
 
-        PurchaseInvoice::query()->whereIn('id', $purchaseIds)->get()->each(function (PurchaseInvoice $invoice) {
-            $changes = ['balance_amount' => $invoice->balanceDue()];
-            if ($invoice->isBill() && ! in_array($invoice->status, ['draft', 'cancelled'], true)) {
-                $state = $invoice->paymentState();
-                if ($state !== 'unpaid') $changes['status'] = $state;
-            }
-            $invoice->forceFill($changes)->saveQuietly();
-        });
+        app(PurchaseInvoiceMoney::class)->refresh($purchaseIds);
     }
 }

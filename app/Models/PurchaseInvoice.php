@@ -57,7 +57,7 @@ class PurchaseInvoice extends Model
 
     /** The paid figure is upstream of every balance: one SQL, read everywhere. */
     public const PAID_SQL = '(coalesce(purchase_invoices.amount_paid, 0)'
-        .' + (select coalesce(sum(foreign_amount), 0) from vendor_payment_entries where vendor_payment_entries.purchase_invoice_id = purchase_invoices.id and vendor_payment_entries.transaction_type = \'debit\')'
+        .' + (select coalesce(sum(foreign_amount), 0) from vendor_payment_entries where vendor_payment_entries.purchase_invoice_id = purchase_invoices.id and vendor_payment_entries.transaction_type = \'debit\' and (vendor_payment_entries.status is null or vendor_payment_entries.status <> \'cancelled\'))'
         .' + (select coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) from cashflow_allocations join cashflow_entries on cashflow_entries.id = cashflow_allocations.cashflow_entry_id where cashflow_allocations.purchase_invoice_id = purchase_invoices.id))';
 
     /** The supplier's own bill number, falling back to our document number. */
@@ -161,10 +161,12 @@ class PurchaseInvoice extends Model
         return $this->hasMany(VendorPaymentEntry::class, 'purchase_invoice_id')->orderBy('transaction_date')->orderBy('id');
     }
 
+    /** Active settlements only; cancelled rows remain in ledgerEntries() as history. */
     public function payments()
     {
         return $this->hasMany(VendorPaymentEntry::class, 'purchase_invoice_id')
             ->where('transaction_type', 'debit')
+            ->where(fn ($query) => $query->whereNull('status')->orWhere('status', '!=', 'cancelled'))
             ->orderBy('transaction_date');
     }
 

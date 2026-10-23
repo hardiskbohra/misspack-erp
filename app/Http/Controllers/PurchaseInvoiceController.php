@@ -362,7 +362,7 @@ class PurchaseInvoiceController extends Controller
             'docType' => $purchaseInvoice->invoice_type,
             'invoice' => $purchaseInvoice,
             'ledgerEntries' => $ledger,
-            'payments' => $ledger->where('transaction_type', 'debit')->values()->concat($allocatedPayments)->sortByDesc('transaction_date')->values(),
+            'payments' => $ledger->where('transaction_type', 'debit')->reject(fn ($payment) => $payment->status === 'cancelled')->values()->concat($allocatedPayments)->sortByDesc('transaction_date')->values(),
             'billBalance' => $purchaseInvoice->balanceDue(),
         ]));
     }
@@ -1022,23 +1022,7 @@ class PurchaseInvoiceController extends Controller
      */
     private function refreshInvoiceMoney(PurchaseInvoice $invoice): void
     {
-        if (! $invoice->exists) {
-            return;
-        }
-
-        $invoice->update(['balance_amount' => $invoice->balanceDue()]);
-
-        /* A bill's stored status follows the money once it has left the office:
-           a received bill with part of it paid is `partial`, and one paid in
-           full is `paid`. A draft is not advanced — the office has not said the
-           bill arrived yet — and a cancellation stands for itself. */
-        if ($invoice->isBill() && ! in_array($invoice->status, ['draft', 'cancelled'], true)) {
-            $payment = $invoice->paymentState();
-
-            if ($payment !== 'unpaid' && $invoice->status !== $payment) {
-                $invoice->update(['status' => $payment]);
-            }
-        }
+        app(\App\Services\PurchaseInvoiceMoney::class)->refresh([$invoice->id]);
     }
 
     /**

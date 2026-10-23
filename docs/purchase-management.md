@@ -61,3 +61,40 @@ tab, and appended to the vendor statement of account in its own currency, which 
 why `PartyStatement::currencies()` reads `cashflow_entries.currency` as well as
 `vendor_payment_entries.foreign_currency`. Recurring rules post through the same
 sync, so a scheduled vendor payment lands on both ledgers at once.
+
+
+## Deleting a vendor-payment cashflow mirror
+
+An explicit **Delete** in Cashflow (single or bulk) reverses the linked vendor-owned
+payment rather than merely removing `cashflow_entry_id`. `reverseForDeletion()` retains
+the vendor ledger row and its attachments with status **Cancelled**, records the deleted
+cashflow ID in its remarks, and writes a `vendor-payment.cashflow-deletion-reversal`
+audit event with the actor and original amounts. The payment, bank entry, allocations,
+bill balance/status and audit write are handled in the deletion transaction; a failed
+cancellation or deletion rolls the operation back.
+
+Cancelled debits are excluded from purchase paid totals, eager/list aggregates, raw
+summary SQL, and the bill's active payment list. `PurchaseInvoiceMoney` refreshes stored
+balances and returns a previously paid/partial bill to **Received** when no active money
+remains (its payment state is **Unpaid**). Other active payments and the document's
+opening `amount_paid` remain intact. Draft/cancelled bills and purchase-order approval
+states are not advanced or reopened. Foreign payments reverse the document-currency
+amount; no new exchange rate is inferred.
+
+This is different from turning off **Also create cashflow** in Vendor → Money: removing
+a bank mirror without deleting the payment does **not** cancel that payment. Cashflow-
+originated payments retain their existing derived-row removal behavior. Shipment-cost
+links are still detached, not cancelled.
+
+### Entries deleted before this fix
+
+Old cashflow deletion cleared the link but left the vendor payment active. An unlinked
+payment can also be a legitimate ledger-only payment, so no migration guesses which rows
+to cancel. Identify the affected payment in **Vendors → Money** and change its status to
+**Cancelled**. That update now refreshes the purchase bill's paid total, balance and status
+as well. Other unmatched/ledger-only payments are not altered automatically.
+
+Regression coverage: `tests/Feature/VendorCashflowDeletionTest.php` exercises single/bulk
+reversal, partial and foreign payments, opening balances, retained evidence/audit, SQL and
+view totals, both payment origins, rollback, permissions, and cancellation of an explicitly
+identified pre-fix orphan.

@@ -139,8 +139,8 @@ class CashflowVendorPaymentSync
     /**
      * Remove the derived ledger row when the cashflow entry is deleted.
      *
-     * A ledger row entered by hand is only unlinked, exactly as the reverse
-     * mirror leaves it: the payment still stands, it just lost its cashflow.
+     * Ledger-owned payments are handled by VendorPaymentCashflowSync::reverseForDeletion()
+     * on explicit cashflow deletion. They are retained as cancelled history.
      */
     public function remove(CashflowEntry $entry): void
     {

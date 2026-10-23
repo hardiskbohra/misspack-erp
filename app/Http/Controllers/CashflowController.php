@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CashflowController extends Controller
@@ -485,8 +486,9 @@ class CashflowController extends Controller
 
     public function destroy(CashflowEntry $cashflow): RedirectResponse
     {
-        $accountId = $cashflow->account_id;
-        $detached = DB::transaction(function () use ($cashflow, $accountId) {
+        $result = DB::transaction(function () use ($cashflow) {
+            $cashflow = CashflowEntry::query()->lockForUpdate()->findOrFail($cashflow->id);
+            $reversed = app(VendorPaymentCashflowSync::class)->reverseForDeletion($cashflow);
             /* A ledger row that this entry created goes with it — removed while
                the link it is found by still exists. */
             app(CashflowVendorPaymentSync::class)->remove($cashflow);
@@ -494,23 +496,23 @@ class CashflowController extends Controller
             $detached = app(VendorPaymentCashflowSync::class)->detach($cashflow);
             $detached += app(\App\Services\ShipmentCostCashflowSync::class)->detach($cashflow);
             app(CashflowAllocations::class)->sync($cashflow, []);
-            $cashflow->delete();
-            $this->recalculateAccountLedger($accountId);
+            if (! $cashflow->delete()) throw ValidationException::withMessages(['entry' => 'The cashflow entry could not be deleted. No payment reversal was saved.']);
+            $this->recalculateAccountLedger($cashflow->account_id);
 
-            return $detached;
+            return ['reversed' => $reversed, 'detached' => $detached];
         });
 
         return redirect()->route('cashflows.index')->with(
             'success',
-            $detached
-                ? 'Cashflow entry deleted. The linked vendor payment / shipment cost was unlinked — set its paid account again if the payment still stands.'
-                : 'Cashflow entry deleted successfully.'
+            'Cashflow entry deleted successfully.'
+                .($result['reversed'] ? ' '.$result['reversed'].' linked '.\Illuminate\Support\Str::plural('vendor payment', $result['reversed']).' cancelled; linked purchase balances recalculated.' : '')
+                .($result['detached'] ? ' Remaining vendor / shipment cost links were detached.' : '')
         );
     }
 
     /**
      * One action across the ledger rows ticked on the list: change accounting
-     * status, or delete. Deletes unlink vendor / shipment mirrors first and
+     * status, or delete. Deletes reverse linked vendor payments, detach shipment mirrors and
      * rebuild the affected account ledgers, same as a single-row delete.
      */
     public function bulk(Request $request): RedirectResponse
@@ -523,6 +525,7 @@ class CashflowController extends Controller
 
         $entries = CashflowEntry::query()->whereIn('id', $data['ids'])->get();
         $done = 0;
+        $reversed = 0;
         $statusMap = [
             'mark_pending' => 'pending',
             'mark_booked' => 'booked',
@@ -530,7 +533,7 @@ class CashflowController extends Controller
             'mark_disputed' => 'disputed',
         ];
 
-        DB::transaction(function () use ($data, $entries, $statusMap, &$done) {
+        DB::transaction(function () use ($data, $entries, $statusMap, &$done, &$reversed) {
             if (isset($statusMap[$data['action']])) {
                 $status = $statusMap[$data['action']];
                 foreach ($entries as $entry) {
@@ -547,6 +550,8 @@ class CashflowController extends Controller
 
             $accountIds = [];
             foreach ($entries as $entry) {
+                $entry = CashflowEntry::query()->lockForUpdate()->findOrFail($entry->id);
+                $reversed += app(VendorPaymentCashflowSync::class)->reverseForDeletion($entry);
                 app(CashflowVendorPaymentSync::class)->remove($entry);
                 app(VendorPaymentCashflowSync::class)->detach($entry);
                 app(\App\Services\ShipmentCostCashflowSync::class)->detach($entry);
@@ -554,7 +559,7 @@ class CashflowController extends Controller
                 if ($entry->account_id) {
                     $accountIds[$entry->account_id] = true;
                 }
-                $entry->delete();
+                if (! $entry->delete()) throw ValidationException::withMessages(['entry' => 'A cashflow entry could not be deleted. No payment reversals were saved.']);
                 $done++;
             }
 
@@ -567,6 +572,7 @@ class CashflowController extends Controller
             'success',
             $done.' '.\Illuminate\Support\Str::plural('entry', $done).' — '
                 .mb_strtolower(self::BULK_ACTIONS[$data['action']]).' done.'
+                .($reversed ? ' '.$reversed.' linked '.\Illuminate\Support\Str::plural('vendor payment', $reversed).' cancelled; linked purchase balances recalculated.' : '')
         );
     }
 

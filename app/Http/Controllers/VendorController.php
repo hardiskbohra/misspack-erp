@@ -519,6 +519,7 @@ class VendorController extends Controller
             $this->cashflowSync()->sync($entry, $syncCashflow);
 
             $this->storeVendorPaymentAttachments($request, $entry);
+            app(\App\Services\PurchaseInvoiceMoney::class)->refresh([$entry->purchase_invoice_id]);
 
             return $entry;
         });
@@ -577,11 +578,13 @@ class VendorController extends Controller
         $this->assertCashflowMirrorPossible($data, $syncCashflow);
 
         DB::transaction(function () use ($request,$data,$vendor,$entry,$syncCashflow) {
+            $oldPurchaseId = $entry->purchase_invoice_id;
             $entry->update($data);
             $this->attachPurchaseDocument($entry);
             $this->assertVendorMoneyAllowed($entry);
             $this->cashflowSync()->sync($entry, $syncCashflow);
             $this->storeVendorPaymentAttachments($request,$entry);
+            app(\App\Services\PurchaseInvoiceMoney::class)->refresh([$oldPurchaseId, $entry->purchase_invoice_id]);
         });
     
         return $this->backToTab($vendor, 'money', $this->paymentSavedMessage($entry, 'updated'));
@@ -614,6 +617,7 @@ class VendorController extends Controller
             }
 
             $entry->delete();
+            app(\App\Services\PurchaseInvoiceMoney::class)->refresh([$entry->purchase_invoice_id]);
         });
 
         $vendor = $entry->vendor;
