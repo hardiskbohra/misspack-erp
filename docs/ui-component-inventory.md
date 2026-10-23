@@ -54,6 +54,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | --- | --- | --- |
 | KPI card | Shared | `.master-stat`, `.cf-stat`, `.cp-stat`; semantic icon accents and neutral surfaces |
 | KPI trend card | Gap | No common trend/delta KPI card |
+| Unallocated advance rail | Shared | `cashflows.partials.unallocated-party-alert` and `master-detail.css`; a bounded-height horizontal strip of keyboard-accessible entry cards, with all allocation links and currency-wise totals preserved. |
 | Summary card | Partial | `.master-info`, statement summaries, report totals; semantics vary by module |
 | Product card | Partial | Product grid and client-portal catalogue card styles |
 | Project card | Partial | Project list/show and client portal project cards |

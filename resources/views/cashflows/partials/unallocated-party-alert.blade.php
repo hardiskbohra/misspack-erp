@@ -12,26 +12,26 @@
                 @foreach($unallocatedCash['totals'] as $currency => $total)
                     <strong>{{ \App\Helpers\CommonHelper::amount($total, $currency) }}</strong>
                 @endforeach
-                <small>{{ $unallocatedCash['count'] }} {{ \Illuminate\Support\Str::plural('entry', $unallocatedCash['count']) }} needs attention</small>
+                <small>{{ $unallocatedCash['count'] }} {{ \Illuminate\Support\Str::plural('entry', $unallocatedCash['count']) }} to allocate</small>
             </div>
         </div>
-        <div class="master-unallocated-alert-rows">
-            @foreach($unallocatedCash['entries']->take(3) as $cashEntry)
-                <a href="{{ route('cashflows.show', ['cashflow' => $cashEntry, 'allocation' => 'add']) }}" class="master-unallocated-alert-row">
+        <div class="master-unallocated-alert-rows" tabindex="0" role="region" aria-label="Unallocated entries, scroll horizontally to browse">
+            @foreach($unallocatedCash['entries'] as $cashEntry)
+                <a href="{{ route('cashflows.show', ['cashflow' => $cashEntry, 'allocation' => 'add']) }}" class="master-unallocated-alert-row" data-ui-tooltip="{{ $cashEntry->particular }}">
                     <span>
                         <strong>{{ $cashEntry->particular }}</strong>
-                        <small>{{ optional($cashEntry->entry_date)->format('d M Y') }} · {{ $cashEntry->statusLabel() }} · Cashflow #{{ $cashEntry->id }}</small>
+                        <small>{{ optional($cashEntry->entry_date)->format('d M Y') }} · #{{ $cashEntry->id }} · {{ $cashEntry->statusLabel() }}</small>
                     </span>
                     <span class="master-unallocated-alert-amount">
-                        <small>Unallocated amount</small>
+                        <small>Unallocated</small>
                         <strong>{{ \App\Helpers\CommonHelper::amount($cashEntry->unallocatedAmount(), $cashEntry->currency) }}</strong>
                         <span class="master-unallocated-alert-action">Allocate now <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
                     </span>
                 </a>
             @endforeach
         </div>
-        @if($unallocatedCash['count'] > 3)
-            <p class="master-unallocated-alert-more">+ {{ $unallocatedCash['count'] - 3 }} more unallocated {{ \Illuminate\Support\Str::plural('entry', $unallocatedCash['count'] - 3) }}</p>
+        @if($unallocatedCash['count'] > 1)
+            <p class="master-unallocated-alert-more"><i class="fa-solid fa-arrows-left-right" aria-hidden="true"></i> Scroll to browse all {{ number_format($unallocatedCash['count']) }} entries. Select a card to allocate.</p>
         @endif
     </section>
 @endif

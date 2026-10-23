@@ -70,7 +70,10 @@
                     aria-selected="{{ $tab === $key ? 'true' : 'false' }}"
                     aria-controls="client-panel-{{ $key }}"
                     href="{{ $tabUrl($key) }}">
-                    {{ $label }}
+                    <span>{{ $label }}</span>
+                    @if(array_key_exists($key, $tabCounts))
+                        <span class="client-tab-count" data-client-tab-count="{{ $key }}">{{ number_format($tabCounts[$key]) }}</span>
+                    @endif
                 </a>
             @endforeach
         </nav>
@@ -302,6 +305,10 @@
             @elseif($tab === 'documents')
                 <section class="master-tab-panel" id="client-panel-documents" role="tabpanel" aria-labelledby="client-tab-documents">
                     @include('clients.partials.documents')
+                </section>
+            @elseif($tab === 'projects')
+                <section class="master-tab-panel" id="client-panel-projects" role="tabpanel" aria-labelledby="client-tab-projects">
+                    @include('clients.partials.projects')
                 </section>
             @elseif($tab === 'invoices')
                 <section class="master-tab-panel" id="client-panel-invoices" role="tabpanel" aria-labelledby="client-tab-invoices">

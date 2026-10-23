@@ -1985,3 +1985,20 @@
 :root[data-theme="dark"] .client-show .cpa-password-box span {
     color: #fcd34d;
 }
+
+/* Collection totals remain visible on every client tab, including empty ones. */
+.client-detail-tabs-card .client-tab-count {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:22px;
+    padding:2px 6px;
+    border-radius:999px;
+    background:var(--ui-muted-surface);
+    color:var(--mc-text-2);
+    font-size:11px;
+    font-weight:600;
+    line-height:1.4;
+    font-variant-numeric:tabular-nums;
+}
+.client-detail-tabs-card .is-active .client-tab-count { background:rgba(255,255,255,.2); color:inherit; }
