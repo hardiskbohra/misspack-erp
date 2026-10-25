@@ -4,7 +4,8 @@
     {
       "file": "tests/Database/MySqlReportingTest.php",
       "methods": [
-        "test_real_database_aggregation_honours_custom_bounds"
+        "test_real_database_aggregation_honours_custom_bounds",
+        "test_native_module_concentration_and_trend_keep_last_day_and_currency_consistent"
       ]
     },
     {
@@ -285,6 +286,33 @@
       ]
     },
     {
+      "file": "tests/Integration/DashboardConsolidationTest.php",
+      "methods": [
+        "test_overview_has_canonical_module_links_instead_of_duplicate_analytical_tabs",
+        "test_rolling_overview_window_reaches_module_as_exact_custom_dates",
+        "test_directory_and_module_navigation_hide_unauthorised_modules",
+        "test_sales_concentration_uses_exact_dates_currency_and_real_issued_documents",
+        "test_finance_category_analysis_excludes_internal_transfers_and_other_currencies",
+        "test_each_existing_module_has_a_single_detailed_empty_state_page",
+        "test_unsupported_currency_returns_validation_error_not_mislabelled_money",
+        "test_module_reader_can_use_directory_without_cross_module_overview_permission",
+        "test_module_retains_secondary_activity_trends_in_the_same_workspace",
+        "test_receipt_quantities_stay_separate_by_unit_and_respect_received_date",
+        "test_completion_timeliness_uses_completion_window_and_end_of_due_day",
+        "test_project_dashboard_retains_live_client_value_analysis_without_mixing_currencies"
+      ]
+    },
+    {
+      "file": "tests/Integration/DashboardFinancialAnalyticsTest.php",
+      "methods": [
+        "test_receivable_ageing_matches_payment_and_allocation_aware_metric_without_writes",
+        "test_selected_currency_agrees_between_kpi_trend_and_concentration",
+        "test_product_line_totals_are_not_multiplied_by_invoice_header_join",
+        "test_purchase_payable_and_finance_movement_are_currency_specific",
+        "test_dashboard_prints_supplied_party_text_safely_and_preserves_currency_in_links"
+      ]
+    },
+    {
       "file": "tests/Integration/DeliveryReceiptPrintTest.php",
       "methods": [
         "test_authenticated_print_is_receiver_ready_without_mutating_stored_hashes_or_evidence",
@@ -379,6 +407,13 @@
       "methods": [
         "test_every_enabled_flag_is_required",
         "test_missing_client_or_wrong_request_attribute_never_resolves_portal_access"
+      ]
+    },
+    {
+      "file": "tests/Unit/DashboardAnalyticsRulesTest.php",
+      "methods": [
+        "test_ageing_bands_do_not_mark_due_today_as_overdue",
+        "test_dashboard_directory_only_contains_authorised_modules"
       ]
     },
     {
@@ -652,6 +687,7 @@
     "app/Services/ClientInvoiceSnapshot.php",
     "app/Services/ClientPortalAccess.php",
     "app/Services/ClientPortalNotifier.php",
+    "app/Services/DashboardAnalytics.php",
     "app/Services/DashboardPeriod.php",
     "app/Services/DocumentUpload.php",
     "app/Services/EmployeeAccess.php",
@@ -816,6 +852,7 @@
     "tools/checks/client-account-summary-check.cjs",
     "tools/checks/confirmation-dialog-check.cjs",
     "tools/checks/cost-check.cjs",
+    "tools/checks/dashboard-consolidation-browser.cjs",
     "tools/checks/dashboard-period-controls-check.cjs",
     "tools/checks/delivery-receipt-print-browser.cjs",
     "tools/checks/design-check.cjs",

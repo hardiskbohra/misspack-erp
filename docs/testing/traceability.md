@@ -31,7 +31,7 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-SETTINGS | Settings, workflow policy and master options | 3 | 3 | 0 |
 | REQ-CPORTAL | Client portal authentication and data isolation | 3 | 3 | 2 |
 | REQ-VPORTAL | Vendor portal and secure share links | 3 | 3 | 0 |
-| REQ-DASH | Overview and module dashboard reporting | 3 | 3 | 2 |
+| REQ-DASH | Overview and module dashboard reporting | 4 | 6 | 6 |
 | REQ-AUDIT | Audit trail and sensitive operations | 3 | 3 | 0 |
 | REQ-FILES | Shared file policy and storage lifecycle | 3 | 3 | 3 |
 | REQ-UI | Shared UI, printing and accessible interactions | 3 | 3 | 0 |

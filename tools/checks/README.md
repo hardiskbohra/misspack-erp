@@ -290,3 +290,21 @@ multi-page repeated headers and intact sign-off. See
 actual results and local runtime notes; optional browser checks are not implied
 by passing the PHP or source-contract suites. Generated files belong only in
 ignored `.work/` or a temporary directory.
+
+## Consolidated module analytics browser regression
+
+`dashboard-consolidation-browser.cjs` uses real Blade views and fictional,
+in-memory records, not production data. It needs `playwright-core` and Chromium:
+
+```sh
+APP_ENV=testing php tools/testing/render-dashboard-analytics.php .work/dashboards
+CHROMIUM_EXECUTABLE_PATH=/path/to/chromium \
+  node tools/checks/dashboard-consolidation-browser.cjs .work/dashboards
+```
+
+Checks executive overview and six modules at desktop/tablet/mobile sizes, scoped
+analytics tables, both trend cards, canonical period/currency links, actual
+reporting drawer/Select2 interaction, and old overview-tab bookmarks. Screenshots
+and generated HTML belong in ignored `.work/` only. Optional browser results are
+separate from PHP and source-contract evidence; see
+[dashboard-consolidation.md](../../docs/testing/dashboard-consolidation.md).

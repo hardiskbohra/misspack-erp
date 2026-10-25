@@ -81,3 +81,13 @@ The receiver-facing delivery receipt is a subsequent production view/presentatio
 - `npm run test:contracts`, shared PDF documents and project-workflow checks passed.
 - Real Chromium/PyMuPDF print checks passed for own-company, vendor, discrepancy and60-line receipts; browser Print / Save as PDF only, not optional DomPDF or full end-to-end system journeys.
 - Test-first failures, focused results, commands and limitations are recorded in [delivery-receipt-print.md](delivery-receipt-print.md). The original native CI links above do not certify this later change; its new branch CI is checked separately.
+
+
+## Dashboard consolidation follow-up (25 October 2026)
+
+Current catalogue: **216 designs** (95 unit,121 integration),61 linked designs and47 PHPUnit files. This follow-up consolidates existing module dashboards and removes duplicated overview projections; it does not certify every business question in the ERP.
+
+- Complete portable suite: **471 tests,15,209 assertions PASS** (Unit, Integration and Feature), PHP8.4.25 WASM. New dashboard cases are included in that total.
+- Browser verification: real Blade/fictional in-memory fixtures for executive overview and six modules at1440/900/390px, no document overflow or JavaScript exceptions; actual drawer/Select2 period controls and legacy-tab canonical navigation checked separately.
+- Read-only monetary, date, permission, product/header cardinality, ageing and unit-separation tests documented in [dashboard-consolidation.md](dashboard-consolidation.md).
+- A new native MySQL module concentration/trend reconciliation test is included in the separate MySQL configuration. Its CI result is checked after pushing; no local native MySQL execution is claimed, and the earlier CI links above do not certify this change.

@@ -58,4 +58,30 @@ class MySqlReportingTest extends TestCase
         $this->assertEqualsWithDelta(30, array_sum($values), .001);
         $this->assertCount(count($period['labels']), $values);
     }
+
+    public function test_native_module_concentration_and_trend_keep_last_day_and_currency_consistent(): void
+    {
+        // The CI job freshly migrates this disposable *_test database. Roll back every fixture row.
+        DB::beginTransaction();
+        try {
+            $suffix = bin2hex(random_bytes(5));
+            foreach ([['INR','2026-10-10',100,'sent'],['INR','2026-10-12',20,'sent'],
+                ['INR','2026-10-11',900,'draft'],['USD','2026-10-12',500,'sent'],['INR','2026-10-13',700,'sent']] as $i => $row) {
+                DB::table('sales_invoices')->insert(['invoice_number'=>'ANALYTICS-'.$suffix.'-'.$i,
+                    'public_token'=>bin2hex(random_bytes(24)), 'invoice_type'=>'tax', 'currency'=>$row[0],
+                    'invoice_date'=>$row[1], 'total_amount'=>$row[2], 'status'=>$row[3], 'client_company_name'=>'Native analytics fixture']);
+            }
+            $period = app(\App\Services\DashboardPeriod::class)->fromRequest(Request::create('/', 'GET', [
+                'period_type'=>'custom','start_date'=>'2026-10-10','end_date'=>'2026-10-12',
+            ]));
+            $data = app(\App\Services\ModuleDashboard::class)->build('sales', $period, 'INR');
+            $this->assertSame(120.0, $data['metrics'][0]['current']);
+            $this->assertSame(120.0, (float) array_sum(array_column($data['trend'],'value')));
+            $panel = collect($data['panels'])->firstWhere('title','Client concentration');
+            $this->assertSame(120.0, $panel['rows'][0]['amount']);
+            $this->assertSame(2, $panel['rows'][0]['count']);
+        } finally {
+            DB::rollBack();
+        }
+    }
 }

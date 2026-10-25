@@ -23,6 +23,13 @@
                             <option value="custom" @selected($period['type'] === 'custom')>Custom date range</option>
                         </select>
                     </div>
+                    <div class="master-field">
+                        <label class="master-label" for="moduleCurrency">Reporting currency</label>
+                        <select class="master-select" id="moduleCurrency" name="currency">
+                            @foreach(['INR', 'USD', 'RMB'] as $code)<option value="{{ $code }}" @selected($currency === $code)>{{ $code }}</option>@endforeach
+                        </select>
+                        @error('currency')<span class="master-error">{{ $message }}</span>@enderror
+                    </div>
                     <div class="master-field module-period-control module-period-month module-period-quarter module-period-half module-period-year">
                         <label class="master-label" for="modulePeriodYear">Year</label>
                         <select class="master-select" name="year" id="modulePeriodYear">
@@ -77,26 +84,32 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('assets/css/module-dashboard.css') }}">
+<link rel="stylesheet" href="{{ $assetVer('assets/css/module-dashboard.css') }}">
 @endpush
 
 @section('content')
 @php
     $formatMetric = fn ($value, $format) => $format === 'money'
-        ? \App\Helpers\CommonHelper::amount((float) $value, 'INR')
+        ? \App\Helpers\CommonHelper::amount((float) $value, $currency)
         : number_format((float) $value, 0);
-    $trendMaximum = max(1, collect($dashboard['trend'])->max(fn ($point) => max((float) $point['value'], (float) ($point['secondary'] ?? 0))));
 @endphp
 <div class="module-dashboard">
     <nav class="module-dashboard-nav" aria-label="Module dashboards">
-        <a href="{{ route('dashboard') }}" class="module-dashboard-nav-link"><i class="fa-solid fa-gauge-high"></i><span>Overview</span></a>
+        @if(auth()->user()?->hasPermission('dashboard.view'))
+        <a href="{{ route('dashboard', request()->only(['period_type', 'year', 'month', 'quarter', 'half', 'start_date', 'end_date', 'currency'])) }}" class="module-dashboard-nav-link"><i class="fa-solid fa-gauge-high"></i><span>Overview</span></a>
+        @endif
         @foreach($modules as $key => $definition)
-            <a href="{{ route('dashboards.show', ['module' => $key] + request()->only(['period_type', 'year', 'month', 'quarter', 'half', 'start_date', 'end_date'])) }}"
+            <a href="{{ route('dashboards.show', ['module' => $key] + request()->only(['period_type', 'year', 'month', 'quarter', 'half', 'start_date', 'end_date', 'currency'])) }}"
                 class="module-dashboard-nav-link {{ $module === $key ? 'active' : '' }}" @if($module === $key) aria-current="page" @endif>
                 <i class="{{ $definition['icon'] }}"></i><span>{{ $definition['label'] }}</span>
             </a>
         @endforeach
     </nav>
+
+    <div class="module-section-links" aria-label="Dashboard sections">
+        <a href="#moduleSummary">Summary &amp; trends</a><a href="#moduleAnalysis">Detailed analysis</a><a href="#moduleAttention">Attention queue</a>
+    </div>
+    <p class="module-scope-note">Money: {{ $currency }} only · no FX conversion. Selected period: {{ $period['label'] }}. Live positions reflect current records as of {{ now()->format('d M Y') }}, not a historical closing balance.</p>
 
     @if(count($dashboard['alerts']))
         <section class="module-alert-banner" role="alert" aria-labelledby="moduleAlertTitle">
@@ -106,7 +119,7 @@
         </section>
     @endif
 
-    <section class="module-stat-grid" aria-label="{{ $dashboard['label'] }} statistics">
+    <section id="moduleSummary" class="module-stat-grid" aria-label="{{ $dashboard['label'] }} statistics">
         @foreach($dashboard['metrics'] as $metric)
             <a class="module-stat-card tone-{{ $metric['tone'] }}" href="{{ $metric['url'] }}">
                 <div class="module-stat-heading"><span>{{ $metric['label'] }}</span><i class="{{ $dashboard['icon'] }}" aria-hidden="true"></i></div>
@@ -114,7 +127,7 @@
                 @if($metric['comparison'])
                     <div class="module-stat-comparison {{ $metric['change'] < 0 ? 'negative' : ($metric['change'] > 0 ? 'positive' : 'neutral') }}">
                         <i class="fa-solid fa-{{ $metric['change'] < 0 ? 'arrow-trend-down' : ($metric['change'] > 0 ? 'arrow-trend-up' : 'minus') }}" aria-hidden="true"></i>
-                        {{ abs($metric['change']) }}% vs {{ $period['previousLabel'] }}
+                        @if($metric['new_activity'] ?? false) New activity · prior period zero @else {{ abs($metric['change']) }}% vs {{ $period['previousLabel'] }} @endif
                     </div>
                 @else
                     <div class="module-stat-comparison neutral"><i class="fa-regular fa-clock" aria-hidden="true"></i> Current open position</div>
@@ -125,30 +138,9 @@
     </section>
 
     <div class="module-dashboard-grid">
-        <section class="module-dashboard-card module-trend-card" aria-labelledby="moduleTrendTitle">
-            <header class="module-card-heading">
-                <div><span>Selected period</span><h2 id="moduleTrendTitle">{{ $dashboard['trend_label'] }}</h2></div>
-                <span class="module-card-chip">{{ $period['label'] }}</span>
-            </header>
-            <div class="module-trend-legend">
-                <span><i class="primary"></i>{{ $module === 'finance' ? 'Inward' : $dashboard['trend_label'] }}</span>
-                @if($module === 'finance')<span><i class="secondary"></i>Outward</span>@endif
-            </div>
-            <div class="module-trend-bars">
-                @foreach($dashboard['trend'] as $point)
-                    <div class="module-trend-item">
-                        <div class="module-trend-values">
-                            <progress max="{{ $trendMaximum }}" value="{{ $point['value'] }}" aria-label="{{ $point['label'] }} {{ $module === 'finance' ? 'inward' : 'value' }}"></progress>
-                            @if(array_key_exists('secondary', $point))
-                                <progress class="secondary" max="{{ $trendMaximum }}" value="{{ $point['secondary'] }}" aria-label="{{ $point['label'] }} outward"></progress>
-                            @endif
-                        </div>
-                        <span>{{ $point['label'] }}</span>
-                        <strong>{{ $formatMetric($point['value'], $dashboard['trend_format']) }}@if(array_key_exists('secondary', $point)) <small>/ {{ $formatMetric($point['secondary'], $dashboard['trend_format']) }}</small>@endif</strong>
-                    </div>
-                @endforeach
-            </div>
-        </section>
+        @include('dashboard.partials.module-trend', ['chartId' => 'moduleTrendTitle', 'chart' => [
+            'title' => $dashboard['trend_label'], 'format' => $dashboard['trend_format'], 'series' => $dashboard['trend'],
+            'primary_label' => $module === 'finance' ? 'Inward' : $dashboard['trend_label'], 'secondary_label' => $module === 'finance' ? 'Outward' : null]])
 
         <section class="module-dashboard-card" aria-labelledby="moduleDistributionTitle">
             <header class="module-card-heading"><div><span>Live workload</span><h2 id="moduleDistributionTitle">Status distribution</h2></div></header>
@@ -173,9 +165,47 @@
         </section>
     </div>
 
+    @foreach($dashboard['additional_trends'] as $chart)
+        @include('dashboard.partials.module-trend', ['chartId' => 'moduleAdditionalTrend'.$loop->index, 'chart' => $chart])
+    @endforeach
+
+    <section id="moduleAnalysis" aria-labelledby="moduleAnalysisTitle">
+        <header class="module-card-heading"><div><span>One consolidated workspace</span><h2 id="moduleAnalysisTitle">Detailed analysis</h2></div></header>
+        <div class="module-analysis-grid">
+            @foreach($dashboard['panels'] as $panel)
+                <article class="module-dashboard-card module-analysis-panel">
+                    <header class="module-card-heading"><div><span>{{ $panel['scope'] === 'period' ? 'Selected period' : 'Live position' }}</span><h3>{{ $panel['title'] }}</h3></div></header>
+                    <p class="module-panel-basis">{{ str_replace('_', ' ', $panel['basis']) }}</p>
+                    <div class="module-analysis-table-wrap" tabindex="0" role="region" aria-label="{{ $panel['title'] }} table">
+                        <table class="module-analysis-table">
+                            <thead><tr>@foreach($panel['columns'] as $column)<th scope="col">{{ $column }}</th>@endforeach</tr></thead>
+                            <tbody>
+                                @forelse($panel['rows'] as $row)
+                                    <tr>@foreach($panel['columns'] as $key => $column)
+                                        @php($cellFormat = $panel['formats'][$key] ?? 'text')
+                                        <td @if($cellFormat !== 'text') class="num" @endif>
+                                            @if($cellFormat === 'money'){{ $formatMetric($row[$key], 'money') }}
+                                            @elseif($cellFormat === 'quantity'){{ number_format((float) $row[$key], 3) }}
+                                            @elseif($cellFormat === 'percent'){{ number_format((float) $row[$key], 1) }}%
+                                            @elseif($cellFormat === 'number'){{ number_format((float) $row[$key]) }}
+                                            @else{{ $row[$key] }}@endif
+                                        </td>
+                                    @endforeach</tr>
+                                @empty
+                                    <tr><td colspan="{{ count($panel['columns']) }}" class="module-empty-copy">No data{{ $panel['available'] ? ' for this scope.' : ' available: this source is not installed or its required fields are missing.' }}</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                    @if($panel['url'])<a class="module-record-link" href="{{ $panel['url'] }}">Open source records <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>@endif
+                </article>
+            @endforeach
+        </div>
+    </section>
+
     <section class="module-dashboard-card module-attention-card" id="moduleAttention" aria-labelledby="moduleAttentionTitle">
         <header class="module-card-heading">
-            <div><span>Action queue</span><h2 id="moduleAttentionTitle">Important attention</h2></div>
+            <div><span>Action queue</span><h2 id="moduleAttentionTitle">Important attention</h2><p class="module-panel-basis">Up to 8 priority items; source record lists remain available for the full workload.</p></div>
             <span class="module-card-chip {{ count($dashboard['alerts']) ? 'danger' : '' }}">{{ count($dashboard['alerts']) }} open</span>
         </header>
         @forelse($dashboard['alerts'] as $alert)

@@ -12,6 +12,14 @@ use Illuminate\Support\Facades\Schema;
 
 class ModuleDashboard
 {
+    private string $currency = 'INR';
+
+    public static function availableModules(?\App\Models\User $user): array
+    {
+        if (! $user) return [];
+        return array_filter(self::MODULES, fn ($definition, $key) => $user->hasPermission($key.'.view'), ARRAY_FILTER_USE_BOTH);
+    }
+
     public const MODULES = [
         'sales' => ['label' => 'Sales', 'icon' => 'fa-solid fa-chart-line', 'description' => 'Leads, clients, invoicing and collections'],
         'purchase' => ['label' => 'Purchase', 'icon' => 'fa-solid fa-cart-shopping', 'description' => 'Purchase orders, vendor bills and payables'],
@@ -21,9 +29,11 @@ class ModuleDashboard
         'work' => ['label' => 'Work & People', 'icon' => 'fa-solid fa-list-check', 'description' => 'Team capacity, coordinator work, tasks and ownership'],
     ];
 
-    public function build(string $module, array $period): array
+    public function build(string $module, array $period, string $currency = 'INR', bool $details = true): array
     {
-        return match ($module) {
+        if (! array_key_exists($module, self::MODULES)) throw new \InvalidArgumentException('Unknown analytics module.');
+        $this->currency = $currency;
+        $data = match ($module) {
             'purchase' => $this->purchase($period),
             'projects' => $this->projects($period),
             'operations' => $this->operations($period),
@@ -31,6 +41,7 @@ class ModuleDashboard
             'work' => $this->work($period),
             default => $this->sales($period),
         } + self::MODULES[$module];
+        return $data + ['additional_trends' => $details ? $this->additionalTrends($module, $period) : [], 'currency' => $currency, 'panels' => $details ? app(DashboardAnalytics::class)->panels($module, $period, $currency) : []];
     }
 
     private function sales(array $period): array
@@ -39,21 +50,21 @@ class ModuleDashboard
         $invoiceCount = fn (Carbon $start, Carbon $end) => $this->countRange('sales_invoices', 'invoice_date', $start, $end, fn ($query) => $query->whereIn('invoice_type', ['tax', 'cash'])->where('status', '!=', 'cancelled'));
         $leadCount = fn (Carbon $start, Carbon $end) => $this->countRange('leads', 'created_at', $start, $end);
         $converted = fn (Carbon $start, Carbon $end) => $this->countRange('leads', 'updated_at', $start, $end, fn ($query) => $query->whereIn('status', ['converted', 'won', 'closed_won']));
-        $invoices = Schema::hasTable('sales_invoices') ? SalesInvoice::query()->with(['payments', 'cashflowAllocations'])->where('status', '!=', 'cancelled')->get() : collect();
+        $invoices = Schema::hasTable('sales_invoices') ? SalesInvoice::query()->with(['payments', 'cashflowAllocations'])->whereIn('invoice_type', ['tax', 'cash'])->where('currency', $this->currency)->whereNotIn('status', ['draft', 'cancelled'])->get() : collect();
         $receivable = round((float) $invoices->sum(fn ($invoice) => $invoice->balanceDue()), 2);
         $overdue = $invoices->filter(fn ($invoice) => $invoice->isOverdue())->values();
 
         return [
             'metrics' => [
-                $this->metric('Period sales', $sales, $period, 'money', 'Tax invoices raised', 'green', $this->url('sales-invoices.index')),
-                $this->metric('Tax invoices', $invoiceCount, $period, 'number', 'Issued in selected period', 'blue', $this->url('sales-invoices.index')),
+                $this->metric('Period sales', $sales, $period, 'money', 'Tax and cash invoices; drafts excluded', 'green', $this->url('sales-invoices.index')),
+                $this->metric('Issued invoices', $invoiceCount, $period, 'number', 'Issued in selected period', 'blue', $this->url('sales-invoices.index')),
                 $this->metric('New leads', $leadCount, $period, 'number', 'Created in selected period', 'purple', $this->url('leads.index')),
                 $this->metric('Converted leads', $converted, $period, 'number', 'Won or converted in period', 'green', $this->url('leads.index')),
-                $this->pointMetric('Receivables', $receivable, 'money', 'Open across all active client documents', 'orange', $this->url('sales-invoices.index')),
+                $this->pointMetric('Receivables', $receivable, 'money', 'Live issued client balances in selected currency', 'orange', $this->url('sales-invoices.index')),
                 $this->pointMetric('Overdue invoices', $overdue->count(), 'number', 'Past due with a live balance', $overdue->isNotEmpty() ? 'red' : 'green', $this->url('sales-invoices.index')),
             ],
             'trend' => $this->series('sales_invoices', 'invoice_date', 'total_amount', $period, fn ($query) => $query->whereIn('invoice_type', ['tax', 'cash'])->where('status', '!=', 'cancelled')),
-            'trend_label' => 'Tax invoice value', 'trend_format' => 'money',
+            'trend_label' => 'Issued invoice value', 'trend_format' => 'money',
             'breakdowns' => [
                 ['title' => 'Invoice status', 'items' => $this->breakdown('sales_invoices', 'status', fn ($query) => $query->whereIn('invoice_type', ['tax', 'cash']))],
                 ['title' => 'Lead pipeline', 'items' => $this->breakdown('leads', 'status')],
@@ -72,7 +83,7 @@ class ModuleDashboard
         $orders = fn (Carbon $start, Carbon $end) => $this->sumRange('purchase_invoices', 'invoice_date', 'total_amount', $start, $end, fn ($query) => $query->where('invoice_type', 'order')->where('status', '!=', 'cancelled'));
         $billCount = fn (Carbon $start, Carbon $end) => $this->countRange('purchase_invoices', 'invoice_date', $start, $end, fn ($query) => $query->where('invoice_type', 'bill')->where('status', '!=', 'cancelled'));
         $orderCount = fn (Carbon $start, Carbon $end) => $this->countRange('purchase_invoices', 'invoice_date', $start, $end, fn ($query) => $query->where('invoice_type', 'order')->where('status', '!=', 'cancelled'));
-        $documents = Schema::hasTable('purchase_invoices') ? PurchaseInvoice::query()->with(['payments', 'cashflowAllocations'])->where('invoice_type', 'bill')->where('status', '!=', 'cancelled')->get() : collect();
+        $documents = Schema::hasTable('purchase_invoices') ? PurchaseInvoice::query()->with(['payments', 'cashflowAllocations'])->where('invoice_type', 'bill')->where('currency', $this->currency)->whereNotIn('status', ['draft', 'cancelled'])->get() : collect();
         $payable = round((float) $documents->sum(fn ($bill) => $bill->balanceDue()), 2);
         $overdue = $documents->filter(fn ($bill) => $bill->isOverdue())->values();
 
@@ -169,12 +180,12 @@ class ModuleDashboard
         $inward = fn (Carbon $start, Carbon $end) => $this->sumRange('cashflow_entries', 'entry_date', 'credit_amount', $start, $end, fn ($query) => $this->excludeTransfers($query));
         $outward = fn (Carbon $start, Carbon $end) => $this->sumRange('cashflow_entries', 'entry_date', 'debit_amount', $start, $end, fn ($query) => $this->excludeTransfers($query));
         $net = fn (Carbon $start, Carbon $end) => $inward($start, $end) - $outward($start, $end);
-        $entries = Schema::hasTable('cashflow_entries') ? CashflowEntry::query()->with('allocations')->get() : collect();
+        $entries = Schema::hasTable('cashflow_entries') ? CashflowEntry::query()->with('allocations')->where('currency', $this->currency)->get() : collect();
         $unallocatedEntries = $entries->filter(fn ($entry) => $entry->unallocatedAmount() > 0.009)->values();
         $unallocated = round((float) $unallocatedEntries->sum(fn ($entry) => $entry->unallocatedAmount()), 2);
-        $tentative = $this->countWhere('cashflow_entries', fn ($query) => $query->whereNotIn('accounting_status', ['booked', 'reconciled']));
-        $salesDocs = Schema::hasTable('sales_invoices') ? SalesInvoice::query()->with(['payments', 'cashflowAllocations'])->where('status', '!=', 'cancelled')->get() : collect();
-        $purchaseDocs = Schema::hasTable('purchase_invoices') ? PurchaseInvoice::query()->with(['payments', 'cashflowAllocations'])->where('invoice_type', 'bill')->where('status', '!=', 'cancelled')->get() : collect();
+        $tentative = $this->countWhere('cashflow_entries', fn ($query) => $query->where('currency', $this->currency)->whereNotIn('accounting_status', ['booked', 'reconciled']));
+        $salesDocs = Schema::hasTable('sales_invoices') ? SalesInvoice::query()->with(['payments', 'cashflowAllocations'])->whereIn('invoice_type', ['tax', 'cash'])->where('currency', $this->currency)->whereNotIn('status', ['draft', 'cancelled'])->get() : collect();
+        $purchaseDocs = Schema::hasTable('purchase_invoices') ? PurchaseInvoice::query()->with(['payments', 'cashflowAllocations'])->where('invoice_type', 'bill')->where('currency', $this->currency)->whereNotIn('status', ['draft', 'cancelled'])->get() : collect();
         $receivable = round((float) $salesDocs->sum(fn ($invoice) => $invoice->balanceDue()), 2);
         $payable = round((float) $purchaseDocs->sum(fn ($bill) => $bill->balanceDue()), 2);
 
@@ -183,7 +194,7 @@ class ModuleDashboard
                 $this->metric('Inward movement', $inward, $period, 'money', 'Cashflow credits; not income classification', 'green', $this->url('cashflows.index')),
                 $this->metric('Outward movement', $outward, $period, 'money', 'Cashflow debits; not expense classification', 'red', $this->url('cashflows.index')),
                 $this->metric('Net movement', $net, $period, 'money', 'Inward less outward movement', 'blue', $this->url('cashflows.index')),
-                $this->pointMetric('Receivables', $receivable, 'money', 'Open client documents', 'orange', $this->url('sales-invoices.index')),
+                $this->pointMetric('Receivables', $receivable, 'money', 'Live issued client balances in selected currency', 'orange', $this->url('sales-invoices.index')),
                 $this->pointMetric('Payables', $payable, 'money', 'Open vendor bills', 'orange', $this->url('purchase-invoices.index')),
                 $this->pointMetric('Unallocated entries', $unallocatedEntries->count(), 'number', $tentative.' tentative ledger entries', ($unallocatedEntries->isNotEmpty() || $tentative) ? 'red' : 'green', $this->url('cashflows.index')),
             ],
@@ -195,7 +206,7 @@ class ModuleDashboard
             ],
             'alerts' => collect([
                 $tentative ? ['level' => 'critical', 'title' => 'Tentative ledger entries', 'message' => $tentative.' entries still need booking or reconciliation.', 'url' => $this->url('cashflows.index')] : null,
-                $unallocated > 0.009 ? ['level' => 'critical', 'title' => 'Unallocated cash', 'message' => number_format($unallocated, 2).' remains unapplied in aggregate entry-currency values.', 'url' => $this->url('cashflows.index')] : null,
+                $unallocated > 0.009 ? ['level' => 'critical', 'title' => 'Unallocated cash', 'message' => number_format($unallocated, 2).' remains unapplied in '.$this->currency.' entries.', 'url' => $this->url('cashflows.index')] : null,
             ])->filter()->values()->all(),
         ];
     }
@@ -237,12 +248,28 @@ class ModuleDashboard
         ];
     }
 
+    private function additionalTrends(string $module, array $period): array
+    {
+        [$title, $table, $date, $amount, $filter] = match ($module) {
+            'sales' => ['Lead intake', 'leads', 'created_at', null, null],
+            'purchase' => ['Purchase order value', 'purchase_invoices', 'invoice_date', 'total_amount', fn ($q) => $q->where('invoice_type', 'order')],
+            'projects' => ['Project completions', 'projects', 'completed_at', null, fn ($q) => $q->whereIn('status', ['completed', 'closed', 'closed_with_outstanding_financials'])],
+            'operations' => ['Packing preparation', 'packaging_lists', 'packing_date', null, null],
+            'finance' => ['Project-tagged cash movement', 'cashflow_entries', 'entry_date', 'credit_amount', function ($q) { $q->whereNotNull('project_id'); $this->excludeTransfers($q); }],
+            default => ['Task completions', 'tasks', 'completed_at', null, fn ($q) => $q->whereIn('status', ['completed', 'done', 'closed'])],
+        };
+        return [['title' => $title, 'format' => $amount ? 'money' : 'number',
+            'series' => $module === 'finance' ? $this->dualSeries($table, $date, 'credit_amount', 'debit_amount', $period, $filter) : $this->series($table, $date, $amount, $period, $filter),
+            'primary_label' => $module === 'finance' ? 'Inward' : $title,
+            'secondary_label' => $module === 'finance' ? 'Outward' : null]];
+    }
+
     private function metric(string $label, callable $resolver, array $period, string $format, string $hint, string $tone, string $url): array
     {
         $current = (float) $resolver($period['start'], $period['end']);
         $previous = (float) $resolver($period['previousStart'], $period['previousEnd']);
         $change = $previous == 0.0 ? ($current == 0.0 ? 0.0 : 100.0) : (($current - $previous) / abs($previous)) * 100;
-        return compact('label', 'current', 'previous', 'format', 'hint', 'tone', 'url') + ['change' => round($change, 1), 'comparison' => true];
+        return compact('label', 'current', 'previous', 'format', 'hint', 'tone', 'url') + ['change' => round($change, 1), 'comparison' => true, 'new_activity' => $previous == 0.0 && $current != 0.0];
     }
 
     private function pointMetric(string $label, float|int $current, string $format, string $hint, string $tone, string $url): array
@@ -254,6 +281,8 @@ class ModuleDashboard
     {
         if (! $this->has($table, [$dateColumn, $amountColumn])) return 0.0;
         $query = DB::table($table)->whereBetween($dateColumn, [$this->boundary($start, $dateColumn), $this->boundary($end, $dateColumn, true)]);
+        if (Schema::hasColumn($table, 'currency')) $query->where('currency', $this->currency);
+        if (in_array($table, ['sales_invoices', 'purchase_invoices'], true)) $query->whereNotIn('status', ['draft', 'cancelled']);
         if ($filter) $filter($query);
         return (float) $query->sum($amountColumn);
     }
@@ -262,6 +291,8 @@ class ModuleDashboard
     {
         if (! $this->has($table, [$dateColumn])) return 0;
         $query = DB::table($table)->whereBetween($dateColumn, [$this->boundary($start, $dateColumn), $this->boundary($end, $dateColumn, true)]);
+        if (in_array($table, ['sales_invoices', 'purchase_invoices'], true)) $query->where('currency', $this->currency)->whereNotIn('status', ['draft', 'cancelled']);
+        if (Schema::hasColumn($table, 'deleted_at')) $query->whereNull('deleted_at');
         if ($filter) $filter($query);
         return (int) $query->count();
     }
@@ -269,13 +300,18 @@ class ModuleDashboard
     private function countWhere(string $table, callable $filter): int
     {
         if (! Schema::hasTable($table)) return 0;
-        $query = DB::table($table); $filter($query); return (int) $query->count();
+        $query = DB::table($table);
+        if (Schema::hasColumn($table, 'deleted_at')) $query->whereNull('deleted_at');
+        $filter($query); return (int) $query->count();
     }
 
     private function breakdown(string $table, string $column, ?callable $filter = null): array
     {
         if (! $this->has($table, [$column])) return [];
-        $query = DB::table($table); if ($filter) $filter($query);
+        $query = DB::table($table);
+        if (Schema::hasColumn($table, 'deleted_at')) $query->whereNull('deleted_at');
+        if (in_array($table, ['sales_invoices', 'purchase_invoices', 'cashflow_entries'], true) && Schema::hasColumn($table, 'currency')) $query->where('currency', $this->currency);
+        if ($filter) $filter($query);
         return $query->selectRaw($column.', count(*) as aggregate')->groupBy($column)->orderByDesc('aggregate')->get()
             ->map(fn ($row) => ['label' => str((string) $row->{$column})->headline()->toString(), 'value' => (int) $row->aggregate])->all();
     }
@@ -331,7 +367,7 @@ class ModuleDashboard
     private function boundary(Carbon $date, string $column, bool $end = false): string
     {
         return str_ends_with($column, '_date') || in_array($column, ['entry_date', 'invoice_date', 'pickup_date', 'drop_date', 'packing_date', 'start_date', 'due_date'], true)
-            ? $date->toDateString() : ($end ? $date->endOfDay()->toDateTimeString() : $date->startOfDay()->toDateTimeString());
+            ? ($end ? $date->copy()->endOfDay()->toDateTimeString() : $date->toDateString()) : ($end ? $date->copy()->endOfDay()->toDateTimeString() : $date->copy()->startOfDay()->toDateTimeString());
     }
 
     private function url(string $route, mixed $parameters = []): string

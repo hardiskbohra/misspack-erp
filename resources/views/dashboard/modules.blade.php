@@ -3,7 +3,9 @@
 @section('page-title', 'Module Dashboards')
 
 @section('page-actions')
+    @if(auth()->user()?->hasPermission('dashboard.view'))
     <a class="master-btn" href="{{ route('dashboard') }}"><i class="fa-solid fa-gauge-high"></i> ERP overview</a>
+    @endif
 @endsection
 
 @push('styles')
@@ -14,7 +16,7 @@
 <div class="module-dashboard">
     <section class="module-directory-grid" aria-label="Available module dashboards">
         @foreach($modules as $key => $module)
-            <a class="module-directory-card" href="{{ route('dashboards.show', $key) }}">
+            <a class="module-directory-card" href="{{ route('dashboards.show', ['module' => $key] + request()->only(['period_type', 'year', 'month', 'quarter', 'half', 'start_date', 'end_date', 'currency'])) }}">
                 <span class="module-directory-icon"><i class="{{ $module['icon'] }}" aria-hidden="true"></i></span>
                 <span><strong>{{ $module['label'] }}</strong><small>{{ $module['description'] }}</small></span>
                 <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>

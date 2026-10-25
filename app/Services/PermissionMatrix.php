@@ -53,6 +53,8 @@ class PermissionMatrix
     public function requiredForRoute(string $route, bool $write = false): ?string
     {
         if ($route === '') return null;
+        // A permission-filtered directory is an entry point, not cross-module data access.
+        if ($route === 'dashboards.index') return null;
         if ($route === 'users.permissions.update') return 'permissions.manage';
         if (Str::is(['projects.*override*','projects.approvals.override*','projects.financial-closure.*','projects.exceptions.escalate'], $route)) return 'projects.override';
         if (Str::is(['vendors.portal.*','vendors.shares.*','clients.portal.*'], $route)) return 'portals.manage';

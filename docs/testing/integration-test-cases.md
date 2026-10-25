@@ -1349,7 +1349,7 @@ Sources: `app/Http/Controllers/VendorPortalController.php`, `app/Http/Controller
 
 ## Overview and module dashboard reporting (`DASH`)
 
-Sources: `app/Services/DashboardPeriod.php`, `app/Services/ModuleDashboard.php`, `app/Http/Controllers/AdminDashboardController.php`.
+Sources: `app/Services/DashboardPeriod.php`, `app/Services/ModuleDashboard.php`, `app/Http/Controllers/AdminDashboardController.php`, `app/Services/DashboardAnalytics.php`.
 
 ### IT-DASH-001 — Native database grouping respects exact boundaries
 
@@ -1388,6 +1388,50 @@ Sources: `app/Services/DashboardPeriod.php`, `app/Services/ModuleDashboard.php`,
 4. Apply once
 
 **Expected:** Relevant fields immediately visible; hidden dates disabled; choices retained; one explicit submission.
+
+### IT-DASH-006 — Executive overview routes to one detailed analytics workspace per module
+
+**Priority:** P1 · **Requirement:** REQ-DASH · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable SQLite; fixed25Oct2026; six stable module routes
+- **Data:** Custom10..12Oct; rolling7days; allowed sales versus forbidden finance
+1. Render executive overview and directory
+2. Follow canonical module links with exact dates and currency
+3. Render all six modules in empty deployments
+
+**Expected:** No duplicate overview sales/finance/operations analytical tabs; canonical links preserve exact windows; detailed metrics, trends, scoped tables and attention remain on one module page.
+
+**Evidence:** `tests/Integration/DashboardConsolidationTest.php#test_overview_has_canonical_module_links_instead_of_duplicate_analytical_tabs`; `tests/Integration/DashboardConsolidationTest.php#test_rolling_overview_window_reaches_module_as_exact_custom_dates`; `tests/Integration/DashboardConsolidationTest.php#test_each_existing_module_has_a_single_detailed_empty_state_page`; `tests/Integration/DashboardConsolidationTest.php#test_module_retains_secondary_activity_trends_in_the_same_workspace`
+
+### IT-DASH-007 — Detailed module analytics reconcile dates currency units and canonical balances
+
+**Priority:** P1 · **Requirement:** REQ-DASH · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable schema fixtures plus actual financial migrations; real direct receipts and cashflow allocations
+- **Data:** INR and USD; draft/cancelled/proforma/out-of-window documents; multiple product lines; pcs/kg receipts; on-time/late tasks; live project portfolio
+1. Compare selected-currency KPI, trend and party concentration
+2. Read ageing from canonical payment/allocation-aware balances
+3. Check unit-separated receipts, completion timeliness, client portfolio and HTML escaping
+
+**Expected:** No cross-currency or cross-unit sums, invoice-header multiplication, fabricated profit or dropped final-day entries. Period flows and live positions are explicit; read-only balances reconcile to existing models.
+
+**Note:** Additional native MySQL method test_native_module_concentration_and_trend_keep_last_day_and_currency_consistent and optional browser check exercise the real engine and layout separately; consult dashboard-consolidation.md.
+
+**Evidence:** `tests/Integration/DashboardConsolidationTest.php#test_sales_concentration_uses_exact_dates_currency_and_real_issued_documents`; `tests/Integration/DashboardConsolidationTest.php#test_finance_category_analysis_excludes_internal_transfers_and_other_currencies`; `tests/Integration/DashboardConsolidationTest.php#test_receipt_quantities_stay_separate_by_unit_and_respect_received_date`; `tests/Integration/DashboardConsolidationTest.php#test_completion_timeliness_uses_completion_window_and_end_of_due_day`; `tests/Integration/DashboardConsolidationTest.php#test_project_dashboard_retains_live_client_value_analysis_without_mixing_currencies`; `tests/Integration/DashboardFinancialAnalyticsTest.php#test_receivable_ageing_matches_payment_and_allocation_aware_metric_without_writes`; `tests/Integration/DashboardFinancialAnalyticsTest.php#test_selected_currency_agrees_between_kpi_trend_and_concentration`; `tests/Integration/DashboardFinancialAnalyticsTest.php#test_product_line_totals_are_not_multiplied_by_invoice_header_join`; `tests/Integration/DashboardFinancialAnalyticsTest.php#test_purchase_payable_and_finance_movement_are_currency_specific`; `tests/Integration/DashboardFinancialAnalyticsTest.php#test_dashboard_prints_supplied_party_text_safely_and_preserves_currency_in_links`
+
+### IT-DASH-008 — Consolidated analytics retain permission validation and empty-state boundaries
+
+**Priority:** P1 · **Requirement:** REQ-DASH · **Implementation:** linked executable evidence
+
+- **Preconditions:** Office users with selected domain grants; empty in-memory tables
+- **Data:** Sales-only reader without dashboard.view; unknown module; invalid currency
+1. Read permission-filtered directory
+2. Request forbidden finance and executive overview
+3. Submit unsupported currency and unknown module
+
+**Expected:** Directory permits an authenticated module reader without granting overview/domain data; forbidden domain403, unknown404; invalid currency validation error; unavailable data not silently treated as measured zero in detail panels.
+
+**Evidence:** `tests/Integration/DashboardConsolidationTest.php#test_directory_and_module_navigation_hide_unauthorised_modules`; `tests/Integration/DashboardConsolidationTest.php#test_unsupported_currency_returns_validation_error_not_mislabelled_money`; `tests/Integration/DashboardConsolidationTest.php#test_module_reader_can_use_directory_without_cross_module_overview_permission`
 
 ## Audit trail and sensitive operations (`AUDIT`)
 

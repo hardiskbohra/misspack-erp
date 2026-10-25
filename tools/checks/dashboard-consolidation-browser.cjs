@@ -1,0 +1,79 @@
+#!/usr/bin/env node
+/* Optional real-Blade browser regression.
+ * APP_ENV=testing php tools/testing/render-dashboard-analytics.php .work/dashboards
+ * CHROMIUM_EXECUTABLE_PATH=... NODE_PATH=... node tools/checks/dashboard-consolidation-browser.cjs .work/dashboards
+ * Fixtures are fictional/in-memory; all generated output stays ignored.
+ */
+'use strict';
+const {chromium} = require('playwright-core');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(__dirname, '../..');
+const directory = path.resolve(process.argv[2] || path.join(root, '.work/dashboards'));
+(async () => {
+    const browser = await chromium.launch({executablePath: process.env.CHROMIUM_EXECUTABLE_PATH, headless: true,
+        args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu']});
+    try {
+        const page = await browser.newPage();
+        const errors = [];
+        page.on('pageerror', error => errors.push(error.message));
+        await page.route('**/*', route => {
+            const url = new URL(route.request().url());
+            if (url.hostname === 'analytics.test' && !url.pathname.includes('.')) {
+                const name = url.pathname === '/dashboard' ? 'overview' : (url.pathname === '/dashboards' ? 'directory' : url.pathname.split('/').pop());
+                const file = path.join(directory, name+'.html');
+                if (fs.existsSync(file)) return route.fulfill({path: file, contentType: 'text/html'});
+            }
+            const file = path.resolve(root, 'public', '.'+decodeURIComponent(url.pathname));
+            if (file.startsWith(path.join(root, 'public')+path.sep) && fs.existsSync(file) && fs.statSync(file).isFile()) return route.fulfill({path: file});
+            return route.abort();
+        });
+        for (const width of [1440, 900, 390]) {
+            await page.setViewportSize({width, height: 1000});
+            for (const module of ['overview', 'sales', 'purchase', 'projects', 'operations', 'finance', 'work']) {
+                errors.length = 0;
+                const pathname = module === 'overview' ? '/dashboard' : '/dashboards/'+module;
+                await page.goto('http://analytics.test'+pathname+'?period_type=custom&start_date=2026-10-10&end_date=2026-10-12&currency=INR', {waitUntil:'networkidle'});
+                assert.deepEqual(errors, [], module+' JavaScript errors');
+                assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1), module+' document overflow at '+width);
+                if (module === 'overview') {
+                    assert.equal(await page.locator('#dashboardTabSales,#dashboardTabFinance,#dashboardTabOperations').count(), 0);
+                    assert.equal(await page.locator('[data-overview-module]').count(), 6);
+                    const url = new URL(await page.locator('[data-overview-module="sales"]').getAttribute('href'));
+                    assert.equal(url.searchParams.get('start_date'),'2026-10-10');
+                    assert.equal(url.searchParams.get('end_date'),'2026-10-12');
+                } else {
+                    assert(await page.locator('#moduleAnalysis').isVisible());
+                    assert(await page.locator('.module-analysis-panel').count() >= 5);
+                    assert.equal(await page.locator('.module-trend-card').count(), 2);
+                    await page.locator('a[href="#moduleAnalysis"]').click();
+                    assert.equal(new URL(page.url()).hash, '#moduleAnalysis');
+                    const link = new URL(await page.locator('.module-dashboard-nav a').filter({hasText:'Finance'}).getAttribute('href'));
+                    assert.equal(link.searchParams.get('start_date'),'2026-10-10');
+                    assert.equal(link.searchParams.get('currency'),'INR');
+                }
+                await page.evaluate(() => window.scrollTo(0, 0));
+                if (width === 1440 || width === 390) await page.screenshot({path:path.join(directory, module+'-'+width+'.png'),fullPage:true});
+                console.log('PASS '+module+' at '+width+'px: one workspace, no document overflow or JS errors');
+            }
+        }
+        await page.goto('http://analytics.test/dashboards/sales?period_type=custom&start_date=2026-10-10&end_date=2026-10-12&currency=INR',{waitUntil:'networkidle'});
+        // Exercise the actual drawer and enhanced Select2 control, not an invisible select.
+        await page.setViewportSize({width:1440,height:1000});
+        await page.locator('[data-drawer-open="moduleDashboardPeriodDrawer"]').click();
+        await page.locator('#select2-modulePeriodType-container').click();
+        await page.getByRole('option', {name:'Month',exact:true}).click();
+        assert.equal(await page.locator('#modulePeriodStartDate').isDisabled(), true);
+        await page.locator('#select2-modulePeriodType-container').click();
+        await page.getByRole('option', {name:'Custom date range',exact:true}).click();
+        assert.equal(await page.locator('#modulePeriodStartDate').isDisabled(), false);
+        assert.equal(await page.locator('#modulePeriodEndDate').getAttribute('min'), '2026-10-10');
+        console.log('PASS reporting-period controls preserve exact dates');
+        await page.goto('http://analytics.test/dashboard?period_type=custom&start_date=2026-10-10&end_date=2026-10-12&currency=INR#dashboard-sales', {waitUntil:'networkidle'});
+        await page.waitForURL('**/dashboards/sales?**');
+        assert.equal(new URL(page.url()).searchParams.get('start_date'), '2026-10-10');
+        assert.equal(new URL(page.url()).searchParams.get('end_date'), '2026-10-12');
+        console.log('PASS legacy overview tab bookmark redirects to the single canonical module workspace');
+    } finally { await browser.close(); }
+})().catch(error => {console.error(error); process.exitCode=1;});

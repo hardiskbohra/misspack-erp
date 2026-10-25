@@ -133,11 +133,15 @@ class DashboardCustomPeriodTest extends TestCase
         $this->app->instance('request', Request::create('/dashboards/finance', 'GET', [
             'period_type' => 'custom', 'start_date' => '2026-10-10', 'end_date' => '2026-10-12',
         ]));
+        $user = new \App\Models\User(['role' => 'admin', 'access_profile' => 'full']);
+        $user->id = 901;
+        $this->actingAs($user);
         preg_match('/<nav class="module-dashboard-nav".*?<\/nav>/s', file_get_contents(resource_path('views/dashboard/module.blade.php')), $matches);
         $html = Blade::render($matches[0], ['modules' => ModuleDashboard::MODULES, 'module' => 'finance']);
-        $this->assertSame(6, substr_count($html, 'start_date=2026-10-10'));
-        $this->assertSame(6, substr_count($html, 'end_date=2026-10-12'));
-        $this->assertSame(6, substr_count($html, 'period_type=custom'));
+        // The overview link now preserves the period too: six modules plus overview.
+        $this->assertSame(7, substr_count($html, 'start_date=2026-10-10'));
+        $this->assertSame(7, substr_count($html, 'end_date=2026-10-12'));
+        $this->assertSame(7, substr_count($html, 'period_type=custom'));
     }
 
     public function test_totals_and_trends_use_exact_custom_bounds_for_dates_and_timestamps(): void

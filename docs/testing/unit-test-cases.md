@@ -963,7 +963,7 @@ Sources: `app/Http/Controllers/VendorPortalController.php`, `app/Http/Controller
 
 ## Overview and module dashboard reporting (`DASH`)
 
-Sources: `app/Services/DashboardPeriod.php`, `app/Services/ModuleDashboard.php`, `app/Http/Controllers/AdminDashboardController.php`.
+Sources: `app/Services/DashboardPeriod.php`, `app/Services/ModuleDashboard.php`, `app/Http/Controllers/AdminDashboardController.php`, `app/Services/DashboardAnalytics.php`.
 
 ### UT-DASH-001 — Custom range is inclusive and same-day valid
 
@@ -1000,6 +1000,19 @@ Sources: `app/Services/DashboardPeriod.php`, `app/Services/ModuleDashboard.php`,
 **Expected:** 25Feb..27Feb; leap day included in current period.
 
 **Note:** Unit target; related component evidence is in DashboardCustomPeriodTest. Not mapped as isolated unit coverage.
+
+### UT-DASH-004 — Consolidated dashboard ageing and module visibility rules
+
+**Priority:** P1 · **Requirement:** REQ-DASH · **Implementation:** linked executable evidence
+
+- **Preconditions:** Fixed25Oct2026; office users with full, sales-only and employee permissions
+- **Data:** Undated/today/future/30/60/90+ due dates; sales.view and operations.manage
+1. Classify due-date boundaries
+2. Resolve only modules authorised by existing permission matrix
+
+**Expected:** Due today is not overdue; stable ageing bands; employees get no office modules and manage implies module view.
+
+**Evidence:** `tests/Unit/DashboardAnalyticsRulesTest.php#test_ageing_bands_do_not_mark_due_today_as_overdue`; `tests/Unit/DashboardAnalyticsRulesTest.php#test_dashboard_directory_only_contains_authorised_modules`
 
 ## Audit trail and sensitive operations (`AUDIT`)
 
