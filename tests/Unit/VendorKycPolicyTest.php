@@ -19,11 +19,11 @@ class VendorKycPolicyTest extends TestCase
         }
     }
 
-    public function test_checker_must_have_manage_access_and_be_different_from_maker_and_creator(): void
+    public function test_review_requires_manage_access_but_allows_maker_and_creator(): void
     {
         $v = new Vendor(['created_by' => 1]);
         $v->forceFill(['kyc_status' => 'under_review', 'kyc_maker_id' => 2]);
-        foreach ([[1, ['purchase.manage'], false], [2, ['purchase.manage'], false], [3, ['purchase.view'], false], [3, ['purchase.manage'], true]] as [$id,$permissions,$allowed]) {
+        foreach ([[1, ['purchase.manage'], true], [2, ['purchase.manage'], true], [3, ['purchase.view'], false], [3, ['purchase.manage'], true]] as [$id,$permissions,$allowed]) {
             $u = new User(['role' => 'admin', 'access_profile' => 'custom', 'permissions' => $permissions]);
             $u->id = $id;
             $this->assertSame($allowed, VendorKyc::canReview($v, $u));

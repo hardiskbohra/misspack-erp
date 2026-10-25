@@ -211,19 +211,19 @@ Sources: `app/Http/Controllers/VendorController.php`, `app/Models/Vendor.php`, `
 
 **Expected:** Permission denied; vendor fields unchanged.
 
-### IT-VENDOR-004 — Draft and submission stage details until independent approval
+### IT-VENDOR-004 — Draft and submission stage details until authorised approval
 
 **Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES · **Implementation:** linked executable evidence
 
 - **Preconditions:** Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md
 - **Data:** On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types
 1. Save draft and submit malicious internal controls
-2. Try creator/read-only/stale approval
-3. Approve current version
+2. Allow creator approval; deny read-only and stale approval
+3. Approve current version and inspect reviewer attribution
 
-**Expected:** Live identity and bank change only on independent approval; commercial currency and operational status unaffected.
+**Expected:** Live identity and bank change only on authorised approval (creator allowed); commercial currency and operational status unaffected.
 
-**Evidence:** `tests/Integration/VendorKycWorkflowTest.php#test_draft_and_final_stage_details_without_mutating_live_vendor_or_internal_controls`; `tests/Integration/VendorKycWorkflowTest.php#test_checker_applies_submission_atomically_but_maker_reader_and_stale_reviews_cannot`
+**Evidence:** `tests/Integration/VendorKycWorkflowTest.php#test_draft_and_final_stage_details_without_mutating_live_vendor_or_internal_controls`; `tests/Integration/VendorKycWorkflowTest.php#test_manager_applies_submission_atomically_but_reader_and_stale_reviews_cannot`; `tests/Integration/VendorKycWorkflowTest.php#test_vendor_creator_can_review_their_own_submission_and_is_recorded_as_reviewer`
 
 ### IT-VENDOR-005 — Revision, rejection and completed-KYC update cycles
 
@@ -291,7 +291,7 @@ Sources: `app/Http/Controllers/VendorController.php`, `app/Models/Vendor.php`, `
 2. Exercise shared JS in Chromium at 1440/390px
 3. Confirm draft/submit/cancel, navigation visibility, errors and locked states
 
-**Expected:** One visible step; correct validation/navigation; private bank data never stored in localStorage; creator/reader cannot review; approved client wizard still locked.
+**Expected:** One visible step; correct validation/navigation; private bank data never stored in localStorage; creator/other managers can review; reader cannot review; approved client wizard still locked.
 
 **Evidence:** `tests/Feature/VendorKycPresentationTest.php#test_actual_http_public_and_office_states_are_accessible_and_use_shared_components`
 

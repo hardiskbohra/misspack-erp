@@ -4010,15 +4010,15 @@
       "level": "unit",
       "priority": "P1",
       "requirement": "REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES",
-      "title": "Different purchase manager is required as checker",
+      "title": "Any authorised purchase manager may review, including creator and maker",
       "preconditions": "Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md",
       "test_data": "On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types",
       "steps": [
         "Check creator, maker, reader and independent manager"
       ],
-      "expected": "Creator/maker/read-only cannot approve; independent purchase manager can review only submitted KYC.",
+      "expected": "Creator/maker/independent manager with purchase.manage may review submitted KYC; read-only access cannot review.",
       "automation": [
-        "tests/Unit/VendorKycPolicyTest.php#test_checker_must_have_manage_access_and_be_different_from_maker_and_creator"
+        "tests/Unit/VendorKycPolicyTest.php#test_review_requires_manage_access_but_allows_maker_and_creator"
       ]
     },
     {
@@ -4063,18 +4063,19 @@
       "level": "integration",
       "priority": "P1",
       "requirement": "REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES",
-      "title": "Draft and submission stage details until independent approval",
+      "title": "Draft and submission stage details until authorised approval",
       "preconditions": "Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md",
       "test_data": "On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types",
       "steps": [
         "Save draft and submit malicious internal controls",
-        "Try creator/read-only/stale approval",
-        "Approve current version"
+        "Allow creator approval; deny read-only and stale approval",
+        "Approve current version and inspect reviewer attribution"
       ],
-      "expected": "Live identity and bank change only on independent approval; commercial currency and operational status unaffected.",
+      "expected": "Live identity and bank change only on authorised approval (creator allowed); commercial currency and operational status unaffected.",
       "automation": [
         "tests/Integration/VendorKycWorkflowTest.php#test_draft_and_final_stage_details_without_mutating_live_vendor_or_internal_controls",
-        "tests/Integration/VendorKycWorkflowTest.php#test_checker_applies_submission_atomically_but_maker_reader_and_stale_reviews_cannot"
+        "tests/Integration/VendorKycWorkflowTest.php#test_manager_applies_submission_atomically_but_reader_and_stale_reviews_cannot",
+        "tests/Integration/VendorKycWorkflowTest.php#test_vendor_creator_can_review_their_own_submission_and_is_recorded_as_reviewer"
       ]
     },
     {
@@ -4174,7 +4175,7 @@
         "Exercise shared JS in Chromium at 1440/390px",
         "Confirm draft/submit/cancel, navigation visibility, errors and locked states"
       ],
-      "expected": "One visible step; correct validation/navigation; private bank data never stored in localStorage; creator/reader cannot review; approved client wizard still locked.",
+      "expected": "One visible step; correct validation/navigation; private bank data never stored in localStorage; creator/other managers can review; reader cannot review; approved client wizard still locked.",
       "automation": [
         "tests/Feature/VendorKycPresentationTest.php#test_actual_http_public_and_office_states_are_accessible_and_use_shared_components"
       ]

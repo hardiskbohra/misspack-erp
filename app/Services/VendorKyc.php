@@ -35,8 +35,7 @@ class VendorKyc
     public static function canReview(Vendor $vendor, User $user): bool
     {
         return $vendor->kyc_status === 'under_review'
-            && app(PermissionMatrix::class)->allows($user, 'purchase.manage')
-            && ! in_array((int) $user->id, array_filter([(int) $vendor->created_by, (int) $vendor->kyc_maker_id]), true);
+            && app(PermissionMatrix::class)->allows($user, 'purchase.manage');
     }
 
     public static function profile(Vendor $vendor): array
@@ -163,7 +162,7 @@ class VendorKyc
             if ($v->kyc_status !== 'under_review') {
                 $this->invalid('decision', 'Only a current submission can be reviewed.');
             }
-            abort_unless(self::canReview($v, $actor), 403, 'A different purchase manager must review this submission.');
+            abort_unless(self::canReview($v, $actor), 403, 'Vendor management access is required to review KYC.');
             $this->checkVersion($v, (int) $data['kyc_version']);
             $decision = $data['decision'];
             if ($decision === 'approved') {

@@ -65,10 +65,8 @@
                     <textarea class="master-textarea" id="vendor_kyc_reopen_reason" name="reason" required maxlength="5000" rows="3">{{ old('reason') }}</textarea></div>
                 <div class="vendor-kyc-actions"><button class="master-btn master-btn-orange" type="submit">Request updated KYC</button></div>
             </form>
-        @elseif ($vendor->kyc_status==='under_review' && $manage)
-            <p class="master-sub">A different purchase manager must review this submission. The maker / record creator cannot approve their own vendor KYC.</p>
         @else
-            <p class="master-sub">{{ $manage?'Review becomes available when the vendor submits their KYC.':'Read-only access. A different purchase manager can review submitted KYC.' }}</p>
+            <p class="master-sub">{{ $manage?'Review becomes available when the vendor submits their KYC.':'Read-only access. A purchase manager can review submitted KYC.' }}</p>
         @endif
         @if ($vendor->kyc_revision_note)<p class="master-sub"><strong>Revision requested:</strong> {{ $vendor->kyc_revision_note }}</p>@endif
         @if ($vendor->kyc_rejection_reason)<p class="master-sub"><strong>Rejection reason:</strong> {{ $vendor->kyc_rejection_reason }}</p>@endif

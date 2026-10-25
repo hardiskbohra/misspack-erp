@@ -163,7 +163,7 @@ Sources: `app/Http/Controllers/VendorController.php`, `app/Models/Vendor.php`, `
 
 **Evidence:** `tests/Unit/VendorKycPolicyTest.php#test_only_draft_and_revision_are_publicly_editable_without_changing_operational_status`
 
-### UT-VENDOR-005 — Different purchase manager is required as checker
+### UT-VENDOR-005 — Any authorised purchase manager may review, including creator and maker
 
 **Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES · **Implementation:** linked executable evidence
 
@@ -171,9 +171,9 @@ Sources: `app/Http/Controllers/VendorController.php`, `app/Models/Vendor.php`, `
 - **Data:** On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types
 1. Check creator, maker, reader and independent manager
 
-**Expected:** Creator/maker/read-only cannot approve; independent purchase manager can review only submitted KYC.
+**Expected:** Creator/maker/independent manager with purchase.manage may review submitted KYC; read-only access cannot review.
 
-**Evidence:** `tests/Unit/VendorKycPolicyTest.php#test_checker_must_have_manage_access_and_be_different_from_maker_and_creator`
+**Evidence:** `tests/Unit/VendorKycPolicyTest.php#test_review_requires_manage_access_but_allows_maker_and_creator`
 
 ### UT-VENDOR-006 — Vendor categories and public field allowlist
 

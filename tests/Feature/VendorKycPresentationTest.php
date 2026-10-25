@@ -23,7 +23,7 @@ class VendorKycPresentationTest extends TestCase
         $this->capture('errors', $this->get($url)->assertOk()->assertSee('data-kyc-error-step="2"', false));
         $this->post($url, F::payload(['intent' => 'submit', 'kyc_version' => $f['vendor']->fresh()->kyc_version]))->assertRedirect();
         $this->capture('under-review', $this->get($url)->assertOk()->assertDontSee('data-kyc-submit', false));
-        $this->capture('office-maker', $this->get('/vendors/'.$id.'?tab=kyc')->assertOk()->assertSee('cannot approve their own vendor KYC'));
+        $this->capture('office-maker', $this->get('/vendors/'.$id.'?tab=kyc')->assertOk()->assertSee('name="decision"', false)->assertDontSee('cannot approve their own vendor KYC'));
         $this->actingAs($f['reader']);
         $this->capture('office-reader', $this->get('/vendors/'.$id.'?tab=kyc')->assertOk()->assertDontSee('name="decision"', false));
         $this->actingAs($f['checker']);

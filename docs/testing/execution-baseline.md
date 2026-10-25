@@ -199,3 +199,15 @@ See[statement-print-preview.md](statement-print-preview.md). Catalogue remains
 - MySQL-specific regression now exercises JSON staging and competing InnoDB row
   locks through two connections, followed by approval and stale replay denial.
   Native CI status is verified after push; no local native MySQL claim.
+
+
+## Vendor KYC review access revision (25 October 2026)
+
+User explicitly removed maker/creator exclusion for all authorised vendor
+managers, not just Admin. The same purchase.manage permission and submitted-state,
+reason, version/lock and audit rules remain; read-only/employee/guest permissions
+are unchanged. Unit, real HTTP and creator-controls tests went Red for the old
+rule, then Green: **517 tests /15,656 assertions** in the full portable suite.
+Real Chromium confirms creator and other-manager decision buttons, read-only
+exclusion and existing desktop/mobile wizard behaviour. Contracts pass. See
+[vendor-kyc.md](vendor-kyc.md); earlier separate-maker requirements are superseded.

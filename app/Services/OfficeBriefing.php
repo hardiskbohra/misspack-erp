@@ -50,7 +50,7 @@ class OfficeBriefing
             'event_key'=>'vendor.kyc.submitted',
             'fingerprint'=>'vendor.kyc.submitted:'.$vendor->id.':'.$vendor->kyc_version,
             'title'=>($vendor->kyc_data['vendor_name'] ?? $vendor->vendor_name).' submitted vendor KYC',
-            'body'=>'A different purchase manager must review these details before they update the vendor record.',
+            'body'=>'Review these details before they update the vendor record. Any authorised purchase manager, including the creator, can review.',
             'severity'=>OfficeAlert::SEVERITY_CRITICAL, 'requires_ack'=>true, 'team'=>'office',
             'action_url'=>route('vendors.show',[$vendor,'tab'=>'kyc']), 'action_label'=>'Review vendor KYC',
             'subject_type'=>\App\Models\Vendor::class, 'subject_id'=>$vendor->id,

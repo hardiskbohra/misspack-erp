@@ -1,3 +1,21 @@
+## Review access change — 25 October 2026
+
+User-requested policy revision (UT-VENDOR-005, IT-VENDOR-004/009): remove the
+maker/creator separation restriction for every authorised purchase manager, not
+only full-access Admin. Creator and current maker may approve, request revision
+or reject their own vendor submissions. Purchase manage permission, employee /
+guest / read-only boundaries, pending-state checks, version locks, reason
+requirements and audit reviewer attribution remain unchanged. Earlier independent
+review evidence below describes the original implementation, superseded here.
+
+TDD: updated unit, real HTTP creator-approval and rendered creator-control tests
+failed for the intended old restriction (3 failures). After removing only the
+identity restriction, full Unit + Integration + Feature passes **517 tests /
+15,656 assertions**; actual Chromium creator/other-manager controls and read-only
+exclusion pass at 1440/390px, alongside existing wizard regressions. Contract,
+catalogue and route checks pass. Native PHP/MySQL CI is checked after push.
+Evidence: `.work/vendor-kyc-open-review-{red,full,contracts,browser}.log`.
+
 # Vendor KYC — acceptance and test-first plan
 
 REQ-VENDOR / REQ-UI / REQ-FILES / REQ-AUTH
@@ -15,7 +33,7 @@ REQ-VENDOR / REQ-UI / REQ-FILES / REQ-AUTH
   allowlist excludes prices, ratings, internal notes, commercial terms, balances,
   operational status, users, permissions and all review/link metadata.
 - Only purchase managers issue/rotate/revoke/mark-sent links and review. The
-  maker/record creator cannot check their own file. Read-only office access may
+  maker/record creator may also review their own file. Read-only office access may
   inspect KYC but not mutate it. Reasons required for revision/rejection.
 - Review only a current submitted version. Row locks and version checks reject
   stale drafts/reviews and duplicate submissions. Approval atomically applies
@@ -35,12 +53,12 @@ REQ-VENDOR / REQ-UI / REQ-FILES / REQ-AUTH
 Open **Vendors → vendor → KYC → Create KYC link**. Copy/share it, optionally
 mark it as sent, and preview the same four-step design as client KYC. Bank
 values already on the office record are not disclosed when first issuing a
-link. Drafts/submissions are staged; only an independent purchase manager's
+link. Drafts/submissions are staged; only an authorised purchase manager's
 approval updates the live vendor. Commercial currency/terms, balances, ratings,
 internal notes and operational status are never public-writable.
 
 `purchase.view` permits inspection; `purchase.manage` permits link administration,
-review and requesting updated KYC. Creator/current maker cannot review. A
+review and requesting updated KYC. Creator/current maker may also review. A
 completed approved/rejected file can be reopened with a reason for another
 submission/review cycle. Office identity/bank edits reset KYC to draft and
 record the maker; ordinary commercial/operational edits do not reset it.

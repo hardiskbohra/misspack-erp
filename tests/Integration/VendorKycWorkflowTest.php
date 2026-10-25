@@ -76,12 +76,11 @@ class VendorKycWorkflowTest extends TestCase
         $this->postJson($url, $this->data())->assertUnprocessable();
     }
 
-    public function test_checker_applies_submission_atomically_but_maker_reader_and_stale_reviews_cannot(): void
+    public function test_manager_applies_submission_atomically_but_reader_and_stale_reviews_cannot(): void
     {
         $url = $this->link();
         $this->submit($url);
         $version = $this->f['vendor']->fresh()->kyc_version;
-        $this->actingAs($this->f['maker'])->patchJson($this->office('/review'), ['decision' => 'approved', 'kyc_version' => $version])->assertForbidden();
         $this->actingAs($this->f['reader'])->patchJson($this->office('/review'), ['decision' => 'approved', 'kyc_version' => $version])->assertForbidden();
         $this->actingAs($this->f['checker'])->patchJson($this->office('/review'), ['decision' => 'approved', 'kyc_version' => $version - 1])->assertUnprocessable();
         $this->patch($this->office('/review'), ['decision' => 'approved', 'kyc_version' => $version])->assertRedirect();
@@ -287,6 +286,21 @@ class VendorKycWorkflowTest extends TestCase
         $url=$this->link();
         $this->postJson($url,$this->data(['contact_person_mobile'=>['not','a','phone']]))->assertUnprocessable();
         $this->assertSame('draft',$this->f['vendor']->fresh()->kyc_status);
+    }
+
+    public function test_vendor_creator_can_review_their_own_submission_and_is_recorded_as_reviewer(): void
+    {
+        $url = $this->link();
+        $this->submit($url);
+        $v = $this->f['vendor']->fresh();
+        $this->actingAs($this->f['maker'])->patch($this->office('/review'), [
+            'decision' => 'approved', 'kyc_version' => $v->kyc_version,
+        ])->assertRedirect();
+        $v->refresh();
+        $this->assertSame('approved', $v->kyc_status);
+        $this->assertSame($this->f['maker']->id, $v->kyc_reviewed_by);
+        $this->assertSame('NEW-BANK', $v->account_number);
+        $this->assertSame($this->f['maker']->id, DB::table('vendor_kyc_events')->where('vendor_id', $v->id)->where('action', 'approved')->value('actor_id'));
     }
 
 }
