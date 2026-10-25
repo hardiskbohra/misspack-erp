@@ -105,6 +105,7 @@
         var layer = activeLayer;
         var panel = panelFor(layer);
         var trigger = activeTrigger;
+        if (panel) panel.dispatchEvent(new CustomEvent('master:drawer-closing', { bubbles: true }));
         activeLayer = null;
         activeTrigger = null;
         layer.classList.remove('is-open');
@@ -141,6 +142,7 @@
     document.addEventListener('keydown', function (event) {
         if (!activeLayer) return;
         if (event.key === 'Escape') {
+            if (event.defaultPrevented) return; // A nested Select2 consumed Escape.
             event.preventDefault();
             closeDrawer(true);
             return;

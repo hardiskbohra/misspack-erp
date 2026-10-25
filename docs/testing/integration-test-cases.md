@@ -1607,3 +1607,21 @@ Sources: `resources/views/components/drawer.blade.php`, `public/assets/js/master
 **Note:** Actual responsive browser verifies40px triggers, keyboard Quick Menu Notes/End/Escape, mobile drawer opening and profile theme reachability; source/HTTP results alone do not prove browser layout.
 
 **Evidence:** `tests/Feature/TopbarQuickMenuTest.php#test_launcher_is_icon_only_but_has_an_accessible_name`; `tests/Feature/TopbarQuickMenuTest.php#test_private_notes_moves_into_quick_menu_for_both_roles_without_office_privilege`; `tests/Feature/TopbarQuickMenuTest.php#test_employee_receives_private_notes_only_even_with_full_profile`; `tests/Feature/TopbarQuickMenuTest.php#test_custom_access_only_shows_permitted_modules_including_manage_implies_view`; `tests/Integration/DashboardConsolidationTest.php#test_compact_topbar_keeps_reporting_context_in_content_and_profile_theme_in_menu`
+
+### IT-UI-005 — Standalone statement filters use the shared searchable form/drawer design
+
+**Priority:** P1 · **Requirement:** REQ-UI · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable statement fixture and authorised finance reader; actual Blade/Select2/assets; Chromium desktop/tablet/mobile
+- **Data:** All-time/custom INR statement; USD switch; explicit ageing off; shared modal/drawer controls with30choices
+1. Render preview and verify shared form/Select2 assets and grouped filter sections
+2. Search with mouse and keyboard in ordinary, multiple, dynamic, modal and drawer controls
+3. Choose All time to clear dates, then edit dates to display Custom
+4. Close overlays and retain opener focus
+5. Submit exact scope and verify actual A4 PDF unchanged
+
+**Expected:** Consistent control borders/spacing, self-contained visible close icon, blue ageing switch and shared footer actions. Search always available, no duplicate initialization/change events, no stranded popup. Exact selected dates/currency/ageing retained.
+
+**Note:** PHP link establishes rendered design dependencies. Actual interactive/visual outcomes separately executed in searchable-selects-browser.cjs at1440/900/390px and light/dark; A4 proof in statement-print-pdf.py. See searchable-selects.md.
+
+**Evidence:** `tests/Integration/StatementPrintPreviewTest.php#test_preview_filters_use_shared_form_and_searchable_select_assets_without_external_close_icons`

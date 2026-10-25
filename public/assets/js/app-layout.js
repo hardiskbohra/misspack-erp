@@ -200,7 +200,7 @@
         document.querySelectorAll('.master-modal.open').forEach(openMasterModal);
 
         document.addEventListener('keydown', function (e) {
-            if (e.key !== 'Escape') return;
+            if (e.key !== 'Escape' || e.defaultPrevented) return;
             document.querySelectorAll('.master-modal.open').forEach(closeMasterModal);
         });
 

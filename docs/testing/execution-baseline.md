@@ -151,3 +151,19 @@ with all rows and only one final closing total. See[statement-print-preview.md](
 for commands, optional browser Save as PDF behaviour and local engine limits.
 Updated inventory:221designs (96unit/125integration),66method-linked designs,
 50test files,455declared routes; no runtime coverage percentage is implied.
+
+
+## Searchable Select2 and print-filter design —25October2026
+
+Central initializer Red for9/50option lists (Infinity instead of0); real browser
+Red for missing30-option search and HTTP Red for missing standalone form assets.
+Green8Node policy tests and7statement HTTP tests/79assertions. Full portable
+**492tests/15,387assertions PASS**. Node tests run with the default contract gate.
+Chromium153 verifies mouse/keyboard search across ordinary/multiple/dynamic,
+modal/drawer controls at1440/900/390px light/dark, plus real statement filter
+styling/date/currency/ageing submissions. Existing dashboard directory/six modules
+and statement-list/print browser journeys pass; real A4 PDFs remain intact,
+including73rows across3pages. See[searchable-selects.md](searchable-selects.md).
+Catalogue223designs (97unit/126integration),67PHP-method-linked designs,50PHPtest
+files. Source contracts and CSS fallback generation checked; native CI reported
+independently after push. No schema, SQL, financial or permission changes.

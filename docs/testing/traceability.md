@@ -34,4 +34,4 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-DASH | Overview and module dashboard reporting | 4 | 6 | 6 |
 | REQ-AUDIT | Audit trail and sensitive operations | 3 | 3 | 0 |
 | REQ-FILES | Shared file policy and storage lifecycle | 3 | 3 | 3 |
-| REQ-UI | Shared UI, printing and accessible interactions | 3 | 4 | 1 |
+| REQ-UI | Shared UI, printing and accessible interactions | 4 | 5 | 2 |

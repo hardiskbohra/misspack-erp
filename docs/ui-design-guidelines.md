@@ -41,6 +41,15 @@ This is the shared visual contract for the ERP application shell and its modules
 - Tab panels may use `--mc-card-soft` to remain visibly distinct from the page canvas; cards inside the panel use `--mc-card`.
 - Use an 8 px spacing rhythm: 12–16 px between related controls, 16 px between cards, and 20–24 px for outer card padding where the content permits.
 - Controls and buttons should remain 40–44 px tall and retain visible keyboard focus states.
+- Every Select2 must expose working search, regardless of option count. Keep the
+  policy in `master-selects.js` (`minimumResultsForSearch: 0`), not per-page
+  overrides. Load the shared theme and cache-busted initializer on standalone
+  enhanced forms too. Preserve native opt-outs/disabled controls, submitted
+  values and existing jQuery change handlers. Dropdown search must remain
+  keyboard-accessible above modals/drawers and close with its owning overlay.
+- Standalone filter drawers load the shared form geometry and canonical design
+  system, not just partial field colours. Group related criteria, use the shared
+  footer actions and ensure the close icon works without external icon fonts.
 
 ## Confirmation dialogs
 

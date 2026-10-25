@@ -21,7 +21,8 @@
                 <p class="core-drawer-subtitle" id="{{ $id }}-description" data-drawer-subtitle @if (! $subtitle) hidden @endif>{{ $subtitle }}</p>
             </div>
             <button type="button" class="core-drawer-close" data-drawer-close aria-label="Close details">
-                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18" /></svg>
             </button>
         </header>
         <div class="core-drawer-content">

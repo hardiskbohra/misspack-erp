@@ -1135,3 +1135,17 @@ Sources: `resources/views/components/drawer.blade.php`, `public/assets/js/master
 1. Resolve active tab
 
 **Expected:** Safe authorised fallback; no hidden data fetch from inaccessible tab.
+
+### UT-UI-004 — One searchable Select2 policy for every option count and entry point
+
+**Priority:** P1 · **Requirement:** REQ-UI · **Implementation:** planned
+
+- **Preconditions:** Node builtin test runner; shared initializer executed in isolated VM; application/vendor sources separate
+- **Data:** 0,1,2,8,9 and50 options; office, client portal, public lead and print entry points
+1. Execute the real initializer and inspect search settings for every count
+2. Reject competing initializers and per-control search hiding
+3. Require cache-busted shared initializer in every entry point
+
+**Expected:** minimumResultsForSearch is always0; selection class/width remain intact; no separate policy hides search; entry points receive updated script.
+
+**Note:** Executed Node unit regressions: tools/testing/select2-policy.test.cjs (8 tests), now part of npm run test:contracts. Catalogue exact-method links count PHP methods only; this is not an unexecuted case.

@@ -3943,6 +3943,46 @@
         "tests/Integration/StatementPrintPreviewTest.php#test_vendor_preview_is_a_single_currency_payable_and_finance_boundary_is_retained"
       ],
       "notes": "Real Chromium and PyMuPDF geometry/text/page checks are separate executed gates; see statement-print-preview.md. Download uses browser Save as PDF when optional Dompdf is not installed."
+    },
+    {
+      "id": "UT-UI-004",
+      "module": "UI",
+      "level": "unit",
+      "priority": "P1",
+      "requirement": "REQ-UI",
+      "title": "One searchable Select2 policy for every option count and entry point",
+      "preconditions": "Node builtin test runner; shared initializer executed in isolated VM; application/vendor sources separate",
+      "test_data": "0,1,2,8,9 and50 options; office, client portal, public lead and print entry points",
+      "steps": [
+        "Execute the real initializer and inspect search settings for every count",
+        "Reject competing initializers and per-control search hiding",
+        "Require cache-busted shared initializer in every entry point"
+      ],
+      "expected": "minimumResultsForSearch is always0; selection class/width remain intact; no separate policy hides search; entry points receive updated script.",
+      "automation": [],
+      "notes": "Executed Node unit regressions: tools/testing/select2-policy.test.cjs (8 tests), now part of npm run test:contracts. Catalogue exact-method links count PHP methods only; this is not an unexecuted case."
+    },
+    {
+      "id": "IT-UI-005",
+      "module": "UI",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-UI",
+      "title": "Standalone statement filters use the shared searchable form/drawer design",
+      "preconditions": "Disposable statement fixture and authorised finance reader; actual Blade/Select2/assets; Chromium desktop/tablet/mobile",
+      "test_data": "All-time/custom INR statement; USD switch; explicit ageing off; shared modal/drawer controls with30choices",
+      "steps": [
+        "Render preview and verify shared form/Select2 assets and grouped filter sections",
+        "Search with mouse and keyboard in ordinary, multiple, dynamic, modal and drawer controls",
+        "Choose All time to clear dates, then edit dates to display Custom",
+        "Close overlays and retain opener focus",
+        "Submit exact scope and verify actual A4 PDF unchanged"
+      ],
+      "expected": "Consistent control borders/spacing, self-contained visible close icon, blue ageing switch and shared footer actions. Search always available, no duplicate initialization/change events, no stranded popup. Exact selected dates/currency/ageing retained.",
+      "automation": [
+        "tests/Integration/StatementPrintPreviewTest.php#test_preview_filters_use_shared_form_and_searchable_select_assets_without_external_close_icons"
+      ],
+      "notes": "PHP link establishes rendered design dependencies. Actual interactive/visual outcomes separately executed in searchable-selects-browser.cjs at1440/900/390px and light/dark; A4 proof in statement-print-pdf.py. See searchable-selects.md."
     }
   ]
 }

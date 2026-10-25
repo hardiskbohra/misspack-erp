@@ -77,6 +77,21 @@ class StatementPrintPreviewTest extends TestCase
         $this->get($download->getAttribute('href'))->assertOk()->assertSee('2,90,380')->assertSee('2,00,796');
     }
 
+    public function test_preview_filters_use_shared_form_and_searchable_select_assets_without_external_close_icons(): void
+    {
+        $page = $this->get($this->url('/print?period=all&currency=INR&ageing=0'))->assertOk();
+        foreach (['assets/css/master-form.css', 'assets/vendor/select2/css/select2.min.css',
+            'assets/css/select2-theme.css', 'assets/vendor/jquery/jquery.min.js',
+            'assets/vendor/select2/js/select2.min.js', 'assets/js/master-selects.js'] as $asset) {
+            $page->assertSee($asset);
+        }
+        $x = $this->xpath($page->getContent());
+        $this->assertSame(1, $x->query('//*[@id="statementPrintFilters"]//button[contains(@class,"core-drawer-close")]//*[local-name()="svg"]')->length);
+        $this->assertSame(2, $x->query('//*[@id="statementPrintFilters"]//section[contains(@class,"core-drawer-section")]')->length);
+        $this->assertSame(1, $x->query('//*[@id="statementPrintFilters"]//label[contains(@class,"master-switch")]/input[@name="ageing"]')->length);
+        $this->assertSame(1, $x->query('//*[@id="statementPrintFilters"]//*[contains(@class,"core-drawer-footer")]//button[contains(@class,"master-btn-primary")]')->length);
+    }
+
     public function test_print_custom_dates_do_not_revert_to_current_month(): void
     {
         $page = $this->get($this->url('/print?period=custom&date_from=2025-01-01&date_to=2025-12-31&currency=INR&ageing=0'))->assertOk();

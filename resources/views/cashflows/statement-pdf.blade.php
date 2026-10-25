@@ -7,7 +7,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    @if(!empty($printPreview))<link rel="stylesheet" href="{{ asset('assets/css/design-system.css') }}">@endif
+    @if(!empty($printPreview))
+        <link rel="stylesheet" href="{{ $assetVer('assets/css/master-form.css') }}">
+        <link rel="stylesheet" href="{{ asset('assets/vendor/select2/css/select2.min.css') }}">
+        <link rel="stylesheet" href="{{ $assetVer('assets/css/select2-theme.css') }}">
+        @include('layouts.partials.design-system-styles', ['forceStatic' => true])
+    @endif
     <title>Statement of account — {{ $statement['party']['name'] }}</title>
     <link rel="stylesheet" href="{{ asset('assets/css/statement.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/document-print.css') }}">

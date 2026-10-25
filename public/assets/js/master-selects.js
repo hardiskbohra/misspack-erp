@@ -6,12 +6,14 @@
 (function () {
     'use strict';
 
+    var started = false;
+
     function init($) {
-        if (!$ || !$.fn || !$.fn.select2) return;
+        if (started || !$ || !$.fn || !$.fn.select2) return;
+        started = true;
 
         function decorate($sel) {
             if ($sel.data('select2')) return; // already initialised
-            var optionsCount = $sel.find('option').length;
             $sel.select2({
                 width: '100%',
                 // copy the original select's classes onto the rendered
@@ -29,8 +31,8 @@
                    scrolling ancestor of the control and flips the list above
                    the field when the window leaves no room below. */
                 dropdownParent: $('body'),
-                // small option lists don't need a search box
-                minimumResultsForSearch: optionsCount <= 8 ? 0 : Infinity,
+                // Every list is searchable, including short lists and large ledgers.
+                minimumResultsForSearch: 0,
                 templateResult: function (data) {
                     if (data.id === '' && data.element && data.element.disabled) {
                         return $('<option>').text(data.text || '');
@@ -49,6 +51,15 @@
             // select2-theme.css strips the native-control geometry from
             // span.select2-container.master-select, so the inner
             // .select2-selection remains the only visible (44px) control.
+            $sel.on('select2:open.masterSelects', function () {
+                // Select2's delayed focus can be lost when a drawer/modal is opening.
+                window.requestAnimationFrame(function () {
+                    var instance = $sel.data('select2');
+                    if (instance && instance.isOpen()) {
+                        $('.select2-container--open .select2-search__field').filter(':visible').last().trigger('focus');
+                    }
+                });
+            });
             var $container = $sel.next('.select2-container'); // Select2 4.x inserts it after the select
             if (!$container.length) $container = $sel.prev('.select2-container');
             // Mirror only the app's own classes — never Select2 internals
@@ -96,6 +107,10 @@
         $(function () {
             initAll();
             watchModals();
+            // Close body-portaled options before the drawer restores opener focus.
+            document.addEventListener('master:drawer-closing', function (event) {
+                closeInside(event.target);
+            });
 
             // Re-decorate selects injected dynamically (AJAX modal rebuilds etc.).
             if (window.MutationObserver) {
