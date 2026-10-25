@@ -23,7 +23,7 @@ Prepared **25 October 2026** from this repository, not a generic ERP template. H
 
 Authentication/RBAC; people/payroll; clients/KYC; vendors; products/pricing; leads; projects/product lanes; execution/approvals/financial closure; QC; Packaging Lists and labels; shipments/delivery; PI/cash/tax invoices; purchase documents; cashflow/allocations/transfers; recurrence; statements; fixed assets; organisation; office services; tasks/coordinator queues; notes; feedback; briefings; global search; settings; client portal; vendor portal/shares; dashboards; audit; files; shared UI/print.
 
-**Executed baseline:** 427 portable PHPUnit tests and14,986 assertions passed;134 expanded tests are new in this change set. Native MySQL and complete system journeys remain separate, unexecuted local gates.
+**Executed baseline:** 427 portable PHPUnit tests and14,986 assertions passed;134 expanded tests are new in this change set. Native PHP/Composer and MySQL CI jobs also passed; complete system journeys and real concurrency remain separate follow-up gates.
 
 ## Executable foundation
 
@@ -57,7 +57,7 @@ APP_ENV=testing DB_HOST=127.0.0.1 DB_USERNAME=YOUR_LOCAL_TEST_USER \
   DB_PASSWORD=YOUR_LOCAL_TEST_PASSWORD npm run test:mysql
 ```
 
-The MySQL XML forces the test database name and the test class rejects any database whose name does not end in `_test`. It creates/drops only randomly named test tables. MySQL CI also runs the **whole fresh migration chain** against its isolated service, separately from SQLite fixtures. Those MySQL checks were prepared but **not run in the local sandbox**.
+The MySQL XML forces the test database name and the test class rejects any database whose name does not end in `_test`. It creates/drops only randomly named test tables. MySQL CI also runs the **whole fresh migration chain** against its isolated service, separately from SQLite fixtures. Those MySQL checks were **not run in the local sandbox**, but the fresh migration and native aggregation CI job passed in [run40176652907](https://github.com/hardiskbohra/misspack-erp/actions/runs/40176652907).
 
 ## Update this pack
 
@@ -74,4 +74,4 @@ The catalogue checker rejects duplicate IDs, missing case fields, missing source
 
 ## Release caveat
 
-A passing portable suite is necessary but not sufficient. The asset-disposal probe found a documented prorating discrepancy; native MySQL migrations/aggregation, real concurrent writers, cross-tenant portal downloads and full browser journeys remain explicit follow-up gates. See the baseline and prioritised TDD backlog before treating the ERP as release-certified.
+A passing portable suite is necessary but not sufficient. The asset-disposal probe found a documented prorating discrepancy; native MySQL migrations/aggregation now pass in CI, while real concurrent writers, cross-tenant portal downloads and full browser journeys remain explicit follow-up gates. See the baseline and prioritised TDD backlog before treating the ERP as release-certified.

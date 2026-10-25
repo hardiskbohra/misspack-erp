@@ -6,17 +6,17 @@
 
 | Check | Result / limit |
 |---|---|
-| Complete portable PHPUnit configuration (`phpunit.xml`) | Final run recorded below; includes Unit, Feature and Integration, not MySQL-only tests |
+| Complete portable PHPUnit configuration (`phpunit.xml`) | Local427 tests/14,986 assertions PASS; native PHP CI job also PASS. Includes Unit, Feature and Integration, not MySQL-only tests |
 | New executable foundation | 134 expanded tests: permission/employee/asset/file/portal unit cases plus HTTP/notes/workflow/route integration cases; included in the full result |
 | Catalogue validation | 31 domains,208 designs:93 unit +115 integration;53 designs have exact method-level links, some partial |
 | Source inventory | 41 test files, including the separately invoked MySQL class; counts are source declarations, not pass/coverage numbers |
 | Route export | 454 declared routes with action/middleware metadata; no access or ownership guarantee implied |
 | Portable Node checks | Catalogue consistency, period-control behaviour, module dashboard contracts and Blade structure; actual run recorded with final hand-off |
-| Native MySQL 8 migrations + day/month/year SQL | Implemented as separate CI job/config; **not executed in this sandbox**, which has no native MySQL service |
+| Native MySQL 8 migrations + day/month/year SQL | **PASS in native GitHub CI run40176652907**; not executed in this sandbox, which has no native MySQL service |
 | Browser/system journeys | Designed here, not executed end-to-end in this task; earlier task screenshots/checks are not presented as fresh executions |
-| Line/branch/mutation coverage | Not measured locally; CI is configured to upload Clover/JUnit evidence, without claiming a guessed percentage |
+| Line/branch/mutation coverage | Not measured locally; native CI completed the coverage command and uploaded Clover/JUnit artifacts. Artifact contents were not inspected here; no percentage claimed |
 
-The sandbox has no native PHP/Composer installation. Executions used PHP8.4.25 through `@php-wasm/cli`3.1.60 and the locked repository dependency sources in ignored `vendor/`, with a test-only autoloader bootstrap. This is useful actual runtime evidence but not a substitute for a native Composer/PHP/MySQL run. CI installs the real locked dependencies via Composer on PHP8.4 and supplies Xdebug and MySQL separately.
+The sandbox has no native PHP/Composer installation. Executions used PHP8.4.25 through `@php-wasm/cli`3.1.60 and the locked repository dependency sources in ignored `vendor/`, with a test-only autoloader bootstrap. This is useful actual runtime evidence but not a substitute for a native Composer/PHP/MySQL run. CI installs the real locked dependencies via Composer on PHP8.4 and supplies Xdebug and MySQL separately. Both native jobs passed in [run40176652907](https://github.com/hardiskbohra/misspack-erp/actions/runs/40176652907), testing code commit96bdcf5. The run/job status was verified through the GitHub API; raw log download is blocked by this sandbox network policy.
 
 Normal native command: `vendor/bin/phpunit -c phpunit.xml`. Sandbox equivalent used:
 
@@ -55,7 +55,7 @@ Accounting-policy signoff and a red/green regression are the next priority. See 
 
 ## Remaining release gates
 
-1. Native MySQL migration and aggregation CI must actually pass; no local pass claimed.
+1. Keep the now-passing native MySQL migration/aggregation CI mandatory; no local native-MySQL execution is claimed.
 2. Verify upgrade/rollback paths against representative prior schemas; SQLite scoped fixtures do not prove the full migration chain or MySQL semantics.
 3. Real concurrent allocation/posting/conversion/numbering tests with overlapping native connections remain planned.
 4. Full portal record/download/print/export isolation matrix remains planned beyond unit enablement and office/notes boundaries.
@@ -69,4 +69,5 @@ Accounting-policy signoff and a red/green regression are the next priority. See 
 - Runtime25.026s; peak312.50MB in this sandbox. This is an observed test-run measurement, not an application performance SLA.
 - `npm run test:contracts`: PASS — catalogue/method traceability, tooling self-checks,1764 period-control assertions,17 module-dashboard checks and14 Blade checks across244 templates.
 - Route-inventory regeneration/check: PASS,454 declarations.
-- No local line-coverage percentage, native-MySQL pass or full-browser/system certification is asserted.
+- Native PHP/Composer suite and disposable MySQL fresh-migration/aggregation jobs: PASS in the linked CI run.
+- No local line-coverage percentage, inspected native assertion count or full-browser/system certification is asserted.
