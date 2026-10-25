@@ -6,7 +6,7 @@ Generated from [catalogue.json](catalogue.json); edit the JSON and run `npm run 
 
 ## Authentication and office permissions (`AUTH`)
 
-Sources: `app/Services/PermissionMatrix.php`, `app/Http/Controllers/AuthController.php`, `app/Http/Middleware/EnsureUserIsAdmin.php`.
+Sources: `app/Services/PermissionMatrix.php`, `app/Http/Controllers/AuthController.php`, `app/Http/Middleware/EnsureUserIsAdmin.php`, `app/Support/Totp.php`, `app/Services/TwoFactorAuthentication.php`, `app/Http/Controllers/TwoFactorController.php`, `app/Http/Controllers/TwoFactorChallengeController.php`.
 
 ### IT-AUTH-001 — Guests cannot enter office modules
 
@@ -45,6 +45,50 @@ Sources: `app/Services/PermissionMatrix.php`, `app/Http/Controllers/AuthControll
 **Expected:** Both return 403; no client created.
 
 **Evidence:** `tests/Integration/OfficeAccessBoundaryTest.php#test_sales_reader_cannot_read_finance_or_write_sales`
+
+### IT-AUTH-004 — Office login locks out after five wrong passwords
+
+**Priority:** P0 · **Requirement:** REQ-AUTH · **Implementation:** linked executable evidence
+
+- **Preconditions:** F-IDENTITY fixture tables (users, audit logs) on disposable SQLite.
+- **Data:** One office user with a strong password; five wrong attempts then one right one from the same client.
+1. POST /login five times with a wrong password
+2. POST /login with the right password during the lockout
+3. Check the lockout is an audit event
+4. Repeat with failures below the limit and confirm a success clears the counter
+
+**Expected:** The sixth attempt is refused with a retry-after message even with the right password; a successful sign-in clears earlier failures; auth.login.throttled is audited.
+
+**Evidence:** `tests/Feature/LoginSecurityTest.php#test_five_wrong_passwords_lock_the_email_and_network_out`; `tests/Feature/LoginSecurityTest.php#test_a_successful_sign_in_forgets_earlier_failures`
+
+### IT-AUTH-005 — Two-factor accounts pass the password only to a challenge
+
+**Priority:** P0 · **Requirement:** REQ-AUTH · **Implementation:** linked executable evidence
+
+- **Preconditions:** F-IDENTITY fixture; user with two-factor confirmed via the service.
+- **Data:** Strong password; live TOTP codes from the stored secret; the eight recovery codes from enrolment.
+1. POST /login with the right password and assert no session is created, only a challenge redirect
+2. Finish at /two-factor-challenge with a current TOTP code and assert the session opens
+3. Sign in with a recovery code, then replay the same code after logout, expecting refusal
+4. Make six wrong code guesses and assert the challenge is torn up and audited
+
+**Expected:** Password alone never opens a session for a two-factor account; recovery codes are single-use; repeated guessing ends the challenge with an auth.two_factor.throttled audit event.
+
+**Evidence:** `tests/Feature/LoginSecurityTest.php#test_a_right_password_only_buys_a_challenge_when_two_factor_is_on`; `tests/Feature/LoginSecurityTest.php#test_recovery_codes_work_exactly_once`; `tests/Feature/LoginSecurityTest.php#test_challenge_gives_up_after_five_wrong_codes`
+
+### IT-AUTH-006 — One password policy everywhere passwords are set
+
+**Priority:** P1 · **Requirement:** REQ-AUTH · **Implementation:** linked executable evidence
+
+- **Preconditions:** F-IDENTITY fixture; signed-in office user.
+- **Data:** A weak candidate (lowercaseonly1x) and a strong one (Str0nger-Passw0rd); enrolment confirm codes.
+1. PUT /account/password with the weak candidate and expect a validation error on password
+2. PUT /account/password with the strong candidate and expect the stored hash to change
+3. Walk the account-page enrolment: start, wrong confirm code, right confirm code, then disable with the current password
+
+**Expected:** The default strength rule rejects the weak password and accepts the strong one; pending enrolment never locks sign-in; confirm turns two-factor on and disable turns it off again.
+
+**Evidence:** `tests/Feature/LoginSecurityTest.php#test_password_change_enforces_the_default_strength_rule`; `tests/Feature/LoginSecurityTest.php#test_the_account_page_enrols_and_disables_two_factor`
 
 ## People, payroll and employee documents (`PEOPLE`)
 

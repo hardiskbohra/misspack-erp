@@ -6,7 +6,7 @@ Generated from [catalogue.json](catalogue.json); edit the JSON and run `npm run 
 
 ## Authentication and office permissions (`AUTH`)
 
-Sources: `app/Services/PermissionMatrix.php`, `app/Http/Controllers/AuthController.php`, `app/Http/Middleware/EnsureUserIsAdmin.php`.
+Sources: `app/Services/PermissionMatrix.php`, `app/Http/Controllers/AuthController.php`, `app/Http/Middleware/EnsureUserIsAdmin.php`, `app/Support/Totp.php`, `app/Services/TwoFactorAuthentication.php`, `app/Http/Controllers/TwoFactorController.php`, `app/Http/Controllers/TwoFactorChallengeController.php`.
 
 ### UT-AUTH-001 — Read permission cannot mutate
 
@@ -44,6 +44,20 @@ Sources: `app/Services/PermissionMatrix.php`, `app/Http/Controllers/AuthControll
 **Expected:** Every office permission is denied.
 
 **Evidence:** `tests/Unit/PermissionMatrixTest.php#test_employee_never_gains_office_access_even_with_full_profile_or_explicit_grants`
+
+### UT-AUTH-004 — TOTP codes match RFC 6238 and the one-step window
+
+**Priority:** P0 · **Requirement:** REQ-AUTH · **Implementation:** linked executable evidence
+
+- **Preconditions:** No database; pure algorithm checks against the RFC test secret.
+- **Data:** RFC 6238 Base32 secret GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ; timestamps 59, 1111111109, 1234567890.
+1. Generate the six-digit code at each RFC timestamp and compare with the expected values
+2. Verify a code inside the one-step window passes and one four steps away fails
+3. Reject non six-digit input and invalid Base32 secrets
+
+**Expected:** Codes equal the RFC vectors to six digits; window rules hold; malformed input never verifies.
+
+**Evidence:** `tests/Unit/TotpTest.php#test_codes_match_the_rfc_6238_vectors`; `tests/Unit/TotpTest.php#test_verify_accepts_the_code_around_the_current_step`; `tests/Unit/TotpTest.php#test_verify_rejects_anything_that_is_not_six_digits`
 
 ## People, payroll and employee documents (`PEOPLE`)
 

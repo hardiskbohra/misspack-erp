@@ -88,6 +88,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     protected function casts(): array
@@ -99,6 +101,12 @@ class User extends Authenticatable
             'password'          => 'hashed',
             'permissions' => 'array',
             'permissions_updated_at' => 'datetime',
+            /* The second factor is a secret even from a database dump: the key
+               and the recovery-code hashes are encrypted on the way in and
+               decrypted only when the challenge needs them. */
+            'two_factor_secret' => 'encrypted',
+            'two_factor_confirmed_at' => 'datetime',
+            'two_factor_recovery_codes' => 'encrypted:array',
         ];
     }
 
@@ -108,6 +116,19 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role !== self::ROLE_EMPLOYEE;
+    }
+
+    /**
+     * Whether the password must be followed by a code at the door.
+     *
+     * True only once enrolment is *confirmed* — a pending setup key never
+     * locks anybody out. The fuller vocabulary (pending, verify, recovery
+     * codes) lives in `App\Services\TwoFactorAuthentication`.
+     */
+    public function hasTwoFactorEnabled(): bool
+    {
+        return $this->two_factor_confirmed_at !== null
+            && ! empty($this->two_factor_secret);
     }
 
     /**

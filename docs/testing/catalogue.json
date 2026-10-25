@@ -8,7 +8,11 @@
       "sources": [
         "app/Services/PermissionMatrix.php",
         "app/Http/Controllers/AuthController.php",
-        "app/Http/Middleware/EnsureUserIsAdmin.php"
+        "app/Http/Middleware/EnsureUserIsAdmin.php",
+        "app/Support/Totp.php",
+        "app/Services/TwoFactorAuthentication.php",
+        "app/Http/Controllers/TwoFactorController.php",
+        "app/Http/Controllers/TwoFactorChallengeController.php"
       ],
       "fixture": "F-IDENTITY; empty disposable database for guest/employee boundary checks"
     },
@@ -4208,7 +4212,7 @@
       "requirement": "REQ-VENDOR",
       "title": "Indian-country aliases trigger compliance without matching overseas countries",
       "preconditions": "Pure VendorKyc country policy; no database",
-      "test_data": "India, IN, IND, Bharat, भारत, whitespace/case variants; blank, null, Indonesia, Singapore, China",
+      "test_data": "India, IN, IND, Bharat, \u092d\u093e\u0930\u0924, whitespace/case variants; blank, null, Indonesia, Singapore, China",
       "steps": [
         "Normalise country input",
         "Check Indian and foreign aliases"
@@ -4401,6 +4405,90 @@
         "tests/Integration/UserDetailPhotoTest.php#test_invalid_empty_and_oversize_uploads_reopen_the_photo_modal_without_losing_the_existing_photo",
         "tests/Integration/UserDetailPhotoTest.php#test_storage_failure_does_not_delete_the_current_photo_or_change_the_record",
         "tests/Integration/UserDetailPhotoTest.php#test_guest_employee_and_read_only_accounts_cannot_change_photos"
+      ]
+    },
+    {
+      "id": "UT-AUTH-004",
+      "module": "AUTH",
+      "level": "unit",
+      "priority": "P0",
+      "requirement": "REQ-AUTH",
+      "title": "TOTP codes match RFC 6238 and the one-step window",
+      "preconditions": "No database; pure algorithm checks against the RFC test secret.",
+      "test_data": "RFC 6238 Base32 secret GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ; timestamps 59, 1111111109, 1234567890.",
+      "steps": [
+        "Generate the six-digit code at each RFC timestamp and compare with the expected values",
+        "Verify a code inside the one-step window passes and one four steps away fails",
+        "Reject non six-digit input and invalid Base32 secrets"
+      ],
+      "expected": "Codes equal the RFC vectors to six digits; window rules hold; malformed input never verifies.",
+      "automation": [
+        "tests/Unit/TotpTest.php#test_codes_match_the_rfc_6238_vectors",
+        "tests/Unit/TotpTest.php#test_verify_accepts_the_code_around_the_current_step",
+        "tests/Unit/TotpTest.php#test_verify_rejects_anything_that_is_not_six_digits"
+      ]
+    },
+    {
+      "id": "IT-AUTH-004",
+      "module": "AUTH",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-AUTH",
+      "title": "Office login locks out after five wrong passwords",
+      "preconditions": "F-IDENTITY fixture tables (users, audit logs) on disposable SQLite.",
+      "test_data": "One office user with a strong password; five wrong attempts then one right one from the same client.",
+      "steps": [
+        "POST /login five times with a wrong password",
+        "POST /login with the right password during the lockout",
+        "Check the lockout is an audit event",
+        "Repeat with failures below the limit and confirm a success clears the counter"
+      ],
+      "expected": "The sixth attempt is refused with a retry-after message even with the right password; a successful sign-in clears earlier failures; auth.login.throttled is audited.",
+      "automation": [
+        "tests/Feature/LoginSecurityTest.php#test_five_wrong_passwords_lock_the_email_and_network_out",
+        "tests/Feature/LoginSecurityTest.php#test_a_successful_sign_in_forgets_earlier_failures"
+      ]
+    },
+    {
+      "id": "IT-AUTH-005",
+      "module": "AUTH",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-AUTH",
+      "title": "Two-factor accounts pass the password only to a challenge",
+      "preconditions": "F-IDENTITY fixture; user with two-factor confirmed via the service.",
+      "test_data": "Strong password; live TOTP codes from the stored secret; the eight recovery codes from enrolment.",
+      "steps": [
+        "POST /login with the right password and assert no session is created, only a challenge redirect",
+        "Finish at /two-factor-challenge with a current TOTP code and assert the session opens",
+        "Sign in with a recovery code, then replay the same code after logout, expecting refusal",
+        "Make six wrong code guesses and assert the challenge is torn up and audited"
+      ],
+      "expected": "Password alone never opens a session for a two-factor account; recovery codes are single-use; repeated guessing ends the challenge with an auth.two_factor.throttled audit event.",
+      "automation": [
+        "tests/Feature/LoginSecurityTest.php#test_a_right_password_only_buys_a_challenge_when_two_factor_is_on",
+        "tests/Feature/LoginSecurityTest.php#test_recovery_codes_work_exactly_once",
+        "tests/Feature/LoginSecurityTest.php#test_challenge_gives_up_after_five_wrong_codes"
+      ]
+    },
+    {
+      "id": "IT-AUTH-006",
+      "module": "AUTH",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-AUTH",
+      "title": "One password policy everywhere passwords are set",
+      "preconditions": "F-IDENTITY fixture; signed-in office user.",
+      "test_data": "A weak candidate (lowercaseonly1x) and a strong one (Str0nger-Passw0rd); enrolment confirm codes.",
+      "steps": [
+        "PUT /account/password with the weak candidate and expect a validation error on password",
+        "PUT /account/password with the strong candidate and expect the stored hash to change",
+        "Walk the account-page enrolment: start, wrong confirm code, right confirm code, then disable with the current password"
+      ],
+      "expected": "The default strength rule rejects the weak password and accepts the strong one; pending enrolment never locks sign-in; confirm turns two-factor on and disable turns it off again.",
+      "automation": [
+        "tests/Feature/LoginSecurityTest.php#test_password_change_enforces_the_default_strength_rule",
+        "tests/Feature/LoginSecurityTest.php#test_the_account_page_enrols_and_disables_two_factor"
       ]
     }
   ]

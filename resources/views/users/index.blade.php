@@ -524,7 +524,7 @@
                             <label class="master-label" for="addPw1">Password <span class="master-required">*</span></label>
                             <div class="master-password-wrap">
                                 <input type="password" name="password" id="addPw1" class="master-input {{ $errors->has('password') ? 'is-invalid' : '' }}"
-                                    placeholder="Min. 6 characters" required autocomplete="new-password">
+                                    placeholder="12+, upper &amp; lower case, a number" required autocomplete="new-password">
                                 <button type="button" class="master-password-toggle" data-toggle-password="addPw1" aria-label="Toggle password visibility"><i class="fas fa-eye" aria-hidden="true"></i></button>
                             </div>
                             @error('password')<span class="master-error">{{ $message }}</span>@enderror
@@ -682,7 +682,7 @@
                         <div class="master-field">
                             <label class="master-label" for="editPw1">New password</label>
                             <div class="master-password-wrap">
-                                <input type="password" name="password" id="editPw1" class="master-input {{ $errors->has('password') ? 'is-invalid' : '' }}" placeholder="Min. 6 characters" autocomplete="new-password">
+                                <input type="password" name="password" id="editPw1" class="master-input {{ $errors->has('password') ? 'is-invalid' : '' }}" placeholder="12+, upper &amp; lower case, a number" autocomplete="new-password">
                                 <button type="button" class="master-password-toggle" data-toggle-password="editPw1" aria-label="Toggle password visibility"><i class="fas fa-eye" aria-hidden="true"></i></button>
                             </div>
                             @error('password')<span class="master-error">{{ $message }}</span>@enderror

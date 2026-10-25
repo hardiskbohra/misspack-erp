@@ -51,6 +51,55 @@
             ]
         },
         {
+            "name": "account.two-factor.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "account/two-factor",
+            "action": "App\\\\Http\\\\Controllers\\\\TwoFactorController@destroy",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "account.two-factor.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "account/two-factor",
+            "action": "App\\\\Http\\\\Controllers\\\\TwoFactorController@store",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "account.two-factor.confirm",
+            "methods": [
+                "POST"
+            ],
+            "uri": "account/two-factor/confirm",
+            "action": "App\\\\Http\\\\Controllers\\\\TwoFactorController@confirm",
+            "middleware": [
+                "web",
+                "auth",
+                "throttle:10,1"
+            ]
+        },
+        {
+            "name": "account.two-factor.recovery",
+            "methods": [
+                "POST"
+            ],
+            "uri": "account/two-factor/recovery-codes",
+            "action": "App\\\\Http\\\\Controllers\\\\TwoFactorController@regenerateRecoveryCodes",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
             "name": "audit.index",
             "methods": [
                 "GET",
@@ -2326,7 +2375,8 @@
             "uri": "login",
             "action": "App\\Http\\Controllers\\AuthController@login",
             "middleware": [
-                "web"
+                "web",
+                "throttle:30,1"
             ]
         },
         {
@@ -5241,6 +5291,30 @@
             "action": "App\\Http\\Controllers\\ShipmentController@publicTrack",
             "middleware": [
                 "web"
+            ]
+        },
+        {
+            "name": "two-factor.challenge",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "two-factor-challenge",
+            "action": "App\\\\Http\\\\Controllers\\\\TwoFactorChallengeController@show",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "two-factor.challenge.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "two-factor-challenge",
+            "action": "App\\\\Http\\\\Controllers\\\\TwoFactorChallengeController@store",
+            "middleware": [
+                "web",
+                "throttle:15,1"
             ]
         },
         {

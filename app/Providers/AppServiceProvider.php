@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -26,6 +27,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        /*
+         | What "a good password" means, said in exactly one place. Every form
+         | that *sets* a password — the account page's own change, the office's
+         | user editor — uses `Password::defaults()`, so the rule cannot drift
+         | the way the old min:4 / min:6 / min:8 trio did. Deliberately *not*
+         | uncompromised(): that check phones a breach-list service the office
+         | network may not reach; mixed case and a number is the floor we can
+         | always keep.
+         */
+        Password::defaults(
+            fn (): Password => Password::min(12)->letters()->mixedCase()->numbers()
+        );
+
         /*
          | assetVer('assets/css/shipments.css')
          |   -> https://host/assets/css/shipments.css?v=1730460000

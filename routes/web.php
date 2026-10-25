@@ -72,6 +72,8 @@ use App\Http\Controllers\OrganisationController;
 use App\Http\Controllers\PackagingListController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
+use App\Http\Controllers\TwoFactorChallengeController;
+use App\Http\Controllers\TwoFactorController;
 
 // Public-disk fallback when the web host cannot create public/storage.
 Route::get('/storage/{path}', \App\Http\Controllers\PublicMediaController::class)->where('path', '.*')->name('media.public');
@@ -81,8 +83,15 @@ Route::get('/', fn () => redirect()->route('login'));
 
 // ── Auth ─────────────────────────────────────────────────────
 Route::get('/login',   [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login',  [AuthController::class, 'login'])->name('login.post');
+/* The per-email+IP lockout lives in the controller; this is the blunt
+   backstop so the door cannot even be *knocked* on endlessly. */
+Route::post('/login',  [AuthController::class, 'login'])->name('login.post')->middleware('throttle:30,1');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+
+/* The second half of sign-in: the password left a name in the session, this
+   page trades a six-digit code — or a recovery code — for the session. */
+Route::get('/two-factor-challenge',  [TwoFactorChallengeController::class, 'show'])->name('two-factor.challenge');
+Route::post('/two-factor-challenge', [TwoFactorChallengeController::class, 'store'])->middleware('throttle:15,1')->name('two-factor.challenge.store');
 
 // Shipment Tracking
 Route::get('/track-shipment/{token}', [ShipmentController::class, 'publicTrack'])->name('shipments.publicTrack');
@@ -650,6 +659,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/account', [AccountController::class, 'index'])->name('account.index');
     Route::put('/account/profile', [AccountController::class, 'updateProfile'])->name('account.profile.update');
     Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password.update');
+
+    /* Two-factor belongs to the account's owner, so it lives beside the
+       password change — an employee's account has the same card. Confirm is
+       throttled tight: six digits is a small space to guess in. */
+    Route::post('/account/two-factor', [TwoFactorController::class, 'store'])->name('account.two-factor.store');
+    Route::post('/account/two-factor/confirm', [TwoFactorController::class, 'confirm'])->middleware('throttle:10,1')->name('account.two-factor.confirm');
+    Route::post('/account/two-factor/recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes'])->name('account.two-factor.recovery');
+    Route::delete('/account/two-factor', [TwoFactorController::class, 'destroy'])->name('account.two-factor.destroy');
 
     /* Notes — the sticky notes off your desk, and the one page in this file
        that belongs to the *login* rather than to a role. It sits outside the

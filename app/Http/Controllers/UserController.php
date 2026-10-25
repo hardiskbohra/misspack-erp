@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -821,7 +822,9 @@ class UserController extends Controller
         $rules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', Rule::unique('users')->ignore($user?->id)],
-            'password' => [$user ? 'nullable' : 'required', 'string', 'min:6', 'confirmed'],
+            /* Same strength rule as the account page's own change —
+               `Password::defaults()` says it once for every form that sets one. */
+            'password' => [$user ? 'nullable' : 'required', 'string', 'confirmed', Password::defaults()],
             'role' => ['required', Rule::in(array_keys(User::ROLES))],
             'mobile' => ['nullable', 'string', 'max:20'],
             'department' => ['nullable', 'string', 'max:255'],
