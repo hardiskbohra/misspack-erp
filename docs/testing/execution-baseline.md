@@ -263,3 +263,19 @@ exclusion and existing desktop/mobile wizard behaviour. Contracts pass. See
 - Catalogue242 designs/86 linked/59 test files. Local PHP WASM only; native PHP/MySQL
   CI checked after push. No measured coverage or live PHP browser E2E claim.
 - See [media-avatar.md](media-avatar.md) for evidence, limits, reproduction and deployment.
+
+## Direct detail-page user photo editing (25 October 2026)
+
+- Red6 intended HTTP failures → detail/public-media Green12/131; full portable
+  Unit + Integration + Feature **548 tests/15,953 assertions PASS**.
+- Visible Edit photo action on all detail tabs for people.manage, with a scoped
+  upload/preview/remove modal. Photo-only endpoint preserves unrelated fields,
+  original file on failed storage and user/tab/year context; readers/staff/guests
+  cannot mutate. Shared upload/persistence and avatar presentation reused.
+- Real Chromium1440/900/390 light/dark PASS: focus lifecycle, preview, replace,
+  remove/cancel/reset, invalid/no photo, permission hiding, native multipart,
+  validation reopen and bounded layout. Existing media/KYC browser regressions PASS.
+- Contracts250 templates/permission21/0/routes464 PASS;243 designs/87 linked cases/
+  60 PHP test files. No live PHP/browser E2E or measured coverage claim. Serial
+  PHP suites avoid fake-disk collisions. Native CI checked after push.
+- Acceptance and evidence: [detail-photo.md](detail-photo.md).

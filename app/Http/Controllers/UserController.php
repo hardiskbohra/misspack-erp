@@ -660,21 +660,70 @@ class UserController extends Controller
             $data['password'] = Hash::make($request->password);
         }
 
-        if ($request->hasFile('avatar')) {
-            if ($user->avatar) {
-                Storage::disk('public')->delete($user->avatar);
-            }
-            $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
+        $this->persistWithPhoto($request, $user, $data);
+
+        return back()->with('success', 'User updated successfully!');
+    }
+
+    /** Photo-only edit from the record: no account/profile fields are accepted. */
+    public function updatePhoto(Request $request, User $user)
+    {
+        $context = ['user' => $user];
+        $tab = $request->query('tab');
+        $year = $request->query('year');
+        if (is_string($tab) && array_key_exists($tab, self::TABS)) {
+            $context['tab'] = $tab;
+        }
+        if (is_string($year) && ($year === 'all' || preg_match('/^\d{4}$/', $year))) {
+            $context['year'] = $year;
         }
 
-        if ($request->boolean('remove_avatar') && ! $request->hasFile('avatar') && $user->avatar) {
-            Storage::disk('public')->delete($user->avatar);
+        try {
+            $request->validate($this->photoRules() + ['remove_avatar' => ['sometimes', 'boolean']]);
+            if (! $request->hasFile('avatar') && ! $request->boolean('remove_avatar')) {
+                throw ValidationException::withMessages(['avatar' => 'Choose a photo or remove the current photo.']);
+            }
+            $this->persistWithPhoto($request, $user);
+        } catch (ValidationException $invalid) {
+            return redirect()->route('users.show', $context)
+                ->withErrors($invalid->validator, 'userPhoto')->with('edit_user_photo', $user->id);
+        }
+
+        return redirect()->route('users.show', $context)->with('success', 'Photo updated successfully!');
+    }
+
+    /** The same upload policy for add/edit user and the detail photo editor. */
+    private function photoRules(): array
+    {
+        return ['avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048']];
+    }
+
+    /** Store first and delete the previous photo only after persistence succeeds. */
+    private function persistWithPhoto(Request $request, User $user, array $data = []): void
+    {
+        $old = $user->avatar;
+        $new = null;
+        if ($request->hasFile('avatar')) {
+            $new = $request->file('avatar')->store('avatars', 'public');
+            if (! $new) {
+                throw ValidationException::withMessages(['avatar' => 'The photo could not be stored. Please try again.']);
+            }
+            $data['avatar'] = $new;
+        } elseif ($request->boolean('remove_avatar')) {
             $data['avatar'] = null;
         }
 
-        $user->update($data);
-
-        return back()->with('success', 'User updated successfully!');
+        try {
+            $user->update($data);
+        } catch (\Throwable $exception) {
+            if ($new) {
+                Storage::disk('public')->delete($new);
+            }
+            throw $exception;
+        }
+        if (array_key_exists('avatar', $data) && $old && $old !== $data['avatar']) {
+            Storage::disk('public')->delete($old);
+        }
     }
 
     /** Delete user */
@@ -777,7 +826,7 @@ class UserController extends Controller
             'mobile' => ['nullable', 'string', 'max:20'],
             'department' => ['nullable', 'string', 'max:255'],
             'designation' => ['nullable', 'string', 'max:255'],
-            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048'],
+            ...$this->photoRules(),
             'employee_code' => ['nullable', 'string', 'max:40'],
             'date_of_joining' => ['nullable', 'date'],
             'date_of_birth' => ['nullable', 'date', 'before:today'],

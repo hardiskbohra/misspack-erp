@@ -100,6 +100,23 @@ Sources: `app/Services/EmployeeAccess.php`, `app/Services/EmployeeProfile.php`, 
 
 **Evidence:** `tests/Integration/PublicMediaAvatarTest.php#test_user_listing_record_account_and_edit_json_use_the_current_photo`; `tests/Integration/PublicMediaAvatarTest.php#test_replacement_photo_wins_over_a_stale_remove_flag_and_is_servable`; `tests/Integration/PublicMediaAvatarTest.php#test_photo_removal_and_invalid_uploads_preserve_the_upload_contract`
 
+### IT-PEOPLE-005 — Edit a user photo directly from any detail tab without changing account fields
+
+**Priority:** P1 · **Requirement:** REQ-PEOPLE; REQ-UI; REQ-FILES; REQ-AUTH · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable Analytics fixture plus employee document/payslip schema; people.manage and people.view office users, employee and guest; fake public disk; captured HTTP views in Chromium
+- **Data:** Saved photo, replacement with stale remove flag, explicit remove, no photo, empty/HTML/oversize upload, simulated failed storage;1440/900/390px light/dark
+1. Render all six detail tabs with a visible Edit photo action for managers only
+2. Open photo-only modal, preview saved image, replace/remove/cancel and inspect native multipart submission
+3. Save via people.manage endpoint and return to same user/tab/year
+4. Reject invalid or empty uploads with a dedicated validation bag and automatically reopen detail modal
+5. Preserve old photo on failed storage and prevent edits to role/password/name/bank fields
+6. Deny guest/employee/read-only mutations; verify focus trap/restoration and bounded mobile layout
+
+**Expected:** Photo editing stays on detail page; original remains until save; only avatar is mutable; shared renderer/picker and validation policy remain consistent with listing edit; permissions, file safety, tab/year context and keyboard lifecycle preserved.
+
+**Evidence:** `tests/Integration/UserDetailPhotoTest.php#test_detail_header_exposes_a_scoped_photo_editor_on_any_tab_only_to_managers`; `tests/Integration/UserDetailPhotoTest.php#test_photo_only_upload_preserves_all_other_fields_and_returns_to_the_same_record_context`; `tests/Integration/UserDetailPhotoTest.php#test_photo_removal_only_happens_on_save_and_displays_initials`; `tests/Integration/UserDetailPhotoTest.php#test_invalid_empty_and_oversize_uploads_reopen_the_photo_modal_without_losing_the_existing_photo`; `tests/Integration/UserDetailPhotoTest.php#test_storage_failure_does_not_delete_the_current_photo_or_change_the_record`; `tests/Integration/UserDetailPhotoTest.php#test_guest_employee_and_read_only_accounts_cannot_change_photos`
+
 ## Client master, KYC and account profile (`CLIENT`)
 
 Sources: `app/Http/Controllers/ClientController.php`, `app/Services/ClientAccountSummary.php`, `app/Models/Client.php`.

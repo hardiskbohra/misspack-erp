@@ -437,6 +437,17 @@
       ]
     },
     {
+      "file": "tests/Integration/UserDetailPhotoTest.php",
+      "methods": [
+        "test_detail_header_exposes_a_scoped_photo_editor_on_any_tab_only_to_managers",
+        "test_photo_only_upload_preserves_all_other_fields_and_returns_to_the_same_record_context",
+        "test_photo_removal_only_happens_on_save_and_displays_initials",
+        "test_invalid_empty_and_oversize_uploads_reopen_the_photo_modal_without_losing_the_existing_photo",
+        "test_storage_failure_does_not_delete_the_current_photo_or_change_the_record",
+        "test_guest_employee_and_read_only_accounts_cannot_change_photos"
+      ]
+    },
+    {
       "file": "tests/Integration/VendorKycWorkflowTest.php",
       "methods": [
         "test_link_and_public_form_are_scoped_private_and_use_the_client_kyc_design",
@@ -995,6 +1006,7 @@
     "tools/checks/dashboard-period-controls-check.cjs",
     "tools/checks/delivery-receipt-print-browser.cjs",
     "tools/checks/design-check.cjs",
+    "tools/checks/detail-photo-browser.cjs",
     "tools/checks/docs-check.cjs",
     "tools/checks/employees-check.cjs",
     "tools/checks/feedback-check.cjs",

@@ -4375,6 +4375,33 @@
       "automation": [
         "tests/Integration/KycTextareaPresentationTest.php#test_public_multiline_fields_share_input_base_focus_and_error_styles"
       ]
+    },
+    {
+      "id": "IT-PEOPLE-005",
+      "module": "PEOPLE",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-PEOPLE; REQ-UI; REQ-FILES; REQ-AUTH",
+      "title": "Edit a user photo directly from any detail tab without changing account fields",
+      "preconditions": "Disposable Analytics fixture plus employee document/payslip schema; people.manage and people.view office users, employee and guest; fake public disk; captured HTTP views in Chromium",
+      "test_data": "Saved photo, replacement with stale remove flag, explicit remove, no photo, empty/HTML/oversize upload, simulated failed storage;1440/900/390px light/dark",
+      "steps": [
+        "Render all six detail tabs with a visible Edit photo action for managers only",
+        "Open photo-only modal, preview saved image, replace/remove/cancel and inspect native multipart submission",
+        "Save via people.manage endpoint and return to same user/tab/year",
+        "Reject invalid or empty uploads with a dedicated validation bag and automatically reopen detail modal",
+        "Preserve old photo on failed storage and prevent edits to role/password/name/bank fields",
+        "Deny guest/employee/read-only mutations; verify focus trap/restoration and bounded mobile layout"
+      ],
+      "expected": "Photo editing stays on detail page; original remains until save; only avatar is mutable; shared renderer/picker and validation policy remain consistent with listing edit; permissions, file safety, tab/year context and keyboard lifecycle preserved.",
+      "automation": [
+        "tests/Integration/UserDetailPhotoTest.php#test_detail_header_exposes_a_scoped_photo_editor_on_any_tab_only_to_managers",
+        "tests/Integration/UserDetailPhotoTest.php#test_photo_only_upload_preserves_all_other_fields_and_returns_to_the_same_record_context",
+        "tests/Integration/UserDetailPhotoTest.php#test_photo_removal_only_happens_on_save_and_displays_initials",
+        "tests/Integration/UserDetailPhotoTest.php#test_invalid_empty_and_oversize_uploads_reopen_the_photo_modal_without_losing_the_existing_photo",
+        "tests/Integration/UserDetailPhotoTest.php#test_storage_failure_does_not_delete_the_current_photo_or_change_the_record",
+        "tests/Integration/UserDetailPhotoTest.php#test_guest_employee_and_read_only_accounts_cannot_change_photos"
+      ]
     }
   ]
 }

@@ -87,3 +87,6 @@ pagination, read-only evidence modal, responsive/keyboard verification and TDD e
 
 See [media-avatar.md](media-avatar.md) for public/private media routing, photo-first
 user avatars, KYC textarea styling, genuine TDD/security/browser evidence and deployment.
+
+See [detail-photo.md](detail-photo.md) for direct detail-page photo editing,
+permission/validation/storage safety tests and responsive keyboard/browser evidence.

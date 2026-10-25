@@ -27,7 +27,7 @@ class PermissionMatrixTest extends TestCase
             ['projects.work-queue.index', false, 'work.view'], ['projects.exceptions.index', false, 'work.view'],
             ['shipments.index', false, 'operations.view'], ['packaging-lists.store', true, 'operations.manage'],
             ['cashflows.index', false, 'finance.view'], ['assets.dispose', true, 'finance.manage'],
-            ['users.show', false, 'people.view'], ['users.store', true, 'people.manage'],
+            ['users.show', false, 'people.view'], ['users.photo.update', true, 'people.manage'], ['users.store', true, 'people.manage'],
             ['users.permissions.update', true, 'permissions.manage'], ['settings.index', false, 'settings.manage'],
             ['audit.index', false, 'audit.view'], ['clients.portal.show', false, 'portals.manage'],
             ['vendors.shares.store', true, 'portals.manage'], ['projects.approvals.override', true, 'projects.override'],

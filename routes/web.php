@@ -282,6 +282,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/users/{user}/documents/{document}', [EmployeeDocumentController::class, 'destroy'])->name('users.documents.destroy');
         Route::get('/users/{user}/documents/{document}/file', [EmployeeDocumentController::class, 'file'])->name('users.documents.file');
         Route::get('/users/{user}/data', [UserController::class, 'getData'])->name('users.data');
+        Route::patch('/users/{user}/photo', [UserController::class, 'updatePhoto'])->name('users.photo.update');
         Route::patch('/users/{user}/permissions', [UserController::class, 'updatePermissions'])->name('users.permissions.update');
         Route::put('/users/{user}',      [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}',   [UserController::class, 'destroy'])->name('users.destroy');

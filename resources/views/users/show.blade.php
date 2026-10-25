@@ -58,6 +58,11 @@
                 </p>
             </div>
         </div>
+        @if (auth()->user()->hasPermission('people.manage'))
+            <button type="button" class="master-btn master-btn-soft" data-open-photo>
+                <i class="fas fa-camera" aria-hidden="true"></i> Edit photo
+            </button>
+        @endif
     </div>
 
     <div class="master-stats desktop-only">
@@ -713,6 +718,9 @@
         </div>
     </div>
 </div>
+@if (auth()->user()->hasPermission('people.manage'))
+    @include('users.partials.photo-modal')
+@endif
 @endsection
 
 @push('scripts')

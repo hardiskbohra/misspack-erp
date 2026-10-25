@@ -5482,6 +5482,19 @@
             ]
         },
         {
+            "name": "users.photo.update",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "users/{user}/photo",
+            "action": "App\\Http\\Controllers\\UserController@updatePhoto",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "vendors.attachments.destroy",
             "methods": [
                 "DELETE"
