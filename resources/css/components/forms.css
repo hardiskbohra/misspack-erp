@@ -1,6 +1,7 @@
-/* Forms use one control shape and visible validation/focus affordances. */
-body[data-ui-shell] :is(.core-text-input, .core-select, .core-textarea, .master-input, .master-select, .master-textarea) {
-    border-color: var(--ui-border);
+/* Forms use one control shape and visible validation/focus affordances.
+   Select2 mirrors classes onto its outer span; only its inner selection is a control. */
+body[data-ui-shell] :is(.core-text-input, .core-select, .core-textarea, .master-input, .master-select, .master-textarea):not(.select2-container) {
+    border: 1px solid var(--ui-border);
     border-radius: var(--ui-radius-control);
     background-color: var(--ui-card-surface);
     color: var(--ui-text);
@@ -8,7 +9,7 @@ body[data-ui-shell] :is(.core-text-input, .core-select, .core-textarea, .master-
     font-size: 14px;
 }
 
-body[data-ui-shell] :is(.core-text-input, .core-select, .master-input, .master-select) {
+body[data-ui-shell] :is(.core-text-input, .core-select, .master-input, .master-select):not(.select2-container) {
     min-height: 40px;
 }
 

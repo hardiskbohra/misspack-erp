@@ -59,14 +59,23 @@
             <a href="{{ route('shipments.edit', $shipment) }}" class="master-btn master-btn-primary">
                 <i class="fa-solid fa-pen"></i> Edit Shipment
             </a>
+            @if ($shipment->latestPackagingList)
+                <a href="{{ route('packaging-lists.show', $shipment->latestPackagingList) }}" class="master-btn master-btn-soft">
+                    <i class="fa-solid fa-boxes-stacked"></i> View Packaging List
+                </a>
+                <a href="{{ route('packaging-lists.create', ['shipment' => $shipment->id]) }}" class="master-btn master-btn-light">
+                    <i class="fa-solid fa-plus"></i> New Packaging List
+                </a>
+            @else
+                <a href="{{ route('packaging-lists.create', ['shipment' => $shipment->id]) }}" class="master-btn master-btn-soft">
+                    <i class="fa-solid fa-boxes-stacked"></i> Create Packaging List
+                </a>
+            @endif
 
             {{-- Print previews are one capability, so they read as one group. --}}
             <div class="record-action-group" role="group" aria-label="Print and preview">
                 <a href="{{ route('shipments.shipping-mark', $shipment) }}" target="_blank" class="master-btn master-btn-soft">
                     <i class="fa-solid fa-tag"></i> Shipping Mark
-                </a>
-                <a href="{{ route('shipments.print', [$shipment, 'packing-list']) }}" target="_blank" class="master-btn master-btn-soft">
-                    <i class="fas fa-print"></i> Packing List
                 </a>
                 <a href="{{ route('shipments.print', [$shipment, 'delivery-challan']) }}" target="_blank" class="master-btn master-btn-soft">
                     <i class="fas fa-print"></i> Challan
@@ -239,6 +248,9 @@
                                         @if ($item->description)
                                             <span class="master-sub">{{ $item->description }}</span>
                                         @endif
+                                        @foreach($item->packingAllocations as $allocation)
+                                            <span class="master-sub">{{ $allocation->packagingListItem?->carton?->packagingList?->packing_number }} · {{ number_format((float)$allocation->allocated_quantity,3) }} {{ $item->unit }}</span>
+                                        @endforeach
                                     </td>
                                     <td class="ship-cell-muted">{{ $item->hs_code ?: '—' }}</td>
                                     <td class="is-num">{{ (int) $item->quantity }} {{ $item->unit }}</td>
@@ -270,6 +282,54 @@
                         @endforeach
                     </div>
                 @endif
+            </section>
+
+            <section class="master-card master-card--flat master-section">
+                <div class="master-section-head"><div><h3 class="master-section-title">Delivery receipt reconciliation</h3><p class="master-sub">Accepted quantities drive project delivery readiness. Short, damaged, rejected and returned quantities remain open until replacement receipts reconcile them.</p></div><span class="master-chip">{{ $shipment->deliveryReceipts->count() }} receipt{{ $shipment->deliveryReceipts->count()===1?'':'s' }}</span></div>
+                <div class="master-table-wrap">
+                    <table class="master-table"><thead><tr><th>Product</th><th class="is-num">Dispatched</th><th class="is-num">Net accepted</th><th class="is-num">Remaining</th><th>Status</th></tr></thead><tbody>
+                        @each('shipments.partials.delivery-reconciliation-row', $shipment->items, 'item')
+                    </tbody></table>
+                </div>
+
+                @if(in_array($shipment->status, \App\Models\Shipment::dispatchedStatuses(), true))
+                    <div class="shipment-receipt-action"><button type="button" class="master-btn master-btn-primary" data-delivery-receipt-open><i class="fa-solid fa-clipboard-check"></i> Record delivery receipt</button></div>
+                    @include('shipments.partials.delivery-receipt-modal')
+                @endif
+
+                <div class="shipment-receipt-history">
+                    @forelse($shipment->deliveryReceipts as $receipt)
+                        <article class="shipment-receipt-card">
+                            <header><div><strong>{{ $receipt->receipt_reference ?: 'Receipt #'.$receipt->id }}</strong><span>{{ $receipt->received_at?->format('d M Y, H:i') }} · {{ $receipt->recipient_name }}</span></div><span class="master-badge {{ $receipt->hasDiscrepancy() ? 'status-delayed' : 'status-completed' }}">{{ $receipt->hasDiscrepancy() ? 'Discrepancy recorded' : 'Accepted' }}</span></header>
+                            <div class="shipment-receipt-lines">
+                                @foreach($receipt->lines as $line)
+                                    <span><strong>{{ $line->shipmentItem?->product_name }}</strong> · {{ number_format((float)$line->accepted_quantity,3) }} accepted
+                                        @if((float)$line->short_quantity>0) · {{ number_format((float)$line->short_quantity,3) }} short @endif
+                                        @if((float)$line->damaged_quantity>0) · {{ number_format((float)$line->damaged_quantity,3) }} damaged @endif
+                                        @if((float)$line->rejected_quantity>0) · {{ number_format((float)$line->rejected_quantity,3) }} rejected @endif
+                                        @if((float)$line->returned_quantity>0) · {{ number_format((float)$line->returned_quantity,3) }} returned @endif
+                                    </span>
+                                @endforeach
+                            </div>
+                            <footer>
+                                <div class="shipment-receipt-evidence">
+                                    @if($receipt->evidenceUrl())
+                                        <a href="{{ $receipt->evidenceUrl() }}" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip"></i> {{ $receipt->evidence_original_name }}</a>
+                                        <small>SHA-256 {{ substr((string) $receipt->evidence_hash,0,12) }} · recorded by {{ $receipt->recorder?->name ?: 'System' }}</small>
+                                    @else
+                                        <span class="shipment-receipt-no-evidence"><i class="fa-regular fa-file"></i> No evidence attached</span>
+                                        <small>Recorded by {{ $receipt->recorder?->name ?: 'System' }} · line quantities are the receipt</small>
+                                    @endif
+                                </div>
+                                <a class="master-btn master-btn-soft master-btn-sm" href="{{ route('shipments.delivery-receipts.print', [$shipment, $receipt]) }}" target="_blank" rel="noopener">
+                                    <i class="fas fa-print"></i> Print receipt
+                                </a>
+                            </footer>
+                        </article>
+                    @empty
+                        <div class="master-empty-state"><i class="fa-solid fa-clipboard"></i><p>No line-level delivery receipt has been recorded. Shipment status alone does not complete delivered quantities.</p></div>
+                    @endforelse
+                </div>
             </section>
         </div>
 
@@ -334,42 +394,8 @@
                 </form>
             </section>
 
-            @include('shipments.partials.documents-card')
 
-            <section class="master-card master-card--flat master-section">
-                <div class="master-section-head">
-                    <h3 class="master-section-title">Shipment Photos</h3>
-                    @if ($shipment->attachments->isNotEmpty())
-                        <span class="master-chip">{{ $shipment->attachments->count() }}</span>
-                    @endif
-                </div>
-
-                @if ($shipment->attachments->isEmpty())
-                    <div class="master-empty-state">
-                        <i class="fa-regular fa-images"></i>
-                        <p>No photos yet. Upload them from the paperwork checklist above.</p>
-                    </div>
-                @else
-                    <div class="photo-grid">
-                        @foreach ($shipment->attachments as $attachment)
-                            <a class="photo-card" href="{{ asset('storage/'.$attachment->file_path) }}" target="_blank">
-                                @if (str_starts_with($attachment->mime_type, 'image/'))
-                                    <img src="{{ asset('storage/'.$attachment->file_path) }}" alt="{{ $attachment->title ?: $attachment->original_name }}">
-                                @else
-                                    <div class="file-card"><i class="file-icon fa-solid fa-file"></i></div>
-                                @endif
-
-                                <div class="photo-card-body">
-                                    <div class="photo-name">{{ $attachment->original_name }}</div>
-                                    <div class="photo-meta">
-                                        <span class="master-chip">{{ $attachment->is_public ? 'Public' : 'Internal' }}</span>
-                                    </div>
-                                </div>
-                            </a>
-                        @endforeach
-                    </div>
-                @endif
-            </section>
+            @include('shipments.partials.attachments-card')
 
             <section class="master-card master-card--flat master-section">
                 <div class="master-section-head">

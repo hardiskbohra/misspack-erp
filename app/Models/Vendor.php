@@ -17,19 +17,40 @@ class Vendor extends Model
     public const STATUS_BLACKLISTED = 'blacklisted';
 
     protected $fillable = [
-        'vendor_number', 'vendor_name', 'brand_name', 'vendor_type', 'category', 'status', 'image_path',
+        'vendor_number', 'vendor_name', 'brand_name', 'vendor_type', 'category', 'status', 'portal_enabled',
+        'portal_enabled_at', 'portal_last_shared_at', 'image_path',
         'contact_person_name', 'contact_person_email', 'contact_person_mobile', 'whatsapp_number', 'alternate_contact',
         'website', 'alibaba_link', 'country', 'state', 'city', 'pincode', 'address',
         'gstin', 'pan', 'tax_id', 'import_export_code',
-        'bank_name', 'account_holder_name', 'account_number', 'ifsc_code', 'swift_code', 'bank_branch',
+        'bank_name', 'account_holder_name', 'account_number', 'ifsc_code', 'swift_code', 'bank_branch', 'bank_address', 'beneficiary_address',
         'preferred_currency', 'payment_terms', 'lead_time_days', 'minimum_order_value', 'rating', 'notes', 'created_by',
     ];
 
+    protected $hidden = ['kyc_public_token', 'kyc_data', 'kyc_submitted_data'];
+
+    // KYC metadata is deliberately not mass assignable from normal vendor forms.
     protected $casts = [
+        'kyc_data'=>'array', 'kyc_submitted_data'=>'array', 'kyc_version'=>'integer',
+        'kyc_sent_at'=>'datetime', 'kyc_submitted_at'=>'datetime', 'kyc_reviewed_at'=>'datetime',
         'minimum_order_value' => 'decimal:2',
         'lead_time_days' => 'integer',
         'rating' => 'integer',
+        'portal_enabled' => 'boolean',
+        'portal_enabled_at' => 'datetime',
+        'portal_last_shared_at' => 'datetime',
     ];
+
+    public function isPublicKycEditable(): bool
+    {
+        return in_array($this->kyc_status ?: 'draft', ['draft','revision'], true);
+    }
+
+    public function kycStatusLabel(): string
+    {
+        return \App\Services\VendorKyc::statusOptions()[$this->kyc_status ?: 'draft'] ?? 'Draft';
+    }
+
+    public function kycReviewer() { return $this->belongsTo(User::class, 'kyc_reviewed_by'); }
 
     public function creator()
     {
@@ -100,15 +121,49 @@ class Vendor extends Model
     public static function typeOptions(): array
     {
         return [
+            'packaging_supplier' => 'Packaging Supplier',
             'manufacturer' => 'Manufacturer',
             'trader' => 'Trader',
             'distributor' => 'Distributor',
             'service_provider' => 'Service Provider',
+            'consultant' => 'Consultant',
+            'forwarder' => 'Forwarder / Logistics',
+            'other' => 'Other Vendor',
         ];
     }
 
     public static function currencyOptions(): array
     {
         return ['INR' => 'INR', 'USD' => 'USD', 'RMB' => 'RMB'];
+    }
+
+    public function packagingLists()
+    {
+        return $this->hasMany(PackagingList::class);
+    }
+
+    public function purchaseInvoices()
+    {
+        return $this->hasMany(PurchaseInvoice::class);
+    }
+
+    public function shipments()
+    {
+        return $this->hasMany(Shipment::class);
+    }
+
+    public function portalUsers()
+    {
+        return $this->hasMany(VendorPortalUser::class);
+    }
+
+    public function shareLinks()
+    {
+        return $this->hasMany(VendorShareLink::class);
+    }
+
+    public function collaborationUpdates()
+    {
+        return $this->hasMany(VendorCollaborationUpdate::class);
     }
 }

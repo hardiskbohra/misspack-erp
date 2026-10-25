@@ -227,6 +227,6 @@
     <script src="{{ asset('assets/vendor/jquery/jquery.min.js') }}"></script>
     <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
     <script src="{{ asset('assets/js/master-alert.js') }}"></script>
-    <script src="{{ asset('assets/js/master-selects.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/master-selects.js') }}"></script>
 </body>
 </html>

@@ -150,9 +150,9 @@ class CashflowPartyTest extends TestCase
     public function test_the_rule_is_the_model_s_own_list_of_columns(): void
     {
         $this->assertSame(
-            ['client' => 'client_id', 'vendor' => 'vendor_id', 'employee' => 'employee_id'],
+            ['client' => 'client_id', 'vendor' => 'vendor_id', 'employee' => 'employee_id', 'office_service' => 'office_service_id'],
             CashflowEntry::partyLinkColumns(),
-            'a fourth link means one line here and one `data-party-for` in the dialog'
+            'every supported party link must be represented in the dialog'
         );
     }
 }

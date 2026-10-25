@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CashflowAllocation;
 use App\Models\CashflowEntry;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Builder;
@@ -79,7 +80,31 @@ class ProjectReceipts
             return collect();
         }
 
-        return self::query($projectIds)->get();
+        $receipts = self::query($projectIds)->get();
+
+        if (! Schema::hasTable('cashflow_allocations')) {
+            return $receipts;
+        }
+
+        $allocated = CashflowAllocation::query()
+            ->with(['cashflowEntry', 'project'])
+            ->whereIn('project_id', $projectIds)
+            ->whereHas('cashflowEntry', fn ($entry) => $entry
+                ->moneyIn()
+                ->whereIn('accounting_status', ['booked', 'reconciled']))
+            ->get()
+            ->map(function (CashflowAllocation $allocation) {
+                $receipt = clone $allocation->cashflowEntry;
+                $receipt->credit_amount = $allocation->amount;
+                $receipt->debit_amount = 0;
+                $receipt->particular = $allocation->note ?: $receipt->particular;
+                $receipt->setRelation('project', $allocation->project);
+                return $receipt;
+            });
+
+        return $receipts->concat($allocated)
+            ->sortBy(fn ($entry) => ($entry->entry_date?->format('Y-m-d') ?? '').'-'.str_pad((string) $entry->id, 12, '0', STR_PAD_LEFT))
+            ->values();
     }
 
     /** @return Collection<int, CashflowEntry> */
@@ -93,6 +118,6 @@ class ProjectReceipts
     {
         $ids = self::publishedProjectIds($clientId);
 
-        return self::available() && $ids !== [] ? self::query($ids)->count() : 0;
+        return self::available() && $ids !== [] ? self::forProjects($ids)->count() : 0;
     }
 }

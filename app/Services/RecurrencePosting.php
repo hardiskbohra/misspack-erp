@@ -19,7 +19,9 @@ use RuntimeException;
  * occurrence is only an ask until the office answers. So this class is called
  * from exactly one place (`RecurrencePlan::approve()`), inside the same
  * transaction as the decision, and it never updates: a posted entry is the
- * ledger's to edit afterwards, like any other row.
+ * ledger's to edit afterwards, like any other row — and, if it pays a vendor,
+ * the vendor ledger gets its copy through `CashflowVendorPaymentSync`, exactly as
+ * a hand-entered cashflow payment would.
  *
  * Two rules are enforced rather than hoped for:
  *
@@ -97,6 +99,10 @@ class RecurrencePosting
            writer: a rule paying a vendor is a vendor entry whatever the select
            was left on. */
         $entry = CashflowEntry::create(CashflowEntry::alignPartyType($data));
+
+        /* A rule that pays a vendor is a vendor payment on the day it posts,
+           so the vendor ledger gets its row at the same moment. */
+        app(CashflowVendorPaymentSync::class)->sync($entry);
 
         CashflowLedger::recalculateAccount($entry->account_id);
 

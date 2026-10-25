@@ -29,6 +29,7 @@ This is the shared visual contract for the ERP application shell and its modules
 - `public/assets/css/document-print.css` is the canonical foundation for every A4 document shown in a browser or saved as a PDF. Load it on standalone print views; use `body.pdf-preview`, `.pdf-sheet` (or `.pdf-sheet--landscape` for wide reports), `.pdf-toolbar`, and `.pdf-action` with its primary/secondary variants. Domain styles own content layout only; paper dimensions, toolbar controls, print reset, font stack, and base tokens stay shared. Add every new printable view to `tools/checks/pdf-documents-check.cjs` so the shared contract stays enforced.
 - Use the shared Inter stack and tabular figures; keep document body text at roughly 10 pt (13 px), captions/field labels at 8–9 pt, and line-height around 1.4–1.5. Do not shrink dense financial tables below a legible size to force a one-page fit.
 - Use A4 portrait with 12 mm margins unless a document has a clear landscape data need. Use a white paper surface and dark text regardless of the app or device theme; never carry a dark-mode canvas into a PDF.
+- A landscape document declares its own `@page { size: A4 landscape; margin: 12mm }` in the view's `<head>`, **after** the stylesheet links. `document-print.css` sets A4 portrait for everything else and a print engine takes the last `@page size` in document order, so the page geometry has to sit last; the domain stylesheet must not restate it. A view opening the print dialog in portrait is the failure this prevents.
 - Print output removes browser/app chrome, shadows and rounded-card framing. Keep a simple hierarchy of issuer, document identity/date, counterparties, itemized figures, tax/totals, payment terms and sign-off.
 - Right-align currency values with tabular numerals and use the shared currency formatter. Label taxable values, discounts, GST heads and balances distinctly; repeat table headers and avoid splitting a table row across pages.
 - Specialized labels (for example, the shipping mark) may retain their exact custom paper geometry; share the font, color, and action tokens without applying the A4 sheet wrapper or changing the label size.
@@ -40,6 +41,30 @@ This is the shared visual contract for the ERP application shell and its modules
 - Tab panels may use `--mc-card-soft` to remain visibly distinct from the page canvas; cards inside the panel use `--mc-card`.
 - Use an 8 px spacing rhythm: 12–16 px between related controls, 16 px between cards, and 20–24 px for outer card padding where the content permits.
 - Controls and buttons should remain 40–44 px tall and retain visible keyboard focus states.
+- Every Select2 must expose working search, regardless of option count. Keep the
+  policy in `master-selects.js` (`minimumResultsForSearch: 0`), not per-page
+  overrides. Load the shared theme and cache-busted initializer on standalone
+  enhanced forms too. Preserve native opt-outs/disabled controls, submitted
+  values and existing jQuery change handlers. Dropdown search must remain
+  keyboard-accessible above modals/drawers and close with its owning overlay.
+- Standalone filter drawers load the shared form geometry and canonical design
+  system, not just partial field colours. Group related criteria, use the shared
+  footer actions and ensure the close icon works without external icon fonts.
+
+## Confirmation dialogs
+
+- Use the shared `MasterAlert.confirm()` or `data-confirm` form/button handler. The generic
+  answer is **Yes** with **Cancel**; never assume a confirmation means deletion. Informational
+  alerts retain **OK**.
+- An explicit action label is allowed when it matches the question (for example, **Convert
+  to bill**, **Mark received**, or **Remove**). Set `confirmText` in JavaScript or
+  `data-confirm-text` in markup. Preserve deliberate **Yes / No** choice dialogs.
+- Creation, conversion and completion confirmations use `danger: false` or
+  `data-confirm-danger="false"`, so they do not look like deletion. Destructive actions
+  retain danger styling and a clear warning about consequences.
+- Run `node tools/checks/confirmation-dialog-check.cjs` after changing shared confirmation
+  handling. Its source audit covers ERP declarations; optional Chromium checks exercise
+  labels, submit/cancel behavior and explicit overrides at desktop and mobile sizes.
 
 ## Tables and tabs
 

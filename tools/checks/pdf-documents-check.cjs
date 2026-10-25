@@ -25,11 +25,14 @@ const portalStatementView = read('resources/views/client_portal/statements/index
 const invoiceView = read('resources/views/sales_invoices/print.blade.php');
 const invoiceCss = plain(read('public/assets/css/sales-invoices-print.css'));
 const cashflowView = read('resources/views/cashflows/pdf.blade.php');
+const packagingView = read('resources/views/packaging_lists/print.blade.php');
+const packagingLabelView = read('resources/views/packaging_lists/label.blade.php');
+const packagingLabelCss = plain(read('public/assets/css/packaging-list-label.css'));
 const cashflowCss = plain(read('public/assets/css/cashflows-pdf.css'));
 const shipmentViews = [
-    read('resources/views/shipments/print/packing-list.blade.php'),
     read('resources/views/shipments/print/delivery-challan.blade.php'),
     read('resources/views/shipments/print/summary.blade.php'),
+    read('resources/views/shipments/print/delivery-receipt.blade.php'),
 ];
 const shipmentToolbar = read('resources/views/shipments/print/partials/toolbar.blade.php');
 const shipmentCss = plain(read('public/assets/css/shipment-print.css'));
@@ -50,13 +53,14 @@ const standaloneA4Views = [
     portalStatementView,
     invoiceView,
     cashflowView,
+    packagingView,
     ...shipmentViews,
 ];
 const loadsSharedPrint = view => /assets\/css\/document-print\.css/.test(view);
 const hasInterLink = view => /fonts\.googleapis\.com\/css2\?family=Inter:wght@400;500;600;700/.test(view);
 check('all A4 PDF/print views load the shared document stylesheet and Inter',
     standaloneA4Views.every(loadsSharedPrint)
-    && [payslipView, statementView, statementPublicView, invoiceView, cashflowView, ...shipmentViews].every(hasInterLink));
+    && [payslipView, statementView, statementPublicView, invoiceView, cashflowView, packagingView, ...shipmentViews].every(hasInterLink));
 
 check('the shared stylesheet defines one paper, type, and action system',
     /--pdf-font-family:\s*"Inter"/.test(documentCss)
@@ -157,7 +161,8 @@ check('discounted invoice line amounts reconcile to the stored tax and taxable t
     && /\$money\(\$line\['tax_amount'\]\)/.test(invoiceView)
     && /lineFiguresUnavailable/.test(invoiceView)
     && !/Total discount|discount_amount/.test(invoiceItemsTable)
-    && (invoiceItemsTable.match(/<col style=/g) || []).length === 6
+    && (invoiceItemsTable.match(/@else([\s\S]*?)@endif/)?.[1].match(/<col style=/g) || []).length === 6
+    && (invoiceItemsTable.match(/@if \(\$cashInvoice\)([\s\S]*?)@else/)?.[1].match(/<col style=/g) || []).length === 4
     && !/\$money\(\$item->(?:cgst|sgst|igst)_amount\)/.test(invoiceView));
 
 check('party GSTIN and PAN use unboxed address text',
@@ -176,8 +181,42 @@ check('cashflow reports use the shared paper shell but keep their landscape data
     && /class="pdf-sheet pdf-sheet--landscape"/.test(cashflowView)
     && /@page\s*\{\s*size:\s*A4 landscape;\s*margin:\s*12mm/.test(cashflowCss));
 
+check('the packaging list uses the shared shell with a print-page orientation setting', /class="pdf-preview pl-standalone"/.test(packagingView)
+    && /class="pdf-sheet pl-sheet"/.test(packagingView)
+    && /pdf-toolbar pdf-toolbar--spread no-print/.test(packagingView)
+    && packagingView.includes('id="plPageStyle"')
+    && packagingView.includes("size: A4 {{ $printSettings['orientation'] }}")
+    && (/assets\/css\/packaging-list-print\.css/.test(packagingView)));
+
+check('the packaging sheet follows the invoice hierarchy on the same tokens', (() => {
+    const css = plain(read('public/assets/css/packaging-list-print.css'));
+    const order = ['class="pl-top"', 'class="pl-facts"', 'class="pl-parties"', 'class="pl-items"', 'class="pl-bottom"', 'class="pl-footer"']
+        .map(marker => packagingView.indexOf(marker));
+
+    return order.every((position, index) => position > -1 && (index === 0 || position > order[index - 1]))
+        && /--pl-font:\s*var\(--pdf-font-family/.test(css)
+        && /\.pl-facts\s*\{[^}]*grid-template-columns:\s*repeat\(5/.test(css)
+        && /\.pl-items th,\s*\n?\.pl-items td \{[^}]*font-size:\s*12px/.test(css);
+})());
+
+/* A document that is not on the shared A4 paper states the page itself, in its
+   own head and after its stylesheet link — a print engine takes the last
+   `@page size` in document order, so anywhere earlier is a coin toss. */
+check('a document with its own paper declares it after its stylesheet, inside the head',
+    (() => {
+        const pageAt = packagingLabelView.indexOf('<style>@page');
+        return pageAt > packagingLabelView.indexOf('packaging-list-label.css')
+            && pageAt < packagingLabelView.indexOf('</head>')
+            && /@page\{size:\{/.test(packagingLabelView);
+    })()
+    && !/@page/.test(plain(read('public/assets/css/packaging-list-print.css'))));
+
+check('carton labels ride the same Inter stack as the rest of the paperwork', /family=Inter:wght@400;500;600;700/.test(packagingLabelView)
+    && /font:12pt\/1\.35 "Inter","Segoe UI",Roboto,Arial,sans-serif/.test(packagingLabelCss)
+    && !/Helvetica/.test(packagingLabelCss));
+
 check('shipment paperwork shares the A4 shell and themed toolbar',
-    shipmentViews.every(view => /class="pdf-preview"/.test(view) && /class="print-sheet pdf-sheet"/.test(view))
+    shipmentViews.every(view => /class="pdf-preview(?: [^"]*)?"/.test(view) && /class="print-sheet pdf-sheet"/.test(view))
     && /pdf-action pdf-action--primary/.test(shipmentToolbar)
     && /pdf-action pdf-action--secondary/.test(shipmentToolbar));
 

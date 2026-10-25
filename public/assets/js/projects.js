@@ -6,9 +6,7 @@
        shared list toolkit (row navigation and the pinned-header shadow) and
        delete confirmation
      - project detail: tab navigation (hash + localStorage restore) and the
-       add/edit modals for products, milestones, attachments and tracking
-     - milestones tab: timeline editor modal (pmile-*, module-specific
-       design)
+       add/edit modals for products, attachments and tracking
    The standard .master-modal dialogs on the detail page use the shared
    master-* modal lifecycle from app-layout.js (window.MasterModal): this
    file only opens modals and fills their forms — close/Escape/backdrop
@@ -99,6 +97,9 @@
                 window.MasterModal.open(target);
             });
         });
+        document.querySelectorAll('.master-modal[data-open-on-errors="true"]').forEach(function (modal) {
+            window.MasterModal.open(modal);
+        });
 
         /* `type="date"` wants `YYYY-MM-DD`; a model cast hands over a full ISO
            timestamp, which the field quietly refuses and shows as empty. */
@@ -155,7 +156,6 @@
                     setValue(editTrackingForm, 'project_product_id', tracking.project_product_id);
                     setValue(editTrackingForm, 'title', tracking.title);
                     setValue(editTrackingForm, 'status', tracking.status);
-                    setValue(editTrackingForm, 'progress_percent', tracking.progress_percent);
                     setValue(editTrackingForm, 'location', tracking.location);
                     setValue(editTrackingForm, 'notes', tracking.notes);
                     setValue(editTrackingForm, 'is_public', tracking.is_public);
@@ -204,114 +204,76 @@
     }
 
     /* ------------------------------------------------------------------
-       Milestones tab — timeline editor modal
-       Uses the shared master-modal layer (app-layout.js) so it matches
-       every other module: same card, header, close button and footer.
-       Destructive actions open a separate themed confirmation modal.
+       Workflow command centre — task-first views
+       Only one operational surface is visible at a time. The selected view is
+       kept per project so a form round-trip returns the coordinator to the
+       context they were working in.
        ------------------------------------------------------------------ */
-    function initMilestoneModal() {
-        var editModal = document.getElementById('editMilestoneModal');
-        if (!editModal) return;
+    function initWorkflowViews() {
+        var root = document.getElementById('project-panel-workflow');
+        if (!root) return;
 
-        var deleteModal = document.getElementById('deleteMilestoneModal');
-        var editForm = document.getElementById('editMilestoneForm');
-        var deleteForm = document.getElementById('deleteMilestoneForm');
+        var views = Array.prototype.slice.call(root.querySelectorAll('[data-workflow-view]'));
+        var triggers = Array.prototype.slice.call(root.querySelectorAll('[data-workflow-open]'));
+        if (!views.length || !triggers.length) return;
 
-        function openModal(modal) {
-            if (!modal) return;
-            if (typeof window.MasterModal !== 'undefined') {
-                window.MasterModal.open(modal);
-                return;
-            }
-            modal.classList.add('open');
-            modal.setAttribute('aria-hidden', 'false');
-            document.body.classList.add('master-modal-open');
-        }
+        var project = document.querySelector('.project-show');
+        var storageKey = 'project-workflow-view:' + (project ? project.getAttribute('data-project-id') : 'default');
+        var allowed = ['actions', 'matrix', 'products', 'commercial', 'history'];
 
-        function closeModal(modal) {
-            if (!modal) return;
-            if (typeof window.MasterModal !== 'undefined') {
-                window.MasterModal.close(modal);
-                return;
-            }
-            modal.classList.remove('open');
-            modal.setAttribute('aria-hidden', 'true');
-            if (!document.querySelector('.master-modal.open')) {
-                document.body.classList.remove('master-modal-open');
-            }
-        }
-
-        function setField(id, value) {
-            var field = document.getElementById(id);
-            if (field) field.value = value || '';
-        }
-
-        function setChecked(id, value) {
-            var field = document.getElementById(id);
-            if (field) field.checked = !!value;
-        }
-
-        document.querySelectorAll('.editMilestoneBtn').forEach(function (button) {
-            button.addEventListener('click', function () {
-                var milestone = {};
-                try {
-                    milestone = JSON.parse(button.getAttribute('data-milestone') || '{}');
-                } catch (e) { /* ignore malformed payload */ }
-
-                if (editForm) editForm.action = button.getAttribute('data-update-url') || '#';
-                if (deleteForm) deleteForm.action = button.getAttribute('data-delete-url') || '#';
-
-                var modalTitle = document.getElementById('editMilestoneModalTitle');
-                if (modalTitle) {
-                    modalTitle.textContent = milestone.title ? 'Edit ' + milestone.title : 'Edit Milestone';
+        function select(name, shouldFocus) {
+            if (allowed.indexOf(name) === -1) name = 'actions';
+            views.forEach(function (view) {
+                view.hidden = view.getAttribute('data-workflow-view') !== name;
+            });
+            triggers.forEach(function (trigger) {
+                var active = trigger.getAttribute('data-workflow-open') === name;
+                if (trigger.getAttribute('role') === 'tab') {
+                    trigger.classList.toggle('is-active', active);
+                    trigger.setAttribute('aria-selected', active ? 'true' : 'false');
+                    trigger.setAttribute('tabindex', active ? '0' : '-1');
                 }
-
-                var deleteDesc = document.getElementById('deleteMilestoneDesc');
-                if (deleteDesc) {
-                    deleteDesc.textContent = milestone.title
-                        ? 'Are you sure you want to delete "' + milestone.title + '"? This action cannot be undone.'
-                        : 'Are you sure you want to delete this milestone? This action cannot be undone.';
+            });
+            try { window.localStorage.setItem(storageKey, name); } catch (error) {}
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', window.location.pathname + window.location.search + '#workflow-' + name);
+            }
+            if (shouldFocus) {
+                var heading = root.querySelector('[data-workflow-view="' + name + '"] h2');
+                if (heading) {
+                    heading.setAttribute('tabindex', '-1');
+                    heading.focus({ preventScroll: true });
                 }
+                root.querySelector('.workflow-view-tabs').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
 
-                setField('edit_milestone_key', milestone.milestone_key);
-                setField('edit_project_product_id', milestone.project_product_id);
-                setField('edit_title', milestone.title);
-                setField('edit_status', milestone.status || 'not_started');
-                setField('edit_progress_percent', milestone.progress_percent || 0);
-                setField('edit_planned_start_date', milestone.planned_start_date);
-                setField('edit_planned_end_date', milestone.planned_end_date);
-                setField('edit_actual_start_date', milestone.actual_start_date);
-                setField('edit_actual_end_date', milestone.actual_end_date);
-                setField('edit_owner_id', milestone.owner_id);
-                setField('edit_sort_order', milestone.sort_order || 0);
-                setField('edit_client_note', milestone.client_note);
-                setField('edit_internal_notes', milestone.internal_notes);
-                setField('edit_notes', milestone.notes);
-                setField('edit_blocked_reason', milestone.blocked_reason);
-                setChecked('edit_is_public', milestone.is_public);
-                setChecked('edit_is_required', milestone.is_required);
-
-                openModal(editModal);
+        triggers.forEach(function (trigger) {
+            trigger.addEventListener('click', function (event) {
+                if (trigger.matches('a')) event.preventDefault();
+                select(trigger.getAttribute('data-workflow-open'), true);
+            });
+            trigger.addEventListener('keydown', function (event) {
+                if (trigger.getAttribute('role') !== 'tab' || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+                event.preventDefault();
+                var tabs = triggers.filter(function (item) { return item.getAttribute('role') === 'tab'; });
+                var index = tabs.indexOf(trigger) + (event.key === 'ArrowRight' ? 1 : -1);
+                var next = tabs[(index + tabs.length) % tabs.length];
+                next.focus();
+                select(next.getAttribute('data-workflow-open'), false);
             });
         });
 
-        /* Footer "Delete" hands over to the themed confirmation modal. */
-        var openDelete = document.getElementById('openDeleteMilestoneModal');
-        if (openDelete) {
-            openDelete.addEventListener('click', function () {
-                closeModal(editModal);
-                openModal(deleteModal);
-            });
-        }
-
-        /* Close/backdrop/Escape handling is owned by the shared modal layer
-           (app-layout.js) through [data-close-modal]. */
+        var fromHash = window.location.hash.indexOf('#workflow-') === 0 ? window.location.hash.replace('#workflow-', '') : null;
+        var saved = null;
+        try { saved = window.localStorage.getItem(storageKey); } catch (error) {}
+        select(allowed.indexOf(fromHash) !== -1 ? fromHash : (allowed.indexOf(saved) !== -1 ? saved : 'actions'), false);
     }
 
     onReady(function () {
         initProjectList();
         initDeleteConfirm();
         initDetailModals();
-        initMilestoneModal();
+        initWorkflowViews();
     });
 })();

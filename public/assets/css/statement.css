@@ -161,7 +161,7 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1px;
-    overflow: hidden;
+    overflow: visible;
     border: 1px solid var(--stmt-border);
     border-radius: 10px;
     background: var(--stmt-border);
@@ -244,8 +244,9 @@
 }
 
 .stmt-num {
-    text-align: center;
+    text-align: right;
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 .stmt-num-strong {
@@ -847,3 +848,128 @@ body.stmt-standalone.stmt-print .stmt {
         font-size: 17px;
     }
 }
+
+/* Compact print composition. Tables also work in server PDF engines without grid. */
+.stmt-logo {
+    display: block;
+    width: 112px;
+    max-height: 48px;
+    object-fit: contain;
+    object-position: left;
+    margin: 0 0 12px;
+}
+
+.stmt-head--compact {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    border-spacing: 0;
+    break-inside: avoid;
+}
+
+.stmt-head--compact > .stmt-brand,
+.stmt-head--compact > .stmt-heading {
+    display: table-cell;
+    vertical-align: top;
+    width: 48%;
+    overflow-wrap: anywhere;
+}
+
+.stmt-head--compact > .stmt-brand { padding-right: 16px; }
+.stmt-head--compact > .stmt-heading { text-align: right; margin: 0; }
+.stmt-head--compact .stmt-stamp { display: block; margin-top: 6px; }
+.stmt-head--compact .stmt-stamp-time { display: block; margin-top: 4px; }
+.stmt-meta.stmt-meta--compact { display: block; }
+.stmt-meta--compact .stmt-block--summary { width: 100%; }
+
+/* Long formatted values may wrap, but must never be clipped or ellipsized. */
+.stmt-figure { min-width: 0; }
+.stmt-figure strong { white-space: normal; overflow-wrap: anywhere; }
+
+body.stmt-print .stmt-figures {
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 0;
+}
+
+body.stmt-print .stmt-figure {
+    display: table-cell;
+    width: 25%;
+    border: 1px solid var(--stmt-border);
+    padding: 10px;
+    vertical-align: top;
+}
+
+body.stmt-print .stmt-figure span,
+body.stmt-print .stmt-figure strong { display: block; }
+body.stmt-print .stmt-figure strong { font-size: 14px; margin-top: 4px; }
+
+.stmt-period-dates { margin: 0 0 6px; font-size: 11px; color: var(--stmt-text-2); }
+.stmt-table-wrap { max-width: 100%; overflow-x: auto; }
+body.stmt-print .stmt-table { table-layout: fixed; }
+body.stmt-print .stmt-col-date { width: 13%; }
+body.stmt-print .stmt-col-particular { width: 18%; }
+body.stmt-print .stmt-col-reference { width: 15%; }
+body.stmt-print .stmt-col-money { width: 17%; }
+body.stmt-print .stmt-col-balance { width: 20%; }
+
+body.stmt-print .stmt-table th,
+body.stmt-print .stmt-table td {
+    padding-left: 4px;
+    padding-right: 4px;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+@media print {
+    .stmt-logo { width: 100px; max-height: 40px; margin-bottom: 8px; }
+    .stmt-head--compact .stmt-brand-line,
+    .stmt-head--compact .stmt-block-line { font-size: 9pt; }
+    .stmt-meta--compact,
+    body.stmt-print .stmt-foot { break-inside: avoid; }
+    .stmt-table-wrap { overflow: visible; }
+    html body.stmt-print .pdf-sheet .stmt-table tbody td {
+        font-size: 9pt;
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+    /* A closing balance is the final total, not a repeating page footer. */
+    .stmt-print .stmt-table tfoot { display: table-row-group; }
+    body.stmt-print .stmt-table tfoot td { font-size: 9pt; }
+}
+
+/* Print masthead: document title beside logo, then issuer/party at equal height.
+   Keep the equal-name rule outside @media print so the preview matches paper. */
+.stmt-masthead {
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+    padding-bottom: 12px;
+    break-inside: avoid;
+}
+
+.stmt-masthead-logo,
+.stmt-document-heading {
+    display: table-cell;
+    width: 50%;
+    vertical-align: top;
+}
+
+.stmt-document-heading { text-align: right; }
+.stmt-masthead .stmt-logo { margin: 0; }
+.stmt-document-heading .stmt-eyebrow { margin-top: 0; }
+.stmt-document-heading .stmt-period { margin-bottom: 0; }
+.stmt-document-heading .stmt-period-dates { margin: 4px 0 0; }
+
+.stmt-head--compact .stmt-brand-name,
+.stmt-head--compact .stmt-party-name {
+    margin: 0 0 4px;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+}
+
+.stmt-table th.stmt-num { text-align: right; }

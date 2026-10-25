@@ -273,12 +273,24 @@ class CashflowFilters
             'clientId' => 'client_id',
             'vendorId' => 'vendor_id',
             'employeeId' => 'employee_id',
-            'projectId' => 'project_id',
             'paymentMode' => 'payment_mode',
             'currency' => 'currency',
             'expenseHead' => 'expense_head',
         ] as $key => $name) {
             $query = $column($query, $key, $name);
+        }
+
+        if ($set('projectId')) {
+            $projectId = $value('projectId');
+            if ((string) $projectId === self::NOT_SET) {
+                $query->whereNull('project_id')
+                    ->when(Schema::hasTable('cashflow_allocations'), fn (Builder $q) => $q->whereDoesntHave('allocations', fn ($allocation) => $allocation->whereNotNull('project_id')));
+            } elseif (Schema::hasTable('cashflow_allocations')) {
+                $query->where(fn (Builder $q) => $q->where('project_id', $projectId)
+                    ->orWhereHas('allocations', fn ($allocation) => $allocation->where('project_id', $projectId)));
+            } else {
+                $query->where('project_id', $projectId);
+            }
         }
 
         return $query
@@ -357,7 +369,7 @@ class CashflowFilters
             return '';
         }
 
-        $project = DB::table('projects')->where('id', $id)->first(['name', 'project_number']);
+        $project = DB::table('projects')->whereNull('deleted_at')->where('id', $id)->first(['name', 'project_number']);
 
         if (! $project) {
             return '';

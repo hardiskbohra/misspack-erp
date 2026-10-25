@@ -6,6 +6,7 @@
 @php
     $paidAmount = $invoice->paidAmount();
     $openAmount = $invoice->openAmount();
+    $advanceAmount = $invoice->advanceAmount();
     $balanceAmount = $invoice->isBill() ? $invoice->balanceDue() : $openAmount;
     $isImport = $invoice->gst_type === 'export';
     $taxAmount = (float) $invoice->cgst_amount + (float) $invoice->sgst_amount + (float) $invoice->igst_amount;
@@ -56,6 +57,7 @@
         <div class="record-head-actions">
             <a href="{{ route($routePrefix.'.index') }}" class="master-btn master-btn-light">Back</a>
             <a href="{{ route($routePrefix.'.edit', $invoice) }}" class="master-btn master-btn-light">Edit</a>
+            @if($invoice->isBill())<a href="{{ route('packaging-lists.create',['purchase_invoice'=>$invoice->id]) }}" class="master-btn master-btn-soft"><i class="fa-solid fa-boxes-stacked"></i> Pack items</a>@endif
             @php
                 $advanceOpen = $invoice->isOrder() && $invoice->canReceiveMoney()
                     ? max((float) $invoice->total_amount - $paidAmount, 0)
@@ -102,7 +104,7 @@
                 </button>
                 <div class="master-dropdown-menu">
                     <button type="button" data-copy-link="{{ route('purchase-invoices.public', $invoice->public_token) }}">
-                        Copy public link
+                        <i class="fa-solid fa-link" aria-hidden="true"></i> Copy public link
                     </button>
                     @if ($invoice->canConvert())
                         <form method="POST" action="{{ route('purchase-invoices.convert', $invoice) }}"
@@ -111,7 +113,7 @@
                             data-confirm-text="Convert to bill"
                             data-confirm-danger="false">
                             @csrf
-                            <button type="submit">Convert to bill</button>
+                            <button type="submit"><i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i> Convert to bill</button>
                         </form>
                     @endif
                     @foreach ($nextStatuses as $next)
@@ -119,14 +121,14 @@
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="status" value="{{ $next }}">
-                            <button type="submit">Mark {{ \App\Models\PurchaseInvoice::statusOptions()[$next] ?? $next }}</button>
+                            <button type="submit"><i class="fa-solid fa-check" aria-hidden="true"></i> Mark {{ \App\Models\PurchaseInvoice::statusOptions()[$next] ?? $next }}</button>
                         </form>
                     @endforeach
                     <form method="POST" action="{{ route($routePrefix.'.destroy', $invoice) }}"
                         data-confirm="Delete {{ $invoice->invoice_number }}?">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="danger">Delete</button>
+                        <button type="submit" class="danger"><i class="fa-solid fa-trash" aria-hidden="true"></i> Delete</button>
                     </form>
                 </div>
             </div>
@@ -341,12 +343,15 @@
                         <div class="si-payment">
                             <span class="si-payment-icon"><i class="fas fa-indian-rupee-sign"></i></span>
                             <div class="si-payment-main">
-                                <strong>Paid {{ optional($payment->transaction_date)->format('d M Y') }}</strong>
+                                <strong>{{ $payment->foreign_amount < 0 ? 'Refunded' : 'Paid' }} {{ optional($payment->transaction_date)->format('d M Y') }}</strong>
                                 <span class="master-sub">{{ $payment->payment_mode ?: 'Mode not recorded' }}
                                     @if (filled($payment->particular)) · {{ $payment->particular }} @endif
                                 </span>
+                                @if (! empty($payment->cashflow_entry_id))
+                                    <a class="si-payment-ref" href="{{ route('cashflows.show', $payment->cashflow_entry_id) }}">Cashflow entry #{{ $payment->cashflow_entry_id }}</a>
+                                @endif
                             </div>
-                            <strong class="si-payment-amount si-clear">{{ \App\Helpers\CommonHelper::amount($payment->foreign_amount, $payment->foreign_currency ?: $invoice->currency) }}</strong>
+                            <strong class="si-payment-amount {{ $payment->foreign_amount < 0 ? 'si-due' : 'si-clear' }}">{{ \App\Helpers\CommonHelper::amount($payment->foreign_amount, $payment->foreign_currency ?: $invoice->currency) }}</strong>
                         </div>
                     @endforeach
                 </div>
@@ -354,6 +359,7 @@
             <div class="si-pay-foot">
                 <div><span>Paid</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($paidAmount, $invoice->currency) }}</strong></div>
                 <div><span>Still open</span><strong class="{{ $openAmount > 0 ? 'si-due' : 'si-clear' }}">{{ \App\Helpers\CommonHelper::amount($openAmount, $invoice->currency) }}</strong></div>
+                @if($advanceAmount > 0.009)<div><span>Advance / overpayment</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($advanceAmount, $invoice->currency) }}</strong></div>@endif
             </div>
         </div>
     @endif

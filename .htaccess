@@ -1,6 +1,23 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Hostinger serves this repository from public_html while Laravel's web
+    # files live in public/. Resolve browser-facing assets there without adding
+    # /public to generated URLs or exposing it in the address bar.
+    RewriteRule ^assets/(.*)$ public/assets/$1 [L,NC]
+    RewriteRule ^storage/(.*)$ public/storage/$1 [L,NC]
+    RewriteRule ^images/(.*)$ public/images/$1 [L,NC]
+    RewriteRule ^favicon\.ico$ public/favicon.ico [L,NC]
+    RewriteRule ^favicon\.png$ public/favicon.png [L,NC]
+
+    # Send every other request through Laravel's public directory. The second
+    # rewrite pass is handled by public/.htaccess and public/index.php.
     RewriteCond %{REQUEST_URI} !^/public/
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
+
+# Never expose environment, dependency or application files if mod_rewrite is
+# unavailable or disabled by the host.
+<FilesMatch "^(\.env|composer\.(json|lock)|artisan)$">
+    Require all denied
+</FilesMatch>

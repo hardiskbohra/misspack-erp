@@ -105,6 +105,7 @@ html body .pdf-toolbar-group {
 }
 
 html body .pdf-action {
+    box-shadow: none;
     appearance: none;
     -webkit-appearance: none;
     display: inline-flex;

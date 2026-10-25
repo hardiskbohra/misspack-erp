@@ -21,9 +21,9 @@
             var link = document.getElementById('kycLink').value;
             var message = document.getElementById('copySuccess');
             navigator.clipboard.writeText(link).then(function () {
-                message.style.display = 'inline';
+                message.hidden = false;
                 setTimeout(function () {
-                    message.style.display = 'none';
+                    message.hidden = true;
                 }, 2000);
             }).catch(function () {
                 MasterAlert.alert(link, { title: 'Copy KYC link — select and copy manually', type: 'info' });

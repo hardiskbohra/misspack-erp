@@ -64,6 +64,7 @@
 
         <form method="POST" action="{{ $isEdit ? route($routePrefix.'.update', $invoice) : route($routePrefix.'.store') }}" class="master-form">
             @csrf
+            @if(!$isEdit && request('return_to'))<input type="hidden" name="return_to" value="{{ request('return_to') }}">@endif
             @if ($isEdit) @method('PUT') @endif
 
             <div class="master-card master-section">

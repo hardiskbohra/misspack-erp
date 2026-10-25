@@ -2,106 +2,27 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\DashboardPeriod;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
-use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class AdminDashboardController extends Controller
 {
-    public function index(Request $request): View
+    // Backward-compatible login/bookmark entry point; no executive analytics remain.
+    public function index(Request $request): RedirectResponse
     {
-        $period = $this->periodContext($request);
-        $range = (int) $request->query('range', 30); // kept for backward compatibility
-        $start = $period['start'];
-        $end = $period['end'];
-        $labels = array_values($period['labels']);
-
-        $salesSeries = $this->salesSeries($period);
-        $purchaseSeries = $this->purchaseSeries($period);
-        $incomeSeries = $this->cashflowSeries('credit_amount', $period);
-        $expenseSeries = $this->cashflowSeries('debit_amount', $period);
-        $projectInwardSeries = $this->projectLedgerSeries('credit_amount', $period);
-        $projectOutwardSeries = $this->projectLedgerSeries('debit_amount', $period);
-
-        $charts = [
-            'period' => [
-                'type' => $period['type'],
-                'label' => $period['label'],
-                'group' => $period['group'],
-                'start' => $start->format('d M Y'),
-                'end' => $end->format('d M Y'),
-            ],
-            'labels' => $labels,
-            'salesPurchase' => [
-                'sales' => $salesSeries,
-                'purchase' => $purchaseSeries,
-                'margin' => $this->subtractSeries($salesSeries, $purchaseSeries),
-            ],
-            'incomeExpense' => [
-                'income' => $incomeSeries,
-                'expense' => $expenseSeries,
-                'net' => $this->subtractSeries($incomeSeries, $expenseSeries),
-            ],
-            'projectPayments' => [
-                'inward' => $projectInwardSeries,
-                'outward' => $projectOutwardSeries,
-                'net' => $this->subtractSeries($projectInwardSeries, $projectOutwardSeries),
-            ],
-            'pipeline' => [
-                'leads' => $this->countSeries('leads', $this->dateColumn('leads', ['created_at']), $period),
-                'projects' => $this->countSeries('projects', $this->dateColumn('projects', ['start_date', 'created_at']), $period),
-                'shipments' => $this->countSeries('shipments', $this->dateColumn('shipments', ['pickup_date', 'created_at']), $period),
-            ],
-            'status' => [
-                'projects' => $this->breakdown(\App\Models\Project::class, 'projects', 'status'),
-                'projectHealth' => $this->breakdown(\App\Models\Project::class, 'projects', 'health'),
-                'shipments' => $this->breakdown(\App\Models\Shipment::class, 'shipments', 'status'),
-                'leads' => $this->breakdown(\App\Models\Lead::class, 'leads', 'status'),
-                'tasks' => $this->breakdown(\App\Models\Task::class, 'tasks', 'status'),
-                'clients' => $this->breakdown(\App\Models\Client::class, 'clients', 'status'),
-            ],
-            'pies' => [
-                'expenseCategories' => $this->expenseCategoryBreakdown($period),
-                'salesByClient' => $this->salesByClientBreakdown($period),
-                'salesByProduct' => $this->salesByProductBreakdown($period),
-                'purchaseByVendor' => $this->purchaseByVendorBreakdown($period),
-            ],
-        ];
-
-        $metrics = $this->metrics($period, $charts);
-        $topClients = $this->topClients();
-        $recentActivity = $this->recentActivity();
-        $alerts = $this->alerts();
-        $attention = $this->immediateAttention();
-        $moduleHealth = $this->moduleHealth();
-        $routes = $this->routes();
-        $availableYears = $this->availableYears();
-
-        return view('dashboard.index', compact(
-            'range',
-            'period',
-            'start',
-            'end',
-            'metrics',
-            'charts',
-            'topClients',
-            'recentActivity',
-            'alerts',
-            'attention',
-            'moduleHealth',
-            'routes',
-            'availableYears'
-        ));
+        return redirect()->route('dashboards.index', $request->only([
+            'period_type', 'year', 'month', 'quarter', 'half', 'start_date', 'end_date', 'currency',
+        ]));
     }
 
     private function periodContext(Request $request): array
     {
         $type = (string) $request->query('period_type', 'year');
-        if (! in_array($type, ['range', 'quarter', 'half', 'year', 'multi_year'], true)) {
+        if (! in_array($type, ['range', 'month', 'quarter', 'half', 'year', 'multi_year', 'custom'], true)) {
             $type = 'year';
         }
 
@@ -116,6 +37,21 @@ class AdminDashboardController extends Controller
             $range = 30;
         }
 
+        if ($type === 'custom') {
+            [$start, $end, $label] = app(DashboardPeriod::class)->customRange($request);
+            $days = (int) $start->diffInDays($end) + 1;
+            // Keep short windows detailed and multi-year charts bounded in size.
+            $group = $days <= 90 ? 'day' : ($days <= 1096 ? 'month' : 'year');
+            $labels = match ($group) {
+                'day' => $this->dateLabels($start, $end),
+                'month' => $this->monthLabels($start, $end),
+                default => $this->yearLabels($start->year, $end->year),
+            };
+
+            return compact('type', 'label', 'year', 'range', 'start', 'end', 'group', 'labels')
+                + ['quarter' => null, 'half' => null];
+        }
+
         if ($type === 'range') {
             $start = now()->subDays($range - 1)->startOfDay();
             $end = now()->endOfDay();
@@ -123,6 +59,29 @@ class AdminDashboardController extends Controller
                 'type' => $type,
                 'label' => 'Last '.$range.' Days',
                 'year' => $year,
+                'quarter' => null,
+                'half' => null,
+                'range' => $range,
+                'start' => $start,
+                'end' => $end,
+                'group' => 'day',
+                'labels' => $this->dateLabels($start, $end),
+            ];
+        }
+
+        if ($type === 'month') {
+            $month = (int) $request->query('month', now()->month);
+            if ($month < 1 || $month > 12) {
+                $month = now()->month;
+            }
+            $start = Carbon::create($year, $month, 1)->startOfDay();
+            $end = $start->copy()->endOfMonth()->endOfDay();
+
+            return [
+                'type' => $type,
+                'label' => $start->format('F Y'),
+                'year' => $year,
+                'month' => $month,
                 'quarter' => null,
                 'half' => null,
                 'range' => $range,
@@ -222,238 +181,6 @@ class AdminDashboardController extends Controller
         ];
     }
 
-    private function metrics(array $period, array $charts): array
-    {
-        $start = $period['start'];
-        $end = $period['end'];
-        $salesTotal = array_sum($charts['salesPurchase']['sales']);
-        $purchaseTotal = array_sum($charts['salesPurchase']['purchase']);
-        $incomeTotal = array_sum($charts['incomeExpense']['income']);
-        $expenseTotal = array_sum($charts['incomeExpense']['expense']);
-        $projectInwardRange = array_sum($charts['projectPayments']['inward']);
-        $projectOutwardRange = array_sum($charts['projectPayments']['outward']);
-
-        /* A project's value is its documents', so the dashboard reads the
-           invoices rather than a figure typed on the project: every tax
-           invoice and every proforma no tax invoice has carried, cancelled
-           documents aside. The monthly series below is the ledger's, which is
-           why the two read different tables and mean different things — one is
-           what was sold, the other what was received. */
-        $estimatedProjectValue = $this->sum(\App\Models\SalesInvoice::class, 'sales_invoices', 'total_amount', function ($query) {
-            $query->whereNotNull('project_id')
-                ->where('status', '!=', 'cancelled')
-                ->where(function ($query) {
-                    $query->where('invoice_type', 'tax')
-                        ->orWhere(function ($query) {
-                            $query->where('invoice_type', 'proforma')->whereNull('converted_invoice_id');
-                        });
-                });
-        });
-        /* A project's money is the ledger's money: the project-payment rows
-           that used to carry a second copy of it are gone. A credit is inward,
-           a debit outward, and both are counted where they are tagged. */
-        $projectInwardAll = $this->sum(\App\Models\CashflowEntry::class, 'cashflow_entries', 'credit_amount', function ($query) {
-            $query->whereNotNull('project_id');
-        });
-        $projectOutwardAll = $this->sum(\App\Models\CashflowEntry::class, 'cashflow_entries', 'debit_amount', function ($query) {
-            $query->whereNotNull('project_id');
-        });
-
-        return [
-            'period_sales' => $salesTotal,
-            'period_purchase' => $purchaseTotal,
-            'period_gross_margin' => $salesTotal - $purchaseTotal,
-            'period_margin_percent' => $salesTotal > 0 ? round((($salesTotal - $purchaseTotal) / $salesTotal) * 100, 2) : 0,
-            'period_income' => $incomeTotal,
-            'period_expense' => $expenseTotal,
-            'period_net_income' => $incomeTotal - $expenseTotal,
-            'period_project_inward' => $projectInwardRange,
-            'period_project_outward' => $projectOutwardRange,
-            'period_project_profit' => $projectInwardRange - $projectOutwardRange,
-
-            'clients_total' => $this->count(\App\Models\Client::class, 'clients'),
-            'clients_approved' => $this->count(\App\Models\Client::class, 'clients', function ($query) { $query->where('status', 'approved'); }),
-            'clients_under_review' => $this->count(\App\Models\Client::class, 'clients', function ($query) { $query->where('status', 'under_review'); }),
-
-            'leads_total' => $this->count(\App\Models\Lead::class, 'leads'),
-            'leads_range' => $this->count(\App\Models\Lead::class, 'leads', function ($query) use ($start, $end) { $query->whereBetween('created_at', [$start, $end]); }),
-            'leads_converted' => $this->count(\App\Models\Lead::class, 'leads', function ($query) { $query->whereIn('status', ['converted', 'won', 'closed_won']); }),
-
-            'projects_total' => $this->count(\App\Models\Project::class, 'projects'),
-            'projects_active' => $this->count(\App\Models\Project::class, 'projects', function ($query) { $query->whereIn('status', ['planned', 'in_progress', 'waiting_client', 'waiting_vendor', 'on_hold']); }),
-            'projects_completed' => $this->count(\App\Models\Project::class, 'projects', function ($query) { $query->where('status', 'completed'); }),
-            'projects_at_risk' => $this->count(\App\Models\Project::class, 'projects', function ($query) { $query->whereIn('health', ['amber', 'red']); }),
-            'project_estimated_value' => $estimatedProjectValue,
-            'project_inward_all' => $projectInwardAll,
-            'project_outward_all' => $projectOutwardAll,
-            'project_profit_all' => $projectInwardAll - $projectOutwardAll,
-            'project_outstanding_all' => max($estimatedProjectValue - $projectInwardAll, 0),
-            'project_inward_range' => $projectInwardRange,
-            'project_outward_range' => $projectOutwardRange,
-            'project_profit_range' => $projectInwardRange - $projectOutwardRange,
-
-            'shipments_total' => $this->count(\App\Models\Shipment::class, 'shipments'),
-            'shipments_in_transit' => $this->count(\App\Models\Shipment::class, 'shipments', function ($query) { $query->where('status', 'in_transit'); }),
-            'shipments_delivered' => $this->count(\App\Models\Shipment::class, 'shipments', function ($query) { $query->where('status', 'delivered'); }),
-            'shipments_delayed' => $this->count(\App\Models\Shipment::class, 'shipments', function ($query) { $query->whereIn('status', ['delayed', 'custom_hold']); }),
-
-            'products_total' => $this->count(\App\Models\Product::class, 'products'),
-            'products_active' => $this->count(\App\Models\Product::class, 'products', function ($query) { $query->where('status', 'active'); }),
-            'products_ready_stock' => $this->count(\App\Models\Product::class, 'products', function ($query) { $query->where('ready_stock_available', true); }),
-
-            'tasks_total' => $this->count(\App\Models\Task::class, 'tasks'),
-            'tasks_open' => $this->count(\App\Models\Task::class, 'tasks', function ($query) { $query->whereNotIn('status', ['completed', 'done', 'closed']); }),
-            'tasks_completed' => $this->count(\App\Models\Task::class, 'tasks', function ($query) { $query->whereIn('status', ['completed', 'done', 'closed']); }),
-            'tasks_due_today' => $this->dueTodayTasksCount(),
-            'tasks_overdue' => $this->overdueTasks(),
-
-            'vendors_total' => $this->count(\App\Models\Vendor::class, 'vendors'),
-            'cash_credit_range' => $incomeTotal,
-            'cash_debit_range' => $expenseTotal,
-            'cash_net_range' => $incomeTotal - $expenseTotal,
-            'users_total' => $this->count(\App\Models\User::class, 'users'),
-        ];
-    }
-
-    private function hasModelTable(string $model, string $table): bool
-    {
-        return class_exists($model) && Schema::hasTable($table);
-    }
-
-    private function count(string $model, string $table, ?callable $callback = null): int
-    {
-        if (! $this->hasModelTable($model, $table)) {
-            return 0;
-        }
-
-        $query = $model::query();
-        if ($callback) {
-            $callback($query);
-        }
-
-        return (int) $query->count();
-    }
-
-    private function sum(string $model, string $table, string $column, ?callable $callback = null): float
-    {
-        if (! $this->hasModelTable($model, $table) || ! Schema::hasColumn($table, $column)) {
-            return 0;
-        }
-
-        $query = $model::query();
-        if ($callback) {
-            $callback($query);
-        }
-
-        return (float) $query->sum($column);
-    }
-
-    private function tableColumn(string $table, string $column): bool
-    {
-        return Schema::hasTable($table) && Schema::hasColumn($table, $column);
-    }
-
-    private function dateColumn(string $table, array $columns): ?string
-    {
-        if (! Schema::hasTable($table)) {
-            return null;
-        }
-
-        foreach ($columns as $column) {
-            if (Schema::hasColumn($table, $column)) {
-                return $column;
-            }
-        }
-
-        return null;
-    }
-
-    /* Sales and purchase are document facts now: a tax invoice is money the
-       office has billed, a vendor bill is money it owes. Proformas and purchase
-       orders are the paper before the one that counts, so both series take the
-       money type and leave drafts and cancellations out — one filter, used by
-       the series and by the pies, so a tile and a pie can never disagree. */
-    private function invoiceFilter($query, string $table, string $moneyType): void
-    {
-        if (Schema::hasColumn($table, 'invoice_type')) {
-            $query->where($table.'.invoice_type', $moneyType);
-        }
-
-        if (Schema::hasColumn($table, 'status')) {
-            $query->whereNotIn($table.'.status', ['draft', 'cancelled']);
-        }
-    }
-
-    private function salesSeries(array $period): array
-    {
-        $dateColumn = $this->dateColumn('sales_invoices', ['invoice_date', 'created_at']);
-        if (! $dateColumn || ! $this->tableColumn('sales_invoices', 'total_amount')) {
-            return $this->zeroSeries($period);
-        }
-
-        return $this->sumSeries('sales_invoices', $dateColumn, 'total_amount', $period, function ($query) {
-            $this->invoiceFilter($query, 'sales_invoices', 'tax');
-        });
-    }
-
-    private function purchaseSeries(array $period): array
-    {
-        $dateColumn = $this->dateColumn('purchase_invoices', ['invoice_date', 'created_at']);
-        if (! $dateColumn || ! $this->tableColumn('purchase_invoices', 'total_amount')) {
-            return $this->zeroSeries($period);
-        }
-
-        return $this->sumSeries('purchase_invoices', $dateColumn, 'total_amount', $period, function ($query) {
-            $this->invoiceFilter($query, 'purchase_invoices', 'bill');
-        });
-    }
-
-    private function cashflowSeries(string $amountColumn, array $period): array
-    {
-        $dateColumn = $this->dateColumn('cashflow_entries', ['entry_date', 'created_at']);
-        if (! $dateColumn || ! $this->tableColumn('cashflow_entries', $amountColumn)) {
-            return $this->zeroSeries($period);
-        }
-
-        return $this->sumSeries('cashflow_entries', $dateColumn, $amountColumn, $period);
-    }
-
-    /** Money tagged to a project: `credit_amount` is inward, `debit_amount` out. */
-    private function projectLedgerSeries(string $expression, array $period): array
-    {
-        $dateColumn = $this->dateColumn('cashflow_entries', ['entry_date', 'created_at']);
-        if (! $dateColumn
-            || ! $this->tableColumn('cashflow_entries', $expression)
-            || ! $this->tableColumn('cashflow_entries', 'project_id')) {
-            return $this->zeroSeries($period);
-        }
-
-        return $this->sumSeries('cashflow_entries', $dateColumn, $expression, $period, function ($query) {
-            $query->whereNotNull('project_id');
-        });
-    }
-
-    private function zeroSeries(array $period): array
-    {
-        return array_values(array_fill_keys(array_keys($period['labels']), 0));
-    }
-
-    private function subtractSeries(array $a, array $b): array
-    {
-        $out = [];
-        $count = max(count($a), count($b));
-        for ($i = 0; $i < $count; $i++) {
-            $out[] = round((float) ($a[$i] ?? 0) - (float) ($b[$i] ?? 0), 2);
-        }
-
-        return $out;
-    }
-
-    private function sumSeries(string $table, string $dateColumn, string $sumColumn, array $period, ?callable $callback = null): array
-    {
-        return $this->sumExpressionSeries($table, $dateColumn, $sumColumn, $period, $callback);
-    }
-
     private function sumExpressionSeries(string $table, string $dateColumn, string $expression, array $period, ?callable $callback = null): array
     {
         $series = array_fill_keys(array_keys($period['labels']), 0);
@@ -476,34 +203,6 @@ class AdminDashboardController extends Controller
         foreach ($query->pluck('total', 'bucket')->toArray() as $bucket => $total) {
             if (array_key_exists((string) $bucket, $series)) {
                 $series[(string) $bucket] = round((float) $total, 2);
-            }
-        }
-
-        return array_values($series);
-    }
-
-    private function countSeries(string $table, ?string $dateColumn, array $period, ?callable $callback = null): array
-    {
-        $series = array_fill_keys(array_keys($period['labels']), 0);
-
-        if (! $dateColumn || ! Schema::hasTable($table) || ! Schema::hasColumn($table, $dateColumn)) {
-            return array_values($series);
-        }
-
-        $bucketSql = $this->bucketSql($dateColumn, $period['group']);
-        $query = DB::table($table)
-            ->selectRaw($bucketSql.' as bucket, COUNT(*) as total')
-            ->whereBetween($dateColumn, [$this->dateBoundary($period['start'], $dateColumn), $this->dateBoundary($period['end'], $dateColumn, true)])
-            ->groupBy('bucket')
-            ->orderBy('bucket');
-
-        if ($callback) {
-            $callback($query);
-        }
-
-        foreach ($query->pluck('total', 'bucket')->toArray() as $bucket => $total) {
-            if (array_key_exists((string) $bucket, $series)) {
-                $series[(string) $bucket] = (int) $total;
             }
         }
 
@@ -569,531 +268,6 @@ class AdminDashboardController extends Controller
         return $labels;
     }
 
-    private function expenseCategoryBreakdown(array $period): array
-    {
-        if (! Schema::hasTable('cashflow_entries') || ! Schema::hasColumn('cashflow_entries', 'debit_amount')) {
-            return [];
-        }
-
-        $dateColumn = $this->dateColumn('cashflow_entries', ['entry_date', 'created_at']);
-        if (! $dateColumn) {
-            return [];
-        }
-
-        $query = DB::table('cashflow_entries')
-            ->where('debit_amount', '>', 0)
-            ->whereBetween('cashflow_entries.'.$dateColumn, [$this->dateBoundary($period['start'], $dateColumn), $this->dateBoundary($period['end'], $dateColumn, true)]);
-
-        if (Schema::hasTable('cashflow_categories') && Schema::hasColumn('cashflow_entries', 'category_id')) {
-            $query->leftJoin('cashflow_categories', 'cashflow_entries.category_id', '=', 'cashflow_categories.id')
-                ->selectRaw("COALESCE(cashflow_categories.name, cashflow_entries.expense_head, cashflow_entries.related_party_type, 'Other') as label, SUM(cashflow_entries.debit_amount) as total");
-        } else {
-            $query->selectRaw("COALESCE(expense_head, related_party_type, 'Other') as label, SUM(debit_amount) as total");
-        }
-
-        return $query->groupBy('label')
-            ->orderByDesc('total')
-            ->limit(10)
-            ->pluck('total', 'label')
-            ->mapWithKeys(function ($value, $key) {
-                return [Str::headline((string) $key) => round((float) $value, 2)];
-            })
-            ->toArray();
-    }
-
-    private function salesByClientBreakdown(array $period): array
-    {
-        if (! Schema::hasTable('sales_invoices') || ! Schema::hasColumn('sales_invoices', 'total_amount')) {
-            return [];
-        }
-
-        $dateColumn = $this->dateColumn('sales_invoices', ['invoice_date', 'created_at']);
-        if (! $dateColumn) {
-            return [];
-        }
-
-        $query = DB::table('sales_invoices')
-            ->whereBetween('sales_invoices.'.$dateColumn, [$this->dateBoundary($period['start'], $dateColumn), $this->dateBoundary($period['end'], $dateColumn, true)]);
-
-        $this->invoiceFilter($query, 'sales_invoices', 'tax');
-
-        if (Schema::hasTable('clients') && Schema::hasColumn('sales_invoices', 'client_id')) {
-            $query->leftJoin('clients', 'sales_invoices.client_id', '=', 'clients.id')
-                ->selectRaw("COALESCE(clients.company_name, sales_invoices.client_company_name, 'Unknown Client') as label, SUM(sales_invoices.total_amount) as total");
-        } else {
-            $query->selectRaw("COALESCE(client_company_name, 'Unknown Client') as label, SUM(total_amount) as total");
-        }
-
-        return $query->groupBy('label')->orderByDesc('total')->limit(8)->pluck('total', 'label')
-            ->mapWithKeys(function ($value, $key) { return [(string) $key => round((float) $value, 2)]; })
-            ->toArray();
-    }
-
-    private function salesByProductBreakdown(array $period): array
-    {
-        if (! Schema::hasTable('sales_invoice_items') || ! Schema::hasTable('sales_invoices')) {
-            return [];
-        }
-
-        $dateColumn = $this->dateColumn('sales_invoices', ['invoice_date', 'created_at']);
-        if (! $dateColumn) {
-            return [];
-        }
-
-        return DB::table('sales_invoice_items')
-            ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
-            ->whereBetween('sales_invoices.'.$dateColumn, [$this->dateBoundary($period['start'], $dateColumn), $this->dateBoundary($period['end'], $dateColumn, true)])
-            ->where(function ($query) {
-                $this->invoiceFilter($query, 'sales_invoices', 'tax');
-            })
-            ->selectRaw("COALESCE(sales_invoice_items.product_name, 'Product') as label, SUM(sales_invoice_items.line_total) as total")
-            ->groupBy('label')
-            ->orderByDesc('total')
-            ->limit(8)
-            ->pluck('total', 'label')
-            ->mapWithKeys(function ($value, $key) { return [(string) $key => round((float) $value, 2)]; })
-            ->toArray();
-    }
-
-    private function purchaseByVendorBreakdown(array $period): array
-    {
-        if (! Schema::hasTable('purchase_invoices') || ! Schema::hasColumn('purchase_invoices', 'total_amount')) {
-            return [];
-        }
-
-        $dateColumn = $this->dateColumn('purchase_invoices', ['invoice_date', 'created_at']);
-        if (! $dateColumn) {
-            return [];
-        }
-
-        $query = DB::table('purchase_invoices')
-            ->whereBetween('purchase_invoices.'.$dateColumn, [$this->dateBoundary($period['start'], $dateColumn), $this->dateBoundary($period['end'], $dateColumn, true)]);
-
-        $this->invoiceFilter($query, 'purchase_invoices', 'bill');
-
-        if (Schema::hasTable('vendors') && Schema::hasColumn('purchase_invoices', 'vendor_id')) {
-            $query->leftJoin('vendors', 'purchase_invoices.vendor_id', '=', 'vendors.id')
-                ->selectRaw("COALESCE(vendors.company_name, purchase_invoices.vendor_company_name, 'Vendor') as label, SUM(purchase_invoices.total_amount) as total");
-        } else {
-            $query->selectRaw("COALESCE(vendor_company_name, 'Vendor') as label, SUM(total_amount) as total");
-        }
-
-        return $query->groupBy('label')->orderByDesc('total')->limit(8)->pluck('total', 'label')
-            ->mapWithKeys(function ($value, $key) { return [(string) $key => round((float) $value, 2)]; })
-            ->toArray();
-    }
-
-    private function breakdown(string $model, string $table, string $column): array
-    {
-        if (! $this->hasModelTable($model, $table) || ! Schema::hasColumn($table, $column)) {
-            return [];
-        }
-
-        return $model::query()
-            ->select($column, DB::raw('COUNT(*) as total'))
-            ->groupBy($column)
-            ->orderByDesc('total')
-            ->pluck('total', $column)
-            ->mapWithKeys(function ($value, $key) {
-                return [Str::headline((string) $key) => (int) $value];
-            })
-            ->toArray();
-    }
-
-    private function immediateAttention(): array
-    {
-        return [
-            'today_tasks' => $this->todayDueTaskList(8),
-            'overdue_tasks' => $this->overdueTaskList(8),
-            'in_transit_shipments' => $this->inTransitShipmentDetails(8),
-            'kyc_submissions' => $this->recentKycSubmissions(8),
-            'portal_documents' => $this->newPortalDocuments(8),
-            'portal_comments' => $this->newPortalComments(8),
-        ];
-    }
-
-    private function taskDueDateColumn(): ?string
-    {
-        if (! $this->hasModelTable(\App\Models\Task::class, 'tasks')) {
-            return null;
-        }
-
-        return Schema::hasColumn('tasks', 'due_date') ? 'due_date' : (Schema::hasColumn('tasks', 'deadline') ? 'deadline' : null);
-    }
-
-    private function dueTodayTasksCount(): int
-    {
-        $dateColumn = $this->taskDueDateColumn();
-        if (! $dateColumn) {
-            return 0;
-        }
-
-        return (int) \App\Models\Task::query()
-            ->whereDate($dateColumn, today())
-            ->whereNotIn('status', ['completed', 'done', 'closed'])
-            ->count();
-    }
-
-    private function todayDueTaskList(int $limit = 8): array
-    {
-        $dateColumn = $this->taskDueDateColumn();
-        if (! $dateColumn) {
-            return [];
-        }
-
-        $query = \App\Models\Task::query();
-        if (method_exists(\App\Models\Task::class, 'assignee')) {
-            $query->with('assignee');
-        }
-
-        return $query->whereDate($dateColumn, today())
-            ->whereNotIn('status', ['completed', 'done', 'closed'])
-            ->orderByRaw("CASE priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END")
-            ->latest('id')
-            ->limit($limit)
-            ->get()
-            ->map(function ($task) use ($dateColumn) {
-                return [
-                    'title' => $task->title ?? 'Task #'.$task->id,
-                    'priority' => $task->priority ?? '-',
-                    'status' => $task->status ?? '-',
-                    'assignee' => ($task->relationLoaded('assignee') && $task->assignee) ? $task->assignee->name : 'Unassigned',
-                    'due' => $task->{$dateColumn} ? Carbon::parse($task->{$dateColumn})->format('d M Y') : '-',
-                    'url' => $this->routeUrl('tasks.index'),
-                ];
-            })
-            ->toArray();
-    }
-
-    private function overdueTasks(): int
-    {
-        $dateColumn = $this->taskDueDateColumn();
-        if (! $dateColumn) {
-            return 0;
-        }
-
-        return (int) \App\Models\Task::query()
-            ->whereDate($dateColumn, '<', today())
-            ->whereNotIn('status', ['completed', 'done', 'closed'])
-            ->count();
-    }
-
-    private function overdueTaskList(int $limit = 8): array
-    {
-        $dateColumn = $this->taskDueDateColumn();
-        if (! $dateColumn) {
-            return [];
-        }
-
-        $query = \App\Models\Task::query();
-        if (method_exists(\App\Models\Task::class, 'assignee')) {
-            $query->with('assignee');
-        }
-
-        return $query->whereDate($dateColumn, '<', today())
-            ->whereNotIn('status', ['completed', 'done', 'closed'])
-            ->orderBy($dateColumn)
-            ->limit($limit)
-            ->get()
-            ->map(function ($task) use ($dateColumn) {
-                return [
-                    'title' => $task->title ?? 'Task #'.$task->id,
-                    'priority' => $task->priority ?? '-',
-                    'status' => $task->status ?? '-',
-                    'assignee' => ($task->relationLoaded('assignee') && $task->assignee) ? $task->assignee->name : 'Unassigned',
-                    'due' => $task->{$dateColumn} ? Carbon::parse($task->{$dateColumn})->format('d M Y') : '-',
-                    'days_overdue' => $task->{$dateColumn} ? Carbon::parse($task->{$dateColumn})->diffInDays(today()) : 0,
-                    'url' => $this->routeUrl('tasks.index'),
-                ];
-            })
-            ->toArray();
-    }
-
-    private function inTransitShipmentDetails(int $limit = 8): array
-    {
-        if (! $this->hasModelTable(\App\Models\Shipment::class, 'shipments')) {
-            return [];
-        }
-
-        $query = \App\Models\Shipment::query();
-        if (method_exists(\App\Models\Shipment::class, 'histories')) {
-            $query->with(['histories' => function ($history) {
-                $history->latest('event_time')->latest('id')->limit(1);
-            }]);
-        }
-
-        return $query->where('status', 'in_transit')
-            ->latest('pickup_date')
-            ->latest('id')
-            ->limit($limit)
-            ->get()
-            ->map(function ($shipment) {
-                $latest = ($shipment->relationLoaded('histories') && $shipment->histories->count()) ? $shipment->histories->first() : null;
-                return [
-                    'number' => $shipment->shipment_number ?? '#'.$shipment->id,
-                    'identity' => $shipment->identity_name ?? 'Shipment',
-                    'route' => trim(($shipment->from_name ?: $shipment->from_city ?: '-').' → '.($shipment->to_name ?: $shipment->to_city ?: '-')),
-                    'partner' => $shipment->logistic_partner ?: '-',
-                    'tracking' => $shipment->tracking_number ?: 'No tracking',
-                    'pickup' => $shipment->pickup_date ? Carbon::parse($shipment->pickup_date)->format('d M Y') : '-',
-                    'latest' => $latest ? trim(($latest->location ?: '').' '.$latest->remarks) : 'No latest public update',
-                    'url' => Route::has('shipments.show') ? route('shipments.show', $shipment->id) : '#',
-                ];
-            })
-            ->toArray();
-    }
-
-    private function recentKycSubmissions(int $limit = 8): array
-    {
-        if (! $this->hasModelTable(\App\Models\Client::class, 'clients') || ! Schema::hasColumn('clients', 'kyc_submitted_at')) {
-            return [];
-        }
-
-        $query = \App\Models\Client::query()->whereNotNull('kyc_submitted_at');
-
-        if (Schema::hasColumn('clients', 'status')) {
-            $query->where(function ($nested) {
-                $nested->where('status', 'under_review')
-                    ->orWhere('kyc_submitted_at', '>=', now()->subDays(7));
-            });
-        } else {
-            $query->where('kyc_submitted_at', '>=', now()->subDays(7));
-        }
-
-        return $query->latest('kyc_submitted_at')
-            ->limit($limit)
-            ->get()
-            ->map(function ($client) {
-                return [
-                    'client' => $client->company_name ?? 'Client #'.$client->id,
-                    'number' => $client->client_number ?? '#'.$client->id,
-                    'status' => method_exists($client, 'statusLabel') ? $client->statusLabel() : Str::headline((string) ($client->status ?? '-')),
-                    'submitted' => $client->kyc_submitted_at ? Carbon::parse($client->kyc_submitted_at)->format('d M Y, h:i A') : '-',
-                    'url' => Route::has('clients.show') ? route('clients.show', $client->id) : '#',
-                ];
-            })
-            ->toArray();
-    }
-
-    private function newPortalDocuments(int $limit = 8): array
-    {
-        if (! Schema::hasTable('client_portal_documents')) {
-            return [];
-        }
-
-        $query = DB::table('client_portal_documents')
-            ->leftJoin('clients', 'client_portal_documents.client_id', '=', 'clients.id')
-            ->leftJoin('client_portal_users', 'client_portal_documents.client_portal_user_id', '=', 'client_portal_users.id')
-            ->select(
-                'client_portal_documents.id',
-                'client_portal_documents.client_id',
-                'client_portal_documents.title',
-                'client_portal_documents.original_name',
-                'client_portal_documents.category',
-                'client_portal_documents.related_type',
-                'client_portal_documents.related_id',
-                'client_portal_documents.created_at',
-                'clients.company_name',
-                'client_portal_users.name as portal_user_name',
-                'client_portal_users.username as portal_username'
-            );
-
-        if (Schema::hasColumn('client_portal_documents', 'is_reviewed')) {
-            $query->where('client_portal_documents.is_reviewed', false);
-        }
-
-        return $query->latest('client_portal_documents.id')
-            ->limit($limit)
-            ->get()
-            ->map(function ($row) {
-                return [
-                    'title' => $row->title ?: ($row->original_name ?: 'Client document'),
-                    'client' => $row->company_name ?: 'Client #'.$row->client_id,
-                    'uploaded_by' => $row->portal_user_name ?: ($row->portal_username ?: 'Client'),
-                    'category' => Str::headline((string) $row->category),
-                    'related' => Str::headline((string) ($row->related_type ?: 'general')).($row->related_id ? ' #'.$row->related_id : ''),
-                    'date' => $row->created_at ? Carbon::parse($row->created_at)->format('d M Y, h:i A') : '-',
-                    'url' => Route::has('clients.portal.show') ? route('clients.portal.show', $row->client_id) : (Route::has('clients.show') ? route('clients.show', $row->client_id) : '#'),
-                ];
-            })
-            ->toArray();
-    }
-
-    private function newPortalComments(int $limit = 8): array
-    {
-        if (! Schema::hasTable('client_portal_comments')) {
-            return [];
-        }
-
-        $query = DB::table('client_portal_comments')
-            ->leftJoin('clients', 'client_portal_comments.client_id', '=', 'clients.id')
-            ->leftJoin('client_portal_users', 'client_portal_comments.client_portal_user_id', '=', 'client_portal_users.id')
-            ->where('client_portal_comments.author_type', 'client')
-            ->select(
-                'client_portal_comments.id',
-                'client_portal_comments.client_id',
-                'client_portal_comments.body',
-                'client_portal_comments.related_type',
-                'client_portal_comments.related_id',
-                'client_portal_comments.created_at',
-                'clients.company_name',
-                'client_portal_users.name as portal_user_name',
-                'client_portal_users.username as portal_username'
-            );
-
-        if (Schema::hasColumn('client_portal_comments', 'is_read_by_internal')) {
-            $query->where('client_portal_comments.is_read_by_internal', false);
-        }
-
-        return $query->latest('client_portal_comments.id')
-            ->limit($limit)
-            ->get()
-            ->map(function ($row) {
-                return [
-                    'body' => Str::limit((string) $row->body, 90),
-                    'client' => $row->company_name ?: 'Client #'.$row->client_id,
-                    'author' => $row->portal_user_name ?: ($row->portal_username ?: 'Client'),
-                    'related' => Str::headline((string) ($row->related_type ?: 'general')).($row->related_id ? ' #'.$row->related_id : ''),
-                    'date' => $row->created_at ? Carbon::parse($row->created_at)->format('d M Y, h:i A') : '-',
-                    'url' => Route::has('clients.portal.show') ? route('clients.portal.show', $row->client_id) : (Route::has('clients.show') ? route('clients.show', $row->client_id) : '#'),
-                ];
-            })
-            ->toArray();
-    }
-
-    private function topClients(): array
-    {
-        if (! $this->hasModelTable(\App\Models\Project::class, 'projects') || ! $this->hasModelTable(\App\Models\Client::class, 'clients')) {
-            return [];
-        }
-
-        /* A client's value is its projects' invoices, not a column on the
-           project: the subquery is the same rule `Project::estimatedValue()`
-           sums row by row, written once here because this list is a report
-           over every client and cannot load each project's documents. */
-        $valueSelect = $this->tableColumn('sales_invoices', 'total_amount')
-            ? DB::raw('coalesce((select sum(si.total_amount) from sales_invoices si'
-                .' join projects sp on sp.id = si.project_id'
-                .' where sp.client_id = projects.client_id'
-                .' and si.status <> \'cancelled\''
-                .' and (si.invoice_type = \'tax\' or (si.invoice_type = \'proforma\' and si.converted_invoice_id is null))), 0) as total_value')
-            : DB::raw('0 as total_value');
-
-        return \App\Models\Project::query()
-            ->with('client')
-            ->select('client_id', DB::raw('COUNT(*) as project_count'), $valueSelect, DB::raw('AVG(progress_percent) as avg_progress'))
-            ->whereNotNull('client_id')
-            ->groupBy('client_id')
-            ->orderByDesc('total_value')
-            ->limit(8)
-            ->get()
-            ->map(function ($row) {
-                return [
-                    'name' => $row->client ? $row->client->company_name : 'Client #'.$row->client_id,
-                    'projects' => (int) $row->project_count,
-                    'value' => (float) $row->total_value,
-                    'progress' => round((float) $row->avg_progress, 1),
-                    'url' => Route::has('clients.show') ? route('clients.show', $row->client_id) : '#',
-                ];
-            })
-            ->toArray();
-    }
-
-    private function recentActivity(): array
-    {
-        $items = [];
-
-        $this->pushRecent($items, \App\Models\Project::class, 'projects', 'project', 'Project', 'name', 'project_number', 'projects.show');
-        $this->pushRecent($items, \App\Models\Shipment::class, 'shipments', 'shipment', 'Shipment', 'identity_name', 'shipment_number', 'shipments.show');
-        $this->pushRecent($items, \App\Models\Lead::class, 'leads', 'lead', 'Lead', 'title', 'lead_number', 'leads.show');
-        $this->pushRecent($items, \App\Models\Client::class, 'clients', 'client', 'Client', 'company_name', 'client_number', 'clients.show');
-
-        usort($items, function ($a, $b) {
-            return $b['timestamp'] <=> $a['timestamp'];
-        });
-
-        return array_slice($items, 0, 14);
-    }
-
-    private function pushRecent(array &$items, string $model, string $table, string $type, string $label, string $titleColumn, string $numberColumn, string $routeName): void
-    {
-        if (! $this->hasModelTable($model, $table)) {
-            return;
-        }
-
-        $rows = $model::query()->latest('id')->limit(5)->get();
-
-        foreach ($rows as $row) {
-            $items[] = [
-                'type' => $type,
-                'label' => $label,
-                'title' => $row->{$titleColumn} ?? $label,
-                'number' => $row->{$numberColumn} ?? '#'.$row->id,
-                'status' => $row->status ?? null,
-                'date' => $row->created_at ? $row->created_at->format('d M Y, h:i A') : '-',
-                'timestamp' => $row->created_at ? $row->created_at->timestamp : 0,
-                'url' => Route::has($routeName) ? route($routeName, $row->id) : '#',
-            ];
-        }
-    }
-
-    private function alerts(): array
-    {
-        $alerts = [];
-
-        if ($this->hasModelTable(\App\Models\Project::class, 'projects')) {
-            $redProjects = \App\Models\Project::query()->where('health', 'red')->whereNotIn('status', ['completed', 'cancelled'])->latest('id')->limit(5)->get();
-            foreach ($redProjects as $project) {
-                $alerts[] = ['level' => 'danger', 'title' => 'Critical project', 'message' => $project->name.' needs attention.', 'url' => Route::has('projects.show') ? route('projects.show', $project->id) : '#'];
-            }
-        }
-
-        if ($this->hasModelTable(\App\Models\Shipment::class, 'shipments')) {
-            $shipments = \App\Models\Shipment::query()->whereIn('status', ['delayed', 'custom_hold'])->latest('id')->limit(5)->get();
-            foreach ($shipments as $shipment) {
-                $alerts[] = ['level' => 'warning', 'title' => 'Shipment alert', 'message' => $shipment->shipment_number.' - '.$shipment->statusLabel(), 'url' => Route::has('shipments.show') ? route('shipments.show', $shipment->id) : '#'];
-            }
-        }
-
-        $overdue = $this->overdueTasks();
-        if ($overdue > 0) {
-            $alerts[] = ['level' => 'danger', 'title' => 'Overdue tasks', 'message' => $overdue.' task(s) are overdue.', 'url' => Route::has('tasks.index') ? route('tasks.index') : '#'];
-        }
-
-        /* The one feedback figure that belongs on a dashboard: not the average,
-           which nobody can act on, but how many clients scored us low and have
-           nobody working on it. */
-        if ($this->hasModelTable(\App\Models\FeedbackResponse::class, 'feedback_responses')) {
-            $unowned = (int) \App\Models\FeedbackResponse::query()->needsAttention()->count();
-
-            if ($unowned > 0) {
-                $alerts[] = [
-                    'level' => 'danger',
-                    'title' => 'Client feedback unanswered',
-                    'message' => $unowned.' low score(s) have no follow-up yet.',
-                    'url' => Route::has('feedback.index') ? route('feedback.index', ['band' => 'attention']) : '#',
-                ];
-            }
-        }
-
-        return array_slice($alerts, 0, 10);
-    }
-
-    private function moduleHealth(): array
-    {
-        return [
-            ['name' => 'Tasks', 'installed' => $this->hasModelTable(\App\Models\Task::class, 'tasks'), 'count' => $this->count(\App\Models\Task::class, 'tasks'), 'route' => $this->routeUrl('tasks.index')],
-            ['name' => 'Clients', 'installed' => $this->hasModelTable(\App\Models\Client::class, 'clients'), 'count' => $this->count(\App\Models\Client::class, 'clients'), 'route' => $this->routeUrl('clients.index')],
-            ['name' => 'Leads', 'installed' => $this->hasModelTable(\App\Models\Lead::class, 'leads'), 'count' => $this->count(\App\Models\Lead::class, 'leads'), 'route' => $this->routeUrl('leads.index')],
-            ['name' => 'Products', 'installed' => $this->hasModelTable(\App\Models\Product::class, 'products'), 'count' => $this->count(\App\Models\Product::class, 'products'), 'route' => $this->routeUrl('products.index')],
-            ['name' => 'Projects', 'installed' => $this->hasModelTable(\App\Models\Project::class, 'projects'), 'count' => $this->count(\App\Models\Project::class, 'projects'), 'route' => $this->routeUrl('projects.index')],
-            ['name' => 'Shipments', 'installed' => $this->hasModelTable(\App\Models\Shipment::class, 'shipments'), 'count' => $this->count(\App\Models\Shipment::class, 'shipments'), 'route' => $this->routeUrl('shipments.index')],
-            ['name' => 'Cashflow', 'installed' => $this->hasModelTable(\App\Models\CashflowEntry::class, 'cashflow_entries'), 'count' => $this->count(\App\Models\CashflowEntry::class, 'cashflow_entries'), 'route' => $this->routeUrl('cashflows.index')],
-            ['name' => 'Vendors', 'installed' => $this->hasModelTable(\App\Models\Vendor::class, 'vendors'), 'count' => $this->count(\App\Models\Vendor::class, 'vendors'), 'route' => $this->routeUrl('vendors.index')],
-            ['name' => 'Feedback', 'installed' => $this->hasModelTable(\App\Models\FeedbackRequest::class, 'feedback_requests'), 'count' => $this->count(\App\Models\FeedbackRequest::class, 'feedback_requests'), 'route' => $this->routeUrl('feedback.index')],
-        ];
-    }
-
     private function availableYears(): array
     {
         $current = (int) now()->format('Y');
@@ -1122,23 +296,4 @@ class AdminDashboardController extends Controller
         return $years;
     }
 
-    private function routes(): array
-    {
-        return [
-            'tasks' => $this->routeUrl('tasks.index'),
-            'clients' => $this->routeUrl('clients.index'),
-            'leads' => $this->routeUrl('leads.index'),
-            'products' => $this->routeUrl('products.index'),
-            'projects' => $this->routeUrl('projects.index'),
-            'shipments' => $this->routeUrl('shipments.index'),
-            'cashflows' => $this->routeUrl('cashflows.index'),
-            'vendors' => $this->routeUrl('vendors.index'),
-            'users' => $this->routeUrl('users.index'),
-        ];
-    }
-
-    private function routeUrl(string $name): string
-    {
-        return Route::has($name) ? route($name) : '#';
-    }
 }

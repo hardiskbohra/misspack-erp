@@ -91,6 +91,10 @@ class FeedbackIntake
 
             $this->log($request, $response);
 
+            if ($workflow = $request->project?->workflow) {
+                app(ProjectFeedbackClosure::class)->sync($workflow->fresh(), Auth::id(), false);
+            }
+
             return $response->fresh(['answers', 'actions']);
         });
     }
@@ -222,6 +226,10 @@ class FeedbackIntake
         if ($notifyClient && $status === FeedbackAction::STATUS_RESOLVED && $action->client_notified_at === null) {
             $this->tellClient($action, $note);
             $action->update(['client_notified_at' => now()]);
+        }
+
+        if ($workflow = $action->response?->project?->workflow) {
+            app(ProjectFeedbackClosure::class)->sync($workflow->fresh(), Auth::id(), false);
         }
 
         return $action->fresh();

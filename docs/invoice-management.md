@@ -11,7 +11,7 @@ every rule below.
 An invoice's received figure is **not** a column the office maintains by hand. It is:
 
 ```
-opening received  +  every ledger line linked to the invoice
+opening received  +  direct net receipts  +  allocated document-currency receipts
 ```
 
 - `sales_invoices.amount_paid` is the **opening** figure — money that arrived before
@@ -24,15 +24,15 @@ opening received  +  every ledger line linked to the invoice
   payment filter).
 - `SalesInvoice::receivedAmount()` computes it on a loaded model;
   `scopeWithReceived()` adds it as `received_credit` / `received_debit` for a list;
-  `balanceDue()` is `total_amount − receivedAmount()`, floored at zero.
+  `balanceDue()` is `receivableTotal() − receivedAmount()`, floored at zero.
 - `balance_amount` is **written from** `receivedAmount()` (`refreshInvoiceMoney()`),
-  never the other way round, because `PartyStatement` prints that column on a client's
-  statement and the statement has to agree with the invoice.
+  never the other way round. Statement ageing reads `balanceDue()` too, so a later
+  allocation change cannot leave it reading an obsolete stored balance.
 
 Two consequences the list leans on:
 
 - the payment filter asks the money, not a stored word: *Nothing received* is
-  `amount_paid ≤ 0.01` **and** no ledger lines — an invoice marked `paid` a year ago
+  `receivedAmount() ≤ 0.01` (including allocations) — an invoice marked `paid` a year ago
   whose receipt was deleted is not paid;
 - `amount_paid` is never double counted. A receipt recorded from *Record payment*
   lives in the ledger only.
@@ -364,3 +364,139 @@ the figure.
   listener otherwise): a DOM `change` listener is the one binding select2 never
   fires, and the fields stayed empty until the invoice was saved and the server
   copied the same snapshot. The item rows' product list is bound the same way.
+
+
+## Cash invoices and partial PI conversion
+
+- **New Cash** creates a normal, initially unpaid invoice in the `MP/CI/<financial-year>/` series.
+  Cash is an invoice type, not a fabricated receipt. Server calculations force GST to zero
+  and discard GSTIN/PAN/place-of-supply and item HSN data. Form, record, portal and print
+  suppress tax details; cash documents are excluded from the GST export.
+- Open a PI and use **Cash invoices from this PI**. Choose an amount or a percentage of
+  the **remaining GST-exclusive value**, including proportionate charges/round-off.
+  Choose how much existing money to transfer, including zero, **up to the Cash Invoice
+  value and available PI receipts**. The default updates when the amount/percentage changes;
+  an explicitly entered transfer is kept and validated, not silently increased. A live summary
+  shows what will stay on the PI. Several cash invoices can
+  reference the same PI. Its original lines and total are historical facts, not rewritten
+  physical quantities. Only its uninvoiced remainder remains a receivable.
+- Example: PI 100 + GST 18. Cash-invoice 50 → cash document 50, original PI gross consumed
+  59, remaining PI 59. Effective total claims are **109**, not 168 or 118. A subsequent
+  cash invoice for all remaining base is 50; a subsequent tax invoice for the remainder
+  is 59. Cumulative proportional rounding consumes the last cent on the final conversion.
+- `source_proforma_id` links children; `conversion_base_amount` / `conversion_total_amount`
+  record the GST-exclusive value and original gross value each cash conversion consumed.
+  The PI's `cash_converted_*` caches determine `receivableTotal()` / `RECEIVABLE_TOTAL_SQL`.
+  List totals, filters, statements, project value and financial closure use that same basis.
+- Transfer reassigns opening credit or existing receipt links/allocations, **never writes
+  another bank entry**. Cash-mode/cash-account receipts are applied first (even if bank
+  receipts were recorded earlier), followed by opening credit, then other receipts. For a
+  ₹3,00,000 PI with ₹1,00,000 cash received and ₹50,000 bank received, a ₹1,00,000 cash
+  conversion transfers only ₹1,00,000 and leaves the ₹50,000 bank receipt on the PI.
+  That retained bank receipt moves to the tax invoice only when its remainder is converted.
+  A partially transferred same-currency direct receipt becomes two
+  slices of that same entry. FX allocations split native and document amounts without
+  changing their combined totals or exchange rate. Direct mixed/FX receipts must first be
+  allocated explicitly in Cashflow; an unsupported transfer rolls back the whole conversion.
+  Refunds remain intact, and only net receipts can be transferred.
+- A tax invoice for the remainder keeps **all original item lines and quantities**, including
+  their descriptions, units, HSN, GST rates, discounts, remarks and product references. Unit
+  rates and monetary amounts are prorated by `remaining GST-exclusive value / original
+  GST-exclusive value`; they are not replaced by a single “remaining amount” line. Unit rates
+  display two decimals while proportional line amounts carry rounding cents across rows;
+  the print explains this distinction. Invoice discounts and charges reduce proportionately,
+  and round-off preserves the exact uninvoiced claim. Project quantities/rates are not rewritten.
+  GST stays on the tax remainder only: for a GST-inclusive ₹3,00,000 PI at 18%, a ₹1,00,000
+  cash conversion consumes ₹1,18,000 of the original gross claim, leaving ₹1,82,000 to tax-invoice.
+- Existing invoices/allocations are **not rewritten automatically** by this fix. If an older
+  Cash Invoice received too much, use its audited Delete/reversal and recreate the conversion
+  with the correct transfer **before issuing a tax remainder**. If a tax remainder already
+  exists, the deletion guard still applies; Accounts needs a separately authorised correction.
+- Untransferred money stays against the PI, including when its remaining invoice value is
+  zero: it is then a retained client advance. Such a PI remains in credit/statement queries.
+  Fully cash-invoiced PIs without retained credit are superseded. Neither can be invoiced again.
+- Linked source/child financial documents remain locked against financial editing and
+  cancellation. The original PI and linked tax invoices cannot be deleted while their
+  conversions exist. Bulk deletion does not reverse conversions. Receipts, portal visibility
+  and reminders remain available. A draft duplicate is unlinked; amount-summary children
+  are detached from the project so they cannot create fictitious physical products.
+
+- Workflow advance/dispatch gates aggregate the complete PI settlement family, not only the
+  last child, so an unpaid earlier cash invoice cannot disappear from the dispatch check.
+
+### Delete a converted Cash Invoice
+
+Use **Delete** on the Cash Invoice or its invoice-list row, then confirm the reversal.
+This is an individual, permission-checked action, not a general financial-edit unlock.
+After deletion the ERP opens the original PI so Accounts can check the restored balance.
+
+- The PI regains this conversion's original base and gross value, **including its original
+  GST**. A fully converted PI reopens. Other Cash Invoices and their consumed values stay
+  intact, including their previously rounded amounts.
+- All opening credit and current receipt links/allocations on the deleted Cash Invoice
+  return to the PI, including later receipts, overpayments, refunds and FX allocations.
+  No bank entry is created or removed. Native amounts, document amounts and exchange
+  rates do not change, so bank balances are unchanged.
+- A workflow using this Cash Invoice as its commercial baseline returns to the original
+  PI. Payment gates are re-evaluated against the restored settlement family; dispatch may
+  become blocked if the restored GST-inclusive claim is no longer fully paid.
+- **A linked tax invoice for the PI remainder blocks cash deletion.** Deleting only the
+  cash portion would otherwise restore value already represented by that tax invoice.
+  Tax-conversion reversal is not implemented by this action; no money changes on rejection.
+- The invoice, item and attachment metadata and returned financial links are captured in
+  the immutable audit register. Public-access tokens are excluded. Attachment files remain
+  as audit evidence even though the document and its dependent rows are removed. Deleted
+  Cash Invoice numbers stay reserved, including against manually entered replacements.
+- PI and child locks, receipt reassignment, cached balances, workflow updates, audit and
+  document deletion are one transaction. Missing audit schema, inconsistent conversion
+  totals, or a failed delete aborts the entire reversal. No new migration is required if
+  the existing cash-conversion and audit migrations are already installed.
+
+### Deployment and verification
+
+Run `php artisan migrate --force` to apply `2026_10_21_130000_add_cash_invoice_conversions`.
+No existing invoice values or bank transactions are rewritten by this migration. Once cash
+invoices/conversions exist, schema rollback is refused: dropping the links would duplicate
+receivables. Use a consistent pre-feature backup for rollback after use.
+
+`php artisan test --filter='CashInvoice(Conversion|Deletion)Test'` covers direct GST-free creation,
+partial/full/percentage conversion, chosen retained credit, native/FX receipts, refunds,
+atomic rollback, rounding, tax remainder, immutable links, statement reconciliation,
+project product/value isolation, itemised/prorated tax remainders (including mixed GST,
+discounts and rounding), cash-first capped transfers, and family-wide workflow gates.
+`node tools/checks/cash-conversion-check.cjs` audits the form and optionally exercises the
+amount/percentage defaults, manual choices and caps in Chromium. Deletion coverage adds
+partial/full/sibling reversal, restored receipts/FX/refunds, reserved numbers, tax-remainder
+protection, audit/delete rollback, permissions/CSRF, rendered controls and workflow restoration.
+The SQLite module fixtures run the relevant real migrations; they deliberately avoid the
+unrelated legacy quote-removal migration, which currently fails on an indexed column during a fresh SQLite installation.
+
+
+## Create a client without leaving the invoice
+
+On the invoice create/edit form, choose **Add client** beside the Client selector.
+Enter the company and optional primary contact, GSTIN/PAN, and billing address.
+Shipping defaults to **Same as billing address**; untick it to enter a separate
+shipping address, including city, state, country and postal code.
+
+**Save client & use on invoice** saves a normal draft client immediately, selects
+it in the invoice’s searchable picker, and fills the invoice contact and address
+fields. Product rows, quantities, prices, project and other unsaved invoice values
+stay in place. Cancelling the dialog makes no request; an error keeps the dialog
+values and invoice entries available to correct/retry. The new client remains in
+Clients even if the invoice is later cancelled. This does not approve KYC or grant
+client-portal access.
+
+The existing authenticated `clients.quickStore` endpoint accepts the address fields
+and returns HTTP 201 with `{client: {id, company_name, client_number, snapshot}}` for
+JSON requests. Its ordinary client-list form still redirects to the new client.
+Validation/authentication/CSRF errors for JSON quick-create requests remain JSON;
+the existing office/sales-manage permission and CSRF guards are unchanged.
+`ClientInvoiceSnapshot::from()` is the single mapping used by preselected clients,
+existing selector options, inline creation, and server-side invoice saving. The field
+contract is populated even when no clients exist yet.
+
+Verification: `php artisan test --filter=InvoiceClientCreationTest` covers creation,
+both address modes, validation, legacy redirects, JSON authentication/CSRF failures,
+permission checks, snapshot fallbacks, first-client behaviour and form separation.
+No database migration is needed for inline client creation.

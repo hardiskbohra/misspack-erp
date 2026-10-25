@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\DateRanges;
+use App\Models\CashflowEntry;
 use App\Models\PartyStatementShare;
 use App\Models\SalesInvoice;
 use App\Models\VendorPaymentEntry;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -40,13 +42,14 @@ class PartyStatementController extends Controller
     /** The run: every party with a balance or movement in the period. */
     public function index(Request $request): View
     {
-        $filters = $this->filters($request);
+        $filters = $this->filters($request, true);
 
         /* "All" is two lists, not a third one: clients and vendors are read
            differently (receivable vs payable), so they are built separately and
            merged — never averaged into one number that means nothing. */
         $types = $filters['partyType'] === 'all' ? ['client', 'vendor'] : [$filters['partyType']];
         $rows = [];
+        $totalsByCurrency = [];
         $totals = ['debit' => 0.0, 'credit' => 0.0, 'closing' => 0.0, 'parties' => 0, 'balanced' => 0];
 
         foreach ($types as $type) {
@@ -62,6 +65,11 @@ class PartyStatementController extends Controller
                 $row['party_type'] = $type;
                 $row['party_type_label'] = PartyStatement::partyTypes()[$type];
                 $rows[] = $row;
+                $code = $row['currency'];
+                $totalsByCurrency[$code] ??= ['debit'=>0.0, 'credit'=>0.0, 'closing'=>0.0];
+                foreach (['debit', 'credit', 'closing'] as $field) {
+                    $totalsByCurrency[$code][$field] += $row[$field];
+                }
             }
 
             foreach (['debit', 'credit', 'closing', 'parties', 'balanced'] as $key) {
@@ -72,9 +80,20 @@ class PartyStatementController extends Controller
         usort($rows, fn ($a, $b) => [$b['last_date'] ?? '', $a['name']] <=> [$a['last_date'] ?? '', $b['name']]);
         $totals = array_map(fn ($value) => is_float($value) ? round($value, 2) : $value, $totals);
 
+        ksort($totalsByCurrency);
+        foreach ($totalsByCurrency as &$amounts) {
+            $amounts = array_map(fn ($value) => round($value, 2), $amounts);
+        }
+        unset($amounts);
+        if ($filters['currency'] === 'all') {
+            // A count may span currencies; a monetary aggregate must not.
+            $totals['debit'] = $totals['credit'] = $totals['closing'] = null;
+        }
+
         $shares = PartyStatementShare::query()
             ->when($filters['q'] !== null && $filters['q'] !== '', fn ($q) => $q->where('party_name', 'like', '%'.$filters['q'].'%'))
             ->when($filters['partyType'] !== 'all', fn ($q) => $q->where('party_type', $filters['partyType']))
+            ->when($filters['currency'] !== 'all', fn ($q) => $q->where('party_currency', $filters['currency']))
             ->latest('id')
             ->limit(30)
             ->get();
@@ -82,6 +101,7 @@ class PartyStatementController extends Controller
         return view('cashflows.statements', [
             'rows' => $rows,
             'totals' => $totals,
+            'totalsByCurrency' => $totalsByCurrency,
             'shares' => $shares,
             'currencyOptions' => $this->currencyChoices(),
             'liveCount' => PartyStatementShare::live()->count(),
@@ -93,19 +113,7 @@ class PartyStatementController extends Controller
     /** One statement, on screen, with a printer and a Share button beside it. */
     public function show(Request $request, string $partyType, int $party): View
     {
-        $filters = $this->filters($request);
-        if (! $request->filled('currency')) {
-            $filters['currency'] = $this->statements->defaultCurrency($partyType, $party);
-        }
-        $statement = $this->statements->build(
-            $partyType,
-            $party,
-            $filters['dateFrom'],
-            $filters['dateTo'],
-            ['currency' => $filters['currency'], 'ageing' => $filters['ageing']]
-        );
-
-        abort_if($statement === null, 404);
+        $document = $this->documentData($request, $partyType, $party);
 
         $readyShare = null;
         if ($token = $request->query('share')) {
@@ -113,14 +121,40 @@ class PartyStatementController extends Controller
         }
 
         return view('cashflows.statement-show', [
-            'statement' => $statement,
-            'currencyOptions' => $this->statements->currencies($partyType, $party),
+            ...$document,
             'shares' => PartyStatementShare::forParty($partyType, $party)->latest('id')->limit(20)->get(),
             'readyShare' => $readyShare,
             'expiryChoices' => PartyStatementShare::EXPIRY_CHOICES,
             'channelChoices' => PartyStatementShare::CHANNELS,
-            ...$filters,
         ]);
+    }
+
+    public function print(Request $request, string $partyType, int $party): View
+    {
+        return view('cashflows.statement-pdf', [
+            ...$this->documentData($request, $partyType, $party),
+            'printPreview' => true,
+            'pdfAvailable' => class_exists(\Barryvdh\DomPDF\Facade\Pdf::class),
+        ]);
+    }
+
+    private function documentData(Request $request, string $partyType, int $party): array
+    {
+        $filters = $this->filters($request);
+        if (! $request->filled('currency')) {
+            $filters['currency'] = $this->statements->defaultCurrency($partyType, $party);
+        }
+        $statement = $this->statements->build($partyType, $party, $filters['dateFrom'], $filters['dateTo'],
+            ['currency' => $filters['currency'], 'ageing' => $filters['ageing']]);
+        abort_if($statement === null, 404);
+        // Do not drop a false/zero ageing flag, or an explicit All time preset.
+        $documentQuery = array_filter([
+            'partyType' => $partyType, 'party' => $party, 'period' => $filters['periodKey'],
+            'date_from' => $filters['dateFrom'], 'date_to' => $filters['dateTo'],
+            'currency' => $statement['currency'], 'ageing' => $filters['ageing'] ? '1' : '0',
+        ], fn ($value) => $value !== null && $value !== '');
+        return [...$filters, 'statement' => $statement, 'documentQuery' => $documentQuery,
+            'currencyOptions' => $this->statements->currencies($partyType, $party)];
     }
 
     /**
@@ -130,19 +164,7 @@ class PartyStatementController extends Controller
      */
     public function pdf(Request $request, string $partyType, int $party)
     {
-        $filters = $this->filters($request);
-        if (! $request->filled('currency')) {
-            $filters['currency'] = $this->statements->defaultCurrency($partyType, $party);
-        }
-        $statement = $this->statements->build(
-            $partyType,
-            $party,
-            $filters['dateFrom'],
-            $filters['dateTo'],
-            ['currency' => $filters['currency'], 'ageing' => $filters['ageing']]
-        );
-
-        abort_if($statement === null, 404);
+        $statement = $this->documentData($request, $partyType, $party)['statement'];
 
         $fileName = 'statement-'
             .Str::slug($statement['party']['name'] ?: 'party')
@@ -295,12 +317,19 @@ class PartyStatementController extends Controller
      * One filter shape for the surface and the statement, so the period on the
      * screen is the period in the link and the currency in the columns.
      */
-    private function filters(Request $request): array
+    private function filters(Request $request, bool $listing = false): array
     {
         $partyType = $request->query('party_type', 'all');
         if (! in_array($partyType, ['all', 'client', 'vendor'], true)) {
             $partyType = 'all';
         }
+
+        $currency = strtoupper(trim((string) (is_scalar($request->query('currency')) ? $request->query('currency') : '')));
+        if ($listing) {
+            validator(['currency' => is_scalar($request->query('currency')) ? $currency : $request->query('currency')],
+                ['currency' => ['nullable', 'string', Rule::in(['ALL', ...$this->currencyChoices()])]])->validate();
+        }
+        $currency = $currency !== '' ? ($currency === 'ALL' ? 'all' : $currency) : ($listing ? 'all' : 'INR');
 
         $presets = DateRanges::presets();
         $period = $request->query('period');
@@ -331,7 +360,7 @@ class PartyStatementController extends Controller
 
         return [
             'partyType' => $partyType,
-            'currency' => strtoupper((string) $request->query('currency', 'INR')) ?: 'INR',
+            'currency' => $currency,
             'q' => trim((string) $request->query('q')) ?: null,
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
@@ -356,6 +385,10 @@ class PartyStatementController extends Controller
         if (Schema::hasTable('sales_invoices')) {
             $fromLedger = array_merge($fromLedger, SalesInvoice::query()
                 ->select('currency')->distinct()->pluck('currency')->all());
+        }
+
+        if (Schema::hasTable('cashflow_entries')) {
+            $fromLedger = array_merge($fromLedger, CashflowEntry::query()->distinct()->pluck('currency')->all());
         }
 
         $codes = array_values(array_unique(array_filter(array_map(

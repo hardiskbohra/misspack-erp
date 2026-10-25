@@ -1,75 +1,55 @@
 @extends('client_portal.layouts.app')
 
-@section('title', 'KYC Form')
-@section('page-title', 'KYC Form')
+@section('title', 'KYC workspace')
+@section('page-title', 'KYC workspace')
 
 @section('content')
-    <div class="master-header" style="padding:5px;line-height:1;">
-        <div>
-            <h1>Client KYC</h1>
-            <p style="font-size:16px;font-weight:500;">Review and update your company KYC information.</p>
-        </div>
-        <div class="master-actions">
-            <a href="{{ $kycUrl }}" target="_blank" class="master-btn master-btn-primary">Open KYC Form</a>
-        </div>
+<div class="cp-page-head">
+    <div>
+        <p class="cp-eyebrow">Company verification</p>
+        <h1>KYC workspace</h1>
+        <p>Review your company verification status and securely update the information MissPack needs.</p>
     </div>
-    <div class="cp-grid-2">
-        <div class="cp-card" style="padding:20px;">
-            <p class="cp-eyebrow" style="margin-bottom:0px;">Status</p>
-            <h2 style="margin-top:0;">KYC Status</h2>
-            <div class="cp-grid-2" style="margin-top:15px;">
-                <div>
-                    <span class="cp-muted">Client Number</span>
-                    <strong style="display:block;font-weight:600;">{{ $client->client_number }}</strong>
-                </div>
-                <div>
-                    <span class="cp-muted">Status</span>
-                    <strong style="display:block;font-weight:600;">{{ method_exists($client, 'statusLabel') ? $client->statusLabel() : ucfirst($client->status) }}</strong>
-                </div>
-                <div>
-                    <span class="cp-muted">Submitted</span>
-                    <strong style="display:block;font-weight:600;">{{ $client->kyc_submitted_at ? $client->kyc_submitted_at->format('d M Y') : '-' }}</strong>
-                </div>
-                <div>
-                    <span class="cp-muted">Reviewed</span>
-                    <strong style="display:block;font-weight:600;">{{ $client->kyc_reviewed_at ? $client->kyc_reviewed_at->format('d M Y') : '-' }}</strong>
-                </div>
-            </div>
-            @if ($client->revision_note)
-                <div class="cp-alert cp-alert-warning" style="margin-top:14px;">Revision Note: {{ $client->revision_note }}
-                </div>
-            @endif
-            @if ($client->rejection_reason)
-                <div class="cp-alert cp-alert-error" style="margin-top:14px;">Rejection Reason:
-                    {{ $client->rejection_reason }}</div>
-            @endif
+    <a href="{{ $kycUrl }}" target="_blank" rel="noopener" class="master-btn master-btn-primary"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open KYC form</a>
+</div>
+
+<div class="cp-grid-2 cp-content-grid">
+    <section class="cp-card cp-section-card">
+        <div class="cp-section-heading">
+            <div><p class="cp-eyebrow">Verification</p><h2>Current status</h2></div>
+            <span class="cp-status-pill">{{ method_exists($client, 'statusLabel') ? $client->statusLabel() : ucfirst($client->status) }}</span>
         </div>
-        <div class="cp-card" style="padding:20px;">
-            <p class="cp-eyebrow">Secure Link</p>
-            <h2 style="margin-top:0;">KYC Form Link</h2>
-            <p class="cp-muted" style="margin-top:15px;">
-                Use this link to open the MissPack KYC form. If the form is under review or approved, editing may be locked.
-            </p>
-            <div class="master-field" style="margin-top:15px;">
-                <label class="master-label">KYC URL</label>
-                <input class="master-input" readonly value="{{ $kycUrl }}" id="kycLink">
-            </div>
-            <button
-                class="master-btn master-btn-soft"
-                type="button"
-                style="margin-top:10px;"
-                onclick="copyKycLink()">
-                Copy Link
-            </button>
-            
-            <span id="copySuccess"
-                  style="display:none; margin-left:10px; color:#16a34a; font-size:13px; font-weight:600;">
-                Copied successfully!
-            </span>
+        <dl class="cp-fact-list">
+            <div><dt>Client number</dt><dd>{{ $client->client_number }}</dd></div>
+            <div><dt>Submitted</dt><dd>{{ $client->kyc_submitted_at ? $client->kyc_submitted_at->format('d M Y') : 'Not submitted' }}</dd></div>
+            <div><dt>Reviewed</dt><dd>{{ $client->kyc_reviewed_at ? $client->kyc_reviewed_at->format('d M Y') : 'Not reviewed' }}</dd></div>
+        </dl>
+        @if ($client->revision_note)
+            <div class="cp-inline-alert cp-inline-alert-warning"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>Changes requested</strong><p>{{ $client->revision_note }}</p></div></div>
+        @endif
+        @if ($client->rejection_reason)
+            <div class="cp-inline-alert cp-inline-alert-danger"><i class="fa-solid fa-circle-exclamation"></i><div><strong>Review note</strong><p>{{ $client->rejection_reason }}</p></div></div>
+        @endif
+    </section>
+
+    <section class="cp-card cp-section-card">
+        <div class="cp-section-heading">
+            <div><p class="cp-eyebrow">Secure access</p><h2>Your KYC form link</h2></div>
+            <span class="cp-support-icon"><i class="fa-solid fa-shield-halved"></i></span>
         </div>
-    </div>
-    
+        <p class="cp-section-copy">Use this private link to open your company KYC form. Editing may be locked while the form is under review or after approval.</p>
+        <div class="master-field">
+            <label class="master-label" for="kycLink">KYC URL</label>
+            <input class="master-input" readonly value="{{ $kycUrl }}" id="kycLink">
+        </div>
+        <div class="cp-card-actions cp-card-actions-start">
+            <button class="master-btn master-btn-soft" type="button" onclick="copyKycLink()"><i class="fa-regular fa-copy"></i> Copy link</button>
+            <span id="copySuccess" class="cp-copy-success" hidden><i class="fa-solid fa-circle-check"></i> Copied</span>
+        </div>
+    </section>
+</div>
+
 @push('scripts')
-    <script src="{{ asset('assets/js/client-portal-kyc.js') }}"></script>
+<script src="{{ asset('assets/js/client-portal-kyc.js') }}"></script>
 @endpush
 @endsection

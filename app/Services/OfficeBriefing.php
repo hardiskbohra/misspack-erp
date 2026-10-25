@@ -43,6 +43,20 @@ class OfficeBriefing
         ], email: true);
     }
 
+    public function vendorKycSubmitted(\App\Models\Vendor $vendor): ?OfficeAlert
+    {
+        if (! $this->sourceOn('kyc')) return null;
+        return $this->raise([
+            'event_key'=>'vendor.kyc.submitted',
+            'fingerprint'=>'vendor.kyc.submitted:'.$vendor->id.':'.$vendor->kyc_version,
+            'title'=>($vendor->kyc_data['vendor_name'] ?? $vendor->vendor_name).' submitted vendor KYC',
+            'body'=>'Review these details before they update the vendor record. Any authorised purchase manager, including the creator, can review.',
+            'severity'=>OfficeAlert::SEVERITY_CRITICAL, 'requires_ack'=>true, 'team'=>'office',
+            'action_url'=>route('vendors.show',[$vendor,'tab'=>'kyc']), 'action_label'=>'Review vendor KYC',
+            'subject_type'=>\App\Models\Vendor::class, 'subject_id'=>$vendor->id,
+        ], email: true);
+    }
+
     public function shipmentStatusChanged(Shipment $shipment, ?string $from = null): ?OfficeAlert
     {
         if (! $this->sourceOn('shipment_exception')) {
@@ -143,6 +157,19 @@ class OfficeBriefing
             ->where('subject_type', CashflowRecurrenceRule::class)
             ->where('subject_id', $rule->id)
             ->delete();
+    }
+
+    /**
+     * Raise a source-controlled workflow notice through the same deduplicated,
+     * acknowledged and watcher-emailed channel as the rest of the office inbox.
+     */
+    public function workflowNotice(array $data): ?OfficeAlert
+    {
+        if (! $this->sourceOn('workflow')) {
+            return null;
+        }
+
+        return $this->raise($data, email: true);
     }
 
     public function runScheduled(): array

@@ -301,10 +301,9 @@ check('the file dialog is bound, not only drawn',
    with nothing on the page. The eight-space indent is the grid child's. */
 const showView = read('resources/views/cashflows/show.blade.php');
 const cardIncludeAt = showView.indexOf("@include('cashflows.partials.documents-card'");
-check('the documents card is a row of the record page grid, not its neighbour',
-    showView.indexOf('<div class="master-grid">') < cardIncludeAt
-    && /^ {8}@include\('cashflows\.partials\.documents-card'/m.test(showView)
-    && /\.cf-docs\s*\{\s*grid-column: 1 \/ -1;/.test(cashflowsCss));
+check('the documents card belongs to the documents panel, not beside the record surface',
+    cardIncludeAt > showView.indexOf("$tab === 'documents'")
+    && /<section class="master-tab-panel" aria-label="Documents">[\s\S]{0,180}@include\('cashflows\.partials\.documents-card'/.test(showView));
 
 check('the card takes the grid gutter and keeps no margin of its own',
     /\.cf-docs\s*\{[\s\S]{0,140}margin-bottom: 0;/.test(cashflowsCss));

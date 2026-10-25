@@ -11,13 +11,12 @@ class ProjectTrackingUpdate extends Model
     use HasFactory;
 
     protected $fillable = [
-        'project_id', 'project_product_id', 'title', 'status', 'progress_percent', 'location',
+        'project_id', 'project_product_id', 'title', 'status', 'location',
         'occurred_at', 'notes', 'is_public', 'created_by',
     ];
 
     protected $casts = [
         'occurred_at' => 'datetime',
-        'progress_percent' => 'integer',
         'is_public' => 'boolean',
     ];
 

@@ -11,8 +11,10 @@ use App\Models\ClientPortalNotification;
 use App\Models\ClientPortalUser;
 use App\Models\SavedView;
 use App\Models\SalesInvoice;
+use App\Services\ClientInvoiceSnapshot;
 use App\Services\PartyStatement;
 use App\Services\SavedViews;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,6 +34,7 @@ class ClientController extends Controller
         'portal' => 'Manage Portal',
         'notifications' => 'Notifications',
         'documents' => 'Documents',
+        'projects' => 'Projects',
         'invoices' => 'Invoices',
         'payments' => 'Payments',
         'statement' => 'Statement',
@@ -179,7 +182,7 @@ class ClientController extends Controller
             ->with('success', 'Client created successfully.');
     }
 
-    public function quickStore(Request $request): RedirectResponse
+    public function quickStore(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'company_name' => ['required', 'string', 'max:255'],
@@ -194,10 +197,25 @@ class ClientController extends Controller
             'gstin' => ['nullable', 'string', 'max:30'],
             'pan' => ['nullable', 'string', 'max:20'],
             'notes' => ['nullable', 'string'],
+            'billing_address' => ['nullable', 'string', 'max:5000'],
+            'billing_city' => ['nullable', 'string', 'max:255'],
+            'billing_state' => ['nullable', 'string', 'max:255'],
+            'billing_country' => ['nullable', 'string', 'max:255'],
+            'billing_pincode' => ['nullable', 'string', 'max:30'],
+            'shipping_address' => ['nullable', 'string', 'max:5000'],
+            'shipping_city' => ['nullable', 'string', 'max:255'],
+            'shipping_state' => ['nullable', 'string', 'max:255'],
+            'shipping_country' => ['nullable', 'string', 'max:255'],
+            'shipping_pincode' => ['nullable', 'string', 'max:30'],
+            'shipping_same_as_billing' => ['nullable', 'boolean'],
         ]);
+
+        $data['shipping_same_as_billing'] = $request->boolean('shipping_same_as_billing');
+        $this->copyBillingToShippingIfNeeded($data);
 
         $client = Client::create([
             ...$data,
+            'client_type' => $data['client_type'] ?? 'customer',
             'client_number' => $this->makeClientNumber(),
             'public_token' => Str::random(48),
             'preferred_currency' => 'INR',
@@ -205,6 +223,15 @@ class ClientController extends Controller
             'created_by' => Auth::id(),
             'kyc_submitted_at' => null,
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json(['client' => [
+                'id' => $client->id,
+                'company_name' => $client->company_name,
+                'client_number' => $client->client_number,
+                'snapshot' => ClientInvoiceSnapshot::from($client),
+            ]], 201);
+        }
 
         return redirect()
             ->route('clients.show', $client)
@@ -279,6 +306,13 @@ class ClientController extends Controller
             'notificationsAvailable' => $notificationsAvailable,
             'notifications' => $notifications,
             'supportCount' => $supportCount,
+            'unallocatedCash' => app(\App\Services\UnallocatedCashflows::class)->forClient($client->id),
+            'accountSummary' => app(\App\Services\ClientAccountSummary::class)->forClient($client),
+            'tabCounts' => $this->clientTabCounts($client),
+            'projectEntries' => $tab === 'projects' && Auth::user()?->hasPermission('projects.view') && Schema::hasTable('projects')
+                ? \App\Models\Project::where('client_id', $client->id)->latest('id')
+                    ->paginate(20, ['*'], 'project_page')->appends(['tab' => 'projects'])
+                : null,
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
             ...$invoiceData,
@@ -286,6 +320,17 @@ class ClientController extends Controller
             ...$statementData,
             ...$this->clientFeedbackData($client, $tab),
         ]);
+    }
+
+    /** Read-only account position for the PI/invoice client picker. */
+    public function paymentSummary(Client $client, \App\Services\ClientAccountSummary $summary): JsonResponse
+    {
+        return response()->json([
+            'client_id' => $client->id,
+            'html' => view('clients.partials.account-summary', [
+                'client' => $client, 'accountSummary' => $summary->forClient($client),
+            ])->render(),
+        ])->header('Cache-Control', 'no-store, private');
     }
 
     /**
@@ -351,16 +396,7 @@ class ClientController extends Controller
         $paymentEntries = collect();
 
         if ($available) {
-            $query = CashflowEntry::query()
-                ->where(function ($party) use ($client) {
-                    $party->where('client_id', $client->id);
-                    if (Schema::hasColumn('cashflow_entries', 'related_party_type')
-                        && Schema::hasColumn('cashflow_entries', 'related_party_name')) {
-                        $party->orWhere(fn ($related) => $related
-                            ->where('related_party_type', 'client')
-                            ->where('related_party_name', $client->company_name));
-                    }
-                });
+            $query = $this->clientPaymentQuery($client);
 
             $paymentEntries = (clone $query)
                 ->with(['account', 'category'])
@@ -374,6 +410,46 @@ class ClientController extends Controller
             'paymentEntries' => $paymentEntries,
             'paymentDirectionOptions' => CashflowEntry::transactionTypeOptions(),
             'paymentModeOptions' => CashflowEntry::paymentModeOptions(),
+        ];
+    }
+
+    /** Keep the Payments badge and paginated list on the same exact scope. */
+    private function clientPaymentQuery(Client $client): \Illuminate\Database\Eloquent\Builder
+    {
+        return CashflowEntry::query()->where(function ($party) use ($client) {
+            $party->where('client_id', $client->id);
+            if (Schema::hasColumn('cashflow_entries', 'related_party_type')
+                && Schema::hasColumn('cashflow_entries', 'related_party_name')) {
+                $party->orWhere(fn ($related) => $related
+                    ->where('related_party_type', 'client')
+                    ->where('related_party_name', $client->company_name));
+            }
+        });
+    }
+
+    /** Counts describe the complete tab, never just the currently loaded page. */
+    private function clientTabCounts(Client $client): array
+    {
+        $portal = Schema::hasTable('client_portal_users');
+        $count = fn (string $table) => Schema::hasTable($table)
+            ? DB::table($table)->where('client_id', $client->id)->count() : 0;
+        $contacts = collect(['ceo', 'account_person', 'marketing_person', 'dispatch_person'])
+            ->filter(fn ($prefix) => filled($client->{$prefix.'_name'})
+                || filled($client->{$prefix.'_email'}) || filled($client->{$prefix.'_contact'}))->count();
+        $addresses = collect(['billing', 'shipping'])->filter(fn ($prefix) =>
+            collect(['address', 'city', 'state', 'country', 'pincode'])
+                ->contains(fn ($suffix) => filled($client->{$prefix.'_'.$suffix})))->count();
+
+        return [
+            'contacts' => $contacts,
+            'addresses' => $addresses,
+            'projects' => Schema::hasTable('projects') ? \App\Models\Project::where('client_id', $client->id)->count() : 0,
+            'invoices' => $count('sales_invoices'),
+            'payments' => Schema::hasTable('cashflow_entries') ? $this->clientPaymentQuery($client)->count() : 0,
+            'portal' => $portal ? $count('client_portal_users') : 0,
+            'notifications' => $portal ? $count('client_portal_notifications') : 0,
+            'documents' => $portal ? $count('client_portal_documents') : 0,
+            'feedback' => $count('feedback_requests'),
         ];
     }
 

@@ -21,10 +21,11 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 
 | Component | Status | Current implementation |
 | --- | --- | --- |
+| Topbar quick menu | Shared | `layouts.partials.quick-menu`; permission-filtered frequent modules reuse sidebar destinations and the shared portaled dropdown in `app-layout.js`. Supports arrow keys, Home/End, Escape and Tab, with an icon-only trigger on smaller screens. |
 | Sidebar menu | Shared | `.sidebar-nav`, `.sidebar-item`; portal uses `.cp-nav` / `.cp-nav-link` |
 | Nested menu | Partial | Menu groups and active items exist; no consistent nested disclosure contract |
 | Tabs | Shared | `.master-tabs` / `.master-tab`; Cashflows `.cf-tabs` / `.cf-tab`; core aliases in `components/tabs.css` |
-| Stepper | Partial | Shipment tracking and project milestone steppers are page-specific (`shipments.css`, `projects.css`) |
+| Stepper | Partial | Shipment tracking and project workflow control steppers are page-specific (`shipments.css`, `projects.css`) |
 | Pagination | Shared | Laravel paginator partial and `.master-pagination` / `.cp-pagination`; `resources/views/components/pagination.blade.php` |
 | Secondary navigation | Partial | Record tabs and portal sub-navigation, no standalone shared secondary-nav component |
 
@@ -53,6 +54,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | --- | --- | --- |
 | KPI card | Shared | `.master-stat`, `.cf-stat`, `.cp-stat`; semantic icon accents and neutral surfaces |
 | KPI trend card | Gap | No common trend/delta KPI card |
+| Unallocated advance rail | Shared | `cashflows.partials.unallocated-party-alert` and `master-detail.css`; a bounded-height horizontal strip of keyboard-accessible entry cards, with all allocation links and currency-wise totals preserved. |
 | Summary card | Partial | `.master-info`, statement summaries, report totals; semantics vary by module |
 | Product card | Partial | Product grid and client-portal catalogue card styles |
 | Project card | Partial | Project list/show and client portal project cards |
@@ -67,6 +69,8 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Text | Shared | `.core-text-input`, `.master-input` |
 | Number | Shared | Native number input with shared field styles |
 | Currency | Partial | Money helpers and currency-prefixed/amount controls in finance modules |
+| Client account summary | Shared | `clients.partials.account-summary`, `ClientAccountSummary`, and `invoice-client-account.js`; client profile and PI/invoice picker share all-time, per-currency invoice values, net payments, balances and unapplied credits. Selection fetches fresh figures with stale-response protection; never applies an advance automatically. |
+| Allocation payment position | Shared | `cashflows.partials.document-payment-summary` and `cashflow-document-balance.js`; both allocation dialogs show saved document-currency total, paid and balance on selection, with canonical eager-loaded ledger sums and explicit order advance capacity |
 | Select | Shared | `.core-select`, `.master-select` |
 | Multi-select | Partial | Select2 multi-select on selected screens; not an app-wide default |
 | Search select | Shared | Select2 theme and shared select initialization |
@@ -101,9 +105,10 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | --- | --- | --- |
 | Modal | Shared | `.master-modal`, `.master-modal-card`; Projects and client-document variants are compatibility adapters |
 | Drawer | Shared | `<x-drawer>` plus `master-drawer.js` provides theme-aware, responsive panels, focus trapping, Escape/backdrop/close handling, and focus restoration; vendor/project quick details and module filter panels demonstrate the pattern |
+| Dashboard reporting period | Shared | Overview and module `<x-drawer>` panels reveal the matching controls immediately with native or Select2 events; Custom date range uses required From/To dates, inclusive server-validated bounds, retained selections and one explicit Apply. Hidden date inputs are disabled, and module navigation preserves the custom dates. |
 | Dropdown | Shared | `.master-dropdown`, user-menu and Select2 dropdowns |
 | Popover | Partial | Tooltips and anchored helper patterns exist; no shared popover primitive |
-| Tooltip | Partial | Tooltip containers in lists and finance summaries; not consistently accessible/initialized |
+| Tooltip | Shared | `master-tooltips.js` promotes native `title` text into the themed `.ui-tooltip` surface across office, portal and public layouts; supports hover, keyboard focus, Escape, viewport positioning and dynamic content |
 | Context menu | Gap | No common context-menu component found |
 
 ## Business components
@@ -116,8 +121,8 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | Payment summary | Partial | Invoice, portal, and Cashflow payment summaries use separate markup |
 | Invoice summary | Partial | Sales invoice show/list and portal invoice detail cards |
 | Shipment tracker | Shared, domain-specific | Shipment detail tracker plus public tracking/stepper (`shipments.css`, `shipment-public.css`) |
-| Project timeline | Partial | Project activity/milestone chronology and client-portal timeline (`projects.css`, `client-portal-project-show.css`) |
-| Milestone tracker | Shared, domain-specific | Project milestone stepper and editor (`projects.css`) |
+| Project timeline | Partial | Project activity/workflow control chronology and client-portal timeline (`projects.css`, `client-portal-project-show.css`) |
+| Workflow control tracker | Shared, domain-specific | Project workflow control stepper and editor (`projects.css`) |
 | Activity feed | Gap | Chronological entries exist, but no normalized event/feed API or component |
 | Document attachment | Shared, domain-specific | Master, vendor, project, shipment, and portal attachment cards/grids |
 | Approval flow | Partial | Client KYC review/approval states; no reusable multi-step approval flow |

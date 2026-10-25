@@ -8,12 +8,12 @@
                 <div>
                     <h2 class="master-section-title">Invoices</h2>
                     <p class="master-sub">{{ $project->taxInvoices->count() }}
-                        {{ \Illuminate\Support\Str::plural('tax invoice', $project->taxInvoices->count()) }} raised on
+                        {{ \Illuminate\Support\Str::plural('tax / cash invoice', $project->taxInvoices->count()) }} raised on
                         this project</p>
                 </div>
                 <div class="master-section-meta">
                     <a class="master-btn master-btn-soft master-btn-sm"
-                        href="{{ route('sales-invoices.index', ['invoice_type' => 'tax', 'project_id' => $project->id]) }}">
+                        href="{{ route('sales-invoices.index', ['project_id' => $project->id]) }}">
                         <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Open in invoices</a>
                 </div>
             </div>
@@ -44,11 +44,11 @@
                                 <tr>
                                     <td data-label="Invoice">
                                         <strong>{{ $invoice->invoice_number }}</strong>
-                                        <span class="project-fact-note">{{ $invoice->client_company_name ?: $project->clientName() }}</span>
+                                        <span class="project-fact-note">{{ $invoice->typeLabel() }} · {{ $invoice->client_company_name ?: $project->clientName() }}</span>
                                     </td>
                                     <td data-label="Date">{{ optional($invoice->invoice_date)->format('d M Y') ?: '—' }}</td>
                                     <td data-label="Amount" class="is-num">
-                                        {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}
+                                        {{ \App\Helpers\CommonHelper::amount(($invoice instanceof \App\Models\SalesInvoice ? $invoice->receivableTotal() : $invoice->total_amount), $invoice->currency) }}
                                     </td>
                                     <td data-label="Received" class="is-num">
                                         <strong class="{{ $invoice->receivedAmount() > 0 ? 'project-money-in' : '' }}">
@@ -121,7 +121,7 @@
                                     </td>
                                     <td data-label="Date">{{ optional($invoice->invoice_date)->format('d M Y') ?: '—' }}</td>
                                     <td data-label="Amount" class="is-num">
-                                        {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}
+                                        {{ \App\Helpers\CommonHelper::amount(($invoice instanceof \App\Models\SalesInvoice ? $invoice->receivableTotal() : $invoice->total_amount), $invoice->currency) }}
                                     </td>
                                     <td data-label="Status">
                                         <span class="master-badge status-{{ $invoice->stateKey() }}">{{ $invoice->stateLabel() }}</span>
@@ -182,7 +182,7 @@
                                     <td data-label="Vendor">{{ $invoice->vendor_company_name ?: $invoice->vendor?->contact_person_name ?: '—' }}</td>
                                     <td data-label="Date">{{ optional($invoice->invoice_date)->format('d M Y') ?: '—' }}</td>
                                     <td data-label="Amount" class="is-num">
-                                        {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}
+                                        {{ \App\Helpers\CommonHelper::amount(($invoice instanceof \App\Models\SalesInvoice ? $invoice->receivableTotal() : $invoice->total_amount), $invoice->currency) }}
                                     </td>
                                     <td data-label="Status">
                                         <span class="master-badge status-{{ $invoice->status }}">{{ $invoice->statusLabel() }}</span>
@@ -244,7 +244,7 @@
                                     <td data-label="Vendor">{{ $invoice->vendor_company_name ?: $invoice->vendor?->contact_person_name ?: '—' }}</td>
                                     <td data-label="Date">{{ optional($invoice->invoice_date)->format('d M Y') ?: '—' }}</td>
                                     <td data-label="Amount" class="is-num">
-                                        {{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}
+                                        {{ \App\Helpers\CommonHelper::amount(($invoice instanceof \App\Models\SalesInvoice ? $invoice->receivableTotal() : $invoice->total_amount), $invoice->currency) }}
                                     </td>
                                     <td data-label="Paid" class="is-num">
                                         <strong class="{{ $invoice->paidAmount() > 0 ? 'project-money-out' : '' }}">

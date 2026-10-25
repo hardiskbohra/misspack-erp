@@ -783,12 +783,12 @@ check('the register is a module of its own, under the money it accounts for',
     has(src.routes, "name('assets.index')")
     && has(src.routes, "'/fixed-assets'")
     && has(src.layout, "['label' => 'Fixed assets', 'route' => 'assets.index'")
-    && has(src.layout, "'section' => 'Accounts'")
+    && has(src.layout, "'section' => 'Finance'")
     && (() => {
         /* …and it stands inside that section rather than after the last one. */
         const at = src.layout.indexOf("'route' => 'assets.index'");
         const section = src.layout.lastIndexOf("'section' =>", at);
-        return section > -1 && src.layout.slice(section, at).includes("'Accounts'");
+        return section > -1 && src.layout.slice(section, at).includes("'Finance'");
     })(),
     'the sidebar door sits with the money, because that is what a register is');
 

@@ -14,7 +14,7 @@
     <div class="cp-support-detail-actions">
         <span class="cp-status-pill cp-status-{{ $conversation->status }}">{{ $conversation->statusLabel() }}</span>
         @if($conversation->status !== 'resolved')
-            <form method="POST" action="{{ route('client-portal.support.close', $conversation->id) }}" data-confirm="Mark this request as resolved?">@csrf @method('PATCH')<button class="master-btn master-btn-soft" type="submit">Mark resolved</button></form>
+            <form method="POST" action="{{ route('client-portal.support.close', $conversation->id) }}" data-confirm="Mark this request as resolved?" data-confirm-text="Yes" data-confirm-danger="false">@csrf @method('PATCH')<button class="master-btn master-btn-soft" type="submit">Mark resolved</button></form>
         @else
             <form method="POST" action="{{ route('client-portal.support.reopen', $conversation->id) }}">@csrf @method('PATCH')<button class="master-btn master-btn-soft" type="submit">Reopen request</button></form>
         @endif

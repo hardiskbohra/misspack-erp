@@ -500,6 +500,7 @@
 
 .si-type.type-proforma { --tone-bg: rgba(123, 97, 255, .16); --tone-fg: #6d4bd8; }
 .si-type.type-tax { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
+.si-type.type-cash { --tone-bg: rgba(18, 203, 183, .18); --tone-fg: #0f766e; }
 .si-type.type-order { --tone-bg: rgba(123, 97, 255, .16); --tone-fg: #6d4bd8; }
 .si-type.type-bill { --tone-bg: rgba(79, 131, 241, .18); --tone-fg: #3f6fd8; }
 
@@ -517,6 +518,7 @@
 
 :root[data-theme="dark"] .si-type.type-proforma { --tone-fg: #c4b5fd; }
 :root[data-theme="dark"] .si-type.type-tax { --tone-fg: #93b4ff; }
+:root[data-theme="dark"] .si-type.type-cash { --tone-fg: #5eead4; }
 :root[data-theme="dark"] .si-type.type-order { --tone-fg: #c4b5fd; }
 :root[data-theme="dark"] .si-type.type-bill { --tone-fg: #93b4ff; }
 
@@ -860,3 +862,126 @@
 .si-note-list > .si-note:last-child {
     border-bottom: 0
 }
+
+/* Detailed invoice receipt dialog ------------------------------------------ */
+.si-payment-modal .master-modal-body {
+    display:grid;
+    gap:16px;
+}
+.si-payment-context {
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    border:1px solid var(--mc-border);
+    border-radius:10px;
+    background:var(--mc-card-soft);
+}
+.si-payment-context > div {
+    min-width:0;
+    padding:11px 13px;
+    border-right:1px solid var(--mc-border);
+}
+.si-payment-context > div:last-child { border-right:0; }
+.si-payment-context span,
+.si-payment-context strong { display:block; }
+.si-payment-context span {
+    color:var(--mc-text-3);
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+}
+.si-payment-context strong {
+    overflow:hidden;
+    margin-top:4px;
+    color:var(--mc-text);
+    font-size:13px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.si-payment-section {
+    display:grid;
+    gap:12px;
+    padding-top:2px;
+}
+.si-payment-section + .si-payment-section {
+    padding-top:16px;
+    border-top:1px solid var(--mc-border);
+}
+.si-payment-section-head {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+}
+.si-payment-section-head h4 {
+    margin:0;
+    color:var(--mc-text);
+    font-size:15px;
+    font-weight:700;
+}
+.si-payment-section-head > span {
+    padding:4px 7px;
+    color:#14795f;
+    border-radius:6px;
+    background:rgba(16,167,123,.1);
+    font-size:10px;
+    font-weight:700;
+    text-transform:uppercase;
+}
+.si-account-balance {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+    align-items:center;
+    gap:14px;
+    padding:11px 13px;
+    border:1px solid rgba(16,167,123,.28);
+    border-radius:9px;
+    background:rgba(16,167,123,.06);
+}
+.si-account-balance[hidden] { display:none; }
+.si-account-balance > div { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.si-account-balance span { color:var(--mc-text-2); font-size:11px; }
+.si-account-balance strong { color:#087a59; font-size:13px; font-variant-numeric:tabular-nums; }
+.si-account-balance > i { color:var(--mc-text-3); font-size:11px; }
+.si-payment-help {
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    margin:0;
+    padding:10px 12px;
+    border:1px solid var(--mc-border);
+    border-radius:8px;
+    color:var(--mc-text-2);
+    background:var(--mc-card-soft);
+    font-size:11px;
+    line-height:1.5;
+}
+.si-payment-help i { margin-top:2px; color:#4f83f1; }
+:root[data-theme="dark"] .si-account-balance strong { color:#65ddb8; }
+
+@media (max-width:767px) {
+    .si-payment-context { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .si-payment-context > div:nth-child(2) { border-right:0; }
+    .si-payment-context > div:nth-child(-n+2) { border-bottom:1px solid var(--mc-border); }
+    .si-account-balance { grid-template-columns:1fr; gap:6px; }
+    .si-account-balance > i { display:none; }
+}
+
+/* Cash invoices use the same form without tax-identification or tax-rate controls. */
+.si-form[data-si-cash="true"] [data-si-tax] { display:none !important; }
+
+/* Client creation stays beside the picker; the shared modal owns its chrome. */
+.si-client-picker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.si-client-picker-head .master-label { margin: 0; }
+.si-client-create-modal .si-address-pair { margin-top: 20px; }
+.si-client-address-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.si-client-create-toggle { margin: 0 0 12px; }
+.si-client-create-modal [aria-invalid="true"] { border-color: var(--master-red, #ef4770); }
+.si-client-create-modal [data-client-field-error] { color: var(--master-red, #ef4770); }

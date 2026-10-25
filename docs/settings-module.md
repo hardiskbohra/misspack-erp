@@ -48,7 +48,8 @@ company, changed rarely, read by every screen. Moving the right-hand column into
 Settings would have made the module a second copy of the application.
 
 The rule is enforced by where the screens live, not by a paragraph: this module
-has no models of its own, and `SettingsController` writes nothing.
+has no models of its own, and `SettingsController` writes nothing. The workflow
+area configures organisation defaults; it does not store project actions or decisions.
 
 ---
 
@@ -60,10 +61,11 @@ has no models of its own, and `SettingsController` writes nothing.
 | **Briefings** | what raises an alert for the whole office, whether it pops up, who is emailed, and which desk each watcher holds | `OfficeBriefingSettingController` |
 | **Leads** | the dropdown master data a lead is filed with — status, source, priority, finish, printing, currency, incoterm, capacity unit | `LeadSettingController` |
 | **Feedback** | the scorecard: the lines a client scores, which are also the list the report groups by and the "needs attention" queue scores against | `FeedbackController` |
+| **Workflow** | organisation defaults for required dispatch evidence, approval and exception deadlines, and the standard QC checklist | `WorkflowSettingController` |
 | **Cashflow** | the accounts money moves through, the categories rows are filed under, and the option lists the entry forms are filled from | `CashflowSettingController` |
 | **Fixed assets** | the classes the register is grouped by, and the depreciation recipe each class hands to its assets — the useful life, the method and the residual value | `AssetSettingController` |
 
-The sixth area is the one this list was extended for, and it is the sharpest
+The fixed-assets area is the sharpest
 test of the boundary rule the module has had, because a fixed asset register is
 *two* things at once: a **recipe** ("furniture depreciates over ten years,
 straight line, 5% residual") and a **record** ("this chair, bought on this date,
@@ -74,7 +76,7 @@ sidebar door, their own histories and their own pages, and this page only links
 to them. A register filed under Settings would have been the largest records
 module in the ERP pretending to be configuration.
 
-The sixth area's list is a list, not a grid: one row per class in a
+The fixed-assets area uses a list, not a grid: one row per class in a
 `.master-card` table, the actions in the last cell, the same shape as every other
 master list — and **one dialog behind both doors**. The change door hands the
 dialog the row's own values, `code` included, because `code` is required and
@@ -258,3 +260,18 @@ holds the parts that are easy to lose:
   renders them, and the two module sheets no longer style them;
 - a setting is findable by the words people use, and the search box says so;
 - the boundary rule is written down — this file.
+
+### Packaging lists (`packaging`)
+
+**Settings → Packaging lists → QR code link** configures the global destination
+for carton-label scans. The area is registered once in `SettingsDirectory`, so it
+appears on the hub, every settings rail and settings search. Reading and saving
+requires the existing `settings.manage` permission, not just Operations access.
+`PackagingListSettingController` owns validation and writes; `OfficeSetting` stores
+it under the `packaging` key in the existing `office_settings` table.
+
+A blank destination preserves the per-carton ERP record link. A custom HTTP/HTTPS
+URL is used exactly, for every sender and all A4/A5/100 × 140 mm/100 × 150 mm single/batch labels.
+URLs with credentials, other schemes and values above 200 UTF-8 bytes are rejected;
+the byte limit keeps the payload within the label encoder’s QR capacity. This is
+not a redirect endpoint and the server never fetches the configured destination.

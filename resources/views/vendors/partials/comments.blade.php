@@ -20,7 +20,7 @@
                 <article class="master-card master-card--flat vendor-comment {{ $comment->is_pinned ? 'is-pinned' : '' }}">
                     <header class="vendor-comment-head">
                         <span class="vendor-comment-author">
-                            <span class="vendor-comment-avatar" aria-hidden="true">{{ strtoupper(mb_substr($comment->creator?->name ?: 'Team', 0, 1)) }}</span>
+                            <x-user-avatar :user="$comment->creator" class="vendor-comment-avatar" />
                             <span>
                                 <strong>{{ $comment->creator?->name ?: 'Internal team' }}</strong>
                                 <span class="master-sub">{{ $comment->created_at?->format('d M Y, h:i A') }}</span>

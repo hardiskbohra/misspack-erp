@@ -1,0 +1,72 @@
+name: ERP tests
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  phpunit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, xml, sqlite3, pdo_sqlite, bcmath, gd, zip
+          coverage: xdebug
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: composer install --no-interaction --prefer-dist
+      - name: Verify test catalogue and portable UI checks
+        run: npm run test:contracts
+      - name: Verify declared route inventory
+        run: php tools/testing/export-routes.php --check
+        env:
+          APP_ENV: testing
+      - name: Full unit, feature and integration suite
+        run: |
+          mkdir -p .work
+          vendor/bin/phpunit --log-junit .work/phpunit.xml --coverage-clover .work/coverage.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phpunit-results
+          path: .work/*.xml
+  mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test-only-password
+          MYSQL_DATABASE: misspack_erp_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -ptest-only-password"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: misspack_erp_test
+      DB_USERNAME: root
+      DB_PASSWORD: test-only-password
+      DB_URL: ''
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, xml, pdo_mysql, bcmath, gd, zip
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
+      - name: Fresh schema on disposable MySQL service only
+        run: php artisan migrate --force
+      - name: Native date, month and year aggregation
+        run: vendor/bin/phpunit -c phpunit.mysql.xml

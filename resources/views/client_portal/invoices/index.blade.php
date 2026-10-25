@@ -27,7 +27,7 @@
                         <td data-label="Invoice"><a class="cp-record-link" href="{{ route('client-portal.invoices.sales.show', $invoice) }}"><strong>{{ $invoice->invoice_number }}</strong></a><span class="cp-table-sub">{{ $invoice->typeLabel() }}</span></td>
                         <td data-label="Invoice date" class="ui-mobile-secondary">{{ optional($invoice->invoice_date)->format('d M Y') ?: '—' }}</td>
                         <td data-label="Due date">{{ optional($invoice->due_date)->format('d M Y') ?: '—' }}</td>
-                        <td data-label="Total">{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</td>
+                        <td data-label="Total">{{ \App\Helpers\CommonHelper::amount(($invoice instanceof \App\Models\SalesInvoice ? $invoice->receivableTotal() : $invoice->total_amount), $invoice->currency) }}</td>
                         <td data-label="Received" class="ui-mobile-secondary">{{ \App\Helpers\CommonHelper::amount($invoice->clientPortalReceivedAmount(), $invoice->currency) }}</td>
                         <td data-label="Balance"><strong>{{ \App\Helpers\CommonHelper::amount($invoice->clientPortalBalanceDue(), $invoice->currency) }}</strong></td>
                         <td data-label="State"><span class="cp-status-pill cp-invoice-state-{{ $invoice->clientPortalStateKey() }}">{{ $invoice->clientPortalStateLabel() }}</span></td>

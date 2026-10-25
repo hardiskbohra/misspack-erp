@@ -14,6 +14,8 @@ node tools/checks/blade-check.cjs     # templates parse: directives, includes, c
 node tools/checks/mark-check.cjs      # shipping-mark geometry + QR payloads
 node tools/checks/list-check.cjs      # one index page: chips, columns, toolbar, row actions,
                                       # applied filters, the pinned grid
+node tools/checks/cash-conversion-check.cjs # PI cash transfer defaults/caps + optional Chromium behavior
+node tools/checks/confirmation-dialog-check.cjs # ERP confirmation labels + optional Chromium behavior
 node tools/checks/ui-components-check.cjs # shared Drawer/DataTable API, persistence, a11y, and inventory
 node tools/checks/status-check.cjs    # the rules a shipment status change keeps: the delivery
                                       # date it fills in, the hold/delay reason it still refuses
@@ -56,7 +58,7 @@ node tools/checks/projects-check.cjs  # the projects list is the shared master-l
                                       # shell — while the client portal's classes stay put — and
                                       # the record page: the shared shell and tab links, one list
                                       # of tab names behind both the strip and the URL, one panel
-                                      # per request, the status form in the shared drawer, update
+                                      # per request, workflow-owned project state, update
                                       # URLs the server writes, the shell's facts, tables and empty
                                       # states, well-formed panels, a tone for every state the
                                       # models offer — light and dark, the feedback tab drawn as
@@ -65,6 +67,16 @@ node tools/checks/projects-check.cjs  # the projects list is the shared master-l
                                       # every class a screen names carried by a rule, and the
                                       # client following a project through the login portal
                                       # rather than the removed token link
+node tools/checks/project-workflow-check.cjs
+                                      # the standard project-execution foundation: independent
+                                      # product steps, workflow-owned calculated progress,
+                                      # structured Proforma payment policy, auditable gate
+                                      # snapshots and manager overrides, and the workflow command
+                                      # centre on the project record
+node tools/checks/project-simplification-check.cjs
+                                      # milestones are fully retired and every manual progress
+                                      # write path is removed; workflow calculation is the sole
+                                      # publisher of project progress
 node tools/checks/notes-check.cjs     # the notes module: a note is private to the login that wrote
                                       # it — one owner scope and one row door (a 404 for anybody
                                       # else), one writer, one colour vocabulary with a rule and
@@ -238,14 +250,13 @@ when the dialogs were run.
 | One payroll list | the ledger's Employee field offers employees first and office accounts underneath, from one method on the model — entries filed before roles existed still point at people the picker contains |
 | A tab is a URL | the project record rendered all ten panels on every request and kept the active one in `localStorage`, so no panel could be linked, bookmarked, opened in a second window, or reached with the back button. One panel is rendered per request now, `?tab=` is validated against the controller's own list of names, and a form posted from a tab returns to that tab because every sub-action redirects `back()` |
 | The server writes the URL | each edit dialog carries `data-update-url="{{ route(...) }}"` with an `__ID__` placeholder, bound by one script helper: a hand-built `/project-products/12` misses an install served from a sub-path, and a renamed route is a 404 in whichever of the two places was forgotten |
-| One vocabulary, two pages | the status and health tones are scoped to `.project` and shared by the list, the record header, a milestone badge and the log — so a status cannot mean one thing on the list and another on the page it opens |
+| One vocabulary, two pages | the status and health tones are scoped to `.project` and shared by the list, the record header, a workflow control badge and the log — so a status cannot mean one thing on the list and another on the page it opens |
 | The record page speaks the shell | the record page's sheet may place the shell's classes and no more: it composes the header, the two-column grid and the thread rows, while the cards, facts, tables, badges, empty states and dialogs come from the shared sheets. A second card design on the detail page is how the module stopped matching the list next door |
 | A panel closes as it opens | the tag stack is the only reader a Blade panel has: a wrapper closed one line early moves every card after it out of the grid, and the browser silently recovers — so the checks walk the panel's tags instead of trusting the eye |
 | One writer for a control | a module sheet may place a shared class only inside that module's own scopes: a bare `.master-field input` (`padding: 10px 11px`) beat the shell's `.master-input` (`10px 14px`) on every projects screen, so the same control was a different size on one module's pages — the legacy page's field rules and the form's label colours are scoped to their own pages, and the check refuses a new rule that places a shell class on its own |
 | A string is not a list | `Str::of()` hands back a Stringable — a string that answers to string methods and to nothing else — so `->map()`, `->filter()` or `->each()` on that chain compiles, passes every check that reads a template, and throws `BadMethodCallException` the first time a browser opens the page it is on. The record mark's initials did exactly that. The house idiom is to collect the parts (`collect(explode(...))->map(...)->implode('')`), and no `Str::of()` chain may call a collection method |
 | A string is not an object | the mirror rule: every other `Str::*` static returns a string, and so do `str_*`, `mb_*`, `trim`, `explode`, `implode`, `number_format` and friends — a `->method()` chained onto one of those is a fatal error the moment the page renders, not a clever way to compose text |
 | A panel another sheet owns | the feedback tab renders inside the project record, which loads `projects.css` and never `feedback.css`: a class from another module's sheet is a class with no rules at all, so the tab is built from the record's vocabulary, owns its own `master-tab-panel` wrapper, and reads its band tones from the same state table as every other badge on the page |
-| A class a screen names has rules | a class left behind in the markup renders as nothing, and no reviewer reading the Blade can tell: every `project-*`/`pd-*`/`pmile-*`/`fb-*` class a module screen names is defined by a rule in one of the app's sheets or by another screen that names it, with dynamic compositions (`project-health-dot--{{ $key }}`) not counted as names |
 | A panel brings its own padding | the shared `.master-card` is a surface with no inset — a list card can be flush because its bars are padded instead — but a record panel holds facts, stats or a table directly, so every panel the record renders wears `.project-detail-card` and the card writes the guideline's 22/24 (16/18 on phones), the same inset the client and vendor records give their own cards |
 | A door is not left standing | the public project portal (`/project-portal/{token}`) is gone — the client follows a project by signing in — so no route name, column or copy button may survive it, and `projects.show_client_portal` is checked as still read by the login portal, because that flag is the reason the column stayed |
 | A recipe, not the answer | a fixed asset stores *how* it depreciates — useful life, method, residual value — and never the accumulated depreciation or the net book value, which are computed on every read from the asset's own dates. A stored book value is a column somebody has to remember to correct, and the first time somebody forgets, the register prints a figure the arithmetic does not produce |
@@ -260,3 +271,57 @@ when the dialogs were run.
 | Two figures the spreadsheet could not keep | the export is the office's own column order plus accumulated depreciation and net book value as at the day the file was taken — a register that exports fewer columns than it holds is a register an auditor cannot use |
 | The register is a module, the classes are a setting | the chairs are records (a module under Accounts, with its own histories and pages); the *recipe* a class hands out is configuration, and lives in Settings with the other five areas. A class still holding assets refuses to be deleted, and the two screens link to each other so neither is a dead end |
 | A door that names its own form | every dialog-opening control carries `data-open-asset-modal="<door>"` and the dialog's form carries `data-asset-form="<door>"`: the script finds the dialog through the form, so no list of dialog ids exists to fall out of date, a shared dialog clears itself before it is filled again, and a failed save reopens the dialog it came from with the typing kept |
+
+## Delivery receipt print/PDF regression
+
+`delivery-receipt-print-browser.cjs` checks **real Blade output**, not a handwritten
+HTML approximation. It needs `playwright-core`, Chromium and Python `pymupdf`:
+
+```bash
+APP_ENV=testing php tools/testing/render-delivery-receipts.php .work/receipts
+CHROMIUM_EXECUTABLE_PATH=/path/to/chromium \
+  node tools/checks/delivery-receipt-print-browser.cjs .work/receipts
+```
+
+Fixtures are entirely in memory. Checks cover own/vendor letterhead, hidden audit
+metadata and toolbar, A4 PDF boundaries, signature/stamp writing space, and
+multi-page repeated headers and intact sign-off. See
+[`delivery-receipt-print.md`](../../docs/testing/delivery-receipt-print.md) for
+actual results and local runtime notes; optional browser checks are not implied
+by passing the PHP or source-contract suites. Generated files belong only in
+ignored `.work/` or a temporary directory.
+
+## Consolidated module analytics browser regression
+
+`dashboard-consolidation-browser.cjs` uses real Blade views and fictional,
+in-memory records, not production data. It needs `playwright-core` and Chromium:
+
+```sh
+APP_ENV=testing php tools/testing/render-dashboard-analytics.php .work/dashboards
+CHROMIUM_EXECUTABLE_PATH=/path/to/chromium \
+  node tools/checks/dashboard-consolidation-browser.cjs .work/dashboards
+```
+
+Checks the module directory and six modules at desktop/tablet/mobile sizes, scoped
+analytics tables, both trend cards, canonical period/currency links, actual
+reporting drawer/Select2 interaction, Escape/focus restoration, actual white/light
+and themed dark card backgrounds, and absence of executive navigation. Screenshots
+and generated HTML belong in ignored `.work/` only. Optional browser results are
+separate from PHP and source-contract evidence; see
+[dashboard-consolidation.md](../../docs/testing/dashboard-consolidation.md).
+
+
+## Statement-list filter browser regression
+
+```sh
+APP_ENV=testing php tools/testing/render-statement-list.php .work/statement-list
+CHROMIUM_EXECUTABLE_PATH=/path/to/chromium \
+  node tools/checks/statement-list-browser.cjs .work/statement-list
+```
+
+Uses real Blade with fictional financial records in testing-only SQLite :memory:
+and requires `playwright-core`. Verifies All time, visible currency quick filters,
+party/search context preservation, currency removal and drawer date editing at
+1440/900/390px. Generated artifacts remain ignored. Real HTTP integration and
+native MySQL tests establish backend results separately; see
+[statement-list-filters.md](../../docs/testing/statement-list-filters.md).

@@ -52,6 +52,7 @@ class UserController extends Controller
         'salary' => 'Salary',
         'documents' => 'Documents',
         'work' => 'Work',
+        'access' => 'Access',
     ];
 
     /**
@@ -259,7 +260,9 @@ class UserController extends Controller
      */
     public function show(User $user, EmployeeProfile $profile): View
     {
-        $year = (int) request()->query('year', date('Y'));
+        $yearFilter = (string) request()->query('year', 'all');
+        $showAllSalary = $yearFilter === 'all' || ! preg_match('/^\d{4}$/', $yearFilter);
+        $year = $showAllSalary ? (int) date('Y') : (int) $yearFilter;
         $tab = (string) request()->query('tab', 'overview');
         $tab = self::TAB_ALIASES[$tab] ?? $tab;
         $tab = array_key_exists($tab, self::TABS) ? $tab : 'overview';
@@ -271,7 +274,12 @@ class UserController extends Controller
         /* The year's ledger entries, read once and read *here*: a view array is
            evaluated top to bottom, so a variable first assigned inside it is an
            undefined variable at the line that reads it. */
-        $salaryEntries = $profile->salaryEntries($user, $year.'-01-01', $year.'-12-31');
+        $salaryFrom = $showAllSalary ? $user->date_of_joining?->toDateString() : $year.'-01-01';
+        $salaryTo = $showAllSalary ? now()->toDateString() : $year.'-12-31';
+        $salaryEntries = $profile->salaryEntries($user, $salaryFrom, $salaryTo);
+        $salaryPeriodLabel = $showAllSalary
+            ? ($user->date_of_joining ? 'since joining on '.$user->date_of_joining->format('d M Y') : 'across all recorded years')
+            : 'in '.$year;
 
         /* The payslip being corrected, if the page was opened from a row rather
            than from the record form. Read as an id and matched against this
@@ -297,16 +305,21 @@ class UserController extends Controller
                payslip on the same row. The slips are read once here and handed
                to the view, which is why the rows are built in the service
                rather than in the template. */
-            'payRows' => $profile->payRows($year, $salaryEntries, $payslips),
+            'payRows' => $profile->payRows($showAllSalary ? null : $year, $salaryEntries, $payslips),
             'prefill' => $this->payslipPrefill($salaryEntries),
             'openPayslipDialog' => $this->payslipDialog($editingPayslip),
             'payslipLines' => [
                 'earnings' => EmployeePayslip::EARNING_LINES,
                 'deductions' => EmployeePayslip::DEDUCTION_LINES,
             ],
-            'total' => $profile->yearTotal($user, $year),
-            'months' => $profile->monthlyPay($user, $year),
+            'total' => $showAllSalary
+                ? $profile->payTotals($user, $salaryFrom, $salaryTo)
+                : $profile->yearTotal($user, $year),
+            'months' => $showAllSalary ? [] : $profile->monthlyPay($user, $year),
             'years' => $profile->salaryYears($user),
+            'showAllSalary' => $showAllSalary,
+            'salaryPeriodLabel' => $salaryPeriodLabel,
+            'salaryYearQuery' => $showAllSalary ? 'all' : $year,
             'salaryEntries' => $salaryEntries,
             'attachments' => $profile->attachments($user),
             'tasks' => $tasks,
@@ -319,6 +332,7 @@ class UserController extends Controller
             'roles' => User::ROLES,
             'isSelf' => (int) auth()->id() === (int) $user->id,
             'isLastAdmin' => $this->isLastAdmin($user),
+            'permissionOptions' => app(\App\Services\PermissionMatrix::class)->options(),
         ]);
     }
 
@@ -580,7 +594,7 @@ class UserController extends Controller
             'mobile'      => $user->mobile,
             'department'  => $user->department,
             'designation' => $user->designation,
-            'avatar'      => $user->avatar ? asset('storage/' . $user->avatar) : null,
+            'avatar'      => $user->avatar_url,
             'verified'    => !is_null($user->email_verified_at),
             'role'        => $user->role ?: User::DEFAULT_ROLE,
             'employee_code' => $user->employee_code,
@@ -646,24 +660,102 @@ class UserController extends Controller
             $data['password'] = Hash::make($request->password);
         }
 
-        if ($request->hasFile('avatar')) {
-            if ($user->avatar) {
-                Storage::disk('public')->delete($user->avatar);
-            }
-            $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
-        }
-
-        if ($request->boolean('remove_avatar') && $user->avatar) {
-            Storage::disk('public')->delete($user->avatar);
-            $data['avatar'] = null;
-        }
-
-        $user->update($data);
+        $this->persistWithPhoto($request, $user, $data);
 
         return back()->with('success', 'User updated successfully!');
     }
 
+    /** Photo-only edit from the record: no account/profile fields are accepted. */
+    public function updatePhoto(Request $request, User $user)
+    {
+        $context = ['user' => $user];
+        $tab = $request->query('tab');
+        $year = $request->query('year');
+        if (is_string($tab) && array_key_exists($tab, self::TABS)) {
+            $context['tab'] = $tab;
+        }
+        if (is_string($year) && ($year === 'all' || preg_match('/^\d{4}$/', $year))) {
+            $context['year'] = $year;
+        }
+
+        try {
+            $request->validate($this->photoRules() + ['remove_avatar' => ['sometimes', 'boolean']]);
+            if (! $request->hasFile('avatar') && ! $request->boolean('remove_avatar')) {
+                throw ValidationException::withMessages(['avatar' => 'Choose a photo or remove the current photo.']);
+            }
+            $this->persistWithPhoto($request, $user);
+        } catch (ValidationException $invalid) {
+            return redirect()->route('users.show', $context)
+                ->withErrors($invalid->validator, 'userPhoto')->with('edit_user_photo', $user->id);
+        }
+
+        return redirect()->route('users.show', $context)->with('success', 'Photo updated successfully!');
+    }
+
+    /** The same upload policy for add/edit user and the detail photo editor. */
+    private function photoRules(): array
+    {
+        return ['avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048']];
+    }
+
+    /** Store first and delete the previous photo only after persistence succeeds. */
+    private function persistWithPhoto(Request $request, User $user, array $data = []): void
+    {
+        $old = $user->avatar;
+        $new = null;
+        if ($request->hasFile('avatar')) {
+            $new = $request->file('avatar')->store('avatars', 'public');
+            if (! $new) {
+                throw ValidationException::withMessages(['avatar' => 'The photo could not be stored. Please try again.']);
+            }
+            $data['avatar'] = $new;
+        } elseif ($request->boolean('remove_avatar')) {
+            $data['avatar'] = null;
+        }
+
+        try {
+            $user->update($data);
+        } catch (\Throwable $exception) {
+            if ($new) {
+                Storage::disk('public')->delete($new);
+            }
+            throw $exception;
+        }
+        if (array_key_exists('avatar', $data) && $old && $old !== $data['avatar']) {
+            Storage::disk('public')->delete($old);
+        }
+    }
+
     /** Delete user */
+    public function updatePermissions(Request $request, User $user)
+    {
+        abort_unless(auth()->user()?->hasPermission('permissions.manage'), 403);
+        abort_if($user->isEmployee() && $request->input('access_profile') !== 'employee', 422, 'Employee accounts use self-service access only.');
+        abort_if((int) auth()->id() === (int) $user->id && $request->input('access_profile') === 'custom'
+            && ! in_array('permissions.manage', (array) $request->input('permissions', []), true), 422,
+            'You cannot remove your own ability to manage access profiles.');
+
+        $options = app(\App\Services\PermissionMatrix::class)->options();
+        $profile = $user->isEmployee() ? 'employee' : (string) $request->validate([
+            'access_profile' => ['required', Rule::in(['full','custom'])],
+        ])['access_profile'];
+        $permissions = $profile === 'custom'
+            ? collect((array) $request->input('permissions', []))->filter(fn ($permission) => array_key_exists($permission, $options))->unique()->values()->all()
+            : [];
+        $before = ['access_profile' => $user->access_profile ?: 'full', 'permissions' => $user->permissions ?: []];
+        $user->update([
+            'access_profile' => $profile, 'permissions' => $permissions,
+            'permissions_updated_at' => now(), 'permissions_updated_by' => auth()->id(),
+        ]);
+        app(\App\Services\AuditTrail::class)->event('permissions.updated', [
+            'actor_type' => 'office_user', 'actor_id' => auth()->id(), 'actor_name' => auth()->user()->name,
+            'actor_identifier' => auth()->user()->email, 'auditable_type' => User::class, 'auditable_id' => $user->id,
+            'method' => 'PATCH', 'route_name' => 'users.permissions.update',
+            'changed_fields' => ['access_profile','permissions'], 'context' => ['before' => $before, 'after' => ['access_profile' => $profile, 'permissions' => $permissions]],
+        ]);
+        return redirect()->route('users.show', ['user' => $user, 'tab' => 'access'])->with('success', 'Access profile updated.');
+    }
+
     public function destroy(User $user)
     {
         if ($user->id === auth()->id()) {
@@ -734,7 +826,7 @@ class UserController extends Controller
             'mobile' => ['nullable', 'string', 'max:20'],
             'department' => ['nullable', 'string', 'max:255'],
             'designation' => ['nullable', 'string', 'max:255'],
-            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048'],
+            ...$this->photoRules(),
             'employee_code' => ['nullable', 'string', 'max:40'],
             'date_of_joining' => ['nullable', 'date'],
             'date_of_birth' => ['nullable', 'date', 'before:today'],

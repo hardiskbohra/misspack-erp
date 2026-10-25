@@ -43,9 +43,11 @@ class VendorController extends Controller
         'profile' => 'Profile',
         'contacts' => 'Contacts',
         'commercial' => 'Commercial',
+        'kyc' => 'KYC',
         'procurement' => 'Procurement',
         'money' => 'Money',
         'documents' => 'Documents',
+        'portal' => 'Portal & sharing',
         'comments' => 'Comments',
     ];
 
@@ -261,7 +263,7 @@ class VendorController extends Controller
             'vendor_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:2048'],
             'vendor_name' => ['required', 'string', 'max:255'],
             'brand_name' => ['nullable', 'string', 'max:255'],
-            'vendor_type' => ['nullable', 'in:manufacturer,trader,distributor,service_provider'],
+            'vendor_type' => ['nullable', \Illuminate\Validation\Rule::in(array_keys(Vendor::typeOptions()))],
             'category' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:active,inactive,on_hold,blacklisted'],
             'contact_person_name' => ['nullable', 'string', 'max:255'],
@@ -313,15 +315,42 @@ class VendorController extends Controller
         $vendor->load($relations);
 
         $data = $this->dashboardData($vendor);
+        $portalUsers = collect();
+        $shareLinks = collect();
+        $portalPurchaseDocuments = collect();
+        $portalShipments = collect();
+        $portalPackagingLists = collect();
+        $portalUpdates = collect();
+        if ($tab === 'portal' && Schema::hasTable('vendor_portal_users')) {
+            $portalUsers = \App\Models\VendorPortalUser::where('vendor_id', $vendor->id)->orderBy('id')->get();
+            $shareLinks = \App\Models\VendorShareLink::where('vendor_id', $vendor->id)->latest('id')->get();
+            $portalPurchaseDocuments = PurchaseInvoice::where('vendor_id', $vendor->id)->where('status', '!=', 'draft')->latest('id')->get();
+            $portalShipments = \App\Models\Shipment::where('vendor_id', $vendor->id)->latest('id')->get();
+            $portalPackagingLists = \App\Models\PackagingList::where('vendor_id', $vendor->id)->latest('id')->get();
+            $portalUpdates = \App\Models\VendorCollaborationUpdate::with(['portalUser', 'purchaseInvoice', 'shareLink'])
+                ->where('vendor_id', $vendor->id)->latest('id')->limit(20)->get();
+            \App\Models\VendorCollaborationUpdate::where('vendor_id', $vendor->id)
+                ->whereIn('author_type', ['vendor', 'secure_link'])->whereNull('read_by_office_at')->update(['read_by_office_at' => now()]);
+        }
 
         return view('vendors.show', array_merge($this->formData($vendor), $data, [
+            'kycDocuments' => $tab === 'kyc' ? \App\Models\VendorKycDocument::where('vendor_id',$vendor->id)->orderBy('id')->get() : collect(),
+            'kycEvents' => $tab === 'kyc' ? \App\Models\VendorKycEvent::with('actor')->where('vendor_id',$vendor->id)->latest('id')->get() : collect(),
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
+            'unallocatedCash' => app(\App\Services\UnallocatedCashflows::class)->forVendor($vendor->id),
+            'portalUsers' => $portalUsers,
+            'shareLinks' => $shareLinks,
+            'portalPurchaseDocuments' => $portalPurchaseDocuments,
+            'portalShipments' => $portalShipments,
+            'portalPackagingLists' => $portalPackagingLists,
+            'portalUpdates' => $portalUpdates,
             'tabCounts' => [
                 'contacts' => $vendor->relationLoaded('contacts') ? $vendor->contacts->count() : 0,
                 'procurement' => (int) ($data['summary']['project_products_count'] ?? 0) + (int) ($data['summary']['shipments_count'] ?? 0),
                 'money' => (int) ($data['summary']['statement_count'] ?? 0) + (int) ($data['summary']['cashflow_count'] ?? 0),
                 'documents' => $vendor->relationLoaded('attachments') ? $vendor->attachments->count() : (int) ($data['summary']['attachments_count'] ?? 0),
+                'portal' => $portalUsers->count() + $shareLinks->where('revoked_at', null)->count(),
                 'comments' => $vendor->relationLoaded('comments') ? $vendor->comments->count() : 0,
             ],
             'recordUrl' => fn (string $key) => route('vendors.show', ['vendor' => $vendor, 'tab' => $key]),
@@ -338,14 +367,15 @@ class VendorController extends Controller
         $data = $this->validatedData($request, $vendor);
         unset($data['vendor_image']);
 
-        if ($request->hasFile('vendor_image')) {
-            if ($vendor->image_path) {
-                Storage::disk('public')->delete($vendor->image_path);
-            }
-            $data['image_path'] = $request->file('vendor_image')->store('vendors', 'public');
-        }
+        app(\App\Services\VendorKyc::class)->updateOfficeProfile($vendor, $data, $request->user(),
+            $request->filled('kyc_version') ? (int) $request->input('kyc_version') : null);
 
-        $vendor->update($data);
+        // A stale KYC edit must fail before changing or deleting the vendor image.
+        if ($request->hasFile('vendor_image')) {
+            $oldImage = $vendor->image_path;
+            $vendor->update(['image_path' => $request->file('vendor_image')->store('vendors', 'public')]);
+            if ($oldImage) Storage::disk('public')->delete($oldImage);
+        }
 
         return redirect()
             ->route('vendors.show', $vendor)
@@ -493,6 +523,7 @@ class VendorController extends Controller
             $this->cashflowSync()->sync($entry, $syncCashflow);
 
             $this->storeVendorPaymentAttachments($request, $entry);
+            app(\App\Services\PurchaseInvoiceMoney::class)->refresh([$entry->purchase_invoice_id]);
 
             return $entry;
         });
@@ -501,9 +532,17 @@ class VendorController extends Controller
     }
     
     public function updatePayment(Request $request, Vendor $vendor, VendorPaymentEntry $entry): RedirectResponse {
-    
+
         // Make sure the entry actually belongs to this vendor
         abort_unless((int) $entry->vendor_id === (int) $vendor->id,404);
+
+        /* This row is the vendor-ledger side of a payment recorded in the
+           cashflow module. The cashflow entry owns it, so it is changed there
+           — editing the copy here would silently rewrite the bank row. */
+        if ($entry->isFromCashflow()) {
+            return $this->backToTab($vendor, 'money',
+                'This payment was recorded in the cashflow ledger. Change it there — the vendor ledger keeps the copy up to date.', 'error');
+        }
     
         $data = $request->validate([
             'transaction_date' => ['required', 'date'],
@@ -543,11 +582,13 @@ class VendorController extends Controller
         $this->assertCashflowMirrorPossible($data, $syncCashflow);
 
         DB::transaction(function () use ($request,$data,$vendor,$entry,$syncCashflow) {
+            $oldPurchaseId = $entry->purchase_invoice_id;
             $entry->update($data);
             $this->attachPurchaseDocument($entry);
             $this->assertVendorMoneyAllowed($entry);
             $this->cashflowSync()->sync($entry, $syncCashflow);
             $this->storeVendorPaymentAttachments($request,$entry);
+            app(\App\Services\PurchaseInvoiceMoney::class)->refresh([$oldPurchaseId, $entry->purchase_invoice_id]);
         });
     
         return $this->backToTab($vendor, 'money', $this->paymentSavedMessage($entry, 'updated'));
@@ -555,6 +596,18 @@ class VendorController extends Controller
 
     public function destroyPayment(VendorPaymentEntry $entry): RedirectResponse
     {
+        /* Deleting this row here would delete the bank entry it was derived
+           from. The cashflow screen is where it can be removed. */
+        if ($entry->isFromCashflow()) {
+            $vendor = $entry->vendor;
+
+            return $vendor
+                ? $this->backToTab($vendor, 'money',
+                    'This payment was recorded in the cashflow ledger. Delete it there — the vendor ledger follows the bank row.', 'error')
+                : redirect()->route('vendors.index')->with('error',
+                    'This payment was recorded in the cashflow ledger. Delete it in Cashflow.');
+        }
+
         $hadCashflow = (bool) $entry->cashflow_entry_id;
 
         DB::transaction(function () use ($entry) {
@@ -568,6 +621,7 @@ class VendorController extends Controller
             }
 
             $entry->delete();
+            app(\App\Services\PurchaseInvoiceMoney::class)->refresh([$entry->purchase_invoice_id]);
         });
 
         $vendor = $entry->vendor;
@@ -607,11 +661,11 @@ class VendorController extends Controller
      * the payments tab has to come home to the payments tab even when the
      * browser sent no referer at all.
      */
-    private function backToTab(Vendor $vendor, string $tab, string $message): RedirectResponse
+    private function backToTab(Vendor $vendor, string $tab, string $message, string $level = 'success'): RedirectResponse
     {
         return redirect()
             ->route('vendors.show', ['vendor' => $vendor, 'tab' => $tab])
-            ->with('success', $message);
+            ->with($level, $message);
     }
 
     private function cashflowSync(): VendorPaymentCashflowSync
@@ -801,7 +855,10 @@ class VendorController extends Controller
     private function dashboardData(Vendor $vendor): array
     {
         $projectProducts = $this->vendorProjectProducts($vendor);
-        $statementEntries = $this->vendorStatementEntries($vendor); // cashflow entries
+        /* Cashflow rows with no ledger row behind them: the ledger owns the
+           rupee payments to a linked vendor, so only the rest belongs in the
+           "other cashflow activity" card. */
+        $statementEntries = app(\App\Services\CashflowVendorPaymentSync::class)->unlinkedCashflow($vendor);
         $vendorPaymentEntries = $this->vendorPaymentEntries($vendor); // manual vendor-currency ledger
         $shipments = $this->vendorShipments($vendor);
         $products = $this->vendorProducts($projectProducts);
@@ -1564,48 +1621,6 @@ class VendorController extends Controller
         return $query->limit(100)->get();
     }
 
-    private function vendorStatementEntries(Vendor $vendor)
-    {
-        if (! class_exists(\App\Models\CashflowEntry::class) || ! Schema::hasTable('cashflow_entries')) {
-            return collect();
-        }
-
-        $hasVendorId = Schema::hasColumn('cashflow_entries', 'vendor_id');
-        $hasRelatedType = Schema::hasColumn('cashflow_entries', 'related_party_type');
-        $hasRelatedName = Schema::hasColumn('cashflow_entries', 'related_party_name');
-
-        if (! $hasVendorId && ! ($hasRelatedType && $hasRelatedName)) {
-            return collect();
-        }
-
-        $relations = [];
-        if (class_exists(\App\Models\CashflowAccount::class) && Schema::hasTable('cashflow_accounts')) {
-            $relations[] = 'account';
-        }
-        if (class_exists(\App\Models\CashflowCategory::class) && Schema::hasTable('cashflow_categories')) {
-            $relations[] = 'category';
-        }
-
-        return \App\Models\CashflowEntry::query()
-            ->with($relations)
-            ->where(function ($query) use ($vendor, $hasVendorId, $hasRelatedType, $hasRelatedName) {
-                if ($hasVendorId) {
-                    $query->where('vendor_id', $vendor->id);
-                }
-                if ($hasRelatedType && $hasRelatedName) {
-                    $method = $hasVendorId ? 'orWhere' : 'where';
-                    $query->{$method}(function ($nested) use ($vendor) {
-                        $nested->where('related_party_type', 'vendor')
-                            ->where('related_party_name', 'like', '%'.$vendor->vendor_name.'%');
-                    });
-                }
-            })
-            ->latest('entry_date')
-            ->latest('id')
-            ->limit(250)
-            ->get();
-    }
-
     private function vendorShipments(Vendor $vendor)
     {
         if (! class_exists(\App\Models\Shipment::class) || ! Schema::hasTable('shipments')) {
@@ -1680,7 +1695,7 @@ class VendorController extends Controller
             'vendor_number' => ['nullable', 'string', 'max:255', 'unique:vendors,vendor_number,'.($vendor?->id ?? 'NULL')],
             'vendor_name' => ['required', 'string', 'max:255'],
             'brand_name' => ['nullable', 'string', 'max:255'],
-            'vendor_type' => ['nullable', 'in:manufacturer,trader,distributor,service_provider'],
+            'vendor_type' => ['nullable', \Illuminate\Validation\Rule::in(array_keys(Vendor::typeOptions()))],
             'category' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:active,inactive,on_hold,blacklisted'],
 
@@ -1709,6 +1724,8 @@ class VendorController extends Controller
             'ifsc_code' => ['nullable', 'string', 'max:30'],
             'swift_code' => ['nullable', 'string', 'max:255'],
             'bank_branch' => ['nullable', 'string', 'max:255'],
+            'bank_address' => ['nullable', 'string', 'max:3000'],
+            'beneficiary_address' => ['nullable', 'string', 'max:3000'],
 
             'preferred_currency' => ['nullable', 'in:INR,USD,RMB'],
             'payment_terms' => ['nullable', 'string', 'max:255'],

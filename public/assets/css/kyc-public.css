@@ -232,7 +232,8 @@ body {
 .kyc-field label span { color: #ef4770; }
 
 .kyc-field input,
-.kyc-field select {
+.kyc-field select,
+.kyc-field textarea {
     width: 100%;
     height: 42px;
     border: 1px solid var(--border);
@@ -244,15 +245,25 @@ body {
     color: inherit;
 }
 
+.kyc-field textarea {
+    height: auto;
+    min-height: 96px;
+    padding: 10px 12px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
 .kyc-field input:focus,
-.kyc-field select:focus {
+.kyc-field select:focus,
+.kyc-field textarea:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(79, 131, 241, .15);
 }
 
 .kyc-field.has-error input,
-.kyc-field.has-error select {
+.kyc-field.has-error select,
+.kyc-field.has-error textarea {
     border-color: #ef4770;
 }
 
@@ -427,3 +438,12 @@ body {
     .kyc-nav-hint { flex: 1 0 100%; margin: 0; }
     .kyc-foot-bar { flex-direction: column; }
 }
+
+/* Public vendor KYC uses disabled fieldsets for genuinely read-only steps. */
+.kyc-form fieldset.kyc-fields { border:0; padding:0; margin:0; min-width:0; }
+.kyc-documents { margin-top:24px; color:var(--mc-text); font-size:14px; line-height:1.6; }
+.kyc-documents h3 { font-size:15px; margin-bottom:8px; }
+.kyc-documents p { color:var(--mc-text-3); }
+.kyc-documents li { overflow-wrap:anywhere; }
+/* Button display styles must never override wizard navigation's hidden state. */
+.kyc [hidden] { display:none !important; }

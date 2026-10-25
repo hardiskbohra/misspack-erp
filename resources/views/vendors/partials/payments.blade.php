@@ -22,10 +22,18 @@
     <div class="vendor-panel-head">
         <div>
             <h2 class="vendor-detail-title" id="vendor-block-ledger-title">Vendor-currency ledger</h2>
-            <p class="vendor-detail-help">Purchase orders (once sent), bills and payments in the vendor's own currency. After a PO becomes a bill, only the bill stays on this ledger.</p>
+            <p class="vendor-detail-help">Purchase orders (once sent), bills and payments in the vendor's own currency. After a PO becomes a bill, only the bill stays on this ledger. A rupee payment recorded in Cashflow against this vendor is posted here automatically and marked <em>From cashflow</em>.</p>
         </div>
         <div class="vendor-panel-meta">
             <span class="vendor-pill">{{ $vendorPaymentEntries->count() }} {{ \Illuminate\Support\Str::plural('entry', $vendorPaymentEntries->count()) }}</span>
+            @if (\Illuminate\Support\Facades\Route::has('cashflows.create'))
+                {{-- A payment is often recorded from the bank statement first;
+                     the ledger row follows it, so this shortcut belongs here. --}}
+                <a class="master-btn master-btn-soft master-btn-sm"
+                    href="{{ route('cashflows.create', ['vendor_id' => $vendor->id, 'transaction_type' => 'debit']) }}">
+                    <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Record in cashflow
+                </a>
+            @endif
             <button type="button" class="master-btn master-btn-primary master-btn-sm" id="openAddPaymentModal">
                 <i class="fas fa-plus" aria-hidden="true"></i> Add entry
             </button>
@@ -89,6 +97,9 @@
                             </td>
                             <td data-label="Status">
                                 <span class="vendor-meta-chip">{{ $entry->statusLabel() }}</span>
+                                @if ($entry->isFromCashflow())
+                                    <span class="vendor-meta-chip vendor-source-chip">From cashflow</span>
+                                @endif
                                 @if ($entry->cashflow_entry_id)
                                     @if (\Illuminate\Support\Facades\Route::has('cashflows.show'))
                                         <a class="vendor-sync-link" href="{{ route('cashflows.show', $entry->cashflow_entry_id) }}"
@@ -113,29 +124,40 @@
                                             <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
                                         </button>
                                         <div class="master-dropdown-menu">
-                                            <button type="button" class="editPaymentBtn" data-payment='@json($entry)'>
-                                                <i class="fas fa-pen" aria-hidden="true"></i> Edit entry
-                                            </button>
-                                            @if ($entry->cashflow_entry_id && \Illuminate\Support\Facades\Route::has('cashflows.show'))
-                                                <a href="{{ route('cashflows.show', $entry->cashflow_entry_id) }}">
-                                                    <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Open cashflow row
-                                                </a>
+                                            @if ($entry->isFromCashflow())
+                                                {{-- The bank row owns this payment; the ledger only mirrors it. --}}
+                                                @if ($entry->cashflow_entry_id && \Illuminate\Support\Facades\Route::has('cashflows.show'))
+                                                    <a href="{{ route('cashflows.show', $entry->cashflow_entry_id) }}">
+                                                        <i class="fas fa-pen" aria-hidden="true"></i> Change in cashflow
+                                                    </a>
+                                                @endif
+                                            @else
+                                                <button type="button" class="editPaymentBtn" data-payment='@json($entry)'>
+                                                    <i class="fas fa-pen" aria-hidden="true"></i> Edit entry
+                                                </button>
+                                                @if ($entry->cashflow_entry_id && \Illuminate\Support\Facades\Route::has('cashflows.show'))
+                                                    <a href="{{ route('cashflows.show', $entry->cashflow_entry_id) }}">
+                                                        <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Open cashflow row
+                                                    </a>
+                                                @endif
                                             @endif
                                             @foreach ($entry->attachments as $attachment)
                                                 <a href="{{ $attachment->fileUrl() }}" target="_blank" rel="noopener">
                                                     <i class="fa-solid fa-paperclip" aria-hidden="true"></i> {{ $attachment->original_name ?: 'Proof' }}
                                                 </a>
                                             @endforeach
-                                            @if (\Illuminate\Support\Facades\Route::has('vendors.payments.destroy'))
-                                                <form method="POST" action="{{ route('vendors.payments.destroy', $entry) }}"
-                                                    data-confirm="Delete this vendor payment entry?">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="danger">
-                                                        <i class="far fa-trash-alt" aria-hidden="true"></i> Delete entry
-                                                    </button>
-                                                </form>
-                                            @endif
+                                            @unless ($entry->isFromCashflow())
+                                                @if (\Illuminate\Support\Facades\Route::has('vendors.payments.destroy'))
+                                                    <form method="POST" action="{{ route('vendors.payments.destroy', $entry) }}"
+                                                        data-confirm="Delete this vendor payment entry?">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="danger">
+                                                            <i class="far fa-trash-alt" aria-hidden="true"></i> Delete entry
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            @endunless
                                         </div>
                                     </div>
                                 </div>

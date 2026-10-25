@@ -17,13 +17,17 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'client.portal' => \App\Http\Middleware\ClientPortalAuthenticate::class,
+            'vendor.portal' => \App\Http\Middleware\VendorPortalAuthenticate::class,
             /* The office's half of the application. An employee account reaches
                its own workspace and nothing else — see the middleware. */
             'office' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
+        $middleware->appendToGroup('web', [\App\Http\Middleware\AuditMutations::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is('api/*')
+                // Inline client creation must receive validation/auth errors, not an HTML redirect.
+                || ($request->routeIs('clients.quickStore', 'vendors.publicKyc*', 'vendors.kyc.*') && $request->expectsJson()),
         );
     })->create();

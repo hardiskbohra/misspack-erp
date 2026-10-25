@@ -200,7 +200,7 @@
         document.querySelectorAll('.master-modal.open').forEach(openMasterModal);
 
         document.addEventListener('keydown', function (e) {
-            if (e.key !== 'Escape') return;
+            if (e.key !== 'Escape' || e.defaultPrevented) return;
             document.querySelectorAll('.master-modal.open').forEach(closeMasterModal);
         });
 
@@ -273,9 +273,9 @@
 
             portalMenu(menu);
 
-            /* measure the panel at its full size before capping it */
-            menu.style.maxHeight = 'none';
-            menu.style.overflowY = '';
+            /* Measure natural content without removing the height cap. Removing
+               it on a captured scroll resets scrollTop, hiding keyboard-focused
+               items at the bottom of a menu on short viewports. */
             menu.style.top = '';
             menu.style.bottom = '';
             menu.style.left = '';
@@ -283,7 +283,7 @@
 
             const button = toggle.getBoundingClientRect();
             const width = menu.offsetWidth || 220;
-            const height = menu.offsetHeight || 0;
+            const height = menu.scrollHeight + menu.offsetHeight - menu.clientHeight;
             const viewport = window.innerHeight;
 
             /* right-aligned with the button it belongs to, kept on screen */
@@ -361,12 +361,57 @@
 
                 closeMenus(dropdown);
                 setMenuState(dropdown, willOpen);
+                // Enter the launcher rather than skipping its portaled panel.
+                if (willOpen && dropdown.matches('[data-quick-menu]')) {
+                    menuOf(dropdown)?.querySelector('[role="menuitem"]')?.focus();
+                }
         
             });
         
         });
         
         document.addEventListener('click', () => closeMenus());
+
+        // Opt-in keyboard navigation for the topbar launcher; ordinary row menus stay unchanged.
+        document.addEventListener('keydown', function (event) {
+            const trigger = event.target.closest('[data-quick-menu] .master-dropdown-toggle');
+            const dropdown = trigger?.closest('[data-quick-menu]')
+                || document.querySelector('[data-quick-menu].open');
+            if (!dropdown) return;
+            const menu = menuOf(dropdown);
+            const toggle = dropdown.querySelector('.master-dropdown-toggle');
+            const inMenu = menu?.contains(event.target);
+            if (!trigger && !inMenu) return;
+            const links = [...menu.querySelectorAll('[role="menuitem"]')];
+            if (!links.length) return;
+            if (trigger && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
+                event.preventDefault();
+                closeMenus(dropdown);
+                setMenuState(dropdown, true);
+                links[event.key === 'ArrowUp' ? links.length - 1 : 0].focus();
+            } else if (inMenu && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+                event.preventDefault();
+                const index = links.indexOf(document.activeElement);
+                const next = event.key === 'Home' ? 0 : event.key === 'End' ? links.length - 1
+                    : (index + (event.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length;
+                links[next].focus();
+            } else if (inMenu && event.key === ' ') {
+                event.preventDefault();
+                event.target.closest('[role="menuitem"]')?.click();
+            } else if (inMenu && event.key === 'Tab') {
+                setMenuState(dropdown, false);
+                toggle.focus();
+                // Forward Tab continues to the next topbar action; Shift+Tab returns to the trigger.
+                if (event.shiftKey) event.preventDefault();
+            }
+        });
+
+        document.addEventListener('focusin', function (event) {
+            const dropdown = document.querySelector('[data-quick-menu].open');
+            if (dropdown && !dropdown.contains(event.target) && !menuOf(dropdown)?.contains(event.target)) {
+                setMenuState(dropdown, false);
+            }
+        });
 
         document.addEventListener('keydown', function (e) {
             if (e.key !== 'Escape') return;

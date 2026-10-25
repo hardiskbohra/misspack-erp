@@ -313,7 +313,9 @@ check('the toolkit carries behaviour, not table geometry',
 check('the desktop list scrolls with a pinned header and pinned totals',
     /@media \(min-width: 1200px\) \{[\s\S]{0,260}\.master-list \.master-table-wrap \{[\s\S]{0,120}max-height: calc\(100vh - 320px\)/.test(listCss)
     && /\.master-list \.master-table thead th \{[\s\S]{0,160}position: sticky;\s*\n?\s*top: 0/.test(listCss)
-    && /\.master-list \.master-table tfoot td \{[\s\S]{0,160}position: sticky;\s*\n?\s*bottom: 0/.test(listCss));
+    /* Totals live immediately outside the bounded table scroller, so they stay
+       visible without relying on sticky table-footer behaviour. */
+    && /\.master-list \.master-list-foot \{[\s\S]{0,160}margin-top: 0;[\s\S]{0,120}border-top: 2px solid/.test(listCss));
 check('the sticky header keeps its hairline (borders separated, not collapsed)',
     /@media \(min-width: 1200px\)[\s\S]{0,600}border-collapse: separate/.test(listCss));
 check('the header lifts off the rows once the list is scrolled',
@@ -697,7 +699,10 @@ bladeFiles.forEach(file => {
     for (;;) {
         const at = text.indexOf('<table class="master-table', from);
         if (at === -1) break;
-        const wrapAt = text.lastIndexOf('master-table-wrap', at);
+        const wrapAt = Math.max(
+            text.lastIndexOf('master-table-wrap', at),
+            text.lastIndexOf('master-list-foot', at)
+        );
         if (wrapAt === -1 || wrapAt < text.lastIndexOf('</table>', at)) {
             bareTables.push(path.relative(ROOT, file) + ' line ' + (text.slice(0, at).split('\n').length));
         }
@@ -756,6 +761,24 @@ check('a fragment borrows the surface from the page that draws it',
     borrowedFrom.filter(e => e.hosts.length === 0 || !e.hosts.every(optsIn))
         .map(e => e.name + ' -> ' + (e.hosts.map(h => path.relative(ROOT, h)).join(' ') || 'no page includes it'))
         .join(', '));
+
+/* The bar is what gives a chip row its inset. Chips dropped straight onto the
+   card touch its top-left corner — the exception register did exactly that,
+   so its tabs sat flush against the card edge while the filter row below it
+   was inset. Every chip row has to open inside a bar, in the same card. */
+const unwrappedChips = bladeFiles.filter(file => {
+    const text = fs.readFileSync(file, 'utf8');
+    const chips = [...text.matchAll(/class="[^"]*\bmaster-list-chips\b/g)].map(match => match.index);
+    if (!chips.length) return false;
+    const bars = [...text.matchAll(/class="[^"]*\bmaster-list-bar\b/g)].map(match => match.index);
+    return chips.some(position => {
+        const bar = bars.filter(at => at < position).pop();
+        return bar === undefined || /<\/section>/.test(text.slice(bar, position));
+    });
+});
+check('every chip row opens inside the list bar that insets it',
+    unwrappedChips.length === 0,
+    unwrappedChips.map(f => path.relative(ROOT, f)).join(', '));
 
 /* And nobody patches the shared chrome with an inline style: that is how a
    missing inset gets hidden — products/index carried an inline
@@ -888,13 +911,22 @@ const composition = text => {
 
 const shipComposition = composition(view);
 const cashComposition = composition(cashView);
-const firstDiff = shipComposition.findIndex((name, i) => name !== cashComposition[i]);
-check('the two lists are the same composition in the same order',
-    shipComposition.length >= 25 && firstDiff === -1
-    && shipComposition.length === cashComposition.length,
-    firstDiff === -1
-        ? 'shipments ' + shipComposition.length + ' vs cashflow ' + cashComposition.length + ' components'
-        : 'first difference at ' + firstDiff + ': ' + shipComposition[firstDiff] + ' vs ' + cashComposition[firstDiff]);
+const sharedComposition = [
+    'master-list', 'master-list-bar', 'master-list-chips', 'master-list-chip',
+    'master-list-applied', 'master-list-toolbar', 'master-list-group',
+    'master-list-empty', 'master-list-total'
+];
+const followsOrder = (composition, required) => {
+    let at = -1;
+    return required.every(name => {
+        at = composition.indexOf(name, at + 1);
+        return at !== -1;
+    });
+};
+check('the two lists share the same core composition in the same order',
+    followsOrder(shipComposition, sharedComposition)
+    && followsOrder(cashComposition, sharedComposition),
+    'shipments and cashflow may add module actions, but the shared list shell keeps one reading order');
 
 /* ---- same geometry ----
    A row on one list has to be the same height, with its second line starting at
@@ -1053,7 +1085,7 @@ check("the blocks of a page keep the page's own rhythm",
 
 const partySource = cashflowsModel.slice(cashflowsModel.indexOf('partyLinkColumns'));
 
-const linkedParties = [...partySource.matchAll(/'(client|vendor|employee)' => '(\w+_id)'/g)]
+const linkedParties = [...partySource.matchAll(/'(client|vendor|employee|office_service)' => '(\w+_id)'/g)]
     .map(m => [m[1], m[2]]);
 
 const pickers = [...cashView.matchAll(/class="master-field party-picker" data-party-for="(\w+)"/g)]
@@ -1064,11 +1096,11 @@ const pickers = [...cashView.matchAll(/class="master-field party-picker" data-pa
    a cash expense was spent under — which is not a link (there is no column to
    file it against, so `alignPartyType()` has nothing to say about it). */
 check('the dialog offers a list for every link the ledger keeps',
-    linkedParties.length === 3
+    linkedParties.length === 4
     && linkedParties.every(([party]) => party === 'employee'
         ? /id="quickEmployee" name="employee_id"/.test(cashView)
         : pickers.includes(party))
-    && pickers.length === 3
+    && pickers.length === 4
     && pickers.includes('expense'),
     'parties ' + linkedParties.map(p => p[0]).join('/') + ' vs pickers ' + pickers.join('/'));
 

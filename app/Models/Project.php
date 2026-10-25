@@ -5,17 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use App\Models\ProjectFinancialClosure;
+use App\Models\ProjectException;
 
 class Project extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'project_number', 'client_id', 'name', 'status',
-        'stage', 'priority', 'health', 'start_date', 'target_date', 'completed_at', 'currency',
-        'progress_percent', 'scope_summary', 'deliverables',
+        'project_number', 'client_id', 'name',
+        'priority', 'health', 'start_date', 'target_date', 'currency',
+        'scope_summary', 'deliverables',
         'client_notes', 'internal_notes', 'show_client_portal', 'assigned_to', 'created_by',
     ];
 
@@ -68,16 +71,6 @@ class Project extends Model
             ->latest('id');
     }
 
-    public function milestones()
-    {
-        return $this->hasMany(ProjectMilestone::class)->orderBy('project_product_id')->orderBy('sort_order')->orderBy('id');
-    }
-
-    public function publicMilestones()
-    {
-        return $this->hasMany(ProjectMilestone::class)->where('is_public', true)->orderBy('project_product_id')->orderBy('sort_order')->orderBy('id');
-    }
-
     public function trackingUpdates()
     {
         return $this->hasMany(ProjectTrackingUpdate::class)->latest('occurred_at')->latest('id');
@@ -91,6 +84,11 @@ class Project extends Model
     public function cashflowEntries()
     {
         return $this->hasMany(\App\Models\CashflowEntry::class, 'project_id')->latest('entry_date')->latest('id');
+    }
+
+    public function cashflowAllocations()
+    {
+        return $this->hasMany(\App\Models\CashflowAllocation::class, 'project_id')->latest('id');
     }
 
     public function shipments()
@@ -135,7 +133,7 @@ class Project extends Model
     public function taxInvoices()
     {
         return $this->hasMany(\App\Models\SalesInvoice::class, 'project_id')
-            ->where('invoice_type', 'tax')
+            ->whereIn('invoice_type', ['tax', 'cash'])
             ->latest('invoice_date')
             ->latest('id');
     }
@@ -304,7 +302,7 @@ class Project extends Model
      */
     private function documentValue(Model $document): float
     {
-        $value = (float) $document->total_amount;
+        $value = $document instanceof \App\Models\SalesInvoice ? $document->receivableTotal() : (float) $document->total_amount;
 
         return (string) $document->currency === (string) $this->currency
             ? $value
@@ -337,6 +335,18 @@ class Project extends Model
     
         $inward = (float) $cashflows->where('transaction_type', 'credit')->sum('credit_amount');
         $outward = (float) $cashflows->where('transaction_type', 'debit')->sum('debit_amount');
+
+        if (Schema::hasTable('cashflow_allocations')) {
+            $allocations = $this->relationLoaded('cashflowAllocations')
+                ? $this->cashflowAllocations
+                : $this->cashflowAllocations()->with('cashflowEntry')->get();
+            $inward += (float) $allocations
+                ->filter(fn ($allocation) => $allocation->cashflowEntry?->transaction_type === 'credit')
+                ->sum('amount');
+            $outward += (float) $allocations
+                ->filter(fn ($allocation) => $allocation->cashflowEntry?->transaction_type === 'debit')
+                ->sum('amount');
+        }
     
         return [
             'inward' => $inward,
@@ -346,9 +356,29 @@ class Project extends Model
         ];
     }
 
+    public function exceptions()
+    {
+        return $this->hasMany(ProjectException::class)->latest('detected_at')->latest('id');
+    }
+
+    public function financialClosures()
+    {
+        return $this->hasMany(ProjectFinancialClosure::class)->latest('closed_at')->latest('id');
+    }
+
+    public function latestFinancialClosure()
+    {
+        return $this->hasOne(ProjectFinancialClosure::class)->latestOfMany('closed_at');
+    }
+
     public function isCompleted(): bool
     {
-        return in_array($this->status, ['completed', 'cancelled'], true);
+        return in_array($this->status, ['completed', 'closed', 'closed_with_outstanding_financials', 'cancelled'], true);
+    }
+
+    public static function closureStatuses(): array
+    {
+        return ['closed', 'closed_with_outstanding_financials'];
     }
 
     public static function statusOptions(): array
@@ -361,6 +391,8 @@ class Project extends Model
             'waiting_vendor' => 'Waiting for Vendor',
             'on_hold' => 'On Hold',
             'completed' => 'Completed',
+            'closed' => 'Financially Closed',
+            'closed_with_outstanding_financials' => 'Closed with Outstanding Financials',
             'cancelled' => 'Cancelled',
         ];
     }
@@ -368,21 +400,19 @@ class Project extends Model
     public static function stageOptions(): array
     {
         return [
-            'quote_finalised' => 'Quote Finalised',
-            'kickoff' => 'Kickoff',
-            'sampling' => 'Sampling',
-            'artwork_design' => 'Artwork / Design',
-            'vendor_po' => 'Vendor PO',
-            'client_pi' => 'Client PI',
-            'pps' => 'PPS',
-            'pps_qc' => 'PPS QC',
+            'setup' => 'Project setup',
+            'commercial' => 'Commercial readiness',
+            'procurement' => 'Procurement',
+            'artwork' => 'Artwork approval',
+            'sampling' => 'PPS approval',
             'production' => 'Production',
-            'quality_check' => 'Quality Check',
+            'quality' => 'Quality control',
             'packing' => 'Packing',
-            'dispatch_ready' => 'Dispatch Ready',
-            'shipped' => 'Shipped',
-            'delivered' => 'Delivered',
-            'closed' => 'Closed',
+            'dispatch' => 'Dispatch readiness',
+            'delivery' => 'Delivery',
+            'closure' => 'Closure',
+            'completed' => 'Completed',
+            'closed' => 'Financially closed',
         ];
     }
 
@@ -408,5 +438,25 @@ class Project extends Model
     public static function currencyOptions(): array
     {
         return ['INR' => 'INR', 'USD' => 'USD', 'RMB' => 'RMB'];
+    }
+
+    public function packagingLists()
+    {
+        return $this->hasMany(PackagingList::class);
+    }
+
+    public function workflow()
+    {
+        return $this->hasOne(ProjectWorkflow::class);
+    }
+
+    public function approvalRequests()
+    {
+        return $this->hasMany(ProjectApprovalRequest::class)->latest('requested_at')->latest('id');
+    }
+
+    public function qualityInspections()
+    {
+        return $this->hasMany(ProjectQualityInspection::class)->latest('inspected_at')->latest('id');
     }
 }

@@ -39,6 +39,12 @@ class EnsureUserIsAdmin
                 ->with('error', 'That area belongs to the office. This is your own workspace — your profile, your salary, your payslips and your documents.');
         }
 
+        $required = app(\App\Services\PermissionMatrix::class)->requiredFor($request);
+        if ($required && ! app(\App\Services\PermissionMatrix::class)->allows($user, $required)) {
+            app(\App\Services\AuditTrail::class)->denied($request, $user, $required);
+            return response('Your access profile does not allow this action.', 403);
+        }
+
         return $next($request);
     }
 }

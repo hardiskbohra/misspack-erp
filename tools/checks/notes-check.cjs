@@ -410,9 +410,9 @@ check('an employee keeps notes too, from their own menu',
     /'label' => 'Notes', 'route' => 'notes\.index'/.test(employeeMenu));
 
 const officeMenu = shell.slice(shell.indexOf('$sidebarItems = Auth::user()'));
-check('and the office has its own, in a section of its own',
-    /'section' => 'Personal'/.test(officeMenu)
-    && /'label' => 'Notes', 'route' => 'notes\.index'/.test(officeMenu));
+check('the office does not duplicate the topbar notes door in its long sidebar',
+    ! /'section' => 'Personal'/.test(officeMenu)
+    && ! /'label' => 'Notes', 'route' => 'notes\.index'/.test(officeMenu));
 
 check('the shell tells the stylesheets which module the page is',
     /request\(\)->routeIs\('notes\.\*'\) => 'notes'/.test(shell));
@@ -424,19 +424,15 @@ check('the shell tells the stylesheets which module the page is',
    in words because it is icon-only, and it must say when it is the current
    page. */
 const topbar = shell.slice(shell.indexOf('<div class="topbar-actions">'), shell.indexOf('</header>'));
-const topbarLink = topbar.indexOf("route('notes.index')");
-check('the topbar carries a notes door, beside the search control',
-    topbarLink > -1
-    && topbarLink > topbar.indexOf('@endif')
-    && topbarLink < topbar.indexOf("route('theme.toggle')")
-    && /<a class="topbar-btn" href="\{\{ route\('notes\.index'\) \}\}"/.test(topbar),
-    'it must be a link, outside the office-only block, before the theme switch');
-
-check('the icon-only door names itself and marks the current page',
-    /aria-label="Notes"/.test(topbar)
-    && /title="Notes — private to this login"/.test(topbar)
-    && /@if \(request\(\)->routeIs\('notes\.\*'\)\) aria-current="page" @endif/.test(topbar)
-    && /fa-regular fa-note-sticky/.test(topbar));
+const quickMenu = read('resources/views/layouts/partials/quick-menu.blade.php');
+check('private Notes is in Quick Menu, not a separate topbar action',
+    !topbar.includes("route('notes.index')") && topbar.includes("@include('layouts.partials.quick-menu')")
+    && quickMenu.includes("route('notes.index')") && quickMenu.includes('@if($quickMenuUser)'),
+    'Notes must stay available to both authenticated roles without an extra topbar button');
+check('the Notes menu link names itself and marks its current page',
+    quickMenu.includes('<span>Notes</span>') && quickMenu.includes('Notes — private to this login')
+    && quickMenu.includes("request()->routeIs('notes.*')") && quickMenu.includes('aria-current="page"')
+    && quickMenu.includes('fa-regular fa-note-sticky'));
 
 /* An icon button that is an `<a>` keeps the browser's link blue unless the
    class it wears sets a colour — the same control would then be two colours

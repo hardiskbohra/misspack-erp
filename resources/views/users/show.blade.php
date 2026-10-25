@@ -6,7 +6,7 @@
 @section('page-actions')
     <a class="master-btn master-btn-ghost" href="{{ route('users.index') }}">All users</a>
     @if (! $user->isEmployee())
-        <span class="emp-pill is-off">Office account — full access</span>
+        <span class="emp-pill is-off">Office account — {{ strtolower($user->accessProfileLabel()) }}</span>
     @else
         <span class="emp-pill is-off">Signs in as an employee — sees only their own record</span>
     @endif
@@ -16,12 +16,17 @@
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/employees.css') }}">
     <link rel="stylesheet" href="{{ $assetVer('assets/css/users.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/audit-access.css') }}">
 @endpush
 
 @php
     /* The tab strip is drawn from the controller's own list, and the panel
        names have to match it — a tab that opens nothing is worse than no tab. */
-    $tabUrl = fn (string $key) => route('users.show', ['user' => $user, 'tab' => $key, 'year' => $year]);
+    $tabUrl = fn (string $key) => route('users.show', [
+        'user' => $user,
+        'tab' => $key,
+        'year' => $key === 'salary' ? $salaryYearQuery : $year,
+    ]);
 @endphp
 
 <div class="emp employee-record master-list"
@@ -33,7 +38,7 @@
          it. --}}
     <div class="master-card master-card--flat emp-record-head">
         <div class="emp-record-who">
-            <span class="emp-avatar" aria-hidden="true">{{ $user->initials ?: strtoupper(substr($user->name, 0, 2)) }}</span>
+            <x-user-avatar :user="$user" class="emp-avatar" />
             <div>
                 <h1>{{ $user->name }}</h1>
                 <p class="master-sub emp-record-line">
@@ -53,6 +58,11 @@
                 </p>
             </div>
         </div>
+        @if (auth()->user()->hasPermission('people.manage'))
+            <button type="button" class="master-btn master-btn-soft" data-open-photo>
+                <i class="fas fa-camera" aria-hidden="true"></i> Edit photo
+            </button>
+        @endif
     </div>
 
     <div class="master-stats desktop-only">
@@ -388,8 +398,10 @@
                         <div class="master-card master-card--flat">
                             <div class="master-list-bar">
                                 <div class="master-list-chips">
+                                    <a class="master-list-chip {{ $showAllSalary ? 'is-active' : '' }}"
+                                        href="{{ route('users.show', ['user' => $user, 'tab' => 'salary', 'year' => 'all']) }}">All history</a>
                                     @foreach ($years as $option)
-                                        <a class="master-list-chip {{ (int) $option === (int) $year ? 'is-active' : '' }}"
+                                        <a class="master-list-chip {{ ! $showAllSalary && (int) $option === (int) $year ? 'is-active' : '' }}"
                                             href="{{ route('users.show', ['user' => $user, 'tab' => 'salary', 'year' => $option]) }}">{{ $option }}</a>
                                     @endforeach
                                 </div>
@@ -399,9 +411,11 @@
                                 </p>
                             </div>
 
-                            <div class="emp-months-wrap">
-                                @include('employees.partials.pay-months', ['months' => $months, 'currency' => 'INR'])
-                            </div>
+                            @if (! $showAllSalary)
+                                <div class="emp-months-wrap">
+                                    @include('employees.partials.pay-months', ['months' => $months, 'currency' => 'INR'])
+                                </div>
+                            @endif
                         </div>
 
                         {{-- One table. The month, the money and the paper for the
@@ -411,7 +425,7 @@
                         <div class="master-card master-table-card master-card--flat">
                             <div class="master-list-toolbar">
                                 <p class="master-list-hint">
-                                    {{ $total['entries'] }} {{ \Illuminate\Support\Str::plural('entry', $total['entries']) }} in {{ $year }} · net
+                                    {{ $total['entries'] }} {{ \Illuminate\Support\Str::plural('entry', $total['entries']) }} {{ $salaryPeriodLabel }} · net
                                     <strong>{{ \App\Helpers\CommonHelper::indianCurrency($total['total']) }}</strong>
                                     @if ($total['recovered'] > 0)
                                         · {{ \App\Helpers\CommonHelper::indianCurrency($total['recovered']) }} received back
@@ -439,7 +453,7 @@
                                 'rows' => $payRows,
                                 'context' => 'office',
                                 'user' => $user,
-                                'year' => $year,
+                                'year' => $salaryYearQuery,
                                 'total' => $total,
                             ])
                         </div>
@@ -453,7 +467,7 @@
                         <div class="master-modal {{ $openPayslipDialog === 'create' ? 'open' : '' }}" id="payslipForm"
                             aria-hidden="{{ $openPayslipDialog === 'create' ? 'false' : 'true' }}">
                             <div class="master-modal-card is-wide" role="dialog" aria-modal="true" aria-labelledby="payslipFormTitle">
-                                <form method="POST" action="{{ route('users.payslips.store', ['user' => $user, 'tab' => 'salary', 'year' => $year]) }}" enctype="multipart/form-data">
+                                <form method="POST" action="{{ route('users.payslips.store', ['user' => $user, 'tab' => 'salary', 'year' => $salaryYearQuery]) }}" enctype="multipart/form-data">
                                     @csrf
                                     @include('employees.partials.payslip-form', [
                                         'mode' => 'create',
@@ -474,14 +488,14 @@
                                 {{-- outside the card on purpose: a dialog cannot hold a
                                      second form, so the remove button submits this one --}}
                                 <form method="POST" id="payslipEditDelete"
-                                    action="{{ route('users.payslips.destroy', ['user' => $user, 'payslip' => $editingPayslip, 'tab' => 'salary', 'year' => $year]) }}">
+                                    action="{{ route('users.payslips.destroy', ['user' => $user, 'payslip' => $editingPayslip, 'tab' => 'salary', 'year' => $salaryYearQuery]) }}">
                                     @csrf
                                     @method('DELETE')
                                 </form>
 
                                 <div class="master-modal-card is-wide" role="dialog" aria-modal="true" aria-labelledby="payslipEditTitle">
                                     <form method="POST" enctype="multipart/form-data"
-                                        action="{{ route('users.payslips.update', ['user' => $user, 'payslip' => $editingPayslip, 'tab' => 'salary', 'year' => $year]) }}">
+                                        action="{{ route('users.payslips.update', ['user' => $user, 'payslip' => $editingPayslip, 'tab' => 'salary', 'year' => $salaryYearQuery]) }}">
                                         @csrf
                                         @method('PUT')
                                         @include('employees.partials.payslip-form', [
@@ -676,9 +690,37 @@
                     </div>
                 </section>
             @endif
+
+            @if ($tab === 'access')
+                <section class="master-tab-panel access-panel" aria-label="Access profile">
+                    <div class="master-card master-card--flat access-summary">
+                        <div class="access-summary-copy"><p class="master-eyebrow">Permission boundary</p><h2>{{ $user->accessProfileLabel() }}</h2><p>{{ $user->isEmployee() ? 'Employee self-service is restricted to this person’s own workspace.' : 'Office permissions are enforced on direct URLs and write actions, not only hidden in navigation.' }}</p></div>
+                        <div class="access-summary-meta"><span>Last changed</span><strong>{{ $user->permissions_updated_at?->format('d M Y, H:i') ?: 'Default profile' }}</strong><small>{{ $user->permissionsUpdater?->name ?: 'System default' }}</small></div>
+                    </div>
+                    @if(!$user->isEmployee() && auth()->user()?->hasPermission('permissions.manage'))
+                        <form class="master-card master-card--flat access-form" method="POST" action="{{ route('users.permissions.update', $user) }}">@csrf @method('PATCH')
+                            <div class="master-section-head"><div><p class="master-eyebrow">Office access</p><h2>Access profile</h2></div><button class="master-btn master-btn-primary" type="submit"><i class="fa-solid fa-shield-halved"></i> Save access</button></div>
+                            <div class="access-profile-choices">
+                                <label><input type="radio" name="access_profile" value="full" @checked(($user->access_profile ?: 'full') === 'full')><span><strong>Full office access</strong><small>All current and future office modules. Use only for trusted administrators.</small></span></label>
+                                <label><input type="radio" name="access_profile" value="custom" @checked($user->access_profile === 'custom')><span><strong>Custom office access</strong><small>Only explicitly selected capabilities. New modules start denied.</small></span></label>
+                            </div>
+                            <div class="access-permission-grid">
+                                @foreach(collect($permissionOptions)->groupBy('group') as $group => $permissions)
+                                    <fieldset><legend>{{ $group }}</legend>@foreach($permissions as $key => $permission)<label><input type="checkbox" name="permissions[]" value="{{ $key }}" @checked(in_array($key, $user->permissions ?: [], true))><span><strong>{{ $permission['label'] }}</strong><small>{{ $permission['description'] }}</small></span></label>@endforeach</fieldset>
+                                @endforeach
+                            </div>
+                        </form>
+                    @elseif(!$user->isEmployee())
+                        <div class="master-card master-card--flat master-empty-state"><i class="fa-solid fa-lock" aria-hidden="true"></i><p>You can review this profile, but only an administrator with access-management permission can change it.</p></div>
+                    @endif
+                </section>
+            @endif
         </div>
     </div>
 </div>
+@if (auth()->user()->hasPermission('people.manage'))
+    @include('users.partials.photo-modal')
+@endif
 @endsection
 
 @push('scripts')

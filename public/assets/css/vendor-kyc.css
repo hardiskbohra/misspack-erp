@@ -1,0 +1,24 @@
+/* Client KYC's two-column review cards using the ERP's shared components. */
+.vendor-kyc { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.vendor-kyc .vendor-kyc-card { min-width:0; margin:0; padding:22px 24px; border:1px solid var(--mc-border); border-radius:18px; background:var(--mc-card); box-shadow:var(--mc-shadow); }
+.vendor-kyc h2 { margin:0 0 14px; color:var(--mc-text); font-size:15px; font-weight:600; line-height:1.35; }
+.vendor-kyc h3 { font-size:14px; margin:20px 0 10px; }
+.vendor-kyc .vendor-kyc-wide { grid-column:1/-1; }
+.vendor-kyc .master-sub { line-height:1.6; overflow-wrap:anywhere; }
+.vendor-kyc .vendor-kyc-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+.vendor-kyc .vendor-kyc-link { display:flex; align-items:center; gap:10px; margin:14px 0; }
+.vendor-kyc .vendor-kyc-link input { flex:1; min-width:0; }
+.vendor-kyc .master-info strong, .vendor-kyc td, .vendor-kyc li { overflow-wrap:anywhere; }
+.vendor-kyc .master-table { width:100%; min-width:580px; }
+.vendor-kyc .master-table-wrap { overflow-x:auto; }
+.vendor-kyc .master-field { margin-top:16px; }
+.vendor-kyc .vendor-kyc-history, .vendor-kyc .vendor-kyc-documents { padding-left:20px; margin:0; }
+.vendor-kyc .vendor-kyc-history li, .vendor-kyc .vendor-kyc-documents li { margin:0 0 12px; }
+@media(max-width:767px) {
+    .vendor-kyc { grid-template-columns:minmax(0,1fr); }
+    .vendor-kyc .vendor-kyc-card { padding:18px; }
+    .vendor-kyc .vendor-kyc-link { flex-wrap:wrap; }
+    .vendor-kyc .vendor-kyc-link input { flex-basis:100%; }
+}
+
+.vendor-show .vendor-bank-address { white-space:pre-line; }

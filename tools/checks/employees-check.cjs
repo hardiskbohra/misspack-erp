@@ -68,6 +68,7 @@ const entryModel = read('app/Models/CashflowEntry.php');
 const employeeSalary = read('resources/views/employees/salary.blade.php');
 const payMonths = read('resources/views/employees/partials/pay-months.blade.php');
 const cashflowController = read('app/Http/Controllers/CashflowController.php');
+const cashflowPickers = read('app/Services/CashflowPickers.php');
 const payslipDoc = read('app/Services/PayslipDocument.php');
 const payslipSheet = read('resources/views/employees/partials/payslip.blade.php');
 const payTable = read('resources/views/employees/partials/pay-table.blade.php');
@@ -210,7 +211,7 @@ check('there is one salary door, and the old payslips URL still opens',
     !/'route' => 'my\.payslips'/.test(nav)
     && nav.includes("'route' => 'my.salary'")
     && /return redirect\(\)->to\(route\('my\.salary', \['focus' => 'payslips'\]\)\.'#payslips'\);/.test(workspace)
-    && /\$slips = \$this->profile->issuedPayslips\(\$this->user\(\)\);/.test(workspace));
+    && /\$slips = \$this->profile->issuedPayslips\(\$employee\);/.test(workspace));
 
 check('the menu the employee sees names no office screen, and the office keeps its own',
     !/'route' => 'cashflows\.index'/.test(nav.slice(0, nav.indexOf('$sidebarItems = Auth::user()')))
@@ -220,8 +221,8 @@ check('the menu the employee sees names no office screen, and the office keeps i
 check('the employee sees their salary, their payslips and their documents',
     ['my.salary', 'my.documents'].every(r => nav.includes(r))
     && /employees\.partials\.pay-table/.test(employeeSalary)
-    && /\$slips = \$this->profile->issuedPayslips\(\$this->user\(\)\);/.test(workspace)
-    && /'payRows' => \$this->profile->payRows\(\$year, \$entries, \$slips\)/.test(workspace)
+    && /\$slips = \$this->profile->issuedPayslips\(\$employee\);/.test(workspace)
+    && /'payRows' => \$this->profile->payRows\(\$showAllSalary \? null : \$year, \$entries, \$slips\)/.test(workspace)
     && !/partials\.payslip-table/.test(employeeSalary));
 
 /* ------------------------------------------------- 3b. the way the money went
@@ -441,8 +442,8 @@ check('the record is a tabbed page, and the tabs come from one list',
 check('the tabs are links, so every panel has a URL',
     /class="master-tab \{\{ \$tab === \$key \? 'is-active' : '' \}\}"/.test(userShow)
     && /data-user-tab-link/.test(userShow)
-    && /route\('users\.show', \['user' => \$user, 'tab' => \$key/.test(userShow)
-    && /\$tabUrl = fn \(string \$key\)/.test(userShow));
+    && /\$tabUrl = fn \(string \$key\) => route\('users\.show'/.test(userShow)
+    && /'tab' => \$key/.test(userShow));
 
 check('the record uses the shared tab vocabulary, not a private one',
     /master-tabs-card/.test(userShow) && /master-tabs-panels/.test(userShow)
@@ -491,7 +492,7 @@ check('the pay table carries the month, the money and the payslip on one row',
 /* One row per entry, and the month's slip drawn once — on the month's newest
    row — with the row below it pointing up rather than saying "no payslip". */
 check('a month with two entries draws its payslip once',
-    /public function payRows\(int \$year, Collection \$entries, Collection \$slips\): Collection/.test(payMonthsService)
+    /public function payRows\(\?int \$year, Collection \$entries, Collection \$slips\): Collection/.test(payMonthsService)
     && /'slip' => \$owns \? \(\$byPeriod\[\$period\] \?\? null\) : null,/.test(payMonthsService)
     && /'owns_slip' => \$owns,/.test(payMonthsService)
     && /Same month as the row above/.test(payTable)
@@ -572,7 +573,8 @@ check('the list paints the shared chrome without restating it',
 
 check('the ledger\'s employee field is one list, employees first',
     /public static function employeePicker\(\)/.test(userModel)
-    && /User::employeePicker\(\)/.test(cashflowController)
+    && /User::employeePicker\(\)/.test(cashflowPickers)
+    && /return \$this->pickers->employees\(\);/.test(cashflowController)
     && /sortBy\(fn \(self \$user\) => \$user->isEmployee\(\) \? 0 : 1\)/.test(userModel));
 
 /* ------------------------------------------------------------ 7. the seed */
@@ -606,13 +608,16 @@ const declaredColumns = (() => {
             columns.add('created_at');
             columns.add('updated_at');
         }
+        if (/->softDeletes\(\)/.test(up)) {
+            columns.add('deleted_at');
+        }
     });
 
     return columns;
 })();
 
 /** A result column is not a table column (`select(... as total)`). */
-const SELECT_ALIASES = new Set(['bucket', 'total', 'total_value', 'entry', 'done', 'required', 'aggregate']);
+const SELECT_ALIASES = new Set(['bucket', 'total', 'total_value', 'entry', 'done', 'required', 'aggregate', 'snoozed']);
 
 const walk = dir => fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap(entry =>
     entry.isDirectory()
@@ -807,9 +812,9 @@ check('successful payslip actions return to salary with a visible success flash'
     && /\$parameters = \['user' => \$user, 'tab' => 'salary'\]/.test(payslipController)
     && /\$request->query\('year', ''\)/.test(payslipController)
     && (payslipController.match(/return \$this->returnToSalary\(\$request, \$user/g) || []).length === 3
-    && /route\('users\.payslips\.store', \['user' => \$user, 'tab' => 'salary', 'year' => \$year\]\)/.test(userShow)
-    && /route\('users\.payslips\.update', \['user' => \$user, 'payslip' => \$editingPayslip, 'tab' => 'salary', 'year' => \$year\]\)/.test(userShow)
-    && /route\('users\.payslips\.destroy', \['user' => \$user, 'payslip' => \$editingPayslip, 'tab' => 'salary', 'year' => \$year\]\)/.test(userShow)
+    && /route\('users\.payslips\.store', \['user' => \$user, 'tab' => 'salary', 'year' => \$salaryYearQuery\]\)/.test(userShow)
+    && /route\('users\.payslips\.update', \['user' => \$user, 'payslip' => \$editingPayslip, 'tab' => 'salary', 'year' => \$salaryYearQuery\]\)/.test(userShow)
+    && /route\('users\.payslips\.destroy', \['user' => \$user, 'payslip' => \$editingPayslip, 'tab' => 'salary', 'year' => \$salaryYearQuery\]\)/.test(userShow)
     && /@if\(session\('success'\)\)[\s\S]*?MasterAlert\.toast\(@json\(session\('success'\)\), 'success'/.test(layout));
 
 /* The totals as they are typed, in the browser's own rupee format, which is

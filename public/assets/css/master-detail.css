@@ -57,6 +57,48 @@
     margin-bottom: 0
 }
 
+/* Cash that has reached a party but has not yet been assigned is operationally
+   important, not an error. This shared callout keeps it visible on client,
+   vendor and project records without pretending it is another balance card. */
+.master-unallocated-alert {
+    margin-bottom:16px;
+    min-width:0;
+    overflow:hidden;
+    border:1px solid var(--mc-border);
+    border-left:4px solid var(--master-orange, #f59e0b);
+    border-radius:16px;
+    background:var(--ui-card-surface);
+}
+.master-unallocated-alert-head { display:flex; align-items:center; gap:12px; padding:12px 16px; }
+.master-unallocated-alert-icon { display:grid; place-items:center; width:32px; height:32px; flex:0 0 32px; border-radius:9px; color:var(--master-orange, #f59e0b); background:var(--ui-muted-surface); font-size:15px; }
+.master-unallocated-alert-copy { min-width:0; flex:1; }
+.master-unallocated-alert-eyebrow { color:var(--mc-text-3); font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; }
+.master-unallocated-alert-copy h2 { margin:2px 0 0; color:var(--mc-text); font-size:15px; font-weight:600; }
+.master-unallocated-alert-copy p { margin:3px 0 0; color:var(--mc-text-2); font-size:12px; line-height:1.4; }
+.master-unallocated-alert-totals { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; }
+.master-unallocated-alert-totals > span { color:var(--mc-text-3); font-size:10px; font-weight:600; }
+.master-unallocated-alert-totals strong { color:var(--mc-text); font-size:16px; font-weight:600; font-variant-numeric:tabular-nums; }
+.master-unallocated-alert-totals small { color:var(--mc-text-3); font-size:11px; }
+.master-unallocated-alert-rows { display:grid; grid-auto-flow:column; grid-auto-columns:224px; justify-content:start; gap:10px; padding:0 16px 12px; overflow-x:auto; overscroll-behavior-x:contain; scroll-snap-type:x proximity; scrollbar-width:thin; }
+.master-unallocated-alert-row { display:flex; flex-direction:column; justify-content:space-between; gap:10px; min-width:0; padding:12px; border:1px solid var(--mc-border); border-radius:12px; background:var(--ui-card-surface); color:inherit; text-decoration:none; scroll-snap-align:start; }
+.master-unallocated-alert-row:hover { border-color:var(--master-orange, #f59e0b); background:var(--ui-muted-surface); }
+.master-unallocated-alert-row:focus-visible,.master-unallocated-alert-rows:focus-visible { outline:2px solid var(--master-primary, #4f83f1); outline-offset:-2px; }
+.master-unallocated-alert-row > span:first-child { min-width:0; }
+.master-unallocated-alert-row > span:first-child strong { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; min-height:36px; color:var(--mc-text); font-size:13px; font-weight:600; line-height:18px; }
+.master-unallocated-alert-row small { display:block; margin-top:4px; color:var(--mc-text-3); font-size:10.5px; line-height:1.4; }
+.master-unallocated-alert-amount { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:2px 8px; }
+.master-unallocated-alert-amount > small { grid-column:1/-1; margin:0; }
+.master-unallocated-alert-amount > strong { color:var(--mc-text); font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.master-unallocated-alert-action { display:inline-flex; align-items:center; gap:5px; color:var(--master-primary, #4f83f1); font-size:11px; font-weight:600; white-space:nowrap; }
+.master-unallocated-alert-more { margin:0; padding:0 16px 10px; color:var(--mc-text-3); font-size:11px; line-height:1.4; }
+@media (max-width:767px) {
+    .master-unallocated-alert-head { flex-wrap:wrap; padding:12px; gap:8px; }
+    .master-unallocated-alert-copy p { display:none; }
+    .master-unallocated-alert-totals { flex-direction:row; align-items:baseline; flex-wrap:wrap; gap:4px 10px; width:100%; padding-left:40px; }
+    .master-unallocated-alert-rows { padding:0 12px 10px; grid-auto-columns:min(224px, calc(100vw - 80px)); }
+    .master-unallocated-alert-more { padding:0 12px 10px; }
+}
+
 /* --------------------------------------------------------------------------
    Card headers
    A card title is a title: sentence case, readable size, no letter-spaced

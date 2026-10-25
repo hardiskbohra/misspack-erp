@@ -511,6 +511,20 @@ const phpFiles = ['app/Services/CashflowAnalysis.php', 'app/Services/CashflowFil
     'app/Http/Controllers/CashflowController.php',
     'database/migrations/2026_10_03_020000_promote_employee_on_cashflow_entries_table.php'];
 
+/* A cashflow row that mirrors a vendor payment must not be offered a purchase
+   document: the vendor ledger already settles that bill, and choosing it again
+   is the "counted twice" validation error. The lock is in both allocation
+   surfaces, and the server keeps refusing a hand-built request. */
+const allocationBuilder = read('resources/views/cashflows/partials/allocation-builder.blade.php');
+const detailAllocation = read('resources/views/cashflows/partials/detail-allocation-modal.blade.php');
+const cashflowAllocations = read('app/Services/CashflowAllocations.php');
+check('a vendor-payment mirror allocates to a project, not to a second bill',
+    allocationBuilder.includes('$purchaseLocked') && allocationBuilder.includes('@disabled($purchaseLocked)')
+    && detailAllocation.includes('@disabled($purchaseLocked)')
+    && allocationBuilder.includes("field('purchase_invoice_id').disabled")
+    && cashflowAllocations.includes('bank mirror of vendor payment #')
+    && cashflowAllocations.includes('count the same money twice'));
+
 check('the new PHP is balanced',
     phpFiles.every(file => brackets(read(file))),
     phpFiles.filter(file => !brackets(read(file))).join(', '));

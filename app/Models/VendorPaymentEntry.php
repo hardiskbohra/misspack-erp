@@ -14,7 +14,7 @@ class VendorPaymentEntry extends Model
         'vendor_id', 'project_id', 'purchase_invoice_id', 'cashflow_entry_id', 'transaction_date', 'due_date', 'invoice_number',
         'foreign_currency', 'foreign_amount', 'exchange_rate', 'transaction_type', 'entry_category',
         'particular', 'status', 'paid_account_id', 'payment_mode', 'bank_reference_number',
-        'amount_in_inr', 'remarks', 'created_by',
+        'amount_in_inr', 'remarks', 'created_by', 'source',
     ];
 
     protected $casts = [
@@ -24,6 +24,15 @@ class VendorPaymentEntry extends Model
         'exchange_rate' => 'decimal:6',
         'amount_in_inr' => 'decimal:2',
     ];
+
+    /**
+     * The row was derived from a cashflow entry, so the cashflow screen owns
+     * it: the vendor ledger shows it but does not edit or delete it.
+     */
+    public function isFromCashflow(): bool
+    {
+        return (string) $this->source === \App\Services\CashflowVendorPaymentSync::SOURCE;
+    }
 
     public function vendor()
     {

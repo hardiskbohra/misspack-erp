@@ -3,14 +3,22 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\ModuleDashboardController;
 use App\Http\Controllers\EmployeeDocumentController;
 use App\Http\Controllers\EmployeePayslipController;
 use App\Http\Controllers\EmployeeWorkspaceController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ShipmentController;
+use App\Http\Controllers\ShipmentDeliveryReceiptController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\VendorPortalAuthController;
+use App\Http\Controllers\VendorPortalController;
+use App\Http\Controllers\VendorPortalManagementController;
+use App\Http\Controllers\VendorShareController;
 use App\Http\Controllers\OfficeServiceController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CashflowAttachmentController;
@@ -20,6 +28,7 @@ use App\Http\Controllers\CashflowSettingController;
 use App\Http\Controllers\AssetSettingController;
 use App\Http\Controllers\FixedAssetController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\WorkflowSettingController;
 use App\Http\Controllers\PartyStatementController;
 use App\Http\Controllers\ClientPortalStatementController;
 use App\Http\Controllers\PriceCalculatorController;
@@ -31,9 +40,13 @@ use App\Http\Controllers\LeadCommentController;
 use App\Http\Controllers\ProjectAttachmentController;
 use App\Http\Controllers\ProjectCommentController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectApprovalController;
+use App\Http\Controllers\ProjectWorkflowController;
+use App\Http\Controllers\ProjectCoordinatorQueueController;
+use App\Http\Controllers\ProjectExceptionController;
+use App\Http\Controllers\ProjectQualityInspectionController;
 use App\Http\Controllers\ProjectProductController;
 use App\Http\Controllers\ProjectTrackingController;
-use App\Http\Controllers\ProjectMilestoneController;
 use App\Http\Controllers\PublicFeedbackController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ClientPortalFeedbackController;
@@ -56,8 +69,12 @@ use App\Http\Controllers\NoteController;
 use App\Http\Controllers\OfficeAlertController;
 use App\Http\Controllers\OfficeBriefingSettingController;
 use App\Http\Controllers\OrganisationController;
+use App\Http\Controllers\PackagingListController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
+
+// Public-disk fallback when the web host cannot create public/storage.
+Route::get('/storage/{path}', \App\Http\Controllers\PublicMediaController::class)->where('path', '.*')->name('media.public');
 
 // Redirect root to login
 Route::get('/', fn () => redirect()->route('login'));
@@ -70,7 +87,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 // Shipment Tracking
 Route::get('/track-shipment/{token}', [ShipmentController::class, 'publicTrack'])->name('shipments.publicTrack');
 
-// Client KYC
+// Public vendor and client KYC
+Route::get('/vendor-kyc/{token}', [\App\Http\Controllers\VendorKycController::class, 'show'])->middleware([\App\Http\Middleware\PrivateVendorKyc::class,'throttle:120,1'])->name('vendors.publicKyc');
+Route::post('/vendor-kyc/{token}', [\App\Http\Controllers\VendorKycController::class, 'submit'])->middleware([\App\Http\Middleware\PrivateVendorKyc::class,'throttle:30,1'])->name('vendors.publicKyc.submit');
+Route::get('/vendor-kyc/{token}/documents/{document}', [\App\Http\Controllers\VendorKycController::class, 'publicDocument'])->middleware([\App\Http\Middleware\PrivateVendorKyc::class,'throttle:120,1'])->whereNumber('document')->name('vendors.publicKyc.documents');
 Route::get('/client-kyc/{token}', [ClientController::class, 'publicKyc'])->name('clients.publicKyc');
 Route::post('/client-kyc/{token}', [ClientController::class, 'submitKyc'])->name('clients.publicKyc.submit');
 
@@ -94,6 +114,14 @@ Route::post('/lead-enquiry', [PublicLeadController::class, 'store'])->name('lead
 Route::get('/statement/{token}', [PartyStatementController::class, 'publicShow'])
     ->where('token', '[A-Za-z0-9]{20,80}')
     ->name('statements.public');
+
+Route::get('/vendor-share/{token}', [VendorShareController::class, 'show'])
+    ->where('token', '[A-Za-z0-9]{40,80}')
+    ->name('vendor-shares.show');
+Route::post('/vendor-share/{token}/updates', [VendorShareController::class, 'storeUpdate'])
+    ->where('token', '[A-Za-z0-9]{40,80}')
+    ->middleware('throttle:10,1')
+    ->name('vendor-shares.updates.store');
 
 /* The feedback link. Outside auth for the same reason a statement link is: the
    person answering is a client, not a user of this ERP. The token is the whole
@@ -133,7 +161,12 @@ Route::middleware('auth')->group(function () {
         Route::patch('/clients/{client}/portal/support/{conversation}/status', [ClientPortalSupportManagementController::class, 'updateStatus'])->name('clients.portal.support.status');
         Route::get('/clients/{client}/portal/documents/{document}/file', [ClientPortalManagementController::class, 'downloadDocument'])->name('clients.portal.documents.file');
 
-        Route::redirect('/dashboard', '/clients');
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/audit', [AuditLogController::class, 'index'])->name('audit.index');
+        Route::get('/dashboards', [ModuleDashboardController::class, 'index'])->name('dashboards.index');
+        Route::get('/dashboards/{module}', [ModuleDashboardController::class, 'show'])
+            ->whereIn('module', array_keys(\App\Services\ModuleDashboard::MODULES))
+            ->name('dashboards.show');
         Route::get('/search', GlobalSearchController::class)->name('search');
 
         /* =====================================================================
@@ -155,6 +188,9 @@ Route::middleware('auth')->group(function () {
            redirects where the old routes were.
            ===================================================================== */
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+        Route::get('/settings/packaging', [\App\Http\Controllers\PackagingListSettingController::class, 'index'])->name('settings.packaging');
+        Route::put('/settings/packaging', [\App\Http\Controllers\PackagingListSettingController::class, 'update'])->name('settings.packaging.update');
+
 
         // Organisation — the company record every document prints from.
         Route::get('/settings/organisation', [OrganisationController::class, 'index'])->name('settings.organisation');
@@ -175,6 +211,9 @@ Route::middleware('auth')->group(function () {
         // Briefings — what the office is told about, and who is emailed.
         Route::get('/settings/briefings', [OfficeBriefingSettingController::class, 'index'])->name('settings.briefings');
         Route::put('/settings/briefings', [OfficeBriefingSettingController::class, 'update'])->name('settings.briefings.update');
+
+        Route::get('/settings/workflow', [WorkflowSettingController::class, 'index'])->name('settings.workflow');
+        Route::put('/settings/workflow', [WorkflowSettingController::class, 'update'])->name('settings.workflow.update');
 
         // Leads — the dropdown master data the lead forms offer.
         Route::get('/settings/leads', [LeadSettingController::class, 'index'])->name('settings.leads');
@@ -243,6 +282,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/users/{user}/documents/{document}', [EmployeeDocumentController::class, 'destroy'])->name('users.documents.destroy');
         Route::get('/users/{user}/documents/{document}/file', [EmployeeDocumentController::class, 'file'])->name('users.documents.file');
         Route::get('/users/{user}/data', [UserController::class, 'getData'])->name('users.data');
+        Route::patch('/users/{user}/photo', [UserController::class, 'updatePhoto'])->name('users.photo.update');
+        Route::patch('/users/{user}/permissions', [UserController::class, 'updatePermissions'])->name('users.permissions.update');
         Route::put('/users/{user}',      [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}',   [UserController::class, 'destroy'])->name('users.destroy');
 
@@ -264,6 +305,8 @@ Route::middleware('auth')->group(function () {
         Route::put('/shipments/costs/{cost}', [ShipmentController::class, 'updateCost'])->name('shipments.costs.update');
         Route::delete('/shipments/costs/{cost}', [ShipmentController::class, 'destroyCost'])->name('shipments.costs.destroy');
         Route::post('/shipments/{shipment}/history', [ShipmentController::class, 'storeHistory'])->name('shipments.history.store');
+        Route::post('/shipments/{shipment}/delivery-receipts', [ShipmentDeliveryReceiptController::class, 'store'])->name('shipments.delivery-receipts.store');
+        Route::get('/shipments/{shipment}/delivery-receipts/{receipt}/print', [ShipmentDeliveryReceiptController::class, 'print'])->name('shipments.delivery-receipts.print');
         Route::put('/shipments/history/{history}', [ShipmentController::class, 'updateHistory'])->name('shipments.history.update');
         Route::delete('/shipments/history/{history}', [ShipmentController::class, 'destroyHistory'])->name('shipments.history.destroy');
         Route::post('/shipments/{shipment}/attachments', [ShipmentController::class, 'storeAttachment'])->name('shipments.attachments.store');
@@ -272,12 +315,22 @@ Route::middleware('auth')->group(function () {
         Route::put('/shipments/attachments/{attachment}/toggle-public', [ShipmentController::class, 'togglePublic'])->name('shipments.attachments.toggle-public');
         Route::resource('shipments', ShipmentController::class);
 
+        // Packaging Lists — printable carton/item manifests linked to shipments.
+        Route::patch('/packaging-lists/{packagingList}/print-settings', [PackagingListController::class, 'updatePrintSettings'])->name('packaging-lists.print-settings');
+        Route::get('/packaging-lists/{packagingList}/print', [PackagingListController::class, 'print'])->name('packaging-lists.print');
+        Route::post('/packaging-lists/{packagingList}/labels', [PackagingListController::class, 'labels'])->name('packaging-lists.labels');
+        Route::post('/packaging-lists/{packagingList}/duplicate', [PackagingListController::class, 'duplicate'])->name('packaging-lists.duplicate');
+        Route::patch('/packaging-lists/{packagingList}/status', [PackagingListController::class, 'updateStatus'])->name('packaging-lists.status');
+        Route::post('/packaging-list-cartons/{carton}/label', [PackagingListController::class, 'label'])->name('packaging-lists.cartons.label');
+        Route::resource('packaging-lists', PackagingListController::class);
+
         // Client Management
         Route::post('/clients/quick', [ClientController::class, 'quickStore'])->name('clients.quickStore');
         Route::post('/clients/saved-views', [ClientController::class, 'storeSavedView'])->name('clients.saved-views.store');
         Route::delete('/clients/saved-views/{savedView}', [ClientController::class, 'destroySavedView'])->name('clients.saved-views.destroy');
         Route::patch('/clients/{client}/send-kyc', [ClientController::class, 'sendKyc'])->name('clients.sendKyc');
         Route::patch('/clients/{client}/status', [ClientController::class, 'updateStatus'])->name('clients.status.update');
+        Route::get('/clients/{client}/payment-summary', [ClientController::class, 'paymentSummary'])->name('clients.paymentSummary');
         Route::resource('clients', ClientController::class);
 
         // Vendor Management
@@ -309,6 +362,17 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/vendors/{vendor}/comments', [VendorController::class, 'storeComment'])->name('vendors.comments.store');
         Route::delete('/vendor-comments/{comment}', [VendorController::class, 'destroyComment'])->name('vendors.comments.destroy');
+        Route::patch('/vendors/{vendor}/portal', [VendorPortalManagementController::class, 'enable'])->name('vendors.portal.enable');
+        Route::post('/vendors/{vendor}/portal/users', [VendorPortalManagementController::class, 'storeUser'])->name('vendors.portal.users.store');
+        Route::post('/vendors/{vendor}/portal/updates', [VendorPortalManagementController::class, 'storeUpdate'])->name('vendors.portal.updates.store');
+        Route::patch('/vendors/{vendor}/portal/users/{portalUser}/toggle', [VendorPortalManagementController::class, 'toggleUser'])->name('vendors.portal.users.toggle');
+        Route::post('/vendors/{vendor}/portal/users/{portalUser}/reset-password', [VendorPortalManagementController::class, 'resetUser'])->name('vendors.portal.users.reset');
+        Route::post('/vendors/{vendor}/shares', [VendorPortalManagementController::class, 'storeShare'])->name('vendors.shares.store');
+        Route::patch('/vendors/{vendor}/shares/{share}/revoke', [VendorPortalManagementController::class, 'revokeShare'])->name('vendors.shares.revoke');
+        Route::post('/vendors/{vendor}/kyc/link', [\App\Http\Controllers\VendorKycController::class, 'link'])->name('vendors.kyc.link');
+        Route::patch('/vendors/{vendor}/kyc/reopen', [\App\Http\Controllers\VendorKycController::class, 'reopen'])->name('vendors.kyc.reopen');
+        Route::patch('/vendors/{vendor}/kyc/review', [\App\Http\Controllers\VendorKycController::class, 'review'])->name('vendors.kyc.review');
+        Route::get('/vendors/{vendor}/kyc/documents/{document}', [\App\Http\Controllers\VendorKycController::class, 'officeDocument'])->whereNumber('document')->name('vendors.kyc.documents');
         Route::resource('vendors', VendorController::class);
 
         Route::resource('office-services', OfficeServiceController::class);
@@ -333,6 +397,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/sales-invoices/{salesInvoice}/portal', [SalesInvoiceController::class, 'togglePortal'])->name('sales-invoices.portal');
         Route::post('/sales-invoices/{salesInvoice}/payments', [SalesInvoiceController::class, 'recordPayment'])->name('sales-invoices.payments.store');
         Route::post('/sales-invoices/{salesInvoice}/duplicate', [SalesInvoiceController::class, 'duplicate'])->name('sales-invoices.duplicate');
+        Route::post('/sales-invoices/{salesInvoice}/convert-cash', [SalesInvoiceController::class, 'convertCash'])->name('sales-invoices.convert-cash');
         Route::post('/sales-invoices/{salesInvoice}/convert', [SalesInvoiceController::class, 'convert'])->name('sales-invoices.convert');
         Route::delete('/sales-invoice-attachments/{attachment}', [SalesInvoiceController::class, 'destroyAttachment'])->name('sales-invoices.attachments.destroy');
         Route::resource('sales-invoices', SalesInvoiceController::class);
@@ -368,13 +433,33 @@ Route::middleware('auth')->group(function () {
         Route::resource('leads', LeadController::class);
 
         // Project Management
+        Route::get('/projects/work-queue', [ProjectCoordinatorQueueController::class, 'index'])->name('projects.work-queue.index');
+        Route::patch('/projects/{project}/work-queue/{step}', [ProjectCoordinatorQueueController::class, 'update'])->name('projects.work-queue.update');
+        Route::get('/projects/exceptions', [ProjectExceptionController::class, 'index'])->name('projects.exceptions.index');
+        Route::post('/projects/exceptions/refresh', [ProjectExceptionController::class, 'refresh'])->name('projects.exceptions.refresh');
+        Route::patch('/projects/exceptions/{exception}/acknowledge', [ProjectExceptionController::class, 'acknowledge'])->name('projects.exceptions.acknowledge');
+        Route::patch('/projects/exceptions/{exception}/escalate', [ProjectExceptionController::class, 'escalate'])->name('projects.exceptions.escalate');
         Route::post('/projects/quick', [ProjectController::class, 'quickStore'])->name('projects.quickStore');
-        Route::patch('/projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.status.update');
+        Route::post('/projects/{project}/workflow', [ProjectWorkflowController::class, 'start'])->name('projects.workflow.start');
+        Route::patch('/projects/{project}/workflow/report', [ProjectWorkflowController::class, 'report'])->name('projects.workflow.report');
+        Route::post('/projects/{project}/workflow/evaluate', [ProjectWorkflowController::class, 'evaluate'])->name('projects.workflow.evaluate');
+        Route::post('/projects/{project}/workflow/financial-closure/evaluate', [\App\Http\Controllers\ProjectFinancialClosureController::class, 'evaluate'])->name('projects.workflow.financial-closure.evaluate');
+        Route::post('/projects/{project}/workflow/financial-closure/close', [\App\Http\Controllers\ProjectFinancialClosureController::class, 'close'])->name('projects.workflow.financial-closure.close');
+        Route::post('/projects/{project}/workflow/financial-closure/close-outstanding', [\App\Http\Controllers\ProjectFinancialClosureController::class, 'closeOutstanding'])->name('projects.workflow.financial-closure.close-outstanding');
+        Route::post('/projects/{project}/workflow/financial-closure/reopen', [\App\Http\Controllers\ProjectFinancialClosureController::class, 'reopen'])->name('projects.workflow.financial-closure.reopen');
+        Route::post('/projects/{project}/products/{product}/quality-inspections', [ProjectQualityInspectionController::class, 'store'])->name('projects.quality-inspections.store');
+        Route::post('/projects/{project}/workflow/gates/{evaluation}/override', [ProjectWorkflowController::class, 'override'])->name('projects.workflow.gates.override');
+        Route::patch('/projects/{project}/workflow/overrides/{override}/revoke', [ProjectWorkflowController::class, 'revokeOverride'])->name('projects.workflow.overrides.revoke');
+        Route::patch('/projects/{project}/workflow/steps/{step}', [ProjectWorkflowController::class, 'updateStep'])->name('projects.workflow.steps.update');
+        Route::post('/projects/{project}/approvals', [ProjectApprovalController::class, 'store'])->name('projects.approvals.store');
+        Route::post('/projects/{project}/approvals/{approval}/versions', [ProjectApprovalController::class, 'addVersion'])->name('projects.approvals.versions.store');
+        Route::post('/projects/{project}/approvals/{approval}/override', [ProjectApprovalController::class, 'override'])->name('projects.approvals.override');
+        Route::patch('/projects/{project}/approvals/{approval}/override/revoke', [ProjectApprovalController::class, 'revokeOverride'])->name('projects.approvals.override.revoke');
 
         /* One route: a project product is created by the invoice or purchase
            document that mentions it (`App\Services\ProjectProducts`) and is not
-           deleted from the project — the row carries milestones, comments and
-           attachments, and the office edits only what the project owns. */
+           deleted from the project — the row carries comments and attachments,
+           and the office edits only what the project owns. */
         Route::put('/project-products/{projectProduct}', [ProjectProductController::class, 'update'])->name('projects.products.update');
 
         Route::post('/projects/{project}/comments', [ProjectCommentController::class, 'store'])->name('projects.comments.store');
@@ -390,10 +475,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/project-tracking/{trackingUpdate}', [ProjectTrackingController::class, 'destroy'])->name('projects.tracking.destroy');
 
     
-        Route::post('/projects/{project}/milestones', [ProjectMilestoneController::class, 'store'])->name('projects.milestones.store');
-        Route::post('/projects/{project}/milestones/defaults', [ProjectMilestoneController::class, 'generateDefaults'])->name('projects.milestones.defaults');
-        Route::patch('/project-milestones/{milestone}', [ProjectMilestoneController::class, 'update'])->name('projects.milestones.update');
-        Route::delete('/project-milestones/{milestone}', [ProjectMilestoneController::class, 'destroy'])->name('projects.milestones.destroy');
     
         /* Feedback Management.
 
@@ -444,6 +525,10 @@ Route::middleware('auth')->group(function () {
            here, revoked here, and the statement itself is rebuilt from the ledger
            on every open — never stored, so it cannot go stale. */
         Route::get('/cashflows/statements', [PartyStatementController::class, 'index'])->name('cashflows.statements');
+        Route::get('/cashflows/statements/{partyType}/{party}/print', [PartyStatementController::class, 'print'])
+            ->whereIn('partyType', ['client', 'vendor'])
+            ->whereNumber('party')
+            ->name('cashflows.statements.print');
         Route::get('/cashflows/statements/{partyType}/{party}/pdf', [PartyStatementController::class, 'pdf'])
             ->whereIn('partyType', ['client', 'vendor'])
             ->whereNumber('party')
@@ -522,6 +607,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/cashflows/{cashflow}/expense-statement', [CashflowController::class, 'expenseStatement'])->name('cashflows.expenseStatement');
         Route::post('/cashflows/{cashflow}/duplicate', [CashflowController::class, 'duplicate'])->name('cashflows.duplicate');
         Route::patch('/cashflows/{cashflow}/status', [CashflowController::class, 'updateStatus'])->name('cashflows.status');
+        Route::post('/cashflows/{cashflow}/allocations', [CashflowController::class, 'storeAllocation'])->name('cashflows.allocations.store');
+        Route::put('/cashflows/{cashflow}/allocations/{allocation}', [CashflowController::class, 'updateAllocation'])->name('cashflows.allocations.update');
+        Route::delete('/cashflows/{cashflow}/allocations/{allocation}', [CashflowController::class, 'destroyAllocation'])->name('cashflows.allocations.destroy');
         Route::resource('cashflows', CashflowController::class);
     });
 
@@ -605,6 +693,7 @@ Route::prefix('client-portal')->name('client-portal.')->group(function () {
         Route::get('/projects/{project}', [ClientPortalProjectController::class, 'show'])->name('projects.show');
         Route::get('/projects/{project}/attachments/{attachment}', [ClientPortalProjectController::class, 'attachmentFile'])->name('projects.attachments.file');
         Route::post('/projects/{project}/comments', [ClientPortalProjectController::class, 'storeComment'])->name('projects.comments.store');
+        Route::post('/projects/{project}/approvals/{approval}/decision', [ClientPortalProjectController::class, 'decideApproval'])->name('projects.approvals.decision');
         Route::post('/projects/{project}/documents', [ClientPortalProjectController::class, 'upload'])->name('projects.documents.store');
 
         Route::get('/shipments', [ClientPortalShipmentController::class, 'index'])->name('shipments.index');
@@ -650,5 +739,19 @@ Route::prefix('client-portal')->name('client-portal.')->group(function () {
         Route::get('/notifications', [ClientPortalNotificationController::class, 'index'])->name('notifications.index');
         Route::patch('/notifications/{notification}/read', [ClientPortalNotificationController::class, 'markRead'])->name('notifications.read');
         Route::patch('/notifications/read-all', [ClientPortalNotificationController::class, 'markAllRead'])->name('notifications.readAll');
+    });
+});
+
+Route::prefix('vendor-portal')->name('vendor-portal.')->group(function () {
+    Route::get('/login', [VendorPortalAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [VendorPortalAuthController::class, 'login'])->middleware('throttle:10,1')->name('login.submit');
+    Route::middleware('vendor.portal')->group(function () {
+        Route::post('/logout', [VendorPortalAuthController::class, 'logout'])->name('logout');
+        Route::get('/change-password', [VendorPortalAuthController::class, 'editPassword'])->name('password.edit');
+        Route::post('/change-password', [VendorPortalAuthController::class, 'updatePassword'])->name('password.update');
+        Route::get('/', [VendorPortalController::class, 'dashboard'])->name('dashboard');
+        Route::get('/purchases/{purchaseInvoice}', [VendorPortalController::class, 'purchase'])->name('purchases.show');
+        Route::post('/purchases/{purchaseInvoice}/updates', [VendorPortalController::class, 'storeUpdate'])
+            ->middleware('throttle:20,1')->name('purchases.updates.store');
     });
 });

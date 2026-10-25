@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -61,6 +62,10 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'access_profile',
+        'permissions',
+        'permissions_updated_at',
+        'permissions_updated_by',
         'mobile',
         'department',
         'designation',
@@ -92,6 +97,8 @@ class User extends Authenticatable
             'date_of_joining'   => 'date',
             'date_of_birth'     => 'date',
             'password'          => 'hashed',
+            'permissions' => 'array',
+            'permissions_updated_at' => 'datetime',
         ];
     }
 
@@ -137,6 +144,22 @@ class User extends Authenticatable
     public function roleLabel(): string
     {
         return self::ROLES[$this->role] ?? self::ROLES[self::DEFAULT_ROLE];
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        return app(\App\Services\PermissionMatrix::class)->allows($this, $permission);
+    }
+
+    public function accessProfileLabel(): string
+    {
+        if ($this->isEmployee()) return 'Employee self-service';
+        return ($this->access_profile ?: 'full') === 'full' ? 'Full office access' : 'Custom office access';
+    }
+
+    public function permissionsUpdater()
+    {
+        return $this->belongsTo(self::class, 'permissions_updated_by');
     }
 
     public function employmentTypeLabel(): ?string
@@ -211,18 +234,17 @@ class User extends Authenticatable
     /** First two initials from name */
     public function getInitialsAttribute(): string
     {
-        $words = explode(' ', trim($this->name));
-        $initials = strtoupper(substr($words[0], 0, 1));
-        if (isset($words[1])) {
-            $initials .= strtoupper(substr($words[1], 0, 1));
-        }
-        return $initials;
+        $words = preg_split('/\s+/u', trim((string) $this->name), -1, PREG_SPLIT_NO_EMPTY);
+
+        return mb_strtoupper(implode('', array_map(
+            fn ($word) => mb_substr($word, 0, 1), array_slice($words ?: ['User'], 0, 2)
+        )));
     }
 
-    /** Full URL to avatar or null */
+    /** Public-disk URL to avatar or null; no dependency on the configured app host. */
     public function getAvatarUrlAttribute(): ?string
     {
-        return $this->avatar ? asset('storage/' . $this->avatar) : null;
+        return $this->avatar ? Storage::disk('public')->url($this->avatar) : null;
     }
 
     public function assignedTasks()

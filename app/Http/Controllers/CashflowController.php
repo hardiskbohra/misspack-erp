@@ -6,14 +6,18 @@ use App\Helpers\DateRanges;
 use App\Models\CashflowAccount;
 use App\Models\CashflowCategory;
 use App\Models\CashflowAttachment;
+use App\Models\CashflowAllocation;
 use App\Models\CashflowEntry;
 use App\Models\CashflowMasterOption;
+use App\Models\Project;
 use App\Models\SavedView;
 use App\Models\User;
+use App\Services\CashflowAllocations;
 use App\Services\CashflowAnalysis;
 use App\Services\CashflowFilters;
 use App\Services\CashflowPickers;
 use App\Services\CashflowLedger;
+use App\Services\CashflowVendorPaymentSync;
 use App\Services\SavedViews;
 use App\Services\VendorPaymentCashflowSync;
 use Carbon\Carbon;
@@ -23,6 +27,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CashflowController extends Controller
@@ -124,14 +129,32 @@ class CashflowController extends Controller
 
     public function create(Request $request): View
     {
+        $project = Project::query()->with('client')->find((int) $request->query('project_id'));
+        $direction = in_array($request->query('transaction_type'), ['credit', 'debit'], true)
+            ? $request->query('transaction_type')
+            : 'debit';
         $entry = new CashflowEntry([
             'entry_date' => now()->toDateString(),
-            'transaction_type' => 'debit',
-            'currency' => 'INR',
+            'transaction_type' => $direction,
+            'currency' => $project?->currency ?: 'INR',
             'accounting_status' => 'pending',
             'payment_mode' => 'neft',
-            'related_party_type' => 'other',
+            'related_party_type' => $project ? 'client' : 'other',
+            'client_id' => $project?->client_id,
+            'project_id' => $project?->id,
+            'particular' => $project ? 'Project receipt · '.$project->project_number : null,
         ]);
+
+        /* Opened from a vendor record: the payment is theirs, and the vendor
+           ledger row follows it once it is saved. */
+        $vendor = $request->query('vendor_id')
+            ? \App\Models\Vendor::query()->find((int) $request->query('vendor_id'))
+            : null;
+        if ($vendor && ! $project) {
+            $entry->vendor_id = $vendor->id;
+            $entry->related_party_type = 'vendor';
+            $entry->related_party_name = $vendor->vendor_name;
+        }
 
         $fromId = (int) $request->query('from');
         if ($fromId > 0) {
@@ -148,6 +171,10 @@ class CashflowController extends Controller
                 $entry->accounting_status = 'pending';
                 $entry->bank_reference_number = null;
                 $entry->entry_date = now()->toDateString();
+                if (Schema::hasTable('cashflow_allocations')) {
+                    $source->load('allocations');
+                    $entry->setRelation('allocations', $source->allocations);
+                }
             }
         }
 
@@ -156,17 +183,27 @@ class CashflowController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data = CashflowEntry::alignPartyType($this->validatedData($request));
+        $data = $this->validatedData($request);
+        $allocationRows = $data['allocations'] ?? [];
+        unset($data['allocations']);
+        $data = CashflowEntry::alignPartyType($data);
         $data = $this->normalizeAmounts($data);
         $data['created_by'] = Auth::id();
 
-        $entry = DB::transaction(function () use ($data) {
+        $entry = DB::transaction(function () use ($data, $allocationRows) {
             $entry = CashflowEntry::create($data);
+            app(CashflowAllocations::class)->sync($entry, $allocationRows);
+            /* Money paid to a linked vendor is a vendor-ledger payment too, or
+               the vendor record and the statement never hear about it. */
+            app(CashflowVendorPaymentSync::class)->sync($entry);
             $this->recalculateAccountLedger($entry->account_id);
             return $entry;
         });
 
-        return redirect()->route('cashflows.show', $entry)->with('success', 'Cashflow entry created successfully.');
+        $returnTo = app(\App\Services\ProjectWorkflowReturn::class)->from($request);
+        return $returnTo
+            ? redirect()->to($returnTo)->with('success', 'Receipt saved. Workflow sources were recalculated.')
+            : redirect()->route('cashflows.show', $entry)->with('success', 'Cashflow entry created successfully.');
     }
 
     public function quickStore(Request $request): RedirectResponse
@@ -208,6 +245,7 @@ class CashflowController extends Controller
 
         $entry = DB::transaction(function () use ($data) {
             $entry = CashflowEntry::create($data);
+            app(CashflowVendorPaymentSync::class)->sync($entry);
             $this->recalculateAccountLedger($entry->account_id);
             return $entry;
         });
@@ -218,6 +256,11 @@ class CashflowController extends Controller
     public function show(Request $request, CashflowEntry $cashflow): View
     {
         $with = ['account', 'category', 'creator', 'attachments.uploader', 'employee', 'project', 'salesInvoice'];
+        if (Schema::hasTable('cashflow_allocations')) {
+            $with[] = 'allocations.project';
+            $with[] = 'allocations.salesInvoice';
+            $with[] = 'allocations.purchaseInvoice';
+        }
         if ($this->clientModelAvailable()) $with[] = 'client';
         if ($this->vendorModelAvailable()) $with[] = 'vendor';
         if (Schema::hasTable('office_services')) $with[] = 'officeService';
@@ -242,6 +285,7 @@ class CashflowController extends Controller
 
         return view('cashflows.show', array_merge($this->sharedData(), [
             'entry' => $cashflow,
+            'allocations' => $cashflow->relationLoaded('allocations') ? $cashflow->allocations : collect(),
             'tab' => $tab,
             'tabs' => $tabs,
             'tabCounts' => [
@@ -260,6 +304,7 @@ class CashflowController extends Controller
                 ->limit(50)
                 ->get(),
             'linkedVendorPayment' => app(VendorPaymentCashflowSync::class)->linkedPaymentFor($cashflow),
+            'derivedVendorPayment' => app(VendorPaymentCashflowSync::class)->derivedPaymentFor($cashflow),
             'linkedShipmentCost' => app(\App\Services\ShipmentCostCashflowSync::class)->linkedCostFor($cashflow),
         ]));
     }
@@ -322,22 +367,116 @@ class CashflowController extends Controller
         return back()->with('success', 'Status set to '.$cashflow->statusLabel().'.');
     }
 
+    public function storeAllocation(Request $request, CashflowEntry $cashflow): RedirectResponse
+    {
+        $rows = $cashflow->allocations()->get()->map(fn (CashflowAllocation $allocation) => $this->allocationRow($allocation))->all();
+        /* Preserve an untouched legacy single link when the first detail-page
+           allocation upgrades this entry to the multi-allocation structure. */
+        if ($rows === [] && ($cashflow->project_id || $cashflow->sales_invoice_id)) {
+            $rows[] = [
+                'project_id' => $cashflow->project_id,
+                'sales_invoice_id' => $cashflow->sales_invoice_id,
+                'purchase_invoice_id' => null,
+                'amount' => $cashflow->amountMoved(),
+                'document_amount' => $cashflow->sales_invoice_id ? $cashflow->amountMoved() : null,
+                'note' => null,
+            ];
+        }
+        $rows[] = $this->validatedAllocation($request);
+
+        DB::transaction(function () use ($cashflow, $rows) {
+            app(CashflowAllocations::class)->sync($cashflow, $rows);
+            /* A bill in the vendor's currency gives the ledger row its
+               denomination; without one it stays a rupee row. */
+            app(CashflowVendorPaymentSync::class)->sync($cashflow);
+        });
+
+        return back()->with('success', 'Allocation added successfully.');
+    }
+
+    public function updateAllocation(Request $request, CashflowEntry $cashflow, CashflowAllocation $allocation): RedirectResponse
+    {
+        $this->assertAllocationOwner($cashflow, $allocation);
+        $replacement = $this->validatedAllocation($request);
+        $rows = $cashflow->allocations()->get()->map(
+            fn (CashflowAllocation $row) => $row->is($allocation) ? $replacement : $this->allocationRow($row)
+        )->all();
+
+        DB::transaction(function () use ($cashflow, $rows) {
+            app(CashflowAllocations::class)->sync($cashflow, $rows);
+            app(CashflowVendorPaymentSync::class)->sync($cashflow);
+        });
+
+        return back()->with('success', 'Allocation updated successfully.');
+    }
+
+    public function destroyAllocation(CashflowEntry $cashflow, CashflowAllocation $allocation): RedirectResponse
+    {
+        $this->assertAllocationOwner($cashflow, $allocation);
+        $rows = $cashflow->allocations()->where('id', '!=', $allocation->id)->get()
+            ->map(fn (CashflowAllocation $row) => $this->allocationRow($row))->all();
+
+        DB::transaction(function () use ($cashflow, $rows) {
+            app(CashflowAllocations::class)->sync($cashflow, $rows);
+            /* The denomination came from the allocation; losing it puts the
+               ledger row back in rupees. */
+            app(CashflowVendorPaymentSync::class)->sync($cashflow);
+        });
+
+        return back()->with('success', 'Allocation deleted successfully.');
+    }
+
+    private function validatedAllocation(Request $request): array
+    {
+        return $request->validate([
+            'project_id' => ['nullable', 'integer', 'exists:projects,id'],
+            'sales_invoice_id' => ['nullable', 'integer', 'exists:sales_invoices,id'],
+            'purchase_invoice_id' => ['nullable', 'integer', 'exists:purchase_invoices,id'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'document_amount' => ['nullable', 'numeric', 'min:0.01'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+    }
+
+    private function allocationRow(CashflowAllocation $allocation): array
+    {
+        return $allocation->only([
+            'project_id', 'sales_invoice_id', 'purchase_invoice_id',
+            'amount', 'document_amount', 'note',
+        ]);
+    }
+
+    private function assertAllocationOwner(CashflowEntry $cashflow, CashflowAllocation $allocation): void
+    {
+        abort_unless((int) $allocation->cashflow_entry_id === (int) $cashflow->id, 404);
+    }
+
     public function edit(CashflowEntry $cashflow): View
     {
+        if (Schema::hasTable('cashflow_allocations')) {
+            $cashflow->load('allocations');
+        }
+
         return view('cashflows.form', array_merge($this->sharedData(), [
             'entry' => $cashflow,
             'linkedVendorPayment' => app(VendorPaymentCashflowSync::class)->linkedPaymentFor($cashflow),
+            'derivedVendorPayment' => app(VendorPaymentCashflowSync::class)->derivedPaymentFor($cashflow),
         ]));
     }
 
     public function update(Request $request, CashflowEntry $cashflow): RedirectResponse
     {
-        $data = CashflowEntry::alignPartyType($this->validatedData($request));
+        $data = $this->validatedData($request);
+        $allocationRows = $data['allocations'] ?? [];
+        unset($data['allocations']);
+        $data = CashflowEntry::alignPartyType($data);
         $data = $this->normalizeAmounts($data);
         $oldAccountId = $cashflow->account_id;
 
-        DB::transaction(function () use ($cashflow, $data, $oldAccountId) {
+        DB::transaction(function () use ($cashflow, $data, $allocationRows, $oldAccountId) {
             $cashflow->update($data);
+            app(CashflowAllocations::class)->sync($cashflow, $allocationRows);
+            app(CashflowVendorPaymentSync::class)->sync($cashflow);
             $this->recalculateAccountLedger($oldAccountId);
             $this->recalculateAccountLedger($cashflow->account_id);
         });
@@ -347,28 +486,33 @@ class CashflowController extends Controller
 
     public function destroy(CashflowEntry $cashflow): RedirectResponse
     {
-        $accountId = $cashflow->account_id;
-        $detached = DB::transaction(function () use ($cashflow, $accountId) {
+        $result = DB::transaction(function () use ($cashflow) {
+            $cashflow = CashflowEntry::query()->lockForUpdate()->findOrFail($cashflow->id);
+            $reversed = app(VendorPaymentCashflowSync::class)->reverseForDeletion($cashflow);
+            /* A ledger row that this entry created goes with it — removed while
+               the link it is found by still exists. */
+            app(CashflowVendorPaymentSync::class)->remove($cashflow);
             // Never leave a vendor payment or shipment cost pointing at a deleted entry.
             $detached = app(VendorPaymentCashflowSync::class)->detach($cashflow);
             $detached += app(\App\Services\ShipmentCostCashflowSync::class)->detach($cashflow);
-            $cashflow->delete();
-            $this->recalculateAccountLedger($accountId);
+            app(CashflowAllocations::class)->sync($cashflow, []);
+            if (! $cashflow->delete()) throw ValidationException::withMessages(['entry' => 'The cashflow entry could not be deleted. No payment reversal was saved.']);
+            $this->recalculateAccountLedger($cashflow->account_id);
 
-            return $detached;
+            return ['reversed' => $reversed, 'detached' => $detached];
         });
 
         return redirect()->route('cashflows.index')->with(
             'success',
-            $detached
-                ? 'Cashflow entry deleted. The linked vendor payment / shipment cost was unlinked — set its paid account again if the payment still stands.'
-                : 'Cashflow entry deleted successfully.'
+            'Cashflow entry deleted successfully.'
+                .($result['reversed'] ? ' '.$result['reversed'].' linked '.\Illuminate\Support\Str::plural('vendor payment', $result['reversed']).' cancelled; linked purchase balances recalculated.' : '')
+                .($result['detached'] ? ' Remaining vendor / shipment cost links were detached.' : '')
         );
     }
 
     /**
      * One action across the ledger rows ticked on the list: change accounting
-     * status, or delete. Deletes unlink vendor / shipment mirrors first and
+     * status, or delete. Deletes reverse linked vendor payments, detach shipment mirrors and
      * rebuild the affected account ledgers, same as a single-row delete.
      */
     public function bulk(Request $request): RedirectResponse
@@ -381,6 +525,7 @@ class CashflowController extends Controller
 
         $entries = CashflowEntry::query()->whereIn('id', $data['ids'])->get();
         $done = 0;
+        $reversed = 0;
         $statusMap = [
             'mark_pending' => 'pending',
             'mark_booked' => 'booked',
@@ -388,7 +533,7 @@ class CashflowController extends Controller
             'mark_disputed' => 'disputed',
         ];
 
-        DB::transaction(function () use ($data, $entries, $statusMap, &$done) {
+        DB::transaction(function () use ($data, $entries, $statusMap, &$done, &$reversed) {
             if (isset($statusMap[$data['action']])) {
                 $status = $statusMap[$data['action']];
                 foreach ($entries as $entry) {
@@ -405,12 +550,16 @@ class CashflowController extends Controller
 
             $accountIds = [];
             foreach ($entries as $entry) {
+                $entry = CashflowEntry::query()->lockForUpdate()->findOrFail($entry->id);
+                $reversed += app(VendorPaymentCashflowSync::class)->reverseForDeletion($entry);
+                app(CashflowVendorPaymentSync::class)->remove($entry);
                 app(VendorPaymentCashflowSync::class)->detach($entry);
                 app(\App\Services\ShipmentCostCashflowSync::class)->detach($entry);
+                app(CashflowAllocations::class)->sync($entry, []);
                 if ($entry->account_id) {
                     $accountIds[$entry->account_id] = true;
                 }
-                $entry->delete();
+                if (! $entry->delete()) throw ValidationException::withMessages(['entry' => 'A cashflow entry could not be deleted. No payment reversals were saved.']);
                 $done++;
             }
 
@@ -423,6 +572,7 @@ class CashflowController extends Controller
             'success',
             $done.' '.\Illuminate\Support\Str::plural('entry', $done).' — '
                 .mb_strtolower(self::BULK_ACTIONS[$data['action']]).' done.'
+                .($reversed ? ' '.$reversed.' linked '.\Illuminate\Support\Str::plural('vendor payment', $reversed).' cancelled; linked purchase balances recalculated.' : '')
         );
     }
 
@@ -513,6 +663,13 @@ class CashflowController extends Controller
             'related_party_type' => ['required', Rule::in($this->masterKeys('related_party_type', array_keys(CashflowEntry::relatedPartyOptions())))],
             'related_party_name' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
+            'allocations' => ['nullable', 'array', 'max:100'],
+            'allocations.*.project_id' => ['nullable', 'integer', 'exists:projects,id'],
+            'allocations.*.sales_invoice_id' => ['nullable', 'integer', 'exists:sales_invoices,id'],
+            'allocations.*.purchase_invoice_id' => ['nullable', 'integer', 'exists:purchase_invoices,id'],
+            'allocations.*.amount' => ['nullable', 'numeric', 'min:0.01'],
+            'allocations.*.document_amount' => ['nullable', 'numeric', 'min:0.01'],
+            'allocations.*.note' => ['nullable', 'string', 'max:500'],
         ]);
     }
 
@@ -835,7 +992,10 @@ class CashflowController extends Controller
             /* The paperclip on a row is this count, fetched with the page
                instead of one query per row. Only the list asks for relations,
                so the reports and the chip counts never pay for it. */
-            ->when($withRelations, fn ($q) => $q->withCount('attachments'));
+            ->when($withRelations, fn ($q) => $q->withCount('attachments'))
+            ->when($withRelations && Schema::hasTable('cashflow_allocations'), fn ($q) => $q
+                ->withCount('allocations')
+                ->withSum('allocations as allocated_amount', 'amount'));
 
         return app(CashflowFilters::class)->apply($query, $filters);
     }

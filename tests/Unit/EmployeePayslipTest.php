@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Helpers\CommonHelper;
 use App\Models\CashflowEntry;
 use App\Models\EmployeePayslip;
+use App\Models\Organisation;
 use App\Models\User;
 use App\Services\EmployeeProfile;
 use App\Services\PayslipDocument;
@@ -32,6 +33,15 @@ use Tests\TestCase;
  */
 class EmployeePayslipTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // This is an in-memory document fixture, not an organisation repository test.
+        $issuer = Organisation::current();
+        $issuer->setRelation('addresses', new Collection());
+        $issuer->setRelation('banks', new Collection());
+    }
+
     /** A person, as the record holds them. */
     private function person(array $extra = []): User
     {
@@ -188,6 +198,10 @@ class EmployeePayslipTest extends TestCase
         /* The moment each was built is the one thing that cannot be equal. */
         unset($app['slip']['generated_at'], $pdf['slip']['generated_at']);
 
+        // Independent reads may create equal Carbon dates with different object identities.
+        $this->assertEquals($app['payment']['paid_on'], $pdf['payment']['paid_on']);
+        $app['payment']['paid_on'] = $app['payment']['paid_on']?->toDateString();
+        $pdf['payment']['paid_on'] = $pdf['payment']['paid_on']?->toDateString();
         foreach (['slip', 'issuer', 'employee', 'attendance', 'earnings', 'deductions', 'totals', 'payment'] as $key) {
             $this->assertSame($app[$key], $pdf[$key], 'the paper and the page must agree about '.$key);
         }

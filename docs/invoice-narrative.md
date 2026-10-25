@@ -23,7 +23,7 @@ fix up to the roadmap.
 
 **Fix (`950f073`):**
 - Rewrote the migration: idempotent `Schema::hasColumn` guards, no duplicate column, safe `AFTER shipment_type` position; `down()` no longer drops `shipment_type`.
-- `ProjectController@show`: eager-loads `shipments` only when the column exists (same guarded pattern as `milestones`/`cashflowEntries`), falls back to an empty collection so the page renders on older DBs.
+- `ProjectController@show`: eager-loads `shipments` only when the column exists (same guarded pattern as `workflow controls`/`cashflowEntries`), falls back to an empty collection so the page renders on older DBs.
 - `ClientPortalProjectController@show`: same guard + fallback.
 
 **On your server:** after deploying, run `php artisan migrate`. If `2026_07_17_140210_add_label_to_shipments_table` is already listed in the `migrations` table (previously force-skipped), delete that row first and migrate again — the repaired migration is safe to re-run.
@@ -47,9 +47,7 @@ Verified with a jsdom harness against the real assets: container `flexBasis: 150
 |---|-------|-----|
 | a | Invoice items not inheriting input/select2 CSS (incl. new rows) | `sales-invoices.js` row template now emits `master-*` field classes; compact `.master-items-table` rules added in `sales-invoices.css` (matches `.master-product-select` sizing, 44px controls) |
 | b | Invoice list — top space above dates | date cell markup rebuilt (no stray `<br>`/block spans); cell is now a simple flex column |
-| c | Milestone update modal not scrollable | `.pmile-modal-card > form` made a flex column, `.pmile-modal-body` gets `flex:1 1 auto; min-height:0`, head/footer `flex-shrink:0` |
 | d | Confirm button said "Delete" on Generate-Timeline | `MasterAlert` honours `data-confirm-text` + `data-confirm-danger` (`confirmDanger()`); Generate form now sets `data-confirm-text="Generate"` |
-| e | Milestone view redesign | Rewritten to the stepper/card design (node + connector + card: title, description, badges, progress, planned/actual dates, owner, notes); **one shared partial** (`projects/partials/milestone-product-block.blade.php`) used by admin and client portal — portal is read-only (no edit button, owner name only when eager-loaded → no N+1, no admin-name leak); superseded gen-2 timeline CSS/markup deleted |
 | f | Light/dark theme consistency | New `--mc-*` surface/text/border token set (light + dark) in `app-layout.css`; `--master-*` tokens re-mapped for dark in `master.css`; ~510 hard-coded light colours tokenized across **all** admin master-\* + module CSS (projects, sales-invoices, cashflows, lead-quotes, leads, clients, products, shipments, dashboard, tasks, users, vendors, price-calculator, core). Badge pastels intentionally stay in both themes. Login/public/portal/print pages untouched by design |
 | g | Bell badge jumps on hover | `position:relative` added to `.topbar-btn` so the absolutely-positioned badge has a stable containing block |
 
@@ -72,21 +70,6 @@ New central layer `public/assets/css/responsive.css`, loaded **last** (after `@s
 Global rules: no text auto-scaling, images capped to their container, no tap-highlight flash, pagination wraps.
 
 Audit basis: full `@media` inventory across all 37 stylesheets + view markup checks (table wraps, tab containers, pagination, kanban, modals, drawers). Module stylesheets (master-*, dashboard, tasks, projects, sales-invoices, cashflows, leads, clients, vendors, users, public/login pages) already carried their own grids/MQs; this layer covers only the confirmed gaps. Preview: `/preview/index.html` + `/preview/form.html` (resize the window or use devtools device mode).
-
-
-## Part 8 — Milestone editor aligned to the shared modal theme (4ae83de)
-
-The **Edit Milestone** dialog was the last modal in the app still built on a one-off class set (`.pmile-modal*`) — its own backdrop, radius (24px), close button, padding scale and surface token — so it did not match the dialogs used everywhere else (and its surface came from a bare `var()` that renders transparent whenever the token is unavailable).
-
-It is now built on the **same shared component as every other module**:
-
-- **Markup**: `.master-modal` / `.master-modal-card` / `-header` / `-body` / `-footer`, `.master-modal-close`, `data-close-modal` — identical vocabulary to tasks, clients, vendors, shipments, products, leads and the project page's own Add/Edit Product modals.
-- **Behaviour**: open/close goes through `window.MasterModal` (app-layout.js), so backdrop click, Escape, the × button and the body scroll-lock behave exactly like every other dialog.
-- **Delete**: now the standard themed confirmation modal (440px card, 🗑 header, `master-btn-danger` submit) instead of an inline link under the footer — the same pattern as tasks/clients/vendors delete.
-- **Sizing**: editor card widened to 880px via CSS scoped to `#editMilestoneModal`; phones keep the shared bottom-sheet (`≤767px`) and full-bleed (`≤480px`) rules from `responsive.css`.
-- **Cleanup**: removed the dead `.pmile-modal*` CSS from `projects.css` and the unused copy in `client-portal-project-show.css` (the portal milestones tab is read-only — it never renders the editor). Net −170 lines of duplicated modal CSS.
-
-Verified in the review deck (`/preview/project-milestones.html`): modal opens from ✎ with prefilled values, closes via ×/Cancel/Escape/backdrop, locks body scroll, and hands off to the delete confirmation; 47/47 DOM checks pass.
 
 
 ## Part 9 — Collapsed sidebar keeps its menu names (bb86f63)

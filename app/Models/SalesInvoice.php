@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class SalesInvoice extends Model
@@ -24,20 +25,28 @@ class SalesInvoice extends Model
         'client_company_name', 'client_brand_name', 'client_contact_name', 'client_email',
         'client_mobile', 'client_gstin', 'client_pan', 'billing_address', 'billing_city',
         'billing_state', 'billing_country', 'billing_pincode', 'shipping_address', 'shipping_city',
-        'shipping_state', 'shipping_country', 'shipping_pincode', 'payment_terms', 'delivery_terms',
+        'shipping_state', 'shipping_country', 'shipping_pincode', 'payment_terms', 'advance_required',
+        'advance_percentage', 'balance_before_dispatch', 'payment_tolerance', 'delivery_terms',
         'dispatch_terms', 'transport_mode', 'sales_person', 'subtotal', 'discount_type',
         'discount_value', 'discount_amount', 'taxable_amount', 'cgst_amount', 'sgst_amount',
         'igst_amount', 'freight_amount', 'packing_amount', 'other_charges', 'round_off',
         'total_amount', 'amount_paid', 'balance_amount', 'amount_in_words', 'terms_conditions',
         'notes', 'internal_notes', 'show_client_portal', 'sent_at', 'accepted_at', 'cancelled_at',
-        'created_by',
+        'created_by', 'source_proforma_id', 'conversion_base_amount', 'conversion_total_amount',
+        'cash_converted_base_amount', 'cash_converted_total_amount',
     ];
 
     protected $casts = [
+        'conversion_base_amount' => 'decimal:2', 'conversion_total_amount' => 'decimal:2',
+        'cash_converted_base_amount' => 'decimal:2', 'cash_converted_total_amount' => 'decimal:2',
         'invoice_date' => 'date',
         'due_date' => 'date',
         'valid_until' => 'date',
         'po_date' => 'date',
+        'advance_required' => 'boolean',
+        'advance_percentage' => 'decimal:2',
+        'balance_before_dispatch' => 'boolean',
+        'payment_tolerance' => 'decimal:2',
         'subtotal' => 'decimal:2',
         'exchange_rate' => 'decimal:6',
         'discount_value' => 'decimal:2',
@@ -68,6 +77,70 @@ class SalesInvoice extends Model
         });
     }
 
+    public const RECEIVABLE_TOTAL_SQL = '(sales_invoices.total_amount - coalesce(sales_invoices.cash_converted_total_amount, 0))';
+
+    public function isCash(): bool
+    {
+        return $this->invoice_type === 'cash';
+    }
+
+    public function isConvertedCash(): bool
+    {
+        return $this->isCash() && (int) $this->source_proforma_id > 0;
+    }
+
+    public function deleteConfirmation(): string
+    {
+        return $this->isConvertedCash()
+            ? 'Delete '.$this->invoice_number.' and reverse its cash conversion? The converted value, including the PI’s original GST, and all opening credit/receipts will return to the original PI. Bank balances will not change.'
+            : 'Delete '.$this->invoice_number.'?';
+    }
+
+    public function conversionSource()
+    {
+        return $this->belongsTo(self::class, 'source_proforma_id');
+    }
+
+    public function cashInvoices()
+    {
+        return $this->hasMany(self::class, 'source_proforma_id')->where('invoice_type', 'cash');
+    }
+
+    public function hasMonetaryConversions(): bool
+    {
+        return (float) $this->cash_converted_base_amount > 0 || (int) $this->source_proforma_id > 0;
+    }
+
+    /** Original document less the gross value already replaced by cash invoices. */
+    public function receivableTotal(): float
+    {
+        return round(max((float) $this->total_amount - (float) $this->cash_converted_total_amount, 0), 2);
+    }
+
+    public function cashConvertibleTotal(): float
+    {
+        return round(max((float) $this->total_amount - (float) $this->cgst_amount - (float) $this->sgst_amount - (float) $this->igst_amount, 0), 2);
+    }
+
+    public function cashConvertibleRemaining(): float
+    {
+        return round(max($this->cashConvertibleTotal() - (float) $this->cash_converted_base_amount, 0), 2);
+    }
+
+    /** All monetary claims/credits continuing a baseline PI, each exactly once. */
+    public function settlementDocuments(): \Illuminate\Support\Collection
+    {
+        if ($this->invoice_type === 'proforma' && $this->hasMonetaryConversions()) {
+            $documents = self::where('source_proforma_id', $this->id)->orderBy('id')->get();
+            if (! $this->isSuperseded()) {
+                $documents->push($this);
+            }
+            return $documents;
+        }
+
+        return collect([$this->isSuperseded() ? $this->convertedInvoice : $this])->filter();
+    }
+
     public function items()
     {
         return $this->hasMany(SalesInvoiceItem::class)->orderBy('sort_order')->orderBy('id');
@@ -76,6 +149,11 @@ class SalesInvoice extends Model
     public function payments()
     {
         return $this->hasMany(CashflowEntry::class)->orderBy('entry_date');
+    }
+
+    public function cashflowAllocations()
+    {
+        return $this->hasMany(CashflowAllocation::class, 'sales_invoice_id')->orderBy('id');
     }
 
     public function attachments()
@@ -139,10 +217,10 @@ class SalesInvoice extends Model
             ->orWhereNull('converted_invoice_id'));
     }
 
-    /** Sales: tax invoices, cancellations aside. A proforma is never sales. */
+    /** Sales: tax and cash invoices, cancellations aside. A proforma is never sales. */
     public function scopeSales(Builder $query): Builder
     {
-        return $query->where('invoice_type', 'tax')->where('status', '!=', 'cancelled');
+        return $query->whereIn('invoice_type', ['tax', 'cash'])->where('status', '!=', 'cancelled');
     }
 
     /** Potential revenue: proformas no tax invoice has been raised from yet. */
@@ -178,7 +256,9 @@ class SalesInvoice extends Model
      * invoice uses the method. Two spellings of one rule is how the ledger and
      * the statement started disagreeing in the first place.
      */
-    public const RECEIVED_SQL = '(coalesce(sales_invoices.amount_paid, 0) + (select coalesce(sum(credit_amount - debit_amount), 0) from cashflow_entries where cashflow_entries.sales_invoice_id = sales_invoices.id))';
+    public const RECEIVED_SQL = '(coalesce(sales_invoices.amount_paid, 0)'
+        .' + (select coalesce(sum(credit_amount - debit_amount), 0) from cashflow_entries where cashflow_entries.sales_invoice_id = sales_invoices.id)'
+        .' + (select coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) from cashflow_allocations join cashflow_entries on cashflow_entries.id = cashflow_allocations.cashflow_entry_id where cashflow_allocations.sales_invoice_id = sales_invoices.id))';
 
     /**
      * The receipts filed against this invoice in the ledger.
@@ -192,12 +272,14 @@ class SalesInvoice extends Model
         if ($this->relationLoaded('payments')) {
             return round((float) $this->payments->sum(
                 fn ($payment) => (float) $payment->credit_amount - (float) $payment->debit_amount
-            ), 2);
+            ) + $this->allocatedReceived(), 2);
         }
 
         if (array_key_exists('received_credit', $this->attributes) || array_key_exists('received_debit', $this->attributes)) {
             return round(
-                (float) ($this->attributes['received_credit'] ?? 0) - (float) ($this->attributes['received_debit'] ?? 0),
+                (float) ($this->attributes['received_credit'] ?? 0)
+                    - (float) ($this->attributes['received_debit'] ?? 0)
+                    + $this->allocatedReceived(),
                 2
             );
         }
@@ -207,8 +289,37 @@ class SalesInvoice extends Model
         }
 
         return round((float) ($this->payments()
+            ->reorder()
             ->selectRaw('coalesce(sum(credit_amount - debit_amount), 0) as received')
-            ->first()?->received ?? 0), 2);
+            ->first()?->received ?? 0) + $this->allocatedReceived(), 2);
+    }
+
+    /**
+     * Explicit allocations are positive applications to this document.
+     *
+     * The parent cashflow's credit/debit controls the account ledger, not the
+     * sign of `document_amount`. A user who allocates 200,000 to an invoice has
+     * applied 200,000; interpreting a debit parent as -200,000 produces a false
+     * refund and increases the invoice balance instead of settling it.
+     */
+    private function allocatedReceived(bool $finalizedOnly = false): float
+    {
+        $attribute = $finalizedOnly ? 'client_portal_allocation_received' : 'allocation_received';
+        if (array_key_exists($attribute, $this->attributes)) {
+            return round((float) ($this->attributes[$attribute] ?? 0), 2);
+        }
+        if (! $this->exists || ! Schema::hasTable('cashflow_allocations')) {
+            return 0.0;
+        }
+
+        $total = CashflowAllocation::query()
+            ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
+            ->where('cashflow_allocations.sales_invoice_id', $this->id)
+            ->when($finalizedOnly, fn ($query) => $query->whereIn('cashflow_entries.accounting_status', ['booked', 'reconciled']))
+            ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) as total")
+            ->first()?->total;
+
+        return round((float) ($total ?? 0), 2);
     }
 
     /** Everything received: the invoice's opening figure plus the ledger's receipts. */
@@ -225,7 +336,7 @@ class SalesInvoice extends Model
                 ->whereIn('accounting_status', ['booked', 'reconciled'])
                 ->sum(fn ($payment) => (float) $payment->credit_amount - (float) $payment->debit_amount);
 
-            return round((float) $this->amount_paid + (float) $ledger, 2);
+            return round((float) $this->amount_paid + (float) $ledger + $this->allocatedReceived(true), 2);
         }
 
         if (array_key_exists('client_portal_received_credit', $this->attributes)
@@ -233,7 +344,8 @@ class SalesInvoice extends Model
             return round(
                 (float) $this->amount_paid
                     + (float) ($this->attributes['client_portal_received_credit'] ?? 0)
-                    - (float) ($this->attributes['client_portal_received_debit'] ?? 0),
+                    - (float) ($this->attributes['client_portal_received_debit'] ?? 0)
+                    + $this->allocatedReceived(true),
                 2
             );
         }
@@ -244,10 +356,11 @@ class SalesInvoice extends Model
 
         $ledger = $this->payments()
             ->whereIn('accounting_status', ['booked', 'reconciled'])
+            ->reorder()
             ->selectRaw('coalesce(sum(credit_amount - debit_amount), 0) as received')
-            ->value('received');
+            ->first()?->received;
 
-        return round((float) $this->amount_paid + (float) $ledger, 2);
+        return round((float) $this->amount_paid + (float) ($ledger ?? 0) + $this->allocatedReceived(true), 2);
     }
 
     public function clientPortalBalanceDue(): float
@@ -256,7 +369,7 @@ class SalesInvoice extends Model
             return 0.0;
         }
 
-        return round(max((float) $this->total_amount - $this->clientPortalReceivedAmount(), 0), 2);
+        return round(max($this->receivableTotal() - $this->clientPortalReceivedAmount(), 0), 2);
     }
 
     public function clientPortalStateKey(?\DateTimeInterface $today = null): string
@@ -276,7 +389,7 @@ class SalesInvoice extends Model
         }
 
         $received = $this->clientPortalReceivedAmount();
-        if ((float) $this->total_amount > 0 && $received >= (float) $this->total_amount - 0.01) {
+        if ($this->receivableTotal() > 0 && $received >= $this->receivableTotal() - 0.01) {
             return 'paid';
         }
         if ($received > 0.01) {
@@ -313,13 +426,18 @@ class SalesInvoice extends Model
             return 0.0;
         }
 
-        return round(max((float) $this->total_amount - $this->receivedAmount(), 0), 2);
+        return round(max($this->receivableTotal() - $this->receivedAmount(), 0), 2);
+    }
+
+    public function advanceAmount(): float
+    {
+        return round(max($this->receivedAmount() - $this->receivableTotal(), 0), 2);
     }
 
     /** unpaid | partial | paid — read from the money, never from a stored word. */
     public function paymentState(): string
     {
-        $total = round((float) $this->total_amount, 2);
+        $total = $this->receivableTotal();
         $received = $this->receivedAmount();
 
         if ($total > 0 && $received >= $total - 0.01) {
@@ -466,9 +584,20 @@ class SalesInvoice extends Model
      */
     public function scopeWithReceived(Builder $query): Builder
     {
-        return $query
-            ->withSum('payments as received_credit', 'credit_amount')
+        $query->withSum('payments as received_credit', 'credit_amount')
             ->withSum('payments as received_debit', 'debit_amount');
+
+        if (Schema::hasTable('cashflow_allocations')) {
+            if ($query->getQuery()->columns === null) {
+                $query->select('sales_invoices.*');
+            }
+            $query->addSelect(['allocation_received' => CashflowAllocation::query()
+                ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
+                ->whereColumn('cashflow_allocations.sales_invoice_id', 'sales_invoices.id')
+                ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0)")]);
+        }
+
+        return $query;
     }
 
     /** Portal totals count only receipts the office has finalized. */
@@ -476,9 +605,21 @@ class SalesInvoice extends Model
     {
         $finalizedPayments = fn (Builder $payments) => $payments->whereIn('accounting_status', ['booked', 'reconciled']);
 
-        return $query
-            ->withSum(['payments as client_portal_received_credit' => $finalizedPayments], 'credit_amount')
+        $query->withSum(['payments as client_portal_received_credit' => $finalizedPayments], 'credit_amount')
             ->withSum(['payments as client_portal_received_debit' => $finalizedPayments], 'debit_amount');
+
+        if (Schema::hasTable('cashflow_allocations')) {
+            if ($query->getQuery()->columns === null) {
+                $query->select('sales_invoices.*');
+            }
+            $query->addSelect(['client_portal_allocation_received' => CashflowAllocation::query()
+                ->join('cashflow_entries', 'cashflow_entries.id', '=', 'cashflow_allocations.cashflow_entry_id')
+                ->whereColumn('cashflow_allocations.sales_invoice_id', 'sales_invoices.id')
+                ->whereIn('cashflow_entries.accounting_status', ['booked', 'reconciled'])
+                ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0)")]);
+        }
+
+        return $query;
     }
 
     /**
@@ -555,7 +696,7 @@ class SalesInvoice extends Model
 
         $lines[] = 'Invoice '.$this->invoice_number
             .($this->invoice_date ? ' dated '.$this->invoice_date->format('d M Y') : '')
-            .' for '.$currency((float) $this->total_amount).'.';
+            .' for '.$currency($this->receivableTotal()).'.';
 
         if ($balance > 0.01) {
             $lines[] = $currency($balance).' is still outstanding'
@@ -617,6 +758,7 @@ class SalesInvoice extends Model
         return [
             'proforma' => 'Proforma Invoice',
             'tax' => 'Tax Invoice',
+            'cash' => 'Cash Invoice',
         ];
     }
 
@@ -653,19 +795,24 @@ class SalesInvoice extends Model
         return Organisation::current()->sellerDetails();
     }
 
-    public static function defaultTerms(): string
+    public static function defaultTerms(bool $cash = false): string
     {
         return implode("\n", [
             '1. This invoice is subject to Ahmedabad, Gujarat jurisdiction only.',
             '2. Payment terms will be as mentioned in this invoice. Goods will be dispatched after payment confirmation where advance payment is applicable.',
             '3. Prices are valid only up to the invoice validity date and are subject to change after expiry.',
-            '4. Taxes, freight, packing, insurance, duties and any government charges are extra unless specifically mentioned.',
+            $cash ? '4. Freight, packing, insurance and other charges apply only as mentioned in this invoice.' : '4. Taxes, freight, packing, insurance, duties and any government charges are extra unless specifically mentioned.',
             '5. Production, dispatch and delivery timelines are indicative and depend on payment, artwork approval, sample approval and material availability.',
             '6. Any product customization, printing, artwork or packaging changes after approval may affect price and timeline.',
             '7. Goods once sold/customized/printed will not be returned or exchanged unless there is a proven manufacturing defect.',
-            '8. Please verify product name, quantity, capacity, color, artwork, shipping address and GST details before confirmation.',
+            $cash ? '8. Please verify product name, quantity, capacity, color, artwork and shipping address before confirmation.' : '8. Please verify product name, quantity, capacity, color, artwork, shipping address and GST details before confirmation.',
             '9. Bank charges, forex fluctuation, logistics charges and third-party charges are to be borne by the buyer unless agreed otherwise.',
             '10. This is a computer-generated document and does not require a physical signature unless specifically requested.',
         ]);
+    }
+
+    public function packagingLists()
+    {
+        return $this->hasMany(PackagingList::class);
     }
 }

@@ -65,7 +65,7 @@ const userMenu = blade(read('resources/views/layouts/partials/user-menu.blade.ph
 const search = plain(read('app/Services/GlobalSearch.php'));
 const docs = read('docs/settings-module.md');
 
-const areas = ['organisation', 'cashflow', 'leads', 'feedback', 'briefings', 'assets'];
+const areas = ['organisation', 'cashflow', 'leads', 'workflow', 'feedback', 'briefings', 'assets', 'packaging'];
 const areaView = key => `resources/views/settings/${key}.blade.php`;
 
 /* ------------------------------------------------------------- one list */
@@ -112,7 +112,7 @@ check('the page the office opens owns no setting of its own',
 check('every area screen wears the same rail, with its own key',
     areas.filter((key, index) => index >= 0)
         .every(key => has(blade(read(areaView(key))), `@include('settings.partials.nav', ['current' => '${key}'])`))
-    && areas.length === 6);
+    && areas.length === 8);
 
 check('the hub marks no area, because the hub is not one',
     has(hub, "@include('settings.partials.nav', ['current' => null])")
@@ -284,6 +284,23 @@ check('a setting is findable by the words a person uses for it',
 check('the search box says it searches settings too',
     has(read('resources/views/layouts/partials/global-search.blade.php'), 'and settings.')
     && has(read('public/assets/js/global-search.js'), 'and settings.'));
+
+/* ------------------------------------------------------ workflow controls */
+
+const workflowSettings = read('app/Http/Controllers/WorkflowSettingController.php');
+const officeSettings = read('app/Models/OfficeSetting.php');
+const workflowSettingsView = read('resources/views/settings/workflow.blade.php');
+check('workflow-wide rules live in one central settings area',
+    has(directory, "public const WORKFLOW = 'workflow'")
+    && has(routes, "name('settings.workflow')")
+    && ['documents', 'deadlines', 'quality'].every(tab => has(workflowSettings, `'${tab}'`))
+    && has(officeSettings, 'public static function workflowDefaults()')
+    && has(workflowSettingsView, 'Standard workflow controls'));
+check('workflow settings drive dispatch, deadlines and new QC inspections',
+    has(read('app/Services/ShipmentDocuments.php'), "OfficeSetting::workflow()['documents']")
+    && has(read('app/Services/ProjectExceptionRegistry.php'), "OfficeSetting::workflow()['deadlines']")
+    && has(read('app/Models/ProjectQualityInspection.php'), "OfficeSetting::workflow()['qc_checks']")
+    && has(read('resources/views/projects/partials/record-workflow.blade.php'), 'approval_response_days'));
 
 /* ----------------------------------------------------------- the boundary */
 

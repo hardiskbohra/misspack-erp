@@ -86,7 +86,10 @@
         var circle = byId(circleId);
         var name = byId(nameId);
 
-        if (circle) circle.innerHTML = '<i class="fas fa-user" aria-hidden="true"></i>';
+        if (circle) {
+            circle._avatarRead = (circle._avatarRead || 0) + 1;
+            window.UserAvatars.render(circle, '', circle.dataset.avatarName);
+        }
 
         if (name) {
             name.textContent = 'No file chosen';
@@ -97,13 +100,14 @@
     function drawAvatar(file, circleId, nameId) {
         if (!file) return;
 
+        var circle = byId(circleId);
+        var token = circle ? (circle._avatarRead = (circle._avatarRead || 0) + 1) : 0;
         var reader = new FileReader();
 
         reader.onload = function (event) {
-            var circle = byId(circleId);
-
-            if (circle) {
-                circle.innerHTML = '<img src="' + event.target.result + '" alt="">';
+            // A removed/replaced file must not repaint the preview when its read completes.
+            if (circle && circle._avatarRead === token) {
+                window.UserAvatars.render(circle, event.target.result, circle.dataset.avatarName);
             }
         };
         reader.readAsDataURL(file);
@@ -134,10 +138,8 @@
 
         drawAvatar(input.files[0], circleId, nameId);
 
-        if (input.id === 'editAvatarFile') {
-            if (byId('editRemoveBtn')) byId('editRemoveBtn').hidden = false;
-            if (byId('editRemoveAvatar')) byId('editRemoveAvatar').value = '0';
-        }
+        var removeFlag = input.form && input.form.querySelector('[name="remove_avatar"]');
+        if (removeFlag) removeFlag.value = '0';
     }
 
     /* One band, one input, one row of controls. The circle is a second label for
@@ -181,7 +183,8 @@
 
                 if (!deletes) return;
 
-                if (byId('editRemoveAvatar')) byId('editRemoveAvatar').value = '1';
+                var removeFlag = input && input.form && input.form.querySelector('[name="remove_avatar"]');
+                if (removeFlag) removeFlag.value = '1';
                 if (byId(nameId)) byId(nameId).textContent = 'Photo will be removed on save';
             });
         }
@@ -244,6 +247,56 @@
             : '<i class="fas fa-eye" aria-hidden="true"></i>';
     }
 
+    function wireRecordPhoto() {
+        var modal = byId('userPhotoModal');
+        if (!modal) return;
+        var form = modal.querySelector('form');
+        var circle = byId('recordPhotoCircle');
+        var name = byId('recordPhotoName');
+        var remove = byId('recordPhotoRemove');
+        var input = byId('recordPhotoFile');
+        var flag = form.querySelector('[name="remove_avatar"]');
+        var save = form.querySelector('[type="submit"]');
+        var opener = document.querySelector('[data-open-photo]');
+        function syncSave() {
+            save.disabled = name.classList.contains('is-bad') || !(flag.value === '1' || input.files.length);
+            if (name.classList.contains('is-bad')) remove.hidden = !modal.dataset.photoUrl;
+        }
+        function openPhoto() {
+            form.reset();
+            resetAvatar('recordPhotoCircle', 'recordPhotoName');
+            window.UserAvatars.render(circle, modal.dataset.photoUrl, modal.dataset.photoName);
+            remove.hidden = !modal.dataset.photoUrl;
+            name.textContent = modal.dataset.photoUrl ? 'Current photo' : 'No photo chosen';
+            syncSave();
+            openModal(modal);
+            modal.querySelector('[data-close-modal]').focus({ preventScroll: true });
+        }
+        function restoreFocus() {
+            if (opener) opener.focus({ preventScroll: true });
+        }
+        if (opener) opener.addEventListener('click', openPhoto);
+        form.addEventListener('change', syncSave);
+        form.addEventListener('drop', syncSave);
+        remove.addEventListener('click', syncSave);
+        modal.addEventListener('click', function (event) {
+            if ((event.target === modal || event.target.closest('[data-close-modal]')) && !modal.classList.contains('open')) restoreFocus();
+        });
+        modal.addEventListener('keydown', function (event) {
+            if (!modal.classList.contains('open')) return;
+            if (event.key === 'Escape') {
+                event.preventDefault(); event.stopPropagation(); closeModal(modal); restoreFocus(); return;
+            }
+            if (event.key !== 'Tab') return;
+            var stops = Array.from(modal.querySelectorAll('button:not([disabled]), input:not([type="hidden"]):not([disabled]), a[href], [tabindex="0"]'))
+                .filter(function (node) { return node.getClientRects().length; });
+            var first = stops[0], last = stops[stops.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        });
+        if (modal.dataset.reopenPhoto === '1') openPhoto();
+    }
+
     /* ------------------------------------------------------------ dialogs */
 
     function openAddModal() {
@@ -300,14 +353,8 @@
                 var chosen = byId('editAvName') && byId('editAvName').classList.contains('is-chosen');
 
                 if (circle && !chosen) {
-                    if (user.avatar) {
-                        circle.innerHTML = '<img src="' + user.avatar + '" alt="">';
-                        if (removeButton) removeButton.hidden = false;
-                    } else {
-                        circle.innerHTML = '<span class="master-avatar-initials">' +
-                            String(user.name || 'U').substring(0, 2).toUpperCase() + '</span>';
-                        if (removeButton) removeButton.hidden = true;
-                    }
+                    window.UserAvatars.render(circle, user.avatar, user.name);
+                    if (removeButton) removeButton.hidden = !user.avatar;
                 }
 
                 var note = byId('editRoleNote');
@@ -524,6 +571,7 @@
         });
 
         document.querySelectorAll('[data-avatar-drop]').forEach(wireAvatarBand);
+        wireRecordPhoto();
 
         list();
         /* The record's own tables open their rows, the way the three lists do:

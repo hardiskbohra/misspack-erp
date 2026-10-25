@@ -274,3 +274,13 @@
         flex-wrap: wrap
     }
 }
+
+/* Detail identity action remains available without squeezing the person on mobile. */
+.employee-record .emp-record-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+.employee-record .emp-record-head > .emp-record-who { flex: 1 1 260px; }

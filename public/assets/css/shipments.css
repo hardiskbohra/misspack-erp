@@ -18,6 +18,194 @@
     --ship-muted: #687386;
 }
 
+.shipment-items-fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.shipment-items-fieldset:disabled {
+    opacity: .72;
+}
+
+.shipment-allocation-list {
+    display: grid;
+    gap: 16px;
+}
+
+.shipment-allocation-card {
+    display: grid;
+    gap: 12px;
+    padding: 16px 0;
+    border-top: 1px solid var(--master-border);
+}
+
+.shipment-allocation-card > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.shipment-allocation-card > header strong,
+.shipment-allocation-card > header span {
+    display: block;
+}
+
+.shipment-allocation-card [data-allocation-rows] {
+    display: grid;
+    gap: 10px;
+}
+
+.shipment-receipt-action {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 14px;
+}
+
+.shipment-delivery-modal {
+    width: min(1240px, calc(100vw - 32px));
+}
+
+.shipment-delivery-modal .master-modal-body {
+    display: grid;
+    gap: 16px;
+}
+
+.shipment-delivery-guide {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--mc-border);
+    border-radius: 12px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.55;
+}
+
+.shipment-delivery-guide i {
+    margin-top: 2px;
+    color: #4f83f1;
+}
+
+.shipment-delivery-guide p {
+    margin: 0;
+}
+
+.shipment-delivery-lines table {
+    min-width: 1080px;
+}
+
+.shipment-delivery-lines .master-input {
+    min-width: 88px;
+}
+
+.shipment-delivery-modal thead th small {
+    display: block;
+    margin-top: 2px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    color: var(--mc-text-3);
+    text-transform: none;
+}
+
+.shipment-delivery-computed {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 56px;
+    padding: 8px 10px;
+    border: 1px dashed var(--mc-border);
+    border-radius: 9px;
+    background: var(--mc-card-soft);
+    color: var(--mc-text-2);
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.shipment-delivery-status {
+    display: block;
+    max-width: 260px;
+    margin-top: 4px;
+    color: var(--mc-text-3);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.shipment-delivery-status.is-ok {
+    color: #027a48;
+}
+
+.shipment-delivery-status.is-warn {
+    color: #b54708;
+}
+
+.shipment-delivery-status.is-error {
+    color: #b42318;
+}
+
+.shipment-receipt-history {
+    display: grid;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.shipment-receipt-card {
+    display: grid;
+    gap: 10px;
+    padding: 16px 0;
+    border-top: 1px solid var(--master-border);
+}
+
+.shipment-receipt-card header,
+.shipment-receipt-card footer {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.shipment-receipt-evidence {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.shipment-receipt-evidence a {
+    overflow-wrap: anywhere;
+}
+
+.shipment-receipt-no-evidence {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--mc-text-2);
+    font-weight: 600;
+}
+
+.shipment-receipt-card footer > .master-btn {
+    flex: none;
+}
+
+.shipment-receipt-card header strong,
+.shipment-receipt-card header span,
+.shipment-receipt-lines span {
+    display: block;
+}
+
+.shipment-receipt-lines {
+    display: grid;
+    gap: 6px;
+    color: var(--mc-text-2);
+}
+
 /* =====================================================================
    1. Shipment List (index)
    Badge colours + mobile table-card layout.
@@ -1694,3 +1882,8 @@
     font-size: 14px;
 }
 
+
+/* Detail-page attachments reuse the shared upload row without crowding the gallery. */
+.ship-attachments .ship-doc-upload {
+    margin-bottom: 16px;
+}

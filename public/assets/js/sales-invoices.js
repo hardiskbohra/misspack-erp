@@ -198,7 +198,13 @@
            office learns not to trust either figure. */
         function calculateTotals() {
             var gstType = fieldText('gstType');
-            var exportSale = gstType === 'export';
+            var cashInvoice = fieldText('invoiceType') === 'cash';
+            var exportSale = cashInvoice || gstType === 'export';
+            var invoiceRoot = document.querySelector('.si-form');
+            if (invoiceRoot) invoiceRoot.dataset.siCash = cashInvoice ? 'true' : 'false';
+            var typeSelect = document.getElementById('invoiceType');
+            var typeLabel = document.querySelector('[data-invoice-type-label]');
+            if (typeLabel && typeSelect && typeSelect.selectedIndex >= 0) typeLabel.textContent = typeSelect.options[typeSelect.selectedIndex].text;
 
             var gross = 0;
             var taxable = 0;
@@ -303,12 +309,12 @@
                 '        <input class="master-input" name="items[' + i + '][product_name]" value="' + esc(val(item.product_name, '')) + '" placeholder="Product name">',
                 '        <textarea class="master-textarea" rows="3" name="items[' + i + '][description]" placeholder="Description">' + esc(val(item.description, '')) + '</textarea>',
                 '    </td>',
-                '    <td><input class="master-input" name="items[' + i + '][hsn_sac]" value="' + esc(val(item.hsn_sac, '')) + '" placeholder="HSN"></td>',
+                '    <td data-si-tax><input class="master-input" name="items[' + i + '][hsn_sac]" value="' + esc(val(item.hsn_sac, '')) + '" placeholder="HSN"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.001" min="0" name="items[' + i + '][quantity]" value="' + esc(val(item.quantity, 1)) + '"></td>',
                 '    <td><input class="master-input" name="items[' + i + '][unit]" value="' + esc(val(item.unit, 'pcs')) + '"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.01" min="0" name="items[' + i + '][unit_price]" value="' + esc(val(item.unit_price, 0)) + '"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.01" min="0" name="items[' + i + '][discount_percent]" value="' + esc(val(item.discount_percent, 0)) + '"></td>',
-                '    <td class="is-num"><input class="master-input calc" type="number" step="0.05" min="0" name="items[' + i + '][gst_percent]" value="' + esc(val(item.gst_percent, 18)) + '"></td>',
+                '    <td class="is-num" data-si-tax><input class="master-input calc" type="number" step="0.05" min="0" name="items[' + i + '][gst_percent]" value="' + esc(val(item.gst_percent, 18)) + '"></td>',
                 '    <td class="is-num"><strong class="line-total">₹ 0.00</strong>',
                 '        <input type="hidden" name="items[' + i + '][remarks]" value="' + esc(val(item.remarks, '')) + '"></td>',
                 '    <td class="is-num"><button type="button" class="master-btn master-btn-ghost master-remove" aria-label="Remove this line"><i class="fas fa-xmark" aria-hidden="true"></i></button></td>',
@@ -362,6 +368,15 @@
         ].forEach(function (id) {
             var el = document.getElementById(id);
             if (el) el.addEventListener('input', calculateTotals);
+        });
+        onChange(document.getElementById('invoiceType'), function () {
+            calculateTotals();
+            var root = document.querySelector('.si-form');
+            var terms = document.querySelector('[name=terms_conditions]');
+            if (root && terms && (!terms.value || terms.value === root.dataset.defaultTerms || terms.value === root.dataset.cashTerms)) {
+                terms.value = fieldText('invoiceType') === 'cash' ? root.dataset.cashTerms : root.dataset.defaultTerms;
+            }
+            if (root && root.dataset.invoiceEdit === 'false') document.getElementById('invoiceNumber').value = '';
         });
         ['discountType', 'gstType'].forEach(function (id) {
             var el = document.getElementById(id);
@@ -565,29 +580,94 @@
         var template = form.getAttribute('data-action-template') || '';
         var subtitle = modal.querySelector('[data-payment-subtitle]');
         var amount = modal.querySelector('input[name="amount"]');
+        var account = modal.querySelector('select[name="account_id"]');
+        var balancePanel = modal.querySelector('[data-account-balance]');
+        var currentBalance = modal.querySelector('[data-account-current]');
+        var projectedBalance = modal.querySelector('[data-account-projected]');
+        var invoiceLabel = modal.querySelector('[data-payment-invoice]');
+        var clientLabel = modal.querySelector('[data-payment-client]');
+        var outstandingLabel = modal.querySelector('[data-payment-outstanding]');
+        var currencyLabel = modal.querySelector('[data-payment-currency]');
+        var contextId = modal.querySelector('[data-payment-context-id]');
+        var contextNumber = modal.querySelector('[data-payment-context-number]');
+        var contextClient = modal.querySelector('[data-payment-context-client]');
+        var contextBalance = modal.querySelector('[data-payment-context-balance]');
+        var contextCurrency = modal.querySelector('[data-payment-context-currency]');
+        var activeCurrency = contextCurrency ? (contextCurrency.value || 'INR') : 'INR';
+
+        function receiptMoney(value, currency) {
+            return (currency || 'INR') + ' ' + (Number(value) || 0).toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function refreshAccountProjection() {
+            if (!account || !balancePanel) return;
+            var option = account.options[account.selectedIndex];
+            var hasAccount = option && option.value;
+            balancePanel.hidden = !hasAccount;
+            if (!hasAccount) return;
+
+            var opening = parseFloat(option.getAttribute('data-balance')) || 0;
+            var received = parseFloat(amount ? amount.value : 0) || 0;
+            var currency = option.getAttribute('data-currency') || activeCurrency;
+            if (currentBalance) currentBalance.textContent = receiptMoney(opening, currency);
+            if (projectedBalance) projectedBalance.textContent = receiptMoney(opening + received, currency);
+        }
+
+        if (account) {
+            account.addEventListener('change', refreshAccountProjection);
+            if (window.jQuery) window.jQuery(account).on('change', refreshAccountProjection);
+        }
+        if (amount) amount.addEventListener('input', refreshAccountProjection);
 
         triggers.forEach(function (trigger) {
             trigger.addEventListener('click', function () {
                 var id = trigger.getAttribute('data-invoice-id');
                 var number = trigger.getAttribute('data-invoice-number') || 'this invoice';
                 var balance = trigger.getAttribute('data-invoice-balance') || '';
+                var client = trigger.getAttribute('data-invoice-client') || 'Client not recorded';
+                activeCurrency = trigger.getAttribute('data-invoice-currency') || 'INR';
 
+                form.reset();
                 form.setAttribute('action', template.replace('__INVOICE__', id));
+                if (contextId) contextId.value = id;
+                if (contextNumber) contextNumber.value = number;
+                if (contextClient) contextClient.value = client;
+                if (contextBalance) contextBalance.value = balance;
+                if (contextCurrency) contextCurrency.value = activeCurrency;
 
-                if (subtitle) {
-                    subtitle.textContent = 'Against ' + number + (balance ? ' · ' + balance + ' still owed' : '');
-                }
+                if (window.jQuery && account) window.jQuery(account).val('').trigger('change');
+                if (subtitle) subtitle.textContent = 'Post this receipt to the cashflow ledger and selected account';
+                if (invoiceLabel) invoiceLabel.textContent = number;
+                if (clientLabel) clientLabel.textContent = client;
+                if (outstandingLabel) outstandingLabel.textContent = balance || '—';
+                if (currencyLabel) currencyLabel.textContent = activeCurrency;
 
                 /* What is owed is opened ready to be confirmed, not retyped. */
                 if (amount) {
                     amount.value = trigger.getAttribute('data-invoice-amount') || balance.replace(/[^0-9.]/g, '');
                 }
+                refreshAccountProjection();
 
                 if (window.MasterModal) {
                     window.MasterModal.open(modal);
                 }
             });
         });
+
+        /* Validation returns with the same invoice and fields, so the reopened
+           dialog remains submit-ready instead of pointing at the route template. */
+        if (contextId && contextId.value) {
+            form.setAttribute('action', template.replace('__INVOICE__', contextId.value));
+            activeCurrency = contextCurrency ? (contextCurrency.value || 'INR') : 'INR';
+            if (invoiceLabel) invoiceLabel.textContent = contextNumber ? contextNumber.value : '—';
+            if (clientLabel) clientLabel.textContent = contextClient ? contextClient.value : '—';
+            if (outstandingLabel) outstandingLabel.textContent = contextBalance ? contextBalance.value : '—';
+            if (currencyLabel) currencyLabel.textContent = activeCurrency;
+            refreshAccountProjection();
+        }
     });
 
     /* ----------------------------------------------------------- clipboard
@@ -743,6 +823,47 @@
         }
 
         sync();
+    });
+
+    onReady(function () {
+        var card = document.getElementById('cashInvoiceConversion');
+        if (!card) return;
+        var mode = document.getElementById('cashConversionMode');
+        var value = document.getElementById('cashConversionValue');
+        var transfer = document.getElementById('cashTransferReceived');
+        if (!mode || !value || !transfer) return;
+        var manualTransfer = transfer.dataset.preserveTransfer === 'true';
+        function updateTransfer() {
+            var remainder = Math.max(Number(card.dataset.convertible) || 0, 0);
+            var amount = Number(value.value) || 0;
+            if (mode.value === 'percent') amount = remainder * amount / 100;
+            amount = Math.round(Math.max(0, Math.min(amount, remainder)) * 100) / 100;
+            var limit = Math.min(amount, Math.max(Number(card.dataset.received) || 0, 0));
+            transfer.max = limit.toFixed(2);
+            if (!manualTransfer) transfer.value = limit.toFixed(2);
+            var summary = document.getElementById('cashTransferSummary');
+            if (summary) {
+                var chosen = Number(transfer.value);
+                var format = function (money) { return money.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + card.dataset.currency; };
+                summary.textContent = Number.isFinite(chosen) && chosen >= 0 && chosen <= limit
+                    ? format(chosen) + ' to Cash Invoice; ' + format(Math.max(Number(card.dataset.received) - chosen, 0)) + ' stays with PI.'
+                    : 'Choose a transfer between 0 and ' + format(limit) + '. Excess receipts stay with the PI.';
+            }
+        }
+        transfer.addEventListener('input', function () { manualTransfer = true; updateTransfer(); });
+        value.addEventListener('input', updateTransfer);
+        value.addEventListener('change', updateTransfer);
+        function setLimit(reset) {
+            value.max = mode.value === 'percent' ? '100' : card.dataset.convertible;
+            if (reset) value.value = value.max;
+            updateTransfer();
+        }
+        if (window.jQuery && window.jQuery.fn) {
+            window.jQuery(mode).on('change', function () { setLimit(true); });
+        } else {
+            mode.addEventListener('change', function () { setLimit(true); });
+        }
+        setLimit(false);
     });
 
     /* A failed save comes back with the input kept and the errors on the bag:

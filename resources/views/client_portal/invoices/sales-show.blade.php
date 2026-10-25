@@ -18,7 +18,7 @@
 </div>
 
 <div class="cp-grid-4 cp-invoice-metrics">
-    <div class="cp-card cp-stat"><span>Invoice total</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</strong></div>
+    <div class="cp-card cp-stat"><span>Invoice total</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->receivableTotal(), $invoice->currency) }}</strong></div>
     <div class="cp-card cp-stat"><span>Received</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->clientPortalReceivedAmount(), $invoice->currency) }}</strong></div>
     <div class="cp-card cp-stat"><span>Balance due</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->clientPortalBalanceDue(), $invoice->currency) }}</strong></div>
     <div class="cp-card cp-stat"><span>Payment state</span><strong>{{ $invoice->clientPortalStateLabel() }}</strong></div>
@@ -44,8 +44,11 @@
         </table>
     </div>
     <div class="cp-invoice-total-row"><span>Subtotal {{ $invoice->currency }}</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->subtotal, $invoice->currency) }}</strong></div>
-    <div class="cp-invoice-total-row"><span>Tax and other charges</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->total_amount - $invoice->subtotal + $invoice->round_off, $invoice->currency) }}</strong></div>
-    <div class="cp-invoice-total-row is-grand"><span>Total due</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->total_amount, $invoice->currency) }}</strong></div>
+    <div class="cp-invoice-total-row"><span>{{ $invoice->isCash() ? 'Other charges' : 'Tax and other charges' }}</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->total_amount - $invoice->subtotal + $invoice->round_off, $invoice->currency) }}</strong></div>
+    @if ((float) $invoice->cash_converted_total_amount > 0)
+        <div class="cp-invoice-total-row"><span>Less cash conversions (including removed tax)</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->cash_converted_total_amount, $invoice->currency) }}</strong></div>
+    @endif
+    <div class="cp-invoice-total-row is-grand"><span>Total due</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->receivableTotal(), $invoice->currency) }}</strong></div>
 </section>
 
 <div class="cp-grid-2 cp-invoice-detail-grid">

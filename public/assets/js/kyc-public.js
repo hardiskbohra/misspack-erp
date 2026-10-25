@@ -71,9 +71,26 @@
         var readonly = form.getAttribute('data-kyc-readonly') === '1';
         var token = form.getAttribute('data-kyc-token') || '';
         var storageKey = 'misspack.kyc.' + token;
+        var persistEnabled = form.getAttribute('data-kyc-persist') !== '0';
         var total = panels.length;
         var current = 1;
         var sending = false;
+
+        function syncIndianRequirements() {
+            var country = form.elements.country;
+            if (!country) return; // Client KYC retains its existing rules.
+            var indian = ['india', 'in', 'ind', 'bharat', 'भारत'].indexOf(valueOf(country).toLowerCase()) !== -1;
+            form.querySelectorAll('[data-kyc-indian-required]').forEach(function (field) {
+                field.required = indian && field.getAttribute('data-kyc-uploaded') !== '1';
+                if (!field.required) clearError(field);
+            });
+            form.querySelectorAll('[data-kyc-indian-star], [data-kyc-indian-notice]').forEach(function (node) { node.hidden = !indian; });
+        }
+        var vendorCountry = form.elements.country;
+        if (vendorCountry) {
+            vendorCountry.addEventListener('input', syncIndianRequirements);
+            vendorCountry.addEventListener('change', syncIndianRequirements);
+        }
 
         function panel(n) {
             return form.querySelector('[data-kyc-panel="' + n + '"]');
@@ -85,7 +102,7 @@
         }
 
         function persist() {
-            if (readonly || !window.localStorage) return;
+            if (readonly || !persistEnabled || !window.localStorage) return;
             var data = { step: current, values: {} };
             Array.prototype.forEach.call(form.elements, function (el) {
                 if (!el.name || el.type === 'hidden' && el.name === '_token') return;
@@ -99,7 +116,7 @@
         }
 
         function restore() {
-            if (readonly || !window.localStorage) return;
+            if (readonly || !persistEnabled || !window.localStorage) return;
             if (form.getAttribute('data-kyc-error-step')) return;
             var raw = localStorage.getItem(storageKey);
             if (!raw) return;
@@ -172,7 +189,7 @@
                 setError(field, 'IFSC should look like HDFC0001234.');
                 return false;
             }
-            if ((name === 'ceo_contact' || name.slice(-8) === '_contact') && val && val.replace(/\D/g, '').length < 8) {
+            if ((name === 'ceo_contact' || name.slice(-8) === '_contact' || name === 'contact_person_mobile' || name === 'whatsapp_number' || name === 'alternate_contact') && val && val.replace(/\D/g, '').length < 8) {
                 setError(field, 'Enter a phone number with at least 8 digits.');
                 return false;
             }
@@ -310,6 +327,7 @@
         });
 
         restore();
+        syncIndianRequirements();
         syncShipping();
 
         var start = Number(form.getAttribute('data-kyc-error-step') || 0);

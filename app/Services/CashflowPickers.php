@@ -40,6 +40,9 @@ class CashflowPickers
             'vendors' => $this->vendors(),
             'officeServices' => $this->officeServices(),
             'employees' => $this->employees(),
+            'projects' => $this->projects(),
+            'salesInvoices' => $this->salesInvoices(),
+            'purchaseInvoices' => $this->purchaseInvoices(),
             'accountTypeOptions' => $this->accountTypeOptions(),
             'categoryTypeOptions' => $this->categoryTypeOptions(),
             'transactionTypeOptions' => CashflowEntry::transactionTypeOptions(),
@@ -103,6 +106,27 @@ class CashflowPickers
         }
 
         return \App\Models\OfficeService::query()->orderBy('name')->get();
+    }
+
+    public function projects()
+    {
+        return class_exists(\App\Models\Project::class) && Schema::hasTable('projects')
+            ? \App\Models\Project::query()->orderByDesc('id')->get(['id', 'project_number', 'name', 'currency'])
+            : collect();
+    }
+
+    public function salesInvoices()
+    {
+        return class_exists(\App\Models\SalesInvoice::class) && Schema::hasTable('sales_invoices')
+            ? \App\Models\SalesInvoice::query()->withReceived()->where('status', '<>', 'cancelled')->orderByDesc('invoice_date')->orderByDesc('id')->get()
+            : collect();
+    }
+
+    public function purchaseInvoices()
+    {
+        return class_exists(\App\Models\PurchaseInvoice::class) && Schema::hasTable('purchase_invoices')
+            ? \App\Models\PurchaseInvoice::query()->withPaid()->where('status', '<>', 'cancelled')->orderByDesc('invoice_date')->orderByDesc('id')->get()
+            : collect();
     }
 
     /**

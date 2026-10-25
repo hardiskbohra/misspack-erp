@@ -23,6 +23,7 @@ class OfficeBriefingSubscriber
     {
         return [
             KycWasSubmitted::class => 'onKycSubmitted',
+            \App\Events\VendorKycWasSubmitted::class => 'onVendorKycSubmitted',
             ShipmentStatusChanged::class => 'onShipmentStatusChanged',
         ];
     }
@@ -30,6 +31,16 @@ class OfficeBriefingSubscriber
     public function onKycSubmitted(KycWasSubmitted $event): void
     {
         $this->briefing->kycSubmitted($event->client);
+    }
+
+    public function onVendorKycSubmitted(\App\Events\VendorKycWasSubmitted $event): void
+    {
+        try {
+            $this->briefing->vendorKycSubmitted($event->vendor);
+        } catch (\Throwable $exception) {
+            // A briefing outage must not fail an already committed KYC submission.
+            report($exception);
+        }
     }
 
     public function onShipmentStatusChanged(ShipmentStatusChanged $event): void

@@ -11,7 +11,21 @@
     @php
         $isEdit = $shipment->exists;
         $oldItems = old('items');
-        $items = $oldItems !== null ? $oldItems : $shipment->items->map(fn($item) => $item->only(['product_name', 'sku', 'hs_code', 'quantity', 'unit', 'declared_value', 'currency', 'net_weight', 'gross_weight', 'description']))->toArray();
+        $items = $oldItems !== null ? $oldItems : $shipment->items
+            ->map(fn($item) => $item->only(['project_product_id', 'product_name', 'sku', 'hs_code', 'quantity', 'unit', 'declared_value', 'currency', 'net_weight', 'gross_weight', 'description']))
+            ->toArray();
+        if ($shipment->project_id) {
+            foreach ($items as &$item) {
+                if (!empty($item['project_product_id'])) continue;
+                $matches = $projectProductOptions->filter(function ($option) use ($item) {
+                    $skuMatches = filled($item['sku'] ?? null) && strcasecmp(trim((string)$option->sku), trim((string)$item['sku'])) === 0;
+                    $nameMatches = strcasecmp(trim((string)$option->product_name), trim((string)($item['product_name'] ?? ''))) === 0;
+                    return $skuMatches || $nameMatches;
+                });
+                if ($matches->count() === 1) $item['project_product_id'] = $matches->first()->id;
+            }
+            unset($item);
+        }
         if (empty($items)) {
             $items = [['product_name' => '', 'sku' => '', 'hs_code' => '', 'quantity' => 1, 'unit' => 'pcs', 'declared_value' => '', 'currency' => $shipment->currency ?: 'INR', 'net_weight' => '', 'gross_weight' => '', 'description' => '']];
         }
@@ -29,7 +43,9 @@
             class="master-card master-card--flat master-form-card" enctype="multipart/form-data"
             data-party-lookup-url="{{ route('shipments.party-lookup') }}">
             @csrf
+            @if(!$isEdit && request('return_to'))<input type="hidden" name="return_to" value="{{ request('return_to') }}">@endif
             @if($isEdit) @method('PUT') @endif
+            @if($errors->any())<div class="master-alert error"><strong>Please correct the shipment before saving.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
 
             <div class="master-section">
                 <h3 class="master-section-title">Basic Shipment Information</h3>
@@ -255,6 +271,8 @@
 
             <div class="master-section">
                 <h3 class="master-section-title">Shipment Data / Products</h3>
+                @if($shipmentItemsFrozen)<p class="master-sub">Shipment product lines are frozen because dispatch has started.</p>@endif
+                <fieldset class="shipment-items-fieldset" @disabled($shipmentItemsFrozen)>
                 <div class="master-items-wrap">
                     <table class="master-items-table" id="shipmentItemsTable">
                         <thead>
@@ -271,7 +289,7 @@
                         <tbody>
                             @foreach($items as $index => $item)
                                 <tr>
-                                    <td><input class="master-input" name="items[{{ $index }}][product_name]"
+                                    <td><select class="master-select" name="items[{{ $index }}][project_product_id]" aria-label="Project product identity"><option value="">Unlinked project product</option>@foreach($projectProductOptions as $option)<option value="{{ $option->id }}" data-product-name="{{ $option->product_name }}" data-sku="{{ $option->sku }}" data-quantity="{{ $option->quantity }}" data-unit="{{ $option->unit }}" data-value="{{ $option->total_amount }}" data-currency="{{ $option->currency }}" @selected((string)($item['project_product_id'] ?? '')===(string)$option->id)>{{ $option->project?->project_number ?: $option->project?->name }} · {{ $option->product_name }}</option>@endforeach</select><input class="master-input" name="items[{{ $index }}][product_name]"
                                             value="{{ $item['product_name'] ?? '' }}" placeholder="Product">
                                         <input class="master-input" name="items[{{ $index }}][sku]"
                                             value="{{ $item['sku'] ?? '' }}" hidden>
@@ -301,32 +319,15 @@
                 </div>
                 <button type="button" class="master-btn master-btn-soft master-add-row" id="addShipmentItemRow">+ Add Product
                     Row</button>
+                </fieldset>
             </div>
-            
+
             <div class="master-section">
-                <h3 class="master-section-title">Shipment Photos &amp; Documents</h3>
-                <p class="master-sub" style="margin:-4px 0 10px;">
-                    Pick a document type to file paperwork (packing list, BOE, e-way bill…) into the shipment's
-                    checklist instead of the photo gallery.
-                </p>
+                <h3 class="master-section-title">Shipment photos</h3>
+                <p class="master-sub" style="margin:-4px 0 10px;">Operational documents belong to the project workflow checklist. Keep only shipment photographs here.</p>
                 <div class="master-photo-upload-box">
                     <div class="master-photo-upload-grid">
                 
-                        <div>
-                            <label class="master-label">Document Type (for paperwork)</label>
-
-                            <select class="master-select" name="document_type">
-                                <option value="">Photos / general files</option>
-                                @foreach ($documentTypes as $key => $label)
-                                    <option value="{{ $key }}">{{ $label }}</option>
-                                @endforeach
-                            </select>
-
-                            <div class="master-photo-help">
-                                Filing a document type adds it to the shipment's paperwork checklist.
-                            </div>
-                        </div>
-
                         <div>
                             <label class="master-label">Upload Shipment Photos</label>
                 
@@ -334,22 +335,12 @@
                                 class="master-input"
                                 type="file"
                                 name="attachment_photos[]"
-                                accept="
-                                    image/*,
-                                    .jpg,.jpeg,.png,.webp,.gif,.heic,.heif,
-                                    .pdf,
-                                    .doc,.docx,
-                                    .xls,.xlsx,
-                                    .csv,
-                                    .ppt,.pptx,
-                                    .txt
-                                "
+accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif"
                                 multiple>
                 
                             <div class="master-photo-help">
-                                Upload shipment photos such as package photos, dispatch photos,
-                                delivery proof, custom hold photos etc. Allowed JPG, PNG, WEBP
-                                or GIF. If document then it should be PDF, DOC, Excel file. Max 8MB each.
+                                Upload package, dispatch, delivery or exception photographs. Attach invoices,
+                                customs paperwork and dispatch documents from the Workflow Control Centre.
                             </div>
                         </div>
                 
@@ -508,7 +499,7 @@
 
 <template id="shipmentItemRowTemplate">
     <tr>
-        <td><input class="master-input" name="items[__INDEX__][product_name]" placeholder="Product"></td>
+        <td><select class="master-select" name="items[__INDEX__][project_product_id]" aria-label="Project product identity"><option value="">Unlinked project product</option>@foreach($projectProductOptions as $option)<option value="{{ $option->id }}" data-product-name="{{ $option->product_name }}" data-sku="{{ $option->sku }}" data-quantity="{{ $option->quantity }}" data-unit="{{ $option->unit }}" data-value="{{ $option->total_amount }}" data-currency="{{ $option->currency }}">{{ $option->project?->project_number ?: $option->project?->name }} · {{ $option->product_name }}</option>@endforeach</select><input class="master-input" name="items[__INDEX__][product_name]" placeholder="Product"><input type="hidden" name="items[__INDEX__][sku]"></td>
         <td><input class="master-input" name="items[__INDEX__][hs_code]"></td>
         <td><input class="master-input" type="number" step="0.001" min="0" name="items[__INDEX__][quantity]" value="1"></td>
         <td><input class="master-input" name="items[__INDEX__][unit]" value="pcs"></td>
@@ -525,6 +516,24 @@
         document.getElementById('addShipmentItemRow')?.addEventListener('click', function () {
             const template = document.getElementById('shipmentItemRowTemplate').innerHTML.replaceAll('__INDEX__', shipmentItemIndex++);
             document.querySelector('#shipmentItemsTable tbody').insertAdjacentHTML('beforeend', template);
+        });
+
+        document.getElementById('shipmentItemsTable')?.addEventListener('change', function (event) {
+            const select = event.target.closest('select[name$="[project_product_id]"]');
+            if (!select) return;
+            const option = select.selectedOptions[0];
+            if (!option?.value) return;
+            const row = select.closest('tr');
+            const set = (suffix, value) => {
+                const field = row.querySelector(`[name$="[${suffix}]"]`);
+                if (field && value !== undefined && value !== null && value !== '') field.value = value;
+            };
+            set('product_name', option.dataset.productName);
+            set('sku', option.dataset.sku);
+            set('quantity', option.dataset.quantity);
+            set('unit', option.dataset.unit || 'pcs');
+            set('declared_value', option.dataset.value);
+            set('currency', option.dataset.currency);
         });
     </script>
 @endpush

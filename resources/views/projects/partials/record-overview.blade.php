@@ -39,13 +39,9 @@
                 <div class="master-section-head">
                     <div>
                         <h2 class="master-section-title" id="project-progress-heading">Progress</h2>
-                        <p class="master-sub">{{ $project->stageLabel() }}</p>
+                        <p class="master-sub">Calculated by the Workflow Control Center</p>
                     </div>
-                    <div class="master-section-meta">
-                        <a class="master-btn master-btn-soft master-btn-sm" href="{{ $recordUrl('milestones') }}">
-                            <i class="fa-solid fa-flag-checkered" aria-hidden="true"></i> Milestones
-                        </a>
-                    </div>
+                    <div class="master-section-meta"><a class="master-btn master-btn-soft master-btn-sm" href="{{ $recordUrl('workflow') }}"><i class="fa-solid fa-diagram-project" aria-hidden="true"></i> Open workflow</a></div>
                 </div>
                 <div class="project-progress-block">
                     <div class="project-progress-row">
@@ -54,14 +50,11 @@
                         </span>
                         <strong>{{ $progress }}%</strong>
                     </div>
-                    <p class="project-fact-note">
-                        {{ $milestonesDone }} of {{ $project->milestones->count() }} milestones done
-                        @if ($milestonesOpen > 0) · {{ $milestonesOpen }} still open @endif
-                    </p>
+                    <p class="project-fact-note">Only completed or manager-overridden workflow controls contribute to progress.</p>
                 </div>
                 <div class="master-facts">
                     <div class="master-info"><span>Products</span><strong>{{ number_format($project->products->count()) }}</strong></div>
-                    <div class="master-info"><span>Milestones</span><strong>{{ number_format($project->milestones->count()) }}</strong></div>
+                    <div class="master-info"><span>Workflow controls</span><strong>{{ number_format($workflow?->steps?->count() ?? 0) }}</strong></div>
                     <div class="master-info"><span>Shipments</span><strong>{{ number_format($project->shipments->count()) }}</strong></div>
                     <div class="master-info"><span>Activity updates</span><strong>{{ number_format($project->trackingUpdates->count()) }}</strong></div>
                 </div>

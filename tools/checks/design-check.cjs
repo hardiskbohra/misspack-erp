@@ -470,6 +470,24 @@ check('the two copies of the choice chip are identical',
     copies[0].length > 0 && copies[0].join('|') === copies[1].join('|'),
     copies.map(c => c.length + ' rules').join(' vs '));
 
+/* Repeated boolean settings use a compact switch, not a second primary button. */
+expect('.master-switch', 'width', v => v.trim() === '38px',
+    'the application switch stays compact');
+expect('.master-switch', 'height', v => v.trim() === '22px',
+    'the application switch has field-scale height');
+expect('.master-slider::before', 'box-shadow', v => !v || v.trim() === 'none',
+    'the switch thumb is flat rather than floating');
+expect('.master-switch input:checked + .master-slider::before', 'background',
+    v => v.trim() === '#fff',
+    'the enabled switch separates its white thumb from the active track');
+expect('.master-slider::after', 'content', v => v.trim() === "'−'",
+    'the off switch carries a quiet minus state');
+expect('.master-switch input:checked + .master-slider::after', 'content', v => v.trim() === "'✓'",
+    'the enabled switch carries a clear check state');
+expect('.master-switch input:focus-visible + .master-slider', 'outline',
+    v => /^2px solid var\(--/.test(v.trim()),
+    'the application switch keeps a visible keyboard focus ring');
+
 /* the option list: portaled to the page, and above the dialog it belongs to */
 const selects = strip(read(path.join(ROOT, 'public/assets/js/master-selects.js')))
     .split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
@@ -536,7 +554,6 @@ for (const file of walk(VIEWS).filter(f => f.endsWith('.blade.php'))) {
 /* Where a `master-*` name is worn but no sheet owns it, today. Modules already
    shipped keep their own naming until their turn; nothing new may join them. */
 const KNOWN = [
-    'master-attention-card',
     'master-calc-input', 'master-delete-btn',
     'master-form-group',
     'master-save', 'master-text',

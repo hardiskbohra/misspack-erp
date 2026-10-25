@@ -46,6 +46,18 @@
     };
     $chipUrl = fn (string $key) => route('projects.index', $keep([$key])->all());
 
+    /* Keep only everyday operational states in the quick row. The complete
+       status and health lists remain available in the filter drawer. */
+    $quickStatusOptions = [
+        'in_progress' => 'In Progress',
+        'waiting' => 'Waiting',
+        'on_hold' => 'On Hold',
+    ];
+    $quickHealthOptions = collect($healthOptions)->only(['amber', 'red']);
+    $quickStatusCount = fn (string $key) => $key === 'waiting'
+        ? (int) ($statusCounts['waiting_client'] ?? 0) + (int) ($statusCounts['waiting_vendor'] ?? 0)
+        : (int) ($statusCounts[$key] ?? 0);
+
     $projectCount = $projects->total();
     $firstProject = $projects->firstItem() ?? 0;
     $lastProject = $projects->lastItem() ?? 0;
@@ -94,21 +106,18 @@
          rest of the criteria in the same GET form. --}}
     <section class="master-card master-card--flat" aria-label="Search and filter projects">
         <div class="master-list-bar">
-            <nav class="master-list-chips" aria-label="Filter projects by status">
-                <a class="master-list-chip {{ $status === 'all' ? 'is-active' : '' }}"
-                    href="{{ $statusUrl('all') }}">All projects
+            <nav class="master-list-chips" aria-label="Quick project filters">
+                <a class="master-list-chip {{ $status === 'all' && $health === 'all' ? 'is-active' : '' }}"
+                    href="{{ route('projects.index', $keep(['status', 'health'])->all()) }}">All projects
                     <span class="master-list-chip-count">{{ number_format($stats['total']) }}</span></a>
-                @foreach ($statusOptions as $key => $label)
+                @foreach ($quickStatusOptions as $key => $label)
                     <a class="master-list-chip {{ $status === $key ? 'is-active' : '' }}"
                         href="{{ $statusUrl($key) }}">
                         {{ $label }}
-                        <span class="master-list-chip-count">{{ number_format($statusCounts[$key] ?? 0) }}</span>
+                        <span class="master-list-chip-count">{{ number_format($quickStatusCount($key)) }}</span>
                     </a>
                 @endforeach
-            </nav>
-
-            <div class="master-list-chips" aria-label="Filter projects by health">
-                @foreach ($healthOptions as $key => $label)
+                @foreach ($quickHealthOptions as $key => $label)
                     <a class="master-list-chip {{ $health === $key ? 'is-active' : '' }}"
                         href="{{ $healthUrl($key) }}">
                         <i class="fa-solid fa-circle project-health-dot project-health-dot--{{ $key }}" aria-hidden="true"></i>
@@ -116,7 +125,7 @@
                         <span class="master-list-chip-count">{{ number_format($healthCounts[$key] ?? 0) }}</span>
                     </a>
                 @endforeach
-            </div>
+            </nav>
         </div>
 
         <form method="GET" action="{{ route('projects.index') }}">
@@ -139,6 +148,7 @@
                             <span class="master-label">Status</span>
                             <select class="master-select" name="status">
                                 <option value="all">Every status</option>
+                                <option value="waiting" @selected($status === 'waiting')>Waiting for client or vendor</option>
                                 @foreach ($statusOptions as $key => $label)
                                     <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
                                 @endforeach
@@ -195,7 +205,7 @@
                 @if ($status !== 'all')
                     <span class="master-list-applied-chip">
                         <span class="master-list-applied-key">Status</span>
-                        <span class="master-list-applied-value">{{ $statusOptions[$status] ?? $status }}</span>
+                        <span class="master-list-applied-value">{{ $status === 'waiting' ? 'Waiting for client or vendor' : ($statusOptions[$status] ?? $status) }}</span>
                         <a class="master-list-applied-x" href="{{ $chipUrl('status') }}"
                             aria-label="Remove the status filter" title="Remove the status filter">&times;</a>
                     </span>
@@ -252,6 +262,7 @@
                             $totals = $project->paymentTotals();
                             $statusClass = str_replace('_', '-', (string) $project->status);
                             $healthWord = \Illuminate\Support\Str::before($project->healthLabel(), ' /');
+                            $workflowProgress = max(0, min(100, (int) ($project->workflow?->calculated_progress ?? 0)));
                             $isLate = $project->target_date
                                 && ! in_array($project->status, ['completed', 'cancelled'], true)
                                 && $project->target_date->lessThan($today);
@@ -274,10 +285,10 @@
                             <td data-label="Stage">
                                 <span class="project-table-stage">
                                     <span>{{ $project->stageLabel() }}</span>
-                                    <strong>{{ $project->progress_percent }}%</strong>
+                                    <strong>{{ $workflowProgress }}%</strong>
                                 </span>
                                 <span class="project-table-progress" aria-hidden="true">
-                                    <span style="width: {{ max(0, min(100, (int) $project->progress_percent)) }}%"></span>
+                                    <span style="width: {{ $workflowProgress }}%"></span>
                                 </span>
                             </td>
                             <td data-label="Owner" class="ui-mobile-secondary">
@@ -321,7 +332,7 @@
                                                 data-drawer-status="{{ $project->statusLabel() }}"
                                                 data-drawer-health="{{ $project->healthLabel() }}"
                                                 data-drawer-priority="{{ $project->priorityLabel() }}"
-                                                data-drawer-progress="{{ $project->progress_percent }}%"
+                                                data-drawer-progress="{{ $workflowProgress }}%"
                                                 data-drawer-start-date="{{ $project->start_date?->format('d M Y') ?? 'No start date' }}"
                                                 data-drawer-target-date="{{ $project->target_date?->format('d M Y') ?? 'No target date' }}"
                                                 data-drawer-estimated="{{ \App\Helpers\CommonHelper::amount($project->estimatedValue(), $project->currency) }}"
@@ -358,7 +369,7 @@
                                     <p class="master-list-empty-text">
                                         {{ $filtersActive
                                             ? 'Try a different search or clear the filters to see every project.'
-                                            : 'Create a project when an order is confirmed, and track its products, milestones, payments and feedback from one page.' }}
+                                            : 'Create a project when an order is confirmed, and track its workflow, products, payments and feedback from one page.' }}
                                     </p>
                                     <div class="master-list-empty-actions">
                                         @if ($filtersActive)
@@ -423,7 +434,7 @@
                         <div>
                             <h2 class="master-modal-title" id="quickProjectTitle">Quick project</h2>
                             <p class="master-modal-subtitle" id="quickProjectDescription">
-                                Start the project with the essentials. Products, milestones and payments are added on its page.</p>
+                                Start the project with the essentials. Workflow, products and payments are managed on its page.</p>
                         </div>
                     </div>
                     <button type="button" class="master-modal-close" data-close-modal="quickProjectModal"

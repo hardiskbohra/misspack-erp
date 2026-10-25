@@ -46,6 +46,7 @@
         enctype="multipart/form-data" class="master-card master-form-card" id="vendorForm">
 
         @csrf
+        <input type="hidden" name="kyc_version" value="{{ old('kyc_version', $vendor->kyc_version ?? 0) }}">
         @if($isEdit) @method('PUT') @endif
 
         <section class="vendor-form-section" id="vendor-basic" aria-labelledby="vendor-basic-title">
@@ -271,6 +272,12 @@
                         <input class="master-input @error('bank_branch') is-invalid @enderror" id="vendor_bank_branch" name="bank_branch"
                             value="{{ old('bank_branch', $vendor->bank_branch) }}" maxlength="255" autocomplete="off">
                     </div>
+                    @foreach (['bank_address'=>'Bank Address','beneficiary_address'=>'Beneficiary Address'] as $field=>$label)
+                        <div class="master-field"><label class="master-label" for="vendor_{{ $field }}">{{ $label }}</label>
+                            <textarea class="master-textarea" id="vendor_{{ $field }}" name="{{ $field }}" rows="3" maxlength="3000">{{ old($field,$vendor->{$field}) }}</textarea>
+                        </div>
+                    @endforeach
+
                 </div>
             </div>
         </section>

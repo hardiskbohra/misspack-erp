@@ -54,8 +54,10 @@ final class SettingsDirectory
     public const CASHFLOW = 'cashflow';
     public const LEADS = 'leads';
     public const FEEDBACK = 'feedback';
+    public const WORKFLOW = 'workflow';
     public const BRIEFINGS = 'briefings';
     public const ASSETS = 'assets';
+    public const PACKAGING = 'packaging';
 
     /**
      * Every area of the settings module, in the order the rail shows them.
@@ -104,6 +106,19 @@ final class SettingsDirectory
                 ],
             ],
 
+            self::PACKAGING => [
+                'key' => self::PACKAGING,
+                'label' => 'Packaging lists',
+                'icon' => 'fa-solid fa-boxes-stacked',
+                'blurb' => 'The QR destination used by every carton label, across all packaging lists and paper formats.',
+                'holds' => ['Global carton-label QR code link', 'Default link back to each carton’s packaging list'],
+                'route' => 'settings.packaging',
+                'active' => 'settings.packaging*',
+                'links' => [],
+                'keywords' => ['packaging', 'packing list', 'carton', 'label', 'qr', 'qr code', 'link', 'scan'],
+                'counts' => fn (): array => ['Controls' => 1],
+            ],
+
             self::CASHFLOW => [
                 'key' => self::CASHFLOW,
                 'label' => 'Cashflow',
@@ -149,6 +164,29 @@ final class SettingsDirectory
                 'keywords' => ['lead', 'status', 'source', 'priority', 'finish', 'printing', 'currency', 'incoterm', 'capacity unit', 'dropdown'],
                 'counts' => fn (): array => [
                     'Options' => $this->count('lead_master_options', fn () => LeadMasterOption::query()->count()),
+                ],
+            ],
+
+            self::WORKFLOW => [
+                'key' => self::WORKFLOW,
+                'label' => 'Workflow',
+                'icon' => 'fa-solid fa-diagram-project',
+                'blurb' => 'Organisation defaults for dispatch evidence, action deadlines and the standard quality checklist.',
+                'holds' => [
+                    'Required dispatch documents by shipment type',
+                    'Approval and exception review deadlines',
+                    'Standard QC inspection checklist',
+                ],
+                'route' => 'settings.workflow',
+                'active' => 'settings.workflow*',
+                'links' => [
+                    ['label' => 'Dispatch documents', 'route' => 'settings.workflow', 'params' => ['tab' => 'documents']],
+                    ['label' => 'Deadlines & escalation', 'route' => 'settings.workflow', 'params' => ['tab' => 'deadlines']],
+                    ['label' => 'QC checklist', 'route' => 'settings.workflow', 'params' => ['tab' => 'quality']],
+                ],
+                'keywords' => ['workflow', 'dispatch', 'documents', 'quality', 'qc', 'deadline', 'approval', 'escalation', 'packing'],
+                'counts' => fn (): array => [
+                    'Controls' => 3,
                 ],
             ],
 

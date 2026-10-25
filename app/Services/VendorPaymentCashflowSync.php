@@ -6,7 +6,9 @@ use App\Models\CashflowEntry;
 use App\Models\Vendor;
 use App\Models\VendorPaymentEntry;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Keeps one INR cashflow entry in step with a vendor payment entry.
@@ -116,7 +118,19 @@ class VendorPaymentCashflowSync
         }
 
         if (Schema::hasColumn('cashflow_entries', 'project_id')) {
-            $mirror->project_id = $entry->project_id;
+            $hasProjectAllocation = $mirror->exists
+                && Schema::hasTable('cashflow_allocations')
+                && $mirror->allocations()->whereNotNull('project_id')->exists();
+            $mirror->project_id = $hasProjectAllocation ? null : $entry->project_id;
+            if ($hasProjectAllocation) {
+                /* A full-form edit upgraded the legacy project link to an
+                   allocation. Keep that slice in step with the vendor payment
+                   without restoring the old column and counting it twice. */
+                $mirror->allocations()
+                    ->whereNull('sales_invoice_id')
+                    ->whereNull('purchase_invoice_id')
+                    ->update(['project_id' => $entry->project_id]);
+            }
         }
 
         $mirror->save();
@@ -150,6 +164,47 @@ class VendorPaymentCashflowSync
     }
 
     /**
+     * An explicit cashflow deletion reverses the payment, not just its bank link.
+     * Keep the ledger row and its attachments as cancelled evidence. Do NOT call
+     * this from remove()/sync(): turning off a mirror is not deleting a payment.
+     * The caller's transaction also deletes the cashflow and its allocations.
+     */
+    public function reverseForDeletion(CashflowEntry $cashflow): int
+    {
+        if (! $this->available()) return 0;
+
+        return DB::transaction(function () use ($cashflow) {
+            $payments = VendorPaymentEntry::query()->where('cashflow_entry_id', $cashflow->id)
+                ->where('transaction_type', 'debit')
+                ->when(Schema::hasColumn('vendor_payment_entries', 'source'), fn ($query) => $query->where(function ($query) {
+                    $query->whereNull('source')->orWhere('source', '!=', CashflowVendorPaymentSync::SOURCE);
+                }))->orderBy('id')->lockForUpdate()->get();
+            $count = 0;
+            foreach ($payments as $payment) {
+                if ($payment->status === 'cancelled') continue;
+                $before = $payment->only(['id', 'vendor_id', 'purchase_invoice_id', 'cashflow_entry_id',
+                    'status', 'foreign_currency', 'foreign_amount', 'exchange_rate', 'amount_in_inr', 'paid_account_id']);
+                $saved = $payment->forceFill([
+                    'status' => 'cancelled', 'cashflow_entry_id' => null,
+                    'remarks' => trim((string) $payment->remarks."\nCancelled when cashflow entry #".$cashflow->id.' was deleted.'),
+                ])->save();
+                if (! $saved) throw ValidationException::withMessages(['entry' => 'The linked vendor payment could not be cancelled. No cashflow deletion was saved.']);
+                $user = Auth::user();
+                app(AuditTrail::class)->event('vendor-payment.cashflow-deletion-reversal', [
+                    'actor_type' => $user ? 'office_user' : 'system', 'actor_id' => $user?->id,
+                    'actor_name' => $user?->name, 'actor_identifier' => $user?->email,
+                    'auditable_type' => VendorPaymentEntry::class, 'auditable_id' => $payment->id,
+                    'context' => ['cashflow_entry_id' => $cashflow->id, 'payment_before' => $before,
+                        'payment_after' => $payment->only(['status', 'cashflow_entry_id'])],
+                ]);
+                $count++;
+            }
+            app(PurchaseInvoiceMoney::class)->refresh($payments->pluck('purchase_invoice_id')->all());
+            return $count;
+        });
+    }
+
+    /**
      * Break the link when a cashflow entry is deleted from the cashflow
      * module itself, so the vendor screen never points at a missing entry.
      */
@@ -173,9 +228,29 @@ class VendorPaymentCashflowSync
             return null;
         }
 
+        /* Only a payment the ledger owns. A row this entry generated itself
+           (`source = cashflow`) is its mirror, not its source — showing it as
+           "generated from vendor payment #N" would explain the entry backwards. */
         return VendorPaymentEntry::query()
             ->with('vendor')
             ->where('cashflow_entry_id', $cashflow->id)
+            ->when(Schema::hasColumn('vendor_payment_entries', 'source'), fn ($query) => $query->where(function ($query) {
+                $query->whereNull('source')->orWhere('source', '!=', CashflowVendorPaymentSync::SOURCE);
+            }))
+            ->first();
+    }
+
+    /** The vendor ledger row this cashflow entry posted, if it posted one. */
+    public function derivedPaymentFor(CashflowEntry $cashflow): ?VendorPaymentEntry
+    {
+        if (! $this->available() || ! Schema::hasColumn('vendor_payment_entries', 'source')) {
+            return null;
+        }
+
+        return VendorPaymentEntry::query()
+            ->with('vendor')
+            ->where('cashflow_entry_id', $cashflow->id)
+            ->where('source', CashflowVendorPaymentSync::SOURCE)
             ->first();
     }
 

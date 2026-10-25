@@ -576,53 +576,102 @@
     align-items:center;
     justify-content:space-between;
     gap:12px;
+    min-height:28px;
 }
 
+/* Compact application switch. It is deliberately control-sized rather than
+   button-sized so repeated settings remain easy to scan. */
 .master-switch{
     position:relative;
-    display:inline-block;
-    width:52px;
-    height:30px;
+    display:inline-flex;
+    flex:0 0 38px;
+    width:38px;
+    height:22px;
+    margin:0;
+    vertical-align:middle;
 }
 
 .master-switch input{
+    position:absolute;
+    inset:0;
+    z-index:1;
+    width:100%;
+    height:100%;
+    margin:0;
     opacity:0;
-    width:0;
-    height:0;
+    cursor:pointer;
 }
 
 .master-slider{
+    pointer-events:none;
     position:absolute;
     inset:0;
     cursor:pointer;
-    background:#d1d5db;
+    background:var(--mc-card-soft, var(--ui-muted-surface));
+    border:1px solid var(--mc-border, var(--ui-border));
     border-radius:999px;
-    transition:.25s;
+    transition:background-color .16s ease,border-color .16s ease;
 }
 
 .master-slider::before{
     content:'';
     position:absolute;
-    width:22px;
-    height:22px;
-    left:4px;
-    top:4px;
-    background: var(--mc-card);
+    width:16px;
+    height:16px;
+    left:2px;
+    top:2px;
+    background:color-mix(in srgb,var(--mc-text-3, var(--ui-text-muted)) 10%,var(--mc-card, var(--ui-card-surface)));
+    border:1px solid var(--mc-border, var(--ui-border));
     border-radius:50%;
-    transition:.25s;
-    box-shadow:0 2px 8px rgba(0,0,0,.15);
+    box-shadow:none;
+    transition:transform .16s ease,background-color .16s ease,border-color .16s ease;
+}
+
+.master-slider::after{
+    content:'−';
+    position:absolute;
+    z-index:1;
+    left:3px;
+    top:50%;
+    width:16px;
+    color:var(--mc-text-3, var(--ui-text-muted));
+    font-size:11px;
+    font-weight:700;
+    line-height:1;
+    text-align:center;
+    transform:translateY(-50%);
+    transition:transform .16s ease,color .16s ease;
 }
 
 .master-switch input:checked + .master-slider{
-    background:#2563eb;
+    background:var(--master-primary);
+    border-color:var(--master-primary);
 }
 
 .master-switch input:checked + .master-slider::before{
-    transform:translateX(22px);
+    background:#fff;
+    border-color:#fff;
+    transform:translateX(16px);
 }
 
-.master-switch input:focus + .master-slider{
-    box-shadow:0 0 0 3px rgba(37,99,235,.15);
+.master-switch input:checked + .master-slider::after{
+    content:'✓';
+    color:var(--master-primary);
+    transform:translate(16px,-50%);
+}
+
+.master-switch input:focus-visible + .master-slider{
+    outline:2px solid var(--master-primary);
+    outline-offset:2px;
+}
+
+.master-switch input:disabled{
+    cursor:not-allowed;
+}
+
+.master-switch input:disabled + .master-slider{
+    cursor:not-allowed;
+    opacity:.5;
 }
 
 .master-table td {

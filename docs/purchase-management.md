@@ -23,3 +23,78 @@ supplier's own bill number are the purchase side's half of that row).
 
 Screens: `resources/views/purchase_invoices/` — list, form, record, print.
 A PO converts to a bill; the bill posts into the vendor ledger via `PurchaseBillLedger`.
+
+## One payment, one owner
+
+A rupee payment can be recorded in two places, and only one of them owns it:
+
+| Written in | Ledger row | Owner |
+| --- | --- | --- |
+| Vendor ledger (`vendors.payments.*`) | `vendor_payment_entries`, `source` null | the ledger; `VendorPaymentCashflowSync` mirrors it to a cashflow entry |
+| Cashflow (`cashflows.*`, `vendor_id` set, debit, INR) | `vendor_payment_entries`, `source = 'cashflow'` | the cashflow row; `CashflowVendorPaymentSync` keeps the ledger row in step and deletes it with the entry |
+
+The link column is `vendor_payment_entries.cashflow_entry_id` in both directions,
+so the pair can always be found from either side. A row with `source = 'cashflow'`
+is read-only in the vendor module — the Money tab shows a *From cashflow* chip and
+a *Change in cashflow* link instead of Edit and Delete, and the controller refuses
+`updatePayment()`/`destroyPayment()` on it, because changing one half of a mirrored
+pair silently leaves the other half wrong.
+
+`CashflowAllocations` ignores `source = 'cashflow'` rows when it looks for a
+conflicting mirror, so the originating cashflow entry can still be allocated to a
+bill without the derived row looking like a second payment.
+
+The denomination of a derived row follows the bill it settles, not the bank it
+left from. When the cashflow entry is allocated to a purchase bill in a foreign
+currency, the allocation's **document amount** (the figure typed against the
+bill) becomes `foreign_amount`, its currency becomes `foreign_currency`, and
+`exchange_rate` is the rupee amount divided by it — a ¥8,000 bill paid with
+₹10,000 lands in the ledger as ¥8,000 @ 1.25, and `amount_in_inr` stays ₹10,000.
+Allocations are re-read whenever they change, so removing the bill puts the row
+back in rupees. A payment split across several currencies keeps the rupee
+figure rather than inventing a rate.
+
+A cashflow row the ledger cannot mirror — a vendor matched only by
+`related_party_name`, a foreign-currency row, money received back — is not
+converted. It is shown instead: in *Other cashflow activity* on the vendor's Money
+tab, and appended to the vendor statement of account in its own currency, which is
+why `PartyStatement::currencies()` reads `cashflow_entries.currency` as well as
+`vendor_payment_entries.foreign_currency`. Recurring rules post through the same
+sync, so a scheduled vendor payment lands on both ledgers at once.
+
+
+## Deleting a vendor-payment cashflow mirror
+
+An explicit **Delete** in Cashflow (single or bulk) reverses the linked vendor-owned
+payment rather than merely removing `cashflow_entry_id`. `reverseForDeletion()` retains
+the vendor ledger row and its attachments with status **Cancelled**, records the deleted
+cashflow ID in its remarks, and writes a `vendor-payment.cashflow-deletion-reversal`
+audit event with the actor and original amounts. The payment, bank entry, allocations,
+bill balance/status and audit write are handled in the deletion transaction; a failed
+cancellation or deletion rolls the operation back.
+
+Cancelled debits are excluded from purchase paid totals, eager/list aggregates, raw
+summary SQL, and the bill's active payment list. `PurchaseInvoiceMoney` refreshes stored
+balances and returns a previously paid/partial bill to **Received** when no active money
+remains (its payment state is **Unpaid**). Other active payments and the document's
+opening `amount_paid` remain intact. Draft/cancelled bills and purchase-order approval
+states are not advanced or reopened. Foreign payments reverse the document-currency
+amount; no new exchange rate is inferred.
+
+This is different from turning off **Also create cashflow** in Vendor → Money: removing
+a bank mirror without deleting the payment does **not** cancel that payment. Cashflow-
+originated payments retain their existing derived-row removal behavior. Shipment-cost
+links are still detached, not cancelled.
+
+### Entries deleted before this fix
+
+Old cashflow deletion cleared the link but left the vendor payment active. An unlinked
+payment can also be a legitimate ledger-only payment, so no migration guesses which rows
+to cancel. Identify the affected payment in **Vendors → Money** and change its status to
+**Cancelled**. That update now refreshes the purchase bill's paid total, balance and status
+as well. Other unmatched/ledger-only payments are not altered automatically.
+
+Regression coverage: `tests/Feature/VendorCashflowDeletionTest.php` exercises single/bulk
+reversal, partial and foreign payments, opening balances, retained evidence/audit, SQL and
+view totals, both payment origins, rollback, permissions, and cancellation of an explicitly
+identified pre-fix orphan.

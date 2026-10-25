@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\DateRanges;
 use App\Models\CashflowAccount;
+use App\Models\CashflowCategory;
 use App\Models\CashflowEntry;
 use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceAttachment;
@@ -19,8 +20,13 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Services\CashflowLedger;
+use App\Services\CashInvoiceConversion;
+use App\Services\CashInvoiceDeletion;
+use App\Services\ClientInvoiceSnapshot;
 use App\Services\ProjectProducts;
 use App\Services\SalesInvoiceFilters;
 use App\Services\SavedViews;
@@ -70,14 +76,15 @@ class SalesInvoiceController extends Controller
         /* One document, one claim on the money: a proforma that has become a
            tax invoice is not a receivable, and this clause is what every sum
            below says that with. */
+        $invoiceTotal = SalesInvoice::RECEIVABLE_TOTAL_SQL;
         $live = "(sales_invoices.invoice_type <> 'proforma' or sales_invoices.converted_invoice_id is null)";
 
         $figures = $this->filteredQuery($filters)->reorder()->selectRaw(
-            'coalesce(sum(case when sales_invoices.invoice_type = \'tax\''
-                ." and sales_invoices.status <> 'cancelled' then sales_invoices.total_amount else 0 end), 0) as sales"
+            'coalesce(sum(case when sales_invoices.invoice_type in (\'tax\', \'cash\')'
+                ." and sales_invoices.status <> 'cancelled' then {$invoiceTotal} else 0 end), 0) as sales"
             .', coalesce(sum(case when sales_invoices.invoice_type = \'proforma\''
                 ." and sales_invoices.converted_invoice_id is null and sales_invoices.status <> 'cancelled'"
-                .' then sales_invoices.total_amount else 0 end), 0) as potential'
+                .' then '.$invoiceTotal.' else 0 end), 0) as potential'
             .', coalesce(sum(case when '.$live.' then '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as received'
 
             /* What is owed is the Balance column, summed — the same rule as the
@@ -85,13 +92,13 @@ class SalesInvoiceController extends Controller
                that vanishes: the tax invoice a conversion creates starts as one
                with the advance already on it. Only a cancellation takes a document
                out of what is owed. */
-            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < sales_invoices.total_amount - 0.01'
-                ." and sales_invoices.status <> 'cancelled' then sales_invoices.total_amount - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
+            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < '.$invoiceTotal.' - 0.01'
+                ." and sales_invoices.status <> 'cancelled' then {$invoiceTotal} - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
             .', coalesce(sum(case when sales_invoices.due_date is not null and sales_invoices.due_date < ?'
                 ." and sales_invoices.status not in ('draft', 'cancelled')"
                 .' and '.$live
-                .' and '.SalesInvoice::RECEIVED_SQL.' < sales_invoices.total_amount - 0.01'
-                .' then sales_invoices.total_amount - '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as overdue'
+                .' and '.SalesInvoice::RECEIVED_SQL.' < '.$invoiceTotal.' - 0.01'
+                .' then '.$invoiceTotal.' - '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as overdue'
         )
             ->addBinding([now()->toDateString()], 'select')
             ->first();
@@ -114,10 +121,10 @@ class SalesInvoiceController extends Controller
            reads (`withReceived`, the payment count, the reminder count) never stand
            in front of it. */
         $totals = $this->filteredQuery($filters)->reorder()->selectRaw(
-            'coalesce(sum(case when '.$live.' then sales_invoices.total_amount else 0 end), 0) as counted'
+            'coalesce(sum(case when '.$live.' then '.$invoiceTotal.' else 0 end), 0) as counted'
             .', coalesce(sum(case when '.$live.' then '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as received'
-            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < sales_invoices.total_amount - 0.01'
-                ." and sales_invoices.status <> 'cancelled' then sales_invoices.total_amount - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
+            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < '.$invoiceTotal.' - 0.01'
+                ." and sales_invoices.status <> 'cancelled' then {$invoiceTotal} - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
         )->first();
 
         $pageTotals = [
@@ -129,6 +136,7 @@ class SalesInvoiceController extends Controller
         $invoices = $this->filteredQuery($filters)
             ->withReceived()
             ->withCount('payments')
+            ->when(Schema::hasTable('cashflow_allocations'), fn ($query) => $query->withCount('cashflowAllocations'))
             ->withReminders()
             ->latest('invoice_date')
             ->latest('id')
@@ -150,6 +158,7 @@ class SalesInvoiceController extends Controller
             'chaseLabels' => SalesInvoiceFilters::CHASE_LABELS,
             'reminderChannels' => SalesInvoiceReminder::channelOptions(),
             'accounts' => $this->accounts(),
+            'receiptCategories' => $this->receiptCategories(),
             'bulkActions' => self::BULK_ACTIONS,
             ...$filters,
         ]));
@@ -226,7 +235,7 @@ class SalesInvoiceController extends Controller
                     $invoice->client_gstin,
                     $invoice->project?->project_number,
                     $invoice->currency,
-                    $money($invoice->total_amount),
+                    $money($invoice->receivableTotal()),
                     $money($invoice->receivedAmount()),
                     $money($invoice->balanceDue()),
                     $invoice->stateLabel(),
@@ -251,10 +260,13 @@ class SalesInvoiceController extends Controller
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01'],
             'entry_date' => ['required', 'date'],
-            'account_id' => ['nullable', 'integer'],
-            'payment_mode' => ['nullable', 'string', 'max:40'],
+            'account_id' => ['required', 'integer', 'exists:cashflow_accounts,id'],
+            'category_id' => ['nullable', 'integer', 'exists:cashflow_categories,id'],
+            'accounting_status' => ['required', Rule::in(array_keys(CashflowEntry::accountingStatusOptions()))],
+            'payment_mode' => ['nullable', Rule::in(array_keys(CashflowEntry::paymentModeOptions()))],
             'bank_reference_number' => ['nullable', 'string', 'max:191'],
             'particular' => ['nullable', 'string', 'max:191'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $entry = new CashflowEntry();
@@ -266,24 +278,36 @@ class SalesInvoiceController extends Controller
         $entry->currency = in_array($salesInvoice->currency, array_keys(CashflowEntry::currencyOptions()), true)
             ? $salesInvoice->currency
             : 'INR';
-        $entry->account_id = $data['account_id'] ?? null;
+        $entry->account_id = $data['account_id'];
+        $entry->category_id = $data['category_id'] ?? null;
         $entry->payment_mode = CashflowEntry::normalisePaymentMode($data['payment_mode'] ?? null);
         $entry->bank_reference_number = $data['bank_reference_number'] ?? null;
+        $entry->notes = $data['notes'] ?? null;
         $entry->invoice_bill_number = $salesInvoice->invoice_number;
         $entry->client_id = $salesInvoice->client_id;
         $entry->related_party_type = 'client';
         $entry->related_party_name = $salesInvoice->client_company_name;
         $entry->sales_invoice_id = $salesInvoice->id;
-        $entry->accounting_status = 'pending';
+        $entry->accounting_status = $data['accounting_status'];
         $entry->created_by = Auth::id();
 
         if (Schema::hasColumn('cashflow_entries', 'project_id')) {
             $entry->project_id = $salesInvoice->project_id;
         }
 
-        $entry->save();
+        DB::transaction(function () use ($entry, $salesInvoice) {
+            $invoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
+            if ($invoice->isSuperseded() || $invoice->status === 'cancelled') {
+                throw ValidationException::withMessages(['amount' => 'Record this receipt against the active invoice, not a converted or cancelled PI.']);
+            }
+            $entry->save();
+            CashflowLedger::recalculateAccount($entry->account_id);
+        });
 
         $this->refreshInvoiceMoney($salesInvoice);
+        if ($workflow = $salesInvoice->project?->workflow) {
+            app(\App\Services\ProjectWorkflowGates::class)->evaluateAll($workflow, Auth::id());
+        }
 
         return back()->with('success', 'Receipt of '.number_format($entry->credit_amount, 2)
             .' recorded against '.$salesInvoice->invoice_number.'.');
@@ -334,8 +358,8 @@ class SalesInvoiceController extends Controller
      */
     public function convert(Request $request, SalesInvoice $salesInvoice): RedirectResponse
     {
-        if ($salesInvoice->invoice_type === 'tax') {
-            return back()->with('error', $salesInvoice->invoice_number.' is already a tax invoice.');
+        if ($salesInvoice->invoice_type !== 'proforma') {
+            return back()->with('error', $salesInvoice->invoice_number.' is not a proforma invoice.');
         }
 
         /* A cancelled document is not a document: it owes nothing and stands for
@@ -357,11 +381,12 @@ class SalesInvoiceController extends Controller
         $tax = DB::transaction(function () use ($salesInvoice) {
             $proforma = SalesInvoice::query()->whereKey($salesInvoice->getKey())->lockForUpdate()->first();
 
-            if (! $proforma || $proforma->invoice_type === 'tax' || $proforma->converted_invoice_id) {
+            if (! $proforma || $proforma->invoice_type !== 'proforma' || $proforma->converted_invoice_id
+                || $proforma->status === 'cancelled' || $proforma->cashConvertibleRemaining() <= 0) {
                 return null;
             }
 
-            $tax = $this->copyInvoice($proforma, [
+            $tax = $proforma->hasMonetaryConversions() ? $this->remainderTaxInvoice($proforma) : $this->copyInvoice($proforma, [
                 'invoice_type' => 'tax',
                 'invoice_number' => $this->makeInvoiceNumber('tax'),
                 /* The conversion continues the document rather than restarting
@@ -381,17 +406,117 @@ class SalesInvoiceController extends Controller
 
             $proforma->converted_invoice_id = $tax->id;
             $proforma->save();
+            $this->refreshInvoiceMoney($proforma);
 
             return $tax;
         });
 
         if (! $tax) {
-            return back()->with('error', 'A tax invoice already exists for '.$salesInvoice->invoice_number.'.');
+            return back()->with('error', 'This PI has no available remainder to tax invoice, or was already converted.');
         }
 
-        return redirect()->route('sales-invoices.edit', $tax)
+        return redirect()->route($tax->source_proforma_id ? 'sales-invoices.show' : 'sales-invoices.edit', $tax)
             ->with('success', $tax->invoice_number.' created from proforma '.$salesInvoice->invoice_number
                 .'. The advance and every receipt filed against the proforma moved to it.');
+    }
+
+    public function convertCash(Request $request, SalesInvoice $salesInvoice, CashInvoiceConversion $conversion): RedirectResponse
+    {
+        $data = $request->validate([
+            'conversion_mode' => ['required', Rule::in(['amount', 'percent'])],
+            'conversion_value' => ['required', 'numeric', 'gt:0', 'decimal:0,2'],
+            'transfer_received' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
+        ]);
+        $cash = DB::transaction(function () use ($salesInvoice, $data, $conversion) {
+            $pi = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
+            $plan = $conversion->plan($pi, $data['conversion_mode'], (float) $data['conversion_value']);
+            $cash = $pi->replicate(['created_at', 'updated_at', 'converted_invoice_id', 'cash_converted_base_amount', 'cash_converted_total_amount']);
+            $cash->fill(['invoice_type' => 'cash', 'invoice_number' => $this->makeInvoiceNumber('cash'),
+                'public_token' => null, 'source_proforma_id' => $pi->id, 'conversion_base_amount' => $plan['amount'],
+                'conversion_total_amount' => $plan['gross_consumed'], 'gst_type' => 'none', 'seller_gstin' => null,
+                'seller_pan' => null, 'client_gstin' => null, 'client_pan' => null, 'place_of_supply' => null,
+                'subtotal' => $plan['amount'], 'taxable_amount' => $plan['amount'], 'total_amount' => $plan['amount'],
+                'cgst_amount' => 0, 'sgst_amount' => 0, 'igst_amount' => 0, 'discount_type' => 'amount',
+                'discount_value' => 0, 'discount_amount' => 0, 'freight_amount' => 0, 'packing_amount' => 0,
+                'other_charges' => 0, 'round_off' => 0, 'amount_paid' => 0, 'balance_amount' => $plan['amount'],
+                'amount_in_words' => $this->amountInWords($plan['amount'], $pi->currency),
+                'terms_conditions' => $pi->terms_conditions === SalesInvoice::defaultTerms() ? SalesInvoice::defaultTerms(true) : $pi->terms_conditions,
+                'created_by' => Auth::id()]);
+            $cash->save();
+            $cash->items()->create(['product_name' => 'Amount against '.$pi->invoice_number, 'quantity' => 1,
+                'unit' => 'lot', 'unit_price' => $plan['amount'], 'gross_amount' => $plan['amount'],
+                'taxable_amount' => $plan['amount'], 'line_total' => $plan['amount'], 'gst_percent' => 0,
+                'discount_percent' => 0, 'discount_amount' => 0, 'cgst_amount' => 0, 'sgst_amount' => 0, 'igst_amount' => 0, 'sort_order' => 1]);
+            $conversion->transferReceipts($pi, $cash, (float) $data['transfer_received']);
+            $pi->cash_converted_base_amount = round((float) $pi->cash_converted_base_amount + $plan['amount'], 2);
+            $pi->cash_converted_total_amount = round((float) $pi->cash_converted_total_amount + $plan['gross_consumed'], 2);
+            // A retained advance stays on a zero-remainder PI rather than disappearing
+            // from receivables/opening-credit reports when the PI is superseded.
+            if ($plan['full'] && abs($pi->receivedAmount()) < 0.001) {
+                $pi->converted_invoice_id = $cash->id;
+            }
+            $pi->save();
+            $this->refreshInvoiceMoney($pi);
+            $this->refreshInvoiceMoney($cash);
+            if ($workflow = $pi->project?->workflow) {
+                app(\App\Services\ProjectWorkflowGates::class)->evaluateAll($workflow, Auth::id());
+            }
+            return $cash;
+        });
+        return redirect()->route('sales-invoices.show', $cash)->with('success', 'Cash invoice created. Only the selected receipts were transferred; any PI remainder stays open.');
+    }
+
+    private function remainderTaxInvoice(SalesInvoice $pi): SalesInvoice
+    {
+        $ratio = $pi->cashConvertibleRemaining() / $pi->cashConvertibleTotal();
+        $items = $pi->items()->get();
+        if ($items->isEmpty()) {
+            throw ValidationException::withMessages(['invoice' => 'This PI has no item lines to prorate. Ask Accounts to check the PI before converting it.']);
+        }
+        $tax = $pi->replicate(['created_at', 'updated_at', 'converted_invoice_id', 'cash_converted_base_amount', 'cash_converted_total_amount']);
+        $tax->fill(['invoice_type' => 'tax', 'invoice_number' => $this->makeInvoiceNumber('tax'), 'public_token' => null,
+            'source_proforma_id' => $pi->id, 'amount_paid' => 0, 'created_by' => Auth::id()]);
+        foreach (['discount_amount', 'cgst_amount', 'sgst_amount', 'igst_amount', 'freight_amount', 'packing_amount', 'other_charges'] as $field) {
+            $tax->$field = round((float) $pi->$field * $ratio, 2);
+        }
+        // Preserve percentage discounts; a fixed discount reduces with the claim.
+        if ($tax->discount_type !== 'percent') $tax->discount_value = $tax->discount_amount;
+        $tax->total_amount = $pi->receivableTotal();
+        $tax->balance_amount = $tax->total_amount;
+        $tax->amount_in_words = $this->amountInWords((float) $tax->total_amount, $tax->currency);
+        $tax->save();
+
+        // Keep the ordered product identity, quantities, units, HSN, descriptions,
+        // GST rates and project-product references. This is a financial proration,
+        // not a new physical order: do not sync the reduced rates into the project.
+        // Carry cents across rows rather than independently rounding every row.
+        $running = $scaled = array_fill_keys(['taxable_amount', 'discount_amount', 'cgst_amount', 'sgst_amount', 'igst_amount'], 0.0);
+        $subtotal = $lineTaxable = 0.0;
+        foreach ($items as $item) {
+            $line = $item->replicate(['created_at', 'updated_at']);
+            $line->sales_invoice_id = $tax->id;
+            $line->unit_price = round((float) $item->unit_price * $ratio, 2);
+            foreach (array_keys($running) as $field) {
+                $running[$field] += (float) $item->$field;
+                $next = round($running[$field] * $ratio, 2);
+                $line->$field = round($next - $scaled[$field], 2);
+                $scaled[$field] = $next;
+            }
+            $line->gross_amount = round((float) $line->taxable_amount + (float) $line->discount_amount, 2);
+            $line->line_total = round((float) $line->taxable_amount + (float) $line->cgst_amount + (float) $line->sgst_amount + (float) $line->igst_amount, 2);
+            $line->save();
+            $subtotal += (float) $line->gross_amount;
+            $lineTaxable += (float) $line->taxable_amount;
+        }
+        $tax->subtotal = round($subtotal, 2);
+        $tax->taxable_amount = round($lineTaxable - (float) $tax->discount_amount, 2);
+        // Preserve the exact outstanding claim, including original round-off and
+        // cumulative cash-conversion rounding. Never bill the cash portion twice.
+        $tax->round_off = round((float) $tax->total_amount - (float) $tax->taxable_amount
+            - (float) $tax->cgst_amount - (float) $tax->sgst_amount - (float) $tax->igst_amount
+            - (float) $tax->freight_amount - (float) $tax->packing_amount - (float) $tax->other_charges, 2);
+        $tax->save();
+        return $tax;
     }
 
     /**
@@ -419,6 +544,15 @@ class SalesInvoiceController extends Controller
                 ->where('sales_invoice_id', $proforma->id)
                 ->update(['sales_invoice_id' => $tax->id]);
         }
+        if (Schema::hasTable('cashflow_allocations')) {
+            DB::table('cashflow_allocations')
+                ->where('sales_invoice_id', $proforma->id)
+                ->update([
+                    'sales_invoice_id' => $tax->id,
+                    'document_currency' => $tax->currency,
+                    'updated_at' => now(),
+                ]);
+        }
 
         $this->refreshInvoiceMoney($tax);
         $this->refreshInvoiceMoney($proforma);
@@ -429,8 +563,11 @@ class SalesInvoiceController extends Controller
     {
         /* The link is never copied: a duplicate is a new document, and a
            proforma copy is not "already converted" to anything. */
-        $copy = $source->replicate(['created_at', 'updated_at', 'converted_invoice_id']);
+        $copy = $source->replicate(['created_at', 'updated_at', 'converted_invoice_id', 'source_proforma_id', 'conversion_base_amount', 'conversion_total_amount', 'cash_converted_base_amount', 'cash_converted_total_amount']);
         $copy->fill($overrides);
+        if ($source->source_proforma_id) {
+            $copy->project_id = null;
+        }
         $copy->created_by = Auth::id();
         $copy->save();
 
@@ -445,7 +582,9 @@ class SalesInvoiceController extends Controller
            lines the project's products follow. Materialised here rather than
            left to the copy's first save, because the office may never make
            one — the document already exists. */
-        app(ProjectProducts::class)->fromSalesInvoice($copy);
+        if (! $source->source_proforma_id) {
+            app(ProjectProducts::class)->fromSalesInvoice($copy);
+        }
 
         return $copy;
     }
@@ -539,6 +678,7 @@ class SalesInvoiceController extends Controller
         $counts = [
             'all' => $all,
             'proforma' => $count(['type' => 'proforma']),
+            'cash' => $count(['type' => 'cash']),
             'tax' => $count(['type' => 'tax']),
             'draft' => $count(['status' => 'draft']),
         ];
@@ -564,10 +704,24 @@ class SalesInvoiceController extends Controller
         return CashflowAccount::query()->orderBy('account_name')->get();
     }
 
+    /** Accounting classifications offered by the invoice receipt dialog. */
+    private function receiptCategories()
+    {
+        if (! Schema::hasTable('cashflow_categories')) {
+            return collect();
+        }
+
+        return CashflowCategory::query()
+            ->where('is_active', true)
+            ->whereIn('type', ['income', 'tax', 'other'])
+            ->orderBy('name')
+            ->get();
+    }
+
     public function create(Request $request): View
     {
         $invoiceType = $request->query('type', 'proforma');
-        if (! in_array($invoiceType, ['proforma', 'tax'], true)) {
+        if (! in_array($invoiceType, ['proforma', 'tax', 'cash'], true)) {
             $invoiceType = 'proforma';
         }
 
@@ -590,9 +744,13 @@ class SalesInvoiceController extends Controller
             'currency' => $client ? ($client->preferred_currency ?? 'INR') : 'INR',
             'gst_type' => 'intra_state',
             'payment_terms' => '50% advance, balance before dispatch',
+            'advance_required' => $invoiceType === 'proforma',
+            'advance_percentage' => $invoiceType === 'proforma' ? 50 : null,
+            'balance_before_dispatch' => $invoiceType === 'proforma',
+            'payment_tolerance' => 0,
             'delivery_terms' => 'As mutually discussed',
             'dispatch_terms' => 'Dispatch after payment and approval confirmation',
-            'terms_conditions' => SalesInvoice::defaultTerms(),
+            'terms_conditions' => SalesInvoice::defaultTerms($invoiceType === 'cash'),
             'show_client_portal' => false,
         ]));
 
@@ -624,12 +782,18 @@ class SalesInvoiceController extends Controller
             return $invoice;
         });
 
-        return redirect()->route('sales-invoices.show', $invoice)->with('success', 'Sales invoice created successfully.');
+        $returnTo = app(\App\Services\ProjectWorkflowReturn::class)->from($request);
+        return $returnTo
+            ? redirect()->to($returnTo)->with('success', 'Sales invoice saved. Workflow sources were recalculated.')
+            : redirect()->route('sales-invoices.show', $invoice)->with('success', 'Sales invoice created successfully.');
     }
 
     public function show(SalesInvoice $salesInvoice): View
     {
         $salesInvoice->load(['items.product', 'attachments', 'creator', 'reminders.creator']);
+        if (Schema::hasTable('cashflow_allocations')) {
+            $salesInvoice->load('cashflowAllocations.cashflowEntry');
+        }
         if ($this->clientAvailable()) { $salesInvoice->load('client'); }
         if ($this->projectAvailable()) { $salesInvoice->load('project'); }
 
@@ -638,24 +802,39 @@ class SalesInvoiceController extends Controller
         return view('sales_invoices.show', [
             'invoice' => $salesInvoice,
             'accounts' => $this->accounts(),
+            'receiptCategories' => $this->receiptCategories(),
             'reminderChannels' => SalesInvoiceReminder::channelOptions(),
         ]);
     }
 
-    public function edit(SalesInvoice $salesInvoice): View
+    private function assertEditable(SalesInvoice $invoice): void
     {
+        if ($invoice->hasMonetaryConversions()) {
+            throw ValidationException::withMessages(['invoice' => 'Linked conversion amounts are locked. Receipts can still be recorded; convert any remainder from the original PI.']);
+        }
+    }
+
+    public function edit(SalesInvoice $salesInvoice): View|RedirectResponse
+    {
+        if ($salesInvoice->hasMonetaryConversions()) {
+            return redirect()->route('sales-invoices.show', $salesInvoice)
+                ->with('error', 'Linked conversion amounts are locked. Receipts can still be recorded.');
+        }
         $salesInvoice->load(['items', 'attachments']);
         return view('sales_invoices.form', array_merge($this->sharedData(), ['invoice' => $salesInvoice]));
     }
 
     public function update(Request $request, SalesInvoice $salesInvoice): RedirectResponse
     {
+        $this->assertEditable($salesInvoice);
         $data = $this->validatedData($request, $salesInvoice);
         $items = $data['items'] ?? [];
         unset($data['items'], $data['attachments']);
         $data = $this->prepareInvoiceData($request, $data);
 
         DB::transaction(function () use ($request, $salesInvoice, $data, $items) {
+            $salesInvoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
+            $this->assertEditable($salesInvoice);
             $salesInvoice->update($data);
             $this->syncItemsAndTotals($salesInvoice, $items);
             $this->storeAttachments($request, $salesInvoice);
@@ -666,12 +845,26 @@ class SalesInvoiceController extends Controller
 
     public function destroy(SalesInvoice $salesInvoice): RedirectResponse
     {
-        foreach ($salesInvoice->attachments as $attachment) {
-            if ($attachment->file_path) {
-                Storage::disk('public')->delete($attachment->file_path);
-            }
+        if ($salesInvoice->isConvertedCash()) {
+            $pi = app(CashInvoiceDeletion::class)->delete($salesInvoice);
+
+            return redirect()->route('sales-invoices.show', $pi)->with('success',
+                'Cash Invoice deleted and conversion reversed. Its value and all linked receipts are back on '.$pi->invoice_number.'. Bank balances are unchanged.');
         }
-        $salesInvoice->delete();
+        $this->assertEditable($salesInvoice);
+        DB::transaction(function () use ($salesInvoice) {
+            $salesInvoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
+            $this->assertEditable($salesInvoice);
+            foreach ($salesInvoice->attachments as $attachment) {
+                if ($attachment->file_path) {
+                    Storage::disk('public')->delete($attachment->file_path);
+                }
+            }
+            if (Schema::hasTable('cashflow_allocations')) {
+                DB::table('cashflow_allocations')->where('sales_invoice_id', $salesInvoice->id)->update(['sales_invoice_id' => null]);
+            }
+            $salesInvoice->delete();
+        });
 
         return redirect()->route('sales-invoices.index')->with('success', 'Sales invoice deleted successfully.');
     }
@@ -710,9 +903,16 @@ class SalesInvoiceController extends Controller
 
     private function validatedData(Request $request, ?SalesInvoice $invoice = null): array
     {
+        if ($request->input('invoice_type') === 'cash') $request->merge(['gst_type' => 'none']);
         return $request->validate([
-            'invoice_number' => ['nullable', 'string', 'max:255', 'unique:sales_invoices,invoice_number,'.($invoice ? $invoice->id : 'NULL')],
-            'invoice_type' => ['required', 'in:proforma,tax'],
+            'invoice_number' => ['bail', 'nullable', 'string', 'max:255', 'unique:sales_invoices,invoice_number,'.($invoice ? $invoice->id : 'NULL'),
+                function ($attribute, $value, $fail) {
+                    if (CashInvoiceDeletion::numberWasReversed($value)) {
+                        $fail('This invoice number is reserved in the cash reversal audit history. Leave it blank to generate a new number.');
+                    }
+                },
+            ],
+            'invoice_type' => ['required', 'in:proforma,tax,cash'],
             'status' => ['required', Rule::in(array_keys(SalesInvoice::statusOptions()))],
             'client_id' => ['nullable', 'integer'],
             'project_id' => ['nullable', 'integer'],
@@ -721,7 +921,7 @@ class SalesInvoiceController extends Controller
             'valid_until' => ['nullable', 'date'],
             'currency' => ['required', 'in:INR,USD,RMB'],
             'exchange_rate' => ['nullable', 'numeric', 'min:0'],
-            'gst_type' => ['required', 'in:intra_state,inter_state,export'],
+            'gst_type' => ['required', Rule::in($request->input('invoice_type') === 'cash' ? ['none'] : ['intra_state', 'inter_state', 'export'])],
             'place_of_supply' => ['nullable', 'string', 'max:255'],
             'po_number' => ['nullable', 'string', 'max:255'],
             'po_date' => ['nullable', 'date'],
@@ -763,6 +963,10 @@ class SalesInvoiceController extends Controller
             'shipping_pincode' => ['nullable', 'string', 'max:30'],
 
             'payment_terms' => ['nullable', 'string', 'max:255'],
+            'advance_required' => ['nullable', 'boolean'],
+            'advance_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'balance_before_dispatch' => ['nullable', 'boolean'],
+            'payment_tolerance' => ['nullable', 'numeric', 'min:0'],
             'delivery_terms' => ['nullable', 'string', 'max:255'],
             'dispatch_terms' => ['nullable', 'string', 'max:255'],
             'transport_mode' => ['nullable', 'string', 'max:255'],
@@ -805,8 +1009,12 @@ class SalesInvoiceController extends Controller
         $data['other_charges'] = $data['other_charges'] ?? 0;
         $data['round_off'] = $data['round_off'] ?? 0;
         $data['amount_paid'] = $data['amount_paid'] ?? 0;
-        $data['terms_conditions'] = $data['terms_conditions'] ?: SalesInvoice::defaultTerms();
+        $data['terms_conditions'] = ($data['terms_conditions'] ?? null) ?: SalesInvoice::defaultTerms($data['invoice_type'] === 'cash');
         $data['show_client_portal'] = $request->boolean('show_client_portal');
+        $data['advance_required'] = $request->boolean('advance_required');
+        $data['balance_before_dispatch'] = $request->boolean('balance_before_dispatch');
+        $data['advance_percentage'] = $data['advance_required'] ? ($data['advance_percentage'] ?? 0) : null;
+        $data['payment_tolerance'] = $data['payment_tolerance'] ?? 0;
 
         if (! empty($data['client_id'])) {
             $client = $this->clientById($data['client_id']);
@@ -827,6 +1035,10 @@ class SalesInvoiceController extends Controller
             $data['cancelled_at'] = now();
         }
 
+        if ($data['invoice_type'] === 'cash') {
+            foreach (['seller_gstin', 'client_gstin', 'seller_pan', 'client_pan', 'place_of_supply'] as $field) $data[$field] = null;
+            $data['gst_type'] = 'none';
+        }
         return $data;
     }
 
@@ -853,7 +1065,7 @@ class SalesInvoiceController extends Controller
             $discountPercent = (float) ($item['discount_percent'] ?? 0);
             $discountAmount = round($gross * ($discountPercent / 100), 2);
             $taxable = max($gross - $discountAmount, 0);
-            $gstPercent = (float) ($item['gst_percent'] ?? 18);
+            $gstPercent = $invoice->isCash() ? 0 : (float) ($item['gst_percent'] ?? 18);
             $cgst = 0;
             $sgst = 0;
             $igst = 0;
@@ -872,7 +1084,7 @@ class SalesInvoiceController extends Controller
                 'project_product_id' => $item['project_product_id'] ?? null,
                 'product_name' => $productName ?: 'Product',
                 'description' => $item['description'] ?? null,
-                'hsn_sac' => $item['hsn_sac'] ?? null,
+                'hsn_sac' => $invoice->isCash() ? null : ($item['hsn_sac'] ?? null),
                 'quantity' => $qty ?: 1,
                 'unit' => $item['unit'] ?? 'pcs',
                 'unit_price' => $unitPrice,
@@ -969,26 +1181,7 @@ class SalesInvoiceController extends Controller
        value the office cannot see is a value it cannot correct before it prints. */
     private function clientSnapshot($client): array
     {
-        return [
-            'client_company_name' => $client->company_name ?? null,
-            'client_brand_name' => $client->brand_name ?? null,
-            'client_contact_name' => $client->account_person_name ?: ($client->ceo_name ?? null),
-            'client_email' => $client->account_person_email ?: ($client->ceo_email ?? null),
-            'client_mobile' => $client->account_person_contact ?: ($client->ceo_contact ?? null),
-            'client_gstin' => $client->gstin ?? null,
-            'client_pan' => $client->pan ?? null,
-            'billing_address' => $client->billing_address ?? null,
-            'billing_city' => $client->billing_city ?? null,
-            'billing_state' => $client->billing_state ?? null,
-            'billing_country' => $client->billing_country ?? null,
-            'billing_pincode' => $client->billing_pincode ?? null,
-            'shipping_address' => $client->shipping_address ?: ($client->billing_address ?? null),
-            'shipping_city' => $client->shipping_city ?: ($client->billing_city ?? null),
-            'shipping_state' => $client->shipping_state ?: ($client->billing_state ?? null),
-            'shipping_country' => $client->shipping_country ?: ($client->billing_country ?? null),
-            'shipping_pincode' => $client->shipping_pincode ?: ($client->billing_pincode ?? null),
-            'place_of_supply' => $client->billing_state ?? null,
-        ];
+        return ClientInvoiceSnapshot::from($client);
     }
 
     private function itemsFromSource($project = null): array
@@ -1035,7 +1228,7 @@ class SalesInvoiceController extends Controller
             ? now()->format('y') . '-' . now()->addYear()->format('y')
             : now()->subYear()->format('y') . '-' . now()->format('y');
             
-        $prefix = ($type === 'tax' ? "MP/INV/{$financialYear}/" : "MP/PI/{$financialYear}/");
+        $prefix = match ($type) { 'tax' => "MP/INV/{$financialYear}/", 'cash' => "MP/CI/{$financialYear}/", default => "MP/PI/{$financialYear}/" };
         $next = str_pad((string) (SalesInvoice::where('invoice_type', $type)->whereYear('created_at', now()->year)->count() + 1), 3, '0', STR_PAD_LEFT);
         
         $lastInvoice = SalesInvoice::where('invoice_type', $type)
@@ -1048,7 +1241,8 @@ class SalesInvoiceController extends Controller
         
         $number = $prefix.$next;
 
-        while (SalesInvoice::where('invoice_number', $number)->exists()) {
+        while (SalesInvoice::where('invoice_number', $number)->exists()
+            || ($type === 'cash' && CashInvoiceDeletion::numberWasReversed($number))) {
             $next = str_pad((string) ((int) $next + 1), 3, '0', STR_PAD_LEFT);
             $number = $prefix.$next;
         }
@@ -1179,6 +1373,8 @@ class SalesInvoiceController extends Controller
 
         DB::transaction(function () use ($data, $invoices, &$done, &$skipped) {
             foreach ($invoices as $invoice) {
+                $invoice = SalesInvoice::whereKey($invoice->id)->lockForUpdate()->first();
+                if (! $invoice) { $skipped++; continue; }
                 switch ($data['action']) {
                     case 'mark_sent':
                         /* a cancelled document was withdrawn on purpose: it is not
@@ -1211,7 +1407,7 @@ class SalesInvoiceController extends Controller
 
                     case 'delete_drafts':
                         // only what never left the desk
-                        if ($invoice->status === 'draft') {
+                        if ($invoice->status === 'draft' && ! $invoice->hasMonetaryConversions()) {
                             $invoice->delete();
                             $done++;
                         } else {
@@ -1227,7 +1423,7 @@ class SalesInvoiceController extends Controller
 
         if ($skipped) {
             $why = $data['action'] === 'delete_drafts'
-                ? 'left alone — already past draft, so the client holds it'
+                ? 'left alone — not an unlinked draft; linked Cash Invoices need individual deletion to reverse their conversion safely'
                 : 'left alone — cancelled';
 
             $message .= ' '.$skipped.' '.Str::plural('invoice', $skipped).' '.$why.'.';
@@ -1251,7 +1447,7 @@ class SalesInvoiceController extends Controller
         $selected = $this->selectedIds($request);
 
         $invoices = $this->filteredQuery($filters)
-            ->whereNotIn('sales_invoices.status', ['draft', 'cancelled']);
+            ->whereNotIn('sales_invoices.status', ['draft', 'cancelled'])->where('sales_invoices.invoice_type', '!=', 'cash');
 
         if ($selected !== []) {
             $invoices->whereIn('sales_invoices.id', $selected);
@@ -1364,9 +1560,7 @@ class SalesInvoiceController extends Controller
                holds travels; the field list below keeps its shape either way, so
                changing client clears what the last one had. */
             'clientSnapshots' => $this->clientSnapshots($clients),
-            'clientSnapshotFields' => $clients->isNotEmpty()
-                ? array_keys($this->clientSnapshot($clients->first()))
-                : [],
+            'clientSnapshotFields' => array_keys($this->clientSnapshot(new \App\Models\Client)),
             'projects' => $this->projects(),
             'products' => $this->products(),
             'typeOptions' => SalesInvoice::typeOptions(),

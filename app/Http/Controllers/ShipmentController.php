@@ -7,16 +7,20 @@ use App\Models\CashflowAccount;
 use App\Models\CashflowEntry;
 use App\Models\SalesInvoice;
 use App\Models\SavedView;
+use App\Models\Project;
+use App\Models\ProjectProduct;
 use App\Helpers\DateRanges;
 use App\Models\Shipment;
 use App\Models\ShipmentAttachment;
 use App\Models\ShipmentCost;
+use App\Models\ShipmentItem;
 use App\Models\ShipmentTrackingHistory;
 use App\Services\ClientPortalNotifier;
 use App\Services\SavedViews;
 use App\Services\ShipmentCostCashflowSync;
 use App\Services\ShipmentCostLedger;
 use App\Services\ShipmentDocuments;
+use App\Services\ShipmentDispatchAuthorization;
 use App\Services\ShipmentPartyDirectory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,6 +31,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ShipmentController extends Controller
@@ -55,7 +60,7 @@ class ShipmentController extends Controller
         // Open shipments first, finished ones below; date is the tie-breaker
         // inside each group (see Shipment::scopePriorityOrder).
         $shipments = $this->filteredQuery($request)
-            ->with('creator')
+            ->with(['creator', 'latestPackagingList', 'latestDeliveryReceipt'])
             ->withCount('items')
             ->withCount('costs')
             ->withSum(['costs as cost_same_currency' => fn ($query) => $query->whereColumn('shipment_costs.currency', 'shipments.currency')], 'amount')
@@ -132,18 +137,23 @@ class ShipmentController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        $project = Project::query()->find((int) $request->query('project_id'));
         $shipment = new Shipment([
             'shipment_number' => $this->makeShipmentNumber(),
             'shipment_type' => Shipment::TYPE_DOMESTIC,
             'shipment_mode' => 'courier',
             'pickup_date' => now()->toDateString(),
             'status' => Shipment::STATUS_PLANNING,
-            'currency' => 'INR',
+            'currency' => $project?->currency ?: 'INR',
             'cost_borne_by' => 'misspack',
+            'project_id' => $project?->id,
+            'client_id' => $project?->client_id,
         ]);
-        $shipment->setRelation('items', collect());
+        $shipment->setRelation('items', $project
+            ? $this->projectShipmentItemDefaults($project)->map(fn (array $row) => new ShipmentItem($row))
+            : collect());
         $shipment->setRelation('attachments', collect());
 
         return view('shipments.form', $this->formData($shipment));
@@ -159,6 +169,11 @@ class ShipmentController extends Controller
         /* a shipment can be created already delivered: same rule, same default */
         $data = Shipment::withDeliveryDefaults($data);
         $this->assertDeliveryDateAllowed($data['drop_date'] ?? null, $data['pickup_date'] ?? null);
+        if (! empty($data['project_id']) && in_array($data['status'], Shipment::dispatchedStatuses(), true)) {
+            throw ValidationException::withMessages(['status' => 'Save the project shipment in Planning first. Then create or link and confirm its Packaging List before authorizing dispatch.']);
+        }
+        $probe = new Shipment(['status' => Shipment::STATUS_PLANNING, 'project_id' => $data['project_id'] ?? null]);
+        $this->assertStatusChangeAllowed($probe, $data['status'], ['remarks' => $data['delay_reason'] ?? $data['notes'] ?? null]);
 
         $shipment = DB::transaction(function () use ($request, $data, $items) {
             $data['shipment_number'] = $data['shipment_number'] ?: $this->makeShipmentNumber();
@@ -174,9 +189,14 @@ class ShipmentController extends Controller
             return $shipment;
         });
 
-        return redirect()
-            ->route('shipments.show', $shipment)
-            ->with('success', 'Shipment created successfully.');
+        $this->refreshProjectReadiness($shipment);
+
+        $returnTo = app(\App\Services\ProjectWorkflowReturn::class)->from($request);
+        return $returnTo
+            ? redirect()->to($returnTo)->with('success', 'Shipment saved. Workflow sources were recalculated.')
+            : redirect()
+                ->route('shipments.show', $shipment)
+                ->with('success', 'Shipment created successfully. Create its packaging list from the Packaging Lists module when packing details are ready.');
     }
 
     public function quickStore(Request $request): RedirectResponse
@@ -214,13 +234,13 @@ class ShipmentController extends Controller
 
         return redirect()
             ->route('shipments.show', $shipment)
-            ->with('success', 'Quick shipment created successfully.');
+            ->with('success', 'Quick shipment created successfully. Create its packaging list from the Packaging Lists module when needed.');
     }
 
     public function show(Shipment $shipment): View
     {
         $shipment->load([
-            'items', 'histories', 'attachments', 'client', 'project', 'salesInvoice',
+            'items.packingAllocations.packagingListItem.carton.packagingList', 'items.deliveryReceiptLines', 'deliveryReceipts.lines.shipmentItem', 'deliveryReceipts.recorder', 'histories', 'attachments', 'client', 'project', 'salesInvoice', 'latestPackagingList',
             'costs.vendor', 'costs.paidAccount',
         ]);
 
@@ -229,7 +249,7 @@ class ShipmentController extends Controller
 
     public function edit(Shipment $shipment): View
     {
-        $shipment->load(['items', 'histories.creator', 'attachments.uploader']);
+        $shipment->load(['items.packingAllocations.packagingListItem.carton.packagingList', 'histories.creator', 'attachments.uploader']);
 
         return view('shipments.form', $this->formData($shipment));
     }
@@ -254,12 +274,38 @@ class ShipmentController extends Controller
             'remarks' => $request->input('delay_reason') ?: $request->input('remarks'),
         ]);
 
+        $dispatchTransition = $shipment->status === Shipment::STATUS_PLANNING
+            && in_array($data['status'], Shipment::dispatchedStatuses(), true);
+        $workflow = $shipment->project?->workflow;
+        $evaluation = null;
+        if ($dispatchTransition && $workflow) {
+            $authorizationCandidate = clone $shipment;
+            $authorizationCandidate->status = $data['status'];
+            $evaluation = app(ShipmentDispatchAuthorization::class)->evaluate($authorizationCandidate, $workflow, $items, Auth::id());
+            $evaluation->loadMissing('activeOverride');
+            if (! in_array($evaluation->effectiveResult(), ['passed', 'overridden'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => $evaluation->summary.' Complete the named Packaging List or Project document action, then retry dispatch.',
+                ]);
+            }
+        }
+
         $oldStatus = $shipment->status;
 
-        DB::transaction(function () use ($request, $shipment, $data, $items, $oldStatus) {
+        DB::transaction(function () use ($request, $shipment, $data, $items, $oldStatus, $dispatchTransition, $workflow, $evaluation) {
             $data['show_client_portal'] = $request->boolean('show_client_portal');
             $shipment->update($data);
-            $this->syncItems($shipment, $items);
+            if ($oldStatus === Shipment::STATUS_PLANNING) {
+                $this->syncItems($shipment, $items);
+            }
+            if ($dispatchTransition && $workflow && $evaluation) {
+                $authorization = app(ShipmentDispatchAuthorization::class);
+                $lockedDetails = $authorization->inspect($shipment, $workflow, $authorization->rowsFromShipment($shipment), true);
+                $lockedHash = hash('sha256', json_encode($lockedDetails, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                if (! hash_equals((string)$evaluation->content_hash, $lockedHash)) {
+                    throw ValidationException::withMessages(['status' => 'Linked Packaging List details changed while dispatch was being authorized. Review the current packing evidence and retry.']);
+                }
+            }
             $this->storePhotoAttachments($request, $shipment, $request->boolean('is_public'));
 
             if ($oldStatus !== $shipment->status) {
@@ -271,6 +317,7 @@ class ShipmentController extends Controller
         if ($oldStatus !== $shipment->status) {
             ShipmentStatusChanged::dispatch($shipment->fresh(), $oldStatus);
         }
+        $this->refreshProjectReadiness($shipment->fresh());
 
         $redirect = redirect()
             ->route('shipments.show', $shipment)
@@ -294,6 +341,9 @@ class ShipmentController extends Controller
 
     public function destroy(Shipment $shipment): RedirectResponse
     {
+        abort_if(in_array($shipment->status, Shipment::dispatchedStatuses(), true), 422, 'A dispatched shipment is an operational audit record. Cancel it before deletion.');
+        abort_if($shipment->deliveryReceipts()->exists(), 422, 'A shipment with immutable delivery receipts cannot be deleted.');
+        $project = $shipment->project;
         foreach ($shipment->attachments as $attachment) {
             if ($attachment->file_path) {
                 Storage::disk('public')->delete($attachment->file_path);
@@ -301,6 +351,9 @@ class ShipmentController extends Controller
         }
 
         $shipment->delete();
+        if ($project?->workflow) {
+            app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($project->workflow, Auth::id());
+        }
 
         return redirect()
             ->route('shipments.index')
@@ -346,10 +399,33 @@ class ShipmentController extends Controller
             'remarks' => $data['remarks'] ?? null,
         ]);
 
+        $dispatchTransition = $shipment->status === Shipment::STATUS_PLANNING && in_array($data['status'], Shipment::dispatchedStatuses(), true);
+        $workflow = $shipment->project?->workflow;
+        $dispatchEvaluation = null;
+        if ($dispatchTransition && $workflow) {
+            $authorization = app(ShipmentDispatchAuthorization::class);
+            $candidate = clone $shipment; $candidate->status = $data['status'];
+            $dispatchRows = $authorization->rowsFromShipment($shipment);
+            $dispatchEvaluation = $authorization->evaluate($candidate, $workflow, $dispatchRows, Auth::id());
+            $dispatchEvaluation->loadMissing('activeOverride');
+            if (! in_array($dispatchEvaluation->effectiveResult(), ['passed','overridden'], true)) {
+                throw ValidationException::withMessages(['status' => $dispatchEvaluation->summary.' Complete the named Packaging List or Project document action before dispatch.']);
+            }
+        }
+
         $oldStatus = $shipment->status;
         $notify = $request->boolean('notify_client', true);
 
-        DB::transaction(function () use ($shipment, $data, $attributes, $oldStatus, $notify) {
+        DB::transaction(function () use ($shipment, $data, $attributes, $oldStatus, $notify, $dispatchTransition, $workflow, $dispatchEvaluation) {
+            if ($dispatchTransition && $workflow && $dispatchEvaluation) {
+                $authorization = app(ShipmentDispatchAuthorization::class);
+                $candidate = clone $shipment; $candidate->status = $data['status'];
+                $lockedDetails = $authorization->inspect($candidate, $workflow, $authorization->rowsFromShipment($shipment), true);
+                $lockedHash = hash('sha256', json_encode($lockedDetails, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                if (! hash_equals((string)$dispatchEvaluation->content_hash, $lockedHash)) {
+                    throw ValidationException::withMessages(['status' => 'Linked Packaging List details changed while dispatch was being authorized. Review the current packing evidence and retry.']);
+                }
+            }
             $shipment->histories()->create($data);
             $shipment->update($attributes);
 
@@ -361,6 +437,7 @@ class ShipmentController extends Controller
         if ($oldStatus !== $shipment->status) {
             ShipmentStatusChanged::dispatch($shipment->fresh(), $oldStatus);
         }
+        $this->refreshProjectReadiness($shipment->fresh());
 
         $message = 'Tracking history added successfully.';
 
@@ -386,6 +463,22 @@ class ShipmentController extends Controller
     {
         if ($status === $shipment->status) {
             return;
+        }
+
+        if ($shipment->status === Shipment::STATUS_PLANNING
+            && in_array($status, Shipment::dispatchedStatuses(), true)
+            && $shipment->project_id) {
+            $workflow = \App\Models\ProjectWorkflow::query()->where('project_id', $shipment->project_id)->first();
+            if ($workflow) {
+                $evaluations = app(\App\Services\ProjectWorkflowGates::class)->evaluateAll($workflow, Auth::id());
+                $dispatchGate = collect($evaluations)->firstWhere('gate_key', \App\Services\ProjectWorkflowGates::GATE_DISPATCH_BALANCE);
+                $dispatchGate?->loadMissing('activeOverride');
+                if (! $dispatchGate || ! in_array($dispatchGate->effectiveResult(), ['passed', 'overridden'], true)) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Shipment pickup is blocked until the complete Proforma balance is received or a manager records a current workflow override.',
+                    ]);
+                }
+            }
         }
 
         if (in_array($status, [Shipment::STATUS_CUSTOM_HOLD, Shipment::STATUS_DELAYED], true)
@@ -458,7 +551,8 @@ class ShipmentController extends Controller
 
         $this->storePhotoAttachments($request, $shipment, $request->boolean('is_public'));
 
-        return back()->with('success', 'Shipment photo attachment uploaded successfully.');
+        return redirect()->route('shipments.show', $shipment)->withFragment('shipmentAttachments')
+            ->with('success', 'Shipment attachments uploaded successfully.');
     }
 
     public function updateAttachment(Request $request, ShipmentAttachment $attachment): RedirectResponse
@@ -540,6 +634,7 @@ class ShipmentController extends Controller
         $latestHistory = $shipment->histories()->first();
 
         if ($latestHistory) {
+            $this->assertStatusChangeAllowed($shipment, $latestHistory->status, ['remarks' => $latestHistory->remarks]);
             /* the status is derived from history here, so the delivery default
                has to follow it: a history edit can make the row delivered */
             $shipment->update(Shipment::withDeliveryDefaults(
@@ -568,6 +663,13 @@ class ShipmentController extends Controller
 
     private function validatedData(Request $request, ?Shipment $shipment = null): array
     {
+        $request->merge([
+            'items' => collect($request->input('items', []))
+                ->filter(fn ($item) => filled($item['project_product_id'] ?? null) || filled($item['product_name'] ?? null))
+                ->values()
+                ->all(),
+        ]);
+
         return $request->validate([
             'shipment_number' => ['nullable', 'string', 'max:255', 'unique:shipments,shipment_number,'.($shipment?->id ?? 'NULL')],
             'identity_name' => ['required', 'string', 'max:255'],
@@ -611,7 +713,6 @@ class ShipmentController extends Controller
             'delay_reason' => ['nullable', 'string', 'max:60'],
             'sales_invoice_id' => ['nullable', 'integer'],
             'notify_client' => ['nullable', 'boolean'],
-            'document_type' => ['nullable', 'string', 'max:40'],
             'shipment_cost' => ['nullable', 'numeric', 'min:0'],
             'currency' => ['required', 'in:INR,RMB,USD'],
             'cost_borne_by' => ['required', 'in:shipper,receiver,misspack'],
@@ -621,9 +722,10 @@ class ShipmentController extends Controller
             'notes' => ['nullable', 'string'],
 
             'attachment_photos' => ['nullable', 'array'],
-            'attachment_photos.*' => ['nullable', 'file', 'max:8192'],
+            'attachment_photos.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:8192'],
 
             'items' => ['nullable', 'array'],
+            'items.*.project_product_id' => [Rule::requiredIf(fn () => filled($request->input('project_id'))), 'nullable', Rule::exists('project_products', 'id')->where(fn ($query) => $query->where('project_id', $request->input('project_id')))],
             'items.*.product_name' => ['nullable', 'string', 'max:255'],
             'items.*.sku' => ['nullable', 'string', 'max:255'],
             'items.*.hs_code' => ['nullable', 'string', 'max:255'],
@@ -634,6 +736,11 @@ class ShipmentController extends Controller
             'items.*.net_weight' => ['nullable', 'numeric', 'min:0'],
             'items.*.gross_weight' => ['nullable', 'numeric', 'min:0'],
             'items.*.description' => ['nullable', 'string'],
+        ], [
+            'items.*.project_product_id.required' => 'Select the matching project product for each shipment line.',
+            'items.*.project_product_id.exists' => 'A selected product does not belong to this project. Choose it again.',
+        ], [
+            'items.*.project_product_id' => 'shipment product',
         ]);
     }
 
@@ -668,9 +775,6 @@ class ShipmentController extends Controller
             $mime = (string) $file->getMimeType();
 
             $shipment->attachments()->create([
-                // A document type makes it paperwork; anything else is stamped
-                // by what the file actually is (the old code called every
-                // upload a photo, including PDFs).
                 'attachment_type' => $documentType
                     ? 'document'
                     : (str_starts_with($mime, 'image/') ? 'photo' : 'document'),
@@ -697,6 +801,7 @@ class ShipmentController extends Controller
             }
 
             $shipment->items()->create([
+                'project_product_id' => $item['project_product_id'] ?? null,
                 'product_name' => $item['product_name'],
                 'sku' => $item['sku'] ?? null,
                 'hs_code' => $item['hs_code'] ?? null,
@@ -853,8 +958,8 @@ class ShipmentController extends Controller
     }
 
     /**
-     * Print-ready paperwork built from the shipment itself: packing list,
-     * delivery challan or a one-page summary. Downloads a PDF when the dompdf
+     * Print-ready paperwork built from the shipment itself: a delivery
+     * challan or one-page summary. Packaging Lists belong to their own module. Downloads a PDF when the dompdf
      * package is present, otherwise renders the same page for Print > Save as
      * PDF — the pattern already used by the cashflow reports.
      */
@@ -892,7 +997,6 @@ class ShipmentController extends Controller
     public function printPack(Request $request, Shipment $shipment, string $document)
     {
         $views = [
-            'packing-list' => 'shipments.print.packing-list',
             'delivery-challan' => 'shipments.print.delivery-challan',
             'summary' => 'shipments.print.summary',
         ];
@@ -1140,8 +1244,64 @@ class ShipmentController extends Controller
         return round($inr + $legacyInr, 2);
     }
 
+    private function refreshProjectReadiness(Shipment $shipment): void
+    {
+        if ($workflow = $shipment->project?->workflow) {
+            app(\App\Services\ProjectOperationalReadiness::class)->evaluateAll($workflow, Auth::id());
+            if ($shipment->status === Shipment::STATUS_PLANNING) {
+                $authorization = app(ShipmentDispatchAuthorization::class);
+                $authorization->evaluate($shipment, $workflow, $authorization->rowsFromShipment($shipment), Auth::id());
+            }
+        }
+    }
+
+    private function dispatchAuthorizationEvaluation(Shipment $shipment): ?\App\Models\ProjectGateEvaluation
+    {
+        $workflow = $shipment->project?->workflow;
+        if (! $shipment->exists || ! $workflow) return null;
+        $evaluation = $workflow->evaluations()->where('gate_key', ShipmentDispatchAuthorization::GATE_KEY)->with('activeOverride.approver')->latest('evaluated_at')->latest('id')->first();
+        return (int)data_get($evaluation?->details, 'shipment_id') === (int)$shipment->id ? $evaluation : null;
+    }
+
+    private function projectShipmentItemDefaults(Project $project): \Illuminate\Support\Collection
+    {
+        $products = $project->products()->where('status', '!=', 'cancelled')->orderBy('sort_order')->get();
+        $reserved = ShipmentItem::query()
+            ->whereIn('project_product_id', $products->pluck('id'))
+            ->whereHas('shipment', fn ($query) => $query->where('status', '!=', Shipment::STATUS_CANCELLED))
+            ->selectRaw('project_product_id, SUM(quantity) as aggregate')
+            ->groupBy('project_product_id')
+            ->pluck('aggregate', 'project_product_id');
+
+        return $products->map(function (ProjectProduct $product) use ($project, $reserved) {
+            $quantity = round(max((float) $product->quantity - (float) ($reserved[$product->id] ?? 0), 0), 3);
+            if ($quantity <= 0) return null;
+
+            return [
+                'project_product_id' => $product->id,
+                'product_name' => $product->product_name,
+                'sku' => $product->sku,
+                'hs_code' => data_get($product->product_snapshot, 'hs_code'),
+                'quantity' => $quantity,
+                'unit' => $product->unit ?: 'pcs',
+                'declared_value' => round($quantity * (float) $product->unit_price, 2),
+                'currency' => $product->currency ?: $project->currency ?: 'INR',
+                'net_weight' => null,
+                'gross_weight' => null,
+                'description' => data_get($product->product_snapshot, 'description'),
+            ];
+        })->filter()->values();
+    }
+
     private function formData(Shipment $shipment): array
     {
+        $productOptions = ProjectProduct::query()
+            ->with('project:id,name,project_number')
+            ->when($shipment->project_id,
+                fn ($query) => $query->where('project_id', $shipment->project_id),
+                fn ($query) => $query->where('status', '!=', 'cancelled')->limit(1000))
+            ->orderBy('project_id')->orderBy('sort_order')->get();
+
         return [
             'shipment' => $shipment,
             'statusOptions' => Shipment::statusOptions(),
@@ -1158,6 +1318,9 @@ class ShipmentController extends Controller
             'costHeads' => ShipmentCost::headOptions(),
             'costTotals' => $shipment->costSummary(),
             'invoiceOptions' => $this->invoiceOptions($shipment),
+            'projectProductOptions' => $productOptions,
+            'shipmentItemsFrozen' => $shipment->exists && $shipment->status !== Shipment::STATUS_PLANNING,
+            'dispatchAuthorizationEvaluation' => $this->dispatchAuthorizationEvaluation($shipment),
             'paymentModeOptions' => CashflowEntry::paymentModeOptions(),
             'paidAccounts' => $this->paidAccounts(),
             /* the rate each currency was last billed at — offered as the

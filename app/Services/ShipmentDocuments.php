@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\OfficeSetting;
+use App\Models\PackagingList;
+use App\Models\ProjectAttachment;
 use App\Models\Shipment;
-use App\Models\ShipmentAttachment;
 use Illuminate\Support\Collection;
 
 /**
@@ -36,7 +38,7 @@ class ShipmentDocuments
 
     public function available(): bool
     {
-        return class_exists(ShipmentAttachment::class);
+        return class_exists(ProjectAttachment::class);
     }
 
     /**
@@ -59,11 +61,11 @@ class ShipmentDocuments
      */
     public function requiredFor(Shipment $shipment): array
     {
-        $required = match ($shipment->shipment_type) {
-            Shipment::TYPE_EXPORT => ['packing_list', 'commercial_invoice', 'shipping_bill'],
-            Shipment::TYPE_IMPORT => ['packing_list', 'commercial_invoice', 'bill_of_entry'],
-            default => ['delivery_challan'],
-        };
+        $documentRules = OfficeSetting::workflow()['documents'];
+        $required = array_values(array_intersect(
+            (array) ($documentRules[$shipment->shipment_type] ?? $documentRules[Shipment::TYPE_DOMESTIC] ?? []),
+            array_keys(self::TYPES)
+        ));
 
         // Proof of delivery is only expected once the shipment says delivered.
         if ($shipment->status === Shipment::STATUS_DELIVERED) {
@@ -80,25 +82,31 @@ class ShipmentDocuments
      */
     public function checklist(Shipment $shipment): Collection
     {
-        $attachments = $shipment->relationLoaded('attachments')
-            ? $shipment->attachments
-            : $shipment->attachments()->get();
-
         $required = $this->requiredFor($shipment);
 
-        $grouped = $attachments
-            ->filter(fn (ShipmentAttachment $attachment) => (string) $attachment->document_type !== '')
-            ->groupBy('document_type');
+        $projectGrouped = $shipment->project_id
+            ? ProjectAttachment::query()->where('project_id', $shipment->project_id)->get()->groupBy('category')
+            : collect();
+        $linkedPackingList = $shipment->exists && PackagingList::query()
+            ->where('shipment_id', $shipment->id)
+            ->whereIn('status', ['confirmed', 'dispatched'])
+            ->exists();
+        $deliveryReceiptRecorded = $shipment->relationLoaded('deliveryReceipts')
+            ? $shipment->deliveryReceipts->isNotEmpty()
+            : $shipment->deliveryReceipts()->exists();
 
-        return collect(self::TYPES)->map(function (string $label, string $key) use ($grouped, $required) {
-            $files = $grouped->get($key, collect());
+        return collect(self::TYPES)->map(function (string $label, string $key) use ($projectGrouped, $required, $linkedPackingList, $deliveryReceiptRecorded) {
+            $files = collect($projectGrouped->get($key, collect()))->values();
+            $done = $files->isNotEmpty()
+                || ($key === 'packing_list' && $linkedPackingList)
+                || ($key === 'pod' && $deliveryReceiptRecorded);
 
             return [
                 'key' => $key,
                 'label' => $label,
                 'required' => in_array($key, $required, true),
-                'done' => $files->isNotEmpty(),
-                'attachments' => $files->values(),
+                'done' => $done,
+                'attachments' => $files,
             ];
         })->values();
     }
@@ -120,7 +128,7 @@ class ShipmentDocuments
     /**
      * Compact state for lists and print headers.
      *
-     * @return array{required: int, done: int, missing: array<int, string>, complete: bool}
+     * @return array{required: int, done: int, missing: array<int, string>, complete: bool, checklist: Collection<int, array<string, mixed>>}
      */
     public function summary(Shipment $shipment): array
     {
@@ -133,6 +141,7 @@ class ShipmentDocuments
             'done' => $done->count(),
             'missing' => $required->where('done', false)->pluck('label')->values()->all(),
             'complete' => $required->where('done', false)->isEmpty(),
+            'checklist' => $checklist,
         ];
     }
 }

@@ -30,7 +30,7 @@
     <button type="button" class="master-dropdown-toggle {{ ($surface ?? 'topbar') === 'sidebar' ? 'user-menu-card' : 'topbar-user-btn' }}"
         aria-haspopup="true" aria-expanded="false"
         aria-label="Your account — {{ $menuUser->name ?? 'Admin' }}" title="Your account">
-        <span class="user-avatar-sm topbar-avatar">{{ substr($menuUser->name ?? 'A', 0, 1) }}</span>
+        <x-user-avatar :user="$menuUser" class="user-avatar-sm topbar-avatar" />
         <span class="user-menu-label sidebar-text">
             <span class="topbar-user-name">{{ $menuUser->name ?? 'Admin' }}</span>
             <span class="user-menu-role">{{ $menuRole }}</span>
@@ -40,7 +40,7 @@
 
     <div class="master-dropdown-menu user-menu-panel" role="menu" aria-label="Your account">
         <div class="user-menu-head">
-            <span class="user-avatar-sm user-menu-head-avatar" aria-hidden="true">{{ substr($menuUser->name ?? 'A', 0, 1) }}</span>
+            <x-user-avatar :user="$menuUser" class="user-avatar-sm user-menu-head-avatar" />
             <span class="user-menu-head-text">
                 <strong>{{ $menuUser->name ?? 'Admin' }}</strong>
                 <span class="user-menu-head-role">{{ $menuRole }}</span>
@@ -76,9 +76,7 @@
 
         <div class="user-menu-sep" role="separator"></div>
 
-        {{-- The top bar's theme button is hidden on a phone, so this is the only
-             switch there is on small screens — and a menu is where a person
-             looks for "a setting about me". --}}
+        {{-- Theme belongs to the profile menu on every screen size. --}}
         <form method="POST" action="{{ route('theme.toggle') }}">
             @csrf
             <button type="submit" role="menuitem">

@@ -25,6 +25,9 @@ const tableCss = read('resources/css/components/tables.css');
 const formCss = read('resources/css/components/forms.css');
 const legacyFormCss = read('public/assets/css/master-form.css');
 const responsiveCss = read('resources/css/layout/responsive.css');
+const tooltipCss = read('resources/css/components/tooltips.css');
+const tooltipJs = read('public/assets/js/master-tooltips.js');
+const designAssets = read('resources/views/layouts/partials/design-system-styles.blade.php');
 const inventory = read('docs/ui-component-inventory.md');
 
 check('the shared drawer is an accessible labelled dialog',
@@ -63,6 +66,25 @@ check('right drawers cover page popovers while remaining below modals and toasts
 check('Select2 options remain usable above right drawers and modal dialogs',
     zLayers.select > zLayers.drawer && zLayers.select > zLayers.modal
     && /body\[data-ui-shell\]\s+\.select2-dropdown\s*\{[^}]*z-index:\s*var\(--ui-z-select/.test(dropdownCss));
+check('native titles are promoted to one custom tooltip across every design-system surface',
+    /master-tooltips\.js/.test(designAssets)
+    && /removeAttribute\('title'\)/.test(tooltipJs)
+    && /dataset\.uiTooltip/.test(tooltipJs)
+    && /MutationObserver/.test(tooltipJs));
+check('the shared tooltip is safe, keyboard accessible and viewport positioned',
+    /textContent = text/.test(tooltipJs)
+    && /role', 'tooltip'/.test(tooltipJs)
+    && /focusin/.test(tooltipJs)
+    && /event\.key === 'Escape'/.test(tooltipJs)
+    && /aria-describedby/.test(tooltipJs)
+    && /getBoundingClientRect/.test(tooltipJs));
+check('the custom tooltip is themed, non-intercepting and motion considerate',
+    /background:\s*var\(--ui-text\)/.test(tooltipCss)
+    && /color:\s*var\(--ui-card-surface\)/.test(tooltipCss)
+    && /pointer-events:\s*none/.test(tooltipCss)
+    && /width:\s*max-content/.test(tooltipCss)
+    && !/inset:\s*auto\s+auto\s+0\s+0/.test(tooltipCss)
+    && /prefers-reduced-motion/.test(tooltipCss));
 check('drawer field rows stay top-aligned and collapse to one column on phones',
     /align-content:\s*start/.test(drawerCss)
     && /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/.test(drawerCss)
@@ -141,6 +163,7 @@ const statementFilterContracts = [
     ['resources/views/clients/partials/statement.blade.php', 'clientStatementFiltersDrawer', ['period', 'date_from', 'date_to', 'currency']],
     ['resources/views/client_portal/statements/index.blade.php', 'portalStatementFiltersDrawer', ['period', 'date_from', 'date_to', 'currency']],
     ['resources/views/cashflows/statement-show.blade.php', 'statementDetailFiltersDrawer', ['period', 'date_from', 'date_to', 'currency']],
+    ['resources/views/cashflows/partials/statement-print-filters.blade.php', 'statementPrintFilters', ['period', 'date_from', 'date_to', 'currency', 'ageing']],
     ['resources/views/cashflows/statements.blade.php', 'statementListFiltersDrawer', ['date_from', 'date_to', 'currency']],
 ];
 const statementFiltersStayInDrawers = statementFilterContracts.every(([file, drawerId, fields]) => {
@@ -156,10 +179,16 @@ check('statement period and date/currency filters remain together in their drawe
 const clientStatementView = read('resources/views/clients/partials/statement.blade.php');
 const statementShowView = read('resources/views/cashflows/statement-show.blade.php');
 const documentsView = read('resources/views/cashflows/documents.blade.php');
-check('statement PDF and document-pack downloads remain available with their filters',
+const statementPrintView = read('resources/views/cashflows/partials/statement-print-filters.blade.php');
+check('statement preview retains filtered PDF download and document-pack downloads remain available',
     /cashflows\.statements\.pdf/.test(clientStatementView)
     && /Download PDF/.test(clientStatementView)
-    && /cashflows\.statements\.pdf/.test(statementShowView)
+    && /cashflows\.statements\.print/.test(statementShowView)
+    && /target="_blank"/.test(statementShowView)
+    && !/cashflows\.statements\.pdf/.test(statementShowView)
+    && /cashflows\.statements\.pdf/.test(statementPrintView)
+    && /\$documentQuery/.test(statementPrintView)
+    && /data-drawer-open="statementPrintFilters"/.test(statementPrintView)
     && /cashflows\.documents\.pack/.test(documentsView)
     && /Download pack/.test(documentsView));
 

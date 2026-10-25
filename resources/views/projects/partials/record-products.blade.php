@@ -29,7 +29,6 @@
                         @forelse($project->products as $projectProduct)
                             @php
                                 $media = optional($projectProduct->product)->primaryMedia();
-                                $milestone = $projectProduct->currentMilestone();
                             @endphp
                             <tr>
                                 <td data-label="Image">
@@ -42,8 +41,7 @@
                                 <td data-label="Product">
                                     <strong>{{ $projectProduct->product_name }}</strong>
                                     <span class="project-fact-note">{{ optional($projectProduct->product)->product_number ?: 'No product code' }}</span>
-                                    <span class="master-badge status-{{ str_replace('_', '-', (string) $milestone?->status) }}">
-                                    {{ $milestone?->title ?? 'No milestone' }}</span>
+                                    <span class="master-badge status-{{ str_replace('_', '-', (string) $projectProduct->status) }}">{{ $projectProduct->statusLabel() }}</span>
                                 </td>
                                 <td data-label="Qty">
                                     <strong>{{ number_format($projectProduct->quantity) }} {{ $projectProduct->unit }}</strong>
@@ -132,6 +130,14 @@
                                 <option value="{{ $key }}">{{ $label }}</option>
                             @endforeach
                         </select>
+                    </div>
+                    <div class="master-field">
+                        <label class="master-label">Production completed quantity</label>
+                        <input class="master-input" type="number" min="0" step="0.001" name="production_completed_quantity" required>
+                    </div>
+                    <div class="master-field full">
+                        <label class="master-label">Production evidence</label>
+                        <textarea class="master-textarea" rows="3" name="production_evidence" placeholder="Batch, work-order, completion report or other operational evidence"></textarea>
                     </div>
                     <div class="master-field full">
                         <label class="master-label">Notes</label>

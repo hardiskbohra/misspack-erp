@@ -13,6 +13,7 @@
 </head>
 
 @php
+    $cashInvoice = $invoice->isCash();
     $currency = (string) ($invoice->currency ?: 'INR');
     $money = fn ($amount) => \App\Helpers\CommonHelper::amount((float) $amount, $currency);
     $invoiceItems = $invoice->items->values();
@@ -151,7 +152,7 @@
                             {{ collect([$sellerLocation, $invoice->seller_pincode])->filter()->implode(' · ') }}
                         </p>
                     @endif
-                    @if ($invoice->seller_gstin || $invoice->seller_pan)
+                    @if (!$cashInvoice && ($invoice->seller_gstin || $invoice->seller_pan))
                         <p class="brand-detail">
                             @if ($invoice->seller_gstin) GSTIN {{ $invoice->seller_gstin }} @endif
                             @if ($invoice->seller_pan) · PAN {{ $invoice->seller_pan }} @endif
@@ -189,10 +190,12 @@
                 <span>{{ $secondaryDateLabel }}</span>
                 <strong>{{ optional($secondaryDate)->format('d M Y') ?: '—' }}</strong>
             </div>
+            @if (!$cashInvoice)
             <div class="invoice-fact">
                 <span>Place of supply</span>
                 <strong>{{ $invoice->place_of_supply ?: '—' }}</strong>
             </div>
+            @endif
             <div class="invoice-fact">
                 <span>Purchase order</span>
                 <strong>{{ $invoice->po_number ?: '—' }}</strong>
@@ -218,7 +221,7 @@
                             {{ collect([$billingLocation, $invoice->billing_pincode])->filter()->implode(' · ') }}
                         </p>
                     @endif
-                    @if ($invoice->client_gstin || $invoice->client_pan)
+                    @if (!$cashInvoice && ($invoice->client_gstin || $invoice->client_pan))
                         <p class="party-detail">
                             @if ($invoice->client_gstin) GSTIN {{ $invoice->client_gstin }} @endif
                             @if ($invoice->client_pan) · PAN {{ $invoice->client_pan }} @endif
@@ -262,21 +265,25 @@
         <div class="items-wrap">
             <table class="items">
                 <colgroup>
+                    @if ($cashInvoice)
+                        <col style="width:50%"><col style="width:12%"><col style="width:18%"><col style="width:20%">
+                    @else
                     <col style="width: 36%">
                     <col style="width: 9%">
                     <col style="width: 14%">
                     <col style="width: 19%">
                     <col style="width: 8%">
                     <col style="width: 14%">
+                    @endif
                 </colgroup>
                 <thead>
                     <tr>
-                        <th>Item description / HSN-SAC</th>
+                        <th>{{ $cashInvoice ? 'Item description' : 'Item description / HSN-SAC' }}</th>
                         <th class="right">Qty</th>
                         <th class="right">Rate</th>
-                        <th class="right">Taxable value</th>
-                        <th class="right">GST rate</th>
-                        <th class="right">Tax amount</th>
+                        <th class="right">{{ $cashInvoice ? 'Amount' : 'Taxable value' }}</th>
+                        @if (!$cashInvoice)<th class="right">GST rate</th>
+                        <th class="right">Tax amount</th>@endif
                     </tr>
                 </thead>
                 <tbody>
@@ -296,7 +303,7 @@
                                 @if ($item->remarks)
                                     <span class="item-detail item-remark">{!! nl2br(e($item->remarks)) !!}</span>
                                 @endif
-                                <span class="item-meta">HSN/SAC: {{ $item->hsn_sac ?: '—' }}</span>
+                                @if (!$cashInvoice)<span class="item-meta">HSN/SAC: {{ $item->hsn_sac ?: '—' }}</span>@endif
                             </td>
                             <td class="right quantity-cell">
                                 {{ $quantity }}@if ($item->unit) <span class="unit-label">{{ $item->unit }}</span>@endif
@@ -305,17 +312,23 @@
                             <td class="right item-taxable">
                                 {{ $line['taxable_amount'] !== null ? $money($line['taxable_amount']) : '—' }}
                             </td>
+                            @if (!$cashInvoice)
                             <td class="right">{{ $gstPercent }}%</td>
                             <td class="right item-tax">
                                 {{ $invoiceTaxTotal > 0 && $line['tax_amount'] !== null ? $money($line['tax_amount']) : '—' }}
                             </td>
+                            @endif
                         </tr>
                     @endforeach
                 </tbody>
             </table>
         </div>
 
-        @if ($lineFiguresUnavailable)
+        @if ($invoice->invoice_type === 'tax' && $invoice->source_proforma_id)
+            <p class="line-tax-note">This invoice covers the proportional PI remainder. Unit rates are rounded to two decimals; line amounts use the unrounded proportion.</p>
+        @endif
+
+        @if (!$cashInvoice && $lineFiguresUnavailable)
             <p class="line-tax-note">Some line-level figures could not be allocated for this record. The invoice totals below remain authoritative.</p>
         @endif
 
@@ -378,17 +391,19 @@
                                     <td>-{{ $money($invoice->discount_amount) }}</td>
                                 </tr>
                             @endif
+                            @if (!$cashInvoice)
                             <tr class="taxable-row">
                                 <td>Taxable value</td>
                                 <td>{{ $money($invoice->taxable_amount) }}</td>
                             </tr>
-                            @if ((float) $invoice->cgst_amount > 0)
+                            @endif
+                            @if (!$cashInvoice && (float) $invoice->cgst_amount > 0)
                                 <tr><td>CGST</td><td>{{ $money($invoice->cgst_amount) }}</td></tr>
                             @endif
-                            @if ((float) $invoice->sgst_amount > 0)
+                            @if (!$cashInvoice && (float) $invoice->sgst_amount > 0)
                                 <tr><td>SGST</td><td>{{ $money($invoice->sgst_amount) }}</td></tr>
                             @endif
-                            @if ((float) $invoice->igst_amount > 0)
+                            @if (!$cashInvoice && (float) $invoice->igst_amount > 0)
                                 <tr><td>IGST</td><td>{{ $money($invoice->igst_amount) }}</td></tr>
                             @endif
                             @if ((float) $invoice->freight_amount !== 0.0)
@@ -407,6 +422,10 @@
                                 <td>Grand total</td>
                                 <td>{{ $money($invoice->total_amount) }}</td>
                             </tr>
+                            @if ((float) $invoice->cash_converted_total_amount > 0)
+                                <tr><td>Previously cash invoiced (including removed GST)</td><td>-{{ $money($invoice->cash_converted_total_amount) }}</td></tr>
+                                <tr><td>Remaining PI value</td><td>{{ $money($invoice->receivableTotal()) }}</td></tr>
+                            @endif
                             <tr class="settlement-row">
                                 <td>Received to date</td>
                                 <td>{{ $receivedDisplay }}</td>

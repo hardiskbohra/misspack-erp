@@ -13,7 +13,7 @@ body[data-ui-shell] :is(img, video, canvas, svg) {
     max-width: 100%;
 }
 
-body[data-ui-shell] :is(.master-grid, .master-grid-main, .master-grid-2, .master-grid-3, .master-grid-4, .master-detail-grid, .master-info-grid, .master-form-grid, .master-modal-grid, .master-modal-three-grid, .cf-grid, .cf-form-grid, .cpa-grid, .cpa-form-grid, .cpa-checks, .client-detail-grid, .client-detail-panels, .cp-grid-2, .cp-grid-3, .cp-grid-4, .cp-grid-6, .cp-form-row, .cp-form-grid, .cp-dashboard-columns, .cp-dashboard-stat-grid, .cp-support-grid, .cp-support-conversation-layout, .cp-account-grid, .pd-panel-grid, .pd-inline-form, .pd-product-form, .pd-tracking-form, .pd-attachment-form, .pd-payment-form, .pd-metrics, .pmile-stats, .pmile-form, .projects-stats, .projects-mini-grid, .projects-two-col, .vendor-kpi-grid, .vendor-grid-2, .vendor-grid-3, .vendor-info-grid, .lm-grid, .cq-grid, .cq-info-grid, .master-top-grid, .master-stats, .master-metrics-grid, .master-module-grid, .master-attention-grid, .master-period-form, .master-filter-form, .cf-filter-grid, .client-statement-filter-form, .cp-payment-filters) > * {
+body[data-ui-shell] :is(.master-grid, .master-grid-main, .master-grid-2, .master-grid-3, .master-grid-4, .master-detail-grid, .master-info-grid, .master-form-grid, .master-modal-grid, .master-modal-three-grid, .cf-grid, .cf-form-grid, .cpa-grid, .cpa-form-grid, .cpa-checks, .client-detail-grid, .client-detail-panels, .cp-grid-2, .cp-grid-3, .cp-grid-4, .cp-grid-6, .cp-form-row, .cp-form-grid, .cp-dashboard-columns, .cp-dashboard-stat-grid, .cp-support-grid, .cp-support-conversation-layout, .cp-account-grid, .pd-panel-grid, .pd-inline-form, .pd-product-form, .pd-tracking-form, .pd-attachment-form, .pd-payment-form, .pd-metrics, .projects-stats, .projects-mini-grid, .projects-two-col, .vendor-kpi-grid, .vendor-grid-2, .vendor-grid-3, .vendor-info-grid, .lm-grid, .cq-grid, .cq-info-grid, .master-top-grid, .master-stats, .master-metrics-grid, .master-module-grid, .master-attention-grid, .master-period-form, .master-filter-form, .cf-filter-grid, .client-statement-filter-form, .cp-payment-filters) > * {
     min-width: 0;
 }
 
@@ -60,11 +60,11 @@ body[data-ui-shell] :is(.master-table-wrap, .cf-table-wrap, .cpa-table-wrap, .cp
         padding: 20px;
     }
 
-    body[data-ui-shell] :is(.master-stats, .master-top-grid, .master-metrics-grid.six, .master-metrics-grid.four, .master-module-grid, .master-attention-grid, .cf-summary, .cp-dashboard-stat-grid, .projects-stats, .projects-mini-grid, .vendor-kpi-grid, .pd-metrics, .pmile-stats) {
+    body[data-ui-shell] :is(.master-stats, .master-top-grid, .master-metrics-grid.six, .master-metrics-grid.four, .master-module-grid, .master-attention-grid, .cf-summary, .cp-dashboard-stat-grid, .projects-stats, .projects-mini-grid, .vendor-kpi-grid, .pd-metrics) {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    body[data-ui-shell] :is(.master-detail-grid, .master-modal-three-grid, .pd-inline-form, .pd-product-form, .pd-tracking-form, .pd-attachment-form, .pd-payment-form, .pmile-form) {
+    body[data-ui-shell] :is(.master-detail-grid, .master-modal-three-grid, .pd-inline-form, .pd-product-form, .pd-tracking-form, .pd-attachment-form, .pd-payment-form) {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
@@ -162,11 +162,11 @@ body[data-ui-shell] :is(.master-table-wrap, .cf-table-wrap, .cpa-table-wrap, .cp
         padding: 20px 18px 40px;
     }
 
-    body[data-ui-shell] :is(.master-stats, .master-top-grid, .master-metrics-grid.six, .master-metrics-grid.four, .master-module-grid, .master-attention-grid, .cf-summary, .cp-dashboard-stat-grid, .cp-grid-4, .cp-grid-6, .projects-stats, .projects-mini-grid, .vendor-kpi-grid, .pd-metrics, .pmile-stats) {
+    body[data-ui-shell] :is(.master-stats, .master-top-grid, .master-metrics-grid.six, .master-metrics-grid.four, .master-module-grid, .master-attention-grid, .cf-summary, .cp-dashboard-stat-grid, .cp-grid-4, .cp-grid-6, .projects-stats, .projects-mini-grid, .vendor-kpi-grid, .pd-metrics) {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    body[data-ui-shell] :is(.master-detail-grid, .master-form-grid, .master-modal-grid, .master-modal-three-grid, .master-info-grid, .cf-form-grid, .cpa-form-grid, .cpa-checks, .client-review-fields, .client-review-note-grid, .client-statement-filter-form, .pd-info-list, .pd-inline-form, .pd-product-form, .pd-tracking-form, .pd-attachment-form, .pd-payment-form, .pmile-form, .pmile-edit-form, .projects-filter-form, .vendor-info-grid, .lm-grid, .cq-grid) {
+    body[data-ui-shell] :is(.master-detail-grid, .master-form-grid, .master-modal-grid, .master-modal-three-grid, .master-info-grid, .cf-form-grid, .cpa-form-grid, .cpa-checks, .client-review-fields, .client-review-note-grid, .client-statement-filter-form, .pd-info-list, .pd-inline-form, .pd-product-form, .pd-tracking-form, .pd-attachment-form, .pd-payment-form, .projects-filter-form, .vendor-info-grid, .lm-grid, .cq-grid) {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -198,11 +198,11 @@ body[data-ui-shell] :is(.master-table-wrap, .cf-table-wrap, .cpa-table-wrap, .cp
         padding: 16px 12px 32px;
     }
 
-    body[data-ui-shell] :is(.master-grid, .master-grid-main, .master-grid-2, .master-grid-3, .master-grid-4, .master-form-grid, .master-detail-grid, .master-info-grid, .master-modal-grid, .master-modal-three-grid, .cf-grid, .cf-form-grid, .cpa-grid, .cpa-form-grid, .cpa-checks, .client-detail-grid, .client-review-fields, .client-review-note-grid, .client-statement-filter-form, .cp-grid-2, .cp-grid-3, .cp-grid-4, .cp-grid-6, .cp-form-row, .cp-form-grid, .cp-dashboard-columns, .cp-support-grid, .cp-support-conversation-layout, .cp-account-grid, .pd-panel-grid, .pd-inline-form, .pd-product-form, .pd-tracking-form, .pd-attachment-form, .pd-payment-form, .pmile-form, .pmile-edit-form, .projects-two-col, .projects-filter-form, .vendor-grid-2, .vendor-grid-3, .vendor-info-grid, .lm-grid, .cq-grid, .cq-info-grid, .master-period-form, .master-filter-form, .cf-filter-grid, .client-statement-filter-form, .cp-payment-filters) {
+    body[data-ui-shell] :is(.master-grid, .master-grid-main, .master-grid-2, .master-grid-3, .master-grid-4, .master-form-grid, .master-detail-grid, .master-info-grid, .master-modal-grid, .master-modal-three-grid, .cf-grid, .cf-form-grid, .cpa-grid, .cpa-form-grid, .cpa-checks, .client-detail-grid, .client-review-fields, .client-review-note-grid, .client-statement-filter-form, .cp-grid-2, .cp-grid-3, .cp-grid-4, .cp-grid-6, .cp-form-row, .cp-form-grid, .cp-dashboard-columns, .cp-support-grid, .cp-support-conversation-layout, .cp-account-grid, .pd-panel-grid, .pd-inline-form, .pd-product-form, .pd-tracking-form, .pd-attachment-form, .pd-payment-form, .projects-two-col, .projects-filter-form, .vendor-grid-2, .vendor-grid-3, .vendor-info-grid, .lm-grid, .cq-grid, .cq-info-grid, .master-period-form, .master-filter-form, .cf-filter-grid, .client-statement-filter-form, .cp-payment-filters) {
         grid-template-columns: minmax(0, 1fr);
     }
 
-    body[data-ui-shell] :is(.master-stats, .master-top-grid, .master-metrics-grid.six, .master-metrics-grid.four, .master-module-grid, .master-attention-grid, .cf-summary, .cp-dashboard-stat-grid, .projects-stats, .projects-mini-grid, .vendor-kpi-grid, .pd-metrics, .pmile-stats) {
+    body[data-ui-shell] :is(.master-stats, .master-top-grid, .master-metrics-grid.six, .master-metrics-grid.four, .master-module-grid, .master-attention-grid, .cf-summary, .cp-dashboard-stat-grid, .projects-stats, .projects-mini-grid, .vendor-kpi-grid, .pd-metrics) {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
