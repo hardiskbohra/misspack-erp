@@ -179,5 +179,5 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('assets/js/module-dashboard.js') }}"></script>
+<script src="{{ $assetVer('assets/js/module-dashboard.js') }}"></script>
 @endpush

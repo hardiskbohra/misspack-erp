@@ -71,8 +71,21 @@
             drawDonut('expenseCategoryChart2',dashData.pies.expenseCategories,'expenseCategoryLegend2','₹');
             drawBarChart('projectPaymentChart',labels,[{label:'Project Inward',data:dashData.projectPayments.inward,color:'#4f83f1'},{label:'Project Outward',data:dashData.projectPayments.outward,color:'#ef4770'}]);
         }
-        function togglePeriodControls(){const type=document.getElementById('periodType').value;document.querySelectorAll('.period-control').forEach(el=>el.style.display='none');document.querySelectorAll('.period-'+type).forEach(el=>el.style.display='flex');}
-        togglePeriodControls();document.getElementById('periodType')?.addEventListener('change',togglePeriodControls);
+        const periodType = document.getElementById('periodType');
+        function togglePeriodControls() {
+            if (!periodType) return;
+            document.querySelectorAll('.period-control').forEach(function (field) {
+                const visible = field.classList.contains('period-' + periodType.value);
+                field.hidden = !visible;
+                field.style.display = visible ? 'flex' : 'none';
+            });
+        }
+        togglePeriodControls();
+        // Select2 emits jQuery change events, which native-only listeners miss.
+        if (periodType) {
+            if (window.jQuery) window.jQuery(periodType).on('change.dashboardPeriod', togglePeriodControls);
+            else periodType.addEventListener('change', togglePeriodControls);
+        }
         const dashboardTabs=Array.from(document.querySelectorAll('.master-tab'));
         function activateDashboardTab(name,updateUrl){
             if(!dashboardTabs.some(tab=>tab.dataset.tab===name))name='overview';
