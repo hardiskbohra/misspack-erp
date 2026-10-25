@@ -56,7 +56,7 @@
                 "DELETE"
             ],
             "uri": "account/two-factor",
-            "action": "App\\\\Http\\\\Controllers\\\\TwoFactorController@destroy",
+            "action": "App\\Http\\Controllers\\TwoFactorController@destroy",
             "middleware": [
                 "web",
                 "auth"
@@ -68,7 +68,7 @@
                 "POST"
             ],
             "uri": "account/two-factor",
-            "action": "App\\\\Http\\\\Controllers\\\\TwoFactorController@store",
+            "action": "App\\Http\\Controllers\\TwoFactorController@store",
             "middleware": [
                 "web",
                 "auth"
@@ -80,7 +80,7 @@
                 "POST"
             ],
             "uri": "account/two-factor/confirm",
-            "action": "App\\\\Http\\\\Controllers\\\\TwoFactorController@confirm",
+            "action": "App\\Http\\Controllers\\TwoFactorController@confirm",
             "middleware": [
                 "web",
                 "auth",
@@ -93,7 +93,7 @@
                 "POST"
             ],
             "uri": "account/two-factor/recovery-codes",
-            "action": "App\\\\Http\\\\Controllers\\\\TwoFactorController@regenerateRecoveryCodes",
+            "action": "App\\Http\\Controllers\\TwoFactorController@regenerateRecoveryCodes",
             "middleware": [
                 "web",
                 "auth"
@@ -5300,7 +5300,7 @@
                 "HEAD"
             ],
             "uri": "two-factor-challenge",
-            "action": "App\\\\Http\\\\Controllers\\\\TwoFactorChallengeController@show",
+            "action": "App\\Http\\Controllers\\TwoFactorChallengeController@show",
             "middleware": [
                 "web"
             ]
@@ -5311,7 +5311,7 @@
                 "POST"
             ],
             "uri": "two-factor-challenge",
-            "action": "App\\\\Http\\\\Controllers\\\\TwoFactorChallengeController@store",
+            "action": "App\\Http\\Controllers\\TwoFactorChallengeController@store",
             "middleware": [
                 "web",
                 "throttle:15,1"
