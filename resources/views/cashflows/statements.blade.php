@@ -20,7 +20,7 @@
         return route('cashflows.statements', array_filter(
             $keep,
             fn ($value, $key) => ! in_array($key, ['share'], true)
-                && $value !== null && $value !== '' && $value !== 'all',
+                && $value !== null && $value !== '' && ($value !== 'all' || $key === 'period'),
             ARRAY_FILTER_USE_BOTH
         ));
     };
@@ -28,11 +28,11 @@
     $typeChips = ['all' => 'All parties', 'client' => 'Clients', 'vendor' => 'Vendors'];
     $filtered = trim((string) $q) !== ''
         || ($partyType !== 'all')
-        || $currency !== 'INR'
-        || $periodKey !== 'this_month';
+        || $currency !== 'all'
+        || $activeRange !== 'this_month';
     $isVendor = $partyType === 'vendor';
-    $debitWord = $isVendor ? 'Billed' : 'Invoiced';
-    $creditWord = $isVendor ? 'Paid' : 'Received';
+    $debitWord = $isVendor ? 'Paid' : ($partyType === 'client' ? 'Invoiced' : 'Debit');
+    $creditWord = $isVendor ? 'Billed' : ($partyType === 'client' ? 'Received' : 'Credit');
 @endphp
 
 <div class="cf cashflow-statements master-list">
@@ -43,19 +43,17 @@
             <div>
                 <p class="master-stat-title">Statements to send</p>
                 <p class="master-stat-value">{{ number_format($totals['parties']) }}</p>
-                <p class="master-sub">parties with movement or a balance</p>
+                <p class="master-sub">party/currency accounts with movement or a balance</p>
                 <span class="tooltip-text">One line per party and currency: a vendor billed in RMB and paid in rupees holds two balances, and each is its own statement.</span>
             </div>
         </div>
-        <div class="master-stat master-stat--flat {{ $totals['closing'] > 0 ? 'orange' : 'green' }} tooltip-container">
+        <div class="master-stat master-stat--flat {{ ($currency === 'all' ? $totals['balanced'] > 0 : $totals['closing'] > 0) ? 'orange' : 'green' }} tooltip-container">
             <span class="icon" aria-hidden="true">⏳</span>
             <div>
                 <p class="master-stat-title">{{ $isVendor ? 'Payable' : ($partyType === 'client' ? 'Receivable' : 'Still open') }}</p>
-                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($totals['closing'], $currency) }}</p>
-                <p class="master-sub">{{ $totals['balanced'] }} {{ \Illuminate\Support\Str::plural('party', $totals['balanced']) }} with a balance</p>
-                <span class="tooltip-text">Carried in plus this period's movement, in
-                    {{ \App\Helpers\CommonHelper::currencyLabel($currency) }}. Parties in another currency are on their own
-                    line and are not added in here.</span>
+                @include('cashflows.partials.statement-list-totals', ['fields' => ['closing']])
+                <p class="master-sub">{{ $totals['balanced'] }} {{ \Illuminate\Support\Str::plural('account', $totals['balanced']) }} with a balance</p>
+                <span class="tooltip-text">Carried in plus this period's movement. Each currency is totalled separately; no exchange conversion or mixed-currency total.</span>
             </div>
         </div>
         <div class="master-stat master-stat--flat purple tooltip-container">
@@ -71,7 +69,7 @@
             <span class="icon" aria-hidden="true">₹</span>
             <div>
                 <p class="master-stat-title">Movement this period</p>
-                <p class="master-stat-value">{{ \App\Helpers\CommonHelper::amount($totals['debit'] + $totals['credit'], $currency) }}</p>
+                @include('cashflows.partials.statement-list-totals', ['fields' => ['debit', 'credit']])
                 <p class="master-sub">{{ $debitWord }} + {{ strtolower($creditWord) }}</p>
                 <span class="tooltip-text">Everything the filtered parties moved in this period — the statements themselves carry the running balance.</span>
             </div>
@@ -96,11 +94,23 @@
                 @endforeach
                 <a class="master-list-chip {{ $activeRange === 'all' ? 'is-active' : '' }}"
                     href="{{ $chipUrl(['period' => 'all', 'date_from' => null, 'date_to' => null]) }}"
-                    title="Every party with a balance, whenever it was booked">All time</a>
+                    aria-label="All time: every party with movement or a balance">All time</a>
             </div>
         </div>
 
-        <form method="GET" action="{{ route('cashflows.statements') }}">
+        <nav class="master-list-bar" aria-label="Statement currencies">
+            <div class="master-list-chips">
+                <a class="master-list-chip {{ $currency === 'all' ? 'is-active' : '' }}" @if($currency === 'all') aria-current="true" @endif
+                    href="{{ $chipUrl(['currency' => 'all']) }}">All currencies</a>
+                @foreach ($currencyOptions as $code)
+                    <a class="master-list-chip {{ $currency === $code ? 'is-active' : '' }}" @if($currency === $code) aria-current="true" @endif
+                        href="{{ $chipUrl(['currency' => $code]) }}">{{ $code }}</a>
+                @endforeach
+            </div>
+        </nav>
+
+        <form method="GET" action="{{ route('cashflows.statements') }}" id="statementListFiltersForm">
+            <input type="hidden" name="period" value="{{ $periodKey }}">
             {{-- The party-type chips remain quick filters; carry the active one
                  while the Drawer criteria are applied. --}}
             <input type="hidden" name="party_type" value="{{ $partyType }}">
@@ -112,7 +122,7 @@
                         placeholder="Search party name..." aria-label="Search party">
                 </div>
                 <x-filter-trigger drawer="statementListFiltersDrawer" label="Filters"
-                    :count="(filled($q) ? 1 : 0) + ($partyType !== 'all' ? 1 : 0) + ($currency !== 'INR' ? 1 : 0) + ($activeRange !== 'this_month' ? 1 : 0)" />
+                    :count="(filled($q) ? 1 : 0) + ($partyType !== 'all' ? 1 : 0) + ($currency !== 'all' ? 1 : 0) + ($activeRange !== 'this_month' ? 1 : 0)" />
             </div>
             <x-drawer id="statementListFiltersDrawer" title="Filter statements" eyebrow="Statement filters"
                 subtitle="Keep the statement period, date range, and reporting currency together." size="medium">
@@ -122,12 +132,14 @@
                         <div class="master-field">
                             <label class="master-label" for="statementListCurrency">Currency</label>
                             <select class="master-select" id="statementListCurrency" name="currency" aria-label="Statement currency">
+                                <option value="all" @selected($currency === 'all')>All currencies</option>
                                 @foreach ($currencyOptions as $code)
                                     <option value="{{ $code }}" @selected($currency === $code)>
                                         Statements in {{ \App\Helpers\CommonHelper::currencyLabel($code) }}
                                     </option>
                                 @endforeach
                             </select>
+                            @error('currency')<span class="master-error">{{ $message }}</span>@enderror
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="statementListDateFrom">From</label>
@@ -169,12 +181,12 @@
                         </span>
                     @endif
 
-                    @if ($currency !== 'INR')
+                    @if ($currency !== 'all')
                         <span class="master-list-applied-chip">
                             <span class="master-list-applied-key">Currency</span>
                             <span class="master-list-applied-value">{{ \App\Helpers\CommonHelper::currencyLabel($currency) }}</span>
-                            <a class="master-list-applied-x" href="{{ $chipUrl(['currency' => 'INR']) }}"
-                                aria-label="Back to rupee statements" title="Back to rupee statements">&times;</a>
+                            <a class="master-list-applied-x" href="{{ $chipUrl(['currency' => 'all']) }}"
+                                aria-label="Show all currencies" title="Show all currencies">&times;</a>
                         </span>
                     @endif
 
@@ -200,8 +212,8 @@
                         <th scope="col">Party</th>
                         <th scope="col">Currency</th>
                         <th scope="col" class="is-num">Opening</th>
-                        <th scope="col" class="is-num">Debit <em>({{ strtolower($debitWord) }})</em></th>
-                        <th scope="col" class="is-num">Credit <em>({{ strtolower($creditWord) }})</em></th>
+                        <th scope="col" class="is-num">Debit @if($partyType !== 'all')<em>({{ $debitWord }})</em>@endif</th>
+                        <th scope="col" class="is-num">Credit @if($partyType !== 'all')<em>({{ $creditWord }})</em>@endif</th>
                         <th scope="col" class="is-num">{{ $isVendor ? 'Payable' : 'Balance' }}</th>
                         <th scope="col" class="is-num">Rows</th>
                         <th scope="col">Last activity</th>
@@ -272,11 +284,10 @@
                             <td colspan="5">
                                 <strong>Total — {{ $totals['parties'] }}
                                     {{ \Illuminate\Support\Str::plural('statement', $totals['parties']) }} to send</strong>
-                                <span class="master-sub">Opening + this period's movement, in
-                                    {{ \App\Helpers\CommonHelper::currencyLabel($currency) }}</span>
+                                <span class="master-sub">Opening + this period's movement; currencies totalled separately</span>
                             </td>
                             <td class="is-num">
-                                <strong>{{ \App\Helpers\CommonHelper::amount($totals['closing'], $currency) }}</strong>
+                                @include('cashflows.partials.statement-list-totals', ['fields' => ['closing']])
                                 <span class="master-sub">{{ $isVendor ? 'Payable' : 'Balance' }}</span>
                             </td>
                             <td colspan="3"></td>
@@ -382,5 +393,6 @@
 
 @push('scripts')
     <script src="{{ $assetVer('assets/js/cashflows.js') }}"></script>
+    <script src="{{ $assetVer('assets/js/statement-list-filters.js') }}"></script>
 @endpush
 @endsection

@@ -84,4 +84,32 @@ class MySqlReportingTest extends TestCase
             DB::rollBack();
         }
     }
+
+    public function test_native_statement_list_includes_historical_parties_and_keeps_currency_totals_separate(): void
+    {
+        DB::beginTransaction();
+        try {
+            $suffix = bin2hex(random_bytes(5));
+            $client = \App\Models\Client::create(['client_number'=>'STMT-'.$suffix,'company_name'=>'Native statement client']);
+            \App\Models\SalesInvoice::create(['invoice_number'=>'STMT-'.$suffix,'invoice_type'=>'tax','status'=>'sent',
+                'invoice_date'=>'2024-01-10','currency'=>'USD','total_amount'=>200,'client_id'=>$client->id]);
+            $vendor = \App\Models\Vendor::create(['vendor_number'=>'STMT-'.$suffix,'vendor_name'=>'Native statement vendor','preferred_currency'=>'RMB']);
+            \App\Models\VendorPaymentEntry::create(['vendor_id'=>$vendor->id,'transaction_date'=>'2023-02-12',
+                'transaction_type'=>'credit','foreign_currency'=>'RMB','foreign_amount'=>70,'particular'=>'Native statement bill','status'=>'booked']);
+            $data = app(\App\Http\Controllers\PartyStatementController::class)->index(Request::create('/cashflows/statements','GET', ['period'=>'all']))->getData();
+            $this->assertSame('all', $data['currency']);
+            $this->assertCount(2, $data['rows']);
+            $this->assertSame(200.0, $data['totalsByCurrency']['USD']['closing']);
+            $this->assertSame(70.0, $data['totalsByCurrency']['RMB']['closing']);
+            $this->assertSame(0.0, (float) array_sum(array_column($data['rows'],'opening')));
+            $this->assertNull($data['totals']['closing']);
+            $bounded = app(\App\Http\Controllers\PartyStatementController::class)->index(Request::create('/cashflows/statements','GET',
+                ['period'=>'custom','date_from'=>'2024-01-10','date_to'=>'2024-01-10','currency'=>'USD']))->getData();
+            $this->assertSame(200.0, $bounded['totals']['debit']);
+            $this->assertSame('2024-01-10', $bounded['rows'][0]['last_date']);
+        } finally {
+            DB::rollBack();
+        }
+    }
+
 }

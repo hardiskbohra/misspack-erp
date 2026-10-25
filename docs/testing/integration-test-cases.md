@@ -940,6 +940,36 @@ Sources: `app/Services/PartyStatement.php`, `app/Http/Controllers/PartyStatement
 
 **Expected:** No mutation and same allocation ownership before/after.
 
+### IT-STATEMENT-004 — All-time and currency quick filters survive rendered navigation and search
+
+**Priority:** P1 · **Requirement:** REQ-STATEMENT · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable financial migrations; finance-only office reader; historical client/vendor activity in USD/RMB/GBP and current INR invoice
+- **Data:** USD200 invoice in2025; RMB70 vendor bill in2024; GBP30 receipt in2023; INR100 current month
+1. Follow the actual rendered All time href
+2. Select currency and party quick filters, then search
+3. Open list with no currency filter and inspect per-currency rows and totals
+4. Reject malformed/unsupported currency without changing single-statement default
+
+**Expected:** All time retains period=all and includes historical movement for both party types. Default all currencies; explicit currency narrows only that dimension. Other query context survives. Cashflow-only currency codes are selectable. Currency totals stay separate; cross-currency monetary totals are null, not a fabricated sum.
+
+**Note:** Real browser drawer/date input coverage and native MySQL reporting evidence are separate; see statement-list-filters.md.
+
+**Evidence:** `tests/Integration/StatementListFiltersTest.php#test_rendered_all_time_link_keeps_the_explicit_preset_and_fetches_both_party_types`; `tests/Integration/StatementListFiltersTest.php#test_default_currency_lists_all_accounts_and_totals_are_not_mixed`; `tests/Integration/StatementListFiltersTest.php#test_currency_quick_filters_preserve_all_time_party_type_and_search`; `tests/Integration/StatementListFiltersTest.php#test_bad_currency_is_validated_without_changing_single_statement_currency_defaults`
+
+### IT-STATEMENT-005 — Statement date boundaries and vendor debit/credit labels remain ledger-correct
+
+**Priority:** P1 · **Requirement:** REQ-STATEMENT · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable statements fixture; frozen25Oct2026; date-cast Eloquent records
+- **Data:** INR100 on10Oct, INR25 on31Oct, INR900 on1Nov; vendor bill RMB70
+1. Select October/INR and inspect totals and last activity
+2. Select vendors and inspect debit/credit columns
+
+**Expected:** October includes31Oct, excludes1Nov and reports debit125 with displayable31Oct2026 last activity. Vendor payments are debit/Paid and bills credit/Billed; combined parties have neutral debit/credit headers.
+
+**Evidence:** `tests/Integration/StatementListFiltersTest.php#test_calendar_month_includes_last_day_and_exposes_a_displayable_last_activity_date`; `tests/Integration/StatementListFiltersTest.php#test_vendor_debit_credit_labels_match_the_vendor_ledger_not_the_client_ledger`
+
 ## Asset register, allocation and depreciation (`ASSET`)
 
 Sources: `app/Services/AssetDepreciation.php`, `app/Http/Controllers/FixedAssetController.php`.

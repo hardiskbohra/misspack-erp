@@ -379,6 +379,13 @@ check('the portal controller answers to the portal base',
 check('a statement can never be built for another client in the portal',
     /build\('client', \$client->id/.test(read('app/Http/Controllers/ClientPortalStatementController.php')));
 
+check('All time survives generic chip filtering as an explicit period',
+    surface.includes("($value !== 'all' || $key === 'period')") && surface.includes('name="period" value="{{ $periodKey }}"'));
+check('all currencies are visible quick filters with separate monetary summaries',
+    surface.includes('aria-label="Statement currencies"') && surface.includes('All currencies')
+    && read('app/Http/Controllers/PartyStatementController.php').includes("'totalsByCurrency' => $totalsByCurrency")
+    && service.includes("$totals['debit'] = $totals['credit'] = $totals['closing'] = null"));
+
 /* ---------------------------------------------------------------- report */
 
 const failed = out.filter(([, ok]) => !ok);

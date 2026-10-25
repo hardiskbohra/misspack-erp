@@ -309,3 +309,19 @@ and themed dark card backgrounds, and absence of executive navigation. Screensho
 and generated HTML belong in ignored `.work/` only. Optional browser results are
 separate from PHP and source-contract evidence; see
 [dashboard-consolidation.md](../../docs/testing/dashboard-consolidation.md).
+
+
+## Statement-list filter browser regression
+
+```sh
+APP_ENV=testing php tools/testing/render-statement-list.php .work/statement-list
+CHROMIUM_EXECUTABLE_PATH=/path/to/chromium \
+  node tools/checks/statement-list-browser.cjs .work/statement-list
+```
+
+Uses real Blade with fictional financial records in testing-only SQLite :memory:
+and requires `playwright-core`. Verifies All time, visible currency quick filters,
+party/search context preservation, currency removal and drawer date editing at
+1440/900/390px. Generated artifacts remain ignored. Real HTTP integration and
+native MySQL tests establish backend results separately; see
+[statement-list-filters.md](../../docs/testing/statement-list-filters.md).

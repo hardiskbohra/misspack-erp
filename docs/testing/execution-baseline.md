@@ -101,3 +101,23 @@ The previous overview retention is superseded: executive reporting and its links
 - Browser:42 light/dark page-state checks across directory/six modules at three widths; actual white card backgrounds in light mode and canonical dark backgrounds, consistent card radius, no overflow/JS exceptions, real period controls and drawer Escape/focus restoration.
 - Contracts:632 active module period assertions,19 module contracts and14 Blade checks (244 templates), plus catalogue/negative self-checks. Deleted overview scenarios are retired explicitly, not counted as retained coverage.
 - Native CI is independently verified after push; no SQL or concurrency change/certification is claimed. See [dashboard-consolidation.md](dashboard-consolidation.md).
+
+
+## Statement All time and currency quick-filter follow-up (25 October 2026)
+
+Current catalogue:218 designs (95 unit,123 integration),63 method-linked designs
+and48 PHPUnit files. These design counts are not measured coverage.
+
+- Test-first failures reproduced the dropped `period=all`, INR-only default,
+  missing currency quick filters, invalid currency handling, incorrect vendor
+  debit/credit descriptions and final-day date-cast exclusion.
+- Complete portable suite: **480 tests,15,277 assertions PASS**, PHP8.4.25 WASM,
+  Unit+Integration+Feature; independently inspected JUnit.
+- Chromium: actual statement filters and drawer at desktop/tablet/mobile widths;
+  source statement75/design79 and all default contracts passed. Each monetary
+  subtotal remains single-currency; all-currency grand totals are null.
+- A native MySQL controller/reporting regression covers historical client/vendor
+  data, separate currency totals and a closed one-day window. Native CI results
+  are checked after pushing; local native execution is not claimed.
+- See [statement-list-filters.md](statement-list-filters.md) for commands, scope
+  and evidence. No live installation data was accessed or modified.

@@ -1623,3 +1623,7 @@ a.cf-report-value:hover {
     .cf-allocation-modal .cf-allocation-modal-stats .master-stat-title { margin:0; }
     .cf-allocation-modal .cf-allocation-modal-stats .master-stat-value { margin:0; font-size:14px; white-space:nowrap; }
 }
+
+/* Currency-separated statement summaries use existing card/type tokens. */
+.statement-currency-totals{display:flex;flex-direction:column;gap:4px}
+.statement-currency-total{display:flex;align-items:baseline;gap:8px;font-variant-numeric:tabular-nums;white-space:nowrap}

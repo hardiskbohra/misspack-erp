@@ -271,7 +271,8 @@ class PartyStatement
      * to either add them (wrong) or pick one (a lie by omission). Two lines is
      * what the ledger actually says.
      *
-     * @return array{rows: array<int, array<string, mixed>>, totals: array<string, float|int>}
+     * Pass "all" to list every currency; monetary totals are then null, never mixed.
+     * @return array{rows: array<int, array<string, mixed>>, totals: array<string, float|int|null>}
      */
     public function activity(string $type, ?string $from, ?string $to, ?string $search = null, ?string $currency = null): array
     {
@@ -291,7 +292,7 @@ class PartyStatement
         $totals = ['debit' => 0.0, 'credit' => 0.0, 'closing' => 0.0, 'parties' => 0, 'balanced' => 0];
 
         foreach ($lines as $key => $line) {
-            if ($line['currency'] !== $currency) {
+            if ($currency !== 'ALL' && $line['currency'] !== $currency) {
                 continue;
             }
 
@@ -325,9 +326,11 @@ class PartyStatement
                 'last_date' => $line['last_date'],
             ];
 
-            $totals['debit'] += $line['debit'];
-            $totals['credit'] += $line['credit'];
-            $totals['closing'] += $closing;
+            if ($currency !== 'ALL') {
+                $totals['debit'] += $line['debit'];
+                $totals['credit'] += $line['credit'];
+                $totals['closing'] += $closing;
+            }
             $totals['balanced'] += abs($closing) >= 0.005 ? 1 : 0;
         }
 
@@ -338,6 +341,10 @@ class PartyStatement
         $totals['credit'] = round($totals['credit'], 2);
         $totals['closing'] = round($totals['closing'], 2);
 
+        if ($currency === 'ALL') {
+            $totals['debit'] = $totals['credit'] = $totals['closing'] = null;
+        }
+
         return ['rows' => $rows, 'totals' => $totals];
     }
 
@@ -347,6 +354,8 @@ class PartyStatement
         $lines = [];
 
         $add = function (int $partyId, string $code, string $date, float $debit, float $credit, ?int $count) use (&$lines, $from, $to) {
+            // These sources are SQL DATE columns; Eloquent may append midnight.
+            $date = substr($date, 0, 10);
             $key = $partyId.'|'.$code;
             $lines[$key] ??= [
                 'currency' => $code, 'opening' => 0.0, 'debit' => 0.0, 'credit' => 0.0,
@@ -436,6 +445,8 @@ class PartyStatement
         $withLedger = [];
 
         $add = function (int $partyId, string $code, string $date, float $debit, float $credit) use (&$lines, &$withLedger, $from, $to) {
+            // Compare calendar dates, not a cast DATE's midnight timestamp.
+            $date = substr($date, 0, 10);
             $key = $partyId.'|'.$code;
             $withLedger[$partyId] = true;
 

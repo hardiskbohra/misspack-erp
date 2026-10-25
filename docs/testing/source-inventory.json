@@ -5,7 +5,8 @@
       "file": "tests/Database/MySqlReportingTest.php",
       "methods": [
         "test_real_database_aggregation_honours_custom_bounds",
-        "test_native_module_concentration_and_trend_keep_last_day_and_currency_consistent"
+        "test_native_module_concentration_and_trend_keep_last_day_and_currency_consistent",
+        "test_native_statement_list_includes_historical_parties_and_keeps_currency_totals_separate"
       ]
     },
     {
@@ -354,6 +355,17 @@
       "methods": [
         "test_every_office_route_also_requires_authentication",
         "test_private_note_mutations_are_authenticated_but_not_office_only"
+      ]
+    },
+    {
+      "file": "tests/Integration/StatementListFiltersTest.php",
+      "methods": [
+        "test_rendered_all_time_link_keeps_the_explicit_preset_and_fetches_both_party_types",
+        "test_default_currency_lists_all_accounts_and_totals_are_not_mixed",
+        "test_currency_quick_filters_preserve_all_time_party_type_and_search",
+        "test_bad_currency_is_validated_without_changing_single_statement_currency_defaults",
+        "test_vendor_debit_credit_labels_match_the_vendor_ledger_not_the_client_ledger",
+        "test_calendar_month_includes_last_day_and_exposes_a_displayable_last_activity_date"
       ]
     },
     {
@@ -886,6 +898,7 @@
     "tools/checks/sidebar-navigation-check.cjs",
     "tools/checks/sql-check.cjs",
     "tools/checks/statement-check.cjs",
+    "tools/checks/statement-list-browser.cjs",
     "tools/checks/status-check.cjs",
     "tools/checks/ui-components-check.cjs",
     "tools/checks/vendor-portal-check.cjs",
