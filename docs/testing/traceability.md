@@ -7,7 +7,7 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-AUTH | Authentication and office permissions | 3 | 3 | 6 |
 | REQ-PEOPLE | People, payroll and employee documents | 3 | 3 | 2 |
 | REQ-CLIENT | Client master, KYC and account profile | 3 | 7 | 5 |
-| REQ-VENDOR | Vendor master and payable profile | 7 | 10 | 12 |
+| REQ-VENDOR | Vendor master and payable profile | 8 | 12 | 15 |
 | REQ-PRODUCT | Products and price calculator | 3 | 3 | 0 |
 | REQ-LEAD | Leads and sales follow-up | 3 | 3 | 0 |
 | REQ-PROJECT | Project master and product lanes | 3 | 3 | 0 |

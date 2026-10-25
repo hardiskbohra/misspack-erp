@@ -78,13 +78,13 @@
             <div class="master-table-wrap"><table class="master-table">
                 <thead><tr><th scope="col">Field</th><th scope="col">Current vendor record</th><th scope="col">Submitted for review</th></tr></thead>
                 <tbody>@foreach (\App\Services\VendorKyc::FIELDS as $field)
-                    <tr><th scope="row">{{ \Illuminate\Support\Str::headline($field) }}</th><td data-label="Current vendor record">{{ $field==='vendor_type'?$vendor->typeLabel():($vendor->{$field} ?: '—') }}</td><td data-label="Submitted for review">{{ $field==='vendor_type'?(\App\Models\Vendor::typeOptions()[$submitted[$field]??'']??'—'):($submitted[$field]??'—') }}</td></tr>
+                    <tr><th scope="row">{{ \Illuminate\Support\Str::headline($field) }}</th><td data-label="Current vendor record" @class(['vendor-bank-address'=>in_array($field,['bank_address','beneficiary_address'],true)])>{{ $field==='vendor_type'?$vendor->typeLabel():($vendor->{$field} ?: '—') }}</td><td data-label="Submitted for review" @class(['vendor-bank-address'=>in_array($field,['bank_address','beneficiary_address'],true)])>{{ $field==='vendor_type'?(\App\Models\Vendor::typeOptions()[$submitted[$field]??'']??'—'):($submitted[$field]??'—') }}</td></tr>
                 @endforeach</tbody>
             </table></div>
         @else <p class="master-sub">No KYC submitted yet. Draft details are staged and do not update the live vendor record.</p>@endif
         <h3>Supporting documents</h3>
-        @if ($kycDocuments->isEmpty())<p class="master-sub">No supporting documents uploaded. Documents are optional.</p>@else
-            <ul class="vendor-kyc-documents">@foreach ($kycDocuments as $doc)<li><a href="{{ route('vendors.kyc.documents',[$vendor,$doc->id]) }}">{{ $doc->original_name }}</a> <span class="master-sub">{{ number_format($doc->file_size/1024,1) }} KB · {{ $doc->created_at->format('d M Y') }}</span></li>@endforeach</ul>
+        @if ($kycDocuments->isEmpty())<p class="master-sub">No documents uploaded. GST Certificate and PAN are required for Indian vendors.</p>@else
+            <ul class="vendor-kyc-documents">@foreach ($kycDocuments as $doc)<li><a href="{{ route('vendors.kyc.documents',[$vendor,$doc->id]) }}">{{ $doc->categoryLabel() }} — {{ $doc->original_name }}</a> <span class="master-sub">{{ number_format($doc->file_size/1024,1) }} KB · {{ $doc->created_at->format('d M Y') }}</span></li>@endforeach</ul>
         @endif
     </section>
     <section class="master-card master-card--flat vendor-kyc-card vendor-kyc-wide" aria-labelledby="vendor-kyc-history-heading">

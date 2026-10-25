@@ -1724,6 +1724,8 @@ class VendorController extends Controller
             'ifsc_code' => ['nullable', 'string', 'max:30'],
             'swift_code' => ['nullable', 'string', 'max:255'],
             'bank_branch' => ['nullable', 'string', 'max:255'],
+            'bank_address' => ['nullable', 'string', 'max:3000'],
+            'beneficiary_address' => ['nullable', 'string', 'max:3000'],
 
             'preferred_currency' => ['nullable', 'in:INR,USD,RMB'],
             'payment_terms' => ['nullable', 'string', 'max:255'],

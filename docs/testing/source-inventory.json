@@ -341,6 +341,20 @@
       ]
     },
     {
+      "file": "tests/Integration/IndianVendorKycTest.php",
+      "methods": [
+        "test_indian_final_submission_requires_numbers_and_both_classified_documents",
+        "test_indian_draft_can_be_incomplete_and_saved_evidence_is_reused_on_submission_and_revision",
+        "test_typed_uploads_are_private_and_addresses_are_staged_then_applied_on_approval",
+        "test_generic_or_another_vendors_documents_do_not_satisfy_indian_compliance",
+        "test_named_evidence_rejects_invalid_files_and_counts_towards_the_combined_upload_limit",
+        "test_foreign_vendors_are_exempt_but_indian_country_aliases_are_not",
+        "test_legacy_incomplete_indian_submissions_cannot_be_approved",
+        "test_office_addresses_are_editable_and_invalidate_previously_approved_kyc",
+        "test_missing_private_file_does_not_count_as_valid_indian_evidence"
+      ]
+    },
+    {
       "file": "tests/Integration/NotesOwnershipTest.php",
       "methods": [
         "test_create_ignores_forged_owner_and_persists_authenticated_owner",
@@ -670,7 +684,8 @@
         "test_only_draft_and_revision_are_publicly_editable_without_changing_operational_status",
         "test_review_requires_manage_access_but_allows_maker_and_creator",
         "test_all_requested_vendor_types_are_offered_and_public_fields_exclude_commercial_controls",
-        "test_kyc_metadata_is_not_mass_assignable_or_accidentally_serialized"
+        "test_kyc_metadata_is_not_mass_assignable_or_accidentally_serialized",
+        "test_indian_country_aliases_are_normalised_and_foreign_countries_are_exempt"
       ]
     }
   ],

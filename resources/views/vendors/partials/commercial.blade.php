@@ -20,6 +20,10 @@
                 <div class="master-info"><span>IFSC</span><strong @class(['master-empty-value' => $empty($vendor->ifsc_code)])>{{ $vendor->ifsc_code ?: 'Not on file' }}</strong></div>
                 <div class="master-info"><span>SWIFT</span><strong @class(['master-empty-value' => $empty($vendor->swift_code)])>{{ $vendor->swift_code ?: 'Not on file' }}</strong></div>
                 <div class="master-info"><span>Branch</span><strong @class(['master-empty-value' => $empty($vendor->bank_branch)])>{{ $vendor->bank_branch ?: 'Not on file' }}</strong></div>
+                @foreach (['bank_address'=>'Bank Address','beneficiary_address'=>'Beneficiary Address'] as $field=>$label)
+                    <div class="master-info"><span>{{ $label }}</span><strong @class(['vendor-bank-address'=>true,'master-empty-value'=>!$vendor->{$field}])>{{ $vendor->{$field} ?: 'Not on file' }}</strong></div>
+                @endforeach
+
             </div>
         </section>
 

@@ -18,12 +18,15 @@
         1=>['Company','Who you are',['vendor_name'=>'Legal / business name','brand_name'=>'Brand name','vendor_type'=>'Vendor type','website'=>'Website']],
         2=>['People','Who we call',['contact_person_name'=>'Primary contact','contact_person_email'=>'Email address','contact_person_mobile'=>'Phone number','whatsapp_number'=>'WhatsApp number','alternate_contact'=>'Alternate phone']],
         3=>['Addresses','Where you work',['address'=>'Registered / business address','city'=>'City','state'=>'State / province','country'=>'Country','pincode'=>'Postal code']],
-        4=>['Tax & bank','How we pay',['gstin'=>'GSTIN (India)','pan'=>'PAN (India)','tax_id'=>'Overseas / other tax ID','import_export_code'=>'Import / export code','bank_name'=>'Bank name','account_holder_name'=>'Account holder','account_number'=>'Account number','ifsc_code'=>'IFSC (India)','swift_code'=>'SWIFT / BIC','bank_branch'=>'Bank branch']],
+        4=>['Tax & bank','How we pay',['gstin'=>'GSTIN (India)','pan'=>'PAN (India)','tax_id'=>'Overseas / other tax ID','import_export_code'=>'Import / export code','bank_name'=>'Bank name','account_holder_name'=>'Account holder','account_number'=>'Account number','ifsc_code'=>'IFSC (India)','swift_code'=>'SWIFT / BIC','bank_branch'=>'Bank branch','bank_address'=>'Bank Address','beneficiary_address'=>'Beneficiary Address']],
     ];
     $required=['vendor_name','vendor_type','contact_person_name','contact_person_email','contact_person_mobile','address','city','country'];
+    $indian=\App\Services\VendorKyc::isIndian(old('country',$profile['country']??''));
+    $availableEvidence=\App\Services\VendorKyc::availableEvidence($vendor);
+    $indianFields=['gstin','account_number','ifsc_code'];
     $errorStep=1;
     foreach ($groups as $n=>$group) foreach ($errors->keys() as $key) {
-        if (array_key_exists($key,$group[2]) || ($n===4 && str_starts_with($key,'documents'))) { $errorStep=$n; break 2; }
+        if (array_key_exists($key,$group[2]) || ($n===4 && (str_starts_with($key,'documents') || in_array($key,['gst_certificate','pan_document'],true)))) { $errorStep=$n; break 2; }
     }
     $status=$vendor->kyc_status ?: 'draft';
     $kycToast=session('success')?[['type'=>'success','message'=>session('success')]]:[];
@@ -76,7 +79,7 @@
                 <fieldset class="kyc-grid kyc-fields" @disabled($readonly) aria-label="{{ $group[0] }} details">
                     @foreach ($group[2] as $name=>$label)
                         <div class="kyc-field {{ $errors->has($name)?'has-error':'' }}">
-                            <label for="{{ $name }}">{{ $label }} @if(in_array($name,$required,true))<span>*</span>@endif</label>
+                            <label for="{{ $name }}">{{ $label }} @if(in_array($name,$required,true))<span>*</span>@endif @if(in_array($name,$indianFields,true))<span data-kyc-indian-star @if(!$indian) hidden @endif>*</span>@endif</label>
                             @if ($name==='vendor_type')
                                 <select id="{{ $name }}" name="{{ $name }}" required>
                                     <option value="">Select vendor type</option>
@@ -84,12 +87,13 @@
                                         <option value="{{ $key }}" @selected(old($name,$profile[$name]??'')===$key)>{{ $text }}</option>
                                     @endforeach
                                 </select>
-                            @elseif ($name==='address')
-                                <textarea id="{{ $name }}" name="{{ $name }}" rows="3" maxlength="3000" required>{{ old($name,$profile[$name]??'') }}</textarea>
+                            @elseif (in_array($name,['address','bank_address','beneficiary_address'],true))
+                                <textarea id="{{ $name }}" name="{{ $name }}" rows="3" maxlength="3000" @if($name==='address') required @endif>{{ old($name,$profile[$name]??'') }}</textarea>
                             @else
                                 <input id="{{ $name }}" name="{{ $name }}" type="{{ $name==='contact_person_email'?'email':($name==='website'?'url':'text') }}"
                                     value="{{ old($name,$profile[$name]??'') }}" maxlength="{{ in_array($name,['contact_person_mobile','whatsapp_number','alternate_contact'],true)?40:($name==='pincode'?30:255) }}"
-                                    @if(in_array($name,$required,true)) required @endif
+                                    @if(in_array($name,$required,true) || ($indian && in_array($name,$indianFields,true))) required @endif
+                                    @if(in_array($name,$indianFields,true)) data-kyc-indian-required @endif
                                     @if(in_array($name,['gstin','pan','ifsc_code','swift_code'],true)) data-kyc-upper @endif>
                             @endif
                             @error($name)<p class="kyc-field-error">{{ $message }}</p>@enderror
@@ -98,17 +102,28 @@
                 </fieldset>
                 @if ($n===4)
                     <section class="kyc-documents" aria-labelledby="kyc-documents-title">
-                        <h3 id="kyc-documents-title">Supporting documents <small>(optional)</small></h3>
-                        <p>Registration, tax certificate, bank confirmation or cancelled cheque. PDF, JPG, PNG or WebP; up to 5 files per save, 5 MB each, 20 files total. Documents are private to your KYC review.</p>
+                        <h3 id="kyc-documents-title">KYC documents</h3>
+                        <p>Indian vendors must upload a GST Certificate and PAN. Additional supporting documents are optional. PDF, JPG, PNG or WebP; up to 5 files per save, 5 MB each, 20 files total. Documents are private to your KYC review.</p>
+                        @foreach (['gst_certificate'=>'GST Certificate','pan_document'=>'PAN'] as $category=>$label)
+                            <div class="kyc-field {{ $errors->has($category)?'has-error':'' }}">
+                                <label for="{{ $category }}">{{ $label }} <span data-kyc-indian-star @if(!$indian) hidden @endif>*</span></label>
+                                @if ($availableEvidence[$category]??false)<p>Already uploaded. You do not need to upload again unless it needs updating.</p>@endif
+                                @unless ($readonly)
+                                    <input id="{{ $category }}" name="{{ $category }}" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" data-kyc-indian-required data-kyc-uploaded="{{ ($availableEvidence[$category]??false)?'1':'0' }}" @if($indian && !($availableEvidence[$category]??false)) required @endif>
+                                @endunless
+                                @error($category)<p class="kyc-field-error">{{ $message }}</p>@enderror
+                            </div>
+                        @endforeach
+                        <p data-kyc-indian-notice @if(!$indian) hidden @endif>GST number, bank account number, IFSC, GST Certificate and PAN uploads are mandatory for Indian vendors.</p>
                         @unless ($readonly)
                             <div class="kyc-field {{ $errors->has('documents')?'has-error':'' }}">
-                                <label for="documents">Upload supporting documents</label>
+                                <label for="documents">Additional supporting documents (optional)</label>
                                 <input id="documents" type="file" name="documents[]" multiple accept=".pdf,.jpg,.jpeg,.png,.webp">
                                 @error('documents')<p class="kyc-field-error">{{ $message }}</p>@enderror
                             </div>
                         @endunless
                         @if ($documents->isNotEmpty())
-                            <ul>@foreach ($documents as $doc)<li><a href="{{ route('vendors.publicKyc.documents',[$vendor->kyc_public_token,$doc->id]) }}">{{ $doc->original_name }}</a></li>@endforeach</ul>
+                            <ul>@foreach ($documents as $doc)<li><a href="{{ route('vendors.publicKyc.documents',[$vendor->kyc_public_token,$doc->id]) }}">{{ $doc->categoryLabel() }} — {{ $doc->original_name }}</a></li>@endforeach</ul>
                         @endif
                     </section>
                 @endif

@@ -11,11 +11,14 @@ class VendorKycFixture
 {
     public const MIGRATION = '2026_10_25_180000_add_vendor_kyc.php';
 
+    public const INDIAN_MIGRATION = '2026_10_25_210000_add_indian_vendor_kyc_requirements.php';
+
     public static function install(): array
     {
         AnalyticsDatabaseFixture::install();
         $migration = database_path('migrations/'.self::MIGRATION);
         (require $migration)->up();
+        (require database_path('migrations/'.self::INDIAN_MIGRATION))->up();
         foreach (['2026_10_06_020000_create_office_alerts_table', '2026_10_06_030000_add_shared_ack_to_office_alerts', '2026_10_06_040000_add_snooze_and_email_to_office_alerts', '2026_10_06_050000_create_office_settings_table'] as $file) {
             (require database_path('migrations/'.$file.'.php'))->up();
         }
@@ -34,7 +37,7 @@ class VendorKycFixture
     {
         return array_replace(['vendor_name' => 'Submitted packaging partner', 'vendor_type' => 'packaging_supplier',
             'contact_person_name' => 'Partner contact', 'contact_person_email' => 'partner@example.test', 'contact_person_mobile' => '+91 9876543210',
-            'country' => 'India', 'city' => 'Ahmedabad', 'address' => '123 Supplier Road', 'state' => 'Gujarat', 'pincode' => '380004',
+            'country' => 'Singapore', 'city' => 'Ahmedabad', 'address' => '123 Supplier Road', 'state' => 'Gujarat', 'pincode' => '380004',
             'bank_name' => 'Example bank', 'account_holder_name' => 'Partner', 'account_number' => 'NEW-BANK', 'ifsc_code' => 'HDFC0001234'], $changes);
     }
 }

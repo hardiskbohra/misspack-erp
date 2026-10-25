@@ -76,6 +76,22 @@
         var current = 1;
         var sending = false;
 
+        function syncIndianRequirements() {
+            var country = form.elements.country;
+            if (!country) return; // Client KYC retains its existing rules.
+            var indian = ['india', 'in', 'ind', 'bharat', 'भारत'].indexOf(valueOf(country).toLowerCase()) !== -1;
+            form.querySelectorAll('[data-kyc-indian-required]').forEach(function (field) {
+                field.required = indian && field.getAttribute('data-kyc-uploaded') !== '1';
+                if (!field.required) clearError(field);
+            });
+            form.querySelectorAll('[data-kyc-indian-star], [data-kyc-indian-notice]').forEach(function (node) { node.hidden = !indian; });
+        }
+        var vendorCountry = form.elements.country;
+        if (vendorCountry) {
+            vendorCountry.addEventListener('input', syncIndianRequirements);
+            vendorCountry.addEventListener('change', syncIndianRequirements);
+        }
+
         function panel(n) {
             return form.querySelector('[data-kyc-panel="' + n + '"]');
         }
@@ -311,6 +327,7 @@
         });
 
         restore();
+        syncIndianRequirements();
         syncShipping();
 
         var start = Number(form.getAttribute('data-kyc-error-step') || 0);

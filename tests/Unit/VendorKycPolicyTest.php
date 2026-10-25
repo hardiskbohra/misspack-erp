@@ -50,4 +50,14 @@ class VendorKycPolicyTest extends TestCase
             $this->assertArrayNotHasKey($field, $v->toArray());
         }
     }
+
+    public function test_indian_country_aliases_are_normalised_and_foreign_countries_are_exempt(): void
+    {
+        foreach (['India', ' INDIA ', 'IN', 'ind', 'Bharat', 'भारत'] as $country) {
+            $this->assertTrue(VendorKyc::isIndian($country));
+        }
+        foreach ([null, '', 'Indonesia', 'Singapore', 'China'] as $country) {
+            $this->assertFalse(VendorKyc::isIndian($country));
+        }
+    }
 }

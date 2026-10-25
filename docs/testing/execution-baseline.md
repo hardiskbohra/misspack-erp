@@ -211,3 +211,22 @@ rule, then Green: **517 tests /15,656 assertions** in the full portable suite.
 Real Chromium confirms creator and other-manager decision buttons, read-only
 exclusion and existing desktop/mobile wizard behaviour. Contracts pass. See
 [vendor-kyc.md](vendor-kyc.md); earlier separate-maker requirements are superseded.
+
+
+## Indian vendor KYC documents and bank addresses (25 October 2026)
+
+- Test-first mandatory GSTIN/account/IFSC and separately classified GST Certificate
+  and PAN evidence for Indian final submission and approval; incomplete drafts
+  and overseas submissions are exempt. Generic/foreign-owned/missing files do
+  not satisfy compliance; saved proofs can be reused on resubmission.
+- Optional Bank Address and Beneficiary Address flow through staged review,
+  approval and office forms/details as nullable multiline text.
+- Full portable Unit + Integration + Feature: **527 tests/15,765 assertions PASS**;
+  focused vendor suite34/355. Native MySQL now checks typed Indian proofs, both
+  address columns (including >255 characters), JSON and competing review locks.
+- Actual responsive Chromium validation switching, required indicators, blocked
+  confirmation, optional addresses and existing wizard/creator controls PASS.
+  Contracts PASS;237 designs/81 linked cases,55 PHP test files;462 routes.
+- See [vendor-kyc.md](vendor-kyc.md) for migration, acceptance, Red/Green and runtime
+  evidence. Native CI status is checked separately after push; no local MySQL
+  execution or exhaustive E2E/line-coverage claim is made.

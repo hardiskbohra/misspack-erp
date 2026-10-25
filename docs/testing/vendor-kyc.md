@@ -124,3 +124,53 @@ php tools/testing/export-routes.php --check
 Catalogue coverage: UT-VENDOR-004–007 and IT-VENDOR-004–010. Native concurrency,
 portable HTTP and browser UI outcomes are distinct evidence, not interchangeably
 claimed as complete system/line coverage.
+
+## Indian vendor requirements — acceptance (25 October 2026)
+
+Test-first change: Indian final submissions require a valid GSTIN, bank account
+number and IFSC, plus separately classified GST Certificate and PAN uploads.
+Drafts may be incomplete; overseas submissions remain exempt. Recognise India,
+IN, IND, Bharat and भारत case-insensitively with surrounding whitespace ignored.
+Existing generic documents must not silently count as tax certificates. Previously
+saved classified documents belonging to this vendor can satisfy resubmission;
+foreign-vendor evidence or missing storage files cannot. Check pending legacy
+Indian submissions at approval too; request revision rather than approve an
+incomplete file. Do not retroactively change approved or operational statuses.
+Bank Address and Beneficiary Address are optional multiline fields in public
+KYC, submitted comparisons, approved vendor data, and office forms/details.
+Keep document privacy, size/count limits, version/locking, review permissions,
+server draft saving, and full/browser/native regression gates unchanged.
+
+### Indian requirements — verification
+
+- Genuine initial Red: seven targeted tests exposed absent required identifiers /
+  classified evidence, absent staging fields and approval checks. One additional
+  fixture-only failure (stale in-memory version) was corrected without changing
+  the expected rejection. No Indian requirement was relaxed to turn tests green.
+- Green full portable Unit + Integration + Feature: **527 tests / 15,765
+  assertions PASS** on PHP8.4.25 WASM. Focused vendor suite:34 tests/355 assertions.
+  `IndianVendorKycTest` covers nine real HTTP/database cases; country policy has
+  an isolated unit regression. Legacy broad vendor fixtures now explicitly use
+  an overseas vendor, while Indian fixtures exercise all new mandatory rules.
+- Actual Chromium at1440/390px: India switches on all five requirements (GSTIN,
+  account, IFSC, GST Certificate and PAN), missing fields prevent confirmation,
+  overseas switching removes those requirements, both address inputs work, and
+  existing draft/confirm/locked/creator-review/client regression checks PASS.
+- PDF/image privacy, combined five-file-per-save and20-file-total limits remain.
+  Saved evidence can be reused, but generic files, other-vendor files and missing
+  private storage files cannot satisfy the mandatory certificate requirements.
+- Native MySQL test now submits typed Indian proofs, checks category persistence,
+  approves a multiline beneficiary address and a bank address longer than255
+  characters, and repeats real two-connection locking/replay assertions. It runs
+  in the existing disposable MySQL CI job; CI is verified after push, not inferred
+  from SQLite. No production data or external delivery was used.
+- Deploy using `php artisan migrate --force`. The new additive migration adds
+  two nullable text fields and classifies pre-existing documents as Supporting
+  document; it does not guess their tax category, change approved vendors, or
+  alter procurement/payment status. Already-pending incomplete Indian submissions
+  must be sent back for revision before they can be approved.
+- Catalogue: UT-VENDOR-008 / IT-VENDOR-011–012;237 designs (102 unit/135
+  integration),81 exact-method linked cases,55 PHP test files,462 declared routes.
+  Node/Blade/contracts PASS; source declarations are not coverage percentages.
+  Evidence: `.work/indian-vendor-{red,focused,full,browser,contracts}.log` and
+  `.work/indian-vendor-full.xml`.

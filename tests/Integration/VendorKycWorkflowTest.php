@@ -220,10 +220,13 @@ class VendorKycWorkflowTest extends TestCase
     public function test_kyc_schema_migrates_existing_vendors_and_rolls_back_cleanly(): void
     {
         $migration = require database_path('migrations/'.F::MIGRATION);
+        $indianMigration = require database_path('migrations/'.F::INDIAN_MIGRATION);
+        $indianMigration->down();
         $migration->down();
         $this->assertFalse(Schema::hasColumn('vendors', 'kyc_status'));
         $this->assertSame('on_hold', $this->f['vendor']->fresh()->status);
         $migration->up();
+        $indianMigration->up();
         $v = $this->f['vendor']->fresh();
         $this->assertSame('draft', $v->kyc_status);
         $this->assertSame(0, $v->kyc_version);

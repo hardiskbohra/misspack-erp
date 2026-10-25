@@ -201,6 +201,19 @@ Sources: `app/Http/Controllers/VendorController.php`, `app/Models/Vendor.php`, `
 
 **Evidence:** `tests/Unit/VendorKycPolicyTest.php#test_kyc_metadata_is_not_mass_assignable_or_accidentally_serialized`
 
+### UT-VENDOR-008 — Indian-country aliases trigger compliance without matching overseas countries
+
+**Priority:** P1 · **Requirement:** REQ-VENDOR · **Implementation:** linked executable evidence
+
+- **Preconditions:** Pure VendorKyc country policy; no database
+- **Data:** India, IN, IND, Bharat, भारत, whitespace/case variants; blank, null, Indonesia, Singapore, China
+1. Normalise country input
+2. Check Indian and foreign aliases
+
+**Expected:** Only recognised Indian country values trigger requirements; no false match for Indonesia or missing/foreign values.
+
+**Evidence:** `tests/Unit/VendorKycPolicyTest.php#test_indian_country_aliases_are_normalised_and_foreign_countries_are_exempt`
+
 ## Products and price calculator (`PRODUCT`)
 
 Sources: `app/Http/Controllers/ProductController.php`, `app/Http/Controllers/PriceCalculatorController.php`.

@@ -7,8 +7,10 @@ use App\Models\Vendor;
 use App\Services\VendorKyc;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Tests\Support\VendorKycFixture;
 use Tests\TestCase;
@@ -24,6 +26,7 @@ class MySqlVendorKycTest extends TestCase
             throw new \LogicException('Vendor KYC native checks require a disposable MySQL *_test database.');
         }
         Mail::fake();
+        Storage::fake('local');
         $suffix = bin2hex(random_bytes(6));
         $users = [];
         $vendor = null;
@@ -40,11 +43,17 @@ class MySqlVendorKycTest extends TestCase
             $vendor->refresh();
             $request = Request::create('/vendor-kyc/'.$vendor->kyc_public_token, 'POST', VendorKycFixture::payload([
                 'intent' => 'submit', 'kyc_version' => $vendor->kyc_version, 'vendor_name' => 'Native approved partner',
-            ]));
+                'country' => 'India', 'gstin' => '24ABCDE1234F1Z5',
+                'bank_address' => str_repeat('Bank address line ', 30), 'beneficiary_address' => "Beneficiary Road\nAhmedabad",
+            ]), [], [
+                'gst_certificate' => UploadedFile::fake()->create('gst.pdf', 12, 'application/pdf'),
+                'pan_document' => UploadedFile::fake()->create('pan.pdf', 12, 'application/pdf'),
+            ]);
             $service->savePublic($vendor->kyc_public_token, $request);
             $vendor->refresh();
             $this->assertSame('Native original', $vendor->vendor_name);
             $this->assertSame('NEW-BANK', $vendor->kyc_submitted_data['account_number']);
+            $this->assertSame(['gst_certificate', 'pan_document'], DB::table('vendor_kyc_documents')->where('vendor_id', $vendor->id)->orderBy('id')->pluck('category')->all());
             $version = $vendor->kyc_version;
             $competitor = DB::connection('kyc_competitor');
             $competitor->statement('SET SESSION innodb_lock_wait_timeout = 1');
@@ -68,6 +77,8 @@ class MySqlVendorKycTest extends TestCase
             $this->assertSame('blacklisted', $vendor->status);
             $this->assertSame('RMB', $vendor->preferred_currency);
             $this->assertSame('NEW-BANK', $vendor->account_number);
+            $this->assertSame(str_repeat('Bank address line ', 30), $vendor->bank_address);
+            $this->assertSame("Beneficiary Road\nAhmedabad", $vendor->beneficiary_address);
             try {
                 $service->review($vendor, $users['checker'], ['decision' => 'rejected', 'reason' => 'stale', 'kyc_version' => $version]);
                 $this->fail('A replayed review must not overwrite an approval.');
@@ -85,6 +96,9 @@ class MySqlVendorKycTest extends TestCase
             DB::disconnect('kyc_competitor');
             DB::purge('kyc_competitor');
             if ($vendor) {
+                foreach (DB::table('vendor_kyc_documents')->where('vendor_id', $vendor->id)->pluck('file_path') as $path) {
+                    Storage::disk('local')->delete($path);
+                }
                 DB::table('office_alerts')->where('subject_type', Vendor::class)->where('subject_id', $vendor->id)->delete();
                 $vendor->delete();
             }

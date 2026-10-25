@@ -309,6 +309,38 @@ Sources: `app/Http/Controllers/VendorController.php`, `app/Models/Vendor.php`, `
 
 **Evidence:** `tests/Integration/VendorKycWorkflowTest.php#test_kyc_schema_migrates_existing_vendors_and_rolls_back_cleanly`; `tests/Database/MySqlVendorKycTest.php#test_native_json_schema_locking_and_stale_review_protection`
 
+### IT-VENDOR-011 — Indian submissions require bank/tax identifiers and private classified GST/PAN evidence
+
+**Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-FILES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable migrated VendorKycFixture; fake private storage; real public/office HTTP requests
+- **Data:** Indian and overseas profiles; named GST Certificate/PAN, generic/foreign-owned/missing files; drafts and legacy under-review submissions
+1. Reject incomplete Indian final submissions without mutation
+2. Save incomplete draft and typed evidence
+3. Resubmit without re-uploading existing owned evidence
+4. Reject generic, cross-vendor, missing, invalid and excess uploads
+5. Check legacy approval cannot bypass compliance
+
+**Expected:** Indian final submission/approval needs valid GSTIN, account number, IFSC and both private certificate categories. Drafts and overseas vendors exempt. Existing valid owned evidence is reused; combined five-file/20-total limits and private downloads retained.
+
+**Evidence:** `tests/Integration/IndianVendorKycTest.php#test_indian_final_submission_requires_numbers_and_both_classified_documents`; `tests/Integration/IndianVendorKycTest.php#test_indian_draft_can_be_incomplete_and_saved_evidence_is_reused_on_submission_and_revision`; `tests/Integration/IndianVendorKycTest.php#test_generic_or_another_vendors_documents_do_not_satisfy_indian_compliance`; `tests/Integration/IndianVendorKycTest.php#test_named_evidence_rejects_invalid_files_and_counts_towards_the_combined_upload_limit`; `tests/Integration/IndianVendorKycTest.php#test_foreign_vendors_are_exempt_but_indian_country_aliases_are_not`; `tests/Integration/IndianVendorKycTest.php#test_legacy_incomplete_indian_submissions_cannot_be_approved`; `tests/Integration/IndianVendorKycTest.php#test_missing_private_file_does_not_count_as_valid_indian_evidence`
+
+### IT-VENDOR-012 — Bank and beneficiary addresses stage, review, approve and edit as multiline text
+
+**Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-UI · **Implementation:** linked executable evidence
+
+- **Preconditions:** Migrated vendor KYC with two new nullable text columns; private classified documents
+- **Data:** Multiline bank/beneficiary addresses; bank address longer than255 characters on native MySQL
+1. Submit addresses without altering live vendor
+2. Display comparison and classified document labels
+3. Approve and inspect live address fields
+4. Edit addresses from office and reset KYC
+5. Run responsive browser country-switch validation and native persistence/locking
+
+**Expected:** Both optional address fields persist without truncation, appear in public/office forms and record details, retain line breaks, and participate in KYC invalidation. Browser requirements switch with country; native schema supports text and typed evidence.
+
+**Evidence:** `tests/Integration/IndianVendorKycTest.php#test_typed_uploads_are_private_and_addresses_are_staged_then_applied_on_approval`; `tests/Integration/IndianVendorKycTest.php#test_office_addresses_are_editable_and_invalidate_previously_approved_kyc`; `tests/Database/MySqlVendorKycTest.php#test_native_json_schema_locking_and_stale_review_protection`
+
 ## Products and price calculator (`PRODUCT`)
 
 Sources: `app/Http/Controllers/ProductController.php`, `app/Http/Controllers/PriceCalculatorController.php`.

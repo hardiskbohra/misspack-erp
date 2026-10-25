@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -22,10 +23,49 @@ class VendorKyc
         'vendor_name', 'brand_name', 'vendor_type', 'website',
         'contact_person_name', 'contact_person_email', 'contact_person_mobile', 'whatsapp_number', 'alternate_contact',
         'country', 'state', 'city', 'pincode', 'address', 'gstin', 'pan', 'tax_id', 'import_export_code',
-        'bank_name', 'account_holder_name', 'account_number', 'ifsc_code', 'swift_code', 'bank_branch',
+        'bank_name', 'account_holder_name', 'account_number', 'ifsc_code', 'swift_code', 'bank_branch', 'bank_address', 'beneficiary_address',
     ];
 
-    public const BANK_FIELDS = ['bank_name', 'account_holder_name', 'account_number', 'ifsc_code', 'swift_code', 'bank_branch'];
+    public const BANK_FIELDS = ['bank_name', 'account_holder_name', 'account_number', 'ifsc_code', 'swift_code', 'bank_branch', 'bank_address', 'beneficiary_address'];
+
+    public static function isIndian(?string $country): bool
+    {
+        return in_array(mb_strtolower(trim($country ?? '')), ['india', 'in', 'ind', 'bharat', 'भारत'], true);
+    }
+
+    public static function availableEvidence(Vendor $vendor): array
+    {
+        $available = [];
+        foreach (VendorKycDocument::where('vendor_id', $vendor->id)->whereIn('category', ['gst_certificate', 'pan_document'])->get() as $doc) {
+            if (Storage::disk('local')->exists($doc->file_path)) {
+                $available[$doc->category] = true;
+            }
+        }
+
+        return $available;
+    }
+
+    private static function assertIndianCompliance(array $profile, array $available): void
+    {
+        if (! self::isIndian($profile['country'] ?? null)) {
+            return;
+        }
+        Validator::make(array_merge($profile, [
+            'gst_certificate' => $available['gst_certificate'] ?? false,
+            'pan_document' => $available['pan_document'] ?? false,
+        ]), [
+            'gstin' => ['required', 'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/i'],
+            'account_number' => ['required', 'string', 'max:255'],
+            'ifsc_code' => ['required', 'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/i'],
+            'gst_certificate' => ['accepted'], 'pan_document' => ['accepted'],
+        ], [
+            'gstin.required' => 'GST number is required for Indian vendors.',
+            'account_number.required' => 'Bank account number is required for Indian vendors.',
+            'ifsc_code.required' => 'IFSC code is required for Indian vendors.',
+            'gst_certificate.accepted' => 'GST Certificate upload is required for Indian vendors.',
+            'pan_document.accepted' => 'PAN upload is required for Indian vendors.',
+        ])->validate();
+    }
 
     public static function statusOptions(): array
     {
@@ -86,7 +126,9 @@ class VendorKyc
                 foreach (self::FIELDS as $field) {
                     $rules[$field] = ['nullable', 'string', 'max:255'];
                 }
-                $rules['address'] = ['nullable', 'string', 'max:3000'];
+                foreach (['address', 'bank_address', 'beneficiary_address'] as $field) {
+                    $rules[$field] = ['nullable', 'string', 'max:3000'];
+                }
                 $rules['pincode'] = ['nullable', 'string', 'max:30'];
                 foreach (['contact_person_mobile', 'whatsapp_number', 'alternate_contact'] as $field) {
                     $rules[$field] = ['bail', 'nullable', 'string', 'max:40', function ($attribute, $value, $fail) {
@@ -107,25 +149,47 @@ class VendorKyc
                     }
                 }
                 $rules['documents'] = ['nullable', 'array', 'max:5'];
-                $rules['documents.*'] = ['file', 'mimes:pdf,jpg,jpeg,png,webp', 'mimetypes:application/pdf,image/jpeg,image/png,image/webp', 'max:5120'];
+                $fileRules = ['file', 'mimes:pdf,jpg,jpeg,png,webp', 'mimetypes:application/pdf,image/jpeg,image/png,image/webp', 'max:5120'];
+                $rules['documents.*'] = $fileRules;
+                foreach (['gst_certificate', 'pan_document'] as $category) {
+                    $rules[$category] = array_merge(['nullable'], $fileRules);
+                }
                 $data = Arr::only($request->validate($rules), self::FIELDS);
                 foreach (['gstin', 'pan', 'ifsc_code', 'swift_code'] as $field) {
                     if (isset($data[$field])) {
                         $data[$field] = strtoupper($data[$field]);
                     }
                 }
+                $uploads = [];
+                foreach ($request->file('documents', []) as $file) {
+                    $uploads[] = ['file' => $file, 'category' => 'supporting'];
+                }
+                $available = self::availableEvidence($v);
+                foreach (['gst_certificate', 'pan_document'] as $category) {
+                    if ($request->hasFile($category)) {
+                        $uploads[] = ['file' => $request->file($category), 'category' => $category];
+                        $available[$category] = true;
+                    }
+                }
+                if (count($uploads) > 5) {
+                    $this->invalid('documents', 'Upload a maximum of 5 files per save, including GST Certificate and PAN.');
+                }
                 $v->kyc_data = array_replace(self::profile($v), $data);
+                if ($final) {
+                    self::assertIndianCompliance($v->kyc_data, $available);
+                }
                 $v->kyc_version++;
-                if (VendorKycDocument::where('vendor_id', $v->id)->count() + count($request->file('documents', [])) > 20) {
+                if (VendorKycDocument::where('vendor_id', $v->id)->count() + count($uploads) > 20) {
                     $this->invalid('documents', 'A maximum of 20 supporting documents is allowed. Contact MissPack for help.');
                 }
-                foreach ($request->file('documents', []) as $file) {
+                foreach ($uploads as $upload) {
+                    $file = $upload['file'];
                     $path = $file->store('vendor-kyc/'.$v->id, 'local');
                     if (! $path) {
                         throw new \RuntimeException('Unable to store KYC document.');
                     }
                     $stored[] = $path;
-                    VendorKycDocument::create(['vendor_id' => $v->id, 'file_path' => $path,
+                    VendorKycDocument::create(['vendor_id' => $v->id, 'file_path' => $path, 'category' => $upload['category'],
                         'original_name' => mb_substr(preg_replace('/[\x00-\x1f\x7f]/', '', basename($file->getClientOriginalName())), 0, 200),
                         'mime_type' => $file->getMimeType(), 'file_size' => $file->getSize(), 'kyc_version' => $v->kyc_version]);
                 }
@@ -166,6 +230,7 @@ class VendorKyc
             $this->checkVersion($v, (int) $data['kyc_version']);
             $decision = $data['decision'];
             if ($decision === 'approved') {
+                self::assertIndianCompliance($v->kyc_submitted_data ?? [], self::availableEvidence($v));
                 $v->fill(Arr::only($v->kyc_submitted_data ?? [], self::FIELDS));
             }
             $v->kyc_status = $decision;
@@ -240,8 +305,8 @@ class VendorKyc
     {
         VendorKycEvent::create(['vendor_id' => $v->id, 'actor_id' => $actor?->id, 'action' => $action, 'status' => $v->kyc_status,
             'kyc_version' => $v->kyc_version, 'reason' => $reason,
-            'snapshot' => in_array($action,['submitted', 'approved', 'revision', 'rejected'],true) ? [
-                'profile' => $v->kyc_submitted_data, 'document_ids' => VendorKycDocument::where('vendor_id',$v->id)->pluck('id')->all(),
+            'snapshot' => in_array($action, ['submitted', 'approved', 'revision', 'rejected'], true) ? [
+                'profile' => $v->kyc_submitted_data, 'document_ids' => VendorKycDocument::where('vendor_id', $v->id)->pluck('id')->all(),
             ] : null]);
     }
 }

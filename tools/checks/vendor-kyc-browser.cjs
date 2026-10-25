@@ -38,6 +38,13 @@ const root=path.resolve(__dirname,'../..'),dir=path.join(root,'.work/vendor-kyc'
    await page.locator('#address').fill('Browser supplier address');await page.locator('#city').fill('Singapore');await page.locator('#country').fill('Singapore');
    await page.locator('[data-kyc-next]').click();
    assert(!(await page.locator('[data-kyc-next]').isVisible()),'Continue is hidden on the final step');
+   assert(await page.locator('#bank_address').isVisible());assert(await page.locator('#beneficiary_address').isVisible());
+   await page.locator('[data-kyc-prev]').click();await page.locator('#country').fill('India');await page.locator('[data-kyc-next]').click();
+   for(const id of ['gstin','account_number','ifsc_code','gst_certificate','pan_document']) assert(await page.locator('#'+id).evaluate(n=>n.required),'Indian requirement '+id);
+   await page.locator('[data-kyc-submit]').click();assert.equal(await page.getByRole('button',{name:'Yes, submit',exact:true}).count(),0,'Missing Indian requirements prevent confirmation');
+   await page.locator('[data-kyc-prev]').click();await page.locator('#country').fill('Singapore');await page.locator('[data-kyc-next]').click();
+   for(const id of ['gstin','account_number','ifsc_code','gst_certificate','pan_document']) assert(!(await page.locator('#'+id).evaluate(n=>n.required)),'Overseas exemption '+id);
+   await page.locator('#bank_address').fill('Bank Road\nSingapore');await page.locator('#beneficiary_address').fill('Beneficiary Road\nSingapore');
    await page.locator('#account_number').fill('PRIVATE-BROWSER-ACCOUNT');await page.locator('#bank_name').focus();
    assert.equal(await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('misspack.kyc.')).length),0,'Public bank details must not persist in localStorage');
    await page.locator('#documents').setInputFiles({name:'bank.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.7\nfixture')});

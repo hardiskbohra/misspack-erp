@@ -20,3 +20,5 @@
     .vendor-kyc .vendor-kyc-link { flex-wrap:wrap; }
     .vendor-kyc .vendor-kyc-link input { flex-basis:100%; }
 }
+
+.vendor-show .vendor-bank-address { white-space:pre-line; }

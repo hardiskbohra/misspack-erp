@@ -22,7 +22,7 @@ class Vendor extends Model
         'contact_person_name', 'contact_person_email', 'contact_person_mobile', 'whatsapp_number', 'alternate_contact',
         'website', 'alibaba_link', 'country', 'state', 'city', 'pincode', 'address',
         'gstin', 'pan', 'tax_id', 'import_export_code',
-        'bank_name', 'account_holder_name', 'account_number', 'ifsc_code', 'swift_code', 'bank_branch',
+        'bank_name', 'account_holder_name', 'account_number', 'ifsc_code', 'swift_code', 'bank_branch', 'bank_address', 'beneficiary_address',
         'preferred_currency', 'payment_terms', 'lead_time_days', 'minimum_order_value', 'rating', 'notes', 'created_by',
     ];
 
