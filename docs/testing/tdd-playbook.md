@@ -4,6 +4,10 @@
 
 The ERP already existed. New tests in this task are primarily **retrospective characterization and regression tests**; writing them now does not make the historical ERP “built with TDD”. This playbook establishes the process for future work and a risk-ranked backlog for the uncovered catalogue.
 
+## Mandatory standing rule
+
+All future features, behaviour changes and bug fixes must follow test-first Red → Green → Refactor. Before **every commit and push**, run the complete Unit, Integration and Feature suites using `vendor/bin/phpunit -c phpunit.xml`, plus `npm run test:contracts`. Focused checks supplement, not replace, this gate. Report failures or blocked execution honestly and obtain explicit approval before submitting anything unverified. Documentation-only changes need no artificial red business test, but still require unit/integration verification. See the repository's `AGENTS.md` for the persistent development rules.
+
 ## The loop for every change
 
 1. **Specify:** choose a case ID and requirement. Identify the authoritative service and all affected modules. Write concrete amounts/dates/actors and rejection semantics; resolve ambiguous business policy before implementation.
