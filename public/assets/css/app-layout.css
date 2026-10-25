@@ -33,7 +33,7 @@
     --table-row-hover: rgba(255, 255, 255, 0.03);
     --scrollbar-thumb: #253047;
 
-    /* Component (master-*/module) surface tokens — dark */
+    /* Component (master and module) surface tokens — dark */
     --mc-card: #1a2540;
     --mc-card-soft: #17223e;
     --mc-soft: #1d2c4d;
@@ -75,7 +75,7 @@
     --table-row-hover: rgba(0, 0, 0, 0.02);
     --scrollbar-thumb: #cbd5e0;
 
-    /* Component (master-*/module) surface tokens — light */
+    /* Component (master and module) surface tokens — light */
     --mc-card: #ffffff;
     --mc-card-soft: #f8fbff;
     --mc-soft: #eef3ff;

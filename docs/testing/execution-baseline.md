@@ -91,3 +91,13 @@ Current catalogue: **216 designs** (95 unit,121 integration),61 linked designs a
 - Browser verification: real Blade/fictional in-memory fixtures for executive overview and six modules at1440/900/390px, no document overflow or JavaScript exceptions; actual drawer/Select2 period controls and legacy-tab canonical navigation checked separately.
 - Read-only monetary, date, permission, product/header cardinality, ageing and unit-separation tests documented in [dashboard-consolidation.md](dashboard-consolidation.md).
 - A new native MySQL module concentration/trend reconciliation test is included in the separate MySQL configuration. Its CI result is checked after pushing; no local native MySQL execution is claimed, and the earlier CI links above do not certify this change.
+
+
+## Module-only dashboards and visual contract follow-up (25 October 2026)
+
+The previous overview retention is superseded: executive reporting and its links are removed; `/dashboard` redirects to the permission-filtered module directory. The empty-permission state is explicit. Shared `.core-card` styling and restored light/dark `--mc-card` tokens fix transparent analytical cards; no hardcoded white dark-mode override remains.
+
+- Full portable Unit+Integration+Feature: **474 tests,15,216 assertions PASS**, PHP8.4.25 WASM.
+- Browser:42 light/dark page-state checks across directory/six modules at three widths; actual white card backgrounds in light mode and canonical dark backgrounds, consistent card radius, no overflow/JS exceptions, real period controls and drawer Escape/focus restoration.
+- Contracts:632 active module period assertions,19 module contracts and14 Blade checks (244 templates), plus catalogue/negative self-checks. Deleted overview scenarios are retired explicitly, not counted as retained coverage.
+- Native CI is independently verified after push; no SQL or concurrency change/certification is claimed. See [dashboard-consolidation.md](dashboard-consolidation.md).

@@ -2,7 +2,7 @@
 
 ## Agreed scope
 
-25 October 2026: consolidate existing analytics, not a new dashboard for every ERP table. Keep a compact executive overview. Six canonical destinations remain `/dashboards/{sales,purchase,projects,operations,finance,work}`; `/dashboards` is only a directory. Operational record lists/queues remain execution tools, not additional analytical dashboards.
+**Original scope, superseded by the follow-up below:** 25 October 2026: consolidate existing analytics, not a new dashboard for every ERP table. Keep a compact executive overview. Six canonical destinations remain `/dashboards/{sales,purchase,projects,operations,finance,work}`; `/dashboards` is only a directory. Operational record lists/queues remain execution tools, not additional analytical dashboards.
 
 ## Acceptance / TDD designs
 
@@ -49,3 +49,27 @@ CHROMIUM_EXECUTABLE_PATH=/path/to/chromium \
 ```
 
 Requires locked Composer development dependencies, `playwright-core` and Chromium (`NODE_PATH` can point to a temporary install). All fixture databases are forced to disposable in-memory SQLite under `APP_ENV=testing`. Generated HTML and screenshots stay ignored under `.work/`; none belong in Git. The local PHP command used the PHP8.4 WASM runtime equivalent.
+
+## Follow-up: retire executive reporting and align module UI (25 October 2026)
+
+Acceptance: remove executive overview and all its navigation, with `/dashboard`
+retained only as a context-preserving compatibility redirect to the permission-filtered
+module directory. Module-only readers may follow that entry point; employees retain
+their self-service boundary. Keep six module routes and their analytical data unchanged.
+Use the canonical shared card surface (white in light mode, dark surface in dark
+mode), 18px radius, standard spacing/type, touch targets, focus indicators, and
+contained table/chart scrolling. Verify actual computed styles in Chromium, not
+just the presence of a CSS declaration. UT-DASH-004 / IT-DASH-006 / IT-DASH-008
+trace reporting/navigation/permission changes.
+
+
+### Follow-up evidence
+
+- Actual test-first red: two new HTTP regressions failed (compatibility entry403 for sales-only user and obsolete ERP overview navigation). A separate zero-grant landing test failed before its explanatory state was added.
+- Actual computed-style red: directory card background was `rgba(0,0,0,0)`, not white. A prematurely closed comment in both theme blocks in `app-layout.css` swallowed the `--mc-card` declaration. Fixing the comments restores the canonical light/dark token rather than hiding this with scattered hardcoded white overrides.
+- Dashboard panels, statistics, navigation and directory cards now opt into `.core-card`; shared surfaces/radii/shadows remain authoritative. Module CSS retains layout and semantic accents, uses readable theme text,18px/600 metric typography,16px grid gaps,20px panel padding and two-up mobile metrics. Tables retain comfortable14px16px rows, shared header surfaces, scroll wrappers and tabular numbers. Section/source links have40px touch targets and visible focus states.
+- Current complete portable suite: **474 tests,15,216 assertions PASS**, PHP8.4.25 WASM, Unit+Integration+Feature. Three additional regressions retained. Legacy custom-date/native SQL helper tests stay as compatibility coverage; there is no executive page, rendered projection, navigation item or JavaScript.
+- Chromium153: module directory + six modules at1440/900/390px; **42 light/dark page-state checks** verify actual white/light and dark/token card backgrounds,18px radius, absence of executive navigation, no document overflow and no JS exceptions. Real Select2 reporting controls, Escape close and trigger focus restoration pass. Screenshots are ignored, fictional fixtures only.
+- Source contracts now test the compatibility redirect and absence of executive UI rather than retaining obsolete executive requirements. The period-control checker deliberately removes the deleted overview script scenarios and retains all four active module native/Select2/ready/loading combinations (**632 assertions**).
+- No SQL/schema/business aggregation change in this follow-up. Native PHP/MySQL CI is checked after pushing, independently of local WASM evidence.
+- A further browser red caught shared card borders masking the statistics' semantic top accent. The module now supplies only the local accent above the shared border rule; a retained computed-style assertion verifies that the top accent differs from the quiet side border. Direct light/dark root-token assertions prevent canonical card fallbacks from hiding a recurrence of the malformed-comment bug. Additional source checks: design79, shared UI components24 and permission/audit21 passed.

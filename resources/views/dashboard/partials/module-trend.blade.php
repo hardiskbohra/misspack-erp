@@ -1,5 +1,5 @@
 @php($trendMaximum = max(1, collect($chart['series'])->max(fn ($point) => max((float) $point['value'], (float) ($point['secondary'] ?? 0)))))
-<section class="module-dashboard-card module-trend-card" aria-labelledby="{{ $chartId }}">
+<section class="core-card module-dashboard-card module-trend-card" aria-labelledby="{{ $chartId }}">
             <header class="module-card-heading">
                 <div><span>Selected period</span><h2 id="{{ $chartId }}">{{ $chart['title'] }}</h2></div>
                 <span class="module-card-chip">{{ $period['label'] }}</span>

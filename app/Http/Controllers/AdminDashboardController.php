@@ -7,30 +7,16 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class AdminDashboardController extends Controller
 {
-    public function index(Request $request): View
+    // Backward-compatible login/bookmark entry point; no executive analytics remain.
+    public function index(Request $request): RedirectResponse
     {
-        $period = $this->periodContext($request);
-        $start = $period['start'];
-        $end = $period['end'];
-        $currency = $request->validate(['currency' => ['nullable', 'in:INR,USD,RMB']])['currency'] ?? 'INR';
-        // Normalize every overview window (including rolling and multi-year) to
-        // exact dates so a module cannot silently switch to its default month.
-        $moduleQuery = ['period_type' => 'custom', 'start_date' => $start->toDateString(),
-            'end_date' => $end->toDateString(), 'currency' => $currency];
-        $modulePeriod = app(DashboardPeriod::class)->fromRequest(Request::create('/', 'GET', $moduleQuery));
-        $modules = \App\Services\ModuleDashboard::availableModules($request->user());
-        $summaries = [];
-        foreach ($modules as $key => $definition) {
-            $data = app(\App\Services\ModuleDashboard::class)->build($key, $modulePeriod, $currency, false);
-            $summaries[$key] = $definition + ['metrics' => array_slice($data['metrics'], 0, 2), 'alerts' => count($data['alerts']),
-                'url' => route('dashboards.show', ['module' => $key] + $moduleQuery)];
-        }
-        $availableYears = $this->availableYears();
-        return view('dashboard.index', compact('period', 'start', 'end', 'currency', 'summaries', 'availableYears', 'moduleQuery'));
+        return redirect()->route('dashboards.index', $request->only([
+            'period_type', 'year', 'month', 'quarter', 'half', 'start_date', 'end_date', 'currency',
+        ]));
     }
 
     private function periodContext(Request $request): array

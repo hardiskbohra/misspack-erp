@@ -63,21 +63,19 @@ class DashboardConsolidationTest extends TestCase
         }
     }
 
-    public function test_overview_has_canonical_module_links_instead_of_duplicate_analytical_tabs(): void
+    public function test_legacy_dashboard_redirects_to_module_directory_with_custom_dates(): void
     {
+        // The former overview is retired; bookmarks lead to the module directory.
         $this->reader();
-        $response = $this->get('/dashboard?period_type=custom&start_date=2026-10-10&end_date=2026-10-12');
-        $response->assertOk()->assertSee('Executive overview')->assertSee('Sales')->assertDontSee('dashboardTabSales', false)
-            ->assertDontSee('dashboardTabFinance', false)->assertDontSee('dashboardTabOperations', false)
-            ->assertSee('start_date=2026-10-10', false)->assertSee('end_date=2026-10-12', false)
-            ->assertDontSee('/dashboards/finance', false);
+        $this->get('/dashboard?period_type=custom&start_date=2026-10-10&end_date=2026-10-12')
+            ->assertRedirect(route('dashboards.index', ['period_type'=>'custom', 'start_date'=>'2026-10-10','end_date'=>'2026-10-12']));
     }
 
-    public function test_rolling_overview_window_reaches_module_as_exact_custom_dates(): void
+    public function test_retired_overview_drops_unsupported_rolling_day_count(): void
     {
+        // Rolling windows belonged to the removed overview, not to module reporting.
         $this->reader();
-        $this->get('/dashboard?period_type=range&range=7')->assertOk()
-            ->assertSee('start_date=2026-10-19', false)->assertSee('end_date=2026-10-25', false);
+        $this->get('/dashboard?period_type=range&range=7')->assertRedirect(route('dashboards.index', ['period_type'=>'range']));
     }
 
     public function test_directory_and_module_navigation_hide_unauthorised_modules(): void
@@ -139,11 +137,11 @@ class DashboardConsolidationTest extends TestCase
         $this->get('/dashboards/sales?currency=INVALID')->assertRedirect()->assertSessionHasErrors('currency');
     }
 
-    public function test_module_reader_can_use_directory_without_cross_module_overview_permission(): void
+    public function test_module_reader_can_use_directory_and_legacy_entry_without_dashboard_permission(): void
     {
         $this->reader(['sales.view']);
         $this->get('/dashboards')->assertOk()->assertSee('/dashboards/sales', false)->assertDontSee('/dashboards/finance', false);
-        $this->get('/dashboard')->assertForbidden();
+        $this->get('/dashboard')->assertRedirect(route('dashboards.index'));
     }
 
     public function test_module_retains_secondary_activity_trends_in_the_same_workspace(): void
@@ -217,4 +215,31 @@ class DashboardConsolidationTest extends TestCase
         $this->assertSame(1, $panel['rows'][0]['count']);
         $this->assertSame(50.0, $panel['rows'][0]['progress']);
     }
+
+    public function test_retired_executive_dashboard_redirects_module_readers_to_directory_with_context(): void
+    {
+        $this->reader(['sales.view']);
+        $this->get('/dashboard?period_type=custom&start_date=2026-10-10&end_date=2026-10-12&currency=USD&ignored=drop')
+            ->assertRedirect(route('dashboards.index', ['period_type'=>'custom','start_date'=>'2026-10-10',
+                'end_date'=>'2026-10-12','currency'=>'USD']));
+    }
+
+    public function test_module_workspaces_and_directory_have_no_executive_dashboard_navigation(): void
+    {
+        $this->reader();
+        foreach (['/dashboards', '/dashboards/sales'] as $url) {
+            $this->get($url)->assertOk()->assertDontSee('ERP overview')->assertDontSee('>Overview</span>', false)
+                ->assertDontSee('href="'.route('dashboard').'"', false)->assertSee('Module dashboards');
+        }
+    }
+
+
+    public function test_directory_explains_when_no_module_is_authorised_without_exposing_links(): void
+    {
+        $this->reader([]);
+        $this->get('/dashboards')->assertOk()->assertSee('No module dashboards available')
+            ->assertSee('Ask an administrator')->assertDontSee('/dashboards/sales', false)
+            ->assertDontSee('/dashboards/finance', false);
+    }
+
 }

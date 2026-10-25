@@ -118,11 +118,11 @@ class DashboardCustomPeriodTest extends TestCase
         ];
     }
 
-    public function test_invalid_ranges_return_validation_errors_from_both_routes(): void
+    public function test_invalid_ranges_return_validation_errors_from_module_route(): void
     {
         $this->withoutMiddleware();
         $this->withSession([]);
-        foreach (['/dashboard', '/dashboards/finance'] as $url) {
+        foreach (['/dashboards/finance'] as $url) {
             $this->get($url.'?period_type=custom&start_date=2026-10-25&end_date=2026-10-24')
                 ->assertRedirect()->assertSessionHasErrors('end_date');
         }
@@ -136,12 +136,12 @@ class DashboardCustomPeriodTest extends TestCase
         $user = new \App\Models\User(['role' => 'admin', 'access_profile' => 'full']);
         $user->id = 901;
         $this->actingAs($user);
-        preg_match('/<nav class="module-dashboard-nav".*?<\/nav>/s', file_get_contents(resource_path('views/dashboard/module.blade.php')), $matches);
+        preg_match('/<nav class="core-card module-dashboard-nav".*?<\/nav>/s', file_get_contents(resource_path('views/dashboard/module.blade.php')), $matches);
         $html = Blade::render($matches[0], ['modules' => ModuleDashboard::MODULES, 'module' => 'finance']);
-        // The overview link now preserves the period too: six modules plus overview.
-        $this->assertSame(7, substr_count($html, 'start_date=2026-10-10'));
-        $this->assertSame(7, substr_count($html, 'end_date=2026-10-12'));
-        $this->assertSame(7, substr_count($html, 'period_type=custom'));
+        // Six canonical modules preserve the reporting context; no executive overview link.
+        $this->assertSame(6, substr_count($html, 'start_date=2026-10-10'));
+        $this->assertSame(6, substr_count($html, 'end_date=2026-10-12'));
+        $this->assertSame(6, substr_count($html, 'period_type=custom'));
     }
 
     public function test_totals_and_trends_use_exact_custom_bounds_for_dates_and_timestamps(): void

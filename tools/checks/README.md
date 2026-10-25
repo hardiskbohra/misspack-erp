@@ -302,9 +302,10 @@ CHROMIUM_EXECUTABLE_PATH=/path/to/chromium \
   node tools/checks/dashboard-consolidation-browser.cjs .work/dashboards
 ```
 
-Checks executive overview and six modules at desktop/tablet/mobile sizes, scoped
+Checks the module directory and six modules at desktop/tablet/mobile sizes, scoped
 analytics tables, both trend cards, canonical period/currency links, actual
-reporting drawer/Select2 interaction, and old overview-tab bookmarks. Screenshots
+reporting drawer/Select2 interaction, Escape/focus restoration, actual white/light
+and themed dark card backgrounds, and absence of executive navigation. Screenshots
 and generated HTML belong in ignored `.work/` only. Optional browser results are
 separate from PHP and source-contract evidence; see
 [dashboard-consolidation.md](../../docs/testing/dashboard-consolidation.md).

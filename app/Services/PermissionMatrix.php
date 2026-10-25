@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 class PermissionMatrix
 {
     public const GROUPS = [
-        'dashboard' => ['label' => 'Dashboards', 'description' => 'ERP overview and module reporting'],
+        'dashboard' => ['label' => 'Dashboards', 'description' => 'Module reporting'],
         'work' => ['label' => 'Work management', 'description' => 'Tasks, coordinator queue, exceptions and feedback'],
         'sales' => ['label' => 'Sales', 'description' => 'Clients, leads, products and sales invoices'],
         'purchase' => ['label' => 'Purchase', 'description' => 'Vendors, services and purchase documents'],
@@ -54,7 +54,7 @@ class PermissionMatrix
     {
         if ($route === '') return null;
         // A permission-filtered directory is an entry point, not cross-module data access.
-        if ($route === 'dashboards.index') return null;
+        if (in_array($route, ['dashboard', 'dashboards.index'], true)) return null;
         if ($route === 'users.permissions.update') return 'permissions.manage';
         if (Str::is(['projects.*override*','projects.approvals.override*','projects.financial-closure.*','projects.exceptions.escalate'], $route)) return 'projects.override';
         if (Str::is(['vendors.portal.*','vendors.shares.*','clients.portal.*'], $route)) return 'portals.manage';

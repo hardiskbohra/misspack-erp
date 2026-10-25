@@ -113,8 +113,7 @@
            then administer. Frequently used operational doors stay near the top;
            low-frequency governance stays together at the end. */
         $sidebarItems = Auth::user() && Auth::user()->isEmployee() ? $employeeItems : [
-            ['section' => 'Overview'],
-            ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'fa-solid fa-gauge-high'],
+            ['section' => 'Analytics'],
             ['label' => 'Module dashboards', 'route' => 'dashboards.index', 'active' => 'dashboards.*', 'icon' => 'fa-solid fa-chart-column'],
 
             ['section' => 'Project execution'],

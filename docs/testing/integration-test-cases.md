@@ -1389,19 +1389,19 @@ Sources: `app/Services/DashboardPeriod.php`, `app/Services/ModuleDashboard.php`,
 
 **Expected:** Relevant fields immediately visible; hidden dates disabled; choices retained; one explicit submission.
 
-### IT-DASH-006 — Executive overview routes to one detailed analytics workspace per module
+### IT-DASH-006 — Module-only dashboard landing and canonical analytical workspaces
 
 **Priority:** P1 · **Requirement:** REQ-DASH · **Implementation:** linked executable evidence
 
 - **Preconditions:** Disposable SQLite; fixed25Oct2026; six stable module routes
 - **Data:** Custom10..12Oct; rolling7days; allowed sales versus forbidden finance
-1. Render executive overview and directory
-2. Follow canonical module links with exact dates and currency
-3. Render all six modules in empty deployments
+1. Visit retired /dashboard compatibility entry and permission-filtered directory
+2. Follow canonical module links with dates and currency
+3. Render six module workspaces without executive UI
 
-**Expected:** No duplicate overview sales/finance/operations analytical tabs; canonical links preserve exact windows; detailed metrics, trends, scoped tables and attention remain on one module page.
+**Expected:** Legacy entry redirects to directory with allowed reporting context; no executive page/navigation, duplicate summary projection or unnecessary generic dashboard privilege. All detailed metrics, trends, scoped tables and attention remain in their module.
 
-**Evidence:** `tests/Integration/DashboardConsolidationTest.php#test_overview_has_canonical_module_links_instead_of_duplicate_analytical_tabs`; `tests/Integration/DashboardConsolidationTest.php#test_rolling_overview_window_reaches_module_as_exact_custom_dates`; `tests/Integration/DashboardConsolidationTest.php#test_each_existing_module_has_a_single_detailed_empty_state_page`; `tests/Integration/DashboardConsolidationTest.php#test_module_retains_secondary_activity_trends_in_the_same_workspace`
+**Evidence:** `tests/Integration/DashboardConsolidationTest.php#test_legacy_dashboard_redirects_to_module_directory_with_custom_dates`; `tests/Integration/DashboardConsolidationTest.php#test_retired_overview_drops_unsupported_rolling_day_count`; `tests/Integration/DashboardConsolidationTest.php#test_each_existing_module_has_a_single_detailed_empty_state_page`; `tests/Integration/DashboardConsolidationTest.php#test_module_retains_secondary_activity_trends_in_the_same_workspace`; `tests/Integration/DashboardConsolidationTest.php#test_retired_executive_dashboard_redirects_module_readers_to_directory_with_context`; `tests/Integration/DashboardConsolidationTest.php#test_module_workspaces_and_directory_have_no_executive_dashboard_navigation`
 
 ### IT-DASH-007 — Detailed module analytics reconcile dates currency units and canonical balances
 
@@ -1425,13 +1425,13 @@ Sources: `app/Services/DashboardPeriod.php`, `app/Services/ModuleDashboard.php`,
 
 - **Preconditions:** Office users with selected domain grants; empty in-memory tables
 - **Data:** Sales-only reader without dashboard.view; unknown module; invalid currency
-1. Read permission-filtered directory
-2. Request forbidden finance and executive overview
-3. Submit unsupported currency and unknown module
+1. Read permission-filtered directory and compatibility redirect
+2. Request forbidden finance domain
+3. Submit unsupported currency and unknown module; open directory with no module grants
 
-**Expected:** Directory permits an authenticated module reader without granting overview/domain data; forbidden domain403, unknown404; invalid currency validation error; unavailable data not silently treated as measured zero in detail panels.
+**Expected:** Directory/compatibility entry permit office module readers without exposing forbidden domain data; forbidden domain403, unknown404; invalid currency validation error; empty permission set has an explanatory state without module links.
 
-**Evidence:** `tests/Integration/DashboardConsolidationTest.php#test_directory_and_module_navigation_hide_unauthorised_modules`; `tests/Integration/DashboardConsolidationTest.php#test_unsupported_currency_returns_validation_error_not_mislabelled_money`; `tests/Integration/DashboardConsolidationTest.php#test_module_reader_can_use_directory_without_cross_module_overview_permission`
+**Evidence:** `tests/Integration/DashboardConsolidationTest.php#test_directory_and_module_navigation_hide_unauthorised_modules`; `tests/Integration/DashboardConsolidationTest.php#test_unsupported_currency_returns_validation_error_not_mislabelled_money`; `tests/Integration/DashboardConsolidationTest.php#test_module_reader_can_use_directory_and_legacy_entry_without_dashboard_permission`; `tests/Integration/DashboardConsolidationTest.php#test_directory_explains_when_no_module_is_authorised_without_exposing_links`
 
 ## Audit trail and sensitive operations (`AUDIT`)
 

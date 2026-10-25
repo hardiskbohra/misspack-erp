@@ -23,7 +23,7 @@ Prepared **25 October 2026** from this repository, not a generic ERP template. H
 
 Authentication/RBAC; people/payroll; clients/KYC; vendors; products/pricing; leads; projects/product lanes; execution/approvals/financial closure; QC; Packaging Lists and labels; shipments/delivery; PI/cash/tax invoices; purchase documents; cashflow/allocations/transfers; recurrence; statements; fixed assets; organisation; office services; tasks/coordinator queues; notes; feedback; briefings; global search; settings; client portal; vendor portal/shares; dashboards; audit; files; shared UI/print.
 
-**Latest portable run:** 471 PHPUnit tests and15,209 assertions passed, including the receiver-facing delivery receipt and consolidated dashboard regressions. The original testing-pack baseline was427 tests/14,986 assertions (134 added in that task), with passing native PHP/Composer and MySQL CI jobs. See [dashboard-consolidation.md](dashboard-consolidation.md) for current analytics verification and [delivery-receipt-print.md](delivery-receipt-print.md) for print/PDF verification; complete system journeys and real concurrency remain separate follow-up gates.
+**Latest portable run:** 474 PHPUnit tests and15,216 assertions passed, including the receiver-facing delivery receipt and consolidated dashboard regressions. The original testing-pack baseline was427 tests/14,986 assertions (134 added in that task), with passing native PHP/Composer and MySQL CI jobs. See [dashboard-consolidation.md](dashboard-consolidation.md) for current analytics verification and [delivery-receipt-print.md](delivery-receipt-print.md) for print/PDF verification; complete system journeys and real concurrency remain separate follow-up gates.
 
 ## Executable foundation
 

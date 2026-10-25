@@ -15,18 +15,19 @@ $output = $argv[1] ?? base_path('.work/dashboards');
 if (! is_dir($output)) mkdir($output, 0777, true);
 $periods = app(\App\Services\DashboardPeriod::class);
 $dashboards = app(\App\Services\ModuleDashboard::class);
-foreach (['overview', 'directory', ...array_keys(\App\Services\ModuleDashboard::MODULES)] as $module) {
-    $url = $module === 'overview' ? '/dashboard' : ($module === 'directory' ? '/dashboards' : '/dashboards/'.$module);
+foreach (['directory', ...array_keys(\App\Services\ModuleDashboard::MODULES)] as $module) {
+    $url = $module === 'directory' ? '/dashboards' : '/dashboards/'.$module;
     $request = \Illuminate\Http\Request::create($url, 'GET', ['period_type'=>'custom','start_date'=>'2026-10-10','end_date'=>'2026-10-12','currency'=>'INR']);
+    $route = app('router')->getRoutes()->match($request);
+    $request->setRouteResolver(fn () => $route);
     $request->setUserResolver(fn () => $fixture['user']);
     app()->instance('request', $request);
     app('url')->setRequest($request);
     view()->share('errors', new \Illuminate\Support\ViewErrorBag);
     $view = match ($module) {
-        'overview' => app(\App\Http\Controllers\AdminDashboardController::class)->index($request),
         'directory' => app(\App\Http\Controllers\ModuleDashboardController::class)->index(),
         default => app(\App\Http\Controllers\ModuleDashboardController::class)->show($request, $module, $periods, $dashboards),
     };
     file_put_contents($output.'/'.$module.'.html', $view->render());
 }
-echo "Rendered executive overview, directory and six real module dashboard views.\n";
+echo "Rendered directory and six real module dashboard views.\n";

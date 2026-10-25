@@ -21,7 +21,7 @@ const directory = path.resolve(process.argv[2] || path.join(root, '.work/dashboa
         await page.route('**/*', route => {
             const url = new URL(route.request().url());
             if (url.hostname === 'analytics.test' && !url.pathname.includes('.')) {
-                const name = url.pathname === '/dashboard' ? 'overview' : (url.pathname === '/dashboards' ? 'directory' : url.pathname.split('/').pop());
+                const name = url.pathname === '/dashboards' ? 'directory' : url.pathname.split('/').pop();
                 const file = path.join(directory, name+'.html');
                 if (fs.existsSync(file)) return route.fulfill({path: file, contentType: 'text/html'});
             }
@@ -31,18 +31,22 @@ const directory = path.resolve(process.argv[2] || path.join(root, '.work/dashboa
         });
         for (const width of [1440, 900, 390]) {
             await page.setViewportSize({width, height: 1000});
-            for (const module of ['overview', 'sales', 'purchase', 'projects', 'operations', 'finance', 'work']) {
+            for (const module of ['directory', 'sales', 'purchase', 'projects', 'operations', 'finance', 'work']) {
                 errors.length = 0;
-                const pathname = module === 'overview' ? '/dashboard' : '/dashboards/'+module;
+                const pathname = module === 'directory' ? '/dashboards' : '/dashboards/'+module;
                 await page.goto('http://analytics.test'+pathname+'?period_type=custom&start_date=2026-10-10&end_date=2026-10-12&currency=INR', {waitUntil:'networkidle'});
                 assert.deepEqual(errors, [], module+' JavaScript errors');
                 assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1), module+' document overflow at '+width);
-                if (module === 'overview') {
-                    assert.equal(await page.locator('#dashboardTabSales,#dashboardTabFinance,#dashboardTabOperations').count(), 0);
-                    assert.equal(await page.locator('[data-overview-module]').count(), 6);
-                    const url = new URL(await page.locator('[data-overview-module="sales"]').getAttribute('href'));
-                    assert.equal(url.searchParams.get('start_date'),'2026-10-10');
-                    assert.equal(url.searchParams.get('end_date'),'2026-10-12');
+                await page.evaluate(() => document.documentElement.dataset.theme = 'light');
+                assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--mc-card').trim()), '#ffffff');
+                for (const stat of await page.locator('.module-stat-card').evaluateAll(nodes => nodes.map(node => ({top:getComputedStyle(node).borderTopColor, side:getComputedStyle(node).borderLeftColor})))) assert.notEqual(stat.top, stat.side, 'Statistics retain restrained semantic border accents');
+                const surfaces = await page.locator('.module-dashboard-card,.module-stat-card,.module-directory-card,.module-directory-note,.module-dashboard-nav').evaluateAll(nodes => nodes.map(node => ({kind:node.className, color:getComputedStyle(node).backgroundColor})));
+                assert(surfaces.length > 0);
+                for (const card of surfaces) assert.equal(card.color, 'rgb(255, 255, 255)', module+' white card: '+card.kind);
+                for (const card of await page.locator('.module-dashboard-card,.module-directory-card').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).borderRadius))) assert.equal(card, '18px');
+                assert.equal(await page.locator('a').filter({hasText:/^(ERP overview|Overview)$/}).count(), 0);
+                if (module === 'directory') {
+                    assert.equal(await page.locator('.module-directory-card').count(), 6);
                 } else {
                     assert(await page.locator('#moduleAnalysis').isVisible());
                     assert(await page.locator('.module-analysis-panel').count() >= 5);
@@ -55,7 +59,15 @@ const directory = path.resolve(process.argv[2] || path.join(root, '.work/dashboa
                 }
                 await page.evaluate(() => window.scrollTo(0, 0));
                 if (width === 1440 || width === 390) await page.screenshot({path:path.join(directory, module+'-'+width+'.png'),fullPage:true});
-                console.log('PASS '+module+' at '+width+'px: one workspace, no document overflow or JS errors');
+                await page.evaluate(() => document.documentElement.dataset.theme = 'dark');
+                assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--mc-card').trim()), '#1a2540');
+                const dark = await page.locator('.module-dashboard-card,.module-stat-card,.module-directory-card,.module-directory-note,.module-dashboard-nav').evaluateAll(nodes => nodes.map(node => ({background:getComputedStyle(node).backgroundColor, color:getComputedStyle(node).color})));
+                for (const card of dark) {
+                    assert.equal(card.background, 'rgb(26, 37, 64)', module+' themed dark card');
+                    assert.notEqual(card.color, card.background, 'Readable dark-mode card text');
+                }
+                if (module === 'sales' && width === 390) await page.screenshot({path:path.join(directory,'sales-dark-390.png'),fullPage:true});
+                console.log('PASS '+module+' at '+width+'px: white light cards, themed dark cards, no overflow or JS errors');
             }
         }
         await page.goto('http://analytics.test/dashboards/sales?period_type=custom&start_date=2026-10-10&end_date=2026-10-12&currency=INR',{waitUntil:'networkidle'});
@@ -70,10 +82,9 @@ const directory = path.resolve(process.argv[2] || path.join(root, '.work/dashboa
         assert.equal(await page.locator('#modulePeriodStartDate').isDisabled(), false);
         assert.equal(await page.locator('#modulePeriodEndDate').getAttribute('min'), '2026-10-10');
         console.log('PASS reporting-period controls preserve exact dates');
-        await page.goto('http://analytics.test/dashboard?period_type=custom&start_date=2026-10-10&end_date=2026-10-12&currency=INR#dashboard-sales', {waitUntil:'networkidle'});
-        await page.waitForURL('**/dashboards/sales?**');
-        assert.equal(new URL(page.url()).searchParams.get('start_date'), '2026-10-10');
-        assert.equal(new URL(page.url()).searchParams.get('end_date'), '2026-10-12');
-        console.log('PASS legacy overview tab bookmark redirects to the single canonical module workspace');
+        await page.keyboard.press('Escape');
+        assert.equal(await page.locator('#moduleDashboardPeriodDrawer-layer').getAttribute('aria-hidden'), 'true');
+        assert(await page.locator('[data-drawer-open="moduleDashboardPeriodDrawer"]').evaluate(node => node === document.activeElement));
+        console.log('PASS drawer Escape closes and restores focus to reporting-period trigger');
     } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode=1;});

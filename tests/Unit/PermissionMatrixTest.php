@@ -20,7 +20,7 @@ class PermissionMatrixTest extends TestCase
     public static function routeRequirements(): array
     {
         return [
-            ['dashboard', false, 'dashboard.view'], ['clients.index', false, 'sales.view'],
+            ['dashboard', false, null], ['clients.index', false, 'sales.view'],
             ['clients.store', true, 'sales.manage'], ['sales-invoices.print', false, 'sales.view'],
             ['vendors.index', false, 'purchase.view'], ['purchase-invoices.store', true, 'purchase.manage'],
             ['projects.show', false, 'projects.view'], ['projects.update', true, 'projects.manage'],

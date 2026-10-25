@@ -94,10 +94,7 @@
         : number_format((float) $value, 0);
 @endphp
 <div class="module-dashboard">
-    <nav class="module-dashboard-nav" aria-label="Module dashboards">
-        @if(auth()->user()?->hasPermission('dashboard.view'))
-        <a href="{{ route('dashboard', request()->only(['period_type', 'year', 'month', 'quarter', 'half', 'start_date', 'end_date', 'currency'])) }}" class="module-dashboard-nav-link"><i class="fa-solid fa-gauge-high"></i><span>Overview</span></a>
-        @endif
+    <nav class="core-card module-dashboard-nav" aria-label="Module dashboards">
         @foreach($modules as $key => $definition)
             <a href="{{ route('dashboards.show', ['module' => $key] + request()->only(['period_type', 'year', 'month', 'quarter', 'half', 'start_date', 'end_date', 'currency'])) }}"
                 class="module-dashboard-nav-link {{ $module === $key ? 'active' : '' }}" @if($module === $key) aria-current="page" @endif>
@@ -121,7 +118,7 @@
 
     <section id="moduleSummary" class="module-stat-grid" aria-label="{{ $dashboard['label'] }} statistics">
         @foreach($dashboard['metrics'] as $metric)
-            <a class="module-stat-card tone-{{ $metric['tone'] }}" href="{{ $metric['url'] }}">
+            <a class="core-card module-stat-card tone-{{ $metric['tone'] }}" href="{{ $metric['url'] }}">
                 <div class="module-stat-heading"><span>{{ $metric['label'] }}</span><i class="{{ $dashboard['icon'] }}" aria-hidden="true"></i></div>
                 <strong>{{ $formatMetric($metric['current'], $metric['format']) }}</strong>
                 @if($metric['comparison'])
@@ -142,7 +139,7 @@
             'title' => $dashboard['trend_label'], 'format' => $dashboard['trend_format'], 'series' => $dashboard['trend'],
             'primary_label' => $module === 'finance' ? 'Inward' : $dashboard['trend_label'], 'secondary_label' => $module === 'finance' ? 'Outward' : null]])
 
-        <section class="module-dashboard-card" aria-labelledby="moduleDistributionTitle">
+        <section class="core-card module-dashboard-card" aria-labelledby="moduleDistributionTitle">
             <header class="module-card-heading"><div><span>Live workload</span><h2 id="moduleDistributionTitle">Status distribution</h2></div></header>
             <div class="module-distributions">
                 @foreach($dashboard['breakdowns'] as $breakdown)
@@ -173,7 +170,7 @@
         <header class="module-card-heading"><div><span>One consolidated workspace</span><h2 id="moduleAnalysisTitle">Detailed analysis</h2></div></header>
         <div class="module-analysis-grid">
             @foreach($dashboard['panels'] as $panel)
-                <article class="module-dashboard-card module-analysis-panel">
+                <article class="core-card module-dashboard-card module-analysis-panel">
                     <header class="module-card-heading"><div><span>{{ $panel['scope'] === 'period' ? 'Selected period' : 'Live position' }}</span><h3>{{ $panel['title'] }}</h3></div></header>
                     <p class="module-panel-basis">{{ str_replace('_', ' ', $panel['basis']) }}</p>
                     <div class="module-analysis-table-wrap" tabindex="0" role="region" aria-label="{{ $panel['title'] }} table">
@@ -203,7 +200,7 @@
         </div>
     </section>
 
-    <section class="module-dashboard-card module-attention-card" id="moduleAttention" aria-labelledby="moduleAttentionTitle">
+    <section class="core-card module-dashboard-card module-attention-card" id="moduleAttention" aria-labelledby="moduleAttentionTitle">
         <header class="module-card-heading">
             <div><span>Action queue</span><h2 id="moduleAttentionTitle">Important attention</h2><p class="module-panel-basis">Up to 8 priority items; source record lists remain available for the full workload.</p></div>
             <span class="module-card-chip {{ count($dashboard['alerts']) ? 'danger' : '' }}">{{ count($dashboard['alerts']) }} open</span>

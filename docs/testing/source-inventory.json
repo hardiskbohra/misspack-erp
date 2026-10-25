@@ -126,7 +126,7 @@
         "test_module_comparison_uses_the_immediately_preceding_equal_length_window",
         "test_overview_groups_long_windows_without_rounding_the_selected_bounds",
         "test_both_dashboards_reject_invalid_custom_dates",
-        "test_invalid_ranges_return_validation_errors_from_both_routes",
+        "test_invalid_ranges_return_validation_errors_from_module_route",
         "test_module_links_preserve_both_custom_dates",
         "test_totals_and_trends_use_exact_custom_bounds_for_dates_and_timestamps",
         "test_switching_away_from_custom_ignores_stale_date_inputs"
@@ -288,18 +288,21 @@
     {
       "file": "tests/Integration/DashboardConsolidationTest.php",
       "methods": [
-        "test_overview_has_canonical_module_links_instead_of_duplicate_analytical_tabs",
-        "test_rolling_overview_window_reaches_module_as_exact_custom_dates",
+        "test_legacy_dashboard_redirects_to_module_directory_with_custom_dates",
+        "test_retired_overview_drops_unsupported_rolling_day_count",
         "test_directory_and_module_navigation_hide_unauthorised_modules",
         "test_sales_concentration_uses_exact_dates_currency_and_real_issued_documents",
         "test_finance_category_analysis_excludes_internal_transfers_and_other_currencies",
         "test_each_existing_module_has_a_single_detailed_empty_state_page",
         "test_unsupported_currency_returns_validation_error_not_mislabelled_money",
-        "test_module_reader_can_use_directory_without_cross_module_overview_permission",
+        "test_module_reader_can_use_directory_and_legacy_entry_without_dashboard_permission",
         "test_module_retains_secondary_activity_trends_in_the_same_workspace",
         "test_receipt_quantities_stay_separate_by_unit_and_respect_received_date",
         "test_completion_timeliness_uses_completion_window_and_end_of_due_day",
-        "test_project_dashboard_retains_live_client_value_analysis_without_mixing_currencies"
+        "test_project_dashboard_retains_live_client_value_analysis_without_mixing_currencies",
+        "test_retired_executive_dashboard_redirects_module_readers_to_directory_with_context",
+        "test_module_workspaces_and_directory_have_no_executive_dashboard_navigation",
+        "test_directory_explains_when_no_module_is_authorised_without_exposing_links"
       ]
     },
     {
