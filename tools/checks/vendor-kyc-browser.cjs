@@ -60,6 +60,10 @@ const root=path.resolve(__dirname,'../..'),dir=path.join(root,'.work/vendor-kyc'
      for(let i=1;i<4;i++)await page.locator('[data-kyc-next]').click();
      assert(await page.locator('#account_number').isDisabled());
     }
+    if(state==='office-checker'&&width===390){
+     const labels=await page.locator('.vendor-kyc tbody tr').first().locator('td').evaluateAll(cells=>cells.map(n=>getComputedStyle(n,'::before').content));
+     assert(labels[0].includes('Current vendor record')&&labels[1].includes('Submitted for review'),'Mobile comparison must label both current and submitted values');
+    }
     if(state==='office-checker')assert.equal(await page.locator('button[name="decision"]').count(),3);
     if(state==='office-reader'||state==='office-maker')assert.equal(await page.locator('button[name="decision"]').count(),0);
     await page.screenshot({path:path.join(dir,state+'-'+width+'.png'),fullPage:true});

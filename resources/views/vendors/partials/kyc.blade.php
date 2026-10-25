@@ -80,7 +80,7 @@
             <div class="master-table-wrap"><table class="master-table">
                 <thead><tr><th scope="col">Field</th><th scope="col">Current vendor record</th><th scope="col">Submitted for review</th></tr></thead>
                 <tbody>@foreach (\App\Services\VendorKyc::FIELDS as $field)
-                    <tr><th scope="row">{{ \Illuminate\Support\Str::headline($field) }}</th><td>{{ $field==='vendor_type'?$vendor->typeLabel():($vendor->{$field} ?: '—') }}</td><td>{{ $field==='vendor_type'?(\App\Models\Vendor::typeOptions()[$submitted[$field]??'']??'—'):($submitted[$field]??'—') }}</td></tr>
+                    <tr><th scope="row">{{ \Illuminate\Support\Str::headline($field) }}</th><td data-label="Current vendor record">{{ $field==='vendor_type'?$vendor->typeLabel():($vendor->{$field} ?: '—') }}</td><td data-label="Submitted for review">{{ $field==='vendor_type'?(\App\Models\Vendor::typeOptions()[$submitted[$field]??'']??'—'):($submitted[$field]??'—') }}</td></tr>
                 @endforeach</tbody>
             </table></div>
         @else <p class="master-sub">No KYC submitted yet. Draft details are staged and do not update the live vendor record.</p>@endif

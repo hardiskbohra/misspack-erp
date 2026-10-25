@@ -68,7 +68,9 @@ using the existing briefing settings; a briefing outage does not roll back KYC.
   removal; marking sent incorrectly staled an open form; model serialization
   exposed private staging; stale image edits deleted the old image; malformed
   phone arrays produced 500 instead of validation errors. Retained regressions
-  pass after fixes. No expected business values were weakened to turn tests green.
+  pass after fixes. Final visual inspection also caught missing mobile comparison
+  labels; a browser Red proved current/submitted values were indistinguishable,
+  then shared `data-label` mobile captions fixed it. No expected business values were weakened to turn tests green.
 - Full portable PHP 8.4.25 (WASM) Unit + Integration + Feature: **516 tests,
   15,649 assertions PASS**. This is real PHP/HTTP/SQLite evidence, not native
   MySQL/concurrency evidence. `.work/vendor-kyc-full.{log,xml}`.
