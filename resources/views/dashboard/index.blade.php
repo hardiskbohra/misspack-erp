@@ -22,6 +22,7 @@
                             <option value="half" @selected($period['type'] === 'half')>Half year</option>
                             <option value="year" @selected($period['type'] === 'year')>Single year</option>
                             <option value="multi_year" @selected($period['type'] === 'multi_year')>Multi-year</option>
+                            <option value="custom" @selected($period['type'] === 'custom')>Custom date range</option>
                         </select>
                     </div>
                     <div class="master-field period-control period-range">
@@ -81,6 +82,18 @@
                                 <option value="{{ $year }}" @selected((int) ($period['to_year'] ?? now()->year) === (int) $year)>{{ $year }}</option>
                             @endforeach
                         </select>
+                    </div>
+                    <div class="master-field period-control period-custom">
+                        <label class="master-label" for="periodStartDate">From date</label>
+                        <input class="master-input" type="date" id="periodStartDate" name="start_date"
+                            value="{{ $period['start']->toDateString() }}"
+                            @disabled($period['type'] !== 'custom') @required($period['type'] === 'custom')>
+                    </div>
+                    <div class="master-field period-control period-custom">
+                        <label class="master-label" for="periodEndDate">To date</label>
+                        <input class="master-input" type="date" id="periodEndDate" name="end_date" min="{{ $period['start']->toDateString() }}"
+                            value="{{ $period['end']->toDateString() }}"
+                            @disabled($period['type'] !== 'custom') @required($period['type'] === 'custom')>
                     </div>
                 </div>
             </section>

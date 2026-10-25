@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\DashboardPeriod;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -103,7 +104,7 @@ class AdminDashboardController extends Controller
     private function periodContext(Request $request): array
     {
         $type = (string) $request->query('period_type', 'year');
-        if (! in_array($type, ['range', 'month', 'quarter', 'half', 'year', 'multi_year'], true)) {
+        if (! in_array($type, ['range', 'month', 'quarter', 'half', 'year', 'multi_year', 'custom'], true)) {
             $type = 'year';
         }
 
@@ -116,6 +117,21 @@ class AdminDashboardController extends Controller
         $range = (int) $request->query('range', 30);
         if (! in_array($range, [7, 30, 90, 180, 365], true)) {
             $range = 30;
+        }
+
+        if ($type === 'custom') {
+            [$start, $end, $label] = app(DashboardPeriod::class)->customRange($request);
+            $days = (int) $start->diffInDays($end) + 1;
+            // Keep short windows detailed and multi-year charts bounded in size.
+            $group = $days <= 90 ? 'day' : ($days <= 1096 ? 'month' : 'year');
+            $labels = match ($group) {
+                'day' => $this->dateLabels($start, $end),
+                'month' => $this->monthLabels($start, $end),
+                default => $this->yearLabels($start->year, $end->year),
+            };
+
+            return compact('type', 'label', 'year', 'range', 'start', 'end', 'group', 'labels')
+                + ['quarter' => null, 'half' => null];
         }
 
         if ($type === 'range') {

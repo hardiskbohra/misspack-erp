@@ -105,6 +105,7 @@ New views should prefer `core-*` classes. Existing `master-*`, `cf-*`, `cp-*`, `
 | --- | --- | --- |
 | Modal | Shared | `.master-modal`, `.master-modal-card`; Projects and client-document variants are compatibility adapters |
 | Drawer | Shared | `<x-drawer>` plus `master-drawer.js` provides theme-aware, responsive panels, focus trapping, Escape/backdrop/close handling, and focus restoration; vendor/project quick details and module filter panels demonstrate the pattern |
+| Dashboard reporting period | Shared | Overview and module `<x-drawer>` panels reveal the matching controls immediately with native or Select2 events; Custom date range uses required From/To dates, inclusive server-validated bounds, retained selections and one explicit Apply. Hidden date inputs are disabled, and module navigation preserves the custom dates. |
 | Dropdown | Shared | `.master-dropdown`, user-menu and Select2 dropdowns |
 | Popover | Partial | Tooltips and anchored helper patterns exist; no shared popover primitive |
 | Tooltip | Shared | `master-tooltips.js` promotes native `title` text into the themed `.ui-tooltip` surface across office, portal and public layouts; supports hover, keyboard focus, Escape, viewport positioning and dynamic content |

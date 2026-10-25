@@ -20,9 +20,10 @@
                             <option value="quarter" @selected($period['type'] === 'quarter')>Quarter</option>
                             <option value="half" @selected($period['type'] === 'half')>Half year</option>
                             <option value="year" @selected($period['type'] === 'year')>Year</option>
+                            <option value="custom" @selected($period['type'] === 'custom')>Custom date range</option>
                         </select>
                     </div>
-                    <div class="master-field">
+                    <div class="master-field module-period-control module-period-month module-period-quarter module-period-half module-period-year">
                         <label class="master-label" for="modulePeriodYear">Year</label>
                         <select class="master-select" name="year" id="modulePeriodYear">
                             @foreach($availableYears as $year)
@@ -53,6 +54,18 @@
                             <option value="2" @selected((int) $period['half'] === 2)>H2 · Jul–Dec</option>
                         </select>
                     </div>
+                    <div class="master-field module-period-control module-period-custom">
+                        <label class="master-label" for="modulePeriodStartDate">From date</label>
+                        <input class="master-input" type="date" id="modulePeriodStartDate" name="start_date"
+                            value="{{ $period['start']->toDateString() }}"
+                            @disabled($period['type'] !== 'custom') @required($period['type'] === 'custom')>
+                    </div>
+                    <div class="master-field module-period-control module-period-custom">
+                        <label class="master-label" for="modulePeriodEndDate">To date</label>
+                        <input class="master-input" type="date" id="modulePeriodEndDate" name="end_date" min="{{ $period['start']->toDateString() }}"
+                            value="{{ $period['end']->toDateString() }}"
+                            @disabled($period['type'] !== 'custom') @required($period['type'] === 'custom')>
+                    </div>
                 </div>
             </section>
             <x-slot:footer>
@@ -78,7 +91,7 @@
     <nav class="module-dashboard-nav" aria-label="Module dashboards">
         <a href="{{ route('dashboard') }}" class="module-dashboard-nav-link"><i class="fa-solid fa-gauge-high"></i><span>Overview</span></a>
         @foreach($modules as $key => $definition)
-            <a href="{{ route('dashboards.show', ['module' => $key] + request()->only(['period_type', 'year', 'month', 'quarter', 'half'])) }}"
+            <a href="{{ route('dashboards.show', ['module' => $key] + request()->only(['period_type', 'year', 'month', 'quarter', 'half', 'start_date', 'end_date'])) }}"
                 class="module-dashboard-nav-link {{ $module === $key ? 'active' : '' }}" @if($module === $key) aria-current="page" @endif>
                 <i class="{{ $definition['icon'] }}"></i><span>{{ $definition['label'] }}</span>
             </a>

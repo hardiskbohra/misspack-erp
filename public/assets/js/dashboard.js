@@ -78,8 +78,20 @@
                 const visible = field.classList.contains('period-' + periodType.value);
                 field.hidden = !visible;
                 field.style.display = visible ? 'flex' : 'none';
+                field.querySelectorAll('input[type="date"]').forEach(function (input) {
+                    input.disabled = !visible;
+                    input.required = visible;
+                });
             });
         }
+        const fromDate = document.getElementById('periodStartDate');
+        const toDate = document.getElementById('periodEndDate');
+        function syncDateBounds() {
+            if (fromDate && toDate) toDate.min = fromDate.value;
+        }
+        fromDate?.addEventListener('input', syncDateBounds);
+        fromDate?.addEventListener('change', syncDateBounds);
+        syncDateBounds();
         togglePeriodControls();
         // Select2 emits jQuery change events, which native-only listeners miss.
         if (periodType) {

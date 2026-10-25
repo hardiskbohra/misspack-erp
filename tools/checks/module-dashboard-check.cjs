@@ -25,7 +25,7 @@ check('current versus prior period is visible on comparable statistics', view.in
 check('important alerts use a red immediate-attention treatment', view.includes('module-alert-banner')&&view.includes('role="alert"')&&css.includes('border-left:4px solid #dc2626'));
 check('finance excludes transfer categories from both sides of movement', projection.includes('excludeTransfers')&&projection.includes("->where('cashflow_categories.type', 'transfer')")&&projection.includes('Inward movement')&&projection.includes('Outward movement'));
 check('receivables and payables use model balance calculations', projection.includes('$invoice->balanceDue()')&&projection.includes('$bill->balanceDue()')&&projection.includes("with(['payments', 'cashflowAllocations'])"));
-check('module navigation preserves the chosen reporting period', view.includes("request()->only(['period_type', 'year', 'month', 'quarter', 'half'])"));
+check('module navigation preserves the chosen reporting period', view.includes("request()->only(['period_type', 'year', 'month', 'quarter', 'half', 'start_date', 'end_date'])"));
 check('the overview links to the module dashboard directory', overview.includes("route('dashboards.index')")&&overview.includes('Module dashboards'));
 check('the application sidebar links to module dashboards', layout.includes("'route' => 'dashboards.index'")&&layout.includes("'active' => 'dashboards.*'"));
 check('dashboard layouts remain responsive without card shadows', ['@media(max-width:1280px)','@media(max-width:900px)','@media(max-width:680px)','@media(max-width:430px)'].every(rule=>css.includes(rule))&&!css.includes('box-shadow'));
