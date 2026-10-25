@@ -2,7 +2,7 @@
 
 **Date:** 25 October 2026. **Application baseline:** custom-date-range commit `8186393`, plus this testing-only change set. Production application/service/controller behaviour was not changed to make these tests pass.
 
-## Actual evidence
+## Original testing-pack evidence (commit96bdcf5)
 
 | Check | Result / limit |
 |---|---|
@@ -71,3 +71,13 @@ Accounting-policy signoff and a red/green regression are the next priority. See 
 - Route-inventory regeneration/check: PASS,454 declarations.
 - Native PHP/Composer suite and disposable MySQL fresh-migration/aggregation jobs: PASS in the linked CI run.
 - No local line-coverage percentage, inspected native assertion count or full-browser/system certification is asserted.
+
+
+## Delivery receipt follow-up (25 October 2026)
+
+The receiver-facing delivery receipt is a subsequent production view/presentation change, not part of the original testing-only baseline above. The current catalogue contains **212 designs** (94 unit,118 integration), **57 method-linked cases** and **44 PHPUnit files**. Existing planned cases and release gaps remain open.
+
+- Latest complete portable run: **443 tests,15,093 assertions PASS** (Unit, Integration and Feature), PHP8.4.25 WASM; independently checked JUnit with zero failures/errors/skips.
+- `npm run test:contracts`, shared PDF documents and project-workflow checks passed.
+- Real Chromium/PyMuPDF print checks passed for own-company, vendor, discrepancy and60-line receipts; browser Print / Save as PDF only, not optional DomPDF or full end-to-end system journeys.
+- Test-first failures, focused results, commands and limitations are recorded in [delivery-receipt-print.md](delivery-receipt-print.md). The original native CI links above do not certify this later change; its new branch CI is checked separately.

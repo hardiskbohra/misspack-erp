@@ -310,3 +310,124 @@ body {
         break-inside: avoid;
     }
 }
+
+/* Receiver-facing receipt: scoped so challans and summaries keep their layout. */
+.delivery-receipt .receipt-letterhead {
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--pdf-ink);
+    overflow-wrap: anywhere;
+}
+
+.delivery-receipt .receipt-logo {
+    display: block;
+    width: 46mm;
+    max-height: 20mm;
+    object-fit: contain;
+    object-position: left;
+    margin-bottom: 10px;
+}
+
+.delivery-receipt .receipt-issuer-name {
+    display: block;
+    font-size: 15px;
+}
+
+.delivery-receipt .receipt-letterhead p,
+.delivery-receipt .receipt-consignee p {
+    margin: 3px 0 0;
+    white-space: pre-line;
+}
+
+.delivery-receipt .receipt-consignee {
+    margin: 4px 0 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--pdf-border);
+    border-radius: 0;
+    overflow-wrap: anywhere;
+}
+
+.delivery-receipt .receipt-acknowledgement {
+    margin-top: 22px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+.delivery-receipt .receipt-acknowledgement h2 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.delivery-receipt .receipt-acknowledgement p {
+    margin: 0 0 12px;
+}
+
+/* Table cells also work in server PDF engines without CSS grid support. */
+.delivery-receipt .receipt-signs {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 16px;
+}
+
+.delivery-receipt .receipt-signs > div {
+    display: table-cell;
+    width: 50%;
+    vertical-align: top;
+    padding: 12px;
+    border: 1px solid var(--pdf-ink);
+}
+
+.delivery-receipt .receipt-signs > div + div {
+    border-left: 0;
+}
+
+.delivery-receipt .receipt-signs > div > span {
+    color: var(--pdf-ink);
+    font-size: 12px;
+}
+
+.delivery-receipt .receipt-signs .receipt-signature-space {
+    height: 23mm;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid var(--pdf-ink);
+    margin-bottom: 12px;
+}
+
+.delivery-receipt .receipt-signs .receipt-stamp-space {
+    min-height: 42mm;
+    padding: 0;
+    border: 0;
+}
+
+.delivery-receipt .receipt-signs .receipt-write-line {
+    min-height: 9mm;
+    margin: 8px 0 0;
+    border-bottom: 1px solid var(--pdf-border);
+    font-size: 11px;
+}
+
+.delivery-receipt .receipt-delivered-by {
+    margin-top: 22px;
+    padding-top: 12px;
+    font-size: 11px;
+}
+
+.delivery-receipt .receipt-delivered-by span {
+    display: inline-block;
+    width: 65mm;
+    border-bottom: 1px solid var(--pdf-ink);
+}
+
+@media print {
+    /* Long receipts begin below the letterhead and continue with repeated
+       table headings; only individual rows and the sign/stamp block stay whole. */
+    .delivery-receipt .print-table {
+        break-inside: auto;
+        page-break-inside: auto;
+    }
+}

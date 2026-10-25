@@ -3644,6 +3644,95 @@
         "tests/Feature/PackagingProjectComparisonTest.php#test_matched_identical_names_pass_without_review_and_comparison_does_not_change_records",
         "tests/Feature/PackagingProjectComparisonTest.php#test_names_are_escaped_and_lists_without_a_project_do_not_display_a_false_check"
       ]
+    },
+    {
+      "id": "UT-SHIP-004",
+      "level": "unit",
+      "title": "Delivery receipt letterhead follows the shipper and preserves its address snapshot",
+      "preconditions": "In-memory shipment and MissPack organisation; default shipping and billing addresses; fake public logo disk",
+      "test_data": "MissPack spelling variants; vendor or empty shipper with MissPack receiver; current and historical addresses; configured print logo",
+      "steps": [
+        "Resolve issuer for each sender without querying shipment records",
+        "Compare snapshot address and own-company-only fallbacks",
+        "Select configured print logo, never the screen logo"
+      ],
+      "expected": "Only a named own-company shipper gets our logo/contact/address fallback; shipment origin wins; receiver and cost payer do not affect issuer.",
+      "automation": [
+        "tests/Unit/ShipmentPrintIssuerTest.php#test_letterhead_follows_normalised_shipper_identity_not_receiver_or_cost_payer",
+        "tests/Unit/ShipmentPrintIssuerTest.php#test_stored_origin_and_contacts_take_precedence_over_current_organisation_settings",
+        "tests/Unit/ShipmentPrintIssuerTest.php#test_missing_own_origin_falls_back_to_default_shipping_then_billing_only",
+        "tests/Unit/ShipmentPrintIssuerTest.php#test_partial_shipment_address_is_not_silently_replaced_with_current_office",
+        "tests/Unit/ShipmentPrintIssuerTest.php#test_configured_print_logo_is_used_without_screen_logo",
+        "tests/Unit/ShipmentPrintIssuerTest.php#test_address_preserves_non_latin_city_state_and_country"
+      ],
+      "module": "SHIP",
+      "priority": "P1",
+      "requirement": "REQ-SHIP"
+    },
+    {
+      "id": "IT-SHIP-006",
+      "level": "integration",
+      "title": "Shared delivery receipt hides audit metadata without altering stored integrity",
+      "preconditions": "Disposable SQLite receipt fixture; operations reader; content hash and optional evidence already stored",
+      "test_data": "Own-company and vendor senders; with and without supporting POD file",
+      "steps": [
+        "GET authenticated delivery receipt print route",
+        "Inspect shared HTML for receiver details and conditional letterhead",
+        "Reload receipt, lines and shipment from database"
+      ],
+      "expected": "Receiver-facing print has no hashes, internal recorder or evidence filename; quantities, receipt and shipment attributes remain unchanged; optional evidence remains optional.",
+      "automation": [
+        "tests/Integration/DeliveryReceiptPrintTest.php#test_authenticated_print_is_receiver_ready_without_mutating_stored_hashes_or_evidence",
+        "tests/Integration/DeliveryReceiptPrintTest.php#test_optional_evidence_and_vendor_shipper_remain_printable_without_our_logo",
+        "tests/Feature/DeliveryReceiptPrintViewTest.php#test_shared_print_has_no_internal_integrity_or_evidence_metadata",
+        "tests/Feature/DeliveryReceiptPrintViewTest.php#test_own_shipper_has_print_logo_and_origin_address_above_document_title",
+        "tests/Feature/DeliveryReceiptPrintViewTest.php#test_third_party_or_empty_shipper_does_not_get_our_letterhead_even_when_receiver_is_misspack"
+      ],
+      "module": "SHIP",
+      "priority": "P1",
+      "requirement": "REQ-SHIP"
+    },
+    {
+      "id": "IT-SHIP-007",
+      "level": "integration",
+      "title": "Delivery receipt provides safe receiver sign and company stamp areas",
+      "preconditions": "Real Blade view with in-memory accepted and discrepant receipt lines; optional Chromium and PDF inspection",
+      "test_data": "Accepted100 or accepted98/damaged2; supplied HTML in party names, addresses, recipient, notes and reasons; 60-line browser fixture",
+      "steps": [
+        "Render normal and discrepant receipt views",
+        "Check receiver acknowledgement, signature, designation, date/time and stamp fields",
+        "Run optional Chromium PDF check for A4 clipping, logo, long-table pagination and intact signing block"
+      ],
+      "expected": "Escaped supplied text; discrepancy-aware acknowledgement; usable signing and stamp spaces; repeated long-table headers, no lost rows or horizontal clipping.",
+      "automation": [
+        "tests/Feature/DeliveryReceiptPrintViewTest.php#test_receiver_can_sign_date_and_stamp_without_accepting_undisclosed_damage",
+        "tests/Feature/DeliveryReceiptPrintViewTest.php#test_shared_print_escapes_recipient_notes_and_reasons",
+        "tests/Feature/DeliveryReceiptPrintViewTest.php#test_party_names_and_addresses_remain_plain_text"
+      ],
+      "notes": "PHP methods cover rendering and escaping; the actual optional Chromium/PyMuPDF run is recorded in delivery-receipt-print.md, not inferred from these method links.",
+      "module": "SHIP",
+      "priority": "P1",
+      "requirement": "REQ-SHIP"
+    },
+    {
+      "id": "IT-SHIP-008",
+      "level": "integration",
+      "title": "Delivery receipt print retains authentication permission and shipment ownership boundaries",
+      "preconditions": "Disposable SQLite receipt and two shipments; guest and office user without operations access",
+      "test_data": "Foreign receipt/shipment pair; unauthenticated request; finance-only reader",
+      "steps": [
+        "Request receipt under another shipment",
+        "Request print without login",
+        "Request print with no operations permission"
+      ],
+      "expected": "404 for mismatched shipment; login redirect for guest; 403 for unauthorised office user; no public access endpoint introduced.",
+      "automation": [
+        "tests/Integration/DeliveryReceiptPrintTest.php#test_receipt_cannot_be_printed_under_another_shipment",
+        "tests/Integration/DeliveryReceiptPrintTest.php#test_print_retains_login_and_operations_permission_boundaries"
+      ],
+      "module": "SHIP",
+      "priority": "P1",
+      "requirement": "REQ-SHIP"
     }
   ]
 }

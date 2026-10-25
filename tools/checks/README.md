@@ -271,3 +271,22 @@ when the dialogs were run.
 | Two figures the spreadsheet could not keep | the export is the office's own column order plus accumulated depreciation and net book value as at the day the file was taken — a register that exports fewer columns than it holds is a register an auditor cannot use |
 | The register is a module, the classes are a setting | the chairs are records (a module under Accounts, with its own histories and pages); the *recipe* a class hands out is configuration, and lives in Settings with the other five areas. A class still holding assets refuses to be deleted, and the two screens link to each other so neither is a dead end |
 | A door that names its own form | every dialog-opening control carries `data-open-asset-modal="<door>"` and the dialog's form carries `data-asset-form="<door>"`: the script finds the dialog through the form, so no list of dialog ids exists to fall out of date, a shared dialog clears itself before it is filled again, and a failed save reopens the dialog it came from with the typing kept |
+
+## Delivery receipt print/PDF regression
+
+`delivery-receipt-print-browser.cjs` checks **real Blade output**, not a handwritten
+HTML approximation. It needs `playwright-core`, Chromium and Python `pymupdf`:
+
+```bash
+APP_ENV=testing php tools/testing/render-delivery-receipts.php .work/receipts
+CHROMIUM_EXECUTABLE_PATH=/path/to/chromium \
+  node tools/checks/delivery-receipt-print-browser.cjs .work/receipts
+```
+
+Fixtures are entirely in memory. Checks cover own/vendor letterhead, hidden audit
+metadata and toolbar, A4 PDF boundaries, signature/stamp writing space, and
+multi-page repeated headers and intact sign-off. See
+[`delivery-receipt-print.md`](../../docs/testing/delivery-receipt-print.md) for
+actual results and local runtime notes; optional browser checks are not implied
+by passing the PHP or source-contract suites. Generated files belong only in
+ignored `.work/` or a temporary directory.

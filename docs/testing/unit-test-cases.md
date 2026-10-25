@@ -391,6 +391,20 @@ Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDi
 
 **Expected:** No file-required validation; quantities and receipt fact preserved.
 
+### UT-SHIP-004 — Delivery receipt letterhead follows the shipper and preserves its address snapshot
+
+**Priority:** P1 · **Requirement:** REQ-SHIP · **Implementation:** linked executable evidence
+
+- **Preconditions:** In-memory shipment and MissPack organisation; default shipping and billing addresses; fake public logo disk
+- **Data:** MissPack spelling variants; vendor or empty shipper with MissPack receiver; current and historical addresses; configured print logo
+1. Resolve issuer for each sender without querying shipment records
+2. Compare snapshot address and own-company-only fallbacks
+3. Select configured print logo, never the screen logo
+
+**Expected:** Only a named own-company shipper gets our logo/contact/address fallback; shipment origin wins; receiver and cost payer do not affect issuer.
+
+**Evidence:** `tests/Unit/ShipmentPrintIssuerTest.php#test_letterhead_follows_normalised_shipper_identity_not_receiver_or_cost_payer`; `tests/Unit/ShipmentPrintIssuerTest.php#test_stored_origin_and_contacts_take_precedence_over_current_organisation_settings`; `tests/Unit/ShipmentPrintIssuerTest.php#test_missing_own_origin_falls_back_to_default_shipping_then_billing_only`; `tests/Unit/ShipmentPrintIssuerTest.php#test_partial_shipment_address_is_not_silently_replaced_with_current_office`; `tests/Unit/ShipmentPrintIssuerTest.php#test_configured_print_logo_is_used_without_screen_logo`; `tests/Unit/ShipmentPrintIssuerTest.php#test_address_preserves_non_latin_city_state_and_country`
+
 ## Proformas, cash invoices and tax invoices (`SALES`)
 
 Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDeletion.php`, `app/Http/Controllers/SalesInvoiceController.php`.

@@ -32,6 +32,7 @@ const cashflowCss = plain(read('public/assets/css/cashflows-pdf.css'));
 const shipmentViews = [
     read('resources/views/shipments/print/delivery-challan.blade.php'),
     read('resources/views/shipments/print/summary.blade.php'),
+    read('resources/views/shipments/print/delivery-receipt.blade.php'),
 ];
 const shipmentToolbar = read('resources/views/shipments/print/partials/toolbar.blade.php');
 const shipmentCss = plain(read('public/assets/css/shipment-print.css'));
@@ -215,7 +216,7 @@ check('carton labels ride the same Inter stack as the rest of the paperwork', /f
     && !/Helvetica/.test(packagingLabelCss));
 
 check('shipment paperwork shares the A4 shell and themed toolbar',
-    shipmentViews.every(view => /class="pdf-preview"/.test(view) && /class="print-sheet pdf-sheet"/.test(view))
+    shipmentViews.every(view => /class="pdf-preview(?: [^"]*)?"/.test(view) && /class="print-sheet pdf-sheet"/.test(view))
     && /pdf-action pdf-action--primary/.test(shipmentToolbar)
     && /pdf-action pdf-action--secondary/.test(shipmentToolbar));
 

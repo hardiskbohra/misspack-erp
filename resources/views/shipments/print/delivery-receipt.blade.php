@@ -1,3 +1,8 @@
+@php
+    $organisation = $organisation ?? \App\Models\Organisation::current();
+    $issuerResolver = app(\App\Services\ShipmentPrintIssuer::class);
+    $issuer = $issuerResolver->forShipment($shipment, $organisation);
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 
@@ -12,7 +17,7 @@
     <link rel="stylesheet" href="{{ $assetVer('assets/css/document-print.css') }}">
 </head>
 
-<body class="pdf-preview">
+<body class="pdf-preview delivery-receipt">
     <div class="pdf-toolbar print-toolbar no-print">
         <a class="pdf-action pdf-action--secondary" href="{{ route('shipments.show', $shipment) }}">← Back to shipment</a>
 
@@ -30,9 +35,19 @@
     @endif
 
     <main class="print-sheet pdf-sheet">
+        <div class="receipt-letterhead">
+            @if ($issuer['logo_url'])
+                <img class="receipt-logo" src="{{ $issuer['logo_url'] }}" alt="{{ $issuer['name'] }}">
+            @endif
+            @if ($issuer['name'])<strong class="receipt-issuer-name">{{ $issuer['name'] }}</strong>@endif
+            @if ($issuer['address'])<p>{{ $issuer['address'] }}</p>@endif
+            @if ($issuer['mobile'] || $issuer['email'])
+                <p>{{ $issuer['mobile'] ? 'Ph: '.$issuer['mobile'] : '' }}{{ $issuer['mobile'] && $issuer['email'] ? ' · ' : '' }}{{ $issuer['email'] }}</p>
+            @endif
+        </div>
+
         <header class="print-head">
             <div>
-                <span class="print-brand">{{ config('app.name', 'MissPack') }}</span>
                 <h1>Delivery Receipt</h1>
             </div>
             <div class="print-head-meta">
@@ -47,11 +62,12 @@
             <div><span>Recipient</span><strong>{{ $receipt->recipient_name }}</strong></div>
             <div><span>Received at</span><strong>{{ $receipt->received_at?->format('d M Y, H:i') ?: '-' }}</strong></div>
             <div><span>Project / Client</span><strong>{{ $shipment->project->project_number ?? '-' }} · {{ $shipment->client->company_name ?? '-' }}</strong></div>
-            <div><span>Recorded by</span><strong>{{ $receipt->recorder->name ?? 'System' }}</strong></div>
-            <div><span>Evidence document</span><strong>{{ $receipt->evidence_original_name ?: 'Not supplied (optional)' }}</strong></div>
-            @if ($receipt->evidence_hash)
-                <div><span>Evidence SHA-256</span><strong>{{ substr($receipt->evidence_hash, 0, 24) }}…</strong></div>
-            @endif
+        </section>
+
+        <section class="print-party receipt-consignee">
+            <span class="print-label">Deliver to (Receiver)</span>
+            <strong>{{ $shipment->to_name ?: '—' }}</strong>
+            @if ($receiverAddress = $issuerResolver->address($shipment, 'to'))<p>{{ $receiverAddress }}</p>@endif
         </section>
 
         <table class="print-table print-table-compact">
@@ -74,6 +90,7 @@
                         <td>{{ $index + 1 }}</td>
                         <td>
                             <strong>{{ $line->shipmentItem->product_name ?? 'Product #'.$line->shipment_item_id }}</strong>
+                            @if ($line->shipmentItem?->unit)<span class="print-sub">Unit: {{ $line->shipmentItem->unit }}</span>@endif
                             @if ($line->discrepancy_reason)
                                 <span class="print-sub">{{ $line->discrepancy_reason }}</span>
                             @endif
@@ -95,16 +112,26 @@
         <div class="print-notes">
             <p><strong>Outcome:</strong> {{ $receipt->hasDiscrepancy() ? 'Received with discrepancies — see the line reasons above.' : 'Received in accepted condition with no discrepancy.' }}</p>
             @if ($receipt->notes)<p><strong>Notes:</strong> {{ $receipt->notes }}</p>@endif
-            @if ($receipt->content_hash)
-                <p><strong>Record integrity:</strong> SHA-256 {{ $receipt->content_hash }}</p>
-            @endif
         </div>
 
-        <div class="print-signs">
-            <div><span>Delivered by</span></div>
-            <div><span>Received by — signature</span></div>
-            <div><span>Date</span></div>
-        </div>
+        <section class="receipt-acknowledgement">
+            <h2>Receiver acknowledgement</h2>
+            <p>I/We acknowledge receipt of the goods in the quantities and condition recorded above,
+                including any discrepancies noted on this receipt.</p>
+            <div class="print-signs receipt-signs">
+                <div class="receipt-signature">
+                    <span>Receiver signature</span>
+                    <div class="receipt-signature-space"></div>
+                    <p class="receipt-write-line">Name / designation:</p>
+                    <p class="receipt-write-line">Date / time:</p>
+                </div>
+                <div class="receipt-stamp">
+                    <span>Company stamp</span>
+                    <div class="receipt-stamp-space"></div>
+                </div>
+            </div>
+            <p class="receipt-delivered-by">Delivered by (name / signature): <span></span></p>
+        </section>
     </main>
 </body>
 

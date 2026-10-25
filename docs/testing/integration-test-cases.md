@@ -553,6 +553,50 @@ Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDi
 
 **Evidence:** `tests/Feature/ShipmentAttachmentUploadTest.php#test_read_only_users_see_attachments_but_cannot_upload`
 
+### IT-SHIP-006 — Shared delivery receipt hides audit metadata without altering stored integrity
+
+**Priority:** P1 · **Requirement:** REQ-SHIP · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable SQLite receipt fixture; operations reader; content hash and optional evidence already stored
+- **Data:** Own-company and vendor senders; with and without supporting POD file
+1. GET authenticated delivery receipt print route
+2. Inspect shared HTML for receiver details and conditional letterhead
+3. Reload receipt, lines and shipment from database
+
+**Expected:** Receiver-facing print has no hashes, internal recorder or evidence filename; quantities, receipt and shipment attributes remain unchanged; optional evidence remains optional.
+
+**Evidence:** `tests/Integration/DeliveryReceiptPrintTest.php#test_authenticated_print_is_receiver_ready_without_mutating_stored_hashes_or_evidence`; `tests/Integration/DeliveryReceiptPrintTest.php#test_optional_evidence_and_vendor_shipper_remain_printable_without_our_logo`; `tests/Feature/DeliveryReceiptPrintViewTest.php#test_shared_print_has_no_internal_integrity_or_evidence_metadata`; `tests/Feature/DeliveryReceiptPrintViewTest.php#test_own_shipper_has_print_logo_and_origin_address_above_document_title`; `tests/Feature/DeliveryReceiptPrintViewTest.php#test_third_party_or_empty_shipper_does_not_get_our_letterhead_even_when_receiver_is_misspack`
+
+### IT-SHIP-007 — Delivery receipt provides safe receiver sign and company stamp areas
+
+**Priority:** P1 · **Requirement:** REQ-SHIP · **Implementation:** linked executable evidence
+
+- **Preconditions:** Real Blade view with in-memory accepted and discrepant receipt lines; optional Chromium and PDF inspection
+- **Data:** Accepted100 or accepted98/damaged2; supplied HTML in party names, addresses, recipient, notes and reasons; 60-line browser fixture
+1. Render normal and discrepant receipt views
+2. Check receiver acknowledgement, signature, designation, date/time and stamp fields
+3. Run optional Chromium PDF check for A4 clipping, logo, long-table pagination and intact signing block
+
+**Expected:** Escaped supplied text; discrepancy-aware acknowledgement; usable signing and stamp spaces; repeated long-table headers, no lost rows or horizontal clipping.
+
+**Note:** PHP methods cover rendering and escaping; the actual optional Chromium/PyMuPDF run is recorded in delivery-receipt-print.md, not inferred from these method links.
+
+**Evidence:** `tests/Feature/DeliveryReceiptPrintViewTest.php#test_receiver_can_sign_date_and_stamp_without_accepting_undisclosed_damage`; `tests/Feature/DeliveryReceiptPrintViewTest.php#test_shared_print_escapes_recipient_notes_and_reasons`; `tests/Feature/DeliveryReceiptPrintViewTest.php#test_party_names_and_addresses_remain_plain_text`
+
+### IT-SHIP-008 — Delivery receipt print retains authentication permission and shipment ownership boundaries
+
+**Priority:** P1 · **Requirement:** REQ-SHIP · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable SQLite receipt and two shipments; guest and office user without operations access
+- **Data:** Foreign receipt/shipment pair; unauthenticated request; finance-only reader
+1. Request receipt under another shipment
+2. Request print without login
+3. Request print with no operations permission
+
+**Expected:** 404 for mismatched shipment; login redirect for guest; 403 for unauthorised office user; no public access endpoint introduced.
+
+**Evidence:** `tests/Integration/DeliveryReceiptPrintTest.php#test_receipt_cannot_be_printed_under_another_shipment`; `tests/Integration/DeliveryReceiptPrintTest.php#test_print_retains_login_and_operations_permission_boundaries`
+
 ## Proformas, cash invoices and tax invoices (`SALES`)
 
 Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDeletion.php`, `app/Http/Controllers/SalesInvoiceController.php`.

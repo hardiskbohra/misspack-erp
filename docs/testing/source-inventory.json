@@ -132,6 +132,17 @@
       ]
     },
     {
+      "file": "tests/Feature/DeliveryReceiptPrintViewTest.php",
+      "methods": [
+        "test_shared_print_has_no_internal_integrity_or_evidence_metadata",
+        "test_own_shipper_has_print_logo_and_origin_address_above_document_title",
+        "test_third_party_or_empty_shipper_does_not_get_our_letterhead_even_when_receiver_is_misspack",
+        "test_receiver_can_sign_date_and_stamp_without_accepting_undisclosed_damage",
+        "test_shared_print_escapes_recipient_notes_and_reasons",
+        "test_party_names_and_addresses_remain_plain_text"
+      ]
+    },
+    {
       "file": "tests/Feature/ExampleTest.php",
       "methods": [
         "test_the_root_redirects_to_login"
@@ -271,6 +282,15 @@
         "test_view_only_finance_staff_cannot_reverse_or_delete_payments",
         "test_bill_detail_and_listing_do_not_present_cancelled_payment_as_paid",
         "test_reversing_advance_preserves_order_approval_and_cancelled_bill_state"
+      ]
+    },
+    {
+      "file": "tests/Integration/DeliveryReceiptPrintTest.php",
+      "methods": [
+        "test_authenticated_print_is_receiver_ready_without_mutating_stored_hashes_or_evidence",
+        "test_optional_evidence_and_vendor_shipper_remain_printable_without_our_logo",
+        "test_receipt_cannot_be_printed_under_another_shipment",
+        "test_print_retains_login_and_operations_permission_boundaries"
       ]
     },
     {
@@ -523,6 +543,17 @@
         "test_an_unknown_rhythm_is_an_error_rather_than_a_silent_default",
         "test_the_default_ladder_is_step_repeated"
       ]
+    },
+    {
+      "file": "tests/Unit/ShipmentPrintIssuerTest.php",
+      "methods": [
+        "test_letterhead_follows_normalised_shipper_identity_not_receiver_or_cost_payer",
+        "test_stored_origin_and_contacts_take_precedence_over_current_organisation_settings",
+        "test_missing_own_origin_falls_back_to_default_shipping_then_billing_only",
+        "test_partial_shipment_address_is_not_silently_replaced_with_current_office",
+        "test_configured_print_logo_is_used_without_screen_logo",
+        "test_address_preserves_non_latin_city_state_and_country"
+      ]
     }
   ],
   "controllers": [
@@ -677,6 +708,7 @@
     "app/Services/ShipmentDispatchAuthorization.php",
     "app/Services/ShipmentDocuments.php",
     "app/Services/ShipmentPartyDirectory.php",
+    "app/Services/ShipmentPrintIssuer.php",
     "app/Services/UnallocatedCashflows.php",
     "app/Services/VendorPaymentCashflowSync.php"
   ],
@@ -785,6 +817,7 @@
     "tools/checks/confirmation-dialog-check.cjs",
     "tools/checks/cost-check.cjs",
     "tools/checks/dashboard-period-controls-check.cjs",
+    "tools/checks/delivery-receipt-print-browser.cjs",
     "tools/checks/design-check.cjs",
     "tools/checks/docs-check.cjs",
     "tools/checks/employees-check.cjs",
