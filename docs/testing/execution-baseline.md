@@ -230,3 +230,20 @@ exclusion and existing desktop/mobile wizard behaviour. Contracts pass. See
 - See [vendor-kyc.md](vendor-kyc.md) for migration, acceptance, Red/Green and runtime
   evidence. Native CI status is checked separately after push; no local MySQL
   execution or exhaustive E2E/line-coverage claim is made.
+
+
+## Audit register shared UI (25 October 2026)
+
+- Replaced inline evidence popovers/raw pagination with the shared pager and
+  one readonly modal outside the table. Primary search and filter trigger remain
+  available at all breakpoints. Summary labels distinguish current-page counts.
+- Genuine Red3 UI failures → Green4 HTTP/database tests/40 assertions; complete
+  portable Unit + Integration + Feature **531 tests/15,805 assertions PASS**.
+- Actual Chromium1440/900/390px light/dark: modal wrapping/scroll/viewport, focus
+  trap/restoration, close/backdrop/Escape, row switching, shared pagination with
+  full filter retention, one GET form, searchable drawer, hostile/empty states
+  PASS. Captured actual HTTP pages served to browser; no live-browser PHP E2E claim.
+- Contracts/permission-audit21/route462/diff PASS. No controller, SQL, permission,
+  mutation/redaction or shared modal lifecycle changes. Native CI checked after
+  push.238 designs/82 linked cases/56 PHP test files; not measured code coverage.
+- Acceptance, reproduction and artifacts: [audit-register-ui.md](audit-register-ui.md).

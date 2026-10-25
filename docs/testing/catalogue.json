@@ -4267,6 +4267,31 @@
         "tests/Integration/IndianVendorKycTest.php#test_office_addresses_are_editable_and_invalidate_previously_approved_kyc",
         "tests/Database/MySqlVendorKycTest.php#test_native_json_schema_locking_and_stale_review_protection"
       ]
+    },
+    {
+      "id": "IT-AUDIT-004",
+      "module": "AUDIT",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-AUDIT; REQ-UI; REQ-AUTH",
+      "title": "Audit register uses shared pagination and accessible readonly evidence modal",
+      "preconditions": "Disposable AnalyticsDatabaseFixture, authorised audit reader,35 filtered records, current-page evidence templates; real Chromium",
+      "test_data": "Filtered30+5 records, long JSON, hostile HTML text, empty results;1440/900/390px light/dark",
+      "steps": [
+        "Render actual audit HTTP view and shared pagination",
+        "Navigate page2 with all filters retained",
+        "Open distinct rows in one modal outside table",
+        "Close with control, footer, Escape or backdrop; trap/restore focus",
+        "Check mobile filters, searched Select2, long and hostile content",
+        "Deny non-audit readers and retain immutable log count"
+      ],
+      "expected": "Shared ERP table/cards, pager, drawer and modal; current-page scoped escaped evidence; no clipping, horizontal overflow, stale data or log mutations. Filters preserved and accessible on phones; permission boundary unchanged.",
+      "automation": [
+        "tests/Integration/AuditRegisterPresentationTest.php#test_shared_pagination_search_and_single_readonly_evidence_modal_replace_inline_popovers",
+        "tests/Integration/AuditRegisterPresentationTest.php#test_pagination_keeps_scope_and_only_current_page_evidence_is_rendered",
+        "tests/Integration/AuditRegisterPresentationTest.php#test_evidence_is_escaped_and_empty_results_keep_the_shared_readonly_shell",
+        "tests/Integration/AuditRegisterPresentationTest.php#test_non_audit_office_users_cannot_read_the_register_or_evidence"
+      ]
     }
   ]
 }

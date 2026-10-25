@@ -301,6 +301,15 @@
       ]
     },
     {
+      "file": "tests/Integration/AuditRegisterPresentationTest.php",
+      "methods": [
+        "test_shared_pagination_search_and_single_readonly_evidence_modal_replace_inline_popovers",
+        "test_pagination_keeps_scope_and_only_current_page_evidence_is_rendered",
+        "test_evidence_is_escaped_and_empty_results_keep_the_shared_readonly_shell",
+        "test_non_audit_office_users_cannot_read_the_register_or_evidence"
+      ]
+    },
+    {
       "file": "tests/Integration/DashboardConsolidationTest.php",
       "methods": [
         "test_legacy_dashboard_redirects_to_module_directory_with_custom_dates",
@@ -950,6 +959,7 @@
   "source_checks": [
     "tools/checks/assets-check.cjs",
     "tools/checks/assets-dialog-check.cjs",
+    "tools/checks/audit-register-browser.cjs",
     "tools/checks/blade-check.cjs",
     "tools/checks/cash-conversion-check.cjs",
     "tools/checks/client-account-summary-check.cjs",

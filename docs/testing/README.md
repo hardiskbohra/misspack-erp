@@ -7,7 +7,7 @@ Prepared **25 October 2026** from this repository, not a generic ERP template. H
 | Deliverable | Contents |
 |---|---|
 | [Unit test cases](unit-test-cases.md) · [spreadsheet CSV](unit-test-cases.csv) | 102 unit-test designs with IDs, priority, preconditions, inputs, steps and expected results |
-| [Integration test cases](integration-test-cases.md) · [spreadsheet CSV](integration-test-cases.csv) | 135 integration designs, including cross-module money, privacy and workflow scenarios |
+| [Integration test cases](integration-test-cases.md) · [spreadsheet CSV](integration-test-cases.csv) | 136 integration designs, including cross-module money, privacy and workflow scenarios |
 | [Test strategy](test-strategy.md) | Boundaries, risks, environments, acceptance criteria and release gates |
 | [TDD playbook](tdd-playbook.md) | Concrete red–green–refactor workflow, regression discipline and a real next-test example |
 | [Fixture specification](fixtures.md) | Deterministic people, currencies, documents, product lanes, dates and files |
@@ -17,13 +17,13 @@ Prepared **25 October 2026** from this repository, not a generic ERP template. H
 | [Source inventory](source-inventory.json) | Every discovered controller, service, model, test file/method and source check |
 | [Route inventory](route-inventory.json) | 462 declared routes with methods, names, actions and middleware |
 
-**237 designed cases are not 237 automated or passing scenarios.** The catalogue links 81 cases to specific executable methods; some links are deliberately labelled partial. There are more existing regression methods than catalogue links. The source inventory is broader than the curated catalogue, and neither is a code-coverage report. The entire system is **not** exhaustively automated or certified by this hand-off.
+**238 designed cases are not 238 automated or passing scenarios.** The catalogue links 82 cases to specific executable methods; some links are deliberately labelled partial. There are more existing regression methods than catalogue links. The source inventory is broader than the curated catalogue, and neither is a code-coverage report. The entire system is **not** exhaustively automated or certified by this hand-off.
 
 ### Coverage scope
 
 Authentication/RBAC; people/payroll; clients/KYC; vendors; products/pricing; leads; projects/product lanes; execution/approvals/financial closure; QC; Packaging Lists and labels; shipments/delivery; PI/cash/tax invoices; purchase documents; cashflow/allocations/transfers; recurrence; statements; fixed assets; organisation; office services; tasks/coordinator queues; notes; feedback; briefings; global search; settings; client portal; vendor portal/shares; dashboards; audit; files; shared UI/print.
 
-**Latest portable run:** 527 PHPUnit tests and15,765 assertions passed, including the receiver-facing delivery receipt, consolidated dashboard, statement-filter and statement-print regressions. The original testing-pack baseline was427 tests/14,986 assertions (134 added in that task), with passing native PHP/Composer and MySQL CI jobs. See [searchable-selects.md](searchable-selects.md) for shared dropdown/search and print-filter design verification, [statement-print-preview.md](statement-print-preview.md) for new-tab print/download and real A4 verification, [statement-list-filters.md](statement-list-filters.md) for statement filter verification, [dashboard-consolidation.md](dashboard-consolidation.md) for current analytics verification and [delivery-receipt-print.md](delivery-receipt-print.md) for print/PDF verification; complete system journeys and real concurrency remain separate follow-up gates.
+**Latest portable run:** 531 PHPUnit tests and15,805 assertions passed, including the receiver-facing delivery receipt, consolidated dashboard, statement-filter and statement-print regressions. The original testing-pack baseline was427 tests/14,986 assertions (134 added in that task), with passing native PHP/Composer and MySQL CI jobs. See [searchable-selects.md](searchable-selects.md) for shared dropdown/search and print-filter design verification, [statement-print-preview.md](statement-print-preview.md) for new-tab print/download and real A4 verification, [statement-list-filters.md](statement-list-filters.md) for statement filter verification, [dashboard-consolidation.md](dashboard-consolidation.md) for current analytics verification and [delivery-receipt-print.md](delivery-receipt-print.md) for print/PDF verification; complete system journeys and real concurrency remain separate follow-up gates.
 
 ## Executable foundation
 
@@ -81,3 +81,6 @@ A passing portable suite is necessary but not sufficient. The asset-disposal pro
 See [vendor-kyc.md](vendor-kyc.md) for acceptance, staged maker/checker workflow,
 manual sharing, private evidence, genuine Red/Green results, responsive browser
 checks, migration/deployment and native two-connection locking verification.
+
+See [audit-register-ui.md](audit-register-ui.md) for the shared Audit register
+pagination, read-only evidence modal, responsive/keyboard verification and TDD evidence.

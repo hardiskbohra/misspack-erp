@@ -1647,6 +1647,23 @@ Sources: `app/Services/AuditTrail.php`, `app/Http/Middleware/AuditMutations.php`
 
 **Expected:** Reader denied; authorised auditor sees scoped event data.
 
+### IT-AUDIT-004 — Audit register uses shared pagination and accessible readonly evidence modal
+
+**Priority:** P1 · **Requirement:** REQ-AUDIT; REQ-UI; REQ-AUTH · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable AnalyticsDatabaseFixture, authorised audit reader,35 filtered records, current-page evidence templates; real Chromium
+- **Data:** Filtered30+5 records, long JSON, hostile HTML text, empty results;1440/900/390px light/dark
+1. Render actual audit HTTP view and shared pagination
+2. Navigate page2 with all filters retained
+3. Open distinct rows in one modal outside table
+4. Close with control, footer, Escape or backdrop; trap/restore focus
+5. Check mobile filters, searched Select2, long and hostile content
+6. Deny non-audit readers and retain immutable log count
+
+**Expected:** Shared ERP table/cards, pager, drawer and modal; current-page scoped escaped evidence; no clipping, horizontal overflow, stale data or log mutations. Filters preserved and accessible on phones; permission boundary unchanged.
+
+**Evidence:** `tests/Integration/AuditRegisterPresentationTest.php#test_shared_pagination_search_and_single_readonly_evidence_modal_replace_inline_popovers`; `tests/Integration/AuditRegisterPresentationTest.php#test_pagination_keeps_scope_and_only_current_page_evidence_is_rendered`; `tests/Integration/AuditRegisterPresentationTest.php#test_evidence_is_escaped_and_empty_results_keep_the_shared_readonly_shell`; `tests/Integration/AuditRegisterPresentationTest.php#test_non_audit_office_users_cannot_read_the_register_or_evidence`
+
 ## Shared file policy and storage lifecycle (`FILES`)
 
 Sources: `app/Services/DocumentUpload.php`, `app/Http/Controllers/ShipmentController.php`.
