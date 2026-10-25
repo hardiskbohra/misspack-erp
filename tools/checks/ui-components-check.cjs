@@ -163,6 +163,7 @@ const statementFilterContracts = [
     ['resources/views/clients/partials/statement.blade.php', 'clientStatementFiltersDrawer', ['period', 'date_from', 'date_to', 'currency']],
     ['resources/views/client_portal/statements/index.blade.php', 'portalStatementFiltersDrawer', ['period', 'date_from', 'date_to', 'currency']],
     ['resources/views/cashflows/statement-show.blade.php', 'statementDetailFiltersDrawer', ['period', 'date_from', 'date_to', 'currency']],
+    ['resources/views/cashflows/partials/statement-print-filters.blade.php', 'statementPrintFilters', ['period', 'date_from', 'date_to', 'currency', 'ageing']],
     ['resources/views/cashflows/statements.blade.php', 'statementListFiltersDrawer', ['date_from', 'date_to', 'currency']],
 ];
 const statementFiltersStayInDrawers = statementFilterContracts.every(([file, drawerId, fields]) => {
@@ -178,10 +179,16 @@ check('statement period and date/currency filters remain together in their drawe
 const clientStatementView = read('resources/views/clients/partials/statement.blade.php');
 const statementShowView = read('resources/views/cashflows/statement-show.blade.php');
 const documentsView = read('resources/views/cashflows/documents.blade.php');
-check('statement PDF and document-pack downloads remain available with their filters',
+const statementPrintView = read('resources/views/cashflows/partials/statement-print-filters.blade.php');
+check('statement preview retains filtered PDF download and document-pack downloads remain available',
     /cashflows\.statements\.pdf/.test(clientStatementView)
     && /Download PDF/.test(clientStatementView)
-    && /cashflows\.statements\.pdf/.test(statementShowView)
+    && /cashflows\.statements\.print/.test(statementShowView)
+    && /target="_blank"/.test(statementShowView)
+    && !/cashflows\.statements\.pdf/.test(statementShowView)
+    && /cashflows\.statements\.pdf/.test(statementPrintView)
+    && /\$documentQuery/.test(statementPrintView)
+    && /data-drawer-open="statementPrintFilters"/.test(statementPrintView)
     && /cashflows\.documents\.pack/.test(documentsView)
     && /Download pack/.test(documentsView));
 

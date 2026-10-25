@@ -970,6 +970,24 @@ Sources: `app/Services/PartyStatement.php`, `app/Http/Controllers/PartyStatement
 
 **Evidence:** `tests/Integration/StatementListFiltersTest.php#test_calendar_month_includes_last_day_and_exposes_a_displayable_last_activity_date`; `tests/Integration/StatementListFiltersTest.php#test_vendor_debit_credit_labels_match_the_vendor_ledger_not_the_client_ledger`
 
+### IT-STATEMENT-006 — New-tab print preview and download retain selected period, currency and ageing
+
+**Priority:** P1 · **Requirement:** REQ-STATEMENT · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable financial migrations; finance reader and denied office/employee readers; frozen 25 October 2026
+- **Data:** Historical INR290280 invoice and89584 receipt, current INR100 invoice; USD200 and vendor RMB70; stale month dates with period=all
+1. Follow actual Print href into the protected preview
+2. Inspect Download URL and Filters
+3. Change exact dates and retain selected currency/ageing off
+4. Render compact issuer/party header and reject unauthorised readers
+5. Retain current-month defaults and pre-period opening balance
+
+**Expected:** One Print action opens a new tab. Preview and download show selected all-time/custom ledger, not an accidental current month. No currency mixing or balance reset. Issuer logo and address left; party/address/dates right; no issuer PAN. Controls print-hidden and amounts complete.
+
+**Note:** Real Chromium and PyMuPDF geometry/text/page checks are separate executed gates; see statement-print-preview.md. Download uses browser Save as PDF when optional Dompdf is not installed.
+
+**Evidence:** `tests/Integration/StatementPrintPreviewTest.php#test_statement_page_print_link_opens_new_tab_and_preserves_all_time_currency_and_ageing_off`; `tests/Integration/StatementPrintPreviewTest.php#test_preview_exposes_download_and_filters_with_same_all_time_scope`; `tests/Integration/StatementPrintPreviewTest.php#test_print_custom_dates_do_not_revert_to_current_month`; `tests/Integration/StatementPrintPreviewTest.php#test_compact_paper_header_has_logo_party_details_and_no_pan`; `tests/Integration/StatementPrintPreviewTest.php#test_monthly_defaults_remain_unchanged_and_an_explicit_foreign_currency_is_retained`; `tests/Integration/StatementPrintPreviewTest.php#test_vendor_preview_is_a_single_currency_payable_and_finance_boundary_is_retained`
+
 ## Asset register, allocation and depreciation (`ASSET`)
 
 Sources: `app/Services/AssetDepreciation.php`, `app/Http/Controllers/FixedAssetController.php`.

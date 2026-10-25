@@ -576,6 +576,20 @@ Sources: `app/Services/PartyStatement.php`, `app/Http/Controllers/PartyStatement
 
 **Expected:** 9Oct in opening once;10Oct in rows once.
 
+### UT-STATEMENT-004 — Balance issuer address into three compact print lines without truncation
+
+**Priority:** P1 · **Requirement:** REQ-STATEMENT · **Implementation:** linked executable evidence
+
+- **Preconditions:** Pure presentation helper; no database or live issuer data
+- **Data:** Six comma-separated street parts plus city/state/pin/country; multiline address; missing locality
+1. Balance complete street parts across two lines
+2. Keep locality third
+3. Preserve missing values rather than inventing address text
+
+**Expected:** Complete street retained; default issuer has exactly three visual lines in the real A4 PDF; website remains independent.
+
+**Evidence:** `tests/Unit/StatementPrintHeaderTest.php#test_long_issuer_street_is_balanced_into_two_lines_with_locality_third`; `tests/Unit/StatementPrintHeaderTest.php#test_multiline_addresses_and_missing_fields_are_not_invented_or_truncated`
+
 ## Asset register, allocation and depreciation (`ASSET`)
 
 Sources: `app/Services/AssetDepreciation.php`, `app/Http/Controllers/FixedAssetController.php`.

@@ -152,17 +152,7 @@
         });
     });
 
-    /* Printing the statement and not the toolbar: what is on screen behind the
-       document (filters, links, actions) carries .no-print, so the browser's
-       print dialog needs no help beyond being opened. */
     onReady(function () {
-        var printButton = document.getElementById('printStatement');
-        if (printButton) {
-            printButton.addEventListener('click', function () {
-                window.print();
-            });
-        }
-
         /* Copy a link without selecting the text by hand. Falls back to
            selecting the field when the clipboard API is unavailable (a page
            served over plain HTTP has no navigator.clipboard). */

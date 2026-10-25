@@ -19,7 +19,7 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-PURCHASE | Purchase documents and vendor settlement | 3 | 3 | 1 |
 | REQ-CASH | Cashflow, allocations and account transfers | 3 | 6 | 3 |
 | REQ-RECUR | Recurring cashflow planning and posting | 3 | 3 | 0 |
-| REQ-STATEMENT | Party statements and reconciliation | 3 | 5 | 2 |
+| REQ-STATEMENT | Party statements and reconciliation | 4 | 6 | 4 |
 | REQ-ASSET | Asset register, allocation and depreciation | 3 | 3 | 3 |
 | REQ-ORG | Organisation, addresses and banking identity | 3 | 3 | 0 |
 | REQ-SERVICE | Office services and linked spending | 3 | 3 | 0 |

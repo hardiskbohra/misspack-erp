@@ -546,6 +546,20 @@
             ]
         },
         {
+            "name": "cashflows.statements.print",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/statements/{partyType}/{party}/print",
+            "action": "App\\Http\\Controllers\\PartyStatementController@print",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "cashflows.destroy",
             "methods": [
                 "DELETE"

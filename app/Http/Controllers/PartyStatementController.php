@@ -113,19 +113,7 @@ class PartyStatementController extends Controller
     /** One statement, on screen, with a printer and a Share button beside it. */
     public function show(Request $request, string $partyType, int $party): View
     {
-        $filters = $this->filters($request);
-        if (! $request->filled('currency')) {
-            $filters['currency'] = $this->statements->defaultCurrency($partyType, $party);
-        }
-        $statement = $this->statements->build(
-            $partyType,
-            $party,
-            $filters['dateFrom'],
-            $filters['dateTo'],
-            ['currency' => $filters['currency'], 'ageing' => $filters['ageing']]
-        );
-
-        abort_if($statement === null, 404);
+        $document = $this->documentData($request, $partyType, $party);
 
         $readyShare = null;
         if ($token = $request->query('share')) {
@@ -133,14 +121,40 @@ class PartyStatementController extends Controller
         }
 
         return view('cashflows.statement-show', [
-            'statement' => $statement,
-            'currencyOptions' => $this->statements->currencies($partyType, $party),
+            ...$document,
             'shares' => PartyStatementShare::forParty($partyType, $party)->latest('id')->limit(20)->get(),
             'readyShare' => $readyShare,
             'expiryChoices' => PartyStatementShare::EXPIRY_CHOICES,
             'channelChoices' => PartyStatementShare::CHANNELS,
-            ...$filters,
         ]);
+    }
+
+    public function print(Request $request, string $partyType, int $party): View
+    {
+        return view('cashflows.statement-pdf', [
+            ...$this->documentData($request, $partyType, $party),
+            'printPreview' => true,
+            'pdfAvailable' => class_exists(\Barryvdh\DomPDF\Facade\Pdf::class),
+        ]);
+    }
+
+    private function documentData(Request $request, string $partyType, int $party): array
+    {
+        $filters = $this->filters($request);
+        if (! $request->filled('currency')) {
+            $filters['currency'] = $this->statements->defaultCurrency($partyType, $party);
+        }
+        $statement = $this->statements->build($partyType, $party, $filters['dateFrom'], $filters['dateTo'],
+            ['currency' => $filters['currency'], 'ageing' => $filters['ageing']]);
+        abort_if($statement === null, 404);
+        // Do not drop a false/zero ageing flag, or an explicit All time preset.
+        $documentQuery = array_filter([
+            'partyType' => $partyType, 'party' => $party, 'period' => $filters['periodKey'],
+            'date_from' => $filters['dateFrom'], 'date_to' => $filters['dateTo'],
+            'currency' => $statement['currency'], 'ageing' => $filters['ageing'] ? '1' : '0',
+        ], fn ($value) => $value !== null && $value !== '');
+        return [...$filters, 'statement' => $statement, 'documentQuery' => $documentQuery,
+            'currencyOptions' => $this->statements->currencies($partyType, $party)];
     }
 
     /**
@@ -150,19 +164,7 @@ class PartyStatementController extends Controller
      */
     public function pdf(Request $request, string $partyType, int $party)
     {
-        $filters = $this->filters($request);
-        if (! $request->filled('currency')) {
-            $filters['currency'] = $this->statements->defaultCurrency($partyType, $party);
-        }
-        $statement = $this->statements->build(
-            $partyType,
-            $party,
-            $filters['dateFrom'],
-            $filters['dateTo'],
-            ['currency' => $filters['currency'], 'ageing' => $filters['ageing']]
-        );
-
-        abort_if($statement === null, 404);
+        $statement = $this->documentData($request, $partyType, $party)['statement'];
 
         $fileName = 'statement-'
             .Str::slug($statement['party']['name'] ?: 'party')

@@ -372,6 +372,17 @@
       ]
     },
     {
+      "file": "tests/Integration/StatementPrintPreviewTest.php",
+      "methods": [
+        "test_statement_page_print_link_opens_new_tab_and_preserves_all_time_currency_and_ageing_off",
+        "test_preview_exposes_download_and_filters_with_same_all_time_scope",
+        "test_print_custom_dates_do_not_revert_to_current_month",
+        "test_compact_paper_header_has_logo_party_details_and_no_pan",
+        "test_monthly_defaults_remain_unchanged_and_an_explicit_foreign_currency_is_retained",
+        "test_vendor_preview_is_a_single_currency_payable_and_finance_boundary_is_retained"
+      ]
+    },
+    {
       "file": "tests/Unit/AssetDepreciationTest.php",
       "methods": [
         "test_indian_financial_year_boundaries",
@@ -607,6 +618,13 @@
         "test_configured_print_logo_is_used_without_screen_logo",
         "test_address_preserves_non_latin_city_state_and_country"
       ]
+    },
+    {
+      "file": "tests/Unit/StatementPrintHeaderTest.php",
+      "methods": [
+        "test_long_issuer_street_is_balanced_into_two_lines_with_locality_third",
+        "test_multiline_addresses_and_missing_fields_are_not_invented_or_truncated"
+      ]
     }
   ],
   "controllers": [
@@ -763,6 +781,7 @@
     "app/Services/ShipmentDocuments.php",
     "app/Services/ShipmentPartyDirectory.php",
     "app/Services/ShipmentPrintIssuer.php",
+    "app/Services/StatementPrintHeader.php",
     "app/Services/UnallocatedCashflows.php",
     "app/Services/VendorPaymentCashflowSync.php"
   ],
@@ -902,6 +921,7 @@
     "tools/checks/sql-check.cjs",
     "tools/checks/statement-check.cjs",
     "tools/checks/statement-list-browser.cjs",
+    "tools/checks/statement-print-browser.cjs",
     "tools/checks/status-check.cjs",
     "tools/checks/ui-components-check.cjs",
     "tools/checks/vendor-portal-check.cjs",

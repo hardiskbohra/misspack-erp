@@ -514,6 +514,10 @@ Route::middleware('auth')->group(function () {
            here, revoked here, and the statement itself is rebuilt from the ledger
            on every open — never stored, so it cannot go stale. */
         Route::get('/cashflows/statements', [PartyStatementController::class, 'index'])->name('cashflows.statements');
+        Route::get('/cashflows/statements/{partyType}/{party}/print', [PartyStatementController::class, 'print'])
+            ->whereIn('partyType', ['client', 'vendor'])
+            ->whereNumber('party')
+            ->name('cashflows.statements.print');
         Route::get('/cashflows/statements/{partyType}/{party}/pdf', [PartyStatementController::class, 'pdf'])
             ->whereIn('partyType', ['client', 'vendor'])
             ->whereNumber('party')

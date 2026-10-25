@@ -5,9 +5,8 @@
 @section('page-actions')
     <a class="master-btn master-btn-ghost desktop-only"
         href="{{ route('cashflows.statements', array_filter(['party_type' => $statement['party_type'], 'period' => $periodKey, 'date_from' => $dateFrom, 'date_to' => $dateTo, 'currency' => $statement['currency']])) }}">All statements</a>
-    <a class="master-btn master-btn-soft desktop-only"
-        href="{{ route('cashflows.statements.pdf', array_filter(['partyType' => $statement['party_type'], 'party' => $statement['party_id'], 'date_from' => $dateFrom, 'date_to' => $dateTo, 'currency' => $statement['currency'], 'ageing' => $ageing ? '1' : '0'])) }}">Download PDF</a>
-    <button class="master-btn master-btn-soft" type="button" id="printStatement">Print</button>
+    <a class="master-btn master-btn-soft" id="printStatement" target="_blank" rel="noopener" aria-label="Print statement (opens in a new tab)"
+        href="{{ route('cashflows.statements.print', $documentQuery) }}">Print</a>
     <button class="master-btn master-btn-primary" type="button" id="openShareStatement">Share link</button>
 @endsection
 
@@ -70,7 +69,7 @@
                         @endif
                         <div class="master-field">
                             <label class="master-label" for="statementDetailAgeing">Ageing</label>
-                            <label class="master-check"><input id="statementDetailAgeing" type="checkbox" name="ageing" value="1" @checked($ageing)> Include ageing</label>
+                            <input type="hidden" name="ageing" value="0"><label class="master-check"><input id="statementDetailAgeing" type="checkbox" name="ageing" value="1" @checked($ageing)> Include ageing</label>
                         </div>
                     </div>
                 </section>

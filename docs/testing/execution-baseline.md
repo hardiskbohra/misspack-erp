@@ -135,3 +135,19 @@ and48 PHPUnit files. These design counts are not measured coverage.
   arithmetic changes; native CI checked after push independently.
 - See [compact-topbar.md](compact-topbar.md) for TDD, changed menu expectations and
   scope. Design counts are not measured runtime coverage.
+
+
+## Statement print preview —25October2026
+
+Test-first new-tab preview/download selection plus address/exact-date regressions:
+Red5failures/6assertions, then follow-up2missing-helper errors/1missing-date failure;
+Green8focused/71assertions. Full portable **491tests/15,376assertions PASS**.
+The historical opening balance remains part of the monthly closing balance; no
+accounting calculation or SQL changes. Default contracts and statements75/shared
+PDF20/design79/UI24source guards pass. Actual Chromium/PyMuPDF proves popup and
+filter/download interactions, unclipped complete amounts, three-line issuer
+address, exact custom dates, embedded logo,12mmA4 bounds and73rows across3pages
+with all rows and only one final closing total. See[statement-print-preview.md](statement-print-preview.md)
+for commands, optional browser Save as PDF behaviour and local engine limits.
+Updated inventory:221designs (96unit/125integration),66method-linked designs,
+50test files,455declared routes; no runtime coverage percentage is implied.

@@ -3896,6 +3896,53 @@
         "tests/Integration/DashboardConsolidationTest.php#test_compact_topbar_keeps_reporting_context_in_content_and_profile_theme_in_menu"
       ],
       "notes": "Actual responsive browser verifies40px triggers, keyboard Quick Menu Notes/End/Escape, mobile drawer opening and profile theme reachability; source/HTTP results alone do not prove browser layout."
+    },
+    {
+      "id": "UT-STATEMENT-004",
+      "module": "STATEMENT",
+      "level": "unit",
+      "priority": "P1",
+      "requirement": "REQ-STATEMENT",
+      "title": "Balance issuer address into three compact print lines without truncation",
+      "preconditions": "Pure presentation helper; no database or live issuer data",
+      "test_data": "Six comma-separated street parts plus city/state/pin/country; multiline address; missing locality",
+      "steps": [
+        "Balance complete street parts across two lines",
+        "Keep locality third",
+        "Preserve missing values rather than inventing address text"
+      ],
+      "expected": "Complete street retained; default issuer has exactly three visual lines in the real A4 PDF; website remains independent.",
+      "automation": [
+        "tests/Unit/StatementPrintHeaderTest.php#test_long_issuer_street_is_balanced_into_two_lines_with_locality_third",
+        "tests/Unit/StatementPrintHeaderTest.php#test_multiline_addresses_and_missing_fields_are_not_invented_or_truncated"
+      ]
+    },
+    {
+      "id": "IT-STATEMENT-006",
+      "module": "STATEMENT",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-STATEMENT",
+      "title": "New-tab print preview and download retain selected period, currency and ageing",
+      "preconditions": "Disposable financial migrations; finance reader and denied office/employee readers; frozen 25 October 2026",
+      "test_data": "Historical INR290280 invoice and89584 receipt, current INR100 invoice; USD200 and vendor RMB70; stale month dates with period=all",
+      "steps": [
+        "Follow actual Print href into the protected preview",
+        "Inspect Download URL and Filters",
+        "Change exact dates and retain selected currency/ageing off",
+        "Render compact issuer/party header and reject unauthorised readers",
+        "Retain current-month defaults and pre-period opening balance"
+      ],
+      "expected": "One Print action opens a new tab. Preview and download show selected all-time/custom ledger, not an accidental current month. No currency mixing or balance reset. Issuer logo and address left; party/address/dates right; no issuer PAN. Controls print-hidden and amounts complete.",
+      "automation": [
+        "tests/Integration/StatementPrintPreviewTest.php#test_statement_page_print_link_opens_new_tab_and_preserves_all_time_currency_and_ageing_off",
+        "tests/Integration/StatementPrintPreviewTest.php#test_preview_exposes_download_and_filters_with_same_all_time_scope",
+        "tests/Integration/StatementPrintPreviewTest.php#test_print_custom_dates_do_not_revert_to_current_month",
+        "tests/Integration/StatementPrintPreviewTest.php#test_compact_paper_header_has_logo_party_details_and_no_pan",
+        "tests/Integration/StatementPrintPreviewTest.php#test_monthly_defaults_remain_unchanged_and_an_explicit_foreign_currency_is_retained",
+        "tests/Integration/StatementPrintPreviewTest.php#test_vendor_preview_is_a_single_currency_payable_and_finance_boundary_is_retained"
+      ],
+      "notes": "Real Chromium and PyMuPDF geometry/text/page checks are separate executed gates; see statement-print-preview.md. Download uses browser Save as PDF when optional Dompdf is not installed."
     }
   ]
 }
