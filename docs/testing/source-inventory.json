@@ -1056,6 +1056,7 @@
     "tools/checks/projects-check.cjs",
     "tools/checks/recurring-check.cjs",
     "tools/checks/report-check.cjs",
+    "tools/checks/responsive-check.cjs",
     "tools/checks/searchable-selects-browser.cjs",
     "tools/checks/settings-check.cjs",
     "tools/checks/sidebar-navigation-check.cjs",

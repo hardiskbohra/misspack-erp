@@ -33,7 +33,7 @@ capabilities that are missing or stop halfway**:
 | 9 | **No e-invoice (IRN/QR) support, no TDS on vendor payments, no bank reconciliation, no FX revaluation.** | Compliance ceiling as turnover grows past the ₹5 cr e-invoice mandate; manual Tally rework at year end. | P2 |
 | 10 | **`audit_logs` grows unbounded** — middleware audits every mutation, with no retention/prune/archive job. | Table bloat slows backups and the audit UI itself. | P2 |
 | 11 | **No `.env.example`** though `composer setup` copies it. | New environment setup breaks at step one. | P1 (trivial fix) |
-| 12 | **Single organisation/GSTIN only; no API layer (web routes only); mobile responsiveness partial.** | Scaling ceilings: second entity, mobile app/integrations (WhatsApp, transporter APIs), shop-floor phones at dispatch. | P2 |
+| 12 | ~~**Single organisation/GSTIN only; no API layer (web routes only); mobile responsiveness partial.**~~ **Mobile/tablet closed 2026-10-25:** the responsive contract was largely built (shell drawer, per-breakpoint grid maps, card-tables, sheet modals); residual gaps fixed (price-calculator + products mobile grids, unwrapped statement table) and the whole contract is now CI-enforced — see [responsive-design.md](responsive-design.md), `tools/checks/responsive-check.cjs`. Multi-org and API layer remain open. | Scaling ceilings: second entity, mobile app/integrations (WhatsApp, transporter APIs), shop-floor phones at dispatch. | P2 |
 
 Sections 3–7 detail every finding with evidence; §8 sequences them into a
 roadmap; §9 proposes the KPI layer to instrument once the above lands.
@@ -292,7 +292,7 @@ search, module dashboards, print-specific styles for labels/statements.
 - [ ] Invoice state machine lock + credit/debit notes + returns (P1)
 - [ ] PO → GRN → 3-way match (P1)
 - [ ] Bank reconciliation import (P1)
-- [ ] Mobile pass on dispatch/packaging/receipt flows; notification centre (UX)
+- [x] Mobile pass on dispatch/packaging/receipt flows; notification centre (UX) — **mobile half shipped 2026-10-25**: responsive contract audited, remaining module gaps fixed, CI enforcement added (responsive-check.cjs); notification centre still open
 - [ ] Coverage gate + automated E2E golden paths (QA)
 
 ### Later (3–6+ months) — scale & compliance ceiling

@@ -228,7 +228,8 @@
                 @endforeach
             </div>
 
-            <table class="stmt-table stmt-table--compact">
+            <div class="stmt-table-wrap">
+                <table class="stmt-table stmt-table--compact">
                 <thead>
                     <tr>
                         <th scope="col">Date</th>
@@ -261,6 +262,7 @@
                     </tr>
                 </tfoot>
             </table>
+            </div>
 
             <p class="stmt-note">{{ $statement['ageing']['note'] }}</p>
         </section>
