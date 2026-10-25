@@ -181,3 +181,21 @@ three address lines, full figures, once-only totals and73rows/3pages retained;
 print header geometry and desktop/mobile preview checked in real Chromium.
 See[statement-print-preview.md](statement-print-preview.md). Catalogue remains
 223designs (97unit/126integration),67method-linked designs,50PHPtest files.
+
+
+## Vendor KYC (25 October 2026)
+
+- Genuine TDD evidence and operating/deployment notes: [vendor-kyc.md](vendor-kyc.md).
+- Complete portable Unit + Integration + Feature: **516 tests / 15,649 assertions
+  PASS** on PHP8.4.25 WASM; includes 23 new vendor KYC tests. Native MySQL tests
+  remain a separate configuration/CI job, not included in that count.
+- Real Chromium: shared client-style public wizard and office review at1440/390px;
+  steps/validation/hidden navigation, drafts/file control/submit confirmation,
+  private bank persistence, locked/revision/approved/error and checker/maker/reader
+  states PASS. Approved client wizard regression PASS. Captured real HTTP Blade
+  responses are served to the browser runner; not claimed as live-browser PHP E2E.
+- Contracts and462-route inventory PASS; 234 designs/78 exact-method linked cases,
+  54 PHP test files inventoried (includes native class; not measured code coverage).
+- MySQL-specific regression now exercises JSON staging and competing InnoDB row
+  locks through two connections, followed by approval and stale replay denial.
+  Native CI status is verified after push; no local native MySQL claim.

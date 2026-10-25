@@ -43,6 +43,7 @@ class VendorController extends Controller
         'profile' => 'Profile',
         'contacts' => 'Contacts',
         'commercial' => 'Commercial',
+        'kyc' => 'KYC',
         'procurement' => 'Procurement',
         'money' => 'Money',
         'documents' => 'Documents',
@@ -262,7 +263,7 @@ class VendorController extends Controller
             'vendor_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:2048'],
             'vendor_name' => ['required', 'string', 'max:255'],
             'brand_name' => ['nullable', 'string', 'max:255'],
-            'vendor_type' => ['nullable', 'in:manufacturer,trader,distributor,service_provider'],
+            'vendor_type' => ['nullable', \Illuminate\Validation\Rule::in(array_keys(Vendor::typeOptions()))],
             'category' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:active,inactive,on_hold,blacklisted'],
             'contact_person_name' => ['nullable', 'string', 'max:255'],
@@ -333,6 +334,8 @@ class VendorController extends Controller
         }
 
         return view('vendors.show', array_merge($this->formData($vendor), $data, [
+            'kycDocuments' => $tab === 'kyc' ? \App\Models\VendorKycDocument::where('vendor_id',$vendor->id)->orderBy('id')->get() : collect(),
+            'kycEvents' => $tab === 'kyc' ? \App\Models\VendorKycEvent::with('actor')->where('vendor_id',$vendor->id)->latest('id')->get() : collect(),
             'tabs' => self::SHOW_TABS,
             'tab' => $tab,
             'unallocatedCash' => app(\App\Services\UnallocatedCashflows::class)->forVendor($vendor->id),
@@ -364,14 +367,15 @@ class VendorController extends Controller
         $data = $this->validatedData($request, $vendor);
         unset($data['vendor_image']);
 
-        if ($request->hasFile('vendor_image')) {
-            if ($vendor->image_path) {
-                Storage::disk('public')->delete($vendor->image_path);
-            }
-            $data['image_path'] = $request->file('vendor_image')->store('vendors', 'public');
-        }
+        app(\App\Services\VendorKyc::class)->updateOfficeProfile($vendor, $data, $request->user(),
+            $request->filled('kyc_version') ? (int) $request->input('kyc_version') : null);
 
-        $vendor->update($data);
+        // A stale KYC edit must fail before changing or deleting the vendor image.
+        if ($request->hasFile('vendor_image')) {
+            $oldImage = $vendor->image_path;
+            $vendor->update(['image_path' => $request->file('vendor_image')->store('vendors', 'public')]);
+            if ($oldImage) Storage::disk('public')->delete($oldImage);
+        }
 
         return redirect()
             ->route('vendors.show', $vendor)
@@ -1691,7 +1695,7 @@ class VendorController extends Controller
             'vendor_number' => ['nullable', 'string', 'max:255', 'unique:vendors,vendor_number,'.($vendor?->id ?? 'NULL')],
             'vendor_name' => ['required', 'string', 'max:255'],
             'brand_name' => ['nullable', 'string', 'max:255'],
-            'vendor_type' => ['nullable', 'in:manufacturer,trader,distributor,service_provider'],
+            'vendor_type' => ['nullable', \Illuminate\Validation\Rule::in(array_keys(Vendor::typeOptions()))],
             'category' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:active,inactive,on_hold,blacklisted'],
 

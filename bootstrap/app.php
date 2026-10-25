@@ -28,6 +28,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*')
                 // Inline client creation must receive validation/auth errors, not an HTML redirect.
-                || ($request->routeIs('clients.quickStore') && $request->expectsJson()),
+                || ($request->routeIs('clients.quickStore', 'vendors.publicKyc*', 'vendors.kyc.*') && $request->expectsJson()),
         );
     })->create();

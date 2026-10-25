@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="{{ asset('assets/css/master-form.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/master-alert.css') }}">
     @include('layouts.partials.design-system-styles')
-    <link rel="stylesheet" href="{{ asset('assets/css/kyc-public.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/kyc-public.css') }}">
 </head>
 <body data-ui-shell="public">
 @php
@@ -363,6 +363,6 @@
 
 <script src="{{ asset('assets/js/master-alert.js') }}"></script>
 <script>window.kycToast = @json($kycToast);</script>
-<script src="{{ asset('assets/js/kyc-public.js') }}"></script>
+<script src="{{ $assetVer('assets/js/kyc-public.js') }}"></script>
 </body>
 </html>

@@ -26,7 +26,12 @@ class Vendor extends Model
         'preferred_currency', 'payment_terms', 'lead_time_days', 'minimum_order_value', 'rating', 'notes', 'created_by',
     ];
 
+    protected $hidden = ['kyc_public_token', 'kyc_data', 'kyc_submitted_data'];
+
+    // KYC metadata is deliberately not mass assignable from normal vendor forms.
     protected $casts = [
+        'kyc_data'=>'array', 'kyc_submitted_data'=>'array', 'kyc_version'=>'integer',
+        'kyc_sent_at'=>'datetime', 'kyc_submitted_at'=>'datetime', 'kyc_reviewed_at'=>'datetime',
         'minimum_order_value' => 'decimal:2',
         'lead_time_days' => 'integer',
         'rating' => 'integer',
@@ -34,6 +39,18 @@ class Vendor extends Model
         'portal_enabled_at' => 'datetime',
         'portal_last_shared_at' => 'datetime',
     ];
+
+    public function isPublicKycEditable(): bool
+    {
+        return in_array($this->kyc_status ?: 'draft', ['draft','revision'], true);
+    }
+
+    public function kycStatusLabel(): string
+    {
+        return \App\Services\VendorKyc::statusOptions()[$this->kyc_status ?: 'draft'] ?? 'Draft';
+    }
+
+    public function kycReviewer() { return $this->belongsTo(User::class, 'kyc_reviewed_by'); }
 
     public function creator()
     {
@@ -104,10 +121,14 @@ class Vendor extends Model
     public static function typeOptions(): array
     {
         return [
+            'packaging_supplier' => 'Packaging Supplier',
             'manufacturer' => 'Manufacturer',
             'trader' => 'Trader',
             'distributor' => 'Distributor',
             'service_provider' => 'Service Provider',
+            'consultant' => 'Consultant',
+            'forwarder' => 'Forwarder / Logistics',
+            'other' => 'Other Vendor',
         ];
     }
 

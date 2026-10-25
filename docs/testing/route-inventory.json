@@ -5496,6 +5496,47 @@
             ]
         },
         {
+            "name": "vendors.publicKyc",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "vendor-kyc/{token}",
+            "action": "App\\Http\\Controllers\\VendorKycController@show",
+            "middleware": [
+                "web",
+                "App\\Http\\Middleware\\PrivateVendorKyc",
+                "throttle:120,1"
+            ]
+        },
+        {
+            "name": "vendors.publicKyc.submit",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendor-kyc/{token}",
+            "action": "App\\Http\\Controllers\\VendorKycController@submit",
+            "middleware": [
+                "web",
+                "App\\Http\\Middleware\\PrivateVendorKyc",
+                "throttle:30,1"
+            ]
+        },
+        {
+            "name": "vendors.publicKyc.documents",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "vendor-kyc/{token}/documents/{document}",
+            "action": "App\\Http\\Controllers\\VendorKycController@publicDocument",
+            "middleware": [
+                "web",
+                "App\\Http\\Middleware\\PrivateVendorKyc",
+                "throttle:120,1"
+            ]
+        },
+        {
             "name": "vendors.payments.attachments.destroy",
             "methods": [
                 "DELETE"
@@ -5866,6 +5907,59 @@
             ],
             "uri": "vendors/{vendor}/edit",
             "action": "App\\Http\\Controllers\\VendorController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.kyc.documents",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "vendors/{vendor}/kyc/documents/{document}",
+            "action": "App\\Http\\Controllers\\VendorKycController@officeDocument",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.kyc.link",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendors/{vendor}/kyc/link",
+            "action": "App\\Http\\Controllers\\VendorKycController@link",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.kyc.reopen",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "vendors/{vendor}/kyc/reopen",
+            "action": "App\\Http\\Controllers\\VendorKycController@reopen",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.kyc.review",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "vendors/{vendor}/kyc/review",
+            "action": "App\\Http\\Controllers\\VendorKycController@review",
             "middleware": [
                 "web",
                 "auth",

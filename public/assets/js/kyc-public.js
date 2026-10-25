@@ -71,6 +71,7 @@
         var readonly = form.getAttribute('data-kyc-readonly') === '1';
         var token = form.getAttribute('data-kyc-token') || '';
         var storageKey = 'misspack.kyc.' + token;
+        var persistEnabled = form.getAttribute('data-kyc-persist') !== '0';
         var total = panels.length;
         var current = 1;
         var sending = false;
@@ -85,7 +86,7 @@
         }
 
         function persist() {
-            if (readonly || !window.localStorage) return;
+            if (readonly || !persistEnabled || !window.localStorage) return;
             var data = { step: current, values: {} };
             Array.prototype.forEach.call(form.elements, function (el) {
                 if (!el.name || el.type === 'hidden' && el.name === '_token') return;
@@ -99,7 +100,7 @@
         }
 
         function restore() {
-            if (readonly || !window.localStorage) return;
+            if (readonly || !persistEnabled || !window.localStorage) return;
             if (form.getAttribute('data-kyc-error-step')) return;
             var raw = localStorage.getItem(storageKey);
             if (!raw) return;
@@ -172,7 +173,7 @@
                 setError(field, 'IFSC should look like HDFC0001234.');
                 return false;
             }
-            if ((name === 'ceo_contact' || name.slice(-8) === '_contact') && val && val.replace(/\D/g, '').length < 8) {
+            if ((name === 'ceo_contact' || name.slice(-8) === '_contact' || name === 'contact_person_mobile' || name === 'whatsapp_number' || name === 'alternate_contact') && val && val.replace(/\D/g, '').length < 8) {
                 setError(field, 'Enter a phone number with at least 8 digits.');
                 return false;
             }

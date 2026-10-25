@@ -119,7 +119,7 @@ Sources: `app/Http/Controllers/ClientController.php`, `app/Services/ClientAccoun
 
 ## Vendor master and payable profile (`VENDOR`)
 
-Sources: `app/Http/Controllers/VendorController.php`, `app/Models/Vendor.php`, `app/Services/VendorPaymentCashflowSync.php`.
+Sources: `app/Http/Controllers/VendorController.php`, `app/Models/Vendor.php`, `app/Services/VendorPaymentCashflowSync.php`, `app/Services/VendorKyc.php`, `app/Http/Controllers/VendorKycController.php`.
 
 ### UT-VENDOR-001 — Outstanding is vendor-specific
 
@@ -150,6 +150,56 @@ Sources: `app/Http/Controllers/VendorController.php`, `app/Models/Vendor.php`, `
 1. Build filtered query and inspect bindings
 
 **Expected:** Input remains bound data; no raw injected predicate.
+
+### UT-VENDOR-004 — KYC lifecycle is independent of operational vendor status
+
+**Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md
+- **Data:** On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types
+1. Check all five KYC states against public editability
+
+**Expected:** Only draft/revision editable; blacklisted operational status unchanged.
+
+**Evidence:** `tests/Unit/VendorKycPolicyTest.php#test_only_draft_and_revision_are_publicly_editable_without_changing_operational_status`
+
+### UT-VENDOR-005 — Different purchase manager is required as checker
+
+**Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md
+- **Data:** On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types
+1. Check creator, maker, reader and independent manager
+
+**Expected:** Creator/maker/read-only cannot approve; independent purchase manager can review only submitted KYC.
+
+**Evidence:** `tests/Unit/VendorKycPolicyTest.php#test_checker_must_have_manage_access_and_be_different_from_maker_and_creator`
+
+### UT-VENDOR-006 — Vendor categories and public field allowlist
+
+**Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md
+- **Data:** On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types
+1. Offer required vendor types
+2. Exclude financial/internal control fields
+
+**Expected:** Packaging suppliers, consultants, forwarders and service providers supported; no public accounting/commercial/internal controls.
+
+**Evidence:** `tests/Unit/VendorKycPolicyTest.php#test_all_requested_vendor_types_are_offered_and_public_fields_exclude_commercial_controls`
+
+### UT-VENDOR-007 — Review metadata and staged bank details resist accidental serialization
+
+**Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md
+- **Data:** On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types
+1. Mass assign review controls
+2. Serialize a model with staged identity/token
+
+**Expected:** Review controls not fillable; staged payloads and bearer token omitted from toArray.
+
+**Evidence:** `tests/Unit/VendorKycPolicyTest.php#test_kyc_metadata_is_not_mass_assignable_or_accidentally_serialized`
 
 ## Products and price calculator (`PRODUCT`)
 

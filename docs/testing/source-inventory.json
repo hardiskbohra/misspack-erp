@@ -10,6 +10,12 @@
       ]
     },
     {
+      "file": "tests/Database/MySqlVendorKycTest.php",
+      "methods": [
+        "test_native_json_schema_locking_and_stale_review_protection"
+      ]
+    },
+    {
       "file": "tests/Feature/CashInvoiceConversionTest.php",
       "methods": [
         "test_three_lakh_pi_keeps_the_bank_receipt_and_prorates_items_on_the_tax_remainder",
@@ -289,6 +295,12 @@
       ]
     },
     {
+      "file": "tests/Feature/VendorKycPresentationTest.php",
+      "methods": [
+        "test_actual_http_public_and_office_states_are_accessible_and_use_shared_components"
+      ]
+    },
+    {
       "file": "tests/Integration/DashboardConsolidationTest.php",
       "methods": [
         "test_legacy_dashboard_redirects_to_module_directory_with_custom_dates",
@@ -382,6 +394,29 @@
         "test_print_masthead_separates_title_filters_from_aligned_party_names_and_removes_only_header_badges",
         "test_monthly_defaults_remain_unchanged_and_an_explicit_foreign_currency_is_retained",
         "test_vendor_preview_is_a_single_currency_payable_and_finance_boundary_is_retained"
+      ]
+    },
+    {
+      "file": "tests/Integration/VendorKycWorkflowTest.php",
+      "methods": [
+        "test_link_and_public_form_are_scoped_private_and_use_the_client_kyc_design",
+        "test_draft_and_final_stage_details_without_mutating_live_vendor_or_internal_controls",
+        "test_checker_applies_submission_atomically_but_maker_reader_and_stale_reviews_cannot",
+        "test_revision_requires_reason_reopens_for_resubmission_and_rejection_locks",
+        "test_rotated_revoked_and_stale_links_cannot_save_or_download_other_vendor_evidence",
+        "test_validation_rejects_bad_inputs_but_foreign_service_providers_do_not_need_indian_tax_ids",
+        "test_office_tab_has_copy_share_review_history_and_documents_without_changing_public_permissions",
+        "test_evidence_is_private_validated_and_downloads_are_vendor_scoped",
+        "test_completed_kyc_can_be_reopened_with_a_reason_for_a_new_review_cycle",
+        "test_office_profile_edits_require_fresh_version_and_invalidate_approved_identity",
+        "test_notifications_audit_and_documents_do_not_leak_bearer_tokens_or_unapproved_values",
+        "test_validation_and_document_errors_have_private_response_headers",
+        "test_kyc_schema_migrates_existing_vendors_and_rolls_back_cleanly",
+        "test_mark_as_sent_does_not_stale_an_open_vendor_form_or_claim_email_delivery",
+        "test_private_evidence_limits_and_office_download_permissions_are_enforced",
+        "test_stale_office_form_cannot_delete_the_existing_vendor_image",
+        "test_public_forms_keep_csrf_authentication_and_rate_limiting_boundaries",
+        "test_malformed_phone_arrays_are_validation_errors_not_server_errors"
       ]
     },
     {
@@ -627,6 +662,15 @@
         "test_long_issuer_street_is_balanced_into_two_lines_with_locality_third",
         "test_multiline_addresses_and_missing_fields_are_not_invented_or_truncated"
       ]
+    },
+    {
+      "file": "tests/Unit/VendorKycPolicyTest.php",
+      "methods": [
+        "test_only_draft_and_revision_are_publicly_editable_without_changing_operational_status",
+        "test_checker_must_have_manage_access_and_be_different_from_maker_and_creator",
+        "test_all_requested_vendor_types_are_offered_and_public_fields_exclude_commercial_controls",
+        "test_kyc_metadata_is_not_mass_assignable_or_accidentally_serialized"
+      ]
     }
   ],
   "controllers": [
@@ -699,6 +743,7 @@
     "app/Http/Controllers/TaskController.php",
     "app/Http/Controllers/UserController.php",
     "app/Http/Controllers/VendorController.php",
+    "app/Http/Controllers/VendorKycController.php",
     "app/Http/Controllers/VendorPortalAuthController.php",
     "app/Http/Controllers/VendorPortalBaseController.php",
     "app/Http/Controllers/VendorPortalController.php",
@@ -785,6 +830,7 @@
     "app/Services/ShipmentPrintIssuer.php",
     "app/Services/StatementPrintHeader.php",
     "app/Services/UnallocatedCashflows.php",
+    "app/Services/VendorKyc.php",
     "app/Services/VendorPaymentCashflowSync.php"
   ],
   "models": [
@@ -878,6 +924,8 @@
     "app/Models/VendorCollaborationUpdate.php",
     "app/Models/VendorComment.php",
     "app/Models/VendorContact.php",
+    "app/Models/VendorKycDocument.php",
+    "app/Models/VendorKycEvent.php",
     "app/Models/VendorPaymentAttachment.php",
     "app/Models/VendorPaymentEntry.php",
     "app/Models/VendorPortalUser.php",
@@ -927,6 +975,7 @@
     "tools/checks/statement-print-browser.cjs",
     "tools/checks/status-check.cjs",
     "tools/checks/ui-components-check.cjs",
+    "tools/checks/vendor-kyc-browser.cjs",
     "tools/checks/vendor-portal-check.cjs",
     "tools/checks/workflow-guidance-check.cjs"
   ]

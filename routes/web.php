@@ -84,7 +84,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 // Shipment Tracking
 Route::get('/track-shipment/{token}', [ShipmentController::class, 'publicTrack'])->name('shipments.publicTrack');
 
-// Client KYC
+// Public vendor and client KYC
+Route::get('/vendor-kyc/{token}', [\App\Http\Controllers\VendorKycController::class, 'show'])->middleware([\App\Http\Middleware\PrivateVendorKyc::class,'throttle:120,1'])->name('vendors.publicKyc');
+Route::post('/vendor-kyc/{token}', [\App\Http\Controllers\VendorKycController::class, 'submit'])->middleware([\App\Http\Middleware\PrivateVendorKyc::class,'throttle:30,1'])->name('vendors.publicKyc.submit');
+Route::get('/vendor-kyc/{token}/documents/{document}', [\App\Http\Controllers\VendorKycController::class, 'publicDocument'])->middleware([\App\Http\Middleware\PrivateVendorKyc::class,'throttle:120,1'])->whereNumber('document')->name('vendors.publicKyc.documents');
 Route::get('/client-kyc/{token}', [ClientController::class, 'publicKyc'])->name('clients.publicKyc');
 Route::post('/client-kyc/{token}', [ClientController::class, 'submitKyc'])->name('clients.publicKyc.submit');
 
@@ -362,6 +365,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/vendors/{vendor}/portal/users/{portalUser}/reset-password', [VendorPortalManagementController::class, 'resetUser'])->name('vendors.portal.users.reset');
         Route::post('/vendors/{vendor}/shares', [VendorPortalManagementController::class, 'storeShare'])->name('vendors.shares.store');
         Route::patch('/vendors/{vendor}/shares/{share}/revoke', [VendorPortalManagementController::class, 'revokeShare'])->name('vendors.shares.revoke');
+        Route::post('/vendors/{vendor}/kyc/link', [\App\Http\Controllers\VendorKycController::class, 'link'])->name('vendors.kyc.link');
+        Route::patch('/vendors/{vendor}/kyc/reopen', [\App\Http\Controllers\VendorKycController::class, 'reopen'])->name('vendors.kyc.reopen');
+        Route::patch('/vendors/{vendor}/kyc/review', [\App\Http\Controllers\VendorKycController::class, 'review'])->name('vendors.kyc.review');
+        Route::get('/vendors/{vendor}/kyc/documents/{document}', [\App\Http\Controllers\VendorKycController::class, 'officeDocument'])->whereNumber('document')->name('vendors.kyc.documents');
         Route::resource('vendors', VendorController::class);
 
         Route::resource('office-services', OfficeServiceController::class);

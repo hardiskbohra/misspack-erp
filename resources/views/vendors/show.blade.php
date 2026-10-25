@@ -5,6 +5,7 @@
 
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/vendor-portal.css') }}">
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/vendor-kyc.css') }}">
 @endpush
 
 @section('content')
@@ -46,6 +47,7 @@
                         <span aria-hidden="true">·</span><span>{{ $location }}</span>
                     @endif
                     <span class="master-badge status-{{ $statusClass }}">{{ $vendor->statusLabel() }}</span>
+                    <span class="master-badge">KYC: {{ $vendor->kycStatusLabel() }}</span>
                     <span class="vendor-type-chip type-{{ $typeClass }}">{{ $vendor->typeLabel() }}</span>
                     <span class="vendor-meta-chip">{{ $vendorCurrency }}</span>
                     @if ($vendor->rating)
@@ -149,6 +151,8 @@
                 @include('vendors.partials.profile')
             @elseif ($tab === 'contacts')
                 @include('vendors.partials.contacts')
+            @elseif ($tab === 'kyc')
+                @include('vendors.partials.kyc')
             @elseif ($tab === 'commercial')
                 @include('vendors.partials.commercial')
             @elseif ($tab === 'procurement')

@@ -46,6 +46,7 @@
         enctype="multipart/form-data" class="master-card master-form-card" id="vendorForm">
 
         @csrf
+        <input type="hidden" name="kyc_version" value="{{ old('kyc_version', $vendor->kyc_version ?? 0) }}">
         @if($isEdit) @method('PUT') @endif
 
         <section class="vendor-form-section" id="vendor-basic" aria-labelledby="vendor-basic-title">

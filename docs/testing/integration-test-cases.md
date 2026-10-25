@@ -174,7 +174,7 @@ Sources: `app/Http/Controllers/ClientController.php`, `app/Services/ClientAccoun
 
 ## Vendor master and payable profile (`VENDOR`)
 
-Sources: `app/Http/Controllers/VendorController.php`, `app/Models/Vendor.php`, `app/Services/VendorPaymentCashflowSync.php`.
+Sources: `app/Http/Controllers/VendorController.php`, `app/Models/Vendor.php`, `app/Services/VendorPaymentCashflowSync.php`, `app/Services/VendorKyc.php`, `app/Http/Controllers/VendorKycController.php`.
 
 ### IT-VENDOR-001 — Vendor payment links exact bill and party
 
@@ -210,6 +210,104 @@ Sources: `app/Http/Controllers/VendorController.php`, `app/Models/Vendor.php`, `
 2. Attempt vendor update
 
 **Expected:** Permission denied; vendor fields unchanged.
+
+### IT-VENDOR-004 — Draft and submission stage details until independent approval
+
+**Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md
+- **Data:** On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types
+1. Save draft and submit malicious internal controls
+2. Try creator/read-only/stale approval
+3. Approve current version
+
+**Expected:** Live identity and bank change only on independent approval; commercial currency and operational status unaffected.
+
+**Evidence:** `tests/Integration/VendorKycWorkflowTest.php#test_draft_and_final_stage_details_without_mutating_live_vendor_or_internal_controls`; `tests/Integration/VendorKycWorkflowTest.php#test_checker_applies_submission_atomically_but_maker_reader_and_stale_reviews_cannot`
+
+### IT-VENDOR-005 — Revision, rejection and completed-KYC update cycles
+
+**Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md
+- **Data:** On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types
+1. Require review reasons
+2. Resubmit revision
+3. Reject and reopen completed KYC with reason
+
+**Expected:** Locked closed states; explicit update request permits new public submission and fresh review without changing existing bank prematurely.
+
+**Evidence:** `tests/Integration/VendorKycWorkflowTest.php#test_revision_requires_reason_reopens_for_resubmission_and_rejection_locks`; `tests/Integration/VendorKycWorkflowTest.php#test_completed_kyc_can_be_reopened_with_a_reason_for_a_new_review_cycle`
+
+### IT-VENDOR-006 — Scoped, revocable manual sharing without stale mark-sent conflicts
+
+**Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md
+- **Data:** On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types
+1. Issue/rotate/revoke links
+2. Try old/stale links
+3. Mark a live link as sent
+
+**Expected:** 48-character secure token; old link access revoked; mark-sent does not invalidate an open form or claim automatic email delivery.
+
+**Evidence:** `tests/Integration/VendorKycWorkflowTest.php#test_rotated_revoked_and_stale_links_cannot_save_or_download_other_vendor_evidence`; `tests/Integration/VendorKycWorkflowTest.php#test_mark_as_sent_does_not_stale_an_open_vendor_form_or_claim_email_delivery`
+
+### IT-VENDOR-007 — Private evidence and public request boundaries
+
+**Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md
+- **Data:** On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types
+1. Upload allowed and forbidden files
+2. Try cross-vendor and unauthorised office downloads
+3. Exercise CSRF, cache/error headers and throttling
+
+**Expected:** Evidence is private; type/size/count restricted; cross-vendor access denied, missing CSRF rejected, excess submissions throttled and errors no-store/noindex.
+
+**Evidence:** `tests/Integration/VendorKycWorkflowTest.php#test_evidence_is_private_validated_and_downloads_are_vendor_scoped`; `tests/Integration/VendorKycWorkflowTest.php#test_private_evidence_limits_and_office_download_permissions_are_enforced`; `tests/Integration/VendorKycWorkflowTest.php#test_validation_and_document_errors_have_private_response_headers`; `tests/Integration/VendorKycWorkflowTest.php#test_public_forms_keep_csrf_authentication_and_rate_limiting_boundaries`
+
+### IT-VENDOR-008 — Office edits, audit and briefing preserve reviewed truth
+
+**Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md
+- **Data:** On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types
+1. Change approved identity using fresh/stale edit versions
+2. Try stale edit with replacement image
+3. Inspect submission notification and audit
+
+**Expected:** Identity edits reset KYC; stale edits cannot delete image; office briefing points to KYC; general audit excludes token and bank values.
+
+**Evidence:** `tests/Integration/VendorKycWorkflowTest.php#test_office_profile_edits_require_fresh_version_and_invalidate_approved_identity`; `tests/Integration/VendorKycWorkflowTest.php#test_stale_office_form_cannot_delete_the_existing_vendor_image`; `tests/Integration/VendorKycWorkflowTest.php#test_notifications_audit_and_documents_do_not_leak_bearer_tokens_or_unapproved_values`
+
+### IT-VENDOR-009 — Client-style responsive vendor wizard and review tab
+
+**Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md
+- **Data:** On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types
+1. Render genuine HTTP states
+2. Exercise shared JS in Chromium at 1440/390px
+3. Confirm draft/submit/cancel, navigation visibility, errors and locked states
+
+**Expected:** One visible step; correct validation/navigation; private bank data never stored in localStorage; creator/reader cannot review; approved client wizard still locked.
+
+**Evidence:** `tests/Feature/VendorKycPresentationTest.php#test_actual_http_public_and_office_states_are_accessible_and_use_shared_components`
+
+### IT-VENDOR-010 — KYC migration, native JSON and competing review locks
+
+**Priority:** P1 · **Requirement:** REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md
+- **Data:** On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types
+1. Migrate existing vendor and roll back
+2. Use a second MySQL connection against locked vendor
+3. Approve once then replay stale review
+
+**Expected:** Migration preserves existing accounts; native InnoDB competing approval times out; approval JSON applies atomically once; stale replay cannot overwrite.
+
+**Evidence:** `tests/Integration/VendorKycWorkflowTest.php#test_kyc_schema_migrates_existing_vendors_and_rolls_back_cleanly`; `tests/Database/MySqlVendorKycTest.php#test_native_json_schema_locking_and_stale_review_protection`
 
 ## Products and price calculator (`PRODUCT`)
 

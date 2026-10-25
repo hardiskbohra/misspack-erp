@@ -38,9 +38,11 @@
       "sources": [
         "app/Http/Controllers/VendorController.php",
         "app/Models/Vendor.php",
-        "app/Services/VendorPaymentCashflowSync.php"
+        "app/Services/VendorPaymentCashflowSync.php",
+        "app/Services/VendorKyc.php",
+        "app/Http/Controllers/VendorKycController.php"
       ],
-      "fixture": "F-MONEY; vendors V1 and V2 with separate bills and payments"
+      "fixture": "F-MONEY; vendors V1 and V2 with separate bills and payments; VendorKycFixture: independent maker/checker/reader; staged identity and fake private evidence"
     },
     {
       "id": "PRODUCT",
@@ -3984,6 +3986,218 @@
         "tests/Integration/StatementPrintPreviewTest.php#test_preview_filters_use_shared_form_and_searchable_select_assets_without_external_close_icons"
       ],
       "notes": "PHP link establishes rendered design dependencies. Actual interactive/visual outcomes separately executed in searchable-selects-browser.cjs at1440/900/390px and light/dark; A4 proof in statement-print-pdf.py. See searchable-selects.md."
+    },
+    {
+      "id": "UT-VENDOR-004",
+      "module": "VENDOR",
+      "level": "unit",
+      "priority": "P1",
+      "requirement": "REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES",
+      "title": "KYC lifecycle is independent of operational vendor status",
+      "preconditions": "Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md",
+      "test_data": "On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types",
+      "steps": [
+        "Check all five KYC states against public editability"
+      ],
+      "expected": "Only draft/revision editable; blacklisted operational status unchanged.",
+      "automation": [
+        "tests/Unit/VendorKycPolicyTest.php#test_only_draft_and_revision_are_publicly_editable_without_changing_operational_status"
+      ]
+    },
+    {
+      "id": "UT-VENDOR-005",
+      "module": "VENDOR",
+      "level": "unit",
+      "priority": "P1",
+      "requirement": "REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES",
+      "title": "Different purchase manager is required as checker",
+      "preconditions": "Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md",
+      "test_data": "On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types",
+      "steps": [
+        "Check creator, maker, reader and independent manager"
+      ],
+      "expected": "Creator/maker/read-only cannot approve; independent purchase manager can review only submitted KYC.",
+      "automation": [
+        "tests/Unit/VendorKycPolicyTest.php#test_checker_must_have_manage_access_and_be_different_from_maker_and_creator"
+      ]
+    },
+    {
+      "id": "UT-VENDOR-006",
+      "module": "VENDOR",
+      "level": "unit",
+      "priority": "P1",
+      "requirement": "REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES",
+      "title": "Vendor categories and public field allowlist",
+      "preconditions": "Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md",
+      "test_data": "On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types",
+      "steps": [
+        "Offer required vendor types",
+        "Exclude financial/internal control fields"
+      ],
+      "expected": "Packaging suppliers, consultants, forwarders and service providers supported; no public accounting/commercial/internal controls.",
+      "automation": [
+        "tests/Unit/VendorKycPolicyTest.php#test_all_requested_vendor_types_are_offered_and_public_fields_exclude_commercial_controls"
+      ]
+    },
+    {
+      "id": "UT-VENDOR-007",
+      "module": "VENDOR",
+      "level": "unit",
+      "priority": "P1",
+      "requirement": "REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES",
+      "title": "Review metadata and staged bank details resist accidental serialization",
+      "preconditions": "Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md",
+      "test_data": "On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types",
+      "steps": [
+        "Mass assign review controls",
+        "Serialize a model with staged identity/token"
+      ],
+      "expected": "Review controls not fillable; staged payloads and bearer token omitted from toArray.",
+      "automation": [
+        "tests/Unit/VendorKycPolicyTest.php#test_kyc_metadata_is_not_mass_assignable_or_accidentally_serialized"
+      ]
+    },
+    {
+      "id": "IT-VENDOR-004",
+      "module": "VENDOR",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES",
+      "title": "Draft and submission stage details until independent approval",
+      "preconditions": "Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md",
+      "test_data": "On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types",
+      "steps": [
+        "Save draft and submit malicious internal controls",
+        "Try creator/read-only/stale approval",
+        "Approve current version"
+      ],
+      "expected": "Live identity and bank change only on independent approval; commercial currency and operational status unaffected.",
+      "automation": [
+        "tests/Integration/VendorKycWorkflowTest.php#test_draft_and_final_stage_details_without_mutating_live_vendor_or_internal_controls",
+        "tests/Integration/VendorKycWorkflowTest.php#test_checker_applies_submission_atomically_but_maker_reader_and_stale_reviews_cannot"
+      ]
+    },
+    {
+      "id": "IT-VENDOR-005",
+      "module": "VENDOR",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES",
+      "title": "Revision, rejection and completed-KYC update cycles",
+      "preconditions": "Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md",
+      "test_data": "On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types",
+      "steps": [
+        "Require review reasons",
+        "Resubmit revision",
+        "Reject and reopen completed KYC with reason"
+      ],
+      "expected": "Locked closed states; explicit update request permits new public submission and fresh review without changing existing bank prematurely.",
+      "automation": [
+        "tests/Integration/VendorKycWorkflowTest.php#test_revision_requires_reason_reopens_for_resubmission_and_rejection_locks",
+        "tests/Integration/VendorKycWorkflowTest.php#test_completed_kyc_can_be_reopened_with_a_reason_for_a_new_review_cycle"
+      ]
+    },
+    {
+      "id": "IT-VENDOR-006",
+      "module": "VENDOR",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES",
+      "title": "Scoped, revocable manual sharing without stale mark-sent conflicts",
+      "preconditions": "Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md",
+      "test_data": "On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types",
+      "steps": [
+        "Issue/rotate/revoke links",
+        "Try old/stale links",
+        "Mark a live link as sent"
+      ],
+      "expected": "48-character secure token; old link access revoked; mark-sent does not invalidate an open form or claim automatic email delivery.",
+      "automation": [
+        "tests/Integration/VendorKycWorkflowTest.php#test_rotated_revoked_and_stale_links_cannot_save_or_download_other_vendor_evidence",
+        "tests/Integration/VendorKycWorkflowTest.php#test_mark_as_sent_does_not_stale_an_open_vendor_form_or_claim_email_delivery"
+      ]
+    },
+    {
+      "id": "IT-VENDOR-007",
+      "module": "VENDOR",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES",
+      "title": "Private evidence and public request boundaries",
+      "preconditions": "Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md",
+      "test_data": "On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types",
+      "steps": [
+        "Upload allowed and forbidden files",
+        "Try cross-vendor and unauthorised office downloads",
+        "Exercise CSRF, cache/error headers and throttling"
+      ],
+      "expected": "Evidence is private; type/size/count restricted; cross-vendor access denied, missing CSRF rejected, excess submissions throttled and errors no-store/noindex.",
+      "automation": [
+        "tests/Integration/VendorKycWorkflowTest.php#test_evidence_is_private_validated_and_downloads_are_vendor_scoped",
+        "tests/Integration/VendorKycWorkflowTest.php#test_private_evidence_limits_and_office_download_permissions_are_enforced",
+        "tests/Integration/VendorKycWorkflowTest.php#test_validation_and_document_errors_have_private_response_headers",
+        "tests/Integration/VendorKycWorkflowTest.php#test_public_forms_keep_csrf_authentication_and_rate_limiting_boundaries"
+      ]
+    },
+    {
+      "id": "IT-VENDOR-008",
+      "module": "VENDOR",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES",
+      "title": "Office edits, audit and briefing preserve reviewed truth",
+      "preconditions": "Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md",
+      "test_data": "On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types",
+      "steps": [
+        "Change approved identity using fresh/stale edit versions",
+        "Try stale edit with replacement image",
+        "Inspect submission notification and audit"
+      ],
+      "expected": "Identity edits reset KYC; stale edits cannot delete image; office briefing points to KYC; general audit excludes token and bank values.",
+      "automation": [
+        "tests/Integration/VendorKycWorkflowTest.php#test_office_profile_edits_require_fresh_version_and_invalidate_approved_identity",
+        "tests/Integration/VendorKycWorkflowTest.php#test_stale_office_form_cannot_delete_the_existing_vendor_image",
+        "tests/Integration/VendorKycWorkflowTest.php#test_notifications_audit_and_documents_do_not_leak_bearer_tokens_or_unapproved_values"
+      ]
+    },
+    {
+      "id": "IT-VENDOR-009",
+      "module": "VENDOR",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES",
+      "title": "Client-style responsive vendor wizard and review tab",
+      "preconditions": "Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md",
+      "test_data": "On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types",
+      "steps": [
+        "Render genuine HTTP states",
+        "Exercise shared JS in Chromium at 1440/390px",
+        "Confirm draft/submit/cancel, navigation visibility, errors and locked states"
+      ],
+      "expected": "One visible step; correct validation/navigation; private bank data never stored in localStorage; creator/reader cannot review; approved client wizard still locked.",
+      "automation": [
+        "tests/Feature/VendorKycPresentationTest.php#test_actual_http_public_and_office_states_are_accessible_and_use_shared_components"
+      ]
+    },
+    {
+      "id": "IT-VENDOR-010",
+      "module": "VENDOR",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-VENDOR; REQ-AUTH; REQ-UI; REQ-FILES",
+      "title": "KYC migration, native JSON and competing review locks",
+      "preconditions": "Disposable migrated database; VendorKycFixture; private storage and mail fakes; see vendor-kyc.md",
+      "test_data": "On-hold RMB supplier; distinct maker/checker/reader; pending bank change; India/overseas vendor types",
+      "steps": [
+        "Migrate existing vendor and roll back",
+        "Use a second MySQL connection against locked vendor",
+        "Approve once then replay stale review"
+      ],
+      "expected": "Migration preserves existing accounts; native InnoDB competing approval times out; approval JSON applies atomically once; stale replay cannot overwrite.",
+      "automation": [
+        "tests/Integration/VendorKycWorkflowTest.php#test_kyc_schema_migrates_existing_vendors_and_rolls_back_cleanly",
+        "tests/Database/MySqlVendorKycTest.php#test_native_json_schema_locking_and_stale_review_protection"
+      ]
     }
   ]
 }

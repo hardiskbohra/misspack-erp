@@ -427,3 +427,12 @@ body {
     .kyc-nav-hint { flex: 1 0 100%; margin: 0; }
     .kyc-foot-bar { flex-direction: column; }
 }
+
+/* Public vendor KYC uses disabled fieldsets for genuinely read-only steps. */
+.kyc-form fieldset.kyc-fields { border:0; padding:0; margin:0; min-width:0; }
+.kyc-documents { margin-top:24px; color:var(--mc-text); font-size:14px; line-height:1.6; }
+.kyc-documents h3 { font-size:15px; margin-bottom:8px; }
+.kyc-documents p { color:var(--mc-text-3); }
+.kyc-documents li { overflow-wrap:anywhere; }
+/* Button display styles must never override wizard navigation's hidden state. */
+.kyc [hidden] { display:none !important; }

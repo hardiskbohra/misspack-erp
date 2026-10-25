@@ -43,6 +43,20 @@ class OfficeBriefing
         ], email: true);
     }
 
+    public function vendorKycSubmitted(\App\Models\Vendor $vendor): ?OfficeAlert
+    {
+        if (! $this->sourceOn('kyc')) return null;
+        return $this->raise([
+            'event_key'=>'vendor.kyc.submitted',
+            'fingerprint'=>'vendor.kyc.submitted:'.$vendor->id.':'.$vendor->kyc_version,
+            'title'=>($vendor->kyc_data['vendor_name'] ?? $vendor->vendor_name).' submitted vendor KYC',
+            'body'=>'A different purchase manager must review these details before they update the vendor record.',
+            'severity'=>OfficeAlert::SEVERITY_CRITICAL, 'requires_ack'=>true, 'team'=>'office',
+            'action_url'=>route('vendors.show',[$vendor,'tab'=>'kyc']), 'action_label'=>'Review vendor KYC',
+            'subject_type'=>\App\Models\Vendor::class, 'subject_id'=>$vendor->id,
+        ], email: true);
+    }
+
     public function shipmentStatusChanged(Shipment $shipment, ?string $from = null): ?OfficeAlert
     {
         if (! $this->sourceOn('shipment_exception')) {
