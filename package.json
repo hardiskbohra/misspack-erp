@@ -5,7 +5,14 @@
     "scripts": {
         "build": "node tools/build-css-architecture.js && vite build",
         "build:design-system": "node tools/build-css-architecture.js",
-        "dev": "vite"
+        "dev": "vite",
+        "test:contracts": "node tools/testing/catalogue.cjs --check && node tools/testing/catalogue.test.cjs && node tools/checks/dashboard-period-controls-check.cjs && node tools/checks/module-dashboard-check.cjs && node tools/checks/blade-check.cjs",
+        "test:catalogue": "node tools/testing/catalogue.cjs --check && node tools/testing/catalogue.test.cjs",
+        "test:catalogue:build": "node tools/testing/catalogue.cjs",
+        "test:php": "vendor/bin/phpunit",
+        "test:integration": "vendor/bin/phpunit --testsuite Integration",
+        "test:mysql": "vendor/bin/phpunit -c phpunit.mysql.xml",
+        "test:routes": "php tools/testing/export-routes.php --check"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

@@ -47,7 +47,8 @@ class RecurrenceScheduleTest extends TestCase
     /** The dates as strings, so a failure reads like the list it is. */
     private function days(array $dates): array
     {
-        return array_map(fn ($date) => $date->toDateString(), $dates);
+        // The scheduler keys occurrences from 1; this helper compares calendar values.
+        return array_values(array_map(fn ($date) => $date->toDateString(), $dates));
     }
 
     /* ------------------------------------------------- the anchor day survives */
@@ -133,7 +134,8 @@ class RecurrenceScheduleTest extends TestCase
         $byDate = $this->schedule->dates('monthly', Carbon::parse('2026-10-05'), Carbon::parse('2026-12-01'), 10, 24);
 
         $this->assertCount(2, $byCount);
-        $this->assertCount(3, $byDate);
+        $this->assertCount(2, $byDate, '5 December is after the 1 December cutoff');
+        $this->assertSame([1, 2], array_keys($byDate), 'occurrence identities start at one');
     }
 
     /** And neither: the ladder is capped by the window, and the cap is not a rule. */

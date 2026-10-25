@@ -56,3 +56,9 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## MissPack ERP testing
+
+The [ERP testing and TDD pack](docs/testing/README.md) contains unit/integration case catalogues (Markdown and CSV), executable test instructions, the observed execution baseline, system journeys, fixtures and the prioritised red–green–refactor backlog. It distinguishes implemented evidence from planned coverage and known gaps.
+
+Run `vendor/bin/phpunit` for the portable suite, `npm run test:contracts` for catalogue/UI contracts, and the separate disposable-MySQL configuration for native reporting checks. See the pack before running database tests.

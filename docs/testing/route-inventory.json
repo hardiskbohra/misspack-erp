@@ -1,0 +1,5979 @@
+{
+    "note": "Declared routes and middleware, not evidence of executed requests or correct record ownership.",
+    "routes": [
+        {
+            "name": null,
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "/",
+            "action": "Closure",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "account.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "account",
+            "action": "App\\Http\\Controllers\\AccountController@index",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "account.password.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "account/password",
+            "action": "App\\Http\\Controllers\\AccountController@updatePassword",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "account.profile.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "account/profile",
+            "action": "App\\Http\\Controllers\\AccountController@updateProfile",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "audit.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "audit",
+            "action": "App\\Http\\Controllers\\AuditLogController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.attachments.storeStandalone",
+            "methods": [
+                "POST"
+            ],
+            "uri": "cashflow-attachments",
+            "action": "App\\Http\\Controllers\\CashflowAttachmentController@storeStandalone",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.attachments.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "cashflow-attachments/{attachment}",
+            "action": "App\\Http\\Controllers\\CashflowAttachmentController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.statements.shares.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "cashflow-statement-shares/{share}",
+            "action": "App\\Http\\Controllers\\PartyStatementController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.statements.shares.revoke",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "cashflow-statement-shares/{share}/revoke",
+            "action": "App\\Http\\Controllers\\PartyStatementController@revoke",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows",
+            "action": "App\\Http\\Controllers\\CashflowController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "cashflows",
+            "action": "App\\Http\\Controllers\\CashflowController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.accounts.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "cashflows/accounts",
+            "action": "App\\Http\\Controllers\\CashflowController@storeAccount",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.bulk",
+            "methods": [
+                "POST"
+            ],
+            "uri": "cashflows/bulk",
+            "action": "App\\Http\\Controllers\\CashflowController@bulk",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.categories.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "cashflows/categories",
+            "action": "App\\Http\\Controllers\\CashflowController@storeCategory",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/create",
+            "action": "App\\Http\\Controllers\\CashflowController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.documents",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/documents",
+            "action": "App\\Http\\Controllers\\CashflowAttachmentController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.documents.pack",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/documents/pack",
+            "action": "App\\Http\\Controllers\\CashflowAttachmentController@pack",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.quickStore",
+            "methods": [
+                "POST"
+            ],
+            "uri": "cashflows/quick",
+            "action": "App\\Http\\Controllers\\CashflowController@quickStore",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.recurring.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/recurring",
+            "action": "App\\Http\\Controllers\\CashflowRecurrenceController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.recurring.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "cashflows/recurring",
+            "action": "App\\Http\\Controllers\\CashflowRecurrenceController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.recurring.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "cashflows/recurring/{recurrence}",
+            "action": "App\\Http\\Controllers\\CashflowRecurrenceController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.recurring.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/recurring/{recurrence}",
+            "action": "App\\Http\\Controllers\\CashflowRecurrenceController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.recurring.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "cashflows/recurring/{recurrence}",
+            "action": "App\\Http\\Controllers\\CashflowRecurrenceController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.recurring.approve",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "cashflows/recurring/{recurrence}/approve",
+            "action": "App\\Http\\Controllers\\CashflowRecurrenceController@approve",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.recurring.end",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "cashflows/recurring/{recurrence}/end",
+            "action": "App\\Http\\Controllers\\CashflowRecurrenceController@end",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.recurring.occurrences.approve",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "cashflows/recurring/{recurrence}/occurrences/{occurrence}/approve",
+            "action": "App\\Http\\Controllers\\CashflowRecurrenceController@approveOccurrence",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.recurring.occurrences.skip",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "cashflows/recurring/{recurrence}/occurrences/{occurrence}/skip",
+            "action": "App\\Http\\Controllers\\CashflowRecurrenceController@skipOccurrence",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.recurring.pause",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "cashflows/recurring/{recurrence}/pause",
+            "action": "App\\Http\\Controllers\\CashflowRecurrenceController@pause",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.recurring.request",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "cashflows/recurring/{recurrence}/request",
+            "action": "App\\Http\\Controllers\\CashflowRecurrenceController@requestApproval",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.recurring.resume",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "cashflows/recurring/{recurrence}/resume",
+            "action": "App\\Http\\Controllers\\CashflowRecurrenceController@resume",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.recurring.sendBack",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "cashflows/recurring/{recurrence}/send-back",
+            "action": "App\\Http\\Controllers\\CashflowRecurrenceController@sendBack",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.reports",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/reports",
+            "action": "App\\Http\\Controllers\\CashflowController@reports",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.reports.export",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/reports/export",
+            "action": "App\\Http\\Controllers\\CashflowController@exportReport",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.reports.pdf",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/reports/pdf",
+            "action": "App\\Http\\Controllers\\CashflowController@downloadPdf",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.saved-views.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "cashflows/saved-views",
+            "action": "App\\Http\\Controllers\\CashflowController@storeSavedView",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.saved-views.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "cashflows/saved-views/{savedView}",
+            "action": "App\\Http\\Controllers\\CashflowController@destroySavedView",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.settings.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/settings",
+            "action": "Closure",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.statements",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/statements",
+            "action": "App\\Http\\Controllers\\PartyStatementController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.statements.shares.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "cashflows/statements/shares",
+            "action": "App\\Http\\Controllers\\PartyStatementController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.statements.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/statements/{partyType}/{party}",
+            "action": "App\\Http\\Controllers\\PartyStatementController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.statements.pdf",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/statements/{partyType}/{party}/pdf",
+            "action": "App\\Http\\Controllers\\PartyStatementController@pdf",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "cashflows/{cashflow}",
+            "action": "App\\Http\\Controllers\\CashflowController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/{cashflow}",
+            "action": "App\\Http\\Controllers\\CashflowController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.update",
+            "methods": [
+                "PUT",
+                "PATCH"
+            ],
+            "uri": "cashflows/{cashflow}",
+            "action": "App\\Http\\Controllers\\CashflowController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.allocations.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "cashflows/{cashflow}/allocations",
+            "action": "App\\Http\\Controllers\\CashflowController@storeAllocation",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.allocations.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "cashflows/{cashflow}/allocations/{allocation}",
+            "action": "App\\Http\\Controllers\\CashflowController@destroyAllocation",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.allocations.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "cashflows/{cashflow}/allocations/{allocation}",
+            "action": "App\\Http\\Controllers\\CashflowController@updateAllocation",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.attachments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "cashflows/{cashflow}/attachments",
+            "action": "App\\Http\\Controllers\\CashflowAttachmentController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.attachments.link",
+            "methods": [
+                "POST"
+            ],
+            "uri": "cashflows/{cashflow}/attachments/link",
+            "action": "App\\Http\\Controllers\\CashflowAttachmentController@link",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.duplicate",
+            "methods": [
+                "POST"
+            ],
+            "uri": "cashflows/{cashflow}/duplicate",
+            "action": "App\\Http\\Controllers\\CashflowController@duplicate",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/{cashflow}/edit",
+            "action": "App\\Http\\Controllers\\CashflowController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.expenseStatement",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/{cashflow}/expense-statement",
+            "action": "App\\Http\\Controllers\\CashflowController@expenseStatement",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.status",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "cashflows/{cashflow}/status",
+            "action": "App\\Http\\Controllers\\CashflowController@updateStatus",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "cashflows.voucher",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "cashflows/{cashflow}/voucher",
+            "action": "App\\Http\\Controllers\\CashflowController@voucher",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.publicKyc",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-kyc/{token}",
+            "action": "App\\Http\\Controllers\\ClientController@publicKyc",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "clients.publicKyc.submit",
+            "methods": [
+                "POST"
+            ],
+            "uri": "client-kyc/{token}",
+            "action": "App\\Http\\Controllers\\ClientController@submitKyc",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "client-portal.dashboard",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal",
+            "action": "App\\Http\\Controllers\\ClientPortalDashboardController@index",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.account.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/account",
+            "action": "App\\Http\\Controllers\\ClientPortalAccountController@index",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.account.password.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "client-portal/account/password",
+            "action": "App\\Http\\Controllers\\ClientPortalAuthController@updatePassword",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.account.profile.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "client-portal/account/profile",
+            "action": "App\\Http\\Controllers\\ClientPortalAccountController@updateProfile",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.attachments.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/attachments",
+            "action": "App\\Http\\Controllers\\ClientPortalDocumentController@index",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.attachments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "client-portal/attachments",
+            "action": "App\\Http\\Controllers\\ClientPortalDocumentController@store",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.attachments.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "client-portal/attachments/{document}",
+            "action": "App\\Http\\Controllers\\ClientPortalDocumentController@destroy",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.attachments.file",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/attachments/{document}/file",
+            "action": "App\\Http\\Controllers\\ClientPortalDocumentController@file",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.password.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/change-password",
+            "action": "App\\Http\\Controllers\\ClientPortalAuthController@editPassword",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.password.update",
+            "methods": [
+                "POST"
+            ],
+            "uri": "client-portal/change-password",
+            "action": "App\\Http\\Controllers\\ClientPortalAuthController@updatePassword",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.dashboard.alias",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/dashboard",
+            "action": "App\\Http\\Controllers\\ClientPortalDashboardController@index",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.feedback.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/feedback",
+            "action": "App\\Http\\Controllers\\ClientPortalFeedbackController@index",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.feedback.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/feedback/{feedbackRequest}",
+            "action": "App\\Http\\Controllers\\ClientPortalFeedbackController@show",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.feedback.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "client-portal/feedback/{feedbackRequest}",
+            "action": "App\\Http\\Controllers\\ClientPortalFeedbackController@store",
+            "middleware": [
+                "web",
+                "client.portal",
+                "throttle:10,1"
+            ]
+        },
+        {
+            "name": "client-portal.invoices.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/invoices",
+            "action": "App\\Http\\Controllers\\ClientPortalInvoiceController@index",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.invoices.sales.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/invoices/sales/{invoice}",
+            "action": "App\\Http\\Controllers\\ClientPortalInvoiceController@showSales",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.invoices.sales.attachments.file",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/invoices/sales/{invoice}/attachments/{attachment}",
+            "action": "App\\Http\\Controllers\\ClientPortalInvoiceController@salesAttachmentFile",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.invoices.sales.comments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "client-portal/invoices/sales/{invoice}/comments",
+            "action": "App\\Http\\Controllers\\ClientPortalInvoiceController@storeSalesComment",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.invoices.sales.print",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/invoices/sales/{invoice}/print",
+            "action": "App\\Http\\Controllers\\ClientPortalInvoiceController@printSales",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.kyc.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/kyc",
+            "action": "App\\Http\\Controllers\\ClientPortalKycController@show",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.login",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/login",
+            "action": "App\\Http\\Controllers\\ClientPortalAuthController@showLogin",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "client-portal.login.submit",
+            "methods": [
+                "POST"
+            ],
+            "uri": "client-portal/login",
+            "action": "App\\Http\\Controllers\\ClientPortalAuthController@login",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "client-portal.logout",
+            "methods": [
+                "POST"
+            ],
+            "uri": "client-portal/logout",
+            "action": "App\\Http\\Controllers\\ClientPortalAuthController@logout",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.notifications.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/notifications",
+            "action": "App\\Http\\Controllers\\ClientPortalNotificationController@index",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.notifications.readAll",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "client-portal/notifications/read-all",
+            "action": "App\\Http\\Controllers\\ClientPortalNotificationController@markAllRead",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.notifications.read",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "client-portal/notifications/{notification}/read",
+            "action": "App\\Http\\Controllers\\ClientPortalNotificationController@markRead",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.payments.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/payments",
+            "action": "App\\Http\\Controllers\\ClientPortalPaymentController@index",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.products.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/products",
+            "action": "App\\Http\\Controllers\\ClientPortalProductController@index",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.products.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/products/{product}",
+            "action": "App\\Http\\Controllers\\ClientPortalProductController@show",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.projects.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/projects",
+            "action": "App\\Http\\Controllers\\ClientPortalProjectController@index",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.projects.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/projects/{project}",
+            "action": "App\\Http\\Controllers\\ClientPortalProjectController@show",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.projects.approvals.decision",
+            "methods": [
+                "POST"
+            ],
+            "uri": "client-portal/projects/{project}/approvals/{approval}/decision",
+            "action": "App\\Http\\Controllers\\ClientPortalProjectController@decideApproval",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.projects.attachments.file",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/projects/{project}/attachments/{attachment}",
+            "action": "App\\Http\\Controllers\\ClientPortalProjectController@attachmentFile",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.projects.comments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "client-portal/projects/{project}/comments",
+            "action": "App\\Http\\Controllers\\ClientPortalProjectController@storeComment",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.projects.documents.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "client-portal/projects/{project}/documents",
+            "action": "App\\Http\\Controllers\\ClientPortalProjectController@upload",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.shipments.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/shipments",
+            "action": "App\\Http\\Controllers\\ClientPortalShipmentController@index",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.shipments.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/shipments/{shipment}",
+            "action": "App\\Http\\Controllers\\ClientPortalShipmentController@show",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.shipments.attachments.file",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/shipments/{shipment}/attachments/{attachment}",
+            "action": "App\\Http\\Controllers\\ClientPortalShipmentController@file",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.shipments.comments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "client-portal/shipments/{shipment}/comments",
+            "action": "App\\Http\\Controllers\\ClientPortalShipmentController@storeComment",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.shipments.documents.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "client-portal/shipments/{shipment}/documents",
+            "action": "App\\Http\\Controllers\\ClientPortalShipmentController@upload",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.statement.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/statement",
+            "action": "App\\Http\\Controllers\\ClientPortalStatementController@index",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.support.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/support",
+            "action": "App\\Http\\Controllers\\ClientPortalSupportController@index",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.support.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "client-portal/support",
+            "action": "App\\Http\\Controllers\\ClientPortalSupportController@store",
+            "middleware": [
+                "web",
+                "client.portal",
+                "throttle:10,1"
+            ]
+        },
+        {
+            "name": "client-portal.support.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "client-portal/support/{conversation}",
+            "action": "App\\Http\\Controllers\\ClientPortalSupportController@show",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.support.close",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "client-portal/support/{conversation}/close",
+            "action": "App\\Http\\Controllers\\ClientPortalSupportController@close",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "client-portal.support.messages.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "client-portal/support/{conversation}/messages",
+            "action": "App\\Http\\Controllers\\ClientPortalSupportController@reply",
+            "middleware": [
+                "web",
+                "client.portal",
+                "throttle:20,1"
+            ]
+        },
+        {
+            "name": "client-portal.support.reopen",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "client-portal/support/{conversation}/reopen",
+            "action": "App\\Http\\Controllers\\ClientPortalSupportController@reopen",
+            "middleware": [
+                "web",
+                "client.portal"
+            ]
+        },
+        {
+            "name": "clients.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "clients",
+            "action": "App\\Http\\Controllers\\ClientController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "clients",
+            "action": "App\\Http\\Controllers\\ClientController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "clients/create",
+            "action": "App\\Http\\Controllers\\ClientController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.quickStore",
+            "methods": [
+                "POST"
+            ],
+            "uri": "clients/quick",
+            "action": "App\\Http\\Controllers\\ClientController@quickStore",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.saved-views.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "clients/saved-views",
+            "action": "App\\Http\\Controllers\\ClientController@storeSavedView",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.saved-views.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "clients/saved-views/{savedView}",
+            "action": "App\\Http\\Controllers\\ClientController@destroySavedView",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "clients/{client}",
+            "action": "App\\Http\\Controllers\\ClientController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "clients/{client}",
+            "action": "App\\Http\\Controllers\\ClientController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.update",
+            "methods": [
+                "PUT",
+                "PATCH"
+            ],
+            "uri": "clients/{client}",
+            "action": "App\\Http\\Controllers\\ClientController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "clients/{client}/edit",
+            "action": "App\\Http\\Controllers\\ClientController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.paymentSummary",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "clients/{client}/payment-summary",
+            "action": "App\\Http\\Controllers\\ClientController@paymentSummary",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.portal.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "clients/{client}/portal",
+            "action": "App\\Http\\Controllers\\ClientPortalManagementController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.portal.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "clients/{client}/portal",
+            "action": "App\\Http\\Controllers\\ClientPortalManagementController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.portal.documents.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "clients/{client}/portal/documents",
+            "action": "App\\Http\\Controllers\\ClientPortalManagementController@storeDocument",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.portal.documents.file",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "clients/{client}/portal/documents/{document}/file",
+            "action": "App\\Http\\Controllers\\ClientPortalManagementController@downloadDocument",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.portal.markShared",
+            "methods": [
+                "POST"
+            ],
+            "uri": "clients/{client}/portal/mark-shared",
+            "action": "App\\Http\\Controllers\\ClientPortalManagementController@markShared",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.portal.notifications.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "clients/{client}/portal/notifications",
+            "action": "App\\Http\\Controllers\\ClientPortalManagementController@storeNotification",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.portal.resetPassword",
+            "methods": [
+                "POST"
+            ],
+            "uri": "clients/{client}/portal/reset-password",
+            "action": "App\\Http\\Controllers\\ClientPortalManagementController@resetPassword",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.portal.support.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "clients/{client}/portal/support",
+            "action": "App\\Http\\Controllers\\ClientPortalSupportManagementController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.portal.support.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "clients/{client}/portal/support/{conversation}",
+            "action": "App\\Http\\Controllers\\ClientPortalSupportManagementController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.portal.support.reply",
+            "methods": [
+                "POST"
+            ],
+            "uri": "clients/{client}/portal/support/{conversation}/messages",
+            "action": "App\\Http\\Controllers\\ClientPortalSupportManagementController@reply",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.portal.support.status",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "clients/{client}/portal/support/{conversation}/status",
+            "action": "App\\Http\\Controllers\\ClientPortalSupportManagementController@updateStatus",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.portal.users.markShared",
+            "methods": [
+                "POST"
+            ],
+            "uri": "clients/{client}/portal/users/{portalUser}/mark-shared",
+            "action": "App\\Http\\Controllers\\ClientPortalManagementController@markPortalUserShared",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.portal.users.resetPassword",
+            "methods": [
+                "POST"
+            ],
+            "uri": "clients/{client}/portal/users/{portalUser}/reset-password",
+            "action": "App\\Http\\Controllers\\ClientPortalManagementController@resetPortalUserPassword",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.sendKyc",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "clients/{client}/send-kyc",
+            "action": "App\\Http\\Controllers\\ClientController@sendKyc",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "clients.status.update",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "clients/{client}/status",
+            "action": "App\\Http\\Controllers\\ClientController@updateStatus",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "dashboard",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "dashboard",
+            "action": "App\\Http\\Controllers\\AdminDashboardController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "dashboards.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "dashboards",
+            "action": "App\\Http\\Controllers\\ModuleDashboardController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "dashboards.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "dashboards/{module}",
+            "action": "App\\Http\\Controllers\\ModuleDashboardController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "feedback.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "feedback",
+            "action": "App\\Http\\Controllers\\FeedbackController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "feedback.actions.update",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "feedback-actions/{feedbackAction}",
+            "action": "App\\Http\\Controllers\\FeedbackController@updateAction",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "feedback.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "feedback-requests/{feedbackRequest}",
+            "action": "App\\Http\\Controllers\\FeedbackController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "feedback.remind",
+            "methods": [
+                "POST"
+            ],
+            "uri": "feedback-requests/{feedbackRequest}/remind",
+            "action": "App\\Http\\Controllers\\FeedbackController@remind",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "feedback.revoke",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "feedback-requests/{feedbackRequest}/revoke",
+            "action": "App\\Http\\Controllers\\FeedbackController@revoke",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "feedback.shared",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "feedback-requests/{feedbackRequest}/shared",
+            "action": "App\\Http\\Controllers\\FeedbackController@markShared",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "feedback.actions.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "feedback-responses/{feedbackResponse}/actions",
+            "action": "App\\Http\\Controllers\\FeedbackController@storeAction",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "feedback.consent",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "feedback-responses/{feedbackResponse}/consent",
+            "action": "App\\Http\\Controllers\\FeedbackController@updateConsent",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "feedback.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "feedback/asks/{feedbackRequest}",
+            "action": "App\\Http\\Controllers\\FeedbackController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "feedback.export",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "feedback/export",
+            "action": "App\\Http\\Controllers\\FeedbackController@export",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "feedback.settings",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "feedback/settings",
+            "action": "Closure",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "feedback.public.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "feedback/{token}",
+            "action": "App\\Http\\Controllers\\PublicFeedbackController@show",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "feedback.public.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "feedback/{token}",
+            "action": "App\\Http\\Controllers\\PublicFeedbackController@store",
+            "middleware": [
+                "web",
+                "throttle:10,1"
+            ]
+        },
+        {
+            "name": "feedback.public.thanks",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "feedback/{token}/thanks",
+            "action": "App\\Http\\Controllers\\PublicFeedbackController@thanks",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "assets.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "fixed-assets",
+            "action": "App\\Http\\Controllers\\FixedAssetController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "assets.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "fixed-assets",
+            "action": "App\\Http\\Controllers\\FixedAssetController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "assets.depreciation",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "fixed-assets/depreciation",
+            "action": "App\\Http\\Controllers\\FixedAssetController@depreciation",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "assets.depreciation.export",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "fixed-assets/depreciation/export",
+            "action": "App\\Http\\Controllers\\FixedAssetController@depreciationExport",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "assets.export",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "fixed-assets/export",
+            "action": "App\\Http\\Controllers\\FixedAssetController@export",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "assets.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "fixed-assets/{asset}",
+            "action": "App\\Http\\Controllers\\FixedAssetController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "assets.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "fixed-assets/{asset}",
+            "action": "App\\Http\\Controllers\\FixedAssetController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "assets.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "fixed-assets/{asset}",
+            "action": "App\\Http\\Controllers\\FixedAssetController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "assets.allocate",
+            "methods": [
+                "POST"
+            ],
+            "uri": "fixed-assets/{asset}/allocate",
+            "action": "App\\Http\\Controllers\\FixedAssetController@allocate",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "assets.dispose",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "fixed-assets/{asset}/dispose",
+            "action": "App\\Http\\Controllers\\FixedAssetController@dispose",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "assets.maintain",
+            "methods": [
+                "POST"
+            ],
+            "uri": "fixed-assets/{asset}/maintenance",
+            "action": "App\\Http\\Controllers\\FixedAssetController@maintain",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "assets.takeBack",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "fixed-assets/{asset}/take-back",
+            "action": "App\\Http\\Controllers\\FixedAssetController@takeBack",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "assets.verify",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "fixed-assets/{asset}/verify",
+            "action": "App\\Http\\Controllers\\FixedAssetController@verify",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "leads.comments.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "lead-comments/{comment}",
+            "action": "App\\Http\\Controllers\\LeadCommentController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "leads.public.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "lead-enquiry",
+            "action": "App\\Http\\Controllers\\PublicLeadController@create",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "leads.public.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "lead-enquiry",
+            "action": "App\\Http\\Controllers\\PublicLeadController@store",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "leads.public.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "lead-public/{token}",
+            "action": "App\\Http\\Controllers\\PublicLeadController@show",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "leads.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "leads",
+            "action": "App\\Http\\Controllers\\LeadController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "leads.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "leads",
+            "action": "App\\Http\\Controllers\\LeadController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "leads.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "leads/create",
+            "action": "App\\Http\\Controllers\\LeadController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "leads.quickStore",
+            "methods": [
+                "POST"
+            ],
+            "uri": "leads/quick",
+            "action": "App\\Http\\Controllers\\LeadController@quickStore",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "leads.settings.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "leads/settings",
+            "action": "Closure",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "leads.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "leads/{lead}",
+            "action": "App\\Http\\Controllers\\LeadController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "leads.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "leads/{lead}",
+            "action": "App\\Http\\Controllers\\LeadController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "leads.update",
+            "methods": [
+                "PUT",
+                "PATCH"
+            ],
+            "uri": "leads/{lead}",
+            "action": "App\\Http\\Controllers\\LeadController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "leads.comments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "leads/{lead}/comments",
+            "action": "App\\Http\\Controllers\\LeadCommentController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "leads.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "leads/{lead}/edit",
+            "action": "App\\Http\\Controllers\\LeadController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "leads.image",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "leads/{lead}/image",
+            "action": "App\\Http\\Controllers\\LeadController@image",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "leads.status.update",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "leads/{lead}/status",
+            "action": "App\\Http\\Controllers\\LeadController@updateStatus",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "login",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "login",
+            "action": "App\\Http\\Controllers\\AuthController@showLogin",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "login.post",
+            "methods": [
+                "POST"
+            ],
+            "uri": "login",
+            "action": "App\\Http\\Controllers\\AuthController@login",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "logout",
+            "methods": [
+                "POST"
+            ],
+            "uri": "logout",
+            "action": "App\\Http\\Controllers\\AuthController@logout",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "my.dashboard",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "my",
+            "action": "App\\Http\\Controllers\\EmployeeWorkspaceController@dashboard",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "my.documents",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "my/documents",
+            "action": "App\\Http\\Controllers\\EmployeeWorkspaceController@documents",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "my.documents.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "my/documents",
+            "action": "App\\Http\\Controllers\\EmployeeWorkspaceController@storeDocument",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "my.documents.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "my/documents/{document}",
+            "action": "App\\Http\\Controllers\\EmployeeWorkspaceController@destroyDocument",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "my.documents.file",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "my/documents/{document}/file",
+            "action": "App\\Http\\Controllers\\EmployeeWorkspaceController@documentFile",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "my.password.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "my/password",
+            "action": "App\\Http\\Controllers\\EmployeeWorkspaceController@updatePassword",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "my.payslips",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "my/payslips",
+            "action": "App\\Http\\Controllers\\EmployeeWorkspaceController@payslips",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "my.payslips.file",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "my/payslips/{payslip}/file",
+            "action": "App\\Http\\Controllers\\EmployeeWorkspaceController@payslipFile",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "my.payslips.pdf",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "my/payslips/{payslip}/pdf",
+            "action": "App\\Http\\Controllers\\EmployeeWorkspaceController@payslipPdf",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "my.profile",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "my/profile",
+            "action": "App\\Http\\Controllers\\EmployeeWorkspaceController@profile",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "my.profile.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "my/profile",
+            "action": "App\\Http\\Controllers\\EmployeeWorkspaceController@updateProfile",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "my.salary",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "my/salary",
+            "action": "App\\Http\\Controllers\\EmployeeWorkspaceController@salary",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "notes.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "notes",
+            "action": "App\\Http\\Controllers\\NoteController@index",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "notes.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "notes",
+            "action": "App\\Http\\Controllers\\NoteController@store",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "notes.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "notes/{note}",
+            "action": "App\\Http\\Controllers\\NoteController@destroy",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "notes.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "notes/{note}",
+            "action": "App\\Http\\Controllers\\NoteController@update",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "notes.archive",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "notes/{note}/archive",
+            "action": "App\\Http\\Controllers\\NoteController@archive",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "notes.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "notes/{note}/edit",
+            "action": "App\\Http\\Controllers\\NoteController@edit",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "notes.pin",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "notes/{note}/pin",
+            "action": "App\\Http\\Controllers\\NoteController@pin",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "office-alerts.inbox",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "office-alerts",
+            "action": "App\\Http\\Controllers\\OfficeAlertController@inbox",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "office-alerts.settings",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "office-alerts/settings",
+            "action": "Closure",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "office-alerts.ack",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "office-alerts/{office_alert}/ack",
+            "action": "App\\Http\\Controllers\\OfficeAlertController@ack",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "office-alerts.popup",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "office-alerts/{office_alert}/popup",
+            "action": "App\\Http\\Controllers\\OfficeAlertController@popupShown",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "office-alerts.seen",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "office-alerts/{office_alert}/seen",
+            "action": "App\\Http\\Controllers\\OfficeAlertController@seen",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "office-alerts.snooze",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "office-alerts/{office_alert}/snooze",
+            "action": "App\\Http\\Controllers\\OfficeAlertController@snooze",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "office-services.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "office-services",
+            "action": "App\\Http\\Controllers\\OfficeServiceController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "office-services.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "office-services",
+            "action": "App\\Http\\Controllers\\OfficeServiceController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "office-services.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "office-services/create",
+            "action": "App\\Http\\Controllers\\OfficeServiceController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "office-services.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "office-services/{office_service}",
+            "action": "App\\Http\\Controllers\\OfficeServiceController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "office-services.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "office-services/{office_service}",
+            "action": "App\\Http\\Controllers\\OfficeServiceController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "office-services.update",
+            "methods": [
+                "PUT",
+                "PATCH"
+            ],
+            "uri": "office-services/{office_service}",
+            "action": "App\\Http\\Controllers\\OfficeServiceController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "office-services.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "office-services/{office_service}/edit",
+            "action": "App\\Http\\Controllers\\OfficeServiceController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "organisation.settings",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "organisation",
+            "action": "Closure",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "packaging-lists.cartons.label",
+            "methods": [
+                "POST"
+            ],
+            "uri": "packaging-list-cartons/{carton}/label",
+            "action": "App\\Http\\Controllers\\PackagingListController@label",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "packaging-lists.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "packaging-lists",
+            "action": "App\\Http\\Controllers\\PackagingListController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "packaging-lists.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "packaging-lists",
+            "action": "App\\Http\\Controllers\\PackagingListController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "packaging-lists.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "packaging-lists/create",
+            "action": "App\\Http\\Controllers\\PackagingListController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "packaging-lists.duplicate",
+            "methods": [
+                "POST"
+            ],
+            "uri": "packaging-lists/{packagingList}/duplicate",
+            "action": "App\\Http\\Controllers\\PackagingListController@duplicate",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "packaging-lists.labels",
+            "methods": [
+                "POST"
+            ],
+            "uri": "packaging-lists/{packagingList}/labels",
+            "action": "App\\Http\\Controllers\\PackagingListController@labels",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "packaging-lists.print",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "packaging-lists/{packagingList}/print",
+            "action": "App\\Http\\Controllers\\PackagingListController@print",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "packaging-lists.print-settings",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "packaging-lists/{packagingList}/print-settings",
+            "action": "App\\Http\\Controllers\\PackagingListController@updatePrintSettings",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "packaging-lists.status",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "packaging-lists/{packagingList}/status",
+            "action": "App\\Http\\Controllers\\PackagingListController@updateStatus",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "packaging-lists.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "packaging-lists/{packaging_list}",
+            "action": "App\\Http\\Controllers\\PackagingListController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "packaging-lists.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "packaging-lists/{packaging_list}",
+            "action": "App\\Http\\Controllers\\PackagingListController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "packaging-lists.update",
+            "methods": [
+                "PUT",
+                "PATCH"
+            ],
+            "uri": "packaging-lists/{packaging_list}",
+            "action": "App\\Http\\Controllers\\PackagingListController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "packaging-lists.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "packaging-lists/{packaging_list}/edit",
+            "action": "App\\Http\\Controllers\\PackagingListController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "price-calculator.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "price-calculator",
+            "action": "App\\Http\\Controllers\\PriceCalculatorController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "products.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "products",
+            "action": "App\\Http\\Controllers\\ProductController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "products.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "products",
+            "action": "App\\Http\\Controllers\\ProductController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "products.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "products/create",
+            "action": "App\\Http\\Controllers\\ProductController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "products.quickStore",
+            "methods": [
+                "POST"
+            ],
+            "uri": "products/quick",
+            "action": "App\\Http\\Controllers\\ProductController@quickStore",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "products.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "products/{product}",
+            "action": "App\\Http\\Controllers\\ProductController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "products.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "products/{product}",
+            "action": "App\\Http\\Controllers\\ProductController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "products.update",
+            "methods": [
+                "PUT",
+                "PATCH"
+            ],
+            "uri": "products/{product}",
+            "action": "App\\Http\\Controllers\\ProductController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "products.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "products/{product}/edit",
+            "action": "App\\Http\\Controllers\\ProductController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.attachments.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "project-attachments/{projectAttachment}",
+            "action": "App\\Http\\Controllers\\ProjectAttachmentController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.attachments.update",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "project-attachments/{projectAttachment}",
+            "action": "App\\Http\\Controllers\\ProjectAttachmentController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.comments.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "project-comments/{projectComment}",
+            "action": "App\\Http\\Controllers\\ProjectCommentController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.comments.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "project-comments/{projectComment}",
+            "action": "App\\Http\\Controllers\\ProjectCommentController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.products.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "project-products/{projectProduct}",
+            "action": "App\\Http\\Controllers\\ProjectProductController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.tracking.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "project-tracking/{trackingUpdate}",
+            "action": "App\\Http\\Controllers\\ProjectTrackingController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.tracking.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "project-tracking/{trackingUpdate}",
+            "action": "App\\Http\\Controllers\\ProjectTrackingController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "projects",
+            "action": "App\\Http\\Controllers\\ProjectController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects",
+            "action": "App\\Http\\Controllers\\ProjectController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "projects/create",
+            "action": "App\\Http\\Controllers\\ProjectController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.exceptions.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "projects/exceptions",
+            "action": "App\\Http\\Controllers\\ProjectExceptionController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.exceptions.refresh",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/exceptions/refresh",
+            "action": "App\\Http\\Controllers\\ProjectExceptionController@refresh",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.exceptions.acknowledge",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "projects/exceptions/{exception}/acknowledge",
+            "action": "App\\Http\\Controllers\\ProjectExceptionController@acknowledge",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.exceptions.escalate",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "projects/exceptions/{exception}/escalate",
+            "action": "App\\Http\\Controllers\\ProjectExceptionController@escalate",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.quickStore",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/quick",
+            "action": "App\\Http\\Controllers\\ProjectController@quickStore",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.work-queue.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "projects/work-queue",
+            "action": "App\\Http\\Controllers\\ProjectCoordinatorQueueController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "projects/{project}",
+            "action": "App\\Http\\Controllers\\ProjectController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "projects/{project}",
+            "action": "App\\Http\\Controllers\\ProjectController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.update",
+            "methods": [
+                "PUT",
+                "PATCH"
+            ],
+            "uri": "projects/{project}",
+            "action": "App\\Http\\Controllers\\ProjectController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.approvals.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/approvals",
+            "action": "App\\Http\\Controllers\\ProjectApprovalController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.approvals.override",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/approvals/{approval}/override",
+            "action": "App\\Http\\Controllers\\ProjectApprovalController@override",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.approvals.override.revoke",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "projects/{project}/approvals/{approval}/override/revoke",
+            "action": "App\\Http\\Controllers\\ProjectApprovalController@revokeOverride",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.approvals.versions.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/approvals/{approval}/versions",
+            "action": "App\\Http\\Controllers\\ProjectApprovalController@addVersion",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.attachments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/attachments",
+            "action": "App\\Http\\Controllers\\ProjectAttachmentController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.comments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/comments",
+            "action": "App\\Http\\Controllers\\ProjectCommentController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "projects/{project}/edit",
+            "action": "App\\Http\\Controllers\\ProjectController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "feedback.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/feedback",
+            "action": "App\\Http\\Controllers\\FeedbackController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.quality-inspections.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/products/{product}/quality-inspections",
+            "action": "App\\Http\\Controllers\\ProjectQualityInspectionController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.tracking.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/tracking",
+            "action": "App\\Http\\Controllers\\ProjectTrackingController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.work-queue.update",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "projects/{project}/work-queue/{step}",
+            "action": "App\\Http\\Controllers\\ProjectCoordinatorQueueController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.workflow.start",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/workflow",
+            "action": "App\\Http\\Controllers\\ProjectWorkflowController@start",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.workflow.evaluate",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/workflow/evaluate",
+            "action": "App\\Http\\Controllers\\ProjectWorkflowController@evaluate",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.workflow.financial-closure.close",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/workflow/financial-closure/close",
+            "action": "App\\Http\\Controllers\\ProjectFinancialClosureController@close",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.workflow.financial-closure.close-outstanding",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/workflow/financial-closure/close-outstanding",
+            "action": "App\\Http\\Controllers\\ProjectFinancialClosureController@closeOutstanding",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.workflow.financial-closure.evaluate",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/workflow/financial-closure/evaluate",
+            "action": "App\\Http\\Controllers\\ProjectFinancialClosureController@evaluate",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.workflow.financial-closure.reopen",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/workflow/financial-closure/reopen",
+            "action": "App\\Http\\Controllers\\ProjectFinancialClosureController@reopen",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.workflow.gates.override",
+            "methods": [
+                "POST"
+            ],
+            "uri": "projects/{project}/workflow/gates/{evaluation}/override",
+            "action": "App\\Http\\Controllers\\ProjectWorkflowController@override",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.workflow.overrides.revoke",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "projects/{project}/workflow/overrides/{override}/revoke",
+            "action": "App\\Http\\Controllers\\ProjectWorkflowController@revokeOverride",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.workflow.report",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "projects/{project}/workflow/report",
+            "action": "App\\Http\\Controllers\\ProjectWorkflowController@report",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "projects.workflow.steps.update",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "projects/{project}/workflow/steps/{step}",
+            "action": "App\\Http\\Controllers\\ProjectWorkflowController@updateStep",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "products.public",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "public-products/{token}",
+            "action": "App\\Http\\Controllers\\ProductController@publicShow",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "purchase-invoices.public",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "public-purchase-invoices/{token}",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@publicShow",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "sales-invoices.public",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "public-sales-invoices/{token}",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@publicShow",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": null,
+            "methods": [
+                "GET",
+                "HEAD",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS"
+            ],
+            "uri": "purchase-bills",
+            "action": "\\Illuminate\\Routing\\RedirectController",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "purchase-invoices.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "purchase-invoices",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "purchase-invoices.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "purchase-invoices",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "purchase-invoices.bulk",
+            "methods": [
+                "POST"
+            ],
+            "uri": "purchase-invoices/bulk",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@bulk",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "purchase-invoices.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "purchase-invoices/create",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "purchase-invoices.convert",
+            "methods": [
+                "POST"
+            ],
+            "uri": "purchase-invoices/{purchaseInvoice}/convert",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@convert",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "purchase-invoices.payments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "purchase-invoices/{purchaseInvoice}/payments",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@recordPayment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "purchase-invoices.print",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "purchase-invoices/{purchaseInvoice}/print",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@print",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "purchase-invoices.status",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "purchase-invoices/{purchaseInvoice}/status",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@updateStatus",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "purchase-invoices.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "purchase-invoices/{purchase_invoice}",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "purchase-invoices.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "purchase-invoices/{purchase_invoice}",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "purchase-invoices.update",
+            "methods": [
+                "PUT",
+                "PATCH"
+            ],
+            "uri": "purchase-invoices/{purchase_invoice}",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "purchase-invoices.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "purchase-invoices/{purchase_invoice}/edit",
+            "action": "App\\Http\\Controllers\\PurchaseInvoiceController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": null,
+            "methods": [
+                "GET",
+                "HEAD",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS"
+            ],
+            "uri": "purchase-orders",
+            "action": "\\Illuminate\\Routing\\RedirectController",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.attachments.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "sales-invoice-attachments/{attachment}",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@destroyAttachment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "sales-invoices",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.bulk",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/bulk",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@bulk",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "sales-invoices/create",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.export",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "sales-invoices/export",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@export",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.gstExport",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "sales-invoices/gst-export",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@gstExport",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.saved-views.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/saved-views",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@storeSavedView",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.saved-views.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "sales-invoices/saved-views/{savedView}",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@destroySavedView",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.convert",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/convert",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@convert",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.convert-cash",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/convert-cash",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@convertCash",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.duplicate",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/duplicate",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@duplicate",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.markSent",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/mark-sent",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@markSent",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.payments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/payments",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@recordPayment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.portal",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/portal",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@togglePortal",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.print",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/print",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@print",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.reminders.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/reminders",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@logReminder",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "sales-invoices/{sales_invoice}",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "sales-invoices/{sales_invoice}",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.update",
+            "methods": [
+                "PUT",
+                "PATCH"
+            ],
+            "uri": "sales-invoices/{sales_invoice}",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "sales-invoices/{sales_invoice}/edit",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "search",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "search",
+            "action": "App\\Http\\Controllers\\GlobalSearchController",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "settings",
+            "action": "App\\Http\\Controllers\\SettingsController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.assets",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "settings/assets",
+            "action": "App\\Http\\Controllers\\AssetSettingController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.assets.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "settings/assets/categories",
+            "action": "App\\Http\\Controllers\\AssetSettingController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.assets.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "settings/assets/categories/{category}",
+            "action": "App\\Http\\Controllers\\AssetSettingController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.assets.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/assets/categories/{category}",
+            "action": "App\\Http\\Controllers\\AssetSettingController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.briefings",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "settings/briefings",
+            "action": "App\\Http\\Controllers\\OfficeBriefingSettingController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.briefings.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/briefings",
+            "action": "App\\Http\\Controllers\\OfficeBriefingSettingController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.cashflow",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "settings/cashflow",
+            "action": "App\\Http\\Controllers\\CashflowSettingController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.cashflow.accounts.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "settings/cashflow/accounts",
+            "action": "App\\Http\\Controllers\\CashflowSettingController@storeAccount",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.cashflow.accounts.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "settings/cashflow/accounts/{account}",
+            "action": "App\\Http\\Controllers\\CashflowSettingController@destroyAccount",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.cashflow.accounts.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/cashflow/accounts/{account}",
+            "action": "App\\Http\\Controllers\\CashflowSettingController@updateAccount",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.cashflow.categories.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "settings/cashflow/categories",
+            "action": "App\\Http\\Controllers\\CashflowSettingController@storeCategory",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.cashflow.categories.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "settings/cashflow/categories/{category}",
+            "action": "App\\Http\\Controllers\\CashflowSettingController@destroyCategory",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.cashflow.categories.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/cashflow/categories/{category}",
+            "action": "App\\Http\\Controllers\\CashflowSettingController@updateCategory",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.cashflow.masters.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "settings/cashflow/masters",
+            "action": "App\\Http\\Controllers\\CashflowSettingController@storeMaster",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.cashflow.masters.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "settings/cashflow/masters/{master}",
+            "action": "App\\Http\\Controllers\\CashflowSettingController@destroyMaster",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.cashflow.masters.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/cashflow/masters/{master}",
+            "action": "App\\Http\\Controllers\\CashflowSettingController@updateMaster",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.feedback",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "settings/feedback",
+            "action": "App\\Http\\Controllers\\FeedbackController@settings",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.feedback.dimensions.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "settings/feedback/dimensions",
+            "action": "App\\Http\\Controllers\\FeedbackController@storeDimension",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.feedback.dimensions.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "settings/feedback/dimensions/{dimension}",
+            "action": "App\\Http\\Controllers\\FeedbackController@destroyDimension",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.feedback.dimensions.update",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "settings/feedback/dimensions/{dimension}",
+            "action": "App\\Http\\Controllers\\FeedbackController@updateDimension",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.leads",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "settings/leads",
+            "action": "App\\Http\\Controllers\\LeadSettingController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.leads.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "settings/leads/options",
+            "action": "App\\Http\\Controllers\\LeadSettingController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.leads.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "settings/leads/options/{option}",
+            "action": "App\\Http\\Controllers\\LeadSettingController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.leads.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/leads/options/{option}",
+            "action": "App\\Http\\Controllers\\LeadSettingController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.organisation",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "settings/organisation",
+            "action": "App\\Http\\Controllers\\OrganisationController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.organisation.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/organisation",
+            "action": "App\\Http\\Controllers\\OrganisationController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.organisation.addresses.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "settings/organisation/addresses",
+            "action": "App\\Http\\Controllers\\OrganisationController@storeAddress",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.organisation.addresses.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "settings/organisation/addresses/{address}",
+            "action": "App\\Http\\Controllers\\OrganisationController@destroyAddress",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.organisation.addresses.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/organisation/addresses/{address}",
+            "action": "App\\Http\\Controllers\\OrganisationController@updateAddress",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.organisation.banks.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "settings/organisation/banks",
+            "action": "App\\Http\\Controllers\\OrganisationController@storeBank",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.organisation.banks.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "settings/organisation/banks/{bank}",
+            "action": "App\\Http\\Controllers\\OrganisationController@destroyBank",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.organisation.banks.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/organisation/banks/{bank}",
+            "action": "App\\Http\\Controllers\\OrganisationController@updateBank",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.organisation.contacts.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "settings/organisation/contacts",
+            "action": "App\\Http\\Controllers\\OrganisationController@storeContact",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.organisation.contacts.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "settings/organisation/contacts/{contact}",
+            "action": "App\\Http\\Controllers\\OrganisationController@destroyContact",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.organisation.contacts.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/organisation/contacts/{contact}",
+            "action": "App\\Http\\Controllers\\OrganisationController@updateContact",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.organisation.socials.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "settings/organisation/socials",
+            "action": "App\\Http\\Controllers\\OrganisationController@storeSocial",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.organisation.socials.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "settings/organisation/socials/{social}",
+            "action": "App\\Http\\Controllers\\OrganisationController@destroySocial",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.organisation.socials.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/organisation/socials/{social}",
+            "action": "App\\Http\\Controllers\\OrganisationController@updateSocial",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.packaging",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "settings/packaging",
+            "action": "App\\Http\\Controllers\\PackagingListSettingController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.packaging.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/packaging",
+            "action": "App\\Http\\Controllers\\PackagingListSettingController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.workflow",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "settings/workflow",
+            "action": "App\\Http\\Controllers\\WorkflowSettingController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.workflow.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/workflow",
+            "action": "App\\Http\\Controllers\\WorkflowSettingController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "shipments",
+            "action": "App\\Http\\Controllers\\ShipmentController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "shipments",
+            "action": "App\\Http\\Controllers\\ShipmentController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.attachments.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "shipments/attachments/{attachment}",
+            "action": "App\\Http\\Controllers\\ShipmentController@destroyAttachment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.attachments.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "shipments/attachments/{attachment}",
+            "action": "App\\Http\\Controllers\\ShipmentController@updateAttachment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.attachments.toggle-public",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "shipments/attachments/{attachment}/toggle-public",
+            "action": "App\\Http\\Controllers\\ShipmentController@togglePublic",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.costs.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "shipments/costs/{cost}",
+            "action": "App\\Http\\Controllers\\ShipmentController@destroyCost",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.costs.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "shipments/costs/{cost}",
+            "action": "App\\Http\\Controllers\\ShipmentController@updateCost",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "shipments/create",
+            "action": "App\\Http\\Controllers\\ShipmentController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.history.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "shipments/history/{history}",
+            "action": "App\\Http\\Controllers\\ShipmentController@destroyHistory",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.history.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "shipments/history/{history}",
+            "action": "App\\Http\\Controllers\\ShipmentController@updateHistory",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.party-lookup",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "shipments/party-lookup",
+            "action": "App\\Http\\Controllers\\ShipmentController@partyLookup",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.quickStore",
+            "methods": [
+                "POST"
+            ],
+            "uri": "shipments/quick",
+            "action": "App\\Http\\Controllers\\ShipmentController@quickStore",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.saved-views.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "shipments/saved-views",
+            "action": "App\\Http\\Controllers\\ShipmentController@storeSavedView",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.saved-views.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "shipments/saved-views/{savedView}",
+            "action": "App\\Http\\Controllers\\ShipmentController@destroySavedView",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.stickers",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "shipments/stickers",
+            "action": "App\\Http\\Controllers\\ShipmentController@stickers",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "shipments/{shipment}",
+            "action": "App\\Http\\Controllers\\ShipmentController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "shipments/{shipment}",
+            "action": "App\\Http\\Controllers\\ShipmentController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.update",
+            "methods": [
+                "PUT",
+                "PATCH"
+            ],
+            "uri": "shipments/{shipment}",
+            "action": "App\\Http\\Controllers\\ShipmentController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.attachments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "shipments/{shipment}/attachments",
+            "action": "App\\Http\\Controllers\\ShipmentController@storeAttachment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.costs.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "shipments/{shipment}/costs",
+            "action": "App\\Http\\Controllers\\ShipmentController@storeCost",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.delivery-receipts.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "shipments/{shipment}/delivery-receipts",
+            "action": "App\\Http\\Controllers\\ShipmentDeliveryReceiptController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.delivery-receipts.print",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "shipments/{shipment}/delivery-receipts/{receipt}/print",
+            "action": "App\\Http\\Controllers\\ShipmentDeliveryReceiptController@print",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "shipments/{shipment}/edit",
+            "action": "App\\Http\\Controllers\\ShipmentController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.history.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "shipments/{shipment}/history",
+            "action": "App\\Http\\Controllers\\ShipmentController@storeHistory",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.print",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "shipments/{shipment}/print/{document}",
+            "action": "App\\Http\\Controllers\\ShipmentController@printPack",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "shipments.shipping-mark",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "shipments/{shipment}/shipping-mark",
+            "action": "App\\Http\\Controllers\\ShipmentController@shippingMark",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "statements.public",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "statement/{token}",
+            "action": "App\\Http\\Controllers\\PartyStatementController@publicShow",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "storage.local",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "storage/{path}",
+            "action": "Closure",
+            "middleware": []
+        },
+        {
+            "name": "storage.local.upload",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "storage/{path}",
+            "action": "Closure",
+            "middleware": []
+        },
+        {
+            "name": "tasks.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "tasks",
+            "action": "App\\Http\\Controllers\\TaskController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "tasks.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "tasks",
+            "action": "App\\Http\\Controllers\\TaskController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "tasks.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "tasks/create",
+            "action": "App\\Http\\Controllers\\TaskController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "tasks.markAll",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "tasks/mark-all",
+            "action": "App\\Http\\Controllers\\TaskController@markAll",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "tasks.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "tasks/{task}",
+            "action": "App\\Http\\Controllers\\TaskController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "tasks.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "tasks/{task}",
+            "action": "App\\Http\\Controllers\\TaskController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "tasks.update",
+            "methods": [
+                "PUT",
+                "PATCH"
+            ],
+            "uri": "tasks/{task}",
+            "action": "App\\Http\\Controllers\\TaskController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "tasks.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "tasks/{task}/edit",
+            "action": "App\\Http\\Controllers\\TaskController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "tasks.status.update",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "tasks/{task}/status",
+            "action": "App\\Http\\Controllers\\TaskController@updateStatus",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "tasks.toggle",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "tasks/{task}/toggle",
+            "action": "App\\Http\\Controllers\\TaskController@toggle",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "theme.toggle",
+            "methods": [
+                "POST"
+            ],
+            "uri": "theme/toggle",
+            "action": "Closure",
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "name": "shipments.publicTrack",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "track-shipment/{token}",
+            "action": "App\\Http\\Controllers\\ShipmentController@publicTrack",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": null,
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "up",
+            "action": "Closure",
+            "middleware": []
+        },
+        {
+            "name": "users.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "users",
+            "action": "App\\Http\\Controllers\\UserController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "users",
+            "action": "App\\Http\\Controllers\\UserController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.export",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "users/export",
+            "action": "App\\Http\\Controllers\\UserController@export",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "users/{user}",
+            "action": "App\\Http\\Controllers\\UserController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "users/{user}",
+            "action": "App\\Http\\Controllers\\UserController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "users/{user}",
+            "action": "App\\Http\\Controllers\\UserController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.data",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "users/{user}/data",
+            "action": "App\\Http\\Controllers\\UserController@getData",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.documents.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "users/{user}/documents",
+            "action": "App\\Http\\Controllers\\EmployeeDocumentController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.documents.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "users/{user}/documents/{document}",
+            "action": "App\\Http\\Controllers\\EmployeeDocumentController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.documents.file",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "users/{user}/documents/{document}/file",
+            "action": "App\\Http\\Controllers\\EmployeeDocumentController@file",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.documents.verify",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "users/{user}/documents/{document}/verify",
+            "action": "App\\Http\\Controllers\\EmployeeDocumentController@verify",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.payslips.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "users/{user}/payslips",
+            "action": "App\\Http\\Controllers\\EmployeePayslipController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.payslips.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "users/{user}/payslips/{payslip}",
+            "action": "App\\Http\\Controllers\\EmployeePayslipController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.payslips.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "users/{user}/payslips/{payslip}",
+            "action": "App\\Http\\Controllers\\EmployeePayslipController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.payslips.file",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "users/{user}/payslips/{payslip}/file",
+            "action": "App\\Http\\Controllers\\EmployeePayslipController@file",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.payslips.pdf",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "users/{user}/payslips/{payslip}/pdf",
+            "action": "App\\Http\\Controllers\\EmployeePayslipController@pdf",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "users.permissions.update",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "users/{user}/permissions",
+            "action": "App\\Http\\Controllers\\UserController@updatePermissions",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.attachments.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "vendor-attachments/{attachment}",
+            "action": "App\\Http\\Controllers\\VendorController@destroyAttachment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.comments.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "vendor-comments/{comment}",
+            "action": "App\\Http\\Controllers\\VendorController@destroyComment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.payments.attachments.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "vendor-payment-attachments/{attachment}",
+            "action": "App\\Http\\Controllers\\VendorController@destroyPaymentAttachment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.payments.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "vendor-payment-entries/{entry}",
+            "action": "App\\Http\\Controllers\\VendorController@destroyPayment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendor-portal.dashboard",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "vendor-portal",
+            "action": "App\\Http\\Controllers\\VendorPortalController@dashboard",
+            "middleware": [
+                "web",
+                "vendor.portal"
+            ]
+        },
+        {
+            "name": "vendor-portal.password.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "vendor-portal/change-password",
+            "action": "App\\Http\\Controllers\\VendorPortalAuthController@editPassword",
+            "middleware": [
+                "web",
+                "vendor.portal"
+            ]
+        },
+        {
+            "name": "vendor-portal.password.update",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendor-portal/change-password",
+            "action": "App\\Http\\Controllers\\VendorPortalAuthController@updatePassword",
+            "middleware": [
+                "web",
+                "vendor.portal"
+            ]
+        },
+        {
+            "name": "vendor-portal.login",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "vendor-portal/login",
+            "action": "App\\Http\\Controllers\\VendorPortalAuthController@showLogin",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "vendor-portal.login.submit",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendor-portal/login",
+            "action": "App\\Http\\Controllers\\VendorPortalAuthController@login",
+            "middleware": [
+                "web",
+                "throttle:10,1"
+            ]
+        },
+        {
+            "name": "vendor-portal.logout",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendor-portal/logout",
+            "action": "App\\Http\\Controllers\\VendorPortalAuthController@logout",
+            "middleware": [
+                "web",
+                "vendor.portal"
+            ]
+        },
+        {
+            "name": "vendor-portal.purchases.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "vendor-portal/purchases/{purchaseInvoice}",
+            "action": "App\\Http\\Controllers\\VendorPortalController@purchase",
+            "middleware": [
+                "web",
+                "vendor.portal"
+            ]
+        },
+        {
+            "name": "vendor-portal.purchases.updates.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendor-portal/purchases/{purchaseInvoice}/updates",
+            "action": "App\\Http\\Controllers\\VendorPortalController@storeUpdate",
+            "middleware": [
+                "web",
+                "vendor.portal",
+                "throttle:20,1"
+            ]
+        },
+        {
+            "name": "vendor-shares.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "vendor-share/{token}",
+            "action": "App\\Http\\Controllers\\VendorShareController@show",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "vendor-shares.updates.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendor-share/{token}/updates",
+            "action": "App\\Http\\Controllers\\VendorShareController@storeUpdate",
+            "middleware": [
+                "web",
+                "throttle:10,1"
+            ]
+        },
+        {
+            "name": "vendors.index",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "vendors",
+            "action": "App\\Http\\Controllers\\VendorController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendors",
+            "action": "App\\Http\\Controllers\\VendorController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.bulk-status",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "vendors/bulk-status",
+            "action": "App\\Http\\Controllers\\VendorController@bulkStatus",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.create",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "vendors/create",
+            "action": "App\\Http\\Controllers\\VendorController@create",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.payables.export",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "vendors/payables/export",
+            "action": "App\\Http\\Controllers\\VendorController@exportPayables",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.quickStore",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendors/quick",
+            "action": "App\\Http\\Controllers\\VendorController@quickStore",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.saved-views.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendors/saved-views",
+            "action": "App\\Http\\Controllers\\VendorController@storeSavedView",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.saved-views.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "vendors/saved-views/{savedView}",
+            "action": "App\\Http\\Controllers\\VendorController@destroySavedView",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "vendors/{vendor}",
+            "action": "App\\Http\\Controllers\\VendorController@destroy",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.show",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "vendors/{vendor}",
+            "action": "App\\Http\\Controllers\\VendorController@show",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.update",
+            "methods": [
+                "PUT",
+                "PATCH"
+            ],
+            "uri": "vendors/{vendor}",
+            "action": "App\\Http\\Controllers\\VendorController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.attachments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendors/{vendor}/attachments",
+            "action": "App\\Http\\Controllers\\VendorController@storeAttachment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.comments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendors/{vendor}/comments",
+            "action": "App\\Http\\Controllers\\VendorController@storeComment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.contacts.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendors/{vendor}/contacts",
+            "action": "App\\Http\\Controllers\\VendorController@storeContact",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.contacts.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "vendors/{vendor}/contacts/{contact}",
+            "action": "App\\Http\\Controllers\\VendorController@destroyContact",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.contacts.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "vendors/{vendor}/contacts/{contact}",
+            "action": "App\\Http\\Controllers\\VendorController@updateContact",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "vendors/{vendor}/edit",
+            "action": "App\\Http\\Controllers\\VendorController@edit",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.payments.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendors/{vendor}/payments",
+            "action": "App\\Http\\Controllers\\VendorController@storePayment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.payments.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "vendors/{vendor}/payments/{entry}",
+            "action": "App\\Http\\Controllers\\VendorController@updatePayment",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.portal.enable",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "vendors/{vendor}/portal",
+            "action": "App\\Http\\Controllers\\VendorPortalManagementController@enable",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.portal.updates.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendors/{vendor}/portal/updates",
+            "action": "App\\Http\\Controllers\\VendorPortalManagementController@storeUpdate",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.portal.users.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendors/{vendor}/portal/users",
+            "action": "App\\Http\\Controllers\\VendorPortalManagementController@storeUser",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.portal.users.reset",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendors/{vendor}/portal/users/{portalUser}/reset-password",
+            "action": "App\\Http\\Controllers\\VendorPortalManagementController@resetUser",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.portal.users.toggle",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "vendors/{vendor}/portal/users/{portalUser}/toggle",
+            "action": "App\\Http\\Controllers\\VendorPortalManagementController@toggleUser",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.shares.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "vendors/{vendor}/shares",
+            "action": "App\\Http\\Controllers\\VendorPortalManagementController@storeShare",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "vendors.shares.revoke",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "vendors/{vendor}/shares/{share}/revoke",
+            "action": "App\\Http\\Controllers\\VendorPortalManagementController@revokeShare",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        }
+    ]
+}

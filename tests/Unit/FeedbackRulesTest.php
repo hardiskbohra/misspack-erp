@@ -67,7 +67,8 @@ class FeedbackRulesTest extends TestCase
     public function test_a_dimension_left_blank_is_not_a_low_score(): void
     {
         $this->assertSame(FeedbackVocabulary::BAND_PROMOTER, FeedbackVocabulary::band(5, 10, [5, null, 5]));
-        $this->assertSame(FeedbackVocabulary::BAND_PASSIVE, FeedbackVocabulary::band(5, 10, []));
+        // With no dimension evidence, the existing policy uses the headline scores.
+        $this->assertSame(FeedbackVocabulary::BAND_PROMOTER, FeedbackVocabulary::band(5, 10, []));
     }
 
     /**
@@ -116,7 +117,8 @@ class FeedbackRulesTest extends TestCase
         $this->assertSame(100, FeedbackVocabulary::nps([10, 9, 10, 9]));
         $this->assertSame(-100, FeedbackVocabulary::nps([0, 3, 6]));
         $this->assertSame(0, FeedbackVocabulary::nps([10, 0]));
-        $this->assertSame(50, FeedbackVocabulary::nps([10, 5])); // one promoter, one passive
+        $this->assertSame(0, FeedbackVocabulary::nps([10, 5])); // one promoter, one detractor
+        $this->assertSame(50, FeedbackVocabulary::nps([10, 8])); // one promoter, one passive
     }
 
     public function test_nps_refuses_to_invent_a_number_from_no_answers(): void

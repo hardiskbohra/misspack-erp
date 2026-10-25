@@ -1,0 +1,821 @@
+{
+  "note": "Source inventory only. Method counts exclude data-provider expansion and are not runtime coverage or pass counts.",
+  "test_files": [
+    {
+      "file": "tests/Database/MySqlReportingTest.php",
+      "methods": [
+        "test_real_database_aggregation_honours_custom_bounds"
+      ]
+    },
+    {
+      "file": "tests/Feature/CashInvoiceConversionTest.php",
+      "methods": [
+        "test_three_lakh_pi_keeps_the_bank_receipt_and_prorates_items_on_the_tax_remainder",
+        "test_excess_transfer_is_rejected_atomically_even_when_the_pi_has_enough_receipts",
+        "test_percentage_conversion_caps_transfers_and_splits_only_the_cash_receipt",
+        "test_cash_allocation_precedes_direct_bank_receipts_and_opening_credit",
+        "test_cash_payment_mode_is_prioritised_even_without_a_cash_account_type",
+        "test_gst_inclusive_three_lakh_pi_restores_only_the_actual_taxable_remainder",
+        "test_tax_remainder_keeps_metadata_discounts_gst_and_project_quantities",
+        "test_fixed_discounts_and_subcent_lines_reconcile_on_the_remainder",
+        "test_several_partial_cash_conversions_leave_an_exact_itemised_tax_claim",
+        "test_a_pi_without_item_lines_does_not_fabricate_a_tax_remainder",
+        "test_partial_conversion_removes_gst_and_keeps_only_the_uninvoiced_pi_remainder",
+        "test_percentages_apply_to_the_remaining_base_and_multiple_children_reconcile",
+        "test_full_conversion_can_retain_a_chosen_pi_advance_without_losing_it",
+        "test_partial_direct_receipt_becomes_two_slices_of_the_same_bank_entry",
+        "test_fx_allocation_splits_both_native_and_document_amounts_without_revaluation",
+        "test_unsupported_direct_fx_transfer_rolls_back_the_entire_conversion",
+        "test_remainder_can_be_tax_invoiced_without_rebilling_cash_or_moving_cash_receipts",
+        "test_cash_print_has_no_gst_identifiers_or_tax_columns_even_with_a_stale_snapshot",
+        "test_over_conversion_and_over_transfer_never_create_a_child",
+        "test_converted_sources_cannot_be_deleted_and_linked_documents_cannot_be_edited",
+        "test_direct_cash_creation_ignores_forged_tax_fields_and_uses_its_own_number_series",
+        "test_rounding_charges_and_discounted_values_reconcile_after_three_partial_conversions",
+        "test_refunds_stay_intact_and_only_net_receipts_are_transferable",
+        "test_project_value_and_physical_products_do_not_double_count_amount_summary_invoices",
+        "test_allocated_receipts_are_never_classed_as_unpaid_and_residual_pi_can_be_paid",
+        "test_workflow_gates_include_every_cash_child_not_just_the_last_converted_invoice",
+        "test_statement_reconciles_original_opening_credit_and_effective_receivables",
+        "test_stale_route_models_cannot_overwrite_a_pi_after_another_request_converts_it",
+        "test_bulk_deletion_cannot_remove_linked_drafts",
+        "test_migration_can_roll_back_before_use_without_changing_existing_invoice_money",
+        "test_migration_refuses_to_destroy_used_conversion_history"
+      ]
+    },
+    {
+      "file": "tests/Feature/CashInvoiceDeletionTest.php",
+      "methods": [
+        "test_delete_restores_the_pi_value_and_opening_credit_and_redirects_to_it",
+        "test_full_conversion_is_reopened_and_deleted_document_numbers_are_never_reused",
+        "test_a_reversed_invoice_number_cannot_be_reused_manually",
+        "test_deleting_an_earlier_sibling_clears_the_full_conversion_pointer_and_preserves_rounding",
+        "test_split_receipts_and_opening_credit_return_without_duplicating_bank_money",
+        "test_later_direct_receipts_refunds_and_pending_status_return_but_unrelated_receipts_do_not_move",
+        "test_fx_allocations_keep_their_native_and_document_values_on_return",
+        "test_a_tax_remainder_keeps_cash_deletion_blocked_without_changing_any_money",
+        "test_stale_cash_models_cannot_change_the_reversal_values",
+        "test_audit_failure_rolls_back_the_invoice_credit_receipt_links_and_pi_totals",
+        "test_inconsistent_caches_or_ownership_block_the_reversal",
+        "test_a_missing_audit_table_blocks_reversal",
+        "test_repeating_a_delete_never_restores_credit_twice",
+        "test_audit_retains_the_document_and_attachment_evidence_but_not_the_public_token",
+        "test_http_delete_requires_sales_manage_and_records_the_reversal_actor",
+        "test_csrf_guard_still_protects_the_reversal",
+        "test_workflow_cash_baseline_is_restored_to_the_pi_and_dispatch_balance_is_rechecked",
+        "test_a_rejected_model_delete_rolls_back_the_reversal_and_audit",
+        "test_a_rejected_receipt_reassignment_rolls_back_the_reversal",
+        "test_a_rejected_audit_insert_rolls_back_the_reversal",
+        "test_record_page_and_list_offer_the_safe_cash_delete_but_not_original_pi_deletion",
+        "test_confirmation_explains_that_the_cash_conversion_and_receipts_are_reversed"
+      ]
+    },
+    {
+      "file": "tests/Feature/CashflowDocumentBalanceTest.php",
+      "methods": [
+        "test_sales_position_includes_opening_receipts_refunds_and_document_currency_allocations",
+        "test_purchase_position_uses_active_vendor_payments_and_fx_allocations_without_derived_duplicates",
+        "test_saved_editing_allocation_is_counted_once_and_legacy_amount_is_supported",
+        "test_partial_cash_conversion_shows_current_receivable_and_not_the_original_pi_claim",
+        "test_superseded_proforma_has_no_duplicate_balance",
+        "test_purchase_order_shows_advance_capacity_and_preserves_approval_gate",
+        "test_fully_paid_and_overpaid_documents_never_show_negative_balance",
+        "test_rendering_all_picker_options_adds_no_per_document_queries_and_excludes_cancelled_documents",
+        "test_both_allocation_dialogs_render_payment_metadata_and_accessible_summary",
+        "test_real_cashflow_pages_load_payment_summary_script_before_dialog_handlers",
+        "test_vendor_owned_mirror_still_prevents_duplicate_purchase_allocation"
+      ]
+    },
+    {
+      "file": "tests/Feature/ClientAccountSummaryTest.php",
+      "methods": [
+        "test_no_history_has_explicit_zero_figures_in_preferred_currency",
+        "test_opening_direct_receipts_and_refunds_are_counted_exactly_once",
+        "test_partially_allocated_receipt_keeps_remainder_as_advance_without_double_counting",
+        "test_on_account_advance_is_reduced_by_unlinked_client_refund",
+        "test_overpaid_invoice_credit_and_refunds_have_consistent_net_position",
+        "test_fx_allocations_use_document_currency_and_leave_only_remainder_in_bank_currency",
+        "test_converted_proforma_and_partial_cash_conversions_never_duplicate_invoice_value",
+        "test_payments_on_cancelled_invoice_remain_client_credit_but_not_an_invoice_claim",
+        "test_project_receipts_are_client_advances_but_project_vendor_costs_are_not_client_refunds",
+        "test_other_clients_and_ambiguous_shared_remainders_cannot_leak_into_account",
+        "test_endpoint_and_profile_use_same_escaped_summary_with_no_store_response",
+        "test_summary_endpoint_is_sales_permission_gated_and_not_available_to_employees",
+        "test_summary_query_count_does_not_grow_with_invoice_count",
+        "test_client_inferred_from_one_allocated_invoice_owns_only_the_unapplied_remainder",
+        "test_validation_recovery_keeps_selected_client_and_does_not_fill_payment_fields",
+        "test_invoice_form_has_summary_for_all_document_types_and_preselected_clients"
+      ]
+    },
+    {
+      "file": "tests/Feature/ClientProfileTabsTest.php",
+      "methods": [
+        "test_badges_count_client_records_and_project_tab_lists_only_live_client_projects",
+        "test_badges_use_total_records_not_page_size_and_are_stable_on_other_tabs",
+        "test_optional_module_badges_count_all_client_rows_without_loading_full_collections",
+        "test_sales_only_reader_sees_project_count_but_not_protected_project_details",
+        "test_compact_advance_rail_keeps_every_entry_and_allocation_link_accessible"
+      ]
+    },
+    {
+      "file": "tests/Feature/DashboardCustomPeriodTest.php",
+      "methods": [
+        "test_custom_bounds_include_both_entire_days_on_both_dashboards",
+        "test_same_day_is_a_valid_one_day_period",
+        "test_module_comparison_uses_the_immediately_preceding_equal_length_window",
+        "test_overview_groups_long_windows_without_rounding_the_selected_bounds",
+        "test_both_dashboards_reject_invalid_custom_dates",
+        "test_invalid_ranges_return_validation_errors_from_both_routes",
+        "test_module_links_preserve_both_custom_dates",
+        "test_totals_and_trends_use_exact_custom_bounds_for_dates_and_timestamps",
+        "test_switching_away_from_custom_ignores_stale_date_inputs"
+      ]
+    },
+    {
+      "file": "tests/Feature/ExampleTest.php",
+      "methods": [
+        "test_the_root_redirects_to_login"
+      ]
+    },
+    {
+      "file": "tests/Feature/InvoiceClientCreationTest.php",
+      "methods": [
+        "test_inline_creation_saves_both_addresses_and_returns_only_the_invoice_projection",
+        "test_same_as_billing_copies_every_component_on_the_server",
+        "test_legacy_quick_create_still_redirects_and_needs_only_a_company_name",
+        "test_json_validation_stays_on_the_dialog_and_does_not_create_a_client",
+        "test_overlong_and_non_text_addresses_are_rejected_before_saving",
+        "test_unauthenticated_inline_creation_returns_json_401",
+        "test_missing_csrf_token_returns_json_419_without_creating_a_client",
+        "test_read_only_sales_user_cannot_create_clients_from_the_invoice",
+        "test_employee_cannot_create_a_client",
+        "test_empty_client_list_still_has_a_complete_snapshot_field_contract",
+        "test_projection_keeps_existing_contact_and_shipping_fallback_rules",
+        "test_invoice_creation_renders_an_independent_client_form_even_before_the_first_client"
+      ]
+    },
+    {
+      "file": "tests/Feature/PackagingAllLabelsTest.php",
+      "methods": [
+        "test_all_formats_render_each_physical_carton_with_correct_data_and_audit_counts",
+        "test_single_group_accepts_and_audits_the_additional_150_mm_format",
+        "test_an_unknown_format_is_rejected_before_loading_or_auditing_any_cartons"
+      ]
+    },
+    {
+      "file": "tests/Feature/PackagingCartonLabelViewTest.php",
+      "methods": [
+        "test_thermal_label_uses_100_by_140_mm_stock",
+        "test_100_by_150_is_an_additional_thermal_format_without_changing_140",
+        "test_misspack_sender_is_the_heading_and_has_our_print_logo_in_every_format",
+        "test_vendor_sender_has_its_own_heading_and_never_our_logo",
+        "test_a_configured_print_logo_is_used_instead_of_the_screen_logo",
+        "test_branding_follows_sender_not_the_presence_of_a_vendor_link",
+        "test_a4_and_a5_paper_sizes_are_unchanged",
+        "test_sender_text_is_escaped_and_an_unknown_vendor_does_not_become_the_receiver"
+      ]
+    },
+    {
+      "file": "tests/Feature/PackagingPrintColumnsViewTest.php",
+      "methods": [
+        "test_invalid_column_selections_are_rejected_on_save",
+        "test_print_headers_cells_spans_and_totals_follow_the_saved_selection"
+      ]
+    },
+    {
+      "file": "tests/Feature/PackagingPrintSettingsTest.php",
+      "methods": [
+        "test_saving_only_changes_print_settings_and_returns_to_the_print_page",
+        "test_print_view_outputs_saved_orientation_and_safe_running_text",
+        "test_invalid_settings_never_mutate_the_list"
+      ]
+    },
+    {
+      "file": "tests/Feature/PackagingProjectComparisonTest.php",
+      "methods": [
+        "test_comparison_shows_the_actual_packing_catalog_and_linked_project_product",
+        "test_six_unmatched_rows_are_visible_against_actual_project_products_without_guessing",
+        "test_cancelled_and_wrong_project_links_show_the_actual_names_but_fail_identity_checks",
+        "test_matched_identical_names_pass_without_review_and_comparison_does_not_change_records",
+        "test_catalog_sku_and_unit_differences_are_review_warnings_not_confirmation_failures",
+        "test_editor_exposes_project_mapping_and_accepts_an_explicit_valid_choice",
+        "test_confirm_errors_identify_the_original_dynamic_row_keys_and_drafts_remain_saveable",
+        "test_cancelled_or_foreign_project_selections_are_rejected_by_the_save_endpoint",
+        "test_names_are_escaped_and_lists_without_a_project_do_not_display_a_false_check",
+        "test_draft_detail_warns_and_can_confirm_directly_without_opening_edit",
+        "test_confirmation_notice_is_hidden_for_confirmed_dispatched_and_cancelled_lists",
+        "test_confirmation_warning_points_to_mapping_issues_and_keeps_server_validation",
+        "test_confirmation_notice_explains_review_warnings_do_not_block_confirmation",
+        "test_view_only_staff_see_the_warning_but_cannot_confirm"
+      ]
+    },
+    {
+      "file": "tests/Feature/PackagingQrSettingsTest.php",
+      "methods": [
+        "test_default_setting_preserves_the_existing_carton_specific_erp_link",
+        "test_qr_url_is_saved_and_findable_in_the_global_settings_hub_and_area",
+        "test_every_format_and_sender_uses_the_exact_configured_destination_including_copies",
+        "test_setting_is_read_once_per_label_page_not_per_printed_copy",
+        "test_blank_restores_the_default_and_preserves_other_global_settings",
+        "test_invalid_unsafe_or_oversized_urls_are_rejected_without_overwriting_the_setting",
+        "test_http_is_allowed_and_the_200_byte_limit_is_enforced",
+        "test_invalid_manually_stored_values_fall_back_to_the_erp_link",
+        "test_unmigrated_settings_table_keeps_existing_label_generation_working",
+        "test_operations_access_alone_does_not_allow_changing_global_settings",
+        "test_settings_manager_can_configure_the_global_destination",
+        "test_saving_global_settings_requires_a_csrf_token",
+        "test_packaging_qr_settings_are_findable_by_search",
+        "test_login_is_required_for_settings"
+      ]
+    },
+    {
+      "file": "tests/Feature/ShipmentAttachmentUploadTest.php",
+      "methods": [
+        "test_detail_card_offers_direct_multi_upload_with_private_default",
+        "test_upload_returns_to_the_detail_attachments_without_editing_shipment_fields",
+        "test_visibility_is_an_explicit_opt_in",
+        "test_invalid_or_oversized_batches_do_not_store_any_files",
+        "test_read_only_users_see_attachments_but_cannot_upload",
+        "test_attachment_field_errors_render_next_to_the_picker",
+        "test_csrf_still_protects_uploads"
+      ]
+    },
+    {
+      "file": "tests/Feature/TopbarQuickMenuTest.php",
+      "methods": [
+        "test_full_office_menu_contains_frequent_modules_with_real_destinations",
+        "test_custom_access_only_shows_permitted_modules_including_manage_implies_view",
+        "test_employee_does_not_receive_office_shortcuts_even_with_full_profile",
+        "test_no_permitted_modules_means_no_empty_launcher",
+        "test_guest_does_not_receive_office_shortcuts",
+        "test_current_module_is_highlighted_but_excluded_subroutes_are_not",
+        "test_quick_menu_reuses_sidebar_catalog_and_does_not_invent_missing_modules"
+      ]
+    },
+    {
+      "file": "tests/Feature/VendorCashflowDeletionTest.php",
+      "methods": [
+        "test_deleting_mirror_cancels_payment_and_reopens_bill_with_audit_and_bank_balance",
+        "test_other_payments_and_opening_paid_amount_are_preserved",
+        "test_foreign_currency_bill_reverses_document_amount_not_inr_bank_amount",
+        "test_bulk_deletion_reverses_each_bill_and_recalculates_each_account",
+        "test_cancelled_rows_are_excluded_in_lazy_eager_with_paid_and_sql_totals",
+        "test_disabling_cashflow_mirroring_does_not_reverse_a_real_vendor_payment",
+        "test_cashflow_originated_payment_keeps_existing_derived_row_removal_behavior",
+        "test_failed_cashflow_deletion_rolls_back_payment_bill_allocations_and_audit",
+        "test_ledger_only_payments_are_never_automatically_reversed",
+        "test_already_orphaned_payment_can_be_cancelled_in_vendor_money_without_guessing",
+        "test_deleting_from_vendor_money_refreshes_bill_too",
+        "test_bulk_failure_rolls_back_all_selected_entries_and_reversals",
+        "test_failed_payment_cancellation_prevents_cashflow_deletion",
+        "test_view_only_finance_staff_cannot_reverse_or_delete_payments",
+        "test_bill_detail_and_listing_do_not_present_cancelled_payment_as_paid",
+        "test_reversing_advance_preserves_order_approval_and_cancelled_bill_state"
+      ]
+    },
+    {
+      "file": "tests/Integration/NotesOwnershipTest.php",
+      "methods": [
+        "test_create_ignores_forged_owner_and_persists_authenticated_owner",
+        "test_even_an_office_admin_cannot_access_somebody_elses_note",
+        "test_owner_can_update_pin_archive_restore_and_delete_without_transferring_ownership"
+      ]
+    },
+    {
+      "file": "tests/Integration/OfficeAccessBoundaryTest.php",
+      "methods": [
+        "test_guest_cannot_read_office_modules",
+        "test_employee_is_redirected_before_an_office_controller_can_run",
+        "test_sales_reader_cannot_read_finance_or_write_sales"
+      ]
+    },
+    {
+      "file": "tests/Integration/ProjectWorkflowExecutionTest.php",
+      "methods": [
+        "test_start_is_idempotent_and_cancelled_products_do_not_get_new_lanes",
+        "test_product_lanes_are_independent_and_repeated_sync_preserves_completed_work",
+        "test_financial_terminal_decision_is_not_overwritten_by_workflow_recalculation",
+        "test_regular_mass_assignment_cannot_change_workflow_owned_progress_fields"
+      ]
+    },
+    {
+      "file": "tests/Integration/RouteBoundaryInventoryTest.php",
+      "methods": [
+        "test_every_office_route_also_requires_authentication",
+        "test_private_note_mutations_are_authenticated_but_not_office_only"
+      ]
+    },
+    {
+      "file": "tests/Unit/AssetDepreciationTest.php",
+      "methods": [
+        "test_indian_financial_year_boundaries",
+        "test_invalid_financial_year_keys_are_rejected",
+        "test_schedule_conserves_value_and_never_depreciates_below_residual",
+        "test_capitalised_basis_distinguishes_claimed_gst_credit",
+        "test_missing_purchase_date_zero_cost_and_non_depreciating_asset_have_no_schedule"
+      ]
+    },
+    {
+      "file": "tests/Unit/CashflowFiltersTest.php",
+      "methods": [
+        "test_a_request_with_no_filters_narrows_nothing",
+        "test_the_empty_filters_are_empty_and_the_rest_are_sentinels",
+        "test_a_range_name_where_a_day_belongs_is_no_bound",
+        "test_a_real_range_bounds_the_query",
+        "test_a_search_searches_for_what_was_typed",
+        "test_the_word_all_typed_by_hand_is_still_a_search",
+        "test_nothing_that_is_unset_travels_or_is_chipped",
+        "test_every_declared_filter_is_reachable_and_has_a_label"
+      ]
+    },
+    {
+      "file": "tests/Unit/CashflowPartyTest.php",
+      "methods": [
+        "test_a_linked_party_is_the_label",
+        "test_the_default_first_option_does_not_overrule_the_link",
+        "test_a_choice_that_names_one_of_its_own_links_stands",
+        "test_nothing_linked_leaves_the_choice_alone",
+        "test_a_free_text_name_is_not_a_link",
+        "test_the_strongest_link_wins_when_more_than_one_is_set",
+        "test_a_payment_to_an_employee_files_against_them_with_the_selector_untouched",
+        "test_a_client_and_the_employee_it_went_through_can_both_be_named",
+        "test_the_dialog_opens_on_the_option_the_selector_will_show",
+        "test_a_failed_save_keeps_the_party_it_was_filing",
+        "test_a_type_the_list_no_longer_offers_cannot_put_a_picker_on_screen",
+        "test_a_hand_made_request_cannot_name_the_field",
+        "test_the_rule_is_the_model_s_own_list_of_columns"
+      ]
+    },
+    {
+      "file": "tests/Unit/CashflowVendorOwnershipTest.php",
+      "methods": [
+        "test_a_row_derived_from_cashflow_names_the_cashflow_as_owner",
+        "test_a_row_entered_in_the_vendor_ledger_owns_itself",
+        "test_the_ownership_column_can_be_mass_assigned"
+      ]
+    },
+    {
+      "file": "tests/Unit/ClientPortalLoginPolicyTest.php",
+      "methods": [
+        "test_every_enabled_flag_is_required",
+        "test_missing_client_or_wrong_request_attribute_never_resolves_portal_access"
+      ]
+    },
+    {
+      "file": "tests/Unit/DocumentUploadPolicyTest.php",
+      "methods": [
+        "test_supported_extensions_are_case_insensitive",
+        "test_prohibited_extensions_are_rejected_with_the_correct_field",
+        "test_size_limit_includes_exactly_twenty_megabytes_but_rejects_one_kilobyte_more",
+        "test_optional_and_required_upload_controls_share_the_same_policy"
+      ]
+    },
+    {
+      "file": "tests/Unit/EmployeeAccessTest.php",
+      "methods": [
+        "test_employee_can_read_self_but_not_another_employee_or_office_record",
+        "test_missing_actor_or_owner_cannot_read_a_record",
+        "test_office_can_view_and_manage_employee_records",
+        "test_self_service_allowlist_never_contains_salary_bank_or_role_fields"
+      ]
+    },
+    {
+      "file": "tests/Unit/EmployeePayTest.php",
+      "methods": [
+        "test_a_salary_debit_is_money_paid_to_the_person",
+        "test_a_credit_is_money_that_came_back",
+        "test_the_total_and_the_months_are_the_same_rows_read_twice",
+        "test_a_month_that_only_takes_money_back_is_negative",
+        "test_the_query_pins_the_person_and_not_the_direction",
+        "test_money_out_means_the_debits"
+      ]
+    },
+    {
+      "file": "tests/Unit/EmployeePayslipTest.php",
+      "methods": [
+        "test_the_totals_are_the_sum_of_the_slips_own_lines",
+        "test_a_slip_without_a_breakdown_still_says_what_it_paid",
+        "test_the_net_is_spelled_out_the_way_the_office_says_it",
+        "test_paise_and_recoveries_are_worded_too",
+        "test_the_slip_carries_its_own_number_the_days_and_how_to_send_it",
+        "test_the_page_and_the_paper_are_one_document",
+        "test_the_month_and_its_payslip_are_one_row",
+        "test_the_bank_account_on_the_slip_is_masked"
+      ]
+    },
+    {
+      "file": "tests/Unit/ExampleTest.php",
+      "methods": [
+        "test_that_true_is_true"
+      ]
+    },
+    {
+      "file": "tests/Unit/FeedbackRulesTest.php",
+      "methods": [
+        "test_a_single_low_line_makes_the_whole_answer_a_detractor",
+        "test_a_low_overall_or_a_low_recommendation_is_a_detractor",
+        "test_a_promoter_needs_an_excellent_answer_with_no_weak_line",
+        "test_everything_in_between_is_passive",
+        "test_a_dimension_left_blank_is_not_a_low_score",
+        "test_the_sql_that_finds_detractors_uses_the_rule_s_own_numbers",
+        "test_the_needs_attention_queue_is_the_detractors_nobody_has_closed",
+        "test_nps_is_promoters_minus_detractors",
+        "test_nps_refuses_to_invent_a_number_from_no_answers",
+        "test_the_words_a_score_wears",
+        "test_the_intro_depends_on_what_is_being_asked"
+      ]
+    },
+    {
+      "file": "tests/Unit/NotesRulesTest.php",
+      "methods": [
+        "test_a_missing_owner_matches_no_rows_at_all",
+        "test_an_owner_narrows_to_one_column_and_one_value",
+        "test_nothing_typed_is_the_default_view",
+        "test_a_hand_typed_filter_is_the_default_rather_than_an_empty_list",
+        "test_a_real_filter_survives_the_read",
+        "test_lifting_the_state_chip_lifts_that_one_key_and_no_other",
+        "test_the_applied_strip_never_repeats_a_chip",
+        "test_the_query_string_the_module_writes_back_carries_only_what_narrows",
+        "test_the_state_chip_is_the_desk_or_the_drawer",
+        "test_a_colour_that_is_not_a_colour_narrows_nothing",
+        "test_every_order_a_reader_can_choose_is_a_scope_the_model_has",
+        "test_the_board_puts_pinned_first",
+        "test_a_colour_nobody_chose_is_the_default_and_never_an_unknown_key",
+        "test_the_vocabulary_agrees_with_itself",
+        "test_filing_is_one_fact",
+        "test_the_excerpt_folds_whitespace_into_one_line"
+      ]
+    },
+    {
+      "file": "tests/Unit/PackagingLetterheadTest.php",
+      "methods": [
+        "test_our_own_sender_name_puts_the_sheet_on_our_letterhead",
+        "test_legal_boilerplate_does_not_change_who_issued_the_sheet",
+        "test_a_vendors_sheet_never_carries_our_logo",
+        "test_an_unnamed_sender_falls_back_to_the_linked_vendor",
+        "test_names_are_compared_as_words_not_fragments"
+      ]
+    },
+    {
+      "file": "tests/Unit/PackagingListLabelsTest.php",
+      "methods": [
+        "test_all_groups_are_numbered_continuously_without_expanding_the_batch_array",
+        "test_empty_invalid_or_oversized_runs_are_rejected_before_a_partial_batch_can_print",
+        "test_the_batch_limit_itself_is_inclusive"
+      ]
+    },
+    {
+      "file": "tests/Unit/PackagingPrintColumnsTest.php",
+      "methods": [
+        "test_legacy_and_new_lists_keep_the_eleven_column_default",
+        "test_columns_are_list_specific_canonical_deduplicated_and_cast_to_json",
+        "test_every_nonempty_subset_has_matching_widths_totaling_one_hundred_percent",
+        "test_empty_or_obsolete_stored_settings_fall_back_safely"
+      ]
+    },
+    {
+      "file": "tests/Unit/PackagingPrintSettingsTest.php",
+      "methods": [
+        "test_existing_lists_default_to_portrait_and_the_original_footer",
+        "test_settings_are_list_specific_cast_and_preserve_intentionally_blank_text",
+        "test_css_text_cannot_close_a_style_element_or_inject_rules"
+      ]
+    },
+    {
+      "file": "tests/Unit/PackagingSectionsTest.php",
+      "methods": [
+        "test_blocks_sharing_a_heading_form_one_section_in_entry_order",
+        "test_a_block_with_no_heading_is_titled_by_its_label_then_its_first_item",
+        "test_a_carton_holding_two_products_is_one_block_with_two_lines",
+        "test_the_sections_add_up_to_the_document_totals",
+        "test_a_section_can_carry_more_than_one_carton_size"
+      ]
+    },
+    {
+      "file": "tests/Unit/PermissionMatrixTest.php",
+      "methods": [
+        "test_route_requires_the_correct_permission",
+        "test_module_dashboard_requires_its_own_domain_not_generic_dashboard_access",
+        "test_manage_implies_view_but_view_does_not_imply_manage_or_sensitive_access",
+        "test_employee_never_gains_office_access_even_with_full_profile_or_explicit_grants",
+        "test_empty_custom_profile_is_deny_by_default"
+      ]
+    },
+    {
+      "file": "tests/Unit/RecurrenceScheduleTest.php",
+      "methods": [
+        "test_a_rule_on_the_31st_pays_the_last_day_when_there_is_no_31st",
+        "test_the_same_rule_in_a_leap_year_pays_the_29th",
+        "test_a_leap_day_rule_clamps_and_then_finds_its_day_again",
+        "test_quarterly_and_half_yearly_are_the_same_rule_three_and_six_months_out",
+        "test_daily_and_weekly_are_days_and_weeks",
+        "test_a_count_stops_the_ladder_exactly_at_the_count",
+        "test_an_end_date_stops_the_ladder_inside_the_month",
+        "test_the_end_date_and_the_count_are_each_a_ceiling",
+        "test_neither_ending_means_the_ladder_runs_to_the_window",
+        "test_an_end_date_before_the_start_is_an_empty_plan",
+        "test_the_first_date_of_a_plan_is_the_effective_date",
+        "test_a_paused_rule_resumes_on_its_anchor_day_not_the_day_it_was_resumed",
+        "test_a_rule_resumed_on_its_own_day_asks_that_day",
+        "test_a_daily_rule_resumed_after_a_gap_starts_today",
+        "test_a_future_effective_date_is_where_the_plan_starts",
+        "test_every_rhythm_the_form_offers_is_a_rhythm_the_calendar_knows",
+        "test_an_unknown_rhythm_is_an_error_rather_than_a_silent_default",
+        "test_the_default_ladder_is_step_repeated"
+      ]
+    }
+  ],
+  "controllers": [
+    "app/Http/Controllers/AccountController.php",
+    "app/Http/Controllers/AdminDashboardController.php",
+    "app/Http/Controllers/AssetSettingController.php",
+    "app/Http/Controllers/AuditLogController.php",
+    "app/Http/Controllers/AuthController.php",
+    "app/Http/Controllers/CashflowAttachmentController.php",
+    "app/Http/Controllers/CashflowController.php",
+    "app/Http/Controllers/CashflowRecurrenceController.php",
+    "app/Http/Controllers/CashflowSettingController.php",
+    "app/Http/Controllers/ClientController.php",
+    "app/Http/Controllers/ClientPortalAccountController.php",
+    "app/Http/Controllers/ClientPortalAuthController.php",
+    "app/Http/Controllers/ClientPortalBaseController.php",
+    "app/Http/Controllers/ClientPortalDashboardController.php",
+    "app/Http/Controllers/ClientPortalDocumentController.php",
+    "app/Http/Controllers/ClientPortalFeedbackController.php",
+    "app/Http/Controllers/ClientPortalInvoiceController.php",
+    "app/Http/Controllers/ClientPortalKycController.php",
+    "app/Http/Controllers/ClientPortalManagementController.php",
+    "app/Http/Controllers/ClientPortalNotificationController.php",
+    "app/Http/Controllers/ClientPortalPaymentController.php",
+    "app/Http/Controllers/ClientPortalProductController.php",
+    "app/Http/Controllers/ClientPortalProjectController.php",
+    "app/Http/Controllers/ClientPortalShipmentController.php",
+    "app/Http/Controllers/ClientPortalStatementController.php",
+    "app/Http/Controllers/ClientPortalSupportController.php",
+    "app/Http/Controllers/ClientPortalSupportManagementController.php",
+    "app/Http/Controllers/Controller.php",
+    "app/Http/Controllers/EmployeeDocumentController.php",
+    "app/Http/Controllers/EmployeePayslipController.php",
+    "app/Http/Controllers/EmployeeWorkspaceController.php",
+    "app/Http/Controllers/FeedbackController.php",
+    "app/Http/Controllers/FixedAssetController.php",
+    "app/Http/Controllers/GlobalSearchController.php",
+    "app/Http/Controllers/LeadCommentController.php",
+    "app/Http/Controllers/LeadController.php",
+    "app/Http/Controllers/LeadSettingController.php",
+    "app/Http/Controllers/ModuleDashboardController.php",
+    "app/Http/Controllers/NoteController.php",
+    "app/Http/Controllers/OfficeAlertController.php",
+    "app/Http/Controllers/OfficeBriefingSettingController.php",
+    "app/Http/Controllers/OfficeServiceController.php",
+    "app/Http/Controllers/OrganisationController.php",
+    "app/Http/Controllers/PackagingListController.php",
+    "app/Http/Controllers/PackagingListSettingController.php",
+    "app/Http/Controllers/PartyStatementController.php",
+    "app/Http/Controllers/PriceCalculatorController.php",
+    "app/Http/Controllers/ProductController.php",
+    "app/Http/Controllers/ProjectApprovalController.php",
+    "app/Http/Controllers/ProjectAttachmentController.php",
+    "app/Http/Controllers/ProjectCommentController.php",
+    "app/Http/Controllers/ProjectController.php",
+    "app/Http/Controllers/ProjectCoordinatorQueueController.php",
+    "app/Http/Controllers/ProjectExceptionController.php",
+    "app/Http/Controllers/ProjectFinancialClosureController.php",
+    "app/Http/Controllers/ProjectProductController.php",
+    "app/Http/Controllers/ProjectQualityInspectionController.php",
+    "app/Http/Controllers/ProjectTrackingController.php",
+    "app/Http/Controllers/ProjectWorkflowController.php",
+    "app/Http/Controllers/PublicFeedbackController.php",
+    "app/Http/Controllers/PublicLeadController.php",
+    "app/Http/Controllers/PurchaseInvoiceController.php",
+    "app/Http/Controllers/SalesInvoiceController.php",
+    "app/Http/Controllers/SettingsController.php",
+    "app/Http/Controllers/ShipmentController.php",
+    "app/Http/Controllers/ShipmentDeliveryReceiptController.php",
+    "app/Http/Controllers/TaskController.php",
+    "app/Http/Controllers/UserController.php",
+    "app/Http/Controllers/VendorController.php",
+    "app/Http/Controllers/VendorPortalAuthController.php",
+    "app/Http/Controllers/VendorPortalBaseController.php",
+    "app/Http/Controllers/VendorPortalController.php",
+    "app/Http/Controllers/VendorPortalManagementController.php",
+    "app/Http/Controllers/VendorShareController.php",
+    "app/Http/Controllers/WorkflowSettingController.php"
+  ],
+  "services": [
+    "app/Services/AssetDepreciation.php",
+    "app/Services/AssetFigures.php",
+    "app/Services/AssetFilters.php",
+    "app/Services/AssetIntake.php",
+    "app/Services/AssetVocabulary.php",
+    "app/Services/AuditTrail.php",
+    "app/Services/CashInvoiceConversion.php",
+    "app/Services/CashInvoiceDeletion.php",
+    "app/Services/CashflowAllocations.php",
+    "app/Services/CashflowAnalysis.php",
+    "app/Services/CashflowFilters.php",
+    "app/Services/CashflowLedger.php",
+    "app/Services/CashflowPickers.php",
+    "app/Services/CashflowVendorPaymentSync.php",
+    "app/Services/ClientAccountSummary.php",
+    "app/Services/ClientInvoiceSnapshot.php",
+    "app/Services/ClientPortalAccess.php",
+    "app/Services/ClientPortalNotifier.php",
+    "app/Services/DashboardPeriod.php",
+    "app/Services/DocumentUpload.php",
+    "app/Services/EmployeeAccess.php",
+    "app/Services/EmployeeProfile.php",
+    "app/Services/FeedbackFigures.php",
+    "app/Services/FeedbackFilters.php",
+    "app/Services/FeedbackFormRules.php",
+    "app/Services/FeedbackIntake.php",
+    "app/Services/FeedbackVocabulary.php",
+    "app/Services/GlobalSearch.php",
+    "app/Services/ModuleDashboard.php",
+    "app/Services/NoteFigures.php",
+    "app/Services/NoteFilters.php",
+    "app/Services/NoteIntake.php",
+    "app/Services/NoteVocabulary.php",
+    "app/Services/OfficeBriefing.php",
+    "app/Services/PackagingLabelQr.php",
+    "app/Services/PackagingListLabels.php",
+    "app/Services/PackagingListProjectComparison.php",
+    "app/Services/PackagingListProjectLinker.php",
+    "app/Services/PackagingListSource.php",
+    "app/Services/PackagingListVerifier.php",
+    "app/Services/PartyStatement.php",
+    "app/Services/PayslipDocument.php",
+    "app/Services/PermissionMatrix.php",
+    "app/Services/ProjectApprovals.php",
+    "app/Services/ProjectCoordinatorQueue.php",
+    "app/Services/ProjectExceptionRegistry.php",
+    "app/Services/ProjectFeedbackClosure.php",
+    "app/Services/ProjectFinancialClosure.php",
+    "app/Services/ProjectOperationalReadiness.php",
+    "app/Services/ProjectProducts.php",
+    "app/Services/ProjectReceipts.php",
+    "app/Services/ProjectWorkflowExecution.php",
+    "app/Services/ProjectWorkflowGates.php",
+    "app/Services/ProjectWorkflowGuidance.php",
+    "app/Services/ProjectWorkflowMatrix.php",
+    "app/Services/ProjectWorkflowNotifications.php",
+    "app/Services/ProjectWorkflowReturn.php",
+    "app/Services/PurchaseBillLedger.php",
+    "app/Services/PurchaseInvoiceMoney.php",
+    "app/Services/RecurrenceFigures.php",
+    "app/Services/RecurrenceFilters.php",
+    "app/Services/RecurrenceIntake.php",
+    "app/Services/RecurrencePlan.php",
+    "app/Services/RecurrencePosting.php",
+    "app/Services/RecurrenceSchedule.php",
+    "app/Services/RecurrenceVocabulary.php",
+    "app/Services/SalesInvoiceFilters.php",
+    "app/Services/SavedViews.php",
+    "app/Services/SettingsDirectory.php",
+    "app/Services/ShipmentCostCashflowSync.php",
+    "app/Services/ShipmentCostLedger.php",
+    "app/Services/ShipmentDispatchAuthorization.php",
+    "app/Services/ShipmentDocuments.php",
+    "app/Services/ShipmentPartyDirectory.php",
+    "app/Services/UnallocatedCashflows.php",
+    "app/Services/VendorPaymentCashflowSync.php"
+  ],
+  "models": [
+    "app/Models/AuditLog.php",
+    "app/Models/CashflowAccount.php",
+    "app/Models/CashflowAllocation.php",
+    "app/Models/CashflowAttachment.php",
+    "app/Models/CashflowCategory.php",
+    "app/Models/CashflowEntry.php",
+    "app/Models/CashflowMasterOption.php",
+    "app/Models/CashflowRecurrenceOccurrence.php",
+    "app/Models/CashflowRecurrenceRule.php",
+    "app/Models/Client.php",
+    "app/Models/ClientPortalComment.php",
+    "app/Models/ClientPortalConversation.php",
+    "app/Models/ClientPortalDocument.php",
+    "app/Models/ClientPortalInvoice.php",
+    "app/Models/ClientPortalMessage.php",
+    "app/Models/ClientPortalNotification.php",
+    "app/Models/ClientPortalUser.php",
+    "app/Models/EmployeeDocument.php",
+    "app/Models/EmployeePayslip.php",
+    "app/Models/FeedbackAction.php",
+    "app/Models/FeedbackAnswer.php",
+    "app/Models/FeedbackMasterOption.php",
+    "app/Models/FeedbackRequest.php",
+    "app/Models/FeedbackResponse.php",
+    "app/Models/FixedAsset.php",
+    "app/Models/FixedAssetAllocation.php",
+    "app/Models/FixedAssetCategory.php",
+    "app/Models/FixedAssetMaintenance.php",
+    "app/Models/Lead.php",
+    "app/Models/LeadAttachment.php",
+    "app/Models/LeadComment.php",
+    "app/Models/LeadMasterOption.php",
+    "app/Models/Note.php",
+    "app/Models/OfficeAlert.php",
+    "app/Models/OfficeAlertState.php",
+    "app/Models/OfficeService.php",
+    "app/Models/OfficeSetting.php",
+    "app/Models/Organisation.php",
+    "app/Models/OrganisationAddress.php",
+    "app/Models/OrganisationBank.php",
+    "app/Models/OrganisationContact.php",
+    "app/Models/OrganisationSocial.php",
+    "app/Models/PackagingList.php",
+    "app/Models/PackagingListCarton.php",
+    "app/Models/PackagingListItem.php",
+    "app/Models/PackagingListLabelPrint.php",
+    "app/Models/PackagingListVerification.php",
+    "app/Models/PartyStatementShare.php",
+    "app/Models/Product.php",
+    "app/Models/ProductMedia.php",
+    "app/Models/ProductPriceLadder.php",
+    "app/Models/Project.php",
+    "app/Models/ProjectApprovalOverride.php",
+    "app/Models/ProjectApprovalRequest.php",
+    "app/Models/ProjectApprovalVersion.php",
+    "app/Models/ProjectAttachment.php",
+    "app/Models/ProjectComment.php",
+    "app/Models/ProjectException.php",
+    "app/Models/ProjectExceptionEvent.php",
+    "app/Models/ProjectFinancialClosure.php",
+    "app/Models/ProjectGateEvaluation.php",
+    "app/Models/ProjectGateOverride.php",
+    "app/Models/ProjectLog.php",
+    "app/Models/ProjectProduct.php",
+    "app/Models/ProjectQualityInspection.php",
+    "app/Models/ProjectTrackingUpdate.php",
+    "app/Models/ProjectWorkflow.php",
+    "app/Models/ProjectWorkflowStep.php",
+    "app/Models/PurchaseInvoice.php",
+    "app/Models/PurchaseInvoiceItem.php",
+    "app/Models/SalesInvoice.php",
+    "app/Models/SalesInvoiceAttachment.php",
+    "app/Models/SalesInvoiceItem.php",
+    "app/Models/SalesInvoiceReminder.php",
+    "app/Models/SavedView.php",
+    "app/Models/Shipment.php",
+    "app/Models/ShipmentAttachment.php",
+    "app/Models/ShipmentCost.php",
+    "app/Models/ShipmentDeliveryReceipt.php",
+    "app/Models/ShipmentDeliveryReceiptLine.php",
+    "app/Models/ShipmentItem.php",
+    "app/Models/ShipmentPackingAllocation.php",
+    "app/Models/ShipmentTrackingHistory.php",
+    "app/Models/Task.php",
+    "app/Models/User.php",
+    "app/Models/Vendor.php",
+    "app/Models/VendorAttachment.php",
+    "app/Models/VendorCollaborationUpdate.php",
+    "app/Models/VendorComment.php",
+    "app/Models/VendorContact.php",
+    "app/Models/VendorPaymentAttachment.php",
+    "app/Models/VendorPaymentEntry.php",
+    "app/Models/VendorPortalUser.php",
+    "app/Models/VendorShareLink.php"
+  ],
+  "source_checks": [
+    "tools/checks/assets-check.cjs",
+    "tools/checks/assets-dialog-check.cjs",
+    "tools/checks/blade-check.cjs",
+    "tools/checks/cash-conversion-check.cjs",
+    "tools/checks/client-account-summary-check.cjs",
+    "tools/checks/confirmation-dialog-check.cjs",
+    "tools/checks/cost-check.cjs",
+    "tools/checks/dashboard-period-controls-check.cjs",
+    "tools/checks/design-check.cjs",
+    "tools/checks/docs-check.cjs",
+    "tools/checks/employees-check.cjs",
+    "tools/checks/feedback-check.cjs",
+    "tools/checks/invoices-check.cjs",
+    "tools/checks/list-check.cjs",
+    "tools/checks/mark-check.cjs",
+    "tools/checks/module-dashboard-check.cjs",
+    "tools/checks/notes-check.cjs",
+    "tools/checks/packaging-label-batch-check.cjs",
+    "tools/checks/packaging-lists-check.cjs",
+    "tools/checks/packaging-print-borders-browser.cjs",
+    "tools/checks/packaging-print-settings-check.cjs",
+    "tools/checks/pdf-documents-check.cjs",
+    "tools/checks/permission-audit-check.cjs",
+    "tools/checks/php-check.cjs",
+    "tools/checks/project-deletion-check.cjs",
+    "tools/checks/project-feedback-closure-check.cjs",
+    "tools/checks/project-simplification-check.cjs",
+    "tools/checks/project-workflow-check.cjs",
+    "tools/checks/project-workflow-ux-check.cjs",
+    "tools/checks/projects-check.cjs",
+    "tools/checks/recurring-check.cjs",
+    "tools/checks/report-check.cjs",
+    "tools/checks/settings-check.cjs",
+    "tools/checks/sidebar-navigation-check.cjs",
+    "tools/checks/sql-check.cjs",
+    "tools/checks/statement-check.cjs",
+    "tools/checks/status-check.cjs",
+    "tools/checks/ui-components-check.cjs",
+    "tools/checks/vendor-portal-check.cjs",
+    "tools/checks/workflow-guidance-check.cjs"
+  ]
+}

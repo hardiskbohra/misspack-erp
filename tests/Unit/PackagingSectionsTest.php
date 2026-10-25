@@ -6,7 +6,7 @@ use App\Models\PackagingList;
 use App\Models\PackagingListCarton;
 use App\Models\PackagingListItem;
 use Illuminate\Support\Collection;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 /**
  * The sheet is read in sections, and a carton can hold two products.
@@ -28,6 +28,7 @@ use PHPUnit\Framework\TestCase;
  */
 class PackagingSectionsTest extends TestCase
 {
+    private int $cartonId = 0;
     public function test_blocks_sharing_a_heading_form_one_section_in_entry_order(): void
     {
         $list = $this->list([
@@ -163,6 +164,8 @@ class PackagingSectionsTest extends TestCase
             ]);
         }
 
+        // Real persisted carton blocks have distinct identities even without a heading.
+        $carton->id = ++$this->cartonId;
         $carton->setRelation('items', new Collection($lines));
 
         return $carton;
