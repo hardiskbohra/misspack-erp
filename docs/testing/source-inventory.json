@@ -258,11 +258,13 @@
       "methods": [
         "test_full_office_menu_contains_frequent_modules_with_real_destinations",
         "test_custom_access_only_shows_permitted_modules_including_manage_implies_view",
-        "test_employee_does_not_receive_office_shortcuts_even_with_full_profile",
-        "test_no_permitted_modules_means_no_empty_launcher",
+        "test_employee_receives_private_notes_only_even_with_full_profile",
+        "test_no_permitted_modules_still_exposes_only_private_notes",
         "test_guest_does_not_receive_office_shortcuts",
         "test_current_module_is_highlighted_but_excluded_subroutes_are_not",
-        "test_quick_menu_reuses_sidebar_catalog_and_does_not_invent_missing_modules"
+        "test_quick_menu_reuses_sidebar_catalog_and_does_not_invent_missing_modules",
+        "test_launcher_is_icon_only_but_has_an_accessible_name",
+        "test_private_notes_moves_into_quick_menu_for_both_roles_without_office_privilege"
       ]
     },
     {
@@ -303,7 +305,8 @@
         "test_project_dashboard_retains_live_client_value_analysis_without_mixing_currencies",
         "test_retired_executive_dashboard_redirects_module_readers_to_directory_with_context",
         "test_module_workspaces_and_directory_have_no_executive_dashboard_navigation",
-        "test_directory_explains_when_no_module_is_authorised_without_exposing_links"
+        "test_directory_explains_when_no_module_is_authorised_without_exposing_links",
+        "test_compact_topbar_keeps_reporting_context_in_content_and_profile_theme_in_menu"
       ]
     },
     {

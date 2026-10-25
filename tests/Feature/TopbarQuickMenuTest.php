@@ -39,7 +39,7 @@ class TopbarQuickMenuTest extends TestCase
     {
         $this->office();
         $html = $this->html();
-        $this->assertSame(8, substr_count($html, 'role="menuitem"'));
+        $this->assertSame(9, substr_count($html, 'role="menuitem"'));
         foreach (array_slice($this->navigation(), 0, 8) as $item) {
             $this->assertStringContainsString('href="'.route($item['route']).'"', $html);
             $this->assertStringContainsString($item['label'], $html);
@@ -58,23 +58,28 @@ class TopbarQuickMenuTest extends TestCase
         ] as [$permission, $labels]) {
             $this->office(['access_profile' => 'custom', 'permissions' => [$permission]]);
             $html = $this->html();
-            $this->assertSame(count($labels), substr_count($html, 'role="menuitem"'));
+            $this->assertSame(count($labels) + 1, substr_count($html, 'role="menuitem"'));
+            $this->assertStringContainsString('href="'.route('notes.index').'"', $html);
             foreach ($this->navigation() as $item) {
                 $this->assertSame(in_array($item['label'], $labels), str_contains($html, 'href="'.route($item['route']).'"'));
             }
         }
     }
 
-    public function test_employee_does_not_receive_office_shortcuts_even_with_full_profile(): void
+    public function test_employee_receives_private_notes_only_even_with_full_profile(): void
     {
         $this->office(['role' => 'employee']);
-        $this->assertStringNotContainsString('data-quick-menu', $this->html());
+        $html = $this->html();
+        $this->assertSame(1, substr_count($html, 'role="menuitem"'));
+        $this->assertStringContainsString('href="'.route('notes.index').'"', $html);
     }
 
-    public function test_no_permitted_modules_means_no_empty_launcher(): void
+    public function test_no_permitted_modules_still_exposes_only_private_notes(): void
     {
         $this->office(['access_profile' => 'custom', 'permissions' => ['settings.manage']]);
-        $this->assertStringNotContainsString('data-quick-menu', $this->html());
+        $html = $this->html();
+        $this->assertSame(1, substr_count($html, 'role="menuitem"'));
+        $this->assertStringContainsString('href="'.route('notes.index').'"', $html);
     }
 
     public function test_guest_does_not_receive_office_shortcuts(): void
@@ -101,7 +106,31 @@ class TopbarQuickMenuTest extends TestCase
         $items[0]['label'] = 'Shipping desk';
         $html = $this->html($items);
         $this->assertStringContainsString('Shipping desk', $html);
-        $this->assertSame(1, substr_count($html, 'role="menuitem"'));
+        $this->assertSame(2, substr_count($html, 'role="menuitem"'));
         $this->assertStringNotContainsString('href="'.route('cashflows.index').'"', $html);
     }
+
+    public function test_launcher_is_icon_only_but_has_an_accessible_name(): void
+    {
+        $this->office();
+        $html = $this->html();
+        preg_match('/<button[^>]*aria-label="Quick menu"[^>]*>(.*?)<\/button>/s', $html, $button);
+        $this->assertNotEmpty($button);
+        $this->assertSame('', trim(strip_tags($button[1])));
+        $this->assertStringContainsString('data-ui-tooltip="Quick menu"', $html);
+    }
+
+    public function test_private_notes_moves_into_quick_menu_for_both_roles_without_office_privilege(): void
+    {
+        foreach ([['role'=>'admin'], ['role'=>'admin','access_profile'=>'custom','permissions'=>['settings.manage']], ['role'=>'employee']] as $attributes) {
+            $this->office($attributes);
+            $html = $this->html();
+            $this->assertStringContainsString('href="'.route('notes.index').'"', $html);
+            if (($attributes['role'] ?? '') === 'employee') {
+                $this->assertSame(1, substr_count($html, 'role="menuitem"'));
+                $this->assertStringNotContainsString('href="'.route('cashflows.index').'"', $html);
+            }
+        }
+    }
+
 }

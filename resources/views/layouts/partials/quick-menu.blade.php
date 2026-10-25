@@ -14,14 +14,13 @@
             })->values()
         : collect();
 @endphp
-@if($quickMenuItems->isNotEmpty())
+@if($quickMenuUser)
 <div class="master-dropdown topbar-quick-menu" data-quick-menu>
-    <button type="button" class="master-dropdown-toggle topbar-btn" aria-label="Quick menu"
+    <button type="button" class="master-dropdown-toggle topbar-btn" aria-label="Quick menu" data-ui-tooltip="Quick menu"
             aria-haspopup="menu" aria-expanded="false" aria-controls="topbarQuickMenuPanel">
         <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
-        <span class="topbar-quick-label">Quick menu</span>
     </button>
-    <div class="master-dropdown-menu topbar-quick-panel" id="topbarQuickMenuPanel" role="menu" aria-label="Frequently used modules">
+    <div class="master-dropdown-menu topbar-quick-panel" id="topbarQuickMenuPanel" role="menu" aria-label="Quick access">
         <div class="topbar-quick-heading" role="presentation">Frequently used</div>
         @foreach($quickMenuItems as $item)
             @php($quickMenuActive = request()->routeIs($item['active']) && ! (isset($item['except']) && request()->routeIs($item['except'])))
@@ -30,6 +29,12 @@
                 <span>{{ $item['label'] }}</span>
             </a>
         @endforeach
+        {{-- Private Notes remains available to employees and restricted office accounts.
+             It is a personal utility, not a grant to any operational module. --}}
+        <a href="{{ route('notes.index') }}" role="menuitem" tabindex="-1"
+           data-ui-tooltip="Notes — private to this login" @if(request()->routeIs('notes.*')) aria-current="page" @endif>
+            <i class="fa-regular fa-note-sticky" aria-hidden="true"></i><span>Notes</span>
+        </a>
     </div>
 </div>
 @endif

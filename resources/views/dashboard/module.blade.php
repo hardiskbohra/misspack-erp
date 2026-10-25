@@ -2,11 +2,12 @@
 
 @section('page-title', $dashboard['label'].' Dashboard')
 
+@section('page-actions-class', 'topbar-page-actions--compact')
+
 @section('page-actions')
     <form method="GET" action="{{ route('dashboards.show', $module) }}" id="moduleDashboardPeriodForm">
         <div class="core-filter-toolbar">
-            <x-filter-trigger drawer="moduleDashboardPeriodDrawer" label="Reporting period" />
-            <span class="module-period-summary">{{ $period['label'] }} <small>{{ $period['start']->format('d M Y') }} – {{ $period['end']->format('d M Y') }}</small></span>
+            <x-filter-trigger drawer="moduleDashboardPeriodDrawer" label="Reporting period" :icon-only="true" />
         </div>
         <x-drawer id="moduleDashboardPeriodDrawer" title="Choose reporting period" eyebrow="Module dashboard"
             subtitle="Use the same period for totals, trends and the like-for-like comparison." size="medium">
@@ -94,6 +95,11 @@
         : number_format((float) $value, 0);
 @endphp
 <div class="module-dashboard">
+    <section class="core-card module-reporting-summary" id="moduleReportingFilters" aria-label="Selected reporting filters">
+        <div><span>Reporting period</span><strong>{{ $period['label'] }}</strong>
+            @unless($period['type'] === 'custom')<small>{{ $period['start']->format('d M Y') }} – {{ $period['end']->format('d M Y') }}</small>@endunless</div>
+        <span class="module-card-chip">{{ $currency }} only · no FX conversion</span>
+    </section>
     <nav class="core-card module-dashboard-nav" aria-label="Module dashboards">
         @foreach($modules as $key => $definition)
             <a href="{{ route('dashboards.show', ['module' => $key] + request()->only(['period_type', 'year', 'month', 'quarter', 'half', 'start_date', 'end_date', 'currency'])) }}"
@@ -106,7 +112,7 @@
     <div class="module-section-links" aria-label="Dashboard sections">
         <a href="#moduleSummary">Summary &amp; trends</a><a href="#moduleAnalysis">Detailed analysis</a><a href="#moduleAttention">Attention queue</a>
     </div>
-    <p class="module-scope-note">Money: {{ $currency }} only · no FX conversion. Selected period: {{ $period['label'] }}. Live positions reflect current records as of {{ now()->format('d M Y') }}, not a historical closing balance.</p>
+    <p class="module-scope-note">Live positions reflect current records as of {{ now()->format('d M Y') }}, not a historical closing balance.</p>
 
     @if(count($dashboard['alerts']))
         <section class="module-alert-banner" role="alert" aria-labelledby="moduleAlertTitle">

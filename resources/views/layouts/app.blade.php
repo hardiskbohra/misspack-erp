@@ -229,7 +229,7 @@
             {{-- A page's primary action belongs beside its title, not buried in
                  a toolbar: it stays reachable however far the list scrolls. --}}
             @hasSection('page-actions')
-                <div class="topbar-page-actions">@yield('page-actions')</div>
+                <div class="topbar-page-actions @yield('page-actions-class')">@yield('page-actions')</div>
             @endif
 
             <div class="topbar-spacer"></div>
@@ -241,32 +241,6 @@
                         <i class="fas fa-search"></i>
                     </button>
                 @endif
-
-                {{-- Notes, beside Search: it is the one screen both halves of the
-                     application may open — an employee's menu and the office's
-                     both carry it — and a private note is what you reach for
-                     without leaving the record you are on. The control wears the
-                     shell's own topbar button, so it is the same height, radius
-                     and focus ring as its neighbours, and an icon-only control
-                     names itself in words: the label is the tooltip. It marks
-                     itself as the current page, which is how a reader who came in
-                     from a sidebar label knows where they are. --}}
-                <a class="topbar-btn" href="{{ route('notes.index') }}" aria-label="Notes"
-                    title="Notes — private to this login"
-                    @if (request()->routeIs('notes.*')) aria-current="page" @endif>
-                    <i class="fa-regular fa-note-sticky" aria-hidden="true"></i>
-                </a>
-
-                <form method="POST" action="{{ route('theme.toggle') }}" class="theme-form">
-                    @csrf
-                    <button type="submit" class="theme-toggle desktop-only">
-                        @if(session('theme', 'light') === 'light')
-                            <i class="fas fa-moon"></i> <span>Dark</span>
-                        @else
-                            <i class="fas fa-sun"></i> <span>Light</span>
-                        @endif
-                    </button>
-                </form>
 
                 @if (auth()->user()?->isAdmin())
                     <button type="button" class="topbar-btn" data-ob-open aria-label="Office briefings">

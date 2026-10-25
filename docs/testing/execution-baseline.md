@@ -121,3 +121,17 @@ and48 PHPUnit files. These design counts are not measured coverage.
   are checked after pushing; local native execution is not claimed.
 - See [statement-list-filters.md](statement-list-filters.md) for commands, scope
   and evidence. No live installation data was accessed or modified.
+
+
+## Compact topbar follow-up (25 October 2026)
+
+- Catalogue219 designs (95 unit,124 integration),64 linked designs,48 PHPUnit files.
+- Actual red3 targeted failures, then full portable **483 tests/15,304 assertions PASS**
+  on PHP8.4.25 WASM. Unit, Integration and Feature all included.
+- Browser: light/dark module workspaces and directory at desktop/tablet/mobile;
+  icon-only launchers, private Notes keyboard path, profile theme option, selected
+  dates/currency in content, mobile reporting drawer and40px targets verified.
+- Shared filter icon variant is opt-in and generated static CSS rebuilt. No SQL or
+  arithmetic changes; native CI checked after push independently.
+- See [compact-topbar.md](compact-topbar.md) for TDD, changed menu expectations and
+  scope. Design counts are not measured runtime coverage.

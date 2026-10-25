@@ -304,31 +304,14 @@ nor a person's record, so they sit in `routes/web.php` inside `auth` and
 - outside `/my`, because `/my` is one person's record — salary, documents — and
   this is whoever is signed in, an administrator included.
 
-The sidebar carries it twice: in the employee's own menu (`My Workspace`) and in
-the office's, under a `Personal` section. `layouts/app.blade.php` also maps
-`notes.*` to `data-ui-module="notes"`, like every other module.
-
-**The topbar carries it too, beside the search control.** A note is written in
-the middle of something else — you are reading an invoice and remember a call —
-so the door is one click from any screen rather than a trip through the menu.
-The control is an `<a>` wearing the shell's own `.topbar-btn`: the same height,
-radius, spacing table and focus ring as the search and briefing buttons next to
-it, and nothing module-local, because a page-local style for a shell control is
-how two topbars come to disagree. Three details in it are deliberate:
-
-- it is **outside** the office-only block (the search button is admin-only; an
-  employee keeps notes too, so their topbar carries it first);
-- it is **icon-only, therefore it names itself in words** — `aria-label="Notes"`
-  and the tooltip `Notes — private to this login`, the same contract the search
-  and briefing buttons follow;
-- it wears `aria-current="page"` while `notes.*` is open, and the shell styles
-  that state with the accent chip the sidebar toggle already uses on hover, so
-  the topbar has one "you are here" idiom and not two.
-
-One line in `public/assets/css/app-layout.css` came with it: `.topbar-btn` now
-declares `color: var(--text-primary)`. A `<button>` has never inherited the
-theme's colour, but an `<a>` falls back to the browser's link blue, and the same
-control would have been two colours depending on its tag.
+The employee sidebar retains Notes in My Workspace. The office avoids a
+sidebar duplicate; both roles now access private Notes through the icon-only
+**Quick Menu**. This supersedes the former standalone Notes button beside Search.
+The entry remains a real link, named Notes with the ERP tooltip “Notes — private
+to this login” and `aria-current="page"` on `notes.*`. A restricted or employee
+account receives only its private utility and already-authorised module shortcuts;
+Notes never grants office-module access. The shell still maps `notes.*` to
+`data-ui-module="notes"` and preserves the shared link/focus treatment.
 
 ## 10. The guard rails
 
@@ -364,7 +347,7 @@ holds:
   row opening its note through the shared row navigation, and the module's own
   `nt-*` vocabulary declared by its sheet;
 - the shell and the paperwork: both menus, the module mapping, the topbar door
-  (a link, outside the office-only block, beside the search control, labelled,
+  (a private link in Quick Menu for both roles, labelled,
   and marked as the current page — with the shell's own button required to carry
   a colour, or an anchor would wear the browser's link blue), all seven routes,
   the drawer contract list, this document, and the README.

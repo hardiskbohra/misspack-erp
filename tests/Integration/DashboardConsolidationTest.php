@@ -242,4 +242,28 @@ class DashboardConsolidationTest extends TestCase
             ->assertDontSee('/dashboards/finance', false);
     }
 
+
+    public function test_compact_topbar_keeps_reporting_context_in_content_and_profile_theme_in_menu(): void
+    {
+        $this->reader(['work.view']);
+        $page = $this->get('/dashboards/work?period_type=custom&start_date=2026-10-10&end_date=2026-10-12&currency=USD')->assertOk();
+        $dom = new \DOMDocument;
+        @$dom->loadHTML($page->getContent());
+        $xpath = new \DOMXPath($dom);
+        $header = $xpath->query('//header[contains(@class,"topbar")]')->item(0);
+        $this->assertNotNull($header);
+        $this->assertSame(0, $xpath->query('.//button[contains(@class,"theme-toggle")]', $header)->length);
+        $this->assertSame(0, $xpath->query('.//a[contains(@class,"topbar-btn") and @aria-label="Notes"]', $header)->length);
+        $filter = $xpath->query('.//button[@data-drawer-open="moduleDashboardPeriodDrawer"]', $header)->item(0);
+        $this->assertNotNull($filter);
+        $this->assertSame('', trim($filter->textContent));
+        $this->assertStringNotContainsString('10 Oct 2026', $header->textContent);
+        $this->assertSame(1, $xpath->query('.//form[@action="'.route('theme.toggle').'"]', $header)->length);
+        $selection = $xpath->query('//*[@id="moduleReportingFilters"]')->item(0);
+        $this->assertNotNull($selection);
+        $this->assertStringContainsString('10 Oct 2026', $selection->textContent);
+        $this->assertStringContainsString('12 Oct 2026', $selection->textContent);
+        $this->assertStringContainsString('USD', $selection->textContent);
+    }
+
 }

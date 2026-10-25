@@ -327,3 +327,12 @@ a.core-drawer-field-value:hover {
         transition-duration: .01ms;
     }
 }
+
+/* Opt-in icon trigger: keep the label accessible and the target touch-sized. */
+.core-filter-trigger.core-filter-trigger--icon {
+    width: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0;
+    gap: 0;
+}

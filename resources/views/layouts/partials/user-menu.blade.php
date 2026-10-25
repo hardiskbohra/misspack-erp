@@ -76,9 +76,7 @@
 
         <div class="user-menu-sep" role="separator"></div>
 
-        {{-- The top bar's theme button is hidden on a phone, so this is the only
-             switch there is on small screens — and a menu is where a person
-             looks for "a setting about me". --}}
+        {{-- Theme belongs to the profile menu on every screen size. --}}
         <form method="POST" action="{{ route('theme.toggle') }}">
             @csrf
             <button type="submit" role="menuitem">

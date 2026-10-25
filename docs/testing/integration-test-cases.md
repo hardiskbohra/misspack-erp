@@ -1572,3 +1572,20 @@ Sources: `resources/views/components/drawer.blade.php`, `public/assets/js/master
 1. Render each print page and inspect final print rules
 
 **Expected:** Correct paper geometry; black document text; sender branding and configured columns respected.
+
+### IT-UI-004 — Compact topbar preserves private utilities and reporting context
+
+**Priority:** P1 · **Requirement:** REQ-UI · **Implementation:** linked executable evidence
+
+- **Preconditions:** Office, custom-access, employee and guest identities; real module Blade
+- **Data:** Custom10..12Oct2026 in USD; full or settings-only permissions
+1. Render icon-only Quick Menu and reporting trigger
+2. Locate Notes in Quick Menu and theme control only in profile menu
+3. Read selected reporting dates/currency in page content
+4. Retain authorised operational shortcuts and employee privacy
+
+**Expected:** No duplicate standalone theme or Notes controls and no visible launcher/filter text. Accessible names/custom tooltips remain. Exact reporting selection appears in content; mobile filter remains reachable. Notes available privately to both roles without office privilege; guests see no launcher.
+
+**Note:** Actual responsive browser verifies40px triggers, keyboard Quick Menu Notes/End/Escape, mobile drawer opening and profile theme reachability; source/HTTP results alone do not prove browser layout.
+
+**Evidence:** `tests/Feature/TopbarQuickMenuTest.php#test_launcher_is_icon_only_but_has_an_accessible_name`; `tests/Feature/TopbarQuickMenuTest.php#test_private_notes_moves_into_quick_menu_for_both_roles_without_office_privilege`; `tests/Feature/TopbarQuickMenuTest.php#test_employee_receives_private_notes_only_even_with_full_profile`; `tests/Feature/TopbarQuickMenuTest.php#test_custom_access_only_shows_permitted_modules_including_manage_implies_view`; `tests/Integration/DashboardConsolidationTest.php#test_compact_topbar_keeps_reporting_context_in_content_and_profile_theme_in_menu`
