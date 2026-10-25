@@ -939,3 +939,37 @@ body.stmt-print .stmt-table td {
     .stmt-print .stmt-table tfoot { display: table-row-group; }
     body.stmt-print .stmt-table tfoot td { font-size: 9pt; }
 }
+
+/* Print masthead: document title beside logo, then issuer/party at equal height.
+   Keep the equal-name rule outside @media print so the preview matches paper. */
+.stmt-masthead {
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+    padding-bottom: 12px;
+    break-inside: avoid;
+}
+
+.stmt-masthead-logo,
+.stmt-document-heading {
+    display: table-cell;
+    width: 50%;
+    vertical-align: top;
+}
+
+.stmt-document-heading { text-align: right; }
+.stmt-masthead .stmt-logo { margin: 0; }
+.stmt-document-heading .stmt-eyebrow { margin-top: 0; }
+.stmt-document-heading .stmt-period { margin-bottom: 0; }
+.stmt-document-heading .stmt-period-dates { margin: 4px 0 0; }
+
+.stmt-head--compact .stmt-brand-name,
+.stmt-head--compact .stmt-party-name {
+    margin: 0 0 4px;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+}
+
+.stmt-table th.stmt-num { text-align: right; }

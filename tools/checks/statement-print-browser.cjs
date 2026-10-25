@@ -45,6 +45,7 @@ const root=path.resolve(__dirname,'../..'),dir=path.resolve(process.argv[2]||pat
    for(const width of [1440,390]){
     await page.setViewportSize({width,height:1000});
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No page-wide overflow '+name+' '+width);
+    assert(await page.evaluate(()=>{const a=document.querySelector('.stmt-brand-name'),b=document.querySelector('.stmt-party-name');return Math.abs(a.getBoundingClientRect().top-b.getBoundingClientRect().top)<1&&getComputedStyle(a).fontSize===getComputedStyle(b).fontSize;}),'Preview names align and match size '+name+' '+width);
     await page.locator('[data-drawer-open="statementPrintFilters"]').click();
     assert(await page.locator('#printPeriod').isVisible());
     await page.keyboard.press('Escape');
@@ -59,6 +60,20 @@ const root=path.resolve(__dirname,'../..'),dir=path.resolve(process.argv[2]||pat
      hidden:getComputedStyle(document.querySelector('.pdf-toolbar')).display==='none'};
    });
    assert(layout.aligned&&layout.separate,'Issuer and party must be side by side '+name);
+   const header=await page.evaluate(()=>{
+    const company=document.querySelector('.stmt-brand-name'),party=document.querySelector('.stmt-party-name');
+    const logo=document.querySelector('.stmt-logo'),title=document.querySelector('.stmt-eyebrow'),period=document.querySelector('.stmt-period');
+    const b=company.getBoundingClientRect(),p=party.getBoundingClientRect(),l=logo.getBoundingClientRect(),t=title.getBoundingClientRect();
+    return {namesAligned:Math.abs(b.top-p.top)<1,sameSize:getComputedStyle(company).fontSize===getComputedStyle(party).fontSize,
+     sameWeight:getComputedStyle(company).fontWeight===getComputedStyle(party).fontWeight,
+     sameLine:getComputedStyle(company).lineHeight===getComputedStyle(party).lineHeight,
+     titleWithLogo:Math.abs(l.top-t.top)<1,periodBelow:period.getBoundingClientRect().top>=t.bottom,
+     namesBelow:b.top>=Math.max(l.bottom,period.getBoundingClientRect().bottom),
+     chips:document.querySelectorAll('header .stmt-chip').length,balance:getComputedStyle(document.querySelector('.stmt-table thead th:last-child')).textAlign};
+   });
+   assert(header.namesAligned&&header.sameSize&&header.sameWeight&&header.sameLine,'Company/party names must share top line and type '+name);
+   assert(header.titleWithLogo&&header.periodBelow&&header.namesBelow,'Title and filters must sit beside logo above names '+name);
+   assert.equal(header.chips,0,'No header currency/direction chips');assert.equal(header.balance,'right','Balance heading aligns with amounts');
    assert(layout.logo,'Logo loaded');assert.deepEqual(layout.cropped,[],'No cropped summary amounts');assert(layout.hidden,'Toolbar print-hidden');
    await page.pdf({path:path.join(dir,name+'.pdf'),format:'A4',preferCSSPageSize:true,printBackground:true});
    await page.emulateMedia({media:'screen'});

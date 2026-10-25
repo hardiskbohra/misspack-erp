@@ -23,7 +23,28 @@ for name, expected in amounts.items():
     assert doc[0].get_images(), (name, 'missing embedded issuer logo')
     company = doc[0].search_for('MissPack India Pvt Ltd')[0]
     title = doc[0].search_for('STATEMENT OF ACCOUNT')[0]
-    assert company.x1 < title.x0 and abs(company.y0 - title.y0) < 6
+    logo = doc[0].get_image_rects(doc[0].get_images()[0][0])[0]
+    party_text = 'Historical vendor' if name == 'vendor-all' else ('Long client name' if name == 'client-large' else 'Historical client')
+    party = doc[0].search_for(party_text)[0]
+    assert company.x1 < party.x0 and abs(company.y0 - party.y0) < 1, (name, 'issuer/party names not aligned')
+    assert title.x0 > logo.x1 and abs(logo.y0 - title.y0) < 6, (name, 'document title not beside logo')
+    assert company.y0 > max(title.y1, logo.y1)
+    spans = [span for block in doc[0].get_text('dict')['blocks'] if 'lines' in block for line in block['lines'] for span in line['spans']]
+    issuer_span = next(span for span in spans if 'MissPack India Pvt Ltd' in span['text'])
+    party_span = next(span for span in spans if party_text in span['text'])
+    assert abs(issuer_span['size'] - party_span['size']) < .1, (name, 'issuer/party font sizes differ')
+    masthead_text = doc[0].get_text(clip=pymupdf.Rect(title.x0 - 2, title.y0, doc[0].rect.width, company.y0 - 1))
+    assert ('Last year' if name == 'client-custom' else 'All time') in masthead_text
+    # Summary direction and amount currency stay intact; only header badges disappear.
+    header_end = doc[0].search_for('ACCOUNT SUMMARY')[0].y0
+    header_text = doc[0].get_text(clip=pymupdf.Rect(0, 0, doc[0].rect.width, header_end - 1))
+    assert 'Receivable' not in header_text and 'Payable' not in header_text
+    assert '₹' not in header_text and '¥' not in header_text
+    # Locate ledger Balance on the Date heading row, not the summary label.
+    first_page_words = doc[0].get_text('words')
+    table_heading = next(w for w in first_page_words if w[4] == 'DATE')
+    balance_heading = next(w for w in first_page_words if w[4] == 'BALANCE' and abs(w[1] - table_heading[1]) < 3)
+    assert abs(balance_heading[2] - (doc[0].rect.width - 12 * 72 / 25.4 - 4 * 72 / 96)) < 4, (name, 'Balance heading is not right aligned')
     lines = doc[0].get_text().splitlines()
     start = lines.index('MissPack India Pvt Ltd') + 1
     assert lines[start:start+3] == ['E-410, 4th Floor, City Centre',

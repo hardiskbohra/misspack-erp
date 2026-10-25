@@ -69,3 +69,37 @@ Sandbox equivalent uses `/tmp/erp-test-tools/node_modules/.bin/php-wasm-cli`
 with`PHP=8.4`, Playwright via`NODE_PATH=/tmp/erp-test-tools/node_modules`, Chromium
 `/tmp/chromium` with`LD_LIBRARY_PATH=/tmp/al2023/lib`, and PyMuPDF via
 `PYTHONPATH=/tmp/erp-pdf-tools`. Raw HTML/PDF/PNG/JUnit/logs stay ignored in`.work/`.
+
+## Header alignment refinement —25 October 2026
+
+Acceptance: print-only masthead places logo and Statement of account on the
+same top line, selected period/exact dates directly below that title. The next
+row starts issuer and client/vendor names at the same height with identical
+font size/weight/line height. Remove only the header currency/direction chips;
+retain currency on amounts and accounting direction in the summary/closing
+balance. Numeric table headings, including Balance, align right with values.
+Use the authoritative shared document, preserve app/public/portal presentation,
+and retain existing selected-filter, arithmetic, privacy and A4 regression gates.
+
+
+Refinement evidence (IT-STATEMENT-006):
+- Test-first HTTP Red:1failure/2assertions for the missing masthead; actual
+  Chromium Red for names not sharing the same top line/type. Green:8statement
+  integration tests/98assertions. A new closing-label assertion initially assumed
+  literal HTML whitespace; it now reads normalized DOM text, retaining the exact
+  expected Receivable/Payable wording without changing production accounting.
+- Full portable PHP8.4.25:493tests/15,406assertions, Unit/Feature/Integration PASS.
+- Real Chromium preview at1440/390px verifies matching name size/top position.
+  Print-media checks assert equal font size, weight and line height, same name
+  top line, title at logo top, period beneath title, both names below masthead,
+  zero header chips and right-aligned Balance heading for client/vendor/custom/
+  long-name cases. Existing popup, Filters, date scope and Download checks pass.
+- Actual A4 PDF text/span/image geometry independently confirms aligned names,
+  identical font size, title beside embedded logo, period directly under title,
+  absent currency/direction badges and Balance heading at the right table edge.
+  Complete amounts and three issuer-address lines retained. All-time/custom/
+  vendor examples remain1page and73-row stress case remains3pages, with all
+  rows and final total once. App header chips remain unchanged (HTTP assertion).
+- No service, controller, ledger calculation, SQL or permission change. Shared
+  statements75/PDF20/design79/UI24 and default contracts remain verification
+  gates; native PHP/MySQL CI is checked independently after push.

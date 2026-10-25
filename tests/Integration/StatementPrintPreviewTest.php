@@ -117,6 +117,28 @@ class StatementPrintPreviewTest extends TestCase
         $page->assertDontSee('PAN ');
     }
 
+    public function test_print_masthead_separates_title_filters_from_aligned_party_names_and_removes_only_header_badges(): void
+    {
+        foreach (['client', 'vendor'] as $type) {
+            $party = $this->fixture[$type];
+            $currency = $type === 'client' ? 'INR' : 'RMB';
+            $page = $this->get('/cashflows/statements/'.$type.'/'.$party->id.'/print?period=all&currency='.$currency)->assertOk();
+            $x = $this->xpath($page->getContent());
+            $this->assertSame(1, $x->query('//*[contains(@class,"stmt-masthead")]//img[contains(@class,"stmt-logo")]')->length);
+            $this->assertSame(1, $x->query('//*[contains(@class,"stmt-masthead")]//*[contains(@class,"stmt-eyebrow")]')->length);
+            $this->assertSame('All time', trim($x->query('//*[contains(@class,"stmt-masthead")]//*[contains(@class,"stmt-period")]')->item(0)->textContent));
+            $this->assertSame(0, $x->query('//header//*[contains(@class,"stmt-chip")]')->length);
+            $this->assertSame(0, $x->query('//*[contains(@class,"stmt-head--compact")]//*[contains(@class,"stmt-eyebrow")]')->length);
+            $this->assertSame($type === 'client' ? 'receivable' : 'payable', $page->viewData('statement')['direction']);
+            $closingText = preg_replace('/\s+/', ' ', $x->query('//tfoot')->item(0)->textContent);
+            $this->assertStringContainsString($type === 'client' ? 'Closing Receivable' : 'Closing Payable', $closingText);
+        }
+        $app = $this->get($this->url('?period=all&currency=INR'))->assertOk();
+        $appDom = $this->xpath($app->getContent());
+        $this->assertSame(2, $appDom->query('//header//*[contains(@class,"stmt-chip")]')->length);
+        $this->assertSame(0, $appDom->query('//*[contains(@class,"stmt-masthead")]')->length);
+    }
+
     public function test_monthly_defaults_remain_unchanged_and_an_explicit_foreign_currency_is_retained(): void
     {
         foreach (['', '/print', '/pdf'] as $suffix) {

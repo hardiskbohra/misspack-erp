@@ -167,3 +167,17 @@ including73rows across3pages. See[searchable-selects.md](searchable-selects.md).
 Catalogue223designs (97unit/126integration),67PHP-method-linked designs,50PHPtest
 files. Source contracts and CSS fallback generation checked; native CI reported
 independently after push. No schema, SQL, financial or permission changes.
+
+
+## Statement header alignment refinement —25October2026
+
+Print-only logo/title/period masthead followed by equal-sized aligned issuer and
+client/vendor names. Header currency/direction chips removed, not monetary
+currency or summary/closing direction. Numeric headings including Balance now
+align with values. HTTP Red1failure/2assertions and real Chromium alignment Red
+precede implementation; Green8statement integration tests/98assertions. Full
+portable **493tests/15,406assertions PASS**. Real A4 PDF spans/image positions,
+three address lines, full figures, once-only totals and73rows/3pages retained;
+print header geometry and desktop/mobile preview checked in real Chromium.
+See[statement-print-preview.md](statement-print-preview.md). Catalogue remains
+223designs (97unit/126integration),67method-linked designs,50PHPtest files.

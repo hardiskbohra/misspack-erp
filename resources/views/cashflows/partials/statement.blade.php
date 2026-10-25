@@ -41,7 +41,20 @@
 @endphp
 
 <article class="stmt {{ in_array($ctx, ['pdf', 'public'], true) ? 'pdf-sheet' : ($ctx === 'portal' ? 'pdf-print-sheet' : '') }}" aria-label="Statement of account for {{ $party['name'] }}">
-    @if($compactPrint)<img class="stmt-logo" src="{{ \App\Models\Organisation::current()->logoUrl('print') }}" alt="{{ $issuer['seller_company_name'] }}">@endif
+    @if($compactPrint)
+        <header class="stmt-masthead">
+            <div class="stmt-masthead-logo">
+                <img class="stmt-logo" src="{{ \App\Models\Organisation::current()->logoUrl('print') }}" alt="{{ $issuer['seller_company_name'] }}">
+            </div>
+            <div class="stmt-document-heading">
+                <p class="stmt-eyebrow">Statement of account</p>
+                <p class="stmt-period">{{ $statement['period']['label'] }}</p>
+                @if($statement['period']['from'] && $statement['period']['to'])
+                    <p class="stmt-period-dates">{{ $statement['period']['from']->format('d M Y') }} – {{ $statement['period']['to']->format('d M Y') }}</p>
+                @endif
+            </div>
+        </header>
+    @endif
     <header class="stmt-head{{ $compactPrint ? ' stmt-head--compact' : '' }}">
         <div class="stmt-brand">
             <p class="stmt-brand-name">{{ $statement['issuer']['seller_company_name'] }}</p>
@@ -62,19 +75,20 @@
             @endif
         </div>
         <div class="stmt-heading">
-            <p class="stmt-eyebrow">Statement of account</p>
+            @unless($compactPrint)<p class="stmt-eyebrow">Statement of account</p>@endunless
             <h1 class="stmt-party-name">{{ $party['name'] }}</h1>
-            <p class="stmt-period">{{ $statement['period']['label'] }}</p>
+            @unless($compactPrint)<p class="stmt-period">{{ $statement['period']['label'] }}</p>@endunless
             @if($compactPrint)
-                @if($statement['period']['from'] && $statement['period']['to'])<p class="stmt-period-dates">{{ $statement['period']['from']->format('d M Y') }} – {{ $statement['period']['to']->format('d M Y') }}</p>@endif
                 <p class="stmt-block-line">{{ $party['kind'] }} · {{ $party['code'] }}</p>
                 @foreach($party['address_lines'] as $line)<p class="stmt-block-line">{{ $line }}</p>@endforeach
                 @if($party['gstin'])<p class="stmt-block-line">GSTIN {{ $party['gstin'] }}</p>@endif
                 @if($party['contact_person'] || $party['email'] || $party['phone'])<p class="stmt-block-line">{{ collect([$party['contact_person'],$party['email'],$party['phone']])->filter()->implode(' · ') }}</p>@endif
             @endif
             <p class="stmt-stamp">
-                <span class="stmt-chip">{{ $currencyLabel }}</span>
-                <span class="stmt-chip">{{ $direction }}</span>
+                @unless($compactPrint)
+                    <span class="stmt-chip">{{ $currencyLabel }}</span>
+                    <span class="stmt-chip">{{ $direction }}</span>
+                @endunless
                 <span class="stmt-stamp-time">Generated
                     {{ $statement['generated_at']->format('d M Y, h:i A') }}</span>
             </p>
