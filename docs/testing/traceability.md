@@ -5,7 +5,7 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | Requirement | Domain | Unit cases | Integration cases | Cases with executable links |
 |---|---|---:|---:|---:|
 | REQ-AUTH | Authentication and office permissions | 3 | 3 | 6 |
-| REQ-PEOPLE | People, payroll and employee documents | 3 | 3 | 2 |
+| REQ-PEOPLE | People, payroll and employee documents | 4 | 4 | 4 |
 | REQ-CLIENT | Client master, KYC and account profile | 3 | 7 | 5 |
 | REQ-VENDOR | Vendor master and payable profile | 8 | 12 | 15 |
 | REQ-PRODUCT | Products and price calculator | 3 | 3 | 0 |
@@ -33,5 +33,5 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-VPORTAL | Vendor portal and secure share links | 3 | 3 | 0 |
 | REQ-DASH | Overview and module dashboard reporting | 4 | 6 | 6 |
 | REQ-AUDIT | Audit trail and sensitive operations | 3 | 4 | 1 |
-| REQ-FILES | Shared file policy and storage lifecycle | 3 | 3 | 3 |
-| REQ-UI | Shared UI, printing and accessible interactions | 4 | 5 | 2 |
+| REQ-FILES | Shared file policy and storage lifecycle | 3 | 4 | 4 |
+| REQ-UI | Shared UI, printing and accessible interactions | 4 | 6 | 3 |

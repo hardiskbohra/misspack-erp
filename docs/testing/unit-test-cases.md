@@ -83,6 +83,19 @@ Sources: `app/Services/EmployeeAccess.php`, `app/Services/EmployeeProfile.php`, 
 
 **Expected:** Net 27500; negative deductions/earnings follow validation policy.
 
+### UT-PEOPLE-004 — User photo URLs and initials share one authoritative model policy
+
+**Priority:** P1 · **Requirement:** REQ-PEOPLE; REQ-FILES; REQ-UI · **Implementation:** linked executable evidence
+
+- **Preconditions:** Application test container; no database or network required
+- **Data:** Missing photo, default media URL, configured CDN, repeated whitespace and Gujarati names
+1. Resolve avatar accessor with default and explicit public disk URLs
+2. Resolve initials for missing, whitespace and non-Latin names
+
+**Expected:** Same-origin /storage default, explicit CDN respected, null for no photo, correct two-word Unicode initials.
+
+**Evidence:** `tests/Unit/UserAvatarUrlTest.php#test_default_public_media_urls_do_not_depend_on_the_app_host_or_port`; `tests/Unit/UserAvatarUrlTest.php#test_explicit_public_storage_cdn_is_respected`; `tests/Unit/UserAvatarUrlTest.php#test_initials_handle_extra_whitespace_and_non_latin_names`
+
 ## Client master, KYC and account profile (`CLIENT`)
 
 Sources: `app/Http/Controllers/ClientController.php`, `app/Services/ClientAccountSummary.php`, `app/Models/Client.php`.

@@ -85,6 +85,21 @@ Sources: `app/Services/EmployeeAccess.php`, `app/Services/EmployeeProfile.php`, 
 
 **Expected:** Upload belongs to E; verification requires office authority and records verifier.
 
+### IT-PEOPLE-004 — Photo-first identity is consistent through listing record account and edit upload lifecycle
+
+**Priority:** P1 · **Requirement:** REQ-PEOPLE; REQ-FILES; REQ-UI · **Implementation:** linked executable evidence
+
+- **Preconditions:** Analytics fixture plus employee document/payslip schema, office session, fake public photo; Chromium HTTP captures
+- **Data:** Saved PNG, replacement with stale remove flag, invalid upload and explicit removal;1440/900/390px light/dark
+1. Render real list, record, account and both shared shell menus
+2. Read edit JSON and replace saved photo with stale remove flag
+3. Reject invalid upload and remove photo explicitly
+4. Browser checks saved/replacement previews, removal, failed-image initials and no HTML or javascript URL injection
+
+**Expected:** Current photos preferred everywhere; initials when absent or unloadable; valid replacement wins over remove; invalid upload preserves original; no raw HTML interpolation.
+
+**Evidence:** `tests/Integration/PublicMediaAvatarTest.php#test_user_listing_record_account_and_edit_json_use_the_current_photo`; `tests/Integration/PublicMediaAvatarTest.php#test_replacement_photo_wins_over_a_stale_remove_flag_and_is_servable`; `tests/Integration/PublicMediaAvatarTest.php#test_photo_removal_and_invalid_uploads_preserve_the_upload_contract`
+
 ## Client master, KYC and account profile (`CLIENT`)
 
 Sources: `app/Http/Controllers/ClientController.php`, `app/Services/ClientAccountSummary.php`, `app/Models/Client.php`.
@@ -1699,6 +1714,21 @@ Sources: `app/Services/DocumentUpload.php`, `app/Http/Controllers/ShipmentContro
 
 **Expected:** Controlled404/absent result, not filesystem path disclosure or500.
 
+### IT-FILES-004 — Public media fallback cannot expose private files or execute active content
+
+**Priority:** P0 · **Requirement:** REQ-FILES; REQ-AUTH; REQ-UI · **Implementation:** linked executable evidence
+
+- **Preconditions:** Disposable database, isolated public/private fake disks; no public storage symlink
+- **Data:** PNG, HTML, missing file, hidden file, traversal/control/backslash paths, escaping symlink and private KYC proof
+1. GET saved public photo and inspect MIME/nosniff
+2. Reject missing, hidden, traversal and symlink escape paths
+3. Force active content to attachment with sandbox CSP
+4. Confirm distinct private endpoint denies unsigned access but accepts a valid signature
+
+**Expected:** Public images load without symlink; only real files inside public root are served; private disk requires signature and stays inaccessible via /storage.
+
+**Evidence:** `tests/Integration/PublicMediaAvatarTest.php#test_public_images_load_without_a_symlink_and_private_or_traversal_paths_do_not`; `tests/Integration/PublicMediaAvatarTest.php#test_symlinks_cannot_escape_the_public_disk`; `tests/Integration/PublicMediaAvatarTest.php#test_private_storage_keeps_a_distinct_signed_only_endpoint`
+
 ## Shared UI, printing and accessible interactions (`UI`)
 
 Sources: `resources/views/components/drawer.blade.php`, `public/assets/js/master-drawer.js`, `docs/ui-design-guidelines.md`.
@@ -1772,3 +1802,17 @@ Sources: `resources/views/components/drawer.blade.php`, `public/assets/js/master
 **Note:** PHP link establishes rendered design dependencies. Actual interactive/visual outcomes separately executed in searchable-selects-browser.cjs at1440/900/390px and light/dark; A4 proof in statement-print-pdf.py. See searchable-selects.md.
 
 **Evidence:** `tests/Integration/StatementPrintPreviewTest.php#test_preview_filters_use_shared_form_and_searchable_select_assets_without_external_close_icons`
+
+### IT-UI-006 — Vendor KYC multiline fields share base focus and error field design
+
+**Priority:** P1 · **Requirement:** REQ-UI; REQ-VENDOR · **Implementation:** linked executable evidence
+
+- **Preconditions:** VendorKycFixture public form; actual HTTP view captures in Chromium
+- **Data:** Address, Bank Address and Beneficiary Address; multiline values, required error;1440/900/390px
+1. Render public KYC with both optional address fields
+2. Check textarea shared base/focus/error selectors
+3. Browse steps and compare actual typography, geometry, focus ring, error border, vertical resize and multiline values
+
+**Expected:** Inputs and multiline fields share font/radius/padding policy and focus/error tokens; textarea has96px minimum height, auto height and vertical-only resize without mobile overflow.
+
+**Evidence:** `tests/Integration/KycTextareaPresentationTest.php#test_public_multiline_fields_share_input_base_focus_and_error_styles`

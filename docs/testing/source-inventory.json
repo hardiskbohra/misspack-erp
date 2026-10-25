@@ -364,6 +364,12 @@
       ]
     },
     {
+      "file": "tests/Integration/KycTextareaPresentationTest.php",
+      "methods": [
+        "test_public_multiline_fields_share_input_base_focus_and_error_styles"
+      ]
+    },
+    {
       "file": "tests/Integration/NotesOwnershipTest.php",
       "methods": [
         "test_create_ignores_forged_owner_and_persists_authenticated_owner",
@@ -386,6 +392,17 @@
         "test_product_lanes_are_independent_and_repeated_sync_preserves_completed_work",
         "test_financial_terminal_decision_is_not_overwritten_by_workflow_recalculation",
         "test_regular_mass_assignment_cannot_change_workflow_owned_progress_fields"
+      ]
+    },
+    {
+      "file": "tests/Integration/PublicMediaAvatarTest.php",
+      "methods": [
+        "test_public_images_load_without_a_symlink_and_private_or_traversal_paths_do_not",
+        "test_symlinks_cannot_escape_the_public_disk",
+        "test_photo_removal_and_invalid_uploads_preserve_the_upload_contract",
+        "test_private_storage_keeps_a_distinct_signed_only_endpoint",
+        "test_user_listing_record_account_and_edit_json_use_the_current_photo",
+        "test_replacement_photo_wins_over_a_stale_remove_flag_and_is_servable"
       ]
     },
     {
@@ -688,6 +705,14 @@
       ]
     },
     {
+      "file": "tests/Unit/UserAvatarUrlTest.php",
+      "methods": [
+        "test_initials_handle_extra_whitespace_and_non_latin_names",
+        "test_explicit_public_storage_cdn_is_respected",
+        "test_default_public_media_urls_do_not_depend_on_the_app_host_or_port"
+      ]
+    },
+    {
       "file": "tests/Unit/VendorKycPolicyTest.php",
       "methods": [
         "test_only_draft_and_revision_are_publicly_editable_without_changing_operational_status",
@@ -760,6 +785,7 @@
     "app/Http/Controllers/ProjectWorkflowController.php",
     "app/Http/Controllers/PublicFeedbackController.php",
     "app/Http/Controllers/PublicLeadController.php",
+    "app/Http/Controllers/PublicMediaController.php",
     "app/Http/Controllers/PurchaseInvoiceController.php",
     "app/Http/Controllers/SalesInvoiceController.php",
     "app/Http/Controllers/SettingsController.php",
@@ -975,6 +1001,7 @@
     "tools/checks/invoices-check.cjs",
     "tools/checks/list-check.cjs",
     "tools/checks/mark-check.cjs",
+    "tools/checks/media-avatar-browser.cjs",
     "tools/checks/module-dashboard-check.cjs",
     "tools/checks/notes-check.cjs",
     "tools/checks/packaging-label-batch-check.cjs",

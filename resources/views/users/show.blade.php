@@ -38,7 +38,7 @@
          it. --}}
     <div class="master-card master-card--flat emp-record-head">
         <div class="emp-record-who">
-            <span class="emp-avatar" aria-hidden="true">{{ $user->initials ?: strtoupper(substr($user->name, 0, 2)) }}</span>
+            <x-user-avatar :user="$user" class="emp-avatar" />
             <div>
                 <h1>{{ $user->name }}</h1>
                 <p class="master-sub emp-record-line">

@@ -73,6 +73,9 @@ use App\Http\Controllers\PackagingListController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
 
+// Public-disk fallback when the web host cannot create public/storage.
+Route::get('/storage/{path}', \App\Http\Controllers\PublicMediaController::class)->where('path', '.*')->name('media.public');
+
 // Redirect root to login
 Route::get('/', fn () => redirect()->route('login'));
 

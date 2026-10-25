@@ -1,0 +1,24 @@
+/* Geometry/colours remain with each surface; crop/fallback behavior is shared. */
+.user-avatar {
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.user-avatar > [data-avatar-initials] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+.user-avatar > [data-user-avatar-image] {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+}
+.user-avatar.has-photo > [data-avatar-initials] { visibility: hidden; }
+.user-avatar > [hidden] { display: none !important; }

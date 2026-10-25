@@ -232,7 +232,8 @@ body {
 .kyc-field label span { color: #ef4770; }
 
 .kyc-field input,
-.kyc-field select {
+.kyc-field select,
+.kyc-field textarea {
     width: 100%;
     height: 42px;
     border: 1px solid var(--border);
@@ -244,15 +245,25 @@ body {
     color: inherit;
 }
 
+.kyc-field textarea {
+    height: auto;
+    min-height: 96px;
+    padding: 10px 12px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
 .kyc-field input:focus,
-.kyc-field select:focus {
+.kyc-field select:focus,
+.kyc-field textarea:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(79, 131, 241, .15);
 }
 
 .kyc-field.has-error input,
-.kyc-field.has-error select {
+.kyc-field.has-error select,
+.kyc-field.has-error textarea {
     border-color: #ef4770;
 }
 

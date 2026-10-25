@@ -247,3 +247,19 @@ exclusion and existing desktop/mobile wizard behaviour. Contracts pass. See
   mutation/redaction or shared modal lifecycle changes. Native CI checked after
   push.238 designs/82 linked cases/56 PHP test files; not measured code coverage.
 - Acceptance, reproduction and artifacts: [audit-register-ui.md](audit-register-ui.md).
+
+## Public media, photo-first avatars and KYC textareas (25 October 2026)
+
+- Genuine Red7 failures → focused Green10/61; full Unit + Integration + Feature
+  **541 tests/15,866 assertions PASS**. Public disk fallback works without symlink;
+  signed private storage has a separate endpoint and retains its signature gate.
+- Shared photo-first component covers list/record/account/both shell menus/comment
+  authors; edit saved/replacement/remove and broken-file initials verified. KYC
+  multiline controls now share input base/focus/error appearance and vertical resize.
+- Real Chromium1440/900/390 light/dark user surfaces and three-width KYC controls
+  PASS using actual HTTP/JSON/image captures. Contracts249 templates, permission21/0,
+  routes463 PASS. Optional legacy employee source checker has identical HEAD/current
+  132 pass/1 unrelated pre-existing failure; no weakened assertion or regression.
+- Catalogue242 designs/86 linked/59 test files. Local PHP WASM only; native PHP/MySQL
+  CI checked after push. No measured coverage or live PHP browser E2E claim.
+- See [media-avatar.md](media-avatar.md) for evidence, limits, reproduction and deployment.

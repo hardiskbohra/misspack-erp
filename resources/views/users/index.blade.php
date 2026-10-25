@@ -255,7 +255,7 @@
                         <tr class="user-row is-clickable" data-href="{{ route('users.show', $user) }}">
                             <td data-label="Person">
                                 <a class="user-cell" href="{{ route('users.show', $user) }}">
-                                    <span class="user-avatar-mini" aria-hidden="true">{{ $user->initials ?: strtoupper(substr($user->name, 0, 2)) }}</span>
+                                    <x-user-avatar :user="$user" class="user-avatar-mini" />
                                     <span class="user-cell-text">
                                         <span class="user-cell-name">{{ $user->name }}</span>
                                         <span class="master-sub">

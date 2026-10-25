@@ -61,6 +61,7 @@
     <link rel="stylesheet" href="{{ $assetVer('assets/css/app-guidelines.css') }}">
     <link rel="stylesheet" href="{{ $assetVer('assets/css/responsive.css') }}">
     @include('layouts.partials.design-system-styles')
+    <link rel="stylesheet" href="{{ $assetVer('assets/css/user-avatar.css') }}">
 </head>
 @php
     $uiModule = match (true) {
@@ -272,6 +273,7 @@
     <script src="{{ asset('assets/vendor/select2/js/select2.min.js') }}"></script>
 
     {{-- App Scripts --}}
+    <script src="{{ $assetVer('assets/js/user-avatar.js') }}"></script>
     <script src="{{ $assetVer('assets/js/master-alert.js') }}"></script>
     <script src="{{ $assetVer('assets/js/master-selects.js') }}"></script>
     <script src="{{ $assetVer('assets/js/money.js') }}"></script>

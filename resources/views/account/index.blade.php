@@ -12,13 +12,7 @@
     {{-- Who this account belongs to, said once at the top: the menu behind the
          avatar leads here, so the page opens by confirming whose it is. --}}
     <div class="master-card master-card--flat account-head">
-        <span class="account-head-avatar" aria-hidden="true">
-            @if ($me->avatar)
-                <img src="{{ asset('storage/'.$me->avatar) }}" alt="">
-            @else
-                {{ $me->initials ?: strtoupper(substr($me->name ?? 'U', 0, 2)) }}
-            @endif
-        </span>
+        <x-user-avatar :user="$me" class="account-head-avatar" />
         <div class="account-head-text">
             <h2 class="account-head-name">{{ $me->name }}</h2>
             <p class="account-head-meta">

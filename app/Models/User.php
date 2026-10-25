@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -233,18 +234,17 @@ class User extends Authenticatable
     /** First two initials from name */
     public function getInitialsAttribute(): string
     {
-        $words = explode(' ', trim($this->name));
-        $initials = strtoupper(substr($words[0], 0, 1));
-        if (isset($words[1])) {
-            $initials .= strtoupper(substr($words[1], 0, 1));
-        }
-        return $initials;
+        $words = preg_split('/\s+/u', trim((string) $this->name), -1, PREG_SPLIT_NO_EMPTY);
+
+        return mb_strtoupper(implode('', array_map(
+            fn ($word) => mb_substr($word, 0, 1), array_slice($words ?: ['User'], 0, 2)
+        )));
     }
 
-    /** Full URL to avatar or null */
+    /** Public-disk URL to avatar or null; no dependency on the configured app host. */
     public function getAvatarUrlAttribute(): ?string
     {
-        return $this->avatar ? asset('storage/' . $this->avatar) : null;
+        return $this->avatar ? Storage::disk('public')->url($this->avatar) : null;
     }
 
     public function assignedTasks()

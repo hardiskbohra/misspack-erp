@@ -86,7 +86,10 @@
         var circle = byId(circleId);
         var name = byId(nameId);
 
-        if (circle) circle.innerHTML = '<i class="fas fa-user" aria-hidden="true"></i>';
+        if (circle) {
+            circle._avatarRead = (circle._avatarRead || 0) + 1;
+            window.UserAvatars.render(circle, '', circle.dataset.avatarName);
+        }
 
         if (name) {
             name.textContent = 'No file chosen';
@@ -97,13 +100,14 @@
     function drawAvatar(file, circleId, nameId) {
         if (!file) return;
 
+        var circle = byId(circleId);
+        var token = circle ? (circle._avatarRead = (circle._avatarRead || 0) + 1) : 0;
         var reader = new FileReader();
 
         reader.onload = function (event) {
-            var circle = byId(circleId);
-
-            if (circle) {
-                circle.innerHTML = '<img src="' + event.target.result + '" alt="">';
+            // A removed/replaced file must not repaint the preview when its read completes.
+            if (circle && circle._avatarRead === token) {
+                window.UserAvatars.render(circle, event.target.result, circle.dataset.avatarName);
             }
         };
         reader.readAsDataURL(file);
@@ -300,14 +304,8 @@
                 var chosen = byId('editAvName') && byId('editAvName').classList.contains('is-chosen');
 
                 if (circle && !chosen) {
-                    if (user.avatar) {
-                        circle.innerHTML = '<img src="' + user.avatar + '" alt="">';
-                        if (removeButton) removeButton.hidden = false;
-                    } else {
-                        circle.innerHTML = '<span class="master-avatar-initials">' +
-                            String(user.name || 'U').substring(0, 2).toUpperCase() + '</span>';
-                        if (removeButton) removeButton.hidden = true;
-                    }
+                    window.UserAvatars.render(circle, user.avatar, user.name);
+                    if (removeButton) removeButton.hidden = !user.avatar;
                 }
 
                 var note = byId('editRoleNote');

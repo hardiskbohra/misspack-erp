@@ -84,3 +84,6 @@ checks, migration/deployment and native two-connection locking verification.
 
 See [audit-register-ui.md](audit-register-ui.md) for the shared Audit register
 pagination, read-only evidence modal, responsive/keyboard verification and TDD evidence.
+
+See [media-avatar.md](media-avatar.md) for public/private media routing, photo-first
+user avatars, KYC textarea styling, genuine TDD/security/browser evidence and deployment.

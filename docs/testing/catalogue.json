@@ -4292,6 +4292,89 @@
         "tests/Integration/AuditRegisterPresentationTest.php#test_evidence_is_escaped_and_empty_results_keep_the_shared_readonly_shell",
         "tests/Integration/AuditRegisterPresentationTest.php#test_non_audit_office_users_cannot_read_the_register_or_evidence"
       ]
+    },
+    {
+      "id": "UT-PEOPLE-004",
+      "module": "PEOPLE",
+      "level": "unit",
+      "priority": "P1",
+      "requirement": "REQ-PEOPLE; REQ-FILES; REQ-UI",
+      "title": "User photo URLs and initials share one authoritative model policy",
+      "preconditions": "Application test container; no database or network required",
+      "test_data": "Missing photo, default media URL, configured CDN, repeated whitespace and Gujarati names",
+      "steps": [
+        "Resolve avatar accessor with default and explicit public disk URLs",
+        "Resolve initials for missing, whitespace and non-Latin names"
+      ],
+      "expected": "Same-origin /storage default, explicit CDN respected, null for no photo, correct two-word Unicode initials.",
+      "automation": [
+        "tests/Unit/UserAvatarUrlTest.php#test_default_public_media_urls_do_not_depend_on_the_app_host_or_port",
+        "tests/Unit/UserAvatarUrlTest.php#test_explicit_public_storage_cdn_is_respected",
+        "tests/Unit/UserAvatarUrlTest.php#test_initials_handle_extra_whitespace_and_non_latin_names"
+      ]
+    },
+    {
+      "id": "IT-FILES-004",
+      "module": "FILES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-FILES; REQ-AUTH; REQ-UI",
+      "title": "Public media fallback cannot expose private files or execute active content",
+      "preconditions": "Disposable database, isolated public/private fake disks; no public storage symlink",
+      "test_data": "PNG, HTML, missing file, hidden file, traversal/control/backslash paths, escaping symlink and private KYC proof",
+      "steps": [
+        "GET saved public photo and inspect MIME/nosniff",
+        "Reject missing, hidden, traversal and symlink escape paths",
+        "Force active content to attachment with sandbox CSP",
+        "Confirm distinct private endpoint denies unsigned access but accepts a valid signature"
+      ],
+      "expected": "Public images load without symlink; only real files inside public root are served; private disk requires signature and stays inaccessible via /storage.",
+      "automation": [
+        "tests/Integration/PublicMediaAvatarTest.php#test_public_images_load_without_a_symlink_and_private_or_traversal_paths_do_not",
+        "tests/Integration/PublicMediaAvatarTest.php#test_symlinks_cannot_escape_the_public_disk",
+        "tests/Integration/PublicMediaAvatarTest.php#test_private_storage_keeps_a_distinct_signed_only_endpoint"
+      ]
+    },
+    {
+      "id": "IT-PEOPLE-004",
+      "module": "PEOPLE",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-PEOPLE; REQ-FILES; REQ-UI",
+      "title": "Photo-first identity is consistent through listing record account and edit upload lifecycle",
+      "preconditions": "Analytics fixture plus employee document/payslip schema, office session, fake public photo; Chromium HTTP captures",
+      "test_data": "Saved PNG, replacement with stale remove flag, invalid upload and explicit removal;1440/900/390px light/dark",
+      "steps": [
+        "Render real list, record, account and both shared shell menus",
+        "Read edit JSON and replace saved photo with stale remove flag",
+        "Reject invalid upload and remove photo explicitly",
+        "Browser checks saved/replacement previews, removal, failed-image initials and no HTML or javascript URL injection"
+      ],
+      "expected": "Current photos preferred everywhere; initials when absent or unloadable; valid replacement wins over remove; invalid upload preserves original; no raw HTML interpolation.",
+      "automation": [
+        "tests/Integration/PublicMediaAvatarTest.php#test_user_listing_record_account_and_edit_json_use_the_current_photo",
+        "tests/Integration/PublicMediaAvatarTest.php#test_replacement_photo_wins_over_a_stale_remove_flag_and_is_servable",
+        "tests/Integration/PublicMediaAvatarTest.php#test_photo_removal_and_invalid_uploads_preserve_the_upload_contract"
+      ]
+    },
+    {
+      "id": "IT-UI-006",
+      "module": "UI",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-UI; REQ-VENDOR",
+      "title": "Vendor KYC multiline fields share base focus and error field design",
+      "preconditions": "VendorKycFixture public form; actual HTTP view captures in Chromium",
+      "test_data": "Address, Bank Address and Beneficiary Address; multiline values, required error;1440/900/390px",
+      "steps": [
+        "Render public KYC with both optional address fields",
+        "Check textarea shared base/focus/error selectors",
+        "Browse steps and compare actual typography, geometry, focus ring, error border, vertical resize and multiline values"
+      ],
+      "expected": "Inputs and multiline fields share font/radius/padding policy and focus/error tokens; textarea has96px minimum height, auto height and vertical-only resize without mobile overflow.",
+      "automation": [
+        "tests/Integration/KycTextareaPresentationTest.php#test_public_multiline_fields_share_input_base_focus_and_error_styles"
+      ]
     }
   ]
 }

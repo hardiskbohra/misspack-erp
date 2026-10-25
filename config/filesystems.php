@@ -34,6 +34,8 @@ return [
             'driver' => 'local',
             'root' => storage_path('app/private'),
             'serve' => true,
+            // Keep Laravel's signed private-file endpoint separate from public media.
+            'url' => '/private-storage',
             'throw' => false,
             'report' => false,
         ],
@@ -41,7 +43,8 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Same origin by default, including HTTPS and non-standard ports.
+            'url' => env('PUBLIC_STORAGE_URL', '/storage'),
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

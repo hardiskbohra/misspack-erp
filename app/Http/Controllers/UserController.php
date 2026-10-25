@@ -594,7 +594,7 @@ class UserController extends Controller
             'mobile'      => $user->mobile,
             'department'  => $user->department,
             'designation' => $user->designation,
-            'avatar'      => $user->avatar ? asset('storage/' . $user->avatar) : null,
+            'avatar'      => $user->avatar_url,
             'verified'    => !is_null($user->email_verified_at),
             'role'        => $user->role ?: User::DEFAULT_ROLE,
             'employee_code' => $user->employee_code,
@@ -667,7 +667,7 @@ class UserController extends Controller
             $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
         }
 
-        if ($request->boolean('remove_avatar') && $user->avatar) {
+        if ($request->boolean('remove_avatar') && ! $request->hasFile('avatar') && $user->avatar) {
             Storage::disk('public')->delete($user->avatar);
             $data['avatar'] = null;
         }

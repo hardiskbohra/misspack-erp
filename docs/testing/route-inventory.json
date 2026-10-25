@@ -2959,6 +2959,25 @@
             ]
         },
         {
+            "name": "storage.local",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "private-storage/{path}",
+            "action": "Closure",
+            "middleware": []
+        },
+        {
+            "name": "storage.local.upload",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "private-storage/{path}",
+            "action": "Closure",
+            "middleware": []
+        },
+        {
             "name": "products.index",
             "methods": [
                 "GET",
@@ -5054,23 +5073,16 @@
             ]
         },
         {
-            "name": "storage.local",
+            "name": "media.public",
             "methods": [
                 "GET",
                 "HEAD"
             ],
             "uri": "storage/{path}",
-            "action": "Closure",
-            "middleware": []
-        },
-        {
-            "name": "storage.local.upload",
-            "methods": [
-                "PUT"
-            ],
-            "uri": "storage/{path}",
-            "action": "Closure",
-            "middleware": []
+            "action": "App\\Http\\Controllers\\PublicMediaController",
+            "middleware": [
+                "web"
+            ]
         },
         {
             "name": "tasks.index",
