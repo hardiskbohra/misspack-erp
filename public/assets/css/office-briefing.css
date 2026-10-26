@@ -194,17 +194,64 @@ body.ob-open {
    The bell panel is the glance; .obc-* is the whole desk: trays, two
    filter rows and the resolved trail with who cleared what. Reuses the
    dropdown's .ob-item rows so one item reads the same in both surfaces.
+   The page opener here is self-owned: the house's .set-head* set lives in
+   settings.css, which a non-settings page must not pull in — mirror its
+   proportions (52px mark, 18px/600 title) rather than borrow the sheet.
    ===================================================================== */
 
+/* One rhythm for the whole page: the grid owns the gaps, sections don't. */
+.obc {
+    display: grid;
+    gap: 16px;
+}
+
+.obc .master-alert {
+    margin: 0;
+}
+
+.obc-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 22px;
+}
+
+.obc-head-mark {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+    overflow: hidden;
+    border-radius: 16px;
+    background: var(--ui-muted-surface);
+    border: 1px solid var(--ui-border);
+    color: var(--ui-accent);
+    font-size: 19px;
+}
+
+.obc-head-title {
+    margin: 0;
+    color: var(--ui-text);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.obc-head .master-sub {
+    margin: 5px 0 0;
+    max-width: 92ch;
+}
+
+.obc-filters,
 .obc-stats {
-    margin-bottom: 16px;
+    margin-bottom: 0;
 }
 
 .obc-filters {
     padding: 14px 18px;
     display: grid;
     gap: 10px;
-    margin-bottom: 16px;
 }
 
 .obc-filter-row {
@@ -291,9 +338,24 @@ body.ob-open {
 }
 
 @media (max-width: 767px) {
-    /* The desk reads single-column on a phone: filter labels own their row,
-       the chip rows wrap, and an item's action row stacks buttons full-width
-       in thumb order — target, then clear, then snooze. */
+    /* The desk reads single-column on a phone: the head tucks to a tighter
+       pad with a smaller mark, filter labels own their row, the chip rows
+       wrap, and an item's action row stacks buttons full-width in thumb
+       order — target, then clear, then snooze. */
+    .obc-head {
+        padding: 16px;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .obc-head-mark {
+        width: 44px;
+        height: 44px;
+        flex-basis: 44px;
+        border-radius: 14px;
+        font-size: 17px;
+    }
+
     .obc-filter-row {
         flex-direction: column;
         align-items: flex-start;

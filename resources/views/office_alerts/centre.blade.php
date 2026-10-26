@@ -22,10 +22,10 @@
 
 <div class="obc master-list">
 
-    <div class="master-card master-card--flat set-head obc-head">
-        <span class="set-head-mark" aria-hidden="true"><i class="fas fa-bell"></i></span>
+    <div class="master-card master-card--flat obc-head">
+        <span class="obc-head-mark" aria-hidden="true"><i class="fas fa-bell"></i></span>
         <div>
-            <h1 class="set-head-title">Notification centre</h1>
+            <h1 class="obc-head-title">Notification centre</h1>
             <p class="master-sub">
                 The whole desk, not just the bell's glance: open briefings, the ones snoozed until later,
                 and the resolved trail with who cleared it. Watching the
@@ -85,15 +85,21 @@
         </div>
 
         @if (empty($items))
-            <p class="ob-empty obc-empty">
-                @if ($filters['state'] === 'resolved')
-                    Nothing resolved yet on this view. Acknowledged and seen items keep their trail here — who acted, when.
-                @elseif ($filters['state'] === 'snoozed')
-                    Nothing sleeping. Snoozed briefings sit here instead of the bell until they wake.
-                @else
-                    Nothing waiting. New KYC, shipment exceptions and pending books land here first.
-                @endif
-            </p>
+            <div class="master-empty-state">
+                <i class="fas {{ $filters['state'] === 'resolved' ? 'fa-circle-check' : ($filters['state'] === 'snoozed' ? 'fa-clock' : 'fa-inbox') }}"></i>
+                <p>
+                    @if ($filters['state'] === 'resolved')
+                        Nothing resolved yet on this view.<br>
+                        Acknowledged and seen items keep their trail here — who acted, when.
+                    @elseif ($filters['state'] === 'snoozed')
+                        Nothing sleeping.<br>
+                        Snoozed briefings sit here instead of the bell until they wake.
+                    @else
+                        Nothing waiting.<br>
+                        New KYC, shipment exceptions and pending books land here first.
+                    @endif
+                </p>
+            </div>
         @else
             <div class="obc-list"><!-- obc-items-start -->
                 @foreach ($items as $item)
