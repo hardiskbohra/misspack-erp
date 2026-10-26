@@ -24,8 +24,13 @@ if (!file || !fs.existsSync(file)) {
 
 const xml = fs.readFileSync(file, 'utf8');
 
-// Every testcase carrying a <failure> or <error> child.
-const testcaseRe = /<testcase\b[^>]*classname="([^"]*)"[^>]*name="([^"]*)"[^>]*(?:file="([^"]*)")?[^>]*(?:line="([^"]*)")?[^>]*>([\s\S]*?)<\/testcase>/g;
+// Every testcase carrying a <failure> or <error> child. Attribute order is
+// PHPUnit-version-dependent, so pull the attributes out of the tag loosely.
+const testcaseRe = /<testcase\b([^>]*)>([\s\S]*?)<\/testcase>/g;
+const attr = (tag, key) => {
+    const m = new RegExp(key + '="([^"]*)"').exec(tag);
+    return m ? m[1] : null;
+};
 
 let count = 0;
 const MAX = 45;      // "Too many annotations" guard rail
@@ -36,7 +41,11 @@ const decode = (s) => s
     .replace(/&#39;|&apos;/g, "'").replace(/&amp;/g, '&');
 
 for (const match of xml.matchAll(testcaseRe)) {
-    const [, className, name, attrFile, attrLine, body] = match;
+    const [full, attrs, body] = match;
+    const className = attr(attrs, 'classname') || attr(attrs, 'class') || 'unknown';
+    const name = attr(attrs, 'name') || 'unknown';
+    const attrFile = attr(attrs, 'file');
+    const attrLine = attr(attrs, 'line');
     const frag = /<(?:failure|error)\b[^>]*>([\s\S]*?)<\/(?:failure|error)>/.exec(body);
     if (!frag) continue;
 
