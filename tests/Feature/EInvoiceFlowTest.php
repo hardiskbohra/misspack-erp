@@ -31,6 +31,7 @@ class EInvoiceFlowTest extends TestCase
         foreach ([
             '0001_01_01_000000_create_users_table',
             '2024_01_02_000001_add_extra_fields_to_users_table',
+            '2026_10_03_030000_add_employment_profile_to_users_table',
             '2026_10_19_110000_create_permissions_and_audit_log',
             '2026_08_26_010000_create_sales_invoices_table',
             '2026_08_26_010100_create_sales_invoice_items_table',

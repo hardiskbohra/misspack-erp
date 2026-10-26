@@ -14,7 +14,9 @@
     guards that, so nothing here re-asks "is this taxable".
 --}}
 @php
-    $eInv = $invoice->eInvoice ?? null;
+    /* Passed by the controller after a hasTable guard — a test database that
+       predates the table must still open this page. */
+    $eInv = $eInvoice ?? null;
     $cancelReasons = \App\Models\SalesInvoiceEInvoice::CANCEL_REASONS;
 @endphp
 

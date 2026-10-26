@@ -248,7 +248,7 @@
         @endif
 
         @if ($invoice->invoice_type === 'tax')
-            @include('sales_invoices.partials.e-invoice-card', ['invoice' => $invoice, 'eInvoiceIssues' => $eInvoiceIssues])
+            @include('sales_invoices.partials.e-invoice-card', ['invoice' => $invoice, 'eInvoice' => $eInvoice, 'eInvoiceIssues' => $eInvoiceIssues])
         @endif
 
         {{-- Five figures, each one a fact the page was opened for: what was

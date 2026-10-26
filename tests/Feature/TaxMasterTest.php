@@ -23,6 +23,7 @@ class TaxMasterTest extends TestCase
         foreach ([
             '0001_01_01_000000_create_users_table',
             '2024_01_02_000001_add_extra_fields_to_users_table',
+            '2026_10_03_030000_add_employment_profile_to_users_table',
             '2026_10_26_010000_create_hsn_sac_codes_table',
         ] as $migration) {
             (require database_path('migrations/' . $migration . '.php'))->up();

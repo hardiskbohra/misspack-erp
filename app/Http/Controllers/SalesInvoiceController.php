@@ -803,6 +803,12 @@ class SalesInvoiceController extends Controller
 
         /* `accounts` is not decoration: the record page carries the receipt
            dialog, and a dialog whose account list is missing is a 500. */
+        /* The e-invoice card lives behind canRegister(), so a non-registered
+           invoice never looks at $eInvoice at all — but the moment an IRN
+           exists the card shows it, from this guarded hand-off. */
+        $eInvoice = $salesInvoice->eInvoice?->isRegistered() ? $salesInvoice->eInvoice : null;
+        $eInvoiceIssues = $salesInvoice->eInvoiceReasons();
+
         return view('sales_invoices.show', [
             'invoice' => $salesInvoice,
             'accounts' => $this->accounts(),
@@ -811,9 +817,8 @@ class SalesInvoiceController extends Controller
             /* The e-invoice card's pre-flight list: the reasons registration
                would be refused, computed while the page renders so the card
                shows them instead of a dead "register" click. */
-            'eInvoiceIssues' => $salesInvoice->invoice_type === 'tax'
-                ? (new \App\Services\EInvoice\EInvoicePayload($salesInvoice))->issues()
-                : null,
+            'eInvoiceIssues' => $eInvoiceIssues,
+            'eInvoice' => $eInvoice,
         ]);
     }
 
@@ -886,7 +891,11 @@ class SalesInvoiceController extends Controller
             $loads[] = 'eInvoice';
         }
         $salesInvoice->load($loads);
-        return view('sales_invoices.print', ['invoice' => $salesInvoice, 'publicMode' => false]);
+        return view('sales_invoices.print', [
+            'invoice' => $salesInvoice,
+            'publicMode' => false,
+            'eInvoice' => $salesInvoice->relationLoaded('eInvoice') ? $salesInvoice->eInvoice : null,
+        ]);
     }
 
     public function publicShow(string $token): View
@@ -897,7 +906,11 @@ class SalesInvoiceController extends Controller
             ->with(array_merge(['items', 'publicAttachments'],
                 Schema::hasTable('sales_invoice_e_invoices') ? ['eInvoice'] : []))
             ->firstOrFail();
-        return view('sales_invoices.print', ['invoice' => $invoice, 'publicMode' => true]);
+        return view('sales_invoices.print', [
+            'invoice' => $invoice,
+            'publicMode' => true,
+            'eInvoice' => $invoice->relationLoaded('eInvoice') ? $invoice->eInvoice : null,
+        ]);
     }
 
     public function markSent(SalesInvoice $salesInvoice): RedirectResponse
@@ -947,7 +960,10 @@ class SalesInvoiceController extends Controller
             'seller_state' => ['nullable', 'string', 'max:255'],
             'seller_country' => ['nullable', 'string', 'max:255'],
             'seller_pincode' => ['nullable', 'string', 'max:30'],
-            'seller_gstin' => ['nullable', 'string', 'max:30', new ValidGstin],
+            /* Cash invoices carry no GST fields (the writer nulls them), so
+               checksum-gate them only on the invoice types where GST is live. */
+            'seller_gstin' => array_filter(['nullable', 'string', 'max:30',
+                $request->input('invoice_type') === 'cash' ? null : new ValidGstin]),
             'seller_pan' => ['nullable', 'string', 'max:20'],
             'seller_email' => ['nullable', 'string', 'max:255'],
             'seller_mobile' => ['nullable', 'string', 'max:40'],
@@ -964,7 +980,8 @@ class SalesInvoiceController extends Controller
             'client_contact_name' => ['nullable', 'string', 'max:255'],
             'client_email' => ['nullable', 'string', 'max:255'],
             'client_mobile' => ['nullable', 'string', 'max:40'],
-            'client_gstin' => ['nullable', 'string', 'max:30', new ValidGstin],
+            'client_gstin' => array_filter(['nullable', 'string', 'max:30',
+                $request->input('invoice_type') === 'cash' ? null : new ValidGstin]),
             'client_pan' => ['nullable', 'string', 'max:20'],
             'billing_address' => ['nullable', 'string'],
             'billing_city' => ['nullable', 'string', 'max:255'],
