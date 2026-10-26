@@ -810,7 +810,13 @@ class SalesInvoiceController extends Controller
            touch it even here). */
         $loaded = $salesInvoice->relationLoaded('eInvoice') ? $salesInvoice->eInvoice : null;
         $eInvoice = $loaded && $loaded->isRegistered() ? $loaded : null;
+<<<<<<< HEAD
         $eInvoiceIssues = $salesInvoice->eInvoiceReasons();
+=======
+        $eInvoiceIssues = $salesInvoice->invoice_type === 'tax'
+            ? (new \App\Services\EInvoice\EInvoicePayload($salesInvoice))->issues()
+            : null;
+>>>>>>> b88cdf2 (fix(tests): junit annotations carry file+line; gstin-negative posts the broken GSTIN (array_merge); GstRt asserted by value; IRN refusal split into validation vs domain assertions)
 
         return view('sales_invoices.show', [
             'invoice' => $salesInvoice,

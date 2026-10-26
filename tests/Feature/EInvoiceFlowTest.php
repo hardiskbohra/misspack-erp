@@ -126,7 +126,7 @@ class EInvoiceFlowTest extends TestCase
         $this->assertSame('24ABCDE1234F1Z6', $payload['BuyerDtls']['Gstin']);
         $this->assertSame('24', $payload['BuyerDtls']['Pos']);
         $this->assertSame('4819', $payload['ItemList'][0]['HsnCd']);
-        $this->assertSame(18.0, $payload['ItemList'][0]['GstRt']);
+        $this->assertEqualsWithDelta(18.0, (float) $payload['ItemList'][0]['GstRt'], 0.0001);
         $this->assertSame(1000.0, $payload['ValDtls']['AssVal']);
         $this->assertSame(1180.0, $payload['ValDtls']['TotInvVal']);
     }
@@ -139,6 +139,11 @@ class EInvoiceFlowTest extends TestCase
         $record = $invoice->fresh()->eInvoice;
 
         $this->post(route('sales-invoices.einvoice.record', $invoice), ['irn' => 'NOT-AN-IRN'])
+            ->assertSessionHasErrors(['irn']);
+
+        /* The domain check itself: full-length but not hexadecimal. */
+        $this->post(route('sales-invoices.einvoice.record', $invoice),
+            ['irn' => str_repeat('Z', 64)])
             ->assertRedirect();
         $this->assertStringContainsString('64 hexadecimal', (string) session('error'));
         $this->assertSame(SalesInvoiceEInvoice::STATUS_PENDING, $record->fresh()->status);

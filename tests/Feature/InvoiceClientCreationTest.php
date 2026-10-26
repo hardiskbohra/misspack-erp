@@ -194,9 +194,10 @@ class InvoiceClientCreationTest extends TestCase
         $this->office();
 
         // 24ABCDE1234F1Z5 is structurally fine but its check digit should be 6.
-        $this->postJson(route('clients.quickStore'), $this->details() + [
+        // (array_merge, not +: union keeps the left operand's gstin unchanged.)
+        $this->postJson(route('clients.quickStore'), array_merge($this->details(), [
             'gstin' => '24ABCDE1234F1Z5',
-        ])->assertUnprocessable()->assertJsonValidationErrors(['gstin']);
+        ]))->assertUnprocessable()->assertJsonValidationErrors(['gstin']);
 
         $this->assertSame(0, \App\Models\Client::count());
     }
