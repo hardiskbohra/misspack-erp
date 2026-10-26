@@ -4113,6 +4113,19 @@
             ]
         },
         {
+            "name": "sales-invoices.email",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/email",
+            "action": "App\\Http\\Controllers\\SalesInvoiceController@emailClient",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "sales-invoices.markSent",
             "methods": [
                 "PATCH"

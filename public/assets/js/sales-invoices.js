@@ -716,6 +716,48 @@
         });
     });
 
+    /* --------------------------------------------------- the compose dialog
+       Same one-dialog family as the reminder: the trigger carries the defaults
+       the model wrote (`SalesInvoice::emailDefaults()`), the office edits them,
+       and whatever leaves the form is exactly what the send log stores. */
+    onReady(function () {
+        var modal = document.getElementById('emailInvoiceModal');
+        var form = modal ? modal.querySelector('[data-email-form]') : null;
+        var triggers = document.querySelectorAll('[data-open-email]');
+
+        if (!modal || !form || !triggers.length) return;
+
+        var template = form.getAttribute('data-action-template') || '';
+        var subtitle = modal.querySelector('[data-email-subtitle]');
+        var to = modal.querySelector('[data-email-to]');
+        var cc = modal.querySelector('[data-email-cc]');
+        var subject = modal.querySelector('[data-email-subject]');
+        var message = modal.querySelector('[data-email-message]');
+
+        triggers.forEach(function (trigger) {
+            trigger.addEventListener('click', function () {
+                var id = trigger.getAttribute('data-invoice-id');
+                var number = trigger.getAttribute('data-invoice-number') || 'this invoice';
+
+                form.setAttribute('action', template.replace('__INVOICE__', id));
+
+                if (subtitle) {
+                    subtitle.textContent = number + ' — the invoice as the client reads it';
+                }
+                /* fresh defaults on every open: text the office already typed in
+                   a half-closed dialog must never leak into the next invoice */
+                if (to) to.value = trigger.getAttribute('data-email-to') || '';
+                if (cc) cc.value = '';
+                if (subject) subject.value = trigger.getAttribute('data-email-subject') || '';
+                if (message) message.value = trigger.getAttribute('data-email-message') || '';
+
+                if (window.MasterModal) {
+                    window.MasterModal.open(modal);
+                }
+            });
+        });
+    });
+
     /* --------------------------------------------------- the reminder dialog
        One dialog for the page, exactly like the receipt dialog beside it: the
        row says which invoice, the words come from the model, and the office may

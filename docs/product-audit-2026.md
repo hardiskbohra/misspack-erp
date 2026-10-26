@@ -283,7 +283,7 @@ search, module dashboards, print-specific styles for labels/statements.
 - [ ] Transaction-wrapping pass on multi-write endpoints + a `tools/checks` rule (P1)
 - [ ] Audit-log retention job (P2 but trivial)
 - [ ] Decide quotations: restore-lite or remove `customer_quote_id` (P2)
-- [ ] "Email invoice to client" + send-event tracking (first slice of P0 collections)
+- [x] "Email invoice to client" + send-event tracking (first slice of P0 collections) — **shipped 2026-10-26**: compose dialog on the invoice record page and list row menu (defaults from `SalesInvoice::emailDefaults()` — snapshot e-mail, then the client card's accounts desk); every attempt lands in `sales_invoice_sends` with recipients/subject/message/sender/status, so "we never received it" is answerable; failures keep the transport's reason *and* brief the accounts desk through the notification centre; mark-sent/portal flip rides the send by default, skipped for re-sends. See [collections-outreach.md](collections-outreach.md). The dunning schedule and open-tracking remain open.
 
 ### Next (1–3 months) — cash & control
 - [ ] Dunning engine + statement auto-share + WhatsApp deep links (P0)

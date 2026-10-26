@@ -175,6 +175,46 @@ class SalesInvoice extends Model
             ->orderByDesc('id');
     }
 
+    /** Every e-mail that went (or tried to go) to the client, newest first. */
+    public function sends()
+    {
+        return $this->hasMany(SalesInvoiceSend::class)->orderByDesc('sent_at')->orderByDesc('id');
+    }
+
+    /** The words the compose dialog opens with — a polite first send, not a chase. */
+    public function emailMessage(): string
+    {
+        $currency = fn (float $amount) => CommonHelper::amount($amount, $this->currency);
+
+        $lines = ['Dear '.($this->client_contact_name ?: $this->client_company_name ?: 'Sir/Madam').',', ''];
+        $lines[] = 'Please find invoice '.$this->invoice_number
+            .($this->invoice_date ? ' dated '.$this->invoice_date->format('d M Y') : '')
+            .' for '.$currency($this->receivableTotal())
+            .($this->due_date ? ', payable by '.$this->due_date->format('d M Y') : '').'.';
+        $lines[] = '';
+        $lines[] = 'Do come back to us if any line in it needs a query resolved.';
+        $lines[] = '';
+        $lines[] = trim(implode(' · ', array_filter([
+            $this->seller_company_name,
+            $this->seller_mobile,
+        ]))) ?: 'Thank you.';
+
+        return implode("\n", $lines);
+    }
+
+    /** The compose dialog's defaults: To is the snapshot on the invoice, else the accounts desk on the client card. */
+    public function emailDefaults(): array
+    {
+        $to = $this->client_email ?: optional($this->client)->account_person_email;
+
+        return [
+            'to' => (string) ($to ?: ''),
+            'subject' => 'Invoice '.$this->invoice_number
+                .($this->seller_company_name ? ' from '.$this->seller_company_name : ''),
+            'message' => $this->emailMessage(),
+        ];
+    }
+
     public function publicAttachments()
     {
         return $this->hasMany(SalesInvoiceAttachment::class)->where('is_public', true)->latest('id');

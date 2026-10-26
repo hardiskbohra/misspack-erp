@@ -4858,6 +4858,111 @@
             "expected": "No min-width/width \u2265321px on non-table selectors inside max-width media blocks; the trend-chart exception is named with its reason.",
             "automation": [],
             "notes": "Contract-only case: the check itself is the executable evidence (npm run test:contracts \u2192 responsive rule 6)."
+        },
+        {
+            "id": "IT-SALES-013",
+            "module": "SALES",
+            "level": "integration",
+            "priority": "P0",
+            "requirement": "REQ-SALES",
+            "title": "Invoice can be emailed to the client and the send is provable",
+            "preconditions": "Office admin; draft tax invoice with a client snapshot e-mail",
+            "test_data": "To accounts+ops, cc director; mark-sent ticked",
+            "steps": [
+                "Open the compose dialog from the record page",
+                "Send"
+            ],
+            "expected": "Mail carries the posted recipients/subject/message, the invoice numbers and the portal link; a sales_invoice_sends row snapshots to/cc/subject/message/sender; the draft flips to sent+portal-visible; the record page shows the send.",
+            "automation": [
+                "tests/Feature/SalesInvoiceEmailTest.php#test_the_invoice_goes_out_and_the_send_lands_in_the_log"
+            ]
+        },
+        {
+            "id": "IT-SALES-014",
+            "module": "SALES",
+            "level": "integration",
+            "priority": "P1",
+            "requirement": "REQ-SALES",
+            "title": "A re-send of an issued invoice leaves the books alone",
+            "preconditions": "Issued invoice, portal flag off",
+            "test_data": "mark_sent omitted",
+            "steps": [
+                "Send with the box unticked"
+            ],
+            "expected": "Status/sent_at/portal flag untouched; send logged; the mail omits the View-invoice button because the link would 404.",
+            "automation": [
+                "tests/Feature/SalesInvoiceEmailTest.php#test_a_resend_of_an_issued_invoice_leaves_the_books_alone"
+            ]
+        },
+        {
+            "id": "IT-SALES-015",
+            "module": "SALES",
+            "level": "integration",
+            "priority": "P0",
+            "requirement": "REQ-SALES",
+            "title": "The composer refuses bad input and off-limits invoices",
+            "preconditions": "Cancelled invoice; malformed To address",
+            "test_data": "to=not-an-email and to=valid on a cancelled invoice",
+            "steps": [
+                "Attempt both sends"
+            ],
+            "expected": "Validation error / refusal flash; nothing mailed; zero send rows.",
+            "automation": [
+                "tests/Feature/SalesInvoiceEmailTest.php#test_the_composer_refuses_an_address_that_is_none",
+                "tests/Feature/SalesInvoiceEmailTest.php#test_a_cancelled_invoice_is_never_emailed"
+            ]
+        },
+        {
+            "id": "IT-SALES-016",
+            "module": "SALES",
+            "level": "integration",
+            "priority": "P1",
+            "requirement": "REQ-SALES",
+            "title": "A mailer refusal is logged and briefs the accounts desk",
+            "preconditions": "Throwing transport; briefings enabled with e-mails off in fixture",
+            "test_data": "SMTP connection refused",
+            "steps": [
+                "Attempt a send"
+            ],
+            "expected": "Flash error; send row status=failed with the transport's reason; invoice stays draft; office alert invoice.email_failed (ack-required, accounts desk) raised.",
+            "automation": [
+                "tests/Feature/SalesInvoiceEmailTest.php#test_a_refused_send_is_logged_and_briefs_the_desk"
+            ]
+        },
+        {
+            "id": "IT-SALES-017",
+            "module": "SALES",
+            "level": "integration",
+            "priority": "P1",
+            "requirement": "REQ-SALES",
+            "title": "Without a configured sender the office is told before any attempt",
+            "preconditions": "mail.from.address empty",
+            "test_data": "Valid compose post",
+            "steps": [
+                "Attempt a send"
+            ],
+            "expected": "Flash points at Organisation settings; nothing mailed; no send row \u2014 a configuration gap is not a send attempt.",
+            "automation": [
+                "tests/Feature/SalesInvoiceEmailTest.php#test_without_a_configured_sender_the_office_is_told_first"
+            ]
+        },
+        {
+            "id": "IT-SALES-018",
+            "module": "SALES",
+            "level": "integration",
+            "priority": "P0",
+            "requirement": "REQ-SALES",
+            "title": "Guests and payroll cannot email invoices",
+            "preconditions": "Guest session; employee session",
+            "test_data": "POST to the email endpoint",
+            "steps": [
+                "Send unauthenticated",
+                "Send as an employee"
+            ],
+            "expected": "Guest \u2192 login; employee \u2192 their own dashboard; zero sends.",
+            "automation": [
+                "tests/Feature/SalesInvoiceEmailTest.php#test_guests_and_employees_are_held_at_the_wall"
+            ]
         }
     ]
 }

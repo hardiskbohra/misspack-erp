@@ -163,6 +163,15 @@
                         <button type="button" data-copy-text="{{ $invoice->reminderMessage() }}">
                             <i class="fas fa-comment-dots" aria-hidden="true"></i> Copy reminder text
                         </button>
+                        @php($emailDefaults = $invoice->emailDefaults())
+                        <button type="button" data-open-email
+                            data-invoice-id="{{ $invoice->id }}"
+                            data-invoice-number="{{ $invoice->invoice_number }}"
+                            data-email-to="{{ $emailDefaults['to'] }}"
+                            data-email-subject="{{ $emailDefaults['subject'] }}"
+                            data-email-message="{{ $emailDefaults['message'] }}">
+                            <i class="fas fa-paper-plane" aria-hidden="true"></i> Email to client
+                        </button>
                         <button type="button" data-copy-link="{{ route('sales-invoices.public', $invoice->public_token) }}">
                             <i class="fas fa-link" aria-hidden="true"></i> Copy client link
                         </button>
@@ -773,6 +782,74 @@
                         </div>
                     @endif
                 </div>
+
+                @if ($invoice->relationLoaded('sends'))
+                    {{-- The answer to "we never received it": what the office
+                         sent, to whom, when, and whether the mailer took it. --}}
+                    <div class="master-card master-section">
+                        <div class="master-section-head">
+                            <div>
+                                <h2 class="master-section-title">In the client's inbox</h2>
+                                <p class="master-sub">
+                                    @php($lastSend = $invoice->sends->first())
+                                    @if ($lastSend)
+                                        Last e-mailed {{ $lastSend->sent_at?->diffForHumans() }}
+                                        by {{ $lastSend->sender?->name ?? 'the office' }}
+                                        · {{ $invoice->sends->count() }} send{{ $invoice->sends->count() === 1 ? '' : 's' }} logged
+                                    @else
+                                        No e-mail has left the office for this invoice yet
+                                    @endif
+                                </p>
+                            </div>
+                            <div class="master-section-meta">
+                                <button type="button" class="master-btn master-btn-soft" data-open-email
+                                    data-invoice-id="{{ $invoice->id }}"
+                                    data-invoice-number="{{ $invoice->invoice_number }}"
+                                    data-email-to="{{ $emailDefaults['to'] }}"
+                                    data-email-subject="{{ $emailDefaults['subject'] }}"
+                                    data-email-message="{{ $emailDefaults['message'] }}">
+                                    <i class="fas fa-paper-plane" aria-hidden="true"></i> Email it
+                                </button>
+                            </div>
+                        </div>
+
+                        @if ($invoice->sends->isEmpty())
+                            <div class="master-empty-state">
+                                <i class="fas fa-inbox"></i>
+                                <p>
+                                    The button above sends the invoice by e-mail and keeps the copy here —
+                                    the next “we never got it” answers itself.
+                                </p>
+                            </div>
+                        @else
+                            <div class="si-reminder-list">
+                                @foreach ($invoice->sends as $send)
+                                    <div class="si-reminder">
+                                        <div class="si-reminder-when">
+                                            <strong>{{ $send->sent_at?->format('d M Y, H:i') }}</strong>
+                                            <span class="master-sub">{{ $send->sender?->name ?? 'the office' }}</span>
+                                        </div>
+                                        <div class="si-reminder-what">
+                                            <strong>
+                                                {{ $send->subject }}
+                                                <span class="master-status-chip {{ $send->isFailed() ? 'danger' : 'success' }}">
+                                                    {{ $send->isFailed() ? 'Failed' : 'Sent' }}
+                                                </span>
+                                            </strong>
+                                            <span class="master-sub">
+                                                To {{ $send->recipients }}
+                                                @if (filled($send->cc)) · Cc {{ $send->cc }} @endif
+                                                @if ($send->isFailed() && filled($send->error))
+                                                    <span class="si-due">· {{ $send->error }}</span>
+                                                @endif
+                                            </span>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -942,6 +1019,7 @@
 
 @include('sales_invoices.partials.payment-modal')
     @include('sales_invoices.partials.reminder-modal')
+    @include('sales_invoices.partials.email-modal')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/sales-invoices.css') }}">
 @endpush

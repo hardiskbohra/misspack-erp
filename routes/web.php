@@ -407,6 +407,7 @@ Route::middleware('auth')->group(function () {
         /* one action, many rows — the row menu's own actions, in a loop */
         Route::post('/sales-invoices/bulk', [SalesInvoiceController::class, 'bulk'])->name('sales-invoices.bulk');
         Route::post('/sales-invoices/{salesInvoice}/reminders', [SalesInvoiceController::class, 'logReminder'])->name('sales-invoices.reminders.store');
+        Route::post('/sales-invoices/{salesInvoice}/email', [SalesInvoiceController::class, 'emailClient'])->name('sales-invoices.email');
         Route::post('/sales-invoices/saved-views', [SalesInvoiceController::class, 'storeSavedView'])->name('sales-invoices.saved-views.store');
         Route::delete('/sales-invoices/saved-views/{savedView}', [SalesInvoiceController::class, 'destroySavedView'])->name('sales-invoices.saved-views.destroy');
         Route::post('/sales-invoices/{salesInvoice}/e-invoice', [SalesInvoiceEInvoiceController::class, 'generate'])->name('sales-invoices.einvoice.generate');

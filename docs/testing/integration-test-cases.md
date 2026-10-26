@@ -962,6 +962,80 @@ Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDele
 
 **Evidence:** `tests/Feature/CashInvoiceConversionTest.php#test_rounding_charges_and_discounted_values_reconcile_after_three_partial_conversions`
 
+### IT-SALES-013 — Invoice can be emailed to the client and the send is provable
+
+**Priority:** P0 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Office admin; draft tax invoice with a client snapshot e-mail
+- **Data:** To accounts+ops, cc director; mark-sent ticked
+1. Open the compose dialog from the record page
+2. Send
+
+**Expected:** Mail carries the posted recipients/subject/message, the invoice numbers and the portal link; a sales_invoice_sends row snapshots to/cc/subject/message/sender; the draft flips to sent+portal-visible; the record page shows the send.
+
+**Evidence:** `tests/Feature/SalesInvoiceEmailTest.php#test_the_invoice_goes_out_and_the_send_lands_in_the_log`
+
+### IT-SALES-014 — A re-send of an issued invoice leaves the books alone
+
+**Priority:** P1 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Issued invoice, portal flag off
+- **Data:** mark_sent omitted
+1. Send with the box unticked
+
+**Expected:** Status/sent_at/portal flag untouched; send logged; the mail omits the View-invoice button because the link would 404.
+
+**Evidence:** `tests/Feature/SalesInvoiceEmailTest.php#test_a_resend_of_an_issued_invoice_leaves_the_books_alone`
+
+### IT-SALES-015 — The composer refuses bad input and off-limits invoices
+
+**Priority:** P0 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Cancelled invoice; malformed To address
+- **Data:** to=not-an-email and to=valid on a cancelled invoice
+1. Attempt both sends
+
+**Expected:** Validation error / refusal flash; nothing mailed; zero send rows.
+
+**Evidence:** `tests/Feature/SalesInvoiceEmailTest.php#test_the_composer_refuses_an_address_that_is_none`; `tests/Feature/SalesInvoiceEmailTest.php#test_a_cancelled_invoice_is_never_emailed`
+
+### IT-SALES-016 — A mailer refusal is logged and briefs the accounts desk
+
+**Priority:** P1 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Throwing transport; briefings enabled with e-mails off in fixture
+- **Data:** SMTP connection refused
+1. Attempt a send
+
+**Expected:** Flash error; send row status=failed with the transport's reason; invoice stays draft; office alert invoice.email_failed (ack-required, accounts desk) raised.
+
+**Evidence:** `tests/Feature/SalesInvoiceEmailTest.php#test_a_refused_send_is_logged_and_briefs_the_desk`
+
+### IT-SALES-017 — Without a configured sender the office is told before any attempt
+
+**Priority:** P1 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** mail.from.address empty
+- **Data:** Valid compose post
+1. Attempt a send
+
+**Expected:** Flash points at Organisation settings; nothing mailed; no send row — a configuration gap is not a send attempt.
+
+**Evidence:** `tests/Feature/SalesInvoiceEmailTest.php#test_without_a_configured_sender_the_office_is_told_first`
+
+### IT-SALES-018 — Guests and payroll cannot email invoices
+
+**Priority:** P0 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Guest session; employee session
+- **Data:** POST to the email endpoint
+1. Send unauthenticated
+2. Send as an employee
+
+**Expected:** Guest → login; employee → their own dashboard; zero sends.
+
+**Evidence:** `tests/Feature/SalesInvoiceEmailTest.php#test_guests_and_employees_are_held_at_the_wall`
+
 ## Purchase documents and vendor settlement (`PURCHASE`)
 
 Sources: `app/Services/PurchaseBillLedger.php`, `app/Services/PurchaseInvoiceMoney.php`, `app/Http/Controllers/PurchaseInvoiceController.php`.

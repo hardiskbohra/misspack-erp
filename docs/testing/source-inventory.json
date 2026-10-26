@@ -283,6 +283,18 @@
       ]
     },
     {
+      "file": "tests/Feature/SalesInvoiceEmailTest.php",
+      "methods": [
+        "test_guests_and_employees_are_held_at_the_wall",
+        "test_the_invoice_goes_out_and_the_send_lands_in_the_log",
+        "test_a_resend_of_an_issued_invoice_leaves_the_books_alone",
+        "test_the_composer_refuses_an_address_that_is_none",
+        "test_a_cancelled_invoice_is_never_emailed",
+        "test_without_a_configured_sender_the_office_is_told_first",
+        "test_a_refused_send_is_logged_and_briefs_the_desk"
+      ]
+    },
+    {
       "file": "tests/Feature/ShipmentAttachmentUploadTest.php",
       "methods": [
         "test_detail_card_offers_direct_multi_upload_with_private_default",
@@ -1048,6 +1060,7 @@
     "app/Models/SalesInvoiceEInvoice.php",
     "app/Models/SalesInvoiceItem.php",
     "app/Models/SalesInvoiceReminder.php",
+    "app/Models/SalesInvoiceSend.php",
     "app/Models/SavedView.php",
     "app/Models/Shipment.php",
     "app/Models/ShipmentAttachment.php",

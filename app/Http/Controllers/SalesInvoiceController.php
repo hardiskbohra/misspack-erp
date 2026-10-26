@@ -13,8 +13,12 @@ use App\Models\SalesInvoiceReminder;
 use App\Models\SavedView;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use App\Mail\SalesInvoiceMail;
+use App\Models\SalesInvoiceSend;
+use App\Services\OfficeBriefing;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -792,6 +796,9 @@ class SalesInvoiceController extends Controller
     public function show(SalesInvoice $salesInvoice): View
     {
         $salesInvoice->load(['items.product', 'attachments', 'creator', 'reminders.creator']);
+        if (Schema::hasTable('sales_invoice_sends')) {
+            $salesInvoice->load('sends.sender');
+        }
         if (Schema::hasTable('cashflow_allocations')) {
             $salesInvoice->load('cashflowAllocations.cashflowEntry');
         }
@@ -922,6 +929,105 @@ class SalesInvoiceController extends Controller
     {
         $salesInvoice->update(['status' => 'sent', 'sent_at' => now(), 'show_client_portal' => true]);
         return back()->with('success', 'Invoice marked as sent and visible to client portal.');
+    }
+
+    public function emailClient(Request $request, SalesInvoice $salesInvoice, OfficeBriefing $briefing): RedirectResponse
+    {
+        if ($salesInvoice->status === 'cancelled') {
+            return back()->with('error', 'A cancelled invoice is never emailed to the client.');
+        }
+
+        $data = $request->validate([
+            'to' => ['required', 'string', 'max:500'],
+            'cc' => ['nullable', 'string', 'max:500'],
+            'subject' => ['required', 'string', 'max:190'],
+            'message' => ['required', 'string', 'max:4000'],
+            'mark_sent' => ['nullable', 'boolean'],
+        ]);
+
+        /* comma/semicolon lists, like the contacts card already teaches people */
+        [$to, $badTo] = $this->splitEmails($data['to']);
+        [$cc, $badCc] = $this->splitEmails((string) ($data['cc'] ?? ''));
+        if (! $to || $badTo) {
+            throw ValidationException::withMessages(['to' => $badTo
+                ? 'Not an e-mail address: '.implode(', ', $badTo)
+                : 'Who does this go to?']);
+        }
+        if ($badCc) {
+            throw ValidationException::withMessages(['cc' => 'Not an e-mail address: '.implode(', ', $badCc)]);
+        }
+
+        if (! config('mail.from.address')) {
+            return back()->with('error', 'No sender address is configured — set one in Organisation settings before the office can email invoices.');
+        }
+
+        /* An unticked box in the form is an *absent* key, so no default-true:
+           the checkbox's own @checked default is what makes "mark sent" the
+           usual path. */
+        $markSent = $request->boolean('mark_sent');
+        $mail = new SalesInvoiceMail($salesInvoice, $data['subject'], $data['message'],
+            $markSent || (bool) $salesInvoice->show_client_portal);
+        $error = null;
+        try {
+            $pending = Mail::to($to);
+            if ($cc) {
+                $pending->cc($cc);
+            }
+            $pending->send($mail);
+        } catch (\Throwable $e) {
+            $error = $e->getMessage();
+        }
+
+        /* The attempt lands in the log either way — sent or failed with the
+           transport's own reason. "We emailed it" must be provable, and so
+           must "it bounced at the mail server". */
+        SalesInvoiceSend::create([
+            'sales_invoice_id' => $salesInvoice->id,
+            'channel' => 'email',
+            'recipients' => implode(', ', $to),
+            'cc' => $cc ? implode(', ', $cc) : null,
+            'subject' => $data['subject'],
+            'message' => $data['message'],
+            'status' => $error === null ? SalesInvoiceSend::STATUS_SENT : SalesInvoiceSend::STATUS_FAILED,
+            'error' => $error === null ? null : Str::limit($error, 500, ''),
+            'sent_by' => Auth::id(),
+            'sent_at' => now(),
+        ]);
+
+        if ($error !== null) {
+            $briefing->workflowNotice([
+                'event_key' => 'invoice.email_failed',
+                'fingerprint' => 'invoice.email_failed:'.$salesInvoice->id,
+                'title' => 'Invoice '.$salesInvoice->invoice_number.' did not go out',
+                'body' => 'The e-mail to '.implode(', ', $to).' was refused: '.$error,
+                'severity' => 'attention',
+                'requires_ack' => true,
+                'team' => 'accounts',
+                'action_url' => route('sales-invoices.show', $salesInvoice),
+                'action_label' => 'Open the invoice',
+            ]);
+
+            return back()->with('error', 'The e-mail was not accepted by the mailer ('.$error.'). The attempt is logged on the invoice.');
+        }
+
+        if ($markSent) {
+            $updates = ['sent_at' => now(), 'show_client_portal' => true];
+            if ($salesInvoice->status === 'draft') {
+                $updates['status'] = 'sent';
+            }
+            $salesInvoice->update($updates);
+        }
+
+        return back()->with('success', 'Emailed '.$salesInvoice->invoice_number
+            .' to '.implode(', ', $to).'. It is on the invoice\'s send log.');
+    }
+
+    private function splitEmails(string $line): array
+    {
+        $parts = array_values(array_filter(preg_split('/[\s,;]+/', trim($line))));
+        $bad = array_values(array_filter($parts, fn ($p) => ! filter_var($p, FILTER_VALIDATE_EMAIL)));
+
+        return [$bad ? [] : $parts, $bad];
     }
 
     public function destroyAttachment(SalesInvoiceAttachment $attachment): RedirectResponse
