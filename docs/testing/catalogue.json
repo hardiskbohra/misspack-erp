@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "prepared_on": "2026-10-25",
+  "prepared_on": "2026-10-26",
   "modules": [
     {
       "id": "AUTH",
@@ -309,6 +309,23 @@
         "docs/ui-design-guidelines.md"
       ],
       "fixture": "Desktop1440,tablet768,mobile390 and320; light/dark; keyboard-only input"
+    },
+    {
+      "id": "TAX",
+      "name": "GST: GSTIN checksum, HSN/SAC master and e-invoice (IRN/QR)",
+      "sources": [
+        "app/Support/Gstin.php",
+        "app/Rules/ValidGstin.php",
+        "app/Models/HsnSacCode.php",
+        "app/Models/SalesInvoiceEInvoice.php",
+        "app/Services/EInvoice/EInvoicePayload.php",
+        "app/Services/EInvoice/EInvoiceRegistration.php",
+        "app/Services/EInvoice/HttpGateway.php",
+        "app/Services/EInvoice/ManualGateway.php",
+        "app/Http/Controllers/TaxSettingController.php",
+        "app/Http/Controllers/SalesInvoiceEInvoiceController.php"
+      ],
+      "fixture": "F-IDENTITY office user; disposable database with sales_invoices/items, e-invoice and HSN tables; fictitious but checksum-valid GSTINs (24AATCM8816E1Z5 seller, 24ABCDE1234F1Z6 buyer)"
     }
   ],
   "cases": [
@@ -4489,6 +4506,232 @@
       "automation": [
         "tests/Feature/LoginSecurityTest.php#test_password_change_enforces_the_default_strength_rule",
         "tests/Feature/LoginSecurityTest.php#test_the_account_page_enrols_and_disables_two_factor"
+      ]
+    },
+    {
+      "id": "UT-TAX-001",
+      "module": "TAX",
+      "level": "unit",
+      "priority": "P0",
+      "requirement": "REQ-TAX-GSTIN",
+      "title": "GSTIN check digit follows the published mod-36 algorithm and refuses typos",
+      "preconditions": "No database; pure algorithm and rule checks.",
+      "test_data": "Pinned vectors 24AATCM8816E1Z5 / 33AAACC1206D1ZN / 24ABCDE1234F1Z6; single-character mutations at all 15 positions.",
+      "steps": [
+        "Assert known-good GSTINs pass structure, state code and checksum",
+        "Pin the check digits 5/N/6 against the published examples",
+        "Verify every one-character mutation fails",
+        "Verify structural rejections (length, wrong Z slot, entity zero, unallotted state)",
+        "Confirm normalise/state/pan helpers and one shared validation message"
+      ],
+      "expected": "Structure, checksum and state gates hold independently; every typo is refused; nullable input stays nullable.",
+      "automation": [
+        "tests/Unit/GstinTest.php#test_known_good_gstins_pass_structure_state_and_checksum",
+        "tests/Unit/GstinTest.php#test_the_check_digit_is_the_published_mod36_algorithm",
+        "tests/Unit/GstinTest.php#test_a_single_character_typo_anywhere_fails",
+        "tests/Unit/GstinTest.php#test_structural_and_state_rejections",
+        "tests/Unit/GstinTest.php#test_normalise_and_the_parts_it_unlocks",
+        "tests/Unit/GstinTest.php#test_the_validation_rule_carries_one_message_everywhere"
+      ]
+    },
+    {
+      "id": "IT-TAX-001",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "A proforma invoice cannot be e-registered",
+      "preconditions": "Office user; invoice with invoice_type proforma.",
+      "test_data": "Fully populated invoice body that would pass pre-flight if it were a tax invoice.",
+      "steps": [
+        "POST the generate route for the proforma",
+        "Verify the redirect carries a refusal flash and no e-invoice row exists"
+      ],
+      "expected": "No record is even parked; the error names the invoice type as the reason.",
+      "automation": [
+        "tests/Feature/EInvoiceFlowTest.php#test_a_proforma_is_refused_before_any_record_exists"
+      ]
+    },
+    {
+      "id": "IT-TAX-002",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "A tax invoice line without HSN/SAC is named in the refusal",
+      "preconditions": "Office user; tax invoice whose single line has hsn_sac null.",
+      "test_data": "One line of 1000 taxable at 18%.",
+      "steps": [
+        "POST generate",
+        "Read the refusal and confirm it names HSN and no record was created"
+      ],
+      "expected": "The e-invoice law's 4-digit minimum is enforced at pre-flight, not at the portal.",
+      "automation": [
+        "tests/Feature/EInvoiceFlowTest.php#test_a_line_without_hsn_is_named_in_the_refusal"
+      ]
+    },
+    {
+      "id": "IT-TAX-003",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "Generate parks the NIC-schema payload pending acknowledgement",
+      "preconditions": "Office user; fully valid intra-state tax invoice with valid seller and buyer GSTINs.",
+      "test_data": "100 pcs cartons HSN 4819 at 18% GST.",
+      "steps": [
+        "POST generate",
+        "Verify record is pending, provider manual",
+        "Verify payload Version/TranDtls/DocDtls/SellerDtls/BuyerDtls/ItemList/ValDtls contents incl. dd/mm/yyyy date and HsnCd/GstRt"
+      ],
+      "expected": "The stored JSON matches the portal schema for a B2B intra-state invoice.",
+      "automation": [
+        "tests/Feature/EInvoiceFlowTest.php#test_generate_builds_the_portal_schema_and_parks_it_pending"
+      ]
+    },
+    {
+      "id": "IT-TAX-004",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "Manual acknowledgement accepts only a 64-hex IRN and records registration",
+      "preconditions": "Pending e-invoice record for an office user.",
+      "test_data": "Bogus IRN 'NOT-AN-IRN'; then sha256-derived valid IRN with ack number/date and signed QR.",
+      "steps": [
+        "POST record with bogus IRN and verify the 64-hex refusal",
+        "POST record with the valid set and verify registered status, ack fields, registrar and audit event"
+      ],
+      "expected": "Only portal-real IRNs register; registration writes a sales_invoice.einvoice.registered audit row.",
+      "automation": [
+        "tests/Feature/EInvoiceFlowTest.php#test_the_acknowledgement_accepts_only_a_real_irn_and_marks_registration"
+      ]
+    },
+    {
+      "id": "IT-TAX-005",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "Cancellation honours the portal's 24-hour window",
+      "preconditions": "Registered record whose ack_date is 30 hours ago, then 2 hours ago.",
+      "test_data": "Cancel reason code 2 (data entry mistake).",
+      "steps": [
+        "Attempt cancel past the window and verify refusal with the credit-note guidance",
+        "Move ack inside the window and cancel; verify status becomes cancelled"
+      ],
+      "expected": "The window belongs to the portal, not the ERP's preference.",
+      "automation": [
+        "tests/Feature/EInvoiceFlowTest.php#test_the_cancel_window_is_the_portals_twenty_four_hours_not_ours"
+      ]
+    },
+    {
+      "id": "IT-TAX-006",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "The HTTP gateway contract: bearer, schema Version in, artefacts out",
+      "preconditions": "config services.einvoice.provider=http with faked endpoint answering Irn/AckNo/AckDt/SignedQRCode.",
+      "test_data": "GSP-style JSON acknowledgement.",
+      "steps": [
+        "POST generate with Http::fake",
+        "Verify the record registers directly with provider http and stores the signed QR",
+        "Assert the request carried bearer auth and Version 1.1 with SupTyp B2B"
+      ],
+      "expected": "A configured GSP registers without any UI acknowledgement step.",
+      "automation": [
+        "tests/Feature/EInvoiceFlowTest.php#test_the_http_gateway_registers_from_the_endpoints_answer"
+      ]
+    },
+    {
+      "id": "IT-TAX-007",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-TAX-HSN",
+      "title": "The rate master ships packaging defaults and the area lists them",
+      "preconditions": "Migrated database incl. hsn_sac_codes; office user.",
+      "test_data": "Seeded goods/services codes (3923 at 18% et al.).",
+      "steps": [
+        "Count seeded rows",
+        "GET /settings/taxes and verify area chrome and a seeded code render"
+      ],
+      "expected": "A fresh install is usable immediately and the settings page is a directory area.",
+      "automation": [
+        "tests/Feature/TaxMasterTest.php#test_the_migration_seeds_packaging_defaults_and_the_area_lists_them"
+      ]
+    },
+    {
+      "id": "IT-TAX-008",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-TAX-HSN",
+      "title": "Add, edit and remove a code through the settings door",
+      "preconditions": "Office user; migrated HSN table.",
+      "test_data": "New code 39232100 then a rate edit and removal.",
+      "steps": [
+        "POST store",
+        "PUT update flipping rate and inactive",
+        "DELETE and verify the row is gone"
+      ],
+      "expected": "The office maintains its own master; an unchecked active box means false, not unchanged.",
+      "automation": [
+        "tests/Feature/TaxMasterTest.php#test_add_edit_and_remove_a_code_through_the_settings_door"
+      ]
+    },
+    {
+      "id": "IT-TAX-009",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P1",
+      "requirement": "REQ-TAX-HSN",
+      "title": "Master validation refuses letters-as-codes, duplicates and impossible rates",
+      "preconditions": "Office user.",
+      "test_data": "Code 39A3; duplicate of seeded 3923; rate 450.",
+      "steps": [
+        "Attempt each of the three invalid stores and verify the right field errors"
+      ],
+      "expected": "Codes are 4-8 digits, unique; rates live inside 0-99.99.",
+      "automation": [
+        "tests/Feature/TaxMasterTest.php#test_the_rules_a_typo_breaks_against_all_fire"
+      ]
+    },
+    {
+      "id": "IT-TAX-010",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-HSN",
+      "title": "Guests cannot read or write the tax master",
+      "preconditions": "No session.",
+      "test_data": "Store attempt with a valid-looking payload.",
+      "steps": [
+        "GET the area and POST a store without auth",
+        "Verify redirects and an untouched table"
+      ],
+      "expected": "The master sits behind the office door like every settings area.",
+      "automation": [
+        "tests/Feature/TaxMasterTest.php#test_guests_cannot_touch_the_master"
+      ]
+    },
+    {
+      "id": "IT-TAX-011",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-GSTIN",
+      "title": "A client GSTIN that fails its check digit is refused at the invoice door",
+      "preconditions": "Office user; inline client creation from the invoice form.",
+      "test_data": "24ABCDE1234F1Z5 \u2014 structurally valid, checksum-wrong (correct digit is 6).",
+      "steps": [
+        "POST clients.quickStore with the defective GSTIN",
+        "Verify 422 on gstin and no client row"
+      ],
+      "expected": "The checksum rule fires on the historical quickStore path, not only on the full client form.",
+      "automation": [
+        "tests/Feature/InvoiceClientCreationTest.php#test_a_gstin_that_fails_its_check_digit_is_refused"
       ]
     }
   ]

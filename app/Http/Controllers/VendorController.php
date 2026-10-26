@@ -12,6 +12,7 @@ use App\Models\VendorPaymentAttachment;
 use App\Models\VendorPaymentEntry;
 use App\Services\SavedViews;
 use App\Services\VendorPaymentCashflowSync;
+use App\Rules\ValidGstin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -1713,7 +1714,7 @@ class VendorController extends Controller
             'pincode' => ['nullable', 'string', 'max:30'],
             'address' => ['nullable', 'string'],
 
-            'gstin' => ['nullable', 'string', 'max:30'],
+            'gstin' => ['nullable', 'string', 'max:30', new ValidGstin],
             'pan' => ['nullable', 'string', 'max:20'],
             'tax_id' => ['nullable', 'string', 'max:255'],
             'import_export_code' => ['nullable', 'string', 'max:255'],

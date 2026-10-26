@@ -1877,3 +1877,152 @@ Sources: `resources/views/components/drawer.blade.php`, `public/assets/js/master
 **Expected:** Inputs and multiline fields share font/radius/padding policy and focus/error tokens; textarea has96px minimum height, auto height and vertical-only resize without mobile overflow.
 
 **Evidence:** `tests/Integration/KycTextareaPresentationTest.php#test_public_multiline_fields_share_input_base_focus_and_error_styles`
+
+## GST: GSTIN checksum, HSN/SAC master and e-invoice (IRN/QR) (`TAX`)
+
+Sources: `app/Support/Gstin.php`, `app/Rules/ValidGstin.php`, `app/Models/HsnSacCode.php`, `app/Models/SalesInvoiceEInvoice.php`, `app/Services/EInvoice/EInvoicePayload.php`, `app/Services/EInvoice/EInvoiceRegistration.php`, `app/Services/EInvoice/HttpGateway.php`, `app/Services/EInvoice/ManualGateway.php`, `app/Http/Controllers/TaxSettingController.php`, `app/Http/Controllers/SalesInvoiceEInvoiceController.php`.
+
+### IT-TAX-001 — A proforma invoice cannot be e-registered
+
+**Priority:** P0 · **Requirement:** REQ-TAX-EINV · **Implementation:** linked executable evidence
+
+- **Preconditions:** Office user; invoice with invoice_type proforma.
+- **Data:** Fully populated invoice body that would pass pre-flight if it were a tax invoice.
+1. POST the generate route for the proforma
+2. Verify the redirect carries a refusal flash and no e-invoice row exists
+
+**Expected:** No record is even parked; the error names the invoice type as the reason.
+
+**Evidence:** `tests/Feature/EInvoiceFlowTest.php#test_a_proforma_is_refused_before_any_record_exists`
+
+### IT-TAX-002 — A tax invoice line without HSN/SAC is named in the refusal
+
+**Priority:** P0 · **Requirement:** REQ-TAX-EINV · **Implementation:** linked executable evidence
+
+- **Preconditions:** Office user; tax invoice whose single line has hsn_sac null.
+- **Data:** One line of 1000 taxable at 18%.
+1. POST generate
+2. Read the refusal and confirm it names HSN and no record was created
+
+**Expected:** The e-invoice law's 4-digit minimum is enforced at pre-flight, not at the portal.
+
+**Evidence:** `tests/Feature/EInvoiceFlowTest.php#test_a_line_without_hsn_is_named_in_the_refusal`
+
+### IT-TAX-003 — Generate parks the NIC-schema payload pending acknowledgement
+
+**Priority:** P0 · **Requirement:** REQ-TAX-EINV · **Implementation:** linked executable evidence
+
+- **Preconditions:** Office user; fully valid intra-state tax invoice with valid seller and buyer GSTINs.
+- **Data:** 100 pcs cartons HSN 4819 at 18% GST.
+1. POST generate
+2. Verify record is pending, provider manual
+3. Verify payload Version/TranDtls/DocDtls/SellerDtls/BuyerDtls/ItemList/ValDtls contents incl. dd/mm/yyyy date and HsnCd/GstRt
+
+**Expected:** The stored JSON matches the portal schema for a B2B intra-state invoice.
+
+**Evidence:** `tests/Feature/EInvoiceFlowTest.php#test_generate_builds_the_portal_schema_and_parks_it_pending`
+
+### IT-TAX-004 — Manual acknowledgement accepts only a 64-hex IRN and records registration
+
+**Priority:** P0 · **Requirement:** REQ-TAX-EINV · **Implementation:** linked executable evidence
+
+- **Preconditions:** Pending e-invoice record for an office user.
+- **Data:** Bogus IRN 'NOT-AN-IRN'; then sha256-derived valid IRN with ack number/date and signed QR.
+1. POST record with bogus IRN and verify the 64-hex refusal
+2. POST record with the valid set and verify registered status, ack fields, registrar and audit event
+
+**Expected:** Only portal-real IRNs register; registration writes a sales_invoice.einvoice.registered audit row.
+
+**Evidence:** `tests/Feature/EInvoiceFlowTest.php#test_the_acknowledgement_accepts_only_a_real_irn_and_marks_registration`
+
+### IT-TAX-005 — Cancellation honours the portal's 24-hour window
+
+**Priority:** P0 · **Requirement:** REQ-TAX-EINV · **Implementation:** linked executable evidence
+
+- **Preconditions:** Registered record whose ack_date is 30 hours ago, then 2 hours ago.
+- **Data:** Cancel reason code 2 (data entry mistake).
+1. Attempt cancel past the window and verify refusal with the credit-note guidance
+2. Move ack inside the window and cancel; verify status becomes cancelled
+
+**Expected:** The window belongs to the portal, not the ERP's preference.
+
+**Evidence:** `tests/Feature/EInvoiceFlowTest.php#test_the_cancel_window_is_the_portals_twenty_four_hours_not_ours`
+
+### IT-TAX-006 — The HTTP gateway contract: bearer, schema Version in, artefacts out
+
+**Priority:** P0 · **Requirement:** REQ-TAX-EINV · **Implementation:** linked executable evidence
+
+- **Preconditions:** config services.einvoice.provider=http with faked endpoint answering Irn/AckNo/AckDt/SignedQRCode.
+- **Data:** GSP-style JSON acknowledgement.
+1. POST generate with Http::fake
+2. Verify the record registers directly with provider http and stores the signed QR
+3. Assert the request carried bearer auth and Version 1.1 with SupTyp B2B
+
+**Expected:** A configured GSP registers without any UI acknowledgement step.
+
+**Evidence:** `tests/Feature/EInvoiceFlowTest.php#test_the_http_gateway_registers_from_the_endpoints_answer`
+
+### IT-TAX-007 — The rate master ships packaging defaults and the area lists them
+
+**Priority:** P1 · **Requirement:** REQ-TAX-HSN · **Implementation:** linked executable evidence
+
+- **Preconditions:** Migrated database incl. hsn_sac_codes; office user.
+- **Data:** Seeded goods/services codes (3923 at 18% et al.).
+1. Count seeded rows
+2. GET /settings/taxes and verify area chrome and a seeded code render
+
+**Expected:** A fresh install is usable immediately and the settings page is a directory area.
+
+**Evidence:** `tests/Feature/TaxMasterTest.php#test_the_migration_seeds_packaging_defaults_and_the_area_lists_them`
+
+### IT-TAX-008 — Add, edit and remove a code through the settings door
+
+**Priority:** P1 · **Requirement:** REQ-TAX-HSN · **Implementation:** linked executable evidence
+
+- **Preconditions:** Office user; migrated HSN table.
+- **Data:** New code 39232100 then a rate edit and removal.
+1. POST store
+2. PUT update flipping rate and inactive
+3. DELETE and verify the row is gone
+
+**Expected:** The office maintains its own master; an unchecked active box means false, not unchanged.
+
+**Evidence:** `tests/Feature/TaxMasterTest.php#test_add_edit_and_remove_a_code_through_the_settings_door`
+
+### IT-TAX-009 — Master validation refuses letters-as-codes, duplicates and impossible rates
+
+**Priority:** P1 · **Requirement:** REQ-TAX-HSN · **Implementation:** linked executable evidence
+
+- **Preconditions:** Office user.
+- **Data:** Code 39A3; duplicate of seeded 3923; rate 450.
+1. Attempt each of the three invalid stores and verify the right field errors
+
+**Expected:** Codes are 4-8 digits, unique; rates live inside 0-99.99.
+
+**Evidence:** `tests/Feature/TaxMasterTest.php#test_the_rules_a_typo_breaks_against_all_fire`
+
+### IT-TAX-010 — Guests cannot read or write the tax master
+
+**Priority:** P0 · **Requirement:** REQ-TAX-HSN · **Implementation:** linked executable evidence
+
+- **Preconditions:** No session.
+- **Data:** Store attempt with a valid-looking payload.
+1. GET the area and POST a store without auth
+2. Verify redirects and an untouched table
+
+**Expected:** The master sits behind the office door like every settings area.
+
+**Evidence:** `tests/Feature/TaxMasterTest.php#test_guests_cannot_touch_the_master`
+
+### IT-TAX-011 — A client GSTIN that fails its check digit is refused at the invoice door
+
+**Priority:** P0 · **Requirement:** REQ-TAX-GSTIN · **Implementation:** linked executable evidence
+
+- **Preconditions:** Office user; inline client creation from the invoice form.
+- **Data:** 24ABCDE1234F1Z5 — structurally valid, checksum-wrong (correct digit is 6).
+1. POST clients.quickStore with the defective GSTIN
+2. Verify 422 on gstin and no client row
+
+**Expected:** The checksum rule fires on the historical quickStore path, not only on the full client form.
+
+**Evidence:** `tests/Feature/InvoiceClientCreationTest.php#test_a_gstin_that_fails_its_check_digit_is_refused`

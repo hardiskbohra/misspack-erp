@@ -30,6 +30,7 @@ use App\Services\ClientInvoiceSnapshot;
 use App\Services\ProjectProducts;
 use App\Services\SalesInvoiceFilters;
 use App\Services\SavedViews;
+use App\Rules\ValidGstin;
 
 class SalesInvoiceController extends Controller
 {
@@ -794,6 +795,9 @@ class SalesInvoiceController extends Controller
         if (Schema::hasTable('cashflow_allocations')) {
             $salesInvoice->load('cashflowAllocations.cashflowEntry');
         }
+        if (Schema::hasTable('sales_invoice_e_invoices')) {
+            $salesInvoice->load('eInvoice');
+        }
         if ($this->clientAvailable()) { $salesInvoice->load('client'); }
         if ($this->projectAvailable()) { $salesInvoice->load('project'); }
 
@@ -804,6 +808,12 @@ class SalesInvoiceController extends Controller
             'accounts' => $this->accounts(),
             'receiptCategories' => $this->receiptCategories(),
             'reminderChannels' => SalesInvoiceReminder::channelOptions(),
+            /* The e-invoice card's pre-flight list: the reasons registration
+               would be refused, computed while the page renders so the card
+               shows them instead of a dead "register" click. */
+            'eInvoiceIssues' => $salesInvoice->invoice_type === 'tax'
+                ? (new \App\Services\EInvoice\EInvoicePayload($salesInvoice))->issues()
+                : null,
         ]);
     }
 
@@ -871,7 +881,11 @@ class SalesInvoiceController extends Controller
 
     public function print(SalesInvoice $salesInvoice): View
     {
-        $salesInvoice->load(['items', 'attachments']);
+        $loads = ['items', 'attachments'];
+        if (Schema::hasTable('sales_invoice_e_invoices')) {
+            $loads[] = 'eInvoice';
+        }
+        $salesInvoice->load($loads);
         return view('sales_invoices.print', ['invoice' => $salesInvoice, 'publicMode' => false]);
     }
 
@@ -880,7 +894,8 @@ class SalesInvoiceController extends Controller
         $invoice = SalesInvoice::where('public_token', $token)
             ->where('show_client_portal', true)
             ->where('status', '!=', 'draft')
-            ->with(['items', 'publicAttachments'])
+            ->with(array_merge(['items', 'publicAttachments'],
+                Schema::hasTable('sales_invoice_e_invoices') ? ['eInvoice'] : []))
             ->firstOrFail();
         return view('sales_invoices.print', ['invoice' => $invoice, 'publicMode' => true]);
     }
@@ -932,7 +947,7 @@ class SalesInvoiceController extends Controller
             'seller_state' => ['nullable', 'string', 'max:255'],
             'seller_country' => ['nullable', 'string', 'max:255'],
             'seller_pincode' => ['nullable', 'string', 'max:30'],
-            'seller_gstin' => ['nullable', 'string', 'max:30'],
+            'seller_gstin' => ['nullable', 'string', 'max:30', new ValidGstin],
             'seller_pan' => ['nullable', 'string', 'max:20'],
             'seller_email' => ['nullable', 'string', 'max:255'],
             'seller_mobile' => ['nullable', 'string', 'max:40'],
@@ -949,7 +964,7 @@ class SalesInvoiceController extends Controller
             'client_contact_name' => ['nullable', 'string', 'max:255'],
             'client_email' => ['nullable', 'string', 'max:255'],
             'client_mobile' => ['nullable', 'string', 'max:40'],
-            'client_gstin' => ['nullable', 'string', 'max:30'],
+            'client_gstin' => ['nullable', 'string', 'max:30', new ValidGstin],
             'client_pan' => ['nullable', 'string', 'max:20'],
             'billing_address' => ['nullable', 'string'],
             'billing_city' => ['nullable', 'string', 'max:255'],
@@ -1569,6 +1584,11 @@ class SalesInvoiceController extends Controller
             'gstTypeOptions' => SalesInvoice::gstTypeOptions(),
             'sellerDefaults' => SalesInvoice::defaultSellerDetails(),
             'defaultTerms' => SalesInvoice::defaultTerms(),
+            /* The HSN/SAC master the line grid offers: code pick fills the
+               rate, and the e-invoice pre-check reads the same table. */
+            'hsnCodes' => \Illuminate\Support\Facades\Schema::hasTable('hsn_sac_codes')
+                ? \App\Models\HsnSacCode::optionsForForms()
+                : [],
         ];
     }
 

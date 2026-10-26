@@ -4060,6 +4060,45 @@
             ]
         },
         {
+            "name": "sales-invoices.einvoice.generate",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/e-invoice",
+            "action": "App\\Http\\Controllers\\SalesInvoiceEInvoiceController@generate",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.einvoice.record",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/e-invoice/acknowledgement",
+            "action": "App\\Http\\Controllers\\SalesInvoiceEInvoiceController@record",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.einvoice.cancel",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/e-invoice/cancel",
+            "action": "App\\Http\\Controllers\\SalesInvoiceEInvoiceController@cancel",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "sales-invoices.markSent",
             "methods": [
                 "PATCH"
@@ -4729,6 +4768,59 @@
             ],
             "uri": "settings/packaging",
             "action": "App\\Http\\Controllers\\PackagingListSettingController@update",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.taxes",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "settings/taxes",
+            "action": "App\\Http\\Controllers\\TaxSettingController@index",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.taxes.hsn.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "settings/taxes/hsn",
+            "action": "App\\Http\\Controllers\\TaxSettingController@storeHsn",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.taxes.hsn.destroy",
+            "methods": [
+                "DELETE"
+            ],
+            "uri": "settings/taxes/hsn/{hsnSacCode}",
+            "action": "App\\Http\\Controllers\\TaxSettingController@destroyHsn",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "settings.taxes.hsn.update",
+            "methods": [
+                "PUT"
+            ],
+            "uri": "settings/taxes/hsn/{hsnSacCode}",
+            "action": "App\\Http\\Controllers\\TaxSettingController@updateHsn",
             "middleware": [
                 "web",
                 "auth",

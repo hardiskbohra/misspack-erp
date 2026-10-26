@@ -244,6 +244,7 @@
                         <tbody id="invoiceItemsBody"
                             data-ledger-received="{{ $ledgerReceived }}"
                             data-product-options='@json($productOptionsJson)'
+                            data-hsn-codes='@json($hsnCodes ?? [])'
                             data-initial-items='@json($initialInvoiceItems)'></tbody>
                     </table>
                 </div>
@@ -328,6 +329,7 @@
     <link rel="stylesheet" href="{{ $assetVer('assets/css/sales-invoices.css') }}">
 @endpush
 @push('scripts')
+    <script src="{{ $assetVer('assets/js/hsn-autofill.js') }}"></script>
     <script src="{{ $assetVer('assets/js/purchase-invoices.js') }}"></script>
 @endpush
 @endsection

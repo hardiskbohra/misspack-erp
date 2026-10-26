@@ -48,7 +48,7 @@ class InvoiceClientCreationTest extends TestCase
         return [
             'company_name' => 'New Client & Co.', 'brand_name' => 'New Brand',
             'ceo_name' => 'Priya', 'ceo_email' => 'priya@example.test', 'ceo_contact' => '+91 9900000000',
-            'gstin' => '24ABCDE1234F1Z5', 'pan' => 'ABCDE1234F',
+            'gstin' => '24ABCDE1234F1Z6', 'pan' => 'ABCDE1234F',
             'billing_address' => '20 Market Road', 'billing_city' => 'Ahmedabad', 'billing_state' => 'Gujarat',
             'billing_country' => 'India', 'billing_pincode' => '380004',
             'shipping_address' => '8 Warehouse Lane', 'shipping_city' => 'Mumbai', 'shipping_state' => 'Maharashtra',
@@ -187,5 +187,17 @@ class InvoiceClientCreationTest extends TestCase
             ->assertSee('assets/js/invoice-client-create.js', false);
         $html = $response->getContent();
         $this->assertLessThan(strpos($html, 'id="invoiceClientModal"'), strpos($html, '</form>', strpos($html, 'data-invoice-portal-confirm')));
+    }
+
+    public function test_a_gstin_that_fails_its_check_digit_is_refused(): void
+    {
+        $this->office();
+
+        // 24ABCDE1234F1Z5 is structurally fine but its check digit should be 6.
+        $this->postJson(route('clients.quickStore'), $this->details() + [
+            'gstin' => '24ABCDE1234F1Z5',
+        ])->assertUnprocessable()->assertJsonValidationErrors(['gstin']);
+
+        $this->assertSame(0, \App\Models\Client::count());
     }
 }

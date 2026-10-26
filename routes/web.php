@@ -72,6 +72,8 @@ use App\Http\Controllers\OrganisationController;
 use App\Http\Controllers\PackagingListController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
+use App\Http\Controllers\SalesInvoiceEInvoiceController;
+use App\Http\Controllers\TaxSettingController;
 use App\Http\Controllers\TwoFactorChallengeController;
 use App\Http\Controllers\TwoFactorController;
 
@@ -197,6 +199,11 @@ Route::middleware('auth')->group(function () {
            redirects where the old routes were.
            ===================================================================== */
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+        // Taxes & HSN — the rate master the invoice forms offer and the e-invoice payload checks.
+        Route::get('/settings/taxes', [TaxSettingController::class, 'index'])->name('settings.taxes');
+        Route::post('/settings/taxes/hsn', [TaxSettingController::class, 'storeHsn'])->name('settings.taxes.hsn.store');
+        Route::put('/settings/taxes/hsn/{hsnSacCode}', [TaxSettingController::class, 'updateHsn'])->name('settings.taxes.hsn.update');
+        Route::delete('/settings/taxes/hsn/{hsnSacCode}', [TaxSettingController::class, 'destroyHsn'])->name('settings.taxes.hsn.destroy');
         Route::get('/settings/packaging', [\App\Http\Controllers\PackagingListSettingController::class, 'index'])->name('settings.packaging');
         Route::put('/settings/packaging', [\App\Http\Controllers\PackagingListSettingController::class, 'update'])->name('settings.packaging.update');
 
@@ -401,6 +408,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/sales-invoices/{salesInvoice}/reminders', [SalesInvoiceController::class, 'logReminder'])->name('sales-invoices.reminders.store');
         Route::post('/sales-invoices/saved-views', [SalesInvoiceController::class, 'storeSavedView'])->name('sales-invoices.saved-views.store');
         Route::delete('/sales-invoices/saved-views/{savedView}', [SalesInvoiceController::class, 'destroySavedView'])->name('sales-invoices.saved-views.destroy');
+        Route::post('/sales-invoices/{salesInvoice}/e-invoice', [SalesInvoiceEInvoiceController::class, 'generate'])->name('sales-invoices.einvoice.generate');
+        Route::post('/sales-invoices/{salesInvoice}/e-invoice/acknowledgement', [SalesInvoiceEInvoiceController::class, 'record'])->name('sales-invoices.einvoice.record');
+        Route::post('/sales-invoices/{salesInvoice}/e-invoice/cancel', [SalesInvoiceEInvoiceController::class, 'cancel'])->name('sales-invoices.einvoice.cancel');
         Route::get('/sales-invoices/{salesInvoice}/print', [SalesInvoiceController::class, 'print'])->name('sales-invoices.print');
         Route::patch('/sales-invoices/{salesInvoice}/mark-sent', [SalesInvoiceController::class, 'markSent'])->name('sales-invoices.markSent');
         Route::patch('/sales-invoices/{salesInvoice}/portal', [SalesInvoiceController::class, 'togglePortal'])->name('sales-invoices.portal');

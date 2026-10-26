@@ -174,6 +174,14 @@
                     <strong>{{ $invoice->invoice_number }}</strong>
                 </p>
                 <span class="invoice-status">{{ $invoice->statusLabel() }}</span>
+                @if (($invoice->eInvoice ?? null) && $invoice->eInvoice->isRegistered() && $invoice->eInvoice->irn)
+                    <div class="invoice-einvoice">
+                        <p class="invoice-irn"><span>IRN</span> <strong>{{ $invoice->eInvoice->irn }}</strong></p>
+                        @if ($invoice->eInvoice->signed_qr_code)
+                            <div class="invoice-qr" data-invoice-qr="{{ $invoice->eInvoice->signed_qr_code }}"></div>
+                        @endif
+                    </div>
+                @endif
             </div>
         </header>
 
@@ -455,6 +463,16 @@
 
         <footer class="footer-note">This is a computer-generated invoice. Please verify all details before payment.</footer>
     </main>
+@if (($invoice->eInvoice ?? null) && $invoice->eInvoice->isRegistered() && $invoice->eInvoice->signed_qr_code)
+<script src="{{ asset('assets/js/qr.js') }}"></script>
+<script>
+    /* The signed QR is drawn locally — a printed invoice must verify offline. */
+    document.querySelectorAll('[data-invoice-qr]').forEach(function (node) {
+        try { node.innerHTML = window.ShipQR.svg(node.getAttribute('data-invoice-qr'), { quiet: 2, dark: '#0f172a' }); }
+        catch (e) { node.outerHTML = ''; }
+    });
+</script>
+@endif
 </body>
 
 </html>

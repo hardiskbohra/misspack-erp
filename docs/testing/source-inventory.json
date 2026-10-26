@@ -151,6 +151,17 @@
       ]
     },
     {
+      "file": "tests/Feature/EInvoiceFlowTest.php",
+      "methods": [
+        "test_a_proforma_is_refused_before_any_record_exists",
+        "test_a_line_without_hsn_is_named_in_the_refusal",
+        "test_generate_builds_the_portal_schema_and_parks_it_pending",
+        "test_the_acknowledgement_accepts_only_a_real_irn_and_marks_registration",
+        "test_the_cancel_window_is_the_portals_twenty_four_hours_not_ours",
+        "test_the_http_gateway_registers_from_the_endpoints_answer"
+      ]
+    },
+    {
       "file": "tests/Feature/ExampleTest.php",
       "methods": [
         "test_the_root_redirects_to_login"
@@ -170,7 +181,8 @@
         "test_employee_cannot_create_a_client",
         "test_empty_client_list_still_has_a_complete_snapshot_field_contract",
         "test_projection_keeps_existing_contact_and_shipping_fallback_rules",
-        "test_invoice_creation_renders_an_independent_client_form_even_before_the_first_client"
+        "test_invoice_creation_renders_an_independent_client_form_even_before_the_first_client",
+        "test_a_gstin_that_fails_its_check_digit_is_refused"
       ]
     },
     {
@@ -269,6 +281,15 @@
         "test_read_only_users_see_attachments_but_cannot_upload",
         "test_attachment_field_errors_render_next_to_the_picker",
         "test_csrf_still_protects_uploads"
+      ]
+    },
+    {
+      "file": "tests/Feature/TaxMasterTest.php",
+      "methods": [
+        "test_the_migration_seeds_packaging_defaults_and_the_area_lists_them",
+        "test_add_edit_and_remove_a_code_through_the_settings_door",
+        "test_the_rules_a_typo_breaks_against_all_fire",
+        "test_guests_cannot_touch_the_master"
       ]
     },
     {
@@ -611,6 +632,17 @@
       ]
     },
     {
+      "file": "tests/Unit/GstinTest.php",
+      "methods": [
+        "test_known_good_gstins_pass_structure_state_and_checksum",
+        "test_the_check_digit_is_the_published_mod36_algorithm",
+        "test_a_single_character_typo_anywhere_fails",
+        "test_structural_and_state_rejections",
+        "test_normalise_and_the_parts_it_unlocks",
+        "test_the_validation_rule_carries_one_message_everywhere"
+      ]
+    },
+    {
       "file": "tests/Unit/NotesRulesTest.php",
       "methods": [
         "test_a_missing_owner_matches_no_rows_at_all",
@@ -821,10 +853,12 @@
     "app/Http/Controllers/PublicMediaController.php",
     "app/Http/Controllers/PurchaseInvoiceController.php",
     "app/Http/Controllers/SalesInvoiceController.php",
+    "app/Http/Controllers/SalesInvoiceEInvoiceController.php",
     "app/Http/Controllers/SettingsController.php",
     "app/Http/Controllers/ShipmentController.php",
     "app/Http/Controllers/ShipmentDeliveryReceiptController.php",
     "app/Http/Controllers/TaskController.php",
+    "app/Http/Controllers/TaxSettingController.php",
     "app/Http/Controllers/TwoFactorChallengeController.php",
     "app/Http/Controllers/TwoFactorController.php",
     "app/Http/Controllers/UserController.php",
@@ -859,6 +893,12 @@
     "app/Services/DashboardAnalytics.php",
     "app/Services/DashboardPeriod.php",
     "app/Services/DocumentUpload.php",
+    "app/Services/EInvoice/EInvoiceGateway.php",
+    "app/Services/EInvoice/EInvoicePayload.php",
+    "app/Services/EInvoice/EInvoiceRegistration.php",
+    "app/Services/EInvoice/EInvoiceResult.php",
+    "app/Services/EInvoice/HttpGateway.php",
+    "app/Services/EInvoice/ManualGateway.php",
     "app/Services/EmployeeAccess.php",
     "app/Services/EmployeeProfile.php",
     "app/Services/FeedbackFigures.php",
@@ -949,6 +989,7 @@
     "app/Models/FixedAssetAllocation.php",
     "app/Models/FixedAssetCategory.php",
     "app/Models/FixedAssetMaintenance.php",
+    "app/Models/HsnSacCode.php",
     "app/Models/Lead.php",
     "app/Models/LeadAttachment.php",
     "app/Models/LeadComment.php",
@@ -993,6 +1034,7 @@
     "app/Models/PurchaseInvoiceItem.php",
     "app/Models/SalesInvoice.php",
     "app/Models/SalesInvoiceAttachment.php",
+    "app/Models/SalesInvoiceEInvoice.php",
     "app/Models/SalesInvoiceItem.php",
     "app/Models/SalesInvoiceReminder.php",
     "app/Models/SavedView.php",

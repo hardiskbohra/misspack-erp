@@ -1239,3 +1239,23 @@ Sources: `resources/views/components/drawer.blade.php`, `public/assets/js/master
 **Expected:** minimumResultsForSearch is always0; selection class/width remain intact; no separate policy hides search; entry points receive updated script.
 
 **Note:** Executed Node unit regressions: tools/testing/select2-policy.test.cjs (8 tests), now part of npm run test:contracts. Catalogue exact-method links count PHP methods only; this is not an unexecuted case.
+
+## GST: GSTIN checksum, HSN/SAC master and e-invoice (IRN/QR) (`TAX`)
+
+Sources: `app/Support/Gstin.php`, `app/Rules/ValidGstin.php`, `app/Models/HsnSacCode.php`, `app/Models/SalesInvoiceEInvoice.php`, `app/Services/EInvoice/EInvoicePayload.php`, `app/Services/EInvoice/EInvoiceRegistration.php`, `app/Services/EInvoice/HttpGateway.php`, `app/Services/EInvoice/ManualGateway.php`, `app/Http/Controllers/TaxSettingController.php`, `app/Http/Controllers/SalesInvoiceEInvoiceController.php`.
+
+### UT-TAX-001 — GSTIN check digit follows the published mod-36 algorithm and refuses typos
+
+**Priority:** P0 · **Requirement:** REQ-TAX-GSTIN · **Implementation:** linked executable evidence
+
+- **Preconditions:** No database; pure algorithm and rule checks.
+- **Data:** Pinned vectors 24AATCM8816E1Z5 / 33AAACC1206D1ZN / 24ABCDE1234F1Z6; single-character mutations at all 15 positions.
+1. Assert known-good GSTINs pass structure, state code and checksum
+2. Pin the check digits 5/N/6 against the published examples
+3. Verify every one-character mutation fails
+4. Verify structural rejections (length, wrong Z slot, entity zero, unallotted state)
+5. Confirm normalise/state/pan helpers and one shared validation message
+
+**Expected:** Structure, checksum and state gates hold independently; every typo is refused; nullable input stays nullable.
+
+**Evidence:** `tests/Unit/GstinTest.php#test_known_good_gstins_pass_structure_state_and_checksum`; `tests/Unit/GstinTest.php#test_the_check_digit_is_the_published_mod36_algorithm`; `tests/Unit/GstinTest.php#test_a_single_character_typo_anywhere_fails`; `tests/Unit/GstinTest.php#test_structural_and_state_rejections`; `tests/Unit/GstinTest.php#test_normalise_and_the_parts_it_unlocks`; `tests/Unit/GstinTest.php#test_the_validation_rule_carries_one_message_everywhere`

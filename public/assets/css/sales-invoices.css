@@ -985,3 +985,42 @@
 .si-client-create-toggle { margin: 0 0 12px; }
 .si-client-create-modal [aria-invalid="true"] { border-color: var(--master-red, #ef4770); }
 .si-client-create-modal [data-client-field-error] { color: var(--master-red, #ef4770); }
+
+/* ---------------- e-invoice (IRN/QR) card ----------------
+   The registration states on the show page: payload out, acknowledgement in,
+   QR once registered. Module-local chrome; the card itself is master-*. */
+
+.si-einvoice-qr svg {
+    width: 148px;
+    height: auto;
+    display: block;
+    border: 6px solid #fff;
+    border-radius: var(--ui-radius, 10px);
+}
+
+.si-einvoice-payload {
+    margin: 10px 0;
+    padding: 12px 14px;
+    max-height: 320px;
+    overflow: auto;
+    border: 1px solid var(--mc-border);
+    border-radius: var(--ui-radius, 10px);
+    background: var(--mc-card-soft);
+    font-family: var(--ui-font-mono, ui-monospace, monospace);
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.si-details > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+#eInvoiceCard .si-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.si-details[open] > summary {
+    margin-bottom: 10px;
+}

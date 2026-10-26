@@ -151,6 +151,12 @@ class SalesInvoice extends Model
         return $this->hasMany(CashflowEntry::class)->orderBy('entry_date');
     }
 
+    /** The GST-network registration of this invoice, once it exists. */
+    public function eInvoice()
+    {
+        return $this->hasOne(SalesInvoiceEInvoice::class, 'sales_invoice_id');
+    }
+
     public function cashflowAllocations()
     {
         return $this->hasMany(CashflowAllocation::class, 'sales_invoice_id')->orderBy('id');

@@ -166,7 +166,7 @@ the leftover column and references. Decide; don't leave the scar tissue.
 | Finding | Evidence | Recommendation |
 |---|---|---|
 | **No e-invoicing readiness** | No IRN/QR fields or generation for tax invoices (hits ~₹5 cr turnover). E-way bill numbers are hand-entered. | Roadmap: IRP integration (or via GSP), store IRN + signed QR on invoice, print QR on the tax invoice PDF. Even before mandate, prep the schema. |
-| **GST correctness is manual** | `gst_type` defaults `intra_state`; CGST/SGST vs IGST split per line appears user-driven. `place_of_supply` stored but not evidently deriving the split. No HSN/GST-rate master. | Derive split from seller state vs place of supply; validate GSTIN format (15-char checksum); HSN + rate master table to stop hand-typed rates; round per-line vs per-document consistently (document a single rounding rule). |
+| **GST correctness is manual** | `gst_type` defaults `intra_state`; CGST/SGST vs IGST split per line appears user-driven. `place_of_supply` stored but not evidently deriving the split. ~~No HSN/GST-rate master.~~ **Progress 2026-10-26**: GSTIN checksum validation + HSN/SAC rate master shipped ([e-invoice.md](e-invoice.md)); split derivation and rounding policy remain open. | Derive split from seller state vs place of supply; ~~validate GSTIN format~~ (done: 15-char checksum); ~~HSN + rate master table~~ (done); round per-line vs per-document consistently (document a single rounding rule). |
 | **No TDS/TCS tracking** | Vendor payments deduct full amounts; Indian SMBs deduct TDS (194C/194J) and sometimes collect TCS (206C(1H)). | Add TDS section, rate, deducted amount on vendor payment entries; TDS payable report for the accountant. |
 | **No bank reconciliation** | Cashflow accounts exist; no statement import/matching. | CSV import per account, auto-match by amount+date+narration, unmatched queue. This is the feature that makes the ledger *trustworthy*. |
 | **FX handling stops at entry** | `exchange_rate` per entry (decimal 16,6) + INR denomination on vendor payments — good at posting time. Open foreign-currency balances are not revalued at period end. | Period-end revaluation report (unrealised gain/loss) for open invoices. |
@@ -296,7 +296,7 @@ search, module dashboards, print-specific styles for labels/statements.
 - [ ] Coverage gate + automated E2E golden paths (QA)
 
 ### Later (3–6+ months) — scale & compliance ceiling
-- [ ] E-invoice (IRN/QR) schema + integration; GSTIN checksum + HSN/rate master (P2)
+- [x] E-invoice (IRN/QR) schema + integration; GSTIN checksum + HSN/rate master (P2) — **shipped 2026-10-26**: mod-36 GSTIN checksum enforced at every collection door; Taxes & HSN master in Settings (Invoice/purchase forms autofill code→rate); per-invoice IRN/QR lifecycle (generate → ack → cancel-in-24h) with manual and HTTP gateway providers; invoice print carries the signed QR via the offline QR generator (extended to v20, pinned by golden tests). See [e-invoice.md](e-invoice.md). The GST split derivation from place-of-supply remains open.
 - [ ] TDS on vendor payments + reports (P2)
 - [ ] Multi-entity/branch groundwork (`organisation_id` on documents) (P2)
 - [ ] Sanctum API for the first real integration; FX revaluation report (P2)

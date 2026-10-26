@@ -27,7 +27,7 @@ class IndianVendorKycTest extends TestCase
     private function payload(array $changes = []): array
     {
         return F::payload(array_replace(['country' => 'India', 'intent' => 'submit', 'kyc_version' => $this->f['vendor']->fresh()->kyc_version,
-            'gstin' => '24ABCDE1234F1Z5', 'account_number' => '123456789', 'ifsc_code' => 'HDFC0001234',
+            'gstin' => '24ABCDE1234F1Z6', 'account_number' => '123456789', 'ifsc_code' => 'HDFC0001234',
             'bank_address' => "Bank Road\nAhmedabad", 'beneficiary_address' => "Beneficiary Road\nAhmedabad"], $changes));
     }
 

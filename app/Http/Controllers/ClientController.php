@@ -14,6 +14,7 @@ use App\Models\SalesInvoice;
 use App\Services\ClientInvoiceSnapshot;
 use App\Services\PartyStatement;
 use App\Services\SavedViews;
+use App\Rules\ValidGstin;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -194,7 +195,7 @@ class ClientController extends Controller
             'account_person_name' => ['nullable', 'string', 'max:255'],
             'account_person_email' => ['nullable', 'email', 'max:255'],
             'account_person_contact' => ['nullable', 'string', 'max:40'],
-            'gstin' => ['nullable', 'string', 'max:30'],
+            'gstin' => ['nullable', 'string', 'max:30', new ValidGstin],
             'pan' => ['nullable', 'string', 'max:20'],
             'notes' => ['nullable', 'string'],
             'billing_address' => ['nullable', 'string', 'max:5000'],
@@ -726,7 +727,7 @@ class ClientController extends Controller
             'shipping_pincode' => ['nullable', 'string', 'max:30'],
             'shipping_same_as_billing' => ['nullable', 'boolean'],
 
-            'gstin' => array_merge(['nullable', 'string', 'max:30'], $public ? ['regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/i'] : []),
+            'gstin' => ['nullable', 'string', 'max:30', new ValidGstin],
             'pan' => array_merge(['nullable', 'string', 'max:20'], $public ? ['regex:/^[A-Z]{5}[0-9]{4}[A-Z]$/i'] : []),
             'tan' => ['nullable', 'string', 'max:20'],
             'cin' => ['nullable', 'string', 'max:255'],
@@ -755,7 +756,6 @@ class ClientController extends Controller
             'billing_state.required' => 'Billing state is required.',
             'billing_country.required' => 'Billing country is required.',
             'billing_pincode.required' => 'Billing pincode is required.',
-            'gstin.regex' => 'GSTIN should look like 24AAAAA0000A1Z5.',
             'pan.regex' => 'PAN should look like ABCDE1234F.',
             'ifsc_code.regex' => 'IFSC should look like HDFC0001234.',
         ]);

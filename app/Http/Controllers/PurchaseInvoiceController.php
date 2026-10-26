@@ -16,6 +16,7 @@ use App\Models\VendorPaymentEntry;
 use App\Services\ProjectProducts;
 use App\Services\PurchaseBillLedger;
 use App\Services\VendorPaymentCashflowSync;
+use App\Rules\ValidGstin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -804,7 +805,7 @@ class PurchaseInvoiceController extends Controller
             'buyer_state' => ['nullable', 'string', 'max:255'],
             'buyer_country' => ['nullable', 'string', 'max:255'],
             'buyer_pincode' => ['nullable', 'string', 'max:30'],
-            'buyer_gstin' => ['nullable', 'string', 'max:30'],
+            'buyer_gstin' => ['nullable', 'string', 'max:30', new ValidGstin],
             'buyer_pan' => ['nullable', 'string', 'max:20'],
             'buyer_email' => ['nullable', 'string', 'max:255'],
             'buyer_mobile' => ['nullable', 'string', 'max:40'],
@@ -814,7 +815,7 @@ class PurchaseInvoiceController extends Controller
             'vendor_contact_name' => ['nullable', 'string', 'max:255'],
             'vendor_email' => ['nullable', 'string', 'max:255'],
             'vendor_mobile' => ['nullable', 'string', 'max:40'],
-            'vendor_gstin' => ['nullable', 'string', 'max:30'],
+            'vendor_gstin' => ['nullable', 'string', 'max:30', new ValidGstin],
             'vendor_pan' => ['nullable', 'string', 'max:20'],
             'vendor_address' => ['nullable', 'string'],
             'vendor_city' => ['nullable', 'string', 'max:255'],
@@ -1247,6 +1248,10 @@ class PurchaseInvoiceController extends Controller
             'docLabels' => PurchaseInvoice::DOC_LABELS,
             'typeOptions' => PurchaseInvoice::DOC_LABELS,
             'routePrefix' => 'purchase-invoices',
+            /* HSN/SAC master for the line grid (code pick → rate fill). */
+            'hsnCodes' => \Illuminate\Support\Facades\Schema::hasTable('hsn_sac_codes')
+                ? \App\Models\HsnSacCode::optionsForForms()
+                : [],
         ];
     }
 

@@ -35,3 +35,4 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-AUDIT | Audit trail and sensitive operations | 3 | 4 | 1 |
 | REQ-FILES | Shared file policy and storage lifecycle | 3 | 4 | 4 |
 | REQ-UI | Shared UI, printing and accessible interactions | 4 | 6 | 3 |
+| REQ-TAX | GST: GSTIN checksum, HSN/SAC master and e-invoice (IRN/QR) | 1 | 11 | 12 |

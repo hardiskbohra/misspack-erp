@@ -247,6 +247,10 @@
             </section>
         @endif
 
+        @if ($invoice->invoice_type === 'tax')
+            @include('sales_invoices.partials.e-invoice-card', ['invoice' => $invoice, 'eInvoiceIssues' => $eInvoiceIssues])
+        @endif
+
         {{-- Five figures, each one a fact the page was opened for: what was
              asked, what came back, the tax in it, what is still open and when
              it was due. The wording under each is the sentence a figure alone
@@ -920,7 +924,23 @@
         </div>
     </div>
 
-    @include('sales_invoices.partials.payment-modal')
+    @push('scripts')
+<script>
+    /* data-copy="…selector…" — copy the referenced node's text to the clipboard. */
+    document.querySelectorAll('[data-copy]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var target = document.querySelector(btn.getAttribute('data-copy'));
+            if (!target) return;
+            navigator.clipboard.writeText(target.textContent).then(function () {
+                btn.classList.add('is-copied');
+                setTimeout(function () { btn.classList.remove('is-copied'); }, 1500);
+            });
+        });
+    });
+</script>
+@endpush
+
+@include('sales_invoices.partials.payment-modal')
     @include('sales_invoices.partials.reminder-modal')
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/sales-invoices.css') }}">
