@@ -734,10 +734,21 @@
         var subject = modal.querySelector('[data-email-subject]');
         var message = modal.querySelector('[data-email-message]');
 
+        var payloadFor = function (id) {
+            var island = document.querySelector('[data-email-payload="' + id + '"]');
+            if (!island) return { to: '', subject: '', message: '' };
+            try {
+                return JSON.parse(island.textContent) || { to: '', subject: '', message: '' };
+            } catch (e) {
+                return { to: '', subject: '', message: '' };
+            }
+        };
+
         triggers.forEach(function (trigger) {
             trigger.addEventListener('click', function () {
                 var id = trigger.getAttribute('data-invoice-id');
                 var number = trigger.getAttribute('data-invoice-number') || 'this invoice';
+                var defaults = payloadFor(id);
 
                 form.setAttribute('action', template.replace('__INVOICE__', id));
 
@@ -746,10 +757,10 @@
                 }
                 /* fresh defaults on every open: text the office already typed in
                    a half-closed dialog must never leak into the next invoice */
-                if (to) to.value = trigger.getAttribute('data-email-to') || '';
+                if (to) to.value = defaults.to || '';
                 if (cc) cc.value = '';
-                if (subject) subject.value = trigger.getAttribute('data-email-subject') || '';
-                if (message) message.value = trigger.getAttribute('data-email-message') || '';
+                if (subject) subject.value = defaults.subject || '';
+                if (message) message.value = defaults.message || '';
 
                 if (window.MasterModal) {
                     window.MasterModal.open(modal);

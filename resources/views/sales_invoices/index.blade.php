@@ -496,13 +496,9 @@
                                                     <i class="fas fa-indian-rupee-sign" aria-hidden="true"></i> Record payment
                                                 </button>
                                             @endif
-                                            @php($emailDefaults = $invoice->emailDefaults())
                                             <button type="button" data-open-email
                                                 data-invoice-id="{{ $invoice->id }}"
-                                                data-invoice-number="{{ $invoice->invoice_number }}"
-                                                data-email-to="{{ $emailDefaults['to'] }}"
-                                                data-email-subject="{{ $emailDefaults['subject'] }}"
-                                                data-email-message="{{ $emailDefaults['message'] }}">
+                                                data-invoice-number="{{ $invoice->invoice_number }}">
                                                 <i class="fas fa-paper-plane" aria-hidden="true"></i> Email to client
                                             </button>
                                             <button type="button" data-open-reminder
@@ -625,6 +621,9 @@
     @include('sales_invoices.partials.payment-modal')
     @include('sales_invoices.partials.reminder-modal')
     @include('sales_invoices.partials.email-modal')
+    @foreach ($invoices as $invoice)
+        <script type="application/json" data-email-payload="{{ $invoice->id }}">@json($invoice->emailDefaults())</script>
+    @endforeach
 </div>
 @endsection
 

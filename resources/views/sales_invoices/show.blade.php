@@ -163,13 +163,9 @@
                         <button type="button" data-copy-text="{{ $invoice->reminderMessage() }}">
                             <i class="fas fa-comment-dots" aria-hidden="true"></i> Copy reminder text
                         </button>
-                        @php($emailDefaults = $invoice->emailDefaults())
                         <button type="button" data-open-email
                             data-invoice-id="{{ $invoice->id }}"
-                            data-invoice-number="{{ $invoice->invoice_number }}"
-                            data-email-to="{{ $emailDefaults['to'] }}"
-                            data-email-subject="{{ $emailDefaults['subject'] }}"
-                            data-email-message="{{ $emailDefaults['message'] }}">
+                            data-invoice-number="{{ $invoice->invoice_number }}">
                             <i class="fas fa-paper-plane" aria-hidden="true"></i> Email to client
                         </button>
                         <button type="button" data-copy-link="{{ route('sales-invoices.public', $invoice->public_token) }}">
@@ -791,10 +787,9 @@
                             <div>
                                 <h2 class="master-section-title">In the client's inbox</h2>
                                 <p class="master-sub">
-                                    @php($lastSend = $invoice->sends->first())
-                                    @if ($lastSend)
-                                        Last e-mailed {{ $lastSend->sent_at?->diffForHumans() }}
-                                        by {{ $lastSend->sender?->name ?? 'the office' }}
+                                    @if ($invoice->sends->isNotEmpty())
+                                        Last e-mailed {{ $invoice->sends->first()->sent_at?->diffForHumans() }}
+                                        by {{ $invoice->sends->first()->sender?->name ?? 'the office' }}
                                         · {{ $invoice->sends->count() }} send{{ $invoice->sends->count() === 1 ? '' : 's' }} logged
                                     @else
                                         No e-mail has left the office for this invoice yet
@@ -804,10 +799,7 @@
                             <div class="master-section-meta">
                                 <button type="button" class="master-btn master-btn-soft" data-open-email
                                     data-invoice-id="{{ $invoice->id }}"
-                                    data-invoice-number="{{ $invoice->invoice_number }}"
-                                    data-email-to="{{ $emailDefaults['to'] }}"
-                                    data-email-subject="{{ $emailDefaults['subject'] }}"
-                                    data-email-message="{{ $emailDefaults['message'] }}">
+                                    data-invoice-number="{{ $invoice->invoice_number }}">
                                     <i class="fas fa-paper-plane" aria-hidden="true"></i> Email it
                                 </button>
                             </div>
@@ -817,7 +809,7 @@
                             <div class="master-empty-state">
                                 <i class="fas fa-inbox"></i>
                                 <p>
-                                    The button above sends the invoice by e-mail and keeps the copy here —
+                                    The Email it button sends the invoice by e-mail and keeps the copy here —
                                     the next “we never got it” answers itself.
                                 </p>
                             </div>
@@ -1020,6 +1012,7 @@
 @include('sales_invoices.partials.payment-modal')
     @include('sales_invoices.partials.reminder-modal')
     @include('sales_invoices.partials.email-modal')
+    <script type="application/json" data-email-payload="{{ $invoice->id }}">@json($invoice->emailDefaults())</script>
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/sales-invoices.css') }}">
 @endpush
