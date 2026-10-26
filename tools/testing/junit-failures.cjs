@@ -73,9 +73,13 @@ failures.slice(0, MAX).forEach((f, i) => {
     const where = f.file
         ? f.file.replace(/^\/home\/runner\/work\/[^/]+\/[^/]+\//, '') + (f.line ? ':' + f.line : '')
         : '';
-    const detail = decode(f.detail).replace(/\r/g, '')
-        .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n')
-        .slice(0, BUDGET)
-        .replace(/%/g, '%25').replace(/\n/g, '%0A');
+    /* PHPUnit inlines whole pages into assertSee failures: the needle sits at
+       the END, past any head-budget — so trim the middle, not the message. */
+    const plain = decode(f.detail).replace(/\r/g, '')
+        .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+    const trimmed = plain.length > BUDGET
+        ? plain.slice(0, 500) + '\n…[response body trimmed]…\n' + plain.slice(-1700)
+        : plain;
+    const detail = trimmed.replace(/%/g, '%25').replace(/\n/g, '%0A');
     console.log(`::notice title=FAILED ${f.className}::${f.name}${where ? ' — ' + where : ''}::${detail}`);
 });

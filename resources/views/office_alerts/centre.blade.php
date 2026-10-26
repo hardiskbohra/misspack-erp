@@ -95,7 +95,7 @@
                 @endif
             </p>
         @else
-            <div class="obc-list">
+            <div class="obc-list"><!-- obc-items-start -->
                 @foreach ($items as $item)
                     <article class="ob-item obc-item is-{{ $item['severity'] }} {{ $item['state'] === 'snoozed' ? 'is-snoozed' : '' }} {{ $item['state'] === 'resolved' ? 'is-resolved' : '' }}">
                         <div class="ob-item-head">
@@ -139,7 +139,7 @@
                         @endif
                     </article>
                 @endforeach
-            </div>
+            <!-- obc-items-end --></div>
         @endif
     </section>
     @endif

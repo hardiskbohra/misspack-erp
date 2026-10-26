@@ -68,6 +68,17 @@ class OfficeAlertCentreTest extends TestCase
         ], $attributes));
     }
 
+    /** The alert cards region — the topbar bell embeds the same titles in its
+        JSON payload, so page-wide See/DontSee assertions lie; scope to the
+        centre list itself (markers are invisible comments in the blade). */
+    private function centreCards(string $html): string
+    {
+        $start = strpos($html, 'obc-items-start');
+        $end = strpos($html, 'obc-items-end');
+
+        return $start === false || $end === false ? '' : substr($html, $start, $end - $start);
+    }
+
     public function test_the_centre_is_locked_to_guests_and_the_payroll(): void
     {
         $this->get(route('office-alerts.centre'))->assertRedirect(route('login'));
@@ -87,15 +98,16 @@ class OfficeAlertCentreTest extends TestCase
 
         $response = $this->get(route('office-alerts.centre'));
         $response->assertOk()
-            ->assertSee('Notification centre')
-            ->assertSee('SHP-1012 is on custom hold')
-            ->assertSee('Client KYC waiting')
-            ->assertSee('Open', false)             // tray chip
+            ->assertSee('Notification centre');
+        $cards = $this->centreCards($response->getContent());
+        $this->assertStringContainsString('SHP-1012 is on custom hold', $cards)
+            && $this->assertStringContainsString('Client KYC waiting', $cards);
+        $response->assertSee('Open', false)             // tray chip
             ->assertSee('settings/briefings', false);
 
         /* critical sorts above attention even though it was raised first */
-        $critical = strpos($response->getContent(), 'SHP-1012');
-        $attention = strpos($response->getContent(), 'Client KYC waiting');
+        $critical = strpos($cards, 'SHP-1012');
+        $attention = strpos($cards, 'Client KYC waiting');
         $this->assertLessThan($attention, $critical);
     }
 
@@ -105,15 +117,13 @@ class OfficeAlertCentreTest extends TestCase
         $this->alert(['title' => 'OPS-CASE', 'team' => 'operations']);
         $this->alert(['title' => 'SALES-CASE', 'team' => 'sales', 'severity' => OfficeAlert::SEVERITY_INFO, 'requires_ack' => false]);
 
-        $this->get(route('office-alerts.centre', ['team' => 'sales']))
-            ->assertOk()
-            ->assertSee('SALES-CASE')
-            ->assertDontSee('OPS-CASE');
+        $cards = $this->centreCards($this->get(route('office-alerts.centre', ['team' => 'sales']))->assertOk()->getContent());
+        $this->assertStringContainsString('SALES-CASE', $cards);
+        $this->assertStringNotContainsString('OPS-CASE', $cards);
 
-        $this->get(route('office-alerts.centre', ['severity' => 'critical']))
-            ->assertOk()
-            ->assertSee('OPS-CASE')
-            ->assertDontSee('SALES-CASE');
+        $cards = $this->centreCards($this->get(route('office-alerts.centre', ['severity' => 'critical']))->assertOk()->getContent());
+        $this->assertStringContainsString('OPS-CASE', $cards);
+        $this->assertStringNotContainsString('SALES-CASE', $cards);
 
         /* a nonsense filter value is refused, not silently dropped */
         $this->get(route('office-alerts.centre', ['state' => 'purple']))->assertSessionHasErrors(['state']);
@@ -144,14 +154,15 @@ class OfficeAlertCentreTest extends TestCase
         $this->assertNotNull($alert->acked_at);
         $this->assertSame($user->id, $alert->acked_by);
 
-        /* the open tray no longer shows it, the resolved tray says who acted */
-        $this->get(route('office-alerts.centre'))->assertDontSee('KYC-TEAM-LEAD');
+        /* the open tray no longer shows it… */
+        $cards = $this->centreCards($this->get(route('office-alerts.centre'))->getContent());
+        $this->assertStringNotContainsString('KYC-TEAM-LEAD', $cards);
 
-        $this->get(route('office-alerts.centre', ['state' => 'resolved']))
-            ->assertOk()
-            ->assertSee('KYC-TEAM-LEAD')
-            ->assertSee('Office head')
-            ->assertSee('Resolved', false);
+        /* …the resolved tray keeps it and names who acted */
+        $cards = $this->centreCards($this->get(route('office-alerts.centre', ['state' => 'resolved']))->assertOk()->getContent());
+        $this->assertStringContainsString('KYC-TEAM-LEAD', $cards);
+        $this->assertStringContainsString('Office head', $cards);
+        $this->assertStringContainsString('Resolved', $cards);
     }
 
     public function test_snooze_moves_the_card_out_of_open_and_back(): void
@@ -167,9 +178,10 @@ class OfficeAlertCentreTest extends TestCase
             'user_id' => $user->id,
         ]);
 
-        $this->get(route('office-alerts.centre'))->assertDontSee('SNOOZE-ME');
-        $this->get(route('office-alerts.centre', ['state' => 'snoozed']))
-            ->assertOk()->assertSee('SNOOZE-ME');
+        $cards = $this->centreCards($this->get(route('office-alerts.centre'))->getContent());
+        $this->assertStringNotContainsString('SNOOZE-ME', $cards);
+        $cards = $this->centreCards($this->get(route('office-alerts.centre', ['state' => 'snoozed']))->assertOk()->getContent());
+        $this->assertStringContainsString('SNOOZE-ME', $cards);
     }
 
     public function test_a_desk_watcher_sees_only_their_desks_briefings(): void
@@ -179,11 +191,10 @@ class OfficeAlertCentreTest extends TestCase
         $this->alert(['title' => 'SALES-BRIEF', 'team' => 'sales']);
         $this->alert(['title' => 'ALL-HANDS-BRIEF', 'team' => null]);
 
-        $this->get(route('office-alerts.centre'))
-            ->assertOk()
-            ->assertSee('SALES-BRIEF')
-            ->assertSee('ALL-HANDS-BRIEF')
-            ->assertDontSee('OPS-ONLY-BRIEF');
+        $cards = $this->centreCards($this->get(route('office-alerts.centre'))->assertOk()->getContent());
+        $this->assertStringContainsString('SALES-BRIEF', $cards);
+        $this->assertStringContainsString('ALL-HANDS-BRIEF', $cards);
+        $this->assertStringNotContainsString('OPS-ONLY-BRIEF', $cards);
 
         /* the sales desk filter on an operations alert returns the empty state,
            not another desk's work */
