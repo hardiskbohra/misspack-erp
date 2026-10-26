@@ -50,7 +50,7 @@ class TaxMasterTest extends TestCase
             ->assertOk()
             ->assertSee('Taxes &amp; HSN', false)
             ->assertSee('3923')
-            ->assertSee('settings.partials.nav', false);
+            ->assertSee('/settings/taxes', false);
     }
 
     public function test_add_edit_and_remove_a_code_through_the_settings_door(): void

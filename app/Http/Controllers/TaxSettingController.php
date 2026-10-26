@@ -72,7 +72,9 @@ class TaxSettingController extends Controller
             'kind' => $data['kind'],
             'description' => $data['description'],
             'gst_rate' => (float) $data['gst_rate'],
-            'is_active' => $request->boolean('is_active'),
+            /* A code is created active; quieting it is an edit — on update the
+               checkbox pair speaks, on creation silence is not a choice. */
+            'is_active' => $editing ? $request->boolean('is_active') : true,
             'sort_order' => (int) ($data['sort_order'] ?? 0),
         ];
     }
