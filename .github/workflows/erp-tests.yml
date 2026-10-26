@@ -36,7 +36,9 @@ jobs:
               # TEMP DEBUG PROBE (revert after fix): annotations cap at ten, so
               # spend them on the first lines of the failing single-test run —
               # that is where the exception text lives.
-              vendor/bin/phpunit --filter test_a_refused_send_is_logged_and_briefs_the_desk 2>&1 | grep -v -E '^#+[0-9]+ ' | grep -v '^$' | tail -80 | while IFS= read -r line; do printf '::error::%s\n' "$line"; done
+              vendor/bin/phpunit --filter test_a_refused_send_is_logged_and_briefs_the_desk 2>&1 | tail -6 | while IFS= read -r line; do printf '::error::%s\n' "$line"; done
+              # the handler logged the exception the 500 page hides
+              tail -c 4000 storage/logs/laravel.log 2>/dev/null | tr '\n' '⏎' | cut -c1-1500 | while IFS= read -r line; do printf '::error title=LARAVEL-LOG::%s\n' "$line"; done
             fi
             exit 1
           fi
