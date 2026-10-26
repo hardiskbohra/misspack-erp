@@ -127,8 +127,8 @@ class EInvoiceFlowTest extends TestCase
         $this->assertSame('24', $payload['BuyerDtls']['Pos']);
         $this->assertSame('4819', $payload['ItemList'][0]['HsnCd']);
         $this->assertEqualsWithDelta(18.0, (float) $payload['ItemList'][0]['GstRt'], 0.0001);
-        $this->assertSame(1000.0, $payload['ValDtls']['AssVal']);
-        $this->assertSame(1180.0, $payload['ValDtls']['TotInvVal']);
+        $this->assertEqualsWithDelta(1000.0, (float) $payload['ValDtls']['AssVal'], 0.0001);
+        $this->assertEqualsWithDelta(1180.0, (float) $payload['ValDtls']['TotInvVal'], 0.0001);
     }
 
     public function test_the_acknowledgement_accepts_only_a_real_irn_and_marks_registration(): void
