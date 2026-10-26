@@ -199,10 +199,17 @@ body.ob-open {
    proportions (52px mark, 18px/600 title) rather than borrow the sheet.
    ===================================================================== */
 
-/* One rhythm for the whole page: the grid owns the gaps, sections don't. */
+/* One rhythm for the whole page: the grid owns the gaps, sections don't.
+   Every direct child's own spacing is zeroed — .master-list .master-card
+   alone would add another 18px under each block and double the gutter. */
 .obc {
     display: grid;
     gap: 16px;
+}
+
+.obc > * {
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 .obc .master-alert {
@@ -272,6 +279,16 @@ body.ob-open {
 .obc-list {
     display: grid;
     gap: 2px;
+}
+
+/* Inside the tray card the head already breathes for the section; the first
+   row must not re-pad into the title. */
+.obc-tray .master-section-head {
+    margin-bottom: 8px;
+}
+
+.obc-item:first-child {
+    padding-top: 6px;
 }
 
 .obc-item {

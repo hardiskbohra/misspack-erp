@@ -76,7 +76,7 @@
         </div>
     </section>
 
-    <section class="master-card master-card--flat">
+    <section class="master-card master-card--flat obc-tray">
         <div class="master-section-head">
             <div>
                 <h2 class="master-section-title">{{ $stateLabels[$filters['state']] ?? 'All' }} briefings</h2>
