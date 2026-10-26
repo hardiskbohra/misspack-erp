@@ -288,6 +288,15 @@ without a version the browser keeps serving the old sheet after a deploy.
 | POST | `sales-invoices/{salesInvoice}/duplicate` | `sales-invoices.duplicate` |
 | POST | `sales-invoices/{salesInvoice}/convert` | `sales-invoices.convert` |
 | GET | `sales-invoices/{salesInvoice}/print` | `sales-invoices.print` |
+| POST | `sales-invoices/{salesInvoice}/notes` | `sales-invoices.notes.store` |
+| POST | `sales-invoices/{salesInvoice}/returns` | `sales-invoices.returns.store` |
+| GET | `sales-invoice-notes/{note}/print` | `sales-invoice-notes.print` |
+| PATCH | `sales-invoice-notes/{note}/cancel` | `sales-invoice-notes.cancel` |
+
+The four corrections routes are the state machine's public verbs: an issued
+tax invoice's money no longer edits; it moves through credit notes, debit
+notes, and returns, and a note is *cancelled with a reason*, never edited.
+`docs/invoice-adjustments.md` carries the whole rule.
 
 All of them are declared **before** `Route::resource('sales-invoices', …)`, or
 `/sales-invoices/export` is read as an invoice called "export". The client portal is

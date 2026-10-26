@@ -168,6 +168,20 @@
       ]
     },
     {
+      "file": "tests/Feature/InvoiceAdjustmentTest.php",
+      "methods": [
+        "test_a_sent_tax_invoice_refuses_money_and_identity_changes",
+        "test_an_issued_invoice_still_edits_its_working_fields",
+        "test_an_issued_tax_invoice_cannot_be_deleted_but_a_draft_can",
+        "test_a_credit_note_lowers_what_is_owed_and_stops_when_full",
+        "test_a_debit_note_raises_what_is_owed",
+        "test_a_return_restock_posts_its_credit_and_caps_quantities",
+        "test_a_cancelled_note_stops_applying_and_keeps_its_reason",
+        "test_corrections_refuse_drafts_proformas_and_superseded_documents",
+        "test_notes_change_what_the_listing_counts_but_never_the_receipts"
+      ]
+    },
+    {
       "file": "tests/Feature/InvoiceClientCreationTest.php",
       "methods": [
         "test_inline_creation_saves_both_addresses_and_returns_only_the_invoice_projection",
@@ -877,6 +891,7 @@
     "app/Http/Controllers/PurchaseInvoiceController.php",
     "app/Http/Controllers/SalesInvoiceController.php",
     "app/Http/Controllers/SalesInvoiceEInvoiceController.php",
+    "app/Http/Controllers/SalesInvoiceNoteController.php",
     "app/Http/Controllers/SettingsController.php",
     "app/Http/Controllers/ShipmentController.php",
     "app/Http/Controllers/ShipmentDeliveryReceiptController.php",
@@ -968,6 +983,7 @@
     "app/Services/RecurrencePosting.php",
     "app/Services/RecurrenceSchedule.php",
     "app/Services/RecurrenceVocabulary.php",
+    "app/Services/SalesInvoiceAdjustment.php",
     "app/Services/SalesInvoiceFilters.php",
     "app/Services/SavedViews.php",
     "app/Services/SettingsDirectory.php",
@@ -1059,6 +1075,7 @@
     "app/Models/SalesInvoiceAttachment.php",
     "app/Models/SalesInvoiceEInvoice.php",
     "app/Models/SalesInvoiceItem.php",
+    "app/Models/SalesInvoiceNote.php",
     "app/Models/SalesInvoiceReminder.php",
     "app/Models/SalesInvoiceSend.php",
     "app/Models/SavedView.php",

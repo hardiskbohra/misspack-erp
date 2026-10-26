@@ -289,7 +289,10 @@ check('a value the module does not know widens the list',
 check('the money filter asks the money, not a stored word',
     /whereRaw\("\{\$received\} <= 0\.01"\)/.test(service)
     && /whereRaw\("\{\$received\} > 0\.01"\)/.test(service)
-    && /whereRaw\("\{\$received\} >= \{\$invoiceTotal\} - 0\.01"\)/.test(service),
+    /* "Covered" is judged against the note-adjusted payable: a credit note
+       can bring an invoice to settled without a single rupee moving, and the
+       filter must not chase money nobody owes any more. */
+    && /whereRaw\("\{\$received\} >= \{\$payable\} - 0\.01"\)/.test(service),
     'an invoice marked paid a year ago, whose receipt was deleted, is not paid');
 
 /* ---- 4. the list wears the shared chrome ------------------------------- */
@@ -473,7 +476,9 @@ const owedClauses = [...controller.matchAll(/coalesce\(sum\(case when ([\s\S]{0,
 check('still owed is the Balance column, summed — a draft is money too',
     owedClauses.length === 2
     && owedClauses.every(clause => /RECEIVED_SQL/.test(clause)
-        && /invoiceTotal/.test(clause)
+        /* Owed is payable − received: credits and debits net into the figure,
+           one rule from the model, so list, card and CSV agree. */
+        && /(invoiceTotal|PAYABLE_TOTAL_SQL)/.test(clause)
         && /status <> 'cancelled'/.test(clause)
         && ! /'draft'/.test(clause))
     && /The Balance column, added up/.test(view),

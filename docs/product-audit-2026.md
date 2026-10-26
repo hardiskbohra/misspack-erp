@@ -289,7 +289,7 @@ search, module dashboards, print-specific styles for labels/statements.
 - [ ] Dunning engine + statement auto-share + WhatsApp deep links (P0)
 - [ ] Inventory MVP: warehouses, stock ledger, receipts from purchases, issues on dispatch, low-stock alerts (P0)
 - [ ] Credit-limit enforcement with audited overrides (P1)
-- [ ] Invoice state machine lock + credit/debit notes + returns (P1)
+- [x] Invoice state machine lock + credit/debit notes + returns (P1) — **shipped 2026-10-26**: issued tax invoices lock money/identity (edits that move them are refused); corrections are documents — credit/debit notes (`MP/CN|DN/{FY}/NNN`, reason-required, immutable, cancellable-with-reason) and line-capped returns that restock + credit in one flow; everything owed nets through `payableTotal()`/`PAYABLE_TOTAL_SQL` so the card, the list, and the exports agree. See `docs/invoice-adjustments.md`; IT-SALES-022…030.
 - [ ] PO → GRN → 3-way match (P1)
 - [ ] Bank reconciliation import (P1)
 - [x] Mobile pass on dispatch/packaging/receipt flows; notification centre (UX) — **mobile half shipped 2026-10-25**: responsive contract audited, remaining module gaps fixed, CI enforcement added (responsive-check.cjs); notification centre still open

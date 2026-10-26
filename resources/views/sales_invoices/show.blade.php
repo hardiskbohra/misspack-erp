@@ -842,6 +842,8 @@
                         @endif
                     </div>
                 @endif
+
+                @include('sales_invoices.partials.adjustments-card')
             </div>
         </div>
 
@@ -1009,9 +1011,10 @@
 </script>
 @endpush
 
-@include('sales_invoices.partials.payment-modal')
+    @include('sales_invoices.partials.payment-modal')
     @include('sales_invoices.partials.reminder-modal')
     @include('sales_invoices.partials.email-modal')
+    @include('sales_invoices.partials.adjustments-modals')
     <script type="application/json" data-email-payload="{{ $invoice->id }}">@json($invoice->emailDefaults())</script>
 @push('styles')
     <link rel="stylesheet" href="{{ $assetVer('assets/css/sales-invoices.css') }}">

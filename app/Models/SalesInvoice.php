@@ -79,6 +79,15 @@ class SalesInvoice extends Model
 
     public const RECEIVABLE_TOTAL_SQL = '(sales_invoices.total_amount - coalesce(sales_invoices.cash_converted_total_amount, 0))';
 
+    /** What the client still owes after corrections: receivable, minus live
+        credits, plus live debits — the SQL spelling of payableTotal(). A
+        CASE instead of GREATEST: the fixtures run on SQLite, and SQLite has
+        no greatest() (its max() means something else in MySQL). */
+    public const PAYABLE_TOTAL_SQL = '(case when '.self::RECEIVABLE_TOTAL_SQL
+        .' - '.self::CREDIT_NOTES_SQL.' + '.self::DEBIT_NOTES_SQL.' > 0'
+        .' then '.self::RECEIVABLE_TOTAL_SQL.' - '.self::CREDIT_NOTES_SQL.' + '.self::DEBIT_NOTES_SQL
+        .' else 0 end)';
+
     public function isCash(): bool
     {
         return $this->invoice_type === 'cash';
@@ -307,6 +316,52 @@ class SalesInvoice extends Model
         .' + (select coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) from cashflow_allocations join cashflow_entries on cashflow_entries.id = cashflow_allocations.cashflow_entry_id where cashflow_allocations.sales_invoice_id = sales_invoices.id))';
 
     /**
+     * Corrections against a tax invoice — credits lower what the client owes,
+     * debits raise it; cancelled notes stop applying. Lists and tiles use
+     * these strings; a single invoice uses payableTotal(). One spelling of
+     * one rule, same as RECEIVED_SQL.
+     */
+    public const CREDIT_NOTES_SQL = "(select coalesce(sum(sales_invoice_notes.total), 0) from sales_invoice_notes where sales_invoice_notes.sales_invoice_id = sales_invoices.id and sales_invoice_notes.kind = 'credit' and sales_invoice_notes.status = 'issued')";
+    public const DEBIT_NOTES_SQL = "(select coalesce(sum(sales_invoice_notes.total), 0) from sales_invoice_notes where sales_invoice_notes.sales_invoice_id = sales_invoices.id and sales_invoice_notes.kind = 'debit' and sales_invoice_notes.status = 'issued')";
+
+    /** The credits and debits posted against this invoice. */
+    public function notes()
+    {
+        return $this->hasMany(SalesInvoiceNote::class, 'sales_invoice_id')->latest('id');
+    }
+
+    /** The live notes, cheapest first: a loaded relation or a query. */
+    public function liveNotes()
+    {
+        /* Databases that predate the adjustments table have no corrections —
+           an empty set is the honest answer, never a 500. */
+        if (! \Illuminate\Support\Facades\Schema::hasTable('sales_invoice_notes')) {
+            return collect();
+        }
+
+        $notes = $this->relationLoaded('notes') ? $this->notes : $this->notes()->get();
+
+        return $notes->where('status', SalesInvoiceNote::STATUS_ISSUED);
+    }
+
+    public function creditedTotal(): float
+    {
+        return round((float) $this->liveNotes()->where('kind', SalesInvoiceNote::KIND_CREDIT)->sum('total'), 2);
+    }
+
+    public function debitedTotal(): float
+    {
+        return round((float) $this->liveNotes()->where('kind', SalesInvoiceNote::KIND_DEBIT)->sum('total'), 2);
+    }
+
+    /** What the document is worth after its corrections — what the client owes. */
+    public function payableTotal(): float
+    {
+        return round(max($this->receivableTotal() - $this->creditedTotal() + $this->debitedTotal(), 0), 2);
+    }
+
+
+    /**
      * The receipts filed against this invoice in the ledger.
      *
      * Three ways in, cheapest first: a loaded relation (one query for a page of
@@ -472,21 +527,26 @@ class SalesInvoice extends Model
             return 0.0;
         }
 
-        return round(max($this->receivableTotal() - $this->receivedAmount(), 0), 2);
+        return round(max($this->payableTotal() - $this->receivedAmount(), 0), 2);
     }
 
     public function advanceAmount(): float
     {
-        return round(max($this->receivedAmount() - $this->receivableTotal(), 0), 2);
+        return round(max($this->receivedAmount() - $this->payableTotal(), 0), 2);
     }
 
     /** unpaid | partial | paid — read from the money, never from a stored word. */
     public function paymentState(): string
     {
-        $total = $this->receivableTotal();
+        /* After a credit note the client owes less; "paid" must be measured
+           against the note-adjusted figure or a fully credited invoice could
+           chase money nobody owes. */
+        $total = $this->payableTotal();
         $received = $this->receivedAmount();
 
-        if ($total > 0 && $received >= $total - 0.01) {
+        /* A document credited down to zero has nothing left to collect, and
+           anything already received shows as an advance — not as still owed. */
+        if ($total <= 0.01 || $received >= $total - 0.01) {
             return 'paid';
         }
 

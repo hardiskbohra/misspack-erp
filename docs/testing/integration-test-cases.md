@@ -805,7 +805,7 @@ Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDi
 
 ## Proformas, cash invoices and tax invoices (`SALES`)
 
-Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDeletion.php`, `app/Http/Controllers/SalesInvoiceController.php`.
+Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDeletion.php`, `app/Http/Controllers/SalesInvoiceController.php`, `app/Services/SalesInvoiceAdjustment.php`, `app/Models/SalesInvoiceNote.php`, `app/Http/Controllers/SalesInvoiceNoteController.php`, `tests/Feature/InvoiceAdjustmentTest.php`.
 
 ### IT-SALES-001 — Partial cash conversion leaves PI open
 
@@ -1035,6 +1035,124 @@ Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDele
 **Expected:** Guest → login; employee → their own dashboard; zero sends.
 
 **Evidence:** `tests/Feature/SalesInvoiceEmailTest.php#test_guests_and_employees_are_held_at_the_wall`
+
+### IT-SALES-022 — An issued tax invoice refuses money and identity changes
+
+**Priority:** P1 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Tax invoice MP/INV/26-27/001, status sent, one line 10 PCS at 100, total 1180
+- **Data:** PUT the full edit payload with items.quantity 20; then PUT with a changed client name
+1. PUT /sales-invoices/{id} with the whole document unchanged except items quantity 10 to 20
+2. Observe; then repeat with client_company_name changed only
+
+**Expected:** Both saves are refused with an invoice-level error that names the changed figures and tells the user to issue a credit or debit note; the stored row is untouched.
+
+**Evidence:** `tests/Feature/InvoiceAdjustmentTest.php#test_a_sent_tax_invoice_refuses_money_and_identity_changes`
+
+### IT-SALES-023 — Terms and office notes stay editable on an issued invoice
+
+**Priority:** P1 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Same issued invoice
+- **Data:** PUT with internal_notes and dispatch_terms changed, money untouched
+1. PUT /sales-invoices/{id} changing internal_notes and dispatch_terms only
+
+**Expected:** The save succeeds; totals and identity are byte-identical.
+
+**Evidence:** `tests/Feature/InvoiceAdjustmentTest.php#test_an_issued_invoice_still_edits_its_working_fields`
+
+### IT-SALES-024 — An issued tax invoice cannot be deleted; a draft can
+
+**Priority:** P1 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Issued invoice plus a draft twin
+- **Data:** DELETE the issued invoice; DELETE the draft
+1. Send DELETE to the issued invoice
+2. Send DELETE to the draft
+
+**Expected:** The issued invoice refuses with a guiding error and survives; the draft deletes cleanly.
+
+**Evidence:** `tests/Feature/InvoiceAdjustmentTest.php#test_an_issued_tax_invoice_cannot_be_deleted_but_a_draft_can`
+
+### IT-SALES-025 — A credit note lowers what is owed and caps at the document's worth
+
+**Priority:** P1 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Issued invoice for 1180 (1000 + 90 CGST + 90 SGST)
+- **Data:** Issue credit note of 500 (+tax); then another of 500; then attempt 100 more
+1. POST /sales-invoices/{id}/notes kind=credit subtotal=500 with a reason
+2. Read payableTotal, balanceDue, stored balance_amount
+3. Issue a second 500; then attempt a third of 100
+
+**Expected:** The note is numbered MP/CN/<FY>/001 with tax pro-rated to the invoice split (590); payable and the stored balance drop to 590, then to 0 with paymentState paid; the third attempt is refused because it exceeds what the invoice is still worth.
+
+**Evidence:** `tests/Feature/InvoiceAdjustmentTest.php#test_a_credit_note_lowers_what_is_owed_and_stops_when_full`
+
+### IT-SALES-026 — A debit note raises what is owed
+
+**Priority:** P1 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Same issued invoice
+- **Data:** Issue debit note of 200 (+tax)
+1. POST /sales-invoices/{id}/notes kind=debit subtotal=200 with a reason
+
+**Expected:** The MP/DN note totals 236 and payable/balance rise from 1180 to 1416.
+
+**Evidence:** `tests/Feature/InvoiceAdjustmentTest.php#test_a_debit_note_raises_what_is_owed`
+
+### IT-SALES-027 — A return posts its restock and credit in one flow, capped by what is outstanding per line
+
+**Priority:** P1 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Issued invoice, one line of 10 PCS at 100
+- **Data:** Return 4 PCS with restock; then try returning 7 more
+1. POST /sales-invoices/{id}/returns with lines[item_id,qty 4], restock ticked, reason given
+2. Attempt a second return of 7
+
+**Expected:** A return flag = restock-carrying credit note of 472 (4*100 + tax) is created; the second attempt over the remaining 6 is refused and no extra note exists.
+
+**Evidence:** `tests/Feature/InvoiceAdjustmentTest.php#test_a_return_restock_posts_its_credit_and_caps_quantities`
+
+### IT-SALES-028 — Cancelling a note needs a reason and restores the money
+
+**Priority:** P1 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Invoice with a live credit note of 590
+- **Data:** Cancel without a reason; then with one; then again
+1. PATCH /sales-invoice-notes/{id}/cancel with empty cancel_reason
+2. Then with a reason
+3. Then again
+
+**Expected:** The empty cancel is refused; with a reason the note flips to cancelled, keeps the reason, payable returns to 1180, and the note cannot be cancelled twice.
+
+**Evidence:** `tests/Feature/InvoiceAdjustmentTest.php#test_a_cancelled_note_stops_applying_and_keeps_its_reason`
+
+### IT-SALES-029 — Corrections refuse drafts, proformas and superseded documents
+
+**Priority:** P1 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** A draft invoice and a proforma
+- **Data:** POST a credit note against each
+1. POST notes to the draft
+2. POST notes to the proforma
+
+**Expected:** Both are refused 422; no note rows exist afterwards.
+
+**Evidence:** `tests/Feature/InvoiceAdjustmentTest.php#test_corrections_refuse_drafts_proformas_and_superseded_documents`
+
+### IT-SALES-030 — Notes change what is owed but never what was received
+
+**Priority:** P1 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Issued invoice with 500 recorded as received
+- **Data:** Issue a credit note of 500 (+tax = 590) afterwards
+1. Force amount_paid 500 to emulate a receipt
+2. Issue the credit note
+3. Read receivedAmount, payableTotal, balanceDue, paymentState
+
+**Expected:** Received stays 500; payable drops to 590; balance due is 90; the state reads partial — the receipt is never eaten by the correction.
+
+**Evidence:** `tests/Feature/InvoiceAdjustmentTest.php#test_notes_change_what_the_listing_counts_but_never_the_receipts`
 
 ## Purchase documents and vendor settlement (`PURCHASE`)
 

@@ -497,7 +497,7 @@ Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDi
 
 ## Proformas, cash invoices and tax invoices (`SALES`)
 
-Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDeletion.php`, `app/Http/Controllers/SalesInvoiceController.php`.
+Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDeletion.php`, `app/Http/Controllers/SalesInvoiceController.php`, `app/Services/SalesInvoiceAdjustment.php`, `app/Models/SalesInvoiceNote.php`, `app/Http/Controllers/SalesInvoiceNoteController.php`, `tests/Feature/InvoiceAdjustmentTest.php`.
 
 ### UT-SALES-001 — Cash invoice excludes GST from its amount
 

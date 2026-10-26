@@ -33,6 +33,7 @@ use App\Services\CashInvoiceDeletion;
 use App\Services\ClientInvoiceSnapshot;
 use App\Services\ProjectProducts;
 use App\Services\SalesInvoiceFilters;
+use App\Services\SalesInvoiceAdjustment;
 use App\Services\SavedViews;
 use App\Rules\ValidGstin;
 
@@ -97,13 +98,13 @@ class SalesInvoiceController extends Controller
                that vanishes: the tax invoice a conversion creates starts as one
                with the advance already on it. Only a cancellation takes a document
                out of what is owed. */
-            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < '.$invoiceTotal.' - 0.01'
-                ." and sales_invoices.status <> 'cancelled' then {$invoiceTotal} - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
+            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < '.SalesInvoice::PAYABLE_TOTAL_SQL.' - 0.01'
+                ." and sales_invoices.status <> 'cancelled' then ".SalesInvoice::PAYABLE_TOTAL_SQL.' - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
             .', coalesce(sum(case when sales_invoices.due_date is not null and sales_invoices.due_date < ?'
                 ." and sales_invoices.status not in ('draft', 'cancelled')"
                 .' and '.$live
-                .' and '.SalesInvoice::RECEIVED_SQL.' < '.$invoiceTotal.' - 0.01'
-                .' then '.$invoiceTotal.' - '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as overdue'
+                .' and '.SalesInvoice::RECEIVED_SQL.' < '.SalesInvoice::PAYABLE_TOTAL_SQL.' - 0.01'
+                .' then '.SalesInvoice::PAYABLE_TOTAL_SQL.' - '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as overdue'
         )
             ->addBinding([now()->toDateString()], 'select')
             ->first();
@@ -128,8 +129,8 @@ class SalesInvoiceController extends Controller
         $totals = $this->filteredQuery($filters)->reorder()->selectRaw(
             'coalesce(sum(case when '.$live.' then '.$invoiceTotal.' else 0 end), 0) as counted'
             .', coalesce(sum(case when '.$live.' then '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as received'
-            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < '.$invoiceTotal.' - 0.01'
-                ." and sales_invoices.status <> 'cancelled' then {$invoiceTotal} - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
+            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < '.SalesInvoice::PAYABLE_TOTAL_SQL.' - 0.01'
+                ." and sales_invoices.status <> 'cancelled' then ".SalesInvoice::PAYABLE_TOTAL_SQL.' - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
         )->first();
 
         $pageTotals = [
@@ -799,6 +800,9 @@ class SalesInvoiceController extends Controller
         if (Schema::hasTable('sales_invoice_sends')) {
             $salesInvoice->load('sends.sender');
         }
+        if (Schema::hasTable('sales_invoice_notes')) {
+            $salesInvoice->load('notes.creator');
+        }
         if (Schema::hasTable('cashflow_allocations')) {
             $salesInvoice->load('cashflowAllocations.cashflowEntry');
         }
@@ -862,6 +866,9 @@ class SalesInvoiceController extends Controller
         DB::transaction(function () use ($request, $salesInvoice, $data, $items) {
             $salesInvoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
             $this->assertEditable($salesInvoice);
+            /* An issued tax invoice is a legal document: its money and identity
+               may only move through credit/debit notes, never an edit. */
+            app(SalesInvoiceAdjustment::class)->assertMoneyFieldsUnchanged($salesInvoice, $data, $items);
             $salesInvoice->update($data);
             $this->syncItemsAndTotals($salesInvoice, $items);
             $this->storeAttachments($request, $salesInvoice);
@@ -879,9 +886,11 @@ class SalesInvoiceController extends Controller
                 'Cash Invoice deleted and conversion reversed. Its value and all linked receipts are back on '.$pi->invoice_number.'. Bank balances are unchanged.');
         }
         $this->assertEditable($salesInvoice);
+        app(SalesInvoiceAdjustment::class)->assertDeletable($salesInvoice);
         DB::transaction(function () use ($salesInvoice) {
             $salesInvoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
             $this->assertEditable($salesInvoice);
+            app(SalesInvoiceAdjustment::class)->assertDeletable($salesInvoice);
             foreach ($salesInvoice->attachments as $attachment) {
                 if ($attachment->file_path) {
                     Storage::disk('public')->delete($attachment->file_path);

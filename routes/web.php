@@ -72,6 +72,7 @@ use App\Http\Controllers\OrganisationController;
 use App\Http\Controllers\PackagingListController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
+use App\Http\Controllers\SalesInvoiceNoteController;
 use App\Http\Controllers\SalesInvoiceEInvoiceController;
 use App\Http\Controllers\TaxSettingController;
 use App\Http\Controllers\TwoFactorChallengeController;
@@ -417,6 +418,11 @@ Route::middleware('auth')->group(function () {
         Route::patch('/sales-invoices/{salesInvoice}/mark-sent', [SalesInvoiceController::class, 'markSent'])->name('sales-invoices.markSent');
         Route::patch('/sales-invoices/{salesInvoice}/portal', [SalesInvoiceController::class, 'togglePortal'])->name('sales-invoices.portal');
         Route::post('/sales-invoices/{salesInvoice}/payments', [SalesInvoiceController::class, 'recordPayment'])->name('sales-invoices.payments.store');
+        /* Corrections to an issued tax invoice are documents of their own. */
+        Route::post('/sales-invoices/{salesInvoice}/notes', [SalesInvoiceNoteController::class, 'store'])->name('sales-invoices.notes.store');
+        Route::post('/sales-invoices/{salesInvoice}/returns', [SalesInvoiceNoteController::class, 'storeReturn'])->name('sales-invoices.returns.store');
+        Route::get('/sales-invoice-notes/{note}/print', [SalesInvoiceNoteController::class, 'print'])->name('sales-invoice-notes.print');
+        Route::patch('/sales-invoice-notes/{note}/cancel', [SalesInvoiceNoteController::class, 'cancel'])->name('sales-invoice-notes.cancel');
         Route::post('/sales-invoices/{salesInvoice}/duplicate', [SalesInvoiceController::class, 'duplicate'])->name('sales-invoices.duplicate');
         Route::post('/sales-invoices/{salesInvoice}/convert-cash', [SalesInvoiceController::class, 'convertCash'])->name('sales-invoices.convert-cash');
         Route::post('/sales-invoices/{salesInvoice}/convert', [SalesInvoiceController::class, 'convert'])->name('sales-invoices.convert');
