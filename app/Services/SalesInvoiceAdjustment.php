@@ -422,19 +422,34 @@ class SalesInvoiceAdjustment
     /** Money moved if any saved line changed what it sells, how much, or its tax. */
     protected function itemsChanged(SalesInvoice $invoice, array $incoming): bool
     {
-        $shape = fn ($row, $source) => json_encode([
-            'product_name' => (string) ($source === 'db' ? $row->product_name : ($row['product_name'] ?? '')),
-            'quantity' => round((float) ($source === 'db' ? $row->quantity : ($row['quantity'] ?? 0)), 4),
-            'unit' => (string) ($source === 'db' ? $row->unit : ($row['unit'] ?? '')),
-            'unit_price' => round((float) ($source === 'db' ? $row->unit_price : ($row['unit_price'] ?? 0)), 4),
-            'discount_percent' => round((float) ($source === 'db' ? $row->discount_percent : ($row['discount_percent'] ?? 0)), 2),
-            'gst_percent' => round((float) ($source === 'db' ? $row->gst_percent : ($row['gst_percent'] ?? 0)), 2),
-            'hsn_sac' => (string) ($source === 'db' ? $row->hsn_sac : ($row['hsn_sac'] ?? '')),
-        ]);
+        /* The edit form always posts gst_percent/discount_percent per row and
+           they shape the tax — but a programmatic update that doesn't mention
+           them must not trip the lock on an unset-key artefact. Compare tax
+           detail only when the caller actually speaks it. */
+        $taxKeys = ['discount_percent', 'gst_percent'];
+        $rows = collect($incoming)->filter(fn ($row) => ! empty($row['product_name']));
+        $callerMentionsTax = $rows->isNotEmpty() && $rows->every(
+            fn ($row) => array_diff($taxKeys, array_keys((array) $row)) === []
+        );
+
+        $shape = function ($row, $source) use ($taxKeys, $callerMentionsTax) {
+            $keys = array_merge(
+                ['product_name', 'quantity', 'unit', 'unit_price', 'hsn_sac'],
+                $callerMentionsTax ? $taxKeys : []
+            );
+            $out = [];
+            foreach ($keys as $key) {
+                $value = $source === 'db' ? $row->{$key} : ($row[$key] ?? null);
+                $out[$key] = is_numeric($value)
+                    ? round((float) $value, $key === 'quantity' ? 4 : 2)
+                    : (string) ($value ?? '');
+            }
+
+            return json_encode($out);
+        };
 
         $current = $invoice->items->map(fn (SalesInvoiceItem $item) => $shape($item, 'db'))->sort()->values()->all();
-        $next = collect($incoming)->filter(fn ($row) => ! empty($row['product_name']))
-            ->map(fn ($row) => $shape($row, 'in'))->sort()->values()->all();
+        $next = $rows->map(fn ($row) => $shape($row, 'in'))->sort()->values()->all();
 
         return $current !== $next;
     }

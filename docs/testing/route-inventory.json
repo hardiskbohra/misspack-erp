@@ -3927,6 +3927,33 @@
             ]
         },
         {
+            "name": "sales-invoice-notes.cancel",
+            "methods": [
+                "PATCH"
+            ],
+            "uri": "sales-invoice-notes/{note}/cancel",
+            "action": "App\\\\Http\\\\Controllers\\\\SalesInvoiceNoteController@cancel",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoice-notes.print",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "sales-invoice-notes/{note}/print",
+            "action": "App\\\\Http\\\\Controllers\\\\SalesInvoiceNoteController@print",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "sales-invoices.index",
             "methods": [
                 "GET",
@@ -4139,6 +4166,19 @@
             ]
         },
         {
+            "name": "sales-invoices.notes.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/notes",
+            "action": "App\\\\Http\\\\Controllers\\\\SalesInvoiceNoteController@store",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "sales-invoices.payments.store",
             "methods": [
                 "POST"
@@ -4185,6 +4225,19 @@
             ],
             "uri": "sales-invoices/{salesInvoice}/reminders",
             "action": "App\\Http\\Controllers\\SalesInvoiceController@logReminder",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
+            "name": "sales-invoices.returns.store",
+            "methods": [
+                "POST"
+            ],
+            "uri": "sales-invoices/{salesInvoice}/returns",
+            "action": "App\\\\Http\\\\Controllers\\\\SalesInvoiceNoteController@storeReturn",
             "middleware": [
                 "web",
                 "auth",
