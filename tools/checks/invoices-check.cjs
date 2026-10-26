@@ -129,11 +129,19 @@ check('every class the invoice screens wear is defined in the module\'s sheet',
 
 /* ---- 2. one money rule, one ageing vocabulary --------------------------- */
 
+/* The controller spells the model's rule either inline (SalesInvoice::..._SQL)
+   or through a once-named local alias ($receivedSql/$payableSql) — both count;
+   re-typing the ledger join anywhere outside the model never does. */
+const spellsModelMoney =
+    (controller.match(/SalesInvoice::RECEIVED_SQL/g) || []).length >= 3
+    || /SalesInvoice::RECEIVED_SQL/.test(controller)
+        && /\$receivedSql = SalesInvoice::RECEIVED_SQL/.test(controller);
+
 check('the money rule is spelled once, and it is the model\'s',
     /public const RECEIVED_SQL = /.test(model)
     && /public function receivedAmount\(\): float/.test(model)
     && /public function balanceDue\(\): float/.test(model)
-    && (controller.match(/SalesInvoice::RECEIVED_SQL/g) || []).length >= 3
+    && spellsModelMoney
     && ! /from cashflow_entries/.test(controller)
     && ! /from cashflow_entries/.test(service)
     && ! /from cashflow_entries/.test(view),
@@ -475,11 +483,11 @@ const owedClauses = [...controller.matchAll(/coalesce\(sum\(case when ([\s\S]{0,
 
 check('still owed is the Balance column, summed — a draft is money too',
     owedClauses.length === 2
-    && owedClauses.every(clause => /RECEIVED_SQL/.test(clause)
+    && owedClauses.every(clause => /(RECEIVED_SQL|\$receivedSql)/.test(clause)
         /* Owed is payable − received: credits and debits net into the figure,
            one rule from the model (payableSql() falls back to the receivable
            where corrections cannot exist yet), so list, card and CSV agree. */
-        && /(invoiceTotal|PAYABLE_TOTAL_SQL|payableSql\(\))/.test(clause)
+        && /(invoiceTotal|PAYABLE_TOTAL_SQL|payableSql\(\)|\$payableSql)/.test(clause)
         && /status <> 'cancelled'/.test(clause)
         && ! /'draft'/.test(clause))
     && /The Balance column, added up/.test(view),

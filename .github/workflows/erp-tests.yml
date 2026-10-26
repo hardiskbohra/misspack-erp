@@ -33,12 +33,7 @@ jobs:
             # broke without opening logs (which some environments cannot fetch).
             node tools/testing/junit-failures.cjs .work/phpunit.xml
             if [ ! -s .work/phpunit.xml ]; then
-              # TEMP DEBUG PROBE (whole block reverts with the fix)
-              vendor/bin/phpunit --filter test_a_refused_send_is_logged_and_briefs_the_desk 2>&1 | grep -v -E '^#[0-9]+ ' | grep -v -E '^\s*$' | head -90 | while IFS= read -r line; do printf '::error::%s\n' "$line"; done
-              # TEMP DEBUG PROBE (revert after fix): annotations cap at ten, so
-              # spend them on the first lines of the failing single-test run —
-              # that is where the exception text lives.
-              # the handler logged the exception the 500 page hides
+              vendor/bin/phpunit 2>&1 | tail -30 | while IFS= read -r line; do printf '::error::%s\n' "$line"; done
             fi
             exit 1
           fi

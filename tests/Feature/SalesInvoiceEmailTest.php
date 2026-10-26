@@ -239,8 +239,6 @@ class SalesInvoiceEmailTest extends TestCase
         app('mail.manager')->forgetMailers();
         app('mail.manager')->mailer('smtp')->setSymfonyTransport($transport);
 
-        $this->withoutExceptionHandling(); // TEMP PROBE — revert with the fix
-
         $this->post(route('sales-invoices.email', $invoice), [
             'to' => 'accounts@acme.test',
             'subject' => 'Invoice INV-TEST-0001',

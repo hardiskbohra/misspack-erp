@@ -83,6 +83,8 @@ class SalesInvoiceController extends Controller
            tax invoice is not a receivable, and this clause is what every sum
            below says that with. */
         $invoiceTotal = SalesInvoice::RECEIVABLE_TOTAL_SQL;
+        $receivedSql = SalesInvoice::RECEIVED_SQL;
+        $payableSql = SalesInvoice::payableSql();
         $live = "(sales_invoices.invoice_type <> 'proforma' or sales_invoices.converted_invoice_id is null)";
 
         $figures = $this->filteredQuery($filters)->reorder()->selectRaw(
@@ -91,20 +93,20 @@ class SalesInvoiceController extends Controller
             .', coalesce(sum(case when sales_invoices.invoice_type = \'proforma\''
                 ." and sales_invoices.converted_invoice_id is null and sales_invoices.status <> 'cancelled'"
                 .' then '.$invoiceTotal.' else 0 end), 0) as potential'
-            .', coalesce(sum(case when '.$live.' then '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as received'
+            .', coalesce(sum(case when '.$live.' then '.$receivedSql.' else 0 end), 0) as received'
 
             /* What is owed is the Balance column, summed — the same rule as the
                row beside it. A draft is money the office has recorded, not money
                that vanishes: the tax invoice a conversion creates starts as one
                with the advance already on it. Only a cancellation takes a document
-               out of what is owed. */
-            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < '.SalesInvoice::payableSql().' - 0.01'
-                ." and sales_invoices.status <> 'cancelled' then ".SalesInvoice::payableSql().' - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
+               out of what is owed. The payable spells in the model's SQL — credits
+               and debits net into it, so the tile and the card agree. */
+            .", coalesce(sum(case when {$live} and {$receivedSql} < {$payableSql} - 0.01"
+                ." and sales_invoices.status <> 'cancelled' then {$payableSql} - {$receivedSql} else 0 end), 0) as outstanding"
             .', coalesce(sum(case when sales_invoices.due_date is not null and sales_invoices.due_date < ?'
                 ." and sales_invoices.status not in ('draft', 'cancelled')"
-                .' and '.$live
-                .' and '.SalesInvoice::RECEIVED_SQL.' < '.SalesInvoice::payableSql().' - 0.01'
-                .' then '.SalesInvoice::payableSql().' - '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as overdue'
+                ." and {$live} and {$receivedSql} < {$payableSql} - 0.01"
+                ." then {$payableSql} - {$receivedSql} else 0 end), 0) as overdue"
         )
             ->addBinding([now()->toDateString()], 'select')
             ->first();
@@ -127,10 +129,10 @@ class SalesInvoiceController extends Controller
            reads (`withReceived`, the payment count, the reminder count) never stand
            in front of it. */
         $totals = $this->filteredQuery($filters)->reorder()->selectRaw(
-            'coalesce(sum(case when '.$live.' then '.$invoiceTotal.' else 0 end), 0) as counted'
-            .', coalesce(sum(case when '.$live.' then '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as received'
-            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < '.SalesInvoice::payableSql().' - 0.01'
-                ." and sales_invoices.status <> 'cancelled' then ".SalesInvoice::payableSql().' - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
+            "coalesce(sum(case when {$live} then {$invoiceTotal} else 0 end), 0) as counted"
+            .", coalesce(sum(case when {$live} then {$receivedSql} else 0 end), 0) as received"
+            .", coalesce(sum(case when {$live} and {$receivedSql} < {$payableSql} - 0.01"
+                ." and sales_invoices.status <> 'cancelled' then {$payableSql} - {$receivedSql} else 0 end), 0) as outstanding"
         )->first();
 
         $pageTotals = [
