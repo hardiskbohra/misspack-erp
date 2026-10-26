@@ -22,7 +22,11 @@ jobs:
       - name: Verify test catalogue and portable UI checks
         run: npm run test:contracts
       - name: Verify declared route inventory
-        run: php tools/testing/export-routes.php --check
+        run: |
+          php tools/testing/export-routes.php
+          git diff -- docs/testing/route-inventory.json | head -60 | while IFS= read -r line; do printf '::error title=ROUTE-DIFF::%s\n' "$line"; done
+          git checkout -- docs/testing/route-inventory.json
+          exit $(git status --porcelain docs/testing/route-inventory.json >/dev/null 2>&1; git diff --quiet docs/testing/route-inventory.json; echo $?)
         env:
           APP_ENV: testing
       - name: Full unit, feature and integration suite
