@@ -2644,6 +2644,20 @@
             ]
         },
         {
+            "name": "office-alerts.centre",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "office-alerts/centre",
+            "action": "App\\Http\\Controllers\\OfficeAlertController@centre",
+            "middleware": [
+                "web",
+                "auth",
+                "office"
+            ]
+        },
+        {
             "name": "office-alerts.settings",
             "methods": [
                 "GET",

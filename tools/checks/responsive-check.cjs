@@ -16,6 +16,10 @@
         (structural sheets are allow-listed with reasons, below)
      5. the responsive contract is intact: imported LAST in the design-system
         entry and present with its two flagship classes in the built sheet
+     6. no mobile media block pins a layout past the narrowest phone: a
+        `min-width: Npx` (N ≥ 321) inside an @media(max-width:…) rule is how
+        screens quietly overflow — wide TABLES are the only allowed shape,
+        because the contract already forces their wrapper to scroll
    ========================================================================== */
 'use strict';
 
@@ -156,6 +160,71 @@ const builtText = fs.existsSync(built) ? fs.readFileSync(built, 'utf8') : '';
 check('the built design-system sheet carries the responsive contract',
     builtText.includes('data-ui-shell') && builtText.includes('ui-mobile-cards') && builtText.includes('ui-mobile-secondary'),
     'run npm run build:design-system');
+
+/* ---------------- 6. no fixed layout floor inside a mobile media block ----
+   The textbook case: a table card-ified for phones (rows become blocks) that
+   kept a `min-width: 346px` — every iPhone below the SE 2 and every split-
+   screen window then scrolled sideways. An inline-style check (rule 3) can
+   never see this; it lives in the module sheets' media blocks. Tables whose
+   own width exceeds the viewport are the documented exception: the contract
+   (rule 2) already demands their wrapper carries overflow-x. Every other
+   exception is named here with its reason, so a review decides it, not the
+   linter. */
+
+const MOBILE_FLOOR_EXCEPTIONS = {
+    'module-dashboard.css': {
+        '.module-trend-bars:640': 'the six-column chart stays 640px inside .module-trend-card, which the same media block gives overflow-x:auto — wide content inside a scroll wrapper, the scroll-wrapper pattern’s chart twin',
+    },
+};
+
+const PAPER_SHEET = /print|pdf|voucher|payslip|label|mark|statement/i;
+
+const mediaBlocksOf = (text) => {
+    const blocks = [];
+    let m;
+    const re = /@media\s*\((max|min)-width\s*:\s*(\d+)px\)[^{]*\{/g;
+    while ((m = re.exec(text)) !== null) {
+        let depth = 1, i = re.lastIndex;
+        while (depth && i < text.length) {
+            if (text[i] === '{') depth++;
+            else if (text[i] === '}') depth--;
+            i++;
+        }
+        blocks.push({ maxw: m[1] === 'max', px: parseInt(m[2], 10), body: text.slice(re.lastIndex, i - 1) });
+    }
+    return blocks;
+};
+
+const mobileFloors = [];
+fs.readdirSync(PUBLIC_CSS).filter(f => f.endsWith('.css')).forEach(f => {
+    if (PAPER_SHEET.test(f)) return;
+    const text = fs.readFileSync(path.join(PUBLIC_CSS, f), 'utf8');
+    for (const block of mediaBlocksOf(text)) {
+        if (! block.maxw || block.px > 900) continue;
+        /* selector → declarations: split a rule back apart well enough to
+           blame the right selector for a floor. */
+        const ruleRe = /([^{}]+)\{([^{}]*)\}/g;
+        let r;
+        while ((r = ruleRe.exec(block.body)) !== null) {
+            const decl = r[2];
+            const wm = /(?<![-\w])(min-width|width)\s*:\s*(\d+(?:\.\d+)?)px/.exec(decl);
+            if (! wm || parseFloat(wm[2]) < 321) continue;
+            for (const sel of r[1].split(',')) {
+                const s = sel.trim();
+                /* A table element/class is allowed to stay wide: its wrapper
+                   scrolls (rule 2). A cardized row, cell, column or modal is
+                   never allowed a floor past the phone. */
+                if (/(?:^|[\s>+~])(?:table|[\w.-]*table)\s*(?::[^ ]+)?$/.test(s)) continue;
+                const key = `${s}:${parseInt(wm[2], 10)}`;
+                if ((MOBILE_FLOOR_EXCEPTIONS[f] || {})[key]) continue;
+                mobileFloors.push(`${f}·${s} → ${wm[1]}:${wm[2]}px in ≤${block.px}px block`);
+            }
+        }
+    }
+});
+check('no mobile media block pins a layout past the narrowest phone',
+    mobileFloors.length === 0,
+    mobileFloors.slice(0, 8).join(' | '));
 
 /* ---------------------------------------------------------------- report */
 

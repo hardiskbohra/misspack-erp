@@ -480,7 +480,10 @@
         .master-items-table tr,
         .master-items-table td{
             display:block;
-            min-width: 346px;
+            /* These rows are stacked cards on a phone; a hard 346px floor used
+               to live here and pushed a 320px screen sideways. The card's own
+               padding is all the floor a stacked row needs. */
+            min-width: 0;
             width:100%;
         }
         
@@ -1886,4 +1889,139 @@
 /* Detail-page attachments reuse the shared upload row without crowding the gallery. */
 .ship-attachments .ship-doc-upload {
     margin-bottom: 16px;
+}
+
+/* =====================================================================
+   MOBILE PASS (the warehouse phone) — attachments, live tracker notes and
+   the delivery-receipt workflow. Grouped at the tail so the pass reads as
+   one reviewed unit; every selector overrides only a rule above.
+   ===================================================================== */
+
+@media (max-width: 767px) {
+
+    /* Four columns of ~70px thumbnails on a phone means photos nobody can
+       judge and remove-buttons nobody can hit. Two columns keeps the image
+       big enough to identify and the actions over the 44px touch floor. */
+    .master-attachments-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .master-attachment-card img {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 4 / 3;
+    }
+
+    /* The receipt card's footer can hold an evidence link and a long button
+       side by side; on a phone the button wins the whole row. */
+    .shipment-receipt-card header,
+    .shipment-receipt-card footer {
+        flex-wrap: wrap;
+    }
+
+    /* ---- delivery receipt entry: a full-screen sheet, not a pinched modal
+       Recording a receipt is line-by-line numeric entry from the loading
+       bay; half a screen of chrome around it makes the form the thing you
+       fight. The packaging modals already go full-screen on this breakpoint
+       for the same reason. */
+    #deliveryReceiptModal.master-modal {
+        padding: 0;
+        align-items: stretch;
+    }
+
+    .shipment-delivery-modal {
+        width: 100vw;
+        max-width: none;
+        height: 100dvh;
+        max-height: 100dvh;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .shipment-delivery-modal .master-modal-body {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* ---- the reconciliation lines become cards -----------------------------
+       Nine numeric columns inside a scroll wrapper is manageable at a desk
+       and unusable with thumbs. Every cell already carries data-label, so the
+       shared card pattern applies whole: block the table, hide the head,
+       surface the label. */
+    .shipment-delivery-lines,
+    .shipment-delivery-lines table,
+    .shipment-delivery-lines thead,
+    .shipment-delivery-lines tbody,
+    .shipment-delivery-lines tr,
+    .shipment-delivery-lines td {
+        display: block;
+        min-width: 0;
+        width: 100%;
+    }
+
+    .shipment-delivery-lines {
+        overflow-x: visible;
+    }
+
+    .shipment-delivery-lines table {
+        min-width: 0;
+    }
+
+    .shipment-delivery-lines thead {
+        display: none;
+    }
+
+    .shipment-delivery-lines tr {
+        border: 1px solid var(--master-border);
+        border-radius: 16px;
+        padding: 14px;
+        margin-bottom: 14px;
+        background: var(--mc-card);
+    }
+
+    .shipment-delivery-lines td {
+        border: none;
+        padding: 6px 0;
+    }
+
+    .shipment-delivery-lines td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .04em;
+        color: var(--mc-text-3);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+    }
+
+    .shipment-delivery-lines td:first-child::before {
+        content: "";
+        margin-bottom: 0;
+    }
+
+    .shipment-delivery-lines .master-input,
+    .shipment-delivery-lines .shipment-delivery-computed {
+        width: 100%;
+        min-width: 0;
+        text-align: left;
+    }
+
+    .shipment-delivery-status {
+        max-width: none;
+    }
+
+    /* the freeze-frame math hint can drop under the numbers it explains */
+    .shipment-delivery-guide {
+        align-items: flex-start;
+    }
+
+    .shipment-delivery-modal .master-modal-footer {
+        padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    }
 }

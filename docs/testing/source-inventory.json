@@ -198,6 +198,17 @@
       ]
     },
     {
+      "file": "tests/Feature/OfficeAlertCentreTest.php",
+      "methods": [
+        "test_the_centre_is_locked_to_guests_and_the_payroll",
+        "test_the_centre_lists_open_briefings_with_their_actions",
+        "test_filters_narrow_the_tray_and_keep_the_other_filters",
+        "test_ack_from_the_centre_redirects_and_files_the_resolved_trail",
+        "test_snooze_moves_the_card_out_of_open_and_back",
+        "test_a_desk_watcher_sees_only_their_desks_briefings"
+      ]
+    },
+    {
       "file": "tests/Feature/PackagingAllLabelsTest.php",
       "methods": [
         "test_all_formats_render_each_physical_carton_with_correct_data_and_audit_counts",

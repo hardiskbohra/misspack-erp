@@ -26,7 +26,7 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-TASK | Tasks and coordinator queues | 3 | 3 | 0 |
 | REQ-NOTE | Private notes | 3 | 3 | 3 |
 | REQ-FEEDBACK | Feedback scores and closure | 3 | 3 | 0 |
-| REQ-BRIEF | Office briefings, alerts and watchers | 3 | 3 | 0 |
+| REQ-BRIEF | Office briefings, alerts and watchers | 3 | 8 | 5 |
 | REQ-SEARCH | Global search and navigation | 3 | 3 | 0 |
 | REQ-SETTINGS | Settings, workflow policy and master options | 3 | 3 | 0 |
 | REQ-CPORTAL | Client portal authentication and data isolation | 3 | 3 | 2 |
@@ -34,5 +34,5 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-DASH | Overview and module dashboard reporting | 4 | 6 | 6 |
 | REQ-AUDIT | Audit trail and sensitive operations | 3 | 4 | 1 |
 | REQ-FILES | Shared file policy and storage lifecycle | 3 | 4 | 4 |
-| REQ-UI | Shared UI, printing and accessible interactions | 4 | 6 | 3 |
+| REQ-UI | Shared UI, printing and accessible interactions | 4 | 8 | 3 |
 | REQ-TAX | GST: GSTIN checksum, HSN/SAC master and e-invoice (IRN/QR) | 1 | 11 | 12 |

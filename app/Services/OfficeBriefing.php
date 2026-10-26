@@ -555,6 +555,99 @@ class OfficeBriefing
         );
     }
 
+    /**
+     * The notification centre: the same alerts the bell drops, but whole —
+     * open, snoozed and resolved, filterable, with who-cleared-what on the
+     * record. The bell is a glance; this page is the desk's history, and the
+     * difference matters the day somebody asks "did anyone see the KYC brief
+     * on Tuesday?". The dropdown hides anything acked or seen; the centre
+     * keeps it and says who did it.
+     *
+     * Returned item = present() plus state/resolved metadata; filters are
+     * plain (team, severity, state) and validated in the controller.
+     */
+    public function centre(User $user, array $filters): array
+    {
+        $empty = [
+            'stats' => ['open' => 0, 'critical' => 0, 'snoozed' => 0, 'resolved' => 0],
+            'items' => [],
+            'enabled' => false,
+        ];
+
+        if (! $user->isAdmin() || ! Schema::hasTable('office_alerts') || ! $this->settings()['enabled']) {
+            return $empty;
+        }
+
+        $this->ensureToday();
+
+        $states = OfficeAlertState::query()
+            ->where('user_id', $user->id)
+            ->get()
+            ->keyBy('office_alert_id');
+
+        $rows = OfficeAlert::query()
+            ->with('ackedBy')
+            ->where('event_key', '!=', 'briefing.ran')
+            ->orderByRaw("CASE severity WHEN 'critical' THEN 0 WHEN 'attention' THEN 1 ELSE 2 END")
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get()
+            ->filter(fn (OfficeAlert $alert) => $user->watchesTeam($alert->team))
+            ->map(fn (OfficeAlert $alert) => $this->presentRow($alert, $states->get($alert->id), $user))
+            ->values();
+
+        $counts = fn (string $state) => $rows->where('state', $state)->count();
+
+        $stats = [
+            'open' => $counts('open'),
+            'critical' => $rows->where('state', 'open')->where('severity', OfficeAlert::SEVERITY_CRITICAL)->count(),
+            'snoozed' => $counts('snoozed'),
+            'resolved' => $counts('resolved'),
+        ];
+
+        $filtered = $rows
+            ->when($filters['state'] !== 'all', fn ($r) => $r->where('state', $filters['state']))
+            ->when($filters['team'] !== 'all', fn ($r) => $r->where('team_key', $filters['team']))
+            ->when($filters['severity'] !== 'all', fn ($r) => $r->where('severity', $filters['severity']))
+            ->values();
+
+        return [
+            'stats' => $stats,
+            'items' => $filtered->all(),
+            'enabled' => true,
+            'desk' => \App\Models\OfficeSetting::deskFor($user),
+        ];
+    }
+
+    /** One centre row: the dropdown's presentation plus where it stands. */
+    private function presentRow(OfficeAlert $alert, ?OfficeAlertState $state, User $user): array
+    {
+        $row = $this->present($alert, $state);
+        $row['team_key'] = $alert->team ?: 'office';
+        $row['snoozed'] = (bool) ($state?->snoozed_until && $state->snoozed_until->isFuture());
+
+        if ($alert->requires_ack && $alert->acked_at) {
+            $row['state'] = 'resolved';
+            $row['resolved_at'] = $alert->acked_at->format('d M, H:i');
+            $row['resolved_by'] = 'acknowledged by ' . ($alert->ackedBy?->name ?: 'the office')
+                . ($alert->acked_by !== $user->id ? ' (one shared read covers every desk)' : '');
+        } elseif (! $alert->requires_ack && $state?->seen_at) {
+            $row['state'] = 'resolved';
+            $row['resolved_at'] = $state->seen_at->format('d M, H:i');
+            $row['resolved_by'] = 'you marked it seen';
+        } elseif ($row['snoozed']) {
+            $row['state'] = 'snoozed';
+            $row['resolved_at'] = null;
+            $row['resolved_by'] = null;
+        } else {
+            $row['state'] = 'open';
+            $row['resolved_at'] = null;
+            $row['resolved_by'] = null;
+        }
+
+        return $row;
+    }
+
     private function present(OfficeAlert $alert, ?OfficeAlertState $state): array
     {
         $snoozed = $state?->snoozed_until && $state->snoozed_until->isFuture();

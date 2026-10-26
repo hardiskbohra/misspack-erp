@@ -94,9 +94,33 @@ self-contained shell).
    `@import` in `resources/css/master.css`, and the built
    `design-system.css` must contain it (run `npm run build:design-system`
    after touching `resources/css/**`).
+6. No `@media (max-width: …≤900px)` block pins a layout floor past the phone:
+   `min-width`/`width` ≥ 321px inside a mobile block fails the build. Wide
+   tables are the standing exception (their wrapper scrolls, rule 2);
+   anything else needs a named entry in `MOBILE_FLOOR_EXCEPTIONS` with its
+   reason, like the six-column module trend chart (`640px` inside a
+   `.module-trend-card` that the same block gives `overflow-x: auto`).
 
 Beyond the check: keep tap targets ≥ 40px, never rely on hover for essential
 actions, and try the page once in a 375px-wide window before calling it done.
+
+## 5.1 The October pass — dispatch, packaging, receipts
+
+Walking the three warehouse flows on the smallest phone found and fixed:
+
+- **Dispatch form:** the card-ified line-items table kept a phantom
+  `min-width: 346px` inside its ≤767px block — every 320px screen scrolled
+  sideways. The floor is gone (cards are `width: 100%` + padding).
+- **Shipment detail attachments:** a fixed 4-column grid squeezed photos to
+  ~70px and remove-buttons under the 40px tap floor; ≤767px it is two
+  columns with the image reading 4:3.
+- **Delivery receipt entry:** the 9-column reconciliation table now opens as
+  a full-screen sheet (`100dvh`, safe-area-aware footer) whose lines become
+  labelled stacked cards — the same `data-label` pattern the shipment form
+  already used. Seven thumb entries per line, no hunting inside a scroll well.
+
+`test:contracts` rule 6 (above) pins all three shapes for every future
+screen.
 
 ## 6. Test devices / quick sanity
 

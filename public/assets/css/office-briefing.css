@@ -187,3 +187,139 @@ body.ob-open {
         max-height: calc(100dvh - 24px);
     }
 }
+
+/* =====================================================================
+   NOTIFICATION CENTRE — the desk as a page
+   ---------------------------------------------------------------------
+   The bell panel is the glance; .obc-* is the whole desk: trays, two
+   filter rows and the resolved trail with who cleared what. Reuses the
+   dropdown's .ob-item rows so one item reads the same in both surfaces.
+   ===================================================================== */
+
+.obc-stats {
+    margin-bottom: 16px;
+}
+
+.obc-filters {
+    padding: 14px 18px;
+    display: grid;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.obc-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.obc-filter-label {
+    flex: 0 0 64px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--mc-text-3);
+}
+
+.obc-list {
+    display: grid;
+    gap: 2px;
+}
+
+.obc-item {
+    margin-bottom: 0;
+    border-radius: 0;
+    border-bottom: 1px solid var(--mc-border);
+    padding: 16px 4px;
+}
+
+.obc-item:last-child {
+    border-bottom: 0;
+}
+
+.obc-item.is-resolved {
+    opacity: .78;
+}
+
+.obc-item.is-resolved:hover {
+    opacity: 1;
+}
+
+.obc-item h3 {
+    margin: 2px 0 4px;
+    font-size: 14.5px;
+}
+
+.obc-item > p {
+    margin: 0 0 6px;
+    color: var(--mc-text-2);
+    font-size: 13px;
+    line-height: 1.55;
+    max-width: 78ch;
+}
+
+.obc-resolved-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #027a48;
+}
+
+.obc-resolved-line i {
+    font-size: 12px;
+}
+
+.obc-actions {
+    flex-wrap: wrap;
+}
+
+.obc-actions form {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.obc-snooze-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--mc-text-3);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+@media (max-width: 767px) {
+    /* The desk reads single-column on a phone: filter labels own their row,
+       the chip rows wrap, and an item's action row stacks buttons full-width
+       in thumb order — target, then clear, then snooze. */
+    .obc-filter-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .obc-filter-label {
+        flex: none;
+    }
+
+    .obc-item {
+        padding: 14px 2px;
+    }
+
+    .obc-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .obc-actions > a,
+    .obc-actions > form > .master-btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .obc-snooze {
+        justify-content: space-between;
+    }
+}

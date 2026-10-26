@@ -1462,6 +1462,73 @@ Sources: `app/Services/OfficeBriefing.php`, `app/Http/Controllers/OfficeAlertCon
 
 **Expected:** Only settings-authorised mutation persists.
 
+### IT-BRIEF-004 — Notification centre lists open briefings with their actions
+
+**Priority:** P1 · **Requirement:** REQ-BRIEF · **Implementation:** linked executable evidence
+
+- **Preconditions:** Office admin; open critical ops briefing and attention sales briefing
+- **Data:** Two raised alerts
+1. Open /office-alerts/centre
+
+**Expected:** 200 with both items, critical sorted first, tray/desk/severity chips present.
+
+**Evidence:** `tests/Feature/OfficeAlertCentreTest.php#test_the_centre_is_locked_to_guests_and_the_payroll`; `tests/Feature/OfficeAlertCentreTest.php#test_the_centre_lists_open_briefings_with_their_actions`
+
+### IT-BRIEF-005 — Centre filters narrow by desk and severity without mutating state
+
+**Priority:** P1 · **Requirement:** REQ-BRIEF · **Implementation:** linked executable evidence
+
+- **Preconditions:** Alerts on two desks and severities
+- **Data:** OPS-CASE critical, SALES-CASE info
+1. Filter team=sales
+2. then severity=critical
+3. submit nonsense state value
+
+**Expected:** Only matching desks/severities show; invalid values 422; reader state untouched; chips preserve sibling filters.
+
+**Evidence:** `tests/Feature/OfficeAlertCentreTest.php#test_filters_narrow_the_tray_and_keep_the_other_filters`
+
+### IT-BRIEF-006 — Acknowledging from the centre files a resolvable trail
+
+**Priority:** P1 · **Requirement:** REQ-BRIEF · **Implementation:** linked executable evidence
+
+- **Preconditions:** Open shared-ack briefing
+- **Data:** KYC-TEAM-LEAD alert
+1. PATCH ack from a plain form (no XHR)
+2. re-open open tray
+3. open resolved tray
+
+**Expected:** Redirect with flash (not JSON); acked_at/by stamped; open tray empties; resolved tray names who acted.
+
+**Evidence:** `tests/Feature/OfficeAlertCentreTest.php#test_ack_from_the_centre_redirects_and_files_the_resolved_trail`
+
+### IT-BRIEF-007 — Snoozing from the centre moves the card to the snoozed tray
+
+**Priority:** P2 · **Requirement:** REQ-BRIEF · **Implementation:** linked executable evidence
+
+- **Preconditions:** Open briefing
+- **Data:** until=1h form post
+1. Snooze 1h from the centre
+2. view open tray
+3. view snoozed tray
+
+**Expected:** State row stamped; open tray hides it; snoozed tray shows it with wake time.
+
+**Evidence:** `tests/Feature/OfficeAlertCentreTest.php#test_snooze_moves_the_card_out_of_open_and_back`
+
+### IT-BRIEF-008 — Centre respects the desk watcher scope
+
+**Priority:** P1 · **Requirement:** REQ-BRIEF · **Implementation:** linked executable evidence
+
+- **Preconditions:** Sales-desk watcher; ops, sales and office-wide alerts open
+- **Data:** Three alerts across desks
+1. Open centre
+2. filter to operations desk
+
+**Expected:** Only sales + office-wide visible; filtering to another desk returns the empty state, not the data.
+
+**Evidence:** `tests/Feature/OfficeAlertCentreTest.php#test_a_desk_watcher_sees_only_their_desks_briefings`
+
 ## Global search and navigation (`SEARCH`)
 
 Sources: `app/Services/GlobalSearch.php`, `app/Http/Controllers/GlobalSearchController.php`.
@@ -1877,6 +1944,30 @@ Sources: `resources/views/components/drawer.blade.php`, `public/assets/js/master
 **Expected:** Inputs and multiline fields share font/radius/padding policy and focus/error tokens; textarea has96px minimum height, auto height and vertical-only resize without mobile overflow.
 
 **Evidence:** `tests/Integration/KycTextareaPresentationTest.php#test_public_multiline_fields_share_input_base_focus_and_error_styles`
+
+### IT-UI-007 — Delivery-receipt modal is a full-screen sheet with card lines on phones
+
+**Priority:** P1 · **Requirement:** REQ-UI-RESPONSIVE · **Implementation:** planned
+
+- **Preconditions:** Dispatched shipment with line items; ≤767px viewport
+- **Data:** One shipment, two lines
+1. Open Record delivery receipt on a phone-width viewport
+
+**Expected:** Modal fills the screen; each line is a labelled card (data-label), inputs full-width, footer respects the safe area; no horizontal page scroll.
+
+**Note:** Pinned by tools/checks/responsive-check.cjs rule 6 (no layout floor past 320px inside mobile blocks) plus the full-sheet/card rules in shipments.css's mobile pass; a device pass confirms the modal fills the screen and lines stack.
+
+### IT-UI-008 — No mobile media block pins a layout past 320px
+
+**Priority:** P1 · **Requirement:** REQ-UI-RESPONSIVE · **Implementation:** planned
+
+- **Preconditions:** Effective ≤767px rules across module sheets
+- **Data:** Contract scan
+1. Run responsive check
+
+**Expected:** No min-width/width ≥321px on non-table selectors inside max-width media blocks; the trend-chart exception is named with its reason.
+
+**Note:** Contract-only case: the check itself is the executable evidence (npm run test:contracts → responsive rule 6).
 
 ## GST: GSTIN checksum, HSN/SAC master and e-invoice (IRN/QR) (`TAX`)
 

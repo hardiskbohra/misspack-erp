@@ -261,6 +261,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/settings/cashflow/masters/{master}', [CashflowSettingController::class, 'updateMaster'])->name('settings.cashflow.masters.update');
         Route::delete('/settings/cashflow/masters/{master}', [CashflowSettingController::class, 'destroyMaster'])->name('settings.cashflow.masters.destroy');
         Route::get('/office-alerts', [OfficeAlertController::class, 'inbox'])->name('office-alerts.inbox');
+        Route::get('/office-alerts/centre', [OfficeAlertController::class, 'centre'])->name('office-alerts.centre');
         Route::patch('/office-alerts/{office_alert}/seen', [OfficeAlertController::class, 'seen'])->name('office-alerts.seen');
         Route::patch('/office-alerts/{office_alert}/ack', [OfficeAlertController::class, 'ack'])->name('office-alerts.ack');
         Route::patch('/office-alerts/{office_alert}/snooze', [OfficeAlertController::class, 'snooze'])->name('office-alerts.snooze');
