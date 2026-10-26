@@ -80,3 +80,22 @@ Seed the three manual alerts first (tinker block above). Also submit one real KY
 - Delete the seeded alerts (tinker snippet above).
 - Note any visual-only findings (spacing, contrast) separately from functional failures — the latter block the merge, the former can follow as polish.
 - If a case fails on a device geometry, capture: URL, viewport, screenshot, and whether it passes at 375px (narrows down media-query vs content bugs).
+
+---
+
+## Part 3 — E-mail invoice send tracking (MC-SEND, latest slice)
+
+Seed: one draft tax invoice with a client whose card has an accounts-desk e-mail; one issued invoice; one cancelled invoice. Delete after: `\App\Models\SalesInvoiceSend::query()->delete()` in tinker is enough.
+
+| # | Start | Steps | Expected |
+|---|---|---|---|
+| MC-SEND-01 | Invoice record page (draft) | Actions menu → **Email to client** | Compose dialog opens, To prefilled from the snapshot/accounts desk, subject and message written; mark-sent ticked |
+| MC-SEND-02 | Same | Send with default words | Flash confirms; the draft flips to *sent*; **In the client's inbox** card lists the send with To/avatars of sender/time; portal link works from the mail |
+| MC-SEND-03 | Received e-mail | Open the mail in the client mailbox | Numbers panel (no./date/due/total) matches the invoice; the office's words appear as written; **View the invoice** button opens the public copy |
+| MC-SEND-04 | Issued invoice | Email it again with the box **unticked** | Nothing on the invoice moves (status/portal/sent-at); the resend still logs; the mail has no View button (the portal is off) |
+| MC-SEND-05 | Compose dialog | Set To to `not-an-email` and send | Validation carries you back into the open dialog with the field flagged; nothing logged |
+| MC-SEND-06 | Cancelled invoice | Email action hidden/refused | Server refuses with a plain reason; nothing in the log |
+| MC-SEND-07 | List page row menu | **Email to client** straight from an invoice row | Same dialog, defaults for *that* row's invoice — never the previous row's leftovers |
+| MC-SEND-08 | Mailer down (or log driver) | Send from the record page | Flash carries the transport's reason; the card shows a red **Failed** event with the reason; the office bell pops an accounts-desk briefing and resolvability in the notification centre |
+| MC-SEND-09 | Delivery-receipt-style regression: dialog at 375px | Open the compose dialog on a phone width | Fields full-width, Send it reachable above the safe area — same sheet discipline as the delivery receipt |
+
