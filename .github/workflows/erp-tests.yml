@@ -36,7 +36,7 @@ jobs:
               # TEMP DEBUG PROBE (revert after fix): annotations cap at ten, so
               # spend them on the first lines of the failing single-test run —
               # that is where the exception text lives.
-              vendor/bin/phpunit --filter test_a_refused_send_is_logged_and_briefs_the_desk 2>&1 | head -60 | while IFS= read -r line; do printf '::error::%s\n' "$line"; done
+              vendor/bin/phpunit --filter test_a_refused_send_is_logged_and_briefs_the_desk 2>&1 | tail -30 | while IFS= read -r line; do printf '::error::%s\n' "$line"; done
             fi
             exit 1
           fi
