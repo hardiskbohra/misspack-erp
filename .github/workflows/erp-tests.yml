@@ -33,14 +33,12 @@ jobs:
             # broke without opening logs (which some environments cannot fetch).
             node tools/testing/junit-failures.cjs .work/phpunit.xml
             if [ ! -s .work/phpunit.xml ]; then
+              # TEMP DEBUG PROBE (whole block reverts with the fix)
+              vendor/bin/phpunit --filter test_probe_refused_send_without_exception_handling 2>&1 | grep -v -E '^#[0-9]+ ' | head -90 | while IFS= read -r line; do printf '::error::%s\n' "$line"; done
               # TEMP DEBUG PROBE (revert after fix): annotations cap at ten, so
               # spend them on the first lines of the failing single-test run —
               # that is where the exception text lives.
-              vendor/bin/phpunit --filter test_a_refused_send_is_logged_and_briefs_the_desk 2>&1 | tail -6 | while IFS= read -r line; do printf '::error::%s\n' "$line"; done
               # the handler logged the exception the 500 page hides
-              ls -la storage/logs/ 2>/dev/null | while IFS= read -r line; do printf '::error title=LOGS::%s\n' "$line"; done
-              grep -a -h 'local.ERROR' storage/logs/laravel.log 2>/dev/null | tail -2 | head -c 1400 | tr -d '\t' | tr '\n' '~' | while IFS= read -r line; do printf '::error title=EXC::%s\n' "$line"; done
-              vendor/bin/phpunit --filter test_a_refused_send_is_logged_and_briefs_the_desk --display-errors --display-warnings 2>&1 | grep -a -E '500|Error|error|Fatal|Exception' | grep -v '^#' | head -12 | while IFS= read -r line; do printf '::error title=MAIL::%s\n' "$line"; done
             fi
             exit 1
           fi
