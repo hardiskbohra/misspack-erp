@@ -59,7 +59,7 @@ class OfficeAlertController extends Controller
             : back()->with('status', 'Marked as read — it stays in the centre\'s history.');
     }
 
-    public function snooze(Request $request, OfficeAlert $office_alert, OfficeBriefing $briefing): JsonResponse
+    public function snooze(Request $request, OfficeAlert $office_alert, OfficeBriefing $briefing): JsonResponse|RedirectResponse
     {
         $until = $request->validate([
             'until' => ['required', 'in:1h,4h,tomorrow'],
