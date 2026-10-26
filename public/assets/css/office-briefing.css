@@ -212,6 +212,16 @@ body.ob-open {
     margin-bottom: 0;
 }
 
+/* master-list.css spaces *its* cards (.master-list .master-card, margin 18px)
+   at specificity (0,2,0) — the page also wears .master-list, and that margin
+   was beating the zeroing above (0,1,1). Same-class specificity plus this
+   module sheet's later load order is what puts the gutter back to 16px
+   exactly, head/stats/filters/tray alike. */
+.obc > .master-card {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
 .obc .master-alert {
     margin: 0;
 }
