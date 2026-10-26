@@ -184,9 +184,9 @@ class SalesInvoiceAdjustment
             'lines.*.quantity' => 'required|numeric|min:0.0001',
         ])->validate();
 
-        $invoice->loadMissing('items', 'notes');
+        $invoice->loadMissing('items', 'adjustments');
 
-        $alreadyReturned = $invoice->notes->where('is_return', true)
+        $alreadyReturned = $invoice->adjustments->where('is_return', true)
             ->where('status', SalesInvoiceNote::STATUS_ISSUED)
             ->flatMap(fn ($note) => collect($note->lines ?? []))
             ->groupBy('item_id')
@@ -303,7 +303,7 @@ class SalesInvoiceAdjustment
     public function syncStoredBalance(SalesInvoice $invoice): void
     {
         $invoice->unsetRelation('payments');
-        $invoice->unsetRelation('notes')->refresh();
+        $invoice->unsetRelation('adjustments')->refresh();
 
         $balance = $invoice->balanceDue();
 
@@ -382,7 +382,7 @@ class SalesInvoiceAdjustment
     /** You cannot credit more than the document is currently worth. */
     protected function assertCreditFits(SalesInvoice $invoice, float $creditTotal): void
     {
-        $invoice->loadMissing('notes');
+        $invoice->loadMissing('adjustments');
         $payable = $invoice->payableTotal();
 
         if ($creditTotal > $payable + 0.01) {

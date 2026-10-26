@@ -58,7 +58,7 @@
 @php
     /* On a record that never asked for its corrections there is nothing
        already returned — the dialog opens with every line returnable. */
-    $notesModel = $invoice->relationLoaded('notes') ? $invoice->notes : collect();
+    $notesModel = $invoice->relationLoaded('adjustments') ? $invoice->adjustments : collect();
     $returned = $notesModel->where('is_return', true)
         ->where('status', \App\Models\SalesInvoiceNote::STATUS_ISSUED)
         ->flatMap(fn ($note) => collect($note->lines ?? []))

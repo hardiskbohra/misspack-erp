@@ -3932,7 +3932,7 @@
                 "PATCH"
             ],
             "uri": "sales-invoice-notes/{note}/cancel",
-            "action": "App\\\\Http\\\\Controllers\\\\SalesInvoiceNoteController@cancel",
+            "action": "App\\Http\\Controllers\\SalesInvoiceNoteController@cancel",
             "middleware": [
                 "web",
                 "auth",
@@ -3946,7 +3946,7 @@
                 "HEAD"
             ],
             "uri": "sales-invoice-notes/{note}/print",
-            "action": "App\\\\Http\\\\Controllers\\\\SalesInvoiceNoteController@print",
+            "action": "App\\Http\\Controllers\\SalesInvoiceNoteController@print",
             "middleware": [
                 "web",
                 "auth",
@@ -4171,7 +4171,7 @@
                 "POST"
             ],
             "uri": "sales-invoices/{salesInvoice}/notes",
-            "action": "App\\\\Http\\\\Controllers\\\\SalesInvoiceNoteController@store",
+            "action": "App\\Http\\Controllers\\SalesInvoiceNoteController@store",
             "middleware": [
                 "web",
                 "auth",
@@ -4237,7 +4237,7 @@
                 "POST"
             ],
             "uri": "sales-invoices/{salesInvoice}/returns",
-            "action": "App\\\\Http\\\\Controllers\\\\SalesInvoiceNoteController@storeReturn",
+            "action": "App\\Http\\Controllers\\SalesInvoiceNoteController@storeReturn",
             "middleware": [
                 "web",
                 "auth",

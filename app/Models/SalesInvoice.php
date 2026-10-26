@@ -96,7 +96,7 @@ class SalesInvoice extends Model
      */
     public static function payableSql(): string
     {
-        return \Illuminate\Support\Facades\Schema::hasTable('sales_invoice_notes')
+        return static::notesTableExists()
             ? self::PAYABLE_TOTAL_SQL
             : self::RECEIVABLE_TOTAL_SQL;
     }
@@ -337,10 +337,29 @@ class SalesInvoice extends Model
     public const CREDIT_NOTES_SQL = "(select coalesce(sum(sales_invoice_notes.total), 0) from sales_invoice_notes where sales_invoice_notes.sales_invoice_id = sales_invoices.id and sales_invoice_notes.kind = 'credit' and sales_invoice_notes.status = 'issued')";
     public const DEBIT_NOTES_SQL = "(select coalesce(sum(sales_invoice_notes.total), 0) from sales_invoice_notes where sales_invoice_notes.sales_invoice_id = sales_invoices.id and sales_invoice_notes.kind = 'debit' and sales_invoice_notes.status = 'issued')";
 
-    /** The credits and debits posted against this invoice. */
-    public function notes()
+    /* NOT `notes` — the invoice's own printable notes column bears that
+       name and an attribute beats a relation on read. The corrections are the
+       invoice's adjustments. */
+    public function adjustments()
     {
         return $this->hasMany(SalesInvoiceNote::class, 'sales_invoice_id')->latest('id');
+    }
+
+    /**
+     * Does this database even know corrections? A table-check per row is how
+     * a ledger page suddenly runs fifty queries — memoize once per request.
+     * The container instance is rebuilt for every request AND every test, so
+     * a fixture that migrates late never poisons a later one.
+     */
+    public static function notesTableExists(): bool
+    {
+        $key = 'sales-invoice-notes-table-exists';
+
+        if (! app()->bound($key)) {
+            app()->instance($key, \Illuminate\Support\Facades\Schema::hasTable('sales_invoice_notes'));
+        }
+
+        return (bool) app($key);
     }
 
     /** The live notes, cheapest first: a loaded relation or a query. */
@@ -348,11 +367,13 @@ class SalesInvoice extends Model
     {
         /* Databases that predate the adjustments table have no corrections —
            an empty set is the honest answer, never a 500. */
-        if (! \Illuminate\Support\Facades\Schema::hasTable('sales_invoice_notes')) {
+        if (! static::notesTableExists()) {
             return collect();
         }
 
-        $notes = $this->relationLoaded('notes') ? $this->notes : $this->notes()->get();
+        $notes = $this->relationLoaded('adjustments')
+            ? $this->adjustments
+            : $this->adjustments()->get();
 
         return $notes->where('status', SalesInvoiceNote::STATUS_ISSUED);
     }

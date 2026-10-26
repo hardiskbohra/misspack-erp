@@ -4,8 +4,8 @@
 @php
     /** @var \App\Models\SalesInvoice $invoice — like the send log beside it,
         the card appears only once the record asked for its corrections. */
-    $notesSupported = $invoice->relationLoaded('notes');
-    $notes = $notesSupported ? $invoice->notes : collect();
+    $notesSupported = $invoice->relationLoaded('adjustments');
+    $notes = $notesSupported ? $invoice->adjustments : collect();
     $adjustmentsUnlocked = $invoice->invoice_type === 'tax'
         && $invoice->status !== 'draft'
         && $invoice->status !== 'cancelled'

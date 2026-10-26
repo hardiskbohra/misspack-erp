@@ -802,8 +802,8 @@ class SalesInvoiceController extends Controller
         if (Schema::hasTable('sales_invoice_sends')) {
             $salesInvoice->load('sends.sender');
         }
-        if (Schema::hasTable('sales_invoice_notes')) {
-            $salesInvoice->load('notes.creator');
+        if (SalesInvoice::notesTableExists()) {
+            $salesInvoice->load('adjustments.creator');
         }
         if (Schema::hasTable('cashflow_allocations')) {
             $salesInvoice->load('cashflowAllocations.cashflowEntry');

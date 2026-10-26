@@ -157,7 +157,7 @@ class InvoiceAdjustmentTest extends TestCase
         /* 500 at the invoice's 9+9 split: 500 + 45 + 45. */
         $this->assertEquals(590, (float) $note->total);
 
-        $invoice->unsetRelation('notes');
+        $invoice->unsetRelation('adjustments');
         $this->assertEquals(590, $invoice->payableTotal());
         $this->assertEquals(590, $invoice->balanceDue());
         /* The stored copy other ledgers read moved too. */
@@ -167,7 +167,7 @@ class InvoiceAdjustmentTest extends TestCase
         app(SalesInvoiceAdjustment::class)->issue($invoice->fresh(), 'credit', [
             'note_date' => '2026-10-25', 'subtotal' => 500, 'reason' => 'Second box disputed',
         ]);
-        $invoice->unsetRelation('notes');
+        $invoice->unsetRelation('adjustments');
         $this->assertEquals(0, $invoice->payableTotal());
         $this->assertSame('paid', $invoice->paymentState());
 
@@ -197,7 +197,7 @@ class InvoiceAdjustmentTest extends TestCase
         /* 200 + 18 + 18 of tax. */
         $this->assertEquals(236, (float) $note->total);
 
-        $invoice->unsetRelation('notes');
+        $invoice->unsetRelation('adjustments');
         $this->assertEquals(1416, $invoice->payableTotal());
         $this->assertEquals(1416, $invoice->balanceDue());
     }
@@ -250,7 +250,7 @@ class InvoiceAdjustmentTest extends TestCase
         $this->assertSame('cancelled', $note->status);
         $this->assertSame('Issued twice — the other note is the right one', $note->cancel_reason);
 
-        $invoice->unsetRelation('notes');
+        $invoice->unsetRelation('adjustments');
         $this->assertEquals(1180, $invoice->payableTotal());
         $this->assertEquals(1180, (float) $invoice->fresh()->balance_amount);
 
@@ -288,7 +288,7 @@ class InvoiceAdjustmentTest extends TestCase
             'note_date' => '2026-10-24', 'subtotal' => 500, 'reason' => 'Rate revision, part of order',
         ]);
 
-        $invoice->unsetRelation('notes');
+        $invoice->unsetRelation('adjustments');
         /* 1180 - 590 credited = 590 owed; 500 already in hand leaves 90. */
         $this->assertEquals(590, $invoice->payableTotal());
         $this->assertEquals(500, $invoice->receivedAmount());
