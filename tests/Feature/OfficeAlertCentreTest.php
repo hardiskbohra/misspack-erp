@@ -128,13 +128,19 @@ class OfficeAlertCentreTest extends TestCase
         /* a nonsense filter value is refused, not silently dropped */
         $this->get(route('office-alerts.centre', ['state' => 'purple']))->assertSessionHasErrors(['state']);
 
-        /* the filter chips carry the sibling filters across */
+        /* the filter chips carry the SIBLING filters across: changing the
+           desk never drops the severity, and changing the tray never drops
+           the desk (the desk row's own chips legitimately re-target desk) */
         $response = $this->get(route('office-alerts.centre', ['team' => 'operations', 'severity' => 'critical']));
         preg_match_all('/href="([^"]+)"/', $response->getContent(), $href);
-        $linked = array_filter($href[1], fn ($u) => str_contains($u, 'severity=critical'));
-        $this->assertNotEmpty($linked);
-        foreach ($linked as $u) {
-            /* chips that hold severity also hold the desk filter */
+        $deskRow = array_filter($href[1], fn ($u) => str_contains($u, 'team=sales'));
+        $this->assertNotEmpty($deskRow);
+        foreach ($deskRow as $u) {
+            $this->assertStringContainsString('severity=critical', $u);
+        }
+        $trayRow = array_filter($href[1], fn ($u) => str_contains($u, 'state=resolved'));
+        $this->assertNotEmpty($trayRow);
+        foreach ($trayRow as $u) {
             $this->assertStringContainsString('team=operations', $u);
         }
         $this->assertDatabaseCount('office_alert_states', 0); // a filter never mutates reader state
