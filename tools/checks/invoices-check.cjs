@@ -477,8 +477,9 @@ check('still owed is the Balance column, summed — a draft is money too',
     owedClauses.length === 2
     && owedClauses.every(clause => /RECEIVED_SQL/.test(clause)
         /* Owed is payable − received: credits and debits net into the figure,
-           one rule from the model, so list, card and CSV agree. */
-        && /(invoiceTotal|PAYABLE_TOTAL_SQL)/.test(clause)
+           one rule from the model (payableSql() falls back to the receivable
+           where corrections cannot exist yet), so list, card and CSV agree. */
+        && /(invoiceTotal|PAYABLE_TOTAL_SQL|payableSql\(\))/.test(clause)
         && /status <> 'cancelled'/.test(clause)
         && ! /'draft'/.test(clause))
     && /The Balance column, added up/.test(view),

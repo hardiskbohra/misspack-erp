@@ -88,6 +88,19 @@ class SalesInvoice extends Model
         .' then '.self::RECEIVABLE_TOTAL_SQL.' - '.self::CREDIT_NOTES_SQL.' + '.self::DEBIT_NOTES_SQL
         .' else 0 end)';
 
+    /**
+     * The payable rule as SQL — but a database that predates the notes table
+     * has no corrections, so lists and filters on it must fall back to the
+     * receivable rather than explode on a missing table. Same guard the
+     * loaders already use (@see liveNotes()).
+     */
+    public static function payableSql(): string
+    {
+        return \Illuminate\Support\Facades\Schema::hasTable('sales_invoice_notes')
+            ? self::PAYABLE_TOTAL_SQL
+            : self::RECEIVABLE_TOTAL_SQL;
+    }
+
     public function isCash(): bool
     {
         return $this->invoice_type === 'cash';

@@ -98,13 +98,13 @@ class SalesInvoiceController extends Controller
                that vanishes: the tax invoice a conversion creates starts as one
                with the advance already on it. Only a cancellation takes a document
                out of what is owed. */
-            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < '.SalesInvoice::PAYABLE_TOTAL_SQL.' - 0.01'
-                ." and sales_invoices.status <> 'cancelled' then ".SalesInvoice::PAYABLE_TOTAL_SQL.' - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
+            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < '.SalesInvoice::payableSql().' - 0.01'
+                ." and sales_invoices.status <> 'cancelled' then ".SalesInvoice::payableSql().' - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
             .', coalesce(sum(case when sales_invoices.due_date is not null and sales_invoices.due_date < ?'
                 ." and sales_invoices.status not in ('draft', 'cancelled')"
                 .' and '.$live
-                .' and '.SalesInvoice::RECEIVED_SQL.' < '.SalesInvoice::PAYABLE_TOTAL_SQL.' - 0.01'
-                .' then '.SalesInvoice::PAYABLE_TOTAL_SQL.' - '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as overdue'
+                .' and '.SalesInvoice::RECEIVED_SQL.' < '.SalesInvoice::payableSql().' - 0.01'
+                .' then '.SalesInvoice::payableSql().' - '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as overdue'
         )
             ->addBinding([now()->toDateString()], 'select')
             ->first();
@@ -129,8 +129,8 @@ class SalesInvoiceController extends Controller
         $totals = $this->filteredQuery($filters)->reorder()->selectRaw(
             'coalesce(sum(case when '.$live.' then '.$invoiceTotal.' else 0 end), 0) as counted'
             .', coalesce(sum(case when '.$live.' then '.SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as received'
-            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < '.SalesInvoice::PAYABLE_TOTAL_SQL.' - 0.01'
-                ." and sales_invoices.status <> 'cancelled' then ".SalesInvoice::PAYABLE_TOTAL_SQL.' - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
+            .', coalesce(sum(case when '.$live.' and '.SalesInvoice::RECEIVED_SQL.' < '.SalesInvoice::payableSql().' - 0.01'
+                ." and sales_invoices.status <> 'cancelled' then ".SalesInvoice::payableSql().' - ".SalesInvoice::RECEIVED_SQL.' else 0 end), 0) as outstanding'
         )->first();
 
         $pageTotals = [
