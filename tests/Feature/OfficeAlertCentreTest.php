@@ -29,6 +29,7 @@ class OfficeAlertCentreTest extends TestCase
             '0001_01_01_000000_create_users_table',
             '2024_01_02_000001_add_extra_fields_to_users_table',
             '2026_10_03_030000_add_employment_profile_to_users_table',
+            '2026_10_19_110000_create_permissions_and_audit_log',
             '2026_10_06_020000_create_office_alerts_table',
             '2026_10_06_030000_add_shared_ack_to_office_alerts',
             '2026_10_06_040000_add_snooze_and_email_to_office_alerts',
