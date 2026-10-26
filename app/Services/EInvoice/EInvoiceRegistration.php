@@ -187,7 +187,7 @@ final class EInvoiceRegistration
             return;
         }
 
-        if ($result->registered && $result->irn) {
+        if ($result->ok && ! $result->needsManualFinish && $result->irn) {
             $record->fill([
                 'status' => SalesInvoiceEInvoice::STATUS_REGISTERED,
                 'irn' => $result->irn,

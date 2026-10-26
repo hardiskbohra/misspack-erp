@@ -805,8 +805,11 @@ class SalesInvoiceController extends Controller
            dialog, and a dialog whose account list is missing is a 500. */
         /* The e-invoice card lives behind canRegister(), so a non-registered
            invoice never looks at $eInvoice at all — but the moment an IRN
-           exists the card shows it, from this guarded hand-off. */
-        $eInvoice = $salesInvoice->eInvoice?->isRegistered() ? $salesInvoice->eInvoice : null;
+           exists the card shows it, from this guarded hand-off (relation only
+           ever loaded when the table exists — databases predating it must not
+           touch it even here). */
+        $loaded = $salesInvoice->relationLoaded('eInvoice') ? $salesInvoice->eInvoice : null;
+        $eInvoice = $loaded && $loaded->isRegistered() ? $loaded : null;
         $eInvoiceIssues = $salesInvoice->eInvoiceReasons();
 
         return view('sales_invoices.show', [
