@@ -13,7 +13,7 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-PROJECT | Project master and product lanes | 3 | 4 | 1 |
 | REQ-WORKFLOW | Execution, approvals, gates and financial closure | 3 | 6 | 6 |
 | REQ-QC | Quality inspection and sampling | 3 | 3 | 0 |
-| REQ-PACK | Packaging lists, verification and print labels | 3 | 5 | 3 |
+| REQ-PACK | Packaging lists, verification and print labels | 3 | 5 | 4 |
 | REQ-SHIP | Shipments, dispatch and delivery | 4 | 9 | 8 |
 | REQ-SALES | Proformas, cash invoices and tax invoices | 3 | 32 | 32 |
 | REQ-PURCHASE | Purchase documents and vendor settlement | 3 | 3 | 1 |
@@ -34,5 +34,5 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-DASH | Overview and module dashboard reporting | 4 | 6 | 6 |
 | REQ-AUDIT | Audit trail and sensitive operations | 3 | 4 | 1 |
 | REQ-FILES | Shared file policy and storage lifecycle | 3 | 4 | 4 |
-| REQ-UI | Shared UI, printing and accessible interactions | 4 | 9 | 4 |
+| REQ-UI | Shared UI, printing and accessible interactions | 4 | 9 | 5 |
 | REQ-TAX | GST: GSTIN checksum, HSN/SAC master and e-invoice (IRN/QR) | 1 | 11 | 12 |

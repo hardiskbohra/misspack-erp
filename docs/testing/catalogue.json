@@ -1296,7 +1296,13 @@
         "Render each print mode"
       ],
       "expected": "Both thermal options available; selected orientation/columns/header/footer/page numbers respected.",
-      "automation": []
+      "automation": [
+        "tests/Feature/PackagingAllLabelsTest.php#test_all_formats_render_each_physical_carton_with_correct_data_and_audit_counts",
+        "tests/Feature/PackagingPrintSettingsTest.php#test_saving_only_changes_print_settings_and_returns_to_the_print_page",
+        "tests/Feature/PackagingPrintColumnsViewTest.php#test_print_headers_cells_spans_and_totals_follow_the_saved_selection"
+      ],
+      "evidence_scope": "partial",
+      "notes": "Method links cover selected label, print-setting and column cases, not every configuration. Thermal typography and actual PDF checks are separately documented in thermal-label-typography.md."
     },
     {
       "id": "UT-SHIP-001",
@@ -3287,7 +3293,14 @@
         "Render each print page and inspect final print rules"
       ],
       "expected": "Correct paper geometry; black document text; sender branding and configured columns respected.",
-      "automation": []
+      "automation": [
+        "tests/Feature/PackagingCartonLabelViewTest.php#test_thermal_label_uses_100_by_140_mm_stock",
+        "tests/Feature/PackagingCartonLabelViewTest.php#test_100_by_150_is_an_additional_thermal_format_without_changing_140",
+        "tests/Feature/PackagingCartonLabelViewTest.php#test_misspack_sender_is_the_heading_and_has_our_print_logo_in_every_format",
+        "tests/Feature/PackagingCartonLabelViewTest.php#test_vendor_sender_has_its_own_heading_and_never_our_logo"
+      ],
+      "evidence_scope": "partial",
+      "notes": "Method links cover carton-label Blade paper and branding only. Thermal PDF geometry, typography and overflow limitations are separately documented in thermal-label-typography.md."
     },
     {
       "id": "IT-SALES-004",

@@ -1233,6 +1233,7 @@
     "tools/checks/module-dashboard-check.cjs",
     "tools/checks/notes-check.cjs",
     "tools/checks/packaging-label-batch-check.cjs",
+    "tools/checks/packaging-label-typography-browser.cjs",
     "tools/checks/packaging-lists-check.cjs",
     "tools/checks/packaging-print-borders-browser.cjs",
     "tools/checks/packaging-print-settings-check.cjs",

@@ -691,7 +691,7 @@ Sources: `app/Http/Controllers/PackagingListController.php`, `app/Services/Packa
 
 ### IT-PACK-003 — Print options remain per list and independent
 
-**Priority:** P0 · **Requirement:** REQ-PACK · **Implementation:** planned
+**Priority:** P0 · **Requirement:** REQ-PACK · **Implementation:** partial evidence
 
 - **Preconditions:** F-PRODUCTS; packing groups and carton sizes; sender MissPack or third party
 - **Data:** 100x140 and 100x150 thermal sizes; A4 orientation; custom columns
@@ -699,6 +699,10 @@ Sources: `app/Http/Controllers/PackagingListController.php`, `app/Services/Packa
 2. Render each print mode
 
 **Expected:** Both thermal options available; selected orientation/columns/header/footer/page numbers respected.
+
+**Note:** Method links cover selected label, print-setting and column cases, not every configuration. Thermal typography and actual PDF checks are separately documented in thermal-label-typography.md.
+
+**Evidence:** `tests/Feature/PackagingAllLabelsTest.php#test_all_formats_render_each_physical_carton_with_correct_data_and_audit_counts`; `tests/Feature/PackagingPrintSettingsTest.php#test_saving_only_changes_print_settings_and_returns_to_the_print_page`; `tests/Feature/PackagingPrintColumnsViewTest.php#test_print_headers_cells_spans_and_totals_follow_the_saved_selection`
 
 ### IT-PACK-004 — Foreign project mapping is refused on save
 
@@ -2213,13 +2217,17 @@ Sources: `resources/views/components/drawer.blade.php`, `public/assets/js/master
 
 ### IT-UI-003 — Document prints use requested paper and identity
 
-**Priority:** P1 · **Requirement:** REQ-UI · **Implementation:** planned
+**Priority:** P1 · **Requirement:** REQ-UI · **Implementation:** partial evidence
 
 - **Preconditions:** Desktop1440,tablet768,mobile390 and320; light/dark; keyboard-only input
 - **Data:** A4 portrait/landscape;100x140 and100x150 labels
 1. Render each print page and inspect final print rules
 
 **Expected:** Correct paper geometry; black document text; sender branding and configured columns respected.
+
+**Note:** Method links cover carton-label Blade paper and branding only. Thermal PDF geometry, typography and overflow limitations are separately documented in thermal-label-typography.md.
+
+**Evidence:** `tests/Feature/PackagingCartonLabelViewTest.php#test_thermal_label_uses_100_by_140_mm_stock`; `tests/Feature/PackagingCartonLabelViewTest.php#test_100_by_150_is_an_additional_thermal_format_without_changing_140`; `tests/Feature/PackagingCartonLabelViewTest.php#test_misspack_sender_is_the_heading_and_has_our_print_logo_in_every_format`; `tests/Feature/PackagingCartonLabelViewTest.php#test_vendor_sender_has_its_own_heading_and_never_our_logo`
 
 ### IT-UI-004 — Compact topbar preserves private utilities and reporting context
 

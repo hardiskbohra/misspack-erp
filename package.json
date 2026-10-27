@@ -6,7 +6,7 @@
     "build": "node tools/build-css-architecture.js && vite build",
     "build:design-system": "node tools/build-css-architecture.js",
     "dev": "vite",
-    "test:contracts": "node tools/testing/catalogue.cjs --check && node tools/testing/catalogue.test.cjs && node --test tools/testing/select2-policy.test.cjs && node tools/checks/dashboard-period-controls-check.cjs && node tools/checks/module-dashboard-check.cjs && node tools/checks/blade-check.cjs && node tools/checks/responsive-check.cjs && node --test tools/testing/qr-code.test.cjs",
+    "test:contracts": "node tools/testing/catalogue.cjs --check && node tools/testing/catalogue.test.cjs && node --test tools/testing/select2-policy.test.cjs tools/testing/packaging-label-typography.test.cjs && node tools/checks/dashboard-period-controls-check.cjs && node tools/checks/module-dashboard-check.cjs && node tools/checks/blade-check.cjs && node tools/checks/responsive-check.cjs && node --test tools/testing/qr-code.test.cjs",
     "test:catalogue": "node tools/testing/catalogue.cjs --check && node tools/testing/catalogue.test.cjs",
     "test:catalogue:build": "node tools/testing/catalogue.cjs",
     "test:php": "vendor/bin/phpunit",
