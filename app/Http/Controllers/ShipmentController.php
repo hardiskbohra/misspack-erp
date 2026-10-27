@@ -256,6 +256,9 @@ class ShipmentController extends Controller
 
     public function update(Request $request, Shipment $shipment): RedirectResponse
     {
+        // A missing collection is not the same as an operator clearing every
+        // row. The editable form sends a marker even when it has no rows.
+        $replaceItems = $request->has('items') || $request->boolean('items_present');
         $data = $this->validatedData($request, $shipment);
         $this->validatePhotoAttachments($request);
         $items = $data['items'] ?? [];
@@ -281,7 +284,9 @@ class ShipmentController extends Controller
         if ($dispatchTransition && $workflow) {
             $authorizationCandidate = clone $shipment;
             $authorizationCandidate->status = $data['status'];
-            $evaluation = app(ShipmentDispatchAuthorization::class)->evaluate($authorizationCandidate, $workflow, $items, Auth::id());
+            $authorization = app(ShipmentDispatchAuthorization::class);
+            $evaluationRows = $replaceItems ? $items : $authorization->rowsFromShipment($shipment);
+            $evaluation = $authorization->evaluate($authorizationCandidate, $workflow, $evaluationRows, Auth::id());
             $evaluation->loadMissing('activeOverride');
             if (! in_array($evaluation->effectiveResult(), ['passed', 'overridden'], true)) {
                 throw ValidationException::withMessages([
@@ -292,10 +297,10 @@ class ShipmentController extends Controller
 
         $oldStatus = $shipment->status;
 
-        DB::transaction(function () use ($request, $shipment, $data, $items, $oldStatus, $dispatchTransition, $workflow, $evaluation) {
+        DB::transaction(function () use ($request, $shipment, $data, $items, $replaceItems, $oldStatus, $dispatchTransition, $workflow, $evaluation) {
             $data['show_client_portal'] = $request->boolean('show_client_portal');
             $shipment->update($data);
-            if ($oldStatus === Shipment::STATUS_PLANNING) {
+            if ($oldStatus === Shipment::STATUS_PLANNING && $replaceItems) {
                 $this->syncItems($shipment, $items);
             }
             if ($dispatchTransition && $workflow && $evaluation) {
@@ -663,9 +668,33 @@ class ShipmentController extends Controller
 
     private function validatedData(Request $request, ?Shipment $shipment = null): array
     {
+        $items = $request->input('items', []);
+        if (! is_array($items)) {
+            throw ValidationException::withMessages(['items' => 'Shipment lines must be a list of items.']);
+        }
+        foreach ($items as $index => $item) {
+            if (! is_array($item)) {
+                throw ValidationException::withMessages(['items.'.$index => 'Each shipment line must be an item.']);
+            }
+        }
+
+        // Ignore only genuinely empty form-template rows. A partially entered
+        // line must produce an error rather than disappear when syncItems replaces
+        // the existing shipment lines.
         $request->merge([
-            'items' => collect($request->input('items', []))
-                ->filter(fn ($item) => filled($item['project_product_id'] ?? null) || filled($item['product_name'] ?? null))
+            'items' => collect($items)
+                ->filter(function (array $item): bool {
+                    foreach (['project_product_id', 'product_name', 'sku', 'hs_code', 'declared_value', 'net_weight', 'gross_weight', 'description'] as $field) {
+                        if (filled($item[$field] ?? null)) return true;
+                    }
+                    $quantity = $item['quantity'] ?? null;
+                    if (filled($quantity) && (! is_numeric($quantity) || (float) $quantity !== 1.0)) return true;
+                    if (filled($item['unit'] ?? null) && $item['unit'] !== 'pcs') return true;
+                    // A new row's dropdown defaults to INR even when the
+                    // shipment uses another currency; that alone is not data.
+                    $currency = $item['currency'] ?? null;
+                    return filled($currency) && ! in_array($currency, ['INR', 'RMB', 'USD'], true);
+                })
                 ->values()
                 ->all(),
         ]);
@@ -713,28 +742,30 @@ class ShipmentController extends Controller
             'delay_reason' => ['nullable', 'string', 'max:60'],
             'sales_invoice_id' => ['nullable', 'integer'],
             'notify_client' => ['nullable', 'boolean'],
-            'shipment_cost' => ['nullable', 'numeric', 'min:0'],
+            // Match the actual DECIMAL and unsigned integer storage limits;
+            // reject excess precision instead of depending on MySQL rounding.
+            'shipment_cost' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99', 'decimal:0,2'],
             'currency' => ['required', 'in:INR,RMB,USD'],
             'cost_borne_by' => ['required', 'in:shipper,receiver,misspack'],
-            'package_count' => ['nullable', 'integer', 'min:0'],
-            'gross_weight' => ['nullable', 'numeric', 'min:0'],
-            'chargeable_weight' => ['nullable', 'numeric', 'min:0'],
+            'package_count' => ['nullable', 'integer', 'min:0', 'max:4294967295'],
+            'gross_weight' => ['nullable', 'numeric', 'min:0', 'max:999999999.999', 'decimal:0,3'],
+            'chargeable_weight' => ['nullable', 'numeric', 'min:0', 'max:999999999.999', 'decimal:0,3'],
             'notes' => ['nullable', 'string'],
 
             'attachment_photos' => ['nullable', 'array'],
             'attachment_photos.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:8192'],
 
             'items' => ['nullable', 'array'],
-            'items.*.project_product_id' => [Rule::requiredIf(fn () => filled($request->input('project_id'))), 'nullable', Rule::exists('project_products', 'id')->where(fn ($query) => $query->where('project_id', $request->input('project_id')))],
-            'items.*.product_name' => ['nullable', 'string', 'max:255'],
+            'items.*.project_product_id' => ['bail', Rule::requiredIf(fn () => filled($request->input('project_id'))), 'nullable', 'integer', Rule::exists('project_products', 'id')->where(fn ($query) => $query->where('project_id', $request->input('project_id')))],
+            'items.*.product_name' => ['required', 'string', 'max:255'],
             'items.*.sku' => ['nullable', 'string', 'max:255'],
             'items.*.hs_code' => ['nullable', 'string', 'max:255'],
-            'items.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'items.*.quantity' => ['nullable', 'numeric', 'min:0', 'max:999999999.999', 'decimal:0,3'],
             'items.*.unit' => ['nullable', 'string', 'max:30'],
-            'items.*.declared_value' => ['nullable', 'numeric', 'min:0'],
+            'items.*.declared_value' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99', 'decimal:0,2'],
             'items.*.currency' => ['nullable', 'in:INR,RMB,USD'],
-            'items.*.net_weight' => ['nullable', 'numeric', 'min:0'],
-            'items.*.gross_weight' => ['nullable', 'numeric', 'min:0'],
+            'items.*.net_weight' => ['nullable', 'numeric', 'min:0', 'max:999999999.999', 'decimal:0,3'],
+            'items.*.gross_weight' => ['nullable', 'numeric', 'min:0', 'max:999999999.999', 'decimal:0,3'],
             'items.*.description' => ['nullable', 'string'],
         ], [
             'items.*.project_product_id.required' => 'Select the matching project product for each shipment line.',

@@ -29,6 +29,7 @@ class SalesInvoiceSend extends Model
         'sent_at' => 'datetime',
     ];
 
+    public const STATUS_PENDING = 'pending';
     public const STATUS_SENT = 'sent';
     public const STATUS_FAILED = 'failed';
 
@@ -45,5 +46,10 @@ class SalesInvoiceSend extends Model
     public function isFailed(): bool
     {
         return $this->status === self::STATUS_FAILED;
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === self::STATUS_PENDING;
     }
 }

@@ -785,14 +785,14 @@
                     <div class="master-card master-section">
                         <div class="master-section-head">
                             <div>
-                                <h2 class="master-section-title">In the client's inbox</h2>
+                                <h2 class="master-section-title">Invoice email history</h2>
                                 <p class="master-sub">
                                     @if ($invoice->sends->isNotEmpty())
-                                        Last e-mailed {{ $invoice->sends->first()->sent_at?->diffForHumans() }}
+                                        Last attempt {{ $invoice->sends->first()->sent_at?->diffForHumans() }}
                                         by {{ $invoice->sends->first()->sender?->name ?? 'the office' }}
-                                        · {{ $invoice->sends->count() }} send{{ $invoice->sends->count() === 1 ? '' : 's' }} logged
+                                        · {{ $invoice->sends->count() }} attempt{{ $invoice->sends->count() === 1 ? '' : 's' }} logged
                                     @else
-                                        No e-mail has left the office for this invoice yet
+                                        No email attempts are recorded for this invoice yet
                                     @endif
                                 </p>
                             </div>
@@ -824,8 +824,8 @@
                                         <div class="si-reminder-what">
                                             <strong>
                                                 {{ $send->subject }}
-                                                <span class="master-status-chip {{ $send->isFailed() ? 'danger' : 'success' }}">
-                                                    {{ $send->isFailed() ? 'Failed' : 'Sent' }}
+                                                <span class="master-status-chip {{ $send->isPending() ? 'warning' : ($send->isFailed() ? 'danger' : 'success') }}">
+                                                    {{ $send->isPending() ? 'Unconfirmed' : ($send->isFailed() ? 'Mailer error' : 'Sent') }}
                                                 </span>
                                             </strong>
                                             <span class="master-sub">
@@ -833,6 +833,9 @@
                                                 @if (filled($send->cc)) · Cc {{ $send->cc }} @endif
                                                 @if ($send->isFailed() && filled($send->error))
                                                     <span class="si-due">· {{ $send->error }}</span>
+                                                @endif
+                                                @if ($send->isPending() || $send->isFailed())
+                                                    <span class="si-due">· Check delivery before retrying.</span>
                                                 @endif
                                             </span>
                                         </div>

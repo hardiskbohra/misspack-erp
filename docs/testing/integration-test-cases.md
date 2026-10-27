@@ -529,6 +529,19 @@ Sources: `app/Http/Controllers/ProjectController.php`, `app/Services/ProjectProd
 
 **Expected:** History retained according to archival policy; no dangling document ownership.
 
+### IT-PROJECT-004 — Normal planning save persists and recalculates a long readiness evaluation
+
+**Priority:** P0 · **Requirement:** REQ-PROJECT · **Implementation:** linked executable evidence
+
+- **Preconditions:** Fresh full schema; authenticated office user; project and shipment with paid commercial baseline on disposable SQLite or strict MySQL
+- **Data:** Save a normal project planning field while packing, QC and document prerequisites produce a long evaluation
+1. Post a normal planning change
+2. Read project and latest gate evaluation
+
+**Expected:** Save succeeds and the complete evaluation is retained; no database exception or truncation.
+
+**Evidence:** `tests/Integration/FullSchemaReliabilityTest.php#test_full_schema_normal_project_planning_save_succeeds_and_evaluates_readiness`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_full_schema_normal_project_planning_save_succeeds_and_evaluates_readiness`
+
 ## Execution, approvals, gates and financial closure (`WORKFLOW`)
 
 Sources: `app/Services/ProjectWorkflowExecution.php`, `app/Services/ProjectWorkflowGates.php`, `app/Services/ProjectFinancialClosure.php`.
@@ -596,6 +609,22 @@ Sources: `app/Services/ProjectWorkflowExecution.php`, `app/Services/ProjectWorkf
 **Expected:** PI baseline restored; dispatch balance recalculated.
 
 **Evidence:** `tests/Feature/CashInvoiceDeletionTest.php#test_workflow_cash_baseline_is_restored_to_the_pi_and_dispatch_balance_is_rechecked`
+
+### IT-WORKFLOW-006 — Fresh schema and message-widening migrations preserve data and refuse lossy rollback
+
+**Priority:** P0 · **Requirement:** REQ-WORKFLOW · **Implementation:** partial evidence
+
+- **Preconditions:** Disposable SQLite and strict MySQL; CREATE/DROP DATABASE privileges for isolated MySQL upgrade schemas
+- **Data:** Existing short values, all widened fields, and values exceeding their old column limits
+1. Run fresh SQLite migration chain and legacy-data upgrade
+2. Apply both widenings on SQLite and MySQL
+3. Attempt unsafe rollback and verify all values remain; shorten data and roll back
+
+**Expected:** Existing values survive upgrade; rollback is blocked before narrowing if any value would be lost; safe short values can roll back.
+
+**Note:** Full fresh MySQL migrations are a separate CI/local setup command. Rollback must be run with writers stopped; these checks do not prove atomicity under concurrent writes.
+
+**Evidence:** `tests/Integration/FreshSchemaTest.php#test_all_migrations_apply_to_a_disposable_fresh_sqlite_database`; `tests/Integration/FreshSchemaTest.php#test_progress_migration_copies_matching_workflow_and_preserves_unmatched_project`; `tests/Integration/WideningMigrationSafetyTest.php#test_gate_summary_migration_preserves_existing_values_and_refuses_lossy_rollback`; `tests/Database/MySqlWideningMigrationSafetyTest.php#test_gate_summary_migration_preserves_existing_values_and_refuses_lossy_rollback`; `tests/Integration/WideningMigrationSafetyTest.php#test_message_widening_preserves_old_values_and_checks_every_column_before_rollback`; `tests/Database/MySqlWideningMigrationSafetyTest.php#test_message_widening_preserves_old_values_and_checks_every_column_before_rollback`
 
 ## Quality inspection and sampling (`QC`)
 
@@ -725,13 +754,17 @@ Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDi
 
 ### IT-SHIP-003 — Dispatch denied when packing/QC/balance missing
 
-**Priority:** P0 · **Requirement:** REQ-SHIP · **Implementation:** planned
+**Priority:** P0 · **Requirement:** REQ-SHIP · **Implementation:** partial evidence
 
 - **Preconditions:** F-PRODUCTS and F-MONEY; partial shipments S1/S2; fake public upload disk
 - **Data:** Confirmed list missing or failed QC or amount due
 1. Attempt dispatch for each failed prerequisite
 
 **Expected:** No dispatch timestamp/stock event; actionable missing-gate details returned.
+
+**Note:** Both real HTTP dispatch paths are covered with multiple simultaneous blockers and a long summary, on SQLite and strict MySQL. Individual prerequisite permutations and concurrent dispatch are not established by these links.
+
+**Evidence:** `tests/Integration/FullSchemaReliabilityTest.php#test_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths`
 
 ### IT-SHIP-004 — Invalid upload batch stores no partial files
 
@@ -802,6 +835,21 @@ Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDi
 **Expected:** 404 for mismatched shipment; login redirect for guest; 403 for unauthorised office user; no public access endpoint introduced.
 
 **Evidence:** `tests/Integration/DeliveryReceiptPrintTest.php#test_receipt_cannot_be_printed_under_another_shipment`; `tests/Integration/DeliveryReceiptPrintTest.php#test_print_retains_login_and_operations_permission_boundaries`
+
+### IT-SHIP-009 — Reject malformed lines and storage-incompatible shipment numbers without data loss
+
+**Priority:** P0 · **Requirement:** REQ-SHIP · **Implementation:** linked executable evidence
+
+- **Preconditions:** Fresh full schema; authenticated operations user; existing shipment and line on disposable SQLite or strict MySQL
+- **Data:** Null/malformed/non-array and incomplete rows; omitted and explicitly cleared rows; overflowing and excess-precision decimals/integers; valid boundary values; blank INR template row under a USD header
+1. Submit malformed or out-of-range edits
+2. Check errors and re-read shipment and items
+3. Submit boundary values and a blank template row
+4. Omit lines and then explicitly clear them; evaluate dispatch with omitted lines
+
+**Expected:** Invalid edits produce field errors and preserve existing rows; valid limits and a blank template row save; omitted lines are preserved and evaluated from storage, while explicit clearing removes them.
+
+**Evidence:** `tests/Integration/FullSchemaReliabilityTest.php#test_malformed_or_incomplete_shipment_lines_cannot_silently_delete_existing_items`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_malformed_or_incomplete_shipment_lines_cannot_silently_delete_existing_items`; `tests/Integration/FullSchemaReliabilityTest.php#test_out_of_range_shipment_values_are_rejected_without_mutating_the_shipment_or_items`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_out_of_range_shipment_values_are_rejected_without_mutating_the_shipment_or_items`; `tests/Integration/FullSchemaReliabilityTest.php#test_values_with_excess_precision_are_not_silently_rounded`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_values_with_excess_precision_are_not_silently_rounded`; `tests/Integration/FullSchemaReliabilityTest.php#test_database_boundary_values_and_an_empty_template_row_are_accepted`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_database_boundary_values_and_an_empty_template_row_are_accepted`; `tests/Integration/FullSchemaReliabilityTest.php#test_missing_shipment_lines_are_preserved_but_explicitly_cleared_lines_are_removed`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_missing_shipment_lines_are_preserved_but_explicitly_cleared_lines_are_removed`; `tests/Integration/FullSchemaReliabilityTest.php#test_dispatch_with_omitted_lines_evaluates_the_stored_lines`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_dispatch_with_omitted_lines_evaluates_the_stored_lines`
 
 ## Proformas, cash invoices and tax invoices (`SALES`)
 
@@ -1153,6 +1201,22 @@ Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDele
 **Expected:** Received stays 500; payable drops to 590; balance due is 90; the state reads partial — the receipt is never eaten by the correction.
 
 **Evidence:** `tests/Feature/InvoiceAdjustmentTest.php#test_notes_change_what_the_listing_counts_but_never_the_receipts`
+
+### IT-SALES-031 — Invoice mail audit remains honest before, during and after delivery attempt
+
+**Priority:** P0 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Fresh full schema; authenticated sales manager; disposable SQLite or strict MySQL; fake mail or an in-process failing transport
+- **Data:** Normalised To/CC longer than raw input; initial audit failure; post-send update failure; 70,000-character transport error
+1. Submit each email attempt
+2. Inspect transport calls, HTTP result, invoice state, alert and stored send record
+3. Read the unconfirmed attempt in the invoice view
+
+**Expected:** The initial audit failure prevents sending; one successful request creates one complete audit record; uncertain outcomes are never reported as confirmed success and advise checking delivery; long failures do not overflow the alert.
+
+**Note:** One mail invocation per request is asserted; this is not an idempotency guarantee across repeated requests, nor a real external-provider delivery test.
+
+**Evidence:** `tests/Integration/FullSchemaReliabilityTest.php#test_invoice_email_with_long_normalised_to_and_cc_is_sent_once_and_fully_recorded`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_invoice_email_with_long_normalised_to_and_cc_is_sent_once_and_fully_recorded`; `tests/Integration/FullSchemaReliabilityTest.php#test_long_mail_transport_error_cannot_overflow_alert_or_response`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_long_mail_transport_error_cannot_overflow_alert_or_response`; `tests/Integration/FullSchemaReliabilityTest.php#test_invoice_email_is_not_sent_when_its_initial_audit_write_fails`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_invoice_email_is_not_sent_when_its_initial_audit_write_fails`; `tests/Integration/FullSchemaReliabilityTest.php#test_invoice_email_result_write_failure_leaves_an_unconfirmed_attempt_not_a_false_success`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_invoice_email_result_write_failure_leaves_an_unconfirmed_attempt_not_a_false_success`
 
 ## Purchase documents and vendor settlement (`PURCHASE`)
 
@@ -1721,6 +1785,19 @@ Sources: `app/Services/OfficeBriefing.php`, `app/Http/Controllers/OfficeAlertCon
 
 **Evidence:** `tests/Feature/OfficeAlertCentreTest.php#test_a_desk_watcher_sees_only_their_desks_briefings`
 
+### IT-BRIEF-009 — Composed notification titles and links retain their complete text
+
+**Priority:** P0 · **Requirement:** REQ-BRIEF · **Implementation:** linked executable evidence
+
+- **Preconditions:** Fresh full schema; authenticated office user; real services and HTTP shipment change on disposable SQLite or strict MySQL
+- **Data:** Long shipment name and carrier, portal token/link, project and workflow-step names
+1. Create a changed shipment and inspect office and client messages
+2. Register a project exception and read it back
+
+**Expected:** Composed titles and action URLs preserve their complete values without a MySQL length failure.
+
+**Evidence:** `tests/Integration/FullSchemaReliabilityTest.php#test_long_shipment_title_and_link_are_saved_to_both_notification_channels`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_long_shipment_title_and_link_are_saved_to_both_notification_channels`; `tests/Integration/FullSchemaReliabilityTest.php#test_project_exception_keeps_the_full_composed_project_and_step_title`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_project_exception_keeps_the_full_composed_project_and_step_title`
+
 ## Global search and navigation (`SEARCH`)
 
 Sources: `app/Services/GlobalSearch.php`, `app/Http/Controllers/GlobalSearchController.php`.
@@ -2160,6 +2237,22 @@ Sources: `resources/views/components/drawer.blade.php`, `public/assets/js/master
 **Expected:** No min-width/width ≥321px on non-table selectors inside max-width media blocks; the trend-chart exception is named with its reason.
 
 **Note:** Contract-only case: the check itself is the executable evidence (npm run test:contracts → responsive rule 6).
+
+### IT-UI-009 — Unexpected production HTTP 500s have a safe correlated response
+
+**Priority:** P0 · **Requirement:** REQ-UI · **Implementation:** linked executable evidence
+
+- **Preconditions:** Production environment with debug mistakenly enabled; fake in-process routes and loggers
+- **Data:** Thrown exception; explicit HTML/API 500; logging outage; validation/auth/403; local debug
+1. Request each failure path
+2. Compare status, response type, reference and logged context
+3. Check known 4xx and local diagnostics
+
+**Expected:** 500s stay 500, suppress details, guide safe retry and use the appropriate HTML/JSON contract; correlation is recorded when the logger works; 4xx and local debug remain intact.
+
+**Note:** A logger outage cannot guarantee a corresponding log entry. Browser evidence is recorded separately, not inferred from PHPUnit.
+
+**Evidence:** `tests/Feature/UnexpectedErrorHandlingTest.php#test_production_html_error_is_safe_even_with_debug_enabled_and_matches_the_reported_reference`; `tests/Feature/UnexpectedErrorHandlingTest.php#test_production_api_error_is_json_and_contains_no_debug_details`; `tests/Feature/UnexpectedErrorHandlingTest.php#test_explicit_500_response_exception_does_not_bypass_the_safe_fallback`; `tests/Feature/UnexpectedErrorHandlingTest.php#test_explicit_api_500_uses_json_even_if_the_original_response_was_html`; `tests/Feature/UnexpectedErrorHandlingTest.php#test_failure_of_the_fallback_log_transport_does_not_expose_the_response_or_cause_another_failure`; `tests/Feature/UnexpectedErrorHandlingTest.php#test_validation_authentication_and_other_client_errors_keep_their_status_and_contract`; `tests/Feature/UnexpectedErrorHandlingTest.php#test_local_debug_mode_retains_the_diagnostic_exception_output`
 
 ## GST: GSTIN checksum, HSN/SAC master and e-invoice (IRN/QR) (`TAX`)
 

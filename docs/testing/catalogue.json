@@ -1388,7 +1388,12 @@
         "Attempt dispatch for each failed prerequisite"
       ],
       "expected": "No dispatch timestamp/stock event; actionable missing-gate details returned.",
-      "automation": []
+      "automation": [
+        "tests/Integration/FullSchemaReliabilityTest.php#test_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths"
+      ],
+      "evidence_scope": "partial",
+      "notes": "Both real HTTP dispatch paths are covered with multiple simultaneous blockers and a long summary, on SQLite and strict MySQL. Individual prerequisite permutations and concurrent dispatch are not established by these links."
     },
     {
       "id": "UT-SALES-001",
@@ -5130,6 +5135,156 @@
       "automation": [
         "tests/Feature/InvoiceAdjustmentTest.php#test_notes_change_what_the_listing_counts_but_never_the_receipts"
       ]
+    },
+    {
+      "id": "IT-SHIP-009",
+      "module": "SHIP",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SHIP",
+      "title": "Reject malformed lines and storage-incompatible shipment numbers without data loss",
+      "preconditions": "Fresh full schema; authenticated operations user; existing shipment and line on disposable SQLite or strict MySQL",
+      "test_data": "Null/malformed/non-array and incomplete rows; omitted and explicitly cleared rows; overflowing and excess-precision decimals/integers; valid boundary values; blank INR template row under a USD header",
+      "steps": [
+        "Submit malformed or out-of-range edits",
+        "Check errors and re-read shipment and items",
+        "Submit boundary values and a blank template row",
+        "Omit lines and then explicitly clear them; evaluate dispatch with omitted lines"
+      ],
+      "expected": "Invalid edits produce field errors and preserve existing rows; valid limits and a blank template row save; omitted lines are preserved and evaluated from storage, while explicit clearing removes them.",
+      "automation": [
+        "tests/Integration/FullSchemaReliabilityTest.php#test_malformed_or_incomplete_shipment_lines_cannot_silently_delete_existing_items",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_malformed_or_incomplete_shipment_lines_cannot_silently_delete_existing_items",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_out_of_range_shipment_values_are_rejected_without_mutating_the_shipment_or_items",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_out_of_range_shipment_values_are_rejected_without_mutating_the_shipment_or_items",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_values_with_excess_precision_are_not_silently_rounded",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_values_with_excess_precision_are_not_silently_rounded",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_database_boundary_values_and_an_empty_template_row_are_accepted",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_database_boundary_values_and_an_empty_template_row_are_accepted",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_missing_shipment_lines_are_preserved_but_explicitly_cleared_lines_are_removed",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_missing_shipment_lines_are_preserved_but_explicitly_cleared_lines_are_removed",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_dispatch_with_omitted_lines_evaluates_the_stored_lines",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_dispatch_with_omitted_lines_evaluates_the_stored_lines"
+      ]
+    },
+    {
+      "id": "IT-PROJECT-004",
+      "module": "PROJECT",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PROJECT",
+      "title": "Normal planning save persists and recalculates a long readiness evaluation",
+      "preconditions": "Fresh full schema; authenticated office user; project and shipment with paid commercial baseline on disposable SQLite or strict MySQL",
+      "test_data": "Save a normal project planning field while packing, QC and document prerequisites produce a long evaluation",
+      "steps": [
+        "Post a normal planning change",
+        "Read project and latest gate evaluation"
+      ],
+      "expected": "Save succeeds and the complete evaluation is retained; no database exception or truncation.",
+      "automation": [
+        "tests/Integration/FullSchemaReliabilityTest.php#test_full_schema_normal_project_planning_save_succeeds_and_evaluates_readiness",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_full_schema_normal_project_planning_save_succeeds_and_evaluates_readiness"
+      ]
+    },
+    {
+      "id": "IT-BRIEF-009",
+      "module": "BRIEF",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-BRIEF",
+      "title": "Composed notification titles and links retain their complete text",
+      "preconditions": "Fresh full schema; authenticated office user; real services and HTTP shipment change on disposable SQLite or strict MySQL",
+      "test_data": "Long shipment name and carrier, portal token/link, project and workflow-step names",
+      "steps": [
+        "Create a changed shipment and inspect office and client messages",
+        "Register a project exception and read it back"
+      ],
+      "expected": "Composed titles and action URLs preserve their complete values without a MySQL length failure.",
+      "automation": [
+        "tests/Integration/FullSchemaReliabilityTest.php#test_long_shipment_title_and_link_are_saved_to_both_notification_channels",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_long_shipment_title_and_link_are_saved_to_both_notification_channels",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_project_exception_keeps_the_full_composed_project_and_step_title",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_project_exception_keeps_the_full_composed_project_and_step_title"
+      ]
+    },
+    {
+      "id": "IT-SALES-031",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES",
+      "title": "Invoice mail audit remains honest before, during and after delivery attempt",
+      "preconditions": "Fresh full schema; authenticated sales manager; disposable SQLite or strict MySQL; fake mail or an in-process failing transport",
+      "test_data": "Normalised To/CC longer than raw input; initial audit failure; post-send update failure; 70,000-character transport error",
+      "steps": [
+        "Submit each email attempt",
+        "Inspect transport calls, HTTP result, invoice state, alert and stored send record",
+        "Read the unconfirmed attempt in the invoice view"
+      ],
+      "expected": "The initial audit failure prevents sending; one successful request creates one complete audit record; uncertain outcomes are never reported as confirmed success and advise checking delivery; long failures do not overflow the alert.",
+      "automation": [
+        "tests/Integration/FullSchemaReliabilityTest.php#test_invoice_email_with_long_normalised_to_and_cc_is_sent_once_and_fully_recorded",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_invoice_email_with_long_normalised_to_and_cc_is_sent_once_and_fully_recorded",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_long_mail_transport_error_cannot_overflow_alert_or_response",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_long_mail_transport_error_cannot_overflow_alert_or_response",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_invoice_email_is_not_sent_when_its_initial_audit_write_fails",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_invoice_email_is_not_sent_when_its_initial_audit_write_fails",
+        "tests/Integration/FullSchemaReliabilityTest.php#test_invoice_email_result_write_failure_leaves_an_unconfirmed_attempt_not_a_false_success",
+        "tests/Database/MySqlFullSchemaReliabilityTest.php#test_invoice_email_result_write_failure_leaves_an_unconfirmed_attempt_not_a_false_success"
+      ],
+      "notes": "One mail invocation per request is asserted; this is not an idempotency guarantee across repeated requests, nor a real external-provider delivery test."
+    },
+    {
+      "id": "IT-UI-009",
+      "module": "UI",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-UI",
+      "title": "Unexpected production HTTP 500s have a safe correlated response",
+      "preconditions": "Production environment with debug mistakenly enabled; fake in-process routes and loggers",
+      "test_data": "Thrown exception; explicit HTML/API 500; logging outage; validation/auth/403; local debug",
+      "steps": [
+        "Request each failure path",
+        "Compare status, response type, reference and logged context",
+        "Check known 4xx and local diagnostics"
+      ],
+      "expected": "500s stay 500, suppress details, guide safe retry and use the appropriate HTML/JSON contract; correlation is recorded when the logger works; 4xx and local debug remain intact.",
+      "automation": [
+        "tests/Feature/UnexpectedErrorHandlingTest.php#test_production_html_error_is_safe_even_with_debug_enabled_and_matches_the_reported_reference",
+        "tests/Feature/UnexpectedErrorHandlingTest.php#test_production_api_error_is_json_and_contains_no_debug_details",
+        "tests/Feature/UnexpectedErrorHandlingTest.php#test_explicit_500_response_exception_does_not_bypass_the_safe_fallback",
+        "tests/Feature/UnexpectedErrorHandlingTest.php#test_explicit_api_500_uses_json_even_if_the_original_response_was_html",
+        "tests/Feature/UnexpectedErrorHandlingTest.php#test_failure_of_the_fallback_log_transport_does_not_expose_the_response_or_cause_another_failure",
+        "tests/Feature/UnexpectedErrorHandlingTest.php#test_validation_authentication_and_other_client_errors_keep_their_status_and_contract",
+        "tests/Feature/UnexpectedErrorHandlingTest.php#test_local_debug_mode_retains_the_diagnostic_exception_output"
+      ],
+      "notes": "A logger outage cannot guarantee a corresponding log entry. Browser evidence is recorded separately, not inferred from PHPUnit."
+    },
+    {
+      "id": "IT-WORKFLOW-006",
+      "module": "WORKFLOW",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-WORKFLOW",
+      "title": "Fresh schema and message-widening migrations preserve data and refuse lossy rollback",
+      "preconditions": "Disposable SQLite and strict MySQL; CREATE/DROP DATABASE privileges for isolated MySQL upgrade schemas",
+      "test_data": "Existing short values, all widened fields, and values exceeding their old column limits",
+      "steps": [
+        "Run fresh SQLite migration chain and legacy-data upgrade",
+        "Apply both widenings on SQLite and MySQL",
+        "Attempt unsafe rollback and verify all values remain; shorten data and roll back"
+      ],
+      "expected": "Existing values survive upgrade; rollback is blocked before narrowing if any value would be lost; safe short values can roll back.",
+      "automation": [
+        "tests/Integration/FreshSchemaTest.php#test_all_migrations_apply_to_a_disposable_fresh_sqlite_database",
+        "tests/Integration/FreshSchemaTest.php#test_progress_migration_copies_matching_workflow_and_preserves_unmatched_project",
+        "tests/Integration/WideningMigrationSafetyTest.php#test_gate_summary_migration_preserves_existing_values_and_refuses_lossy_rollback",
+        "tests/Database/MySqlWideningMigrationSafetyTest.php#test_gate_summary_migration_preserves_existing_values_and_refuses_lossy_rollback",
+        "tests/Integration/WideningMigrationSafetyTest.php#test_message_widening_preserves_old_values_and_checks_every_column_before_rollback",
+        "tests/Database/MySqlWideningMigrationSafetyTest.php#test_message_widening_preserves_old_values_and_checks_every_column_before_rollback"
+      ],
+      "notes": "Full fresh MySQL migrations are a separate CI/local setup command. Rollback must be run with writers stopped; these checks do not prove atomicity under concurrent writes.",
+      "evidence_scope": "partial"
     }
   ]
 }

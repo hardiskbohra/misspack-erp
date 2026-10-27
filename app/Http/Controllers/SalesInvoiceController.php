@@ -978,6 +978,21 @@ class SalesInvoiceController extends Controller
         $markSent = $request->boolean('mark_sent');
         $mail = new SalesInvoiceMail($salesInvoice, $data['subject'], $data['message'],
             $markSent || (bool) $salesInvoice->show_client_portal);
+
+        // Reserve an honest audit entry before the external side effect. If this
+        // insert fails, no mail is attempted; if recording the result fails
+        // afterwards, the remaining pending row warns that delivery is unknown.
+        $send = SalesInvoiceSend::create([
+            'sales_invoice_id' => $salesInvoice->id,
+            'channel' => 'email',
+            'recipients' => implode(', ', $to),
+            'cc' => $cc ? implode(', ', $cc) : null,
+            'subject' => $data['subject'],
+            'message' => $data['message'],
+            'status' => SalesInvoiceSend::STATUS_PENDING,
+            'sent_by' => Auth::id(),
+            'sent_at' => now(),
+        ]);
         $error = null;
         try {
             $pending = Mail::to($to);
@@ -986,31 +1001,23 @@ class SalesInvoiceController extends Controller
             }
             $pending->send($mail);
         } catch (\Throwable $e) {
-            $error = $e->getMessage();
+            // Bound the provider's message before it enters the alert and flash
+            // text as well as the audit log; a very long error must not cause
+            // a second database failure after the external delivery attempt.
+            $error = Str::limit($e->getMessage(), 500, '');
         }
 
-        /* The attempt lands in the log either way — sent or failed with the
-           transport's own reason. "We emailed it" must be provable, and so
-           must "it bounced at the mail server". */
-        SalesInvoiceSend::create([
-            'sales_invoice_id' => $salesInvoice->id,
-            'channel' => 'email',
-            'recipients' => implode(', ', $to),
-            'cc' => $cc ? implode(', ', $cc) : null,
-            'subject' => $data['subject'],
-            'message' => $data['message'],
+        $send->update([
             'status' => $error === null ? SalesInvoiceSend::STATUS_SENT : SalesInvoiceSend::STATUS_FAILED,
             'error' => $error === null ? null : Str::limit($error, 500, ''),
-            'sent_by' => Auth::id(),
-            'sent_at' => now(),
         ]);
 
         if ($error !== null) {
             $briefing->workflowNotice([
                 'event_key' => 'invoice.email_failed',
                 'fingerprint' => 'invoice.email_failed:'.$salesInvoice->id,
-                'title' => 'Invoice '.$salesInvoice->invoice_number.' did not go out',
-                'body' => 'The e-mail to '.implode(', ', $to).' was refused: '.$error,
+                'title' => 'Invoice '.$salesInvoice->invoice_number.' delivery is unconfirmed',
+                'body' => 'The mailer reported an error for '.implode(', ', $to).': '.$error.'. Check delivery before retrying.',
                 'severity' => 'attention',
                 'requires_ack' => true,
                 'team' => 'accounts',
@@ -1018,7 +1025,7 @@ class SalesInvoiceController extends Controller
                 'action_label' => 'Open the invoice',
             ]);
 
-            return back()->with('error', 'The e-mail was not accepted by the mailer ('.$error.'). The attempt is logged on the invoice.');
+            return back()->with('error', 'The mailer reported an error ('.$error.'). Delivery is unconfirmed; check before retrying. The attempt is logged on the invoice.');
         }
 
         if ($markSent) {

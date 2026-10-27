@@ -146,7 +146,7 @@ class SalesInvoiceEmailTest extends TestCase
         /* and the record page now answers "did anyone ever email this?" */
         $this->get(route('sales-invoices.show', $invoice))
             ->assertOk()
-            ->assertSee("In the client's inbox", false)
+            ->assertSee('Invoice email history')
             ->assertSee('accounts@acme.test, ops@acme.test');
     }
 

@@ -273,6 +273,7 @@
                 <h3 class="master-section-title">Shipment Data / Products</h3>
                 @if($shipmentItemsFrozen)<p class="master-sub">Shipment product lines are frozen because dispatch has started.</p>@endif
                 <fieldset class="shipment-items-fieldset" @disabled($shipmentItemsFrozen)>
+                <input type="hidden" name="items_present" value="1">
                 <div class="master-items-wrap">
                     <table class="master-items-table" id="shipmentItemsTable">
                         <thead>

@@ -2,6 +2,25 @@
   "note": "Source inventory only. Method counts exclude data-provider expansion and are not runtime coverage or pass counts.",
   "test_files": [
     {
+      "file": "tests/Database/MySqlFullSchemaReliabilityTest.php",
+      "methods": [
+        "test_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths",
+        "test_full_schema_normal_project_planning_save_succeeds_and_evaluates_readiness",
+        "test_out_of_range_shipment_values_are_rejected_without_mutating_the_shipment_or_items",
+        "test_values_with_excess_precision_are_not_silently_rounded",
+        "test_database_boundary_values_and_an_empty_template_row_are_accepted",
+        "test_long_shipment_title_and_link_are_saved_to_both_notification_channels",
+        "test_project_exception_keeps_the_full_composed_project_and_step_title",
+        "test_invoice_email_with_long_normalised_to_and_cc_is_sent_once_and_fully_recorded",
+        "test_long_mail_transport_error_cannot_overflow_alert_or_response",
+        "test_invoice_email_is_not_sent_when_its_initial_audit_write_fails",
+        "test_invoice_email_result_write_failure_leaves_an_unconfirmed_attempt_not_a_false_success",
+        "test_malformed_or_incomplete_shipment_lines_cannot_silently_delete_existing_items",
+        "test_missing_shipment_lines_are_preserved_but_explicitly_cleared_lines_are_removed",
+        "test_dispatch_with_omitted_lines_evaluates_the_stored_lines"
+      ]
+    },
+    {
       "file": "tests/Database/MySqlReportingTest.php",
       "methods": [
         "test_real_database_aggregation_honours_custom_bounds",
@@ -13,6 +32,13 @@
       "file": "tests/Database/MySqlVendorKycTest.php",
       "methods": [
         "test_native_json_schema_locking_and_stale_review_protection"
+      ]
+    },
+    {
+      "file": "tests/Database/MySqlWideningMigrationSafetyTest.php",
+      "methods": [
+        "test_gate_summary_migration_preserves_existing_values_and_refuses_lossy_rollback",
+        "test_message_widening_preserves_old_values_and_checks_every_column_before_rollback"
       ]
     },
     {
@@ -344,6 +370,18 @@
       ]
     },
     {
+      "file": "tests/Feature/UnexpectedErrorHandlingTest.php",
+      "methods": [
+        "test_production_html_error_is_safe_even_with_debug_enabled_and_matches_the_reported_reference",
+        "test_production_api_error_is_json_and_contains_no_debug_details",
+        "test_explicit_500_response_exception_does_not_bypass_the_safe_fallback",
+        "test_explicit_api_500_uses_json_even_if_the_original_response_was_html",
+        "test_failure_of_the_fallback_log_transport_does_not_expose_the_response_or_cause_another_failure",
+        "test_validation_authentication_and_other_client_errors_keep_their_status_and_contract",
+        "test_local_debug_mode_retains_the_diagnostic_exception_output"
+      ]
+    },
+    {
       "file": "tests/Feature/VendorCashflowDeletionTest.php",
       "methods": [
         "test_deleting_mirror_cancels_payment_and_reopens_bill_with_audit_and_bank_balance",
@@ -417,6 +455,32 @@
         "test_optional_evidence_and_vendor_shipper_remain_printable_without_our_logo",
         "test_receipt_cannot_be_printed_under_another_shipment",
         "test_print_retains_login_and_operations_permission_boundaries"
+      ]
+    },
+    {
+      "file": "tests/Integration/FreshSchemaTest.php",
+      "methods": [
+        "test_all_migrations_apply_to_a_disposable_fresh_sqlite_database",
+        "test_progress_migration_copies_matching_workflow_and_preserves_unmatched_project"
+      ]
+    },
+    {
+      "file": "tests/Integration/FullSchemaReliabilityTest.php",
+      "methods": [
+        "test_full_schema_dispatch_rejects_with_a_complete_long_evaluation_on_both_http_paths",
+        "test_full_schema_normal_project_planning_save_succeeds_and_evaluates_readiness",
+        "test_out_of_range_shipment_values_are_rejected_without_mutating_the_shipment_or_items",
+        "test_values_with_excess_precision_are_not_silently_rounded",
+        "test_database_boundary_values_and_an_empty_template_row_are_accepted",
+        "test_long_shipment_title_and_link_are_saved_to_both_notification_channels",
+        "test_project_exception_keeps_the_full_composed_project_and_step_title",
+        "test_invoice_email_with_long_normalised_to_and_cc_is_sent_once_and_fully_recorded",
+        "test_long_mail_transport_error_cannot_overflow_alert_or_response",
+        "test_invoice_email_is_not_sent_when_its_initial_audit_write_fails",
+        "test_invoice_email_result_write_failure_leaves_an_unconfirmed_attempt_not_a_false_success",
+        "test_malformed_or_incomplete_shipment_lines_cannot_silently_delete_existing_items",
+        "test_missing_shipment_lines_are_preserved_but_explicitly_cleared_lines_are_removed",
+        "test_dispatch_with_omitted_lines_evaluates_the_stored_lines"
       ]
     },
     {
@@ -539,6 +603,13 @@
         "test_public_forms_keep_csrf_authentication_and_rate_limiting_boundaries",
         "test_malformed_phone_arrays_are_validation_errors_not_server_errors",
         "test_vendor_creator_can_review_their_own_submission_and_is_recorded_as_reviewer"
+      ]
+    },
+    {
+      "file": "tests/Integration/WideningMigrationSafetyTest.php",
+      "methods": [
+        "test_gate_summary_migration_preserves_existing_values_and_refuses_lossy_rollback",
+        "test_message_widening_preserves_old_values_and_checks_every_column_before_rollback"
       ]
     },
     {
