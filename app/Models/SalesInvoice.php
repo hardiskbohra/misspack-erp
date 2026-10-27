@@ -346,36 +346,31 @@ class SalesInvoice extends Model
     }
 
     /**
-     * Does this database even know corrections? A table-check per row is how
-     * a ledger page suddenly runs fifty queries — memoize once per request.
-     * The container instance is rebuilt for every request AND every test, so
-     * a fixture that migrates late never poisons a later one.
+     * Does this database even know corrections? Probed once at the places that
+     * build or load (controllers, pickers, summaries — never per row), so a
+     * ledger page's query pattern is exactly one number per figure.
      */
     public static function notesTableExists(): bool
     {
-        $key = 'sales-invoice-notes-table-exists';
-
-        if (! app()->bound($key)) {
-            app()->instance($key, \Illuminate\Support\Facades\Schema::hasTable('sales_invoice_notes'));
-        }
-
-        return (bool) app($key);
+        return \Illuminate\Support\Facades\Schema::hasTable('sales_invoice_notes');
     }
 
-    /** The live notes, cheapest first: a loaded relation or a query. */
+    /**
+     * The live corrections, cheapest first. A loaded relation is free; an old
+     * database that predates the table gets the empty set; anything else pays
+     * one read, on the single-record paths where relations are not loaded.
+     */
     public function liveNotes()
     {
-        /* Databases that predate the adjustments table have no corrections —
-           an empty set is the honest answer, never a 500. */
+        if ($this->relationLoaded('adjustments')) {
+            return $this->adjustments->where('status', SalesInvoiceNote::STATUS_ISSUED);
+        }
+
         if (! static::notesTableExists()) {
             return collect();
         }
 
-        $notes = $this->relationLoaded('adjustments')
-            ? $this->adjustments
-            : $this->adjustments()->get();
-
-        return $notes->where('status', SalesInvoiceNote::STATUS_ISSUED);
+        return $this->adjustments()->where('status', SalesInvoiceNote::STATUS_ISSUED)->get();
     }
 
     public function creditedTotal(): float

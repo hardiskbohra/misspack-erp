@@ -35,6 +35,12 @@ class ClientAccountSummary
             } else {
                 $query->selectRaw('sales_invoices.*, 0 as received_credit, 0 as received_debit, 0 as allocation_received');
             }
+            /* Owed is net of corrections since the adjustments feature; carry
+               them with the rows they correct so the loop stays a constant
+               number of queries however many invoices the client has. */
+            if (SalesInvoice::notesTableExists()) {
+                $query->with('adjustments');
+            }
             $invoices = $query->get();
         }
         foreach ($invoices as $invoice) {
