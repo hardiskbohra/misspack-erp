@@ -115,6 +115,7 @@ class InvoiceAdjustmentTest extends TestCase
 
     public function test_an_issued_invoice_still_edits_its_working_fields(): void
     {
+        $this->withoutExceptionHandling();
         $this->office();
         $invoice = $this->invoice();
 
