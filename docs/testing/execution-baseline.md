@@ -313,3 +313,24 @@ exclusion and existing desktop/mobile wizard behaviour. Contracts pass. See
   checks on captured fixtures, not live-browser PHP E2E or real mail delivery.
 - Details, deployment/rollback precautions, known gaps and post-commit/external
   side-effect warnings: [erp-error-resilience.md](erp-error-resilience.md).
+
+## Automatic rounding for new INR invoices (27 October 2026)
+
+- Full portable Unit + Integration + Feature, PHP 8.4.26: **642 tests / 16,828
+  assertions passed** in 46.9 seconds; the pre-existing PHPUnit notice on the
+  invoice mail transport mock remains. Complete strict MySQL 8.0.14 suite on a
+  disposable migrated database: **25 tests / 258 assertions passed** in 5.0 seconds.
+  The two PHP suites ran serially; the native tests cover the HTTP writer, paise
+  conversion and non-destructive migration plus guarded rollback.
+- `npm run test:contracts`, the invoice module's **82** source checks,
+  483-route inventory and `git diff --check` passed. The invoice source check's
+  pre-existing false positive for the explicitly loaded client-account component
+  was corrected without exempting undefined classes. The catalogue has **291**
+  designs, **134** method-linked cases and **77** executable PHP test files;
+  these are source/evidence counts, not measured coverage.
+- Headless Chromium 153 exercised real login, live PHP/SQLite-backed invoice
+  forms, create/edit persistence and responsive controls at **1440/768/390px**.
+  Auto/manual, paise and Select2 boundaries and currency/type switches passed.
+  No production database or real external delivery was used.
+- Acceptance criteria, test-first evidence, exact commands and deployment/
+  guarded rollback precautions: [invoice-auto-rounding.md](invoice-auto-rounding.md).

@@ -3,6 +3,7 @@
 namespace Tests\Database;
 
 use Illuminate\Support\Facades\DB;
+use Tests\Support\InvoiceAutoRoundingMigrationScenarios;
 use Tests\Support\WideningMigrationScenarios;
 use Tests\TestCase;
 
@@ -10,6 +11,7 @@ use Tests\TestCase;
 class MySqlWideningMigrationSafetyTest extends TestCase
 {
     use WideningMigrationScenarios;
+    use InvoiceAutoRoundingMigrationScenarios;
 
     private ?string $originalConnection = null;
     private ?string $createdDatabase = null;
@@ -52,5 +54,10 @@ class MySqlWideningMigrationSafetyTest extends TestCase
     public function test_message_widening_preserves_old_values_and_checks_every_column_before_rollback(): void
     {
         $this->scenario_message_widening_preserves_old_values_and_checks_every_column_before_rollback();
+    }
+
+    public function test_existing_invoice_money_survives_migration_and_active_policy_cannot_be_dropped(): void
+    {
+        $this->scenario_auto_rounding_migration_preserves_existing_invoice_money_and_guards_rollback();
     }
 }

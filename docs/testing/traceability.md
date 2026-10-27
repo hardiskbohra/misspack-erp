@@ -15,7 +15,7 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-QC | Quality inspection and sampling | 3 | 3 | 0 |
 | REQ-PACK | Packaging lists, verification and print labels | 3 | 5 | 3 |
 | REQ-SHIP | Shipments, dispatch and delivery | 4 | 9 | 8 |
-| REQ-SALES | Proformas, cash invoices and tax invoices | 3 | 28 | 28 |
+| REQ-SALES | Proformas, cash invoices and tax invoices | 3 | 32 | 32 |
 | REQ-PURCHASE | Purchase documents and vendor settlement | 3 | 3 | 1 |
 | REQ-CASH | Cashflow, allocations and account transfers | 3 | 6 | 3 |
 | REQ-RECUR | Recurring cashflow planning and posting | 3 | 3 | 0 |

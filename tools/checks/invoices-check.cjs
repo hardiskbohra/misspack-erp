@@ -52,6 +52,7 @@ const view = read('resources/views/sales_invoices/index.blade.php');
 const form = read('resources/views/sales_invoices/form.blade.php');
 const record = read('resources/views/sales_invoices/show.blade.php');
 const sheet = strip(read('public/assets/css/sales-invoices.css'));
+const clientAccountSheet = strip(read('public/assets/css/client-account-summary.css'));
 const js = read('public/assets/js/sales-invoices.js');
 const model = read('app/Models/SalesInvoice.php');
 const controller = read('app/Http/Controllers/SalesInvoiceController.php');
@@ -113,7 +114,12 @@ check('a shared class may only appear here scoped under the module\'s own',
         ! /\.master-[a-z0-9-]+/.test(sel) || /\.si-[a-z0-9-]+/.test(sel))),
     'an unscoped .master-* here overrides the design system for every page that loads it');
 
+// The shared client-account component owns its own si-* classes and is
+// explicitly loaded by the form. Do not mistake those for missing invoice CSS.
+const componentLoaded = /assets\/css\/client-account-summary\.css/.test(form);
 const definedSi = new Set(sheetRules.flatMap(rule =>
+    [...rule.sel.matchAll(/\.(si-[a-z0-9-]+)/g)].map(m => m[1])));
+const componentSi = new Set(cssRules(clientAccountSheet).flatMap(rule =>
     [...rule.sel.matchAll(/\.(si-[a-z0-9-]+)/g)].map(m => m[1])));
 
 const usedSi = new Set();
@@ -121,9 +127,12 @@ Object.values(screens).forEach(text =>
     [...text.matchAll(/(?<![\w-])si-[a-z0-9-]+/g)].forEach(m => usedSi.add(m[0])));
 [...js.matchAll(/(?<![\w-])(si-[a-z0-9-]+)/g)].forEach(m => usedSi.add(m[1]));
 
-const undefinedSi = [...usedSi].filter(name => ! definedSi.has(name));
+const undefinedSi = [...usedSi].filter(name => ! definedSi.has(name) && ! (
+    componentLoaded && componentSi.has(name) && form.includes(name)
+    && ! view.includes(name) && ! record.includes(name) && ! js.includes(name)
+));
 
-check('every class the invoice screens wear is defined in the module\'s sheet',
+check('every invoice class is defined in the module or an explicitly loaded component sheet',
     undefinedSi.length === 0,
     'used and never declared: ' + undefinedSi.join(', '));
 

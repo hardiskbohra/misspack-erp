@@ -54,6 +54,7 @@ class SalesInvoiceAdjustment
         'packing_amount' => 'packing',
         'other_charges' => 'other charges',
         'round_off' => 'round off',
+        'auto_round_total' => 'round off mode',
         'amount_paid' => 'the opening payment figure',
     ];
 

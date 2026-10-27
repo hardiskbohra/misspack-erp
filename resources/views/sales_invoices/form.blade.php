@@ -469,9 +469,18 @@
                                     Charges</label><input class="master-input" type="number" step="0.01" min="0"
                                     name="other_charges" id="otherCharges"
                                     value="{{ old('other_charges', $invoice->other_charges) }}"></div>
-                            <div class="master-field"><label class="master-label" for="roundOff">Round Off</label><input
-                                    class="master-input" type="number" step="0.01" name="round_off" id="roundOff"
-                                    value="{{ old('round_off', $invoice->round_off) }}"></div>
+                            <div class="master-field">
+                                <label class="master-label" for="roundOff">Round off</label>
+                                <input class="master-input" type="number" step="0.01" name="round_off" id="roundOff"
+                                    value="{{ old('round_off', $invoice->round_off) }}" aria-describedby="roundOffHelp">
+                                <label class="master-check">
+                                    <input type="hidden" name="auto_round_total" value="0">
+                                    <input type="checkbox" id="autoRoundTotal" name="auto_round_total" value="1"
+                                        @checked(old('auto_round_total', $invoice->auto_round_total)) aria-describedby="roundOffHelp">
+                                    <span>Automatically round the INR total</span>
+                                </label>
+                                <p class="master-help" id="roundOffHelp">For INR proforma and tax invoices, round to the nearest rupee. Uncheck to enter a manual adjustment.</p>
+                            </div>
                             {{-- The invoice's *opening* figure. Receipts recorded against
                                  it — from the list's "Record payment", or a cashflow
                                  entry linked to this invoice — are added to it, and

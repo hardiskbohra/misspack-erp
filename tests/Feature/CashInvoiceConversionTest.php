@@ -36,6 +36,7 @@ class CashInvoiceConversionTest extends TestCase
             '2026_07_18_010100_create_project_products_table',
             '2026_07_18_010700_add_project_id_to_cashflow_entries_table',
             '2026_08_26_010000_create_sales_invoices_table',
+            '2026_10_27_140000_add_invoice_auto_round_total',
             '2026_08_26_010100_create_sales_invoice_items_table',
             '2026_08_26_010200_create_sales_invoice_attachments_table',
             '2026_08_29_000000_add_sales_invoice_id_to_cashflow_entries_table',
@@ -278,11 +279,13 @@ class CashInvoiceConversionTest extends TestCase
 
     public function test_fixed_discounts_and_subcent_lines_reconcile_on_the_remainder(): void
     {
+        // This exercises a fractional legacy/manual claim, not the new
+        // default whole-rupee policy for eligible INR invoices.
         $pi = $this->pricedPi([
             ['product_name' => 'A', 'quantity' => 1, 'unit_price' => 0.01],
             ['product_name' => 'B', 'quantity' => 1, 'unit_price' => 0.01],
             ['product_name' => 'C', 'quantity' => 1, 'unit_price' => 0.01],
-        ], ['discount_type' => 'amount', 'discount_value' => 0.01]);
+        ], ['discount_type' => 'amount', 'discount_value' => 0.01, 'auto_round_total' => false]);
         $this->convert($pi, 0.01);
         (new SalesInvoiceController)->convert(Request::create('/', 'POST'), $pi->fresh());
         $tax = SalesInvoice::where('invoice_type', 'tax')->firstOrFail();

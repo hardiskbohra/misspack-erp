@@ -31,6 +31,7 @@ class InvoiceAdjustmentTest extends TestCase
             '2026_10_03_030000_add_employment_profile_to_users_table',
             '2026_10_19_110000_create_permissions_and_audit_log',
             '2026_08_26_010000_create_sales_invoices_table',
+            '2026_10_27_140000_add_invoice_auto_round_total',
             '2026_10_18_171000_add_structured_payment_terms_to_sales_invoices',
             '2026_08_26_010100_create_sales_invoice_items_table',
             '2026_08_26_010200_create_sales_invoice_attachments_table',

@@ -98,6 +98,11 @@
 
         var rowIndex = 0;
         var ledgerReceived = parseFloat(body.getAttribute('data-ledger-received')) || 0;
+        var autoRound = document.getElementById('autoRoundTotal');
+        var roundOffInput = document.getElementById('roundOff');
+        var autoRoundActive = false;
+        // An automatically calculated saved value is not a manual override.
+        var manualRoundOff = autoRound && autoRound.checked ? '0.00' : (roundOffInput ? roundOffInput.value : '');
 
         function money(v) {
             return '₹ ' + (Number(v || 0)).toLocaleString('en-IN', {
@@ -116,7 +121,12 @@
         /* The same rounding the server does, so a preview and a save agree to
            the paisa. */
         function round2(v) {
-            return Math.round((Number(v || 0) + Number.EPSILON) * 100) / 100;
+            var number = Number(v || 0);
+            var absolute = Math.abs(number);
+            // Scale the tolerance with the value: 0.015 × 633 is represented
+            // just below 9.495, but PHP rounds that half-paise up to 9.50.
+            var paise = Math.round((absolute + Number.EPSILON * Math.max(1, absolute)) * 100);
+            return (number < 0 ? -paise : paise) / 100;
         }
 
         /* Everything the office types into a field ends up inside an attribute
@@ -263,11 +273,27 @@
             var freight = fieldValue('freightAmount');
             var packing = fieldValue('packingAmount');
             var other = fieldValue('otherCharges');
-            var roundOff = fieldValue('roundOff');
             var charges = round2(freight + packing + other);
             var tax = round2(cgst + sgst + igst);
-
-            var total = round2(taxableAfter + tax + charges + roundOff);
+            var beforeRoundOff = round2(taxableAfter + tax + charges);
+            var eligible = fieldText('invoiceCurrency') === 'INR' && !cashInvoice;
+            var automatic = !!(autoRound && autoRound.checked && eligible);
+            if (autoRound) autoRound.disabled = !eligible;
+            if (roundOffInput) {
+                if (automatic) {
+                    // Work in paise: half a rupee rounds upward, and the
+                    // signed difference is the visible round-off line.
+                    var paise = Math.round(beforeRoundOff * 100);
+                    var roundedPaise = Math.floor((paise + 50) / 100) * 100;
+                    roundOffInput.value = ((roundedPaise - paise) / 100).toFixed(2);
+                } else if (autoRoundActive) {
+                    roundOffInput.value = manualRoundOff;
+                }
+                roundOffInput.readOnly = automatic;
+            }
+            autoRoundActive = automatic;
+            var roundOff = fieldValue('roundOff');
+            var total = round2(beforeRoundOff + roundOff);
             var received = round2(fieldValue('amountPaid') + ledgerReceived);
             var balance = Math.max(round2(total - received), 0);
 
@@ -363,12 +389,19 @@
             }
         });
 
-        ['discountValue', 'discountType', 'freightAmount', 'packingAmount', 'otherCharges', 'roundOff',
-            'amountPaid', 'gstType'
-        ].forEach(function (id) {
+        ['discountValue', 'freightAmount', 'packingAmount', 'otherCharges', 'amountPaid'].forEach(function (id) {
             var el = document.getElementById(id);
             if (el) el.addEventListener('input', calculateTotals);
         });
+        if (roundOffInput) roundOffInput.addEventListener('input', function () {
+            if (!autoRoundActive) manualRoundOff = roundOffInput.value;
+            calculateTotals();
+        });
+        if (autoRound) autoRound.addEventListener('change', function () {
+            if (autoRound.checked && !autoRoundActive && roundOffInput) manualRoundOff = roundOffInput.value;
+            calculateTotals();
+        });
+        onChange(document.getElementById('invoiceCurrency'), calculateTotals);
         onChange(document.getElementById('invoiceType'), function () {
             calculateTotals();
             var root = document.querySelector('.si-form');
@@ -379,8 +412,8 @@
             if (root && root.dataset.invoiceEdit === 'false') document.getElementById('invoiceNumber').value = '';
         });
         ['discountType', 'gstType'].forEach(function (id) {
-            var el = document.getElementById(id);
-            if (el) el.addEventListener('change', calculateTotals);
+            // Select2 announces a pick with a jQuery change, not a DOM event.
+            onChange(document.getElementById(id), calculateTotals);
         });
 
         /* ------------------------------------------ the client's own record

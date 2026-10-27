@@ -21,6 +21,13 @@
       ]
     },
     {
+      "file": "tests/Database/MySqlInvoiceAutoRoundingTest.php",
+      "methods": [
+        "test_auto_manual_and_ineligible_amounts_are_stored_at_mysql_decimal_precision",
+        "test_partial_conversion_keeps_the_fractional_tax_remainder_on_mysql"
+      ]
+    },
+    {
       "file": "tests/Database/MySqlReportingTest.php",
       "methods": [
         "test_real_database_aggregation_honours_custom_bounds",
@@ -38,7 +45,8 @@
       "file": "tests/Database/MySqlWideningMigrationSafetyTest.php",
       "methods": [
         "test_gate_summary_migration_preserves_existing_values_and_refuses_lossy_rollback",
-        "test_message_widening_preserves_old_values_and_checks_every_column_before_rollback"
+        "test_message_widening_preserves_old_values_and_checks_every_column_before_rollback",
+        "test_existing_invoice_money_survives_migration_and_active_policy_cannot_be_dropped"
       ]
     },
     {
@@ -495,6 +503,34 @@
         "test_legacy_incomplete_indian_submissions_cannot_be_approved",
         "test_office_addresses_are_editable_and_invalidate_previously_approved_kyc",
         "test_missing_private_file_does_not_count_as_valid_indian_evidence"
+      ]
+    },
+    {
+      "file": "tests/Integration/InvoiceAutoRoundingMigrationTest.php",
+      "methods": [
+        "test_existing_invoice_money_survives_migration_and_active_policy_cannot_be_dropped"
+      ]
+    },
+    {
+      "file": "tests/Integration/InvoiceAutoRoundingTest.php",
+      "methods": [
+        "test_new_inr_proformas_and_tax_invoices_round_half_up_and_store_the_signed_difference",
+        "test_half_paise_on_a_fractional_quantity_is_rounded_before_the_whole_rupee_total",
+        "test_rounding_is_after_discounts_and_charges_and_is_visible_on_print_and_detail",
+        "test_auto_rounding_is_applied_after_gst_invoice_discount_and_charges",
+        "test_explicit_manual_override_is_preserved_and_auto_mode_does_not_trust_submitted_round_off",
+        "test_draft_edits_recompute_auto_mode_and_keep_manual_mode_when_it_is_selected",
+        "test_existing_legacy_invoice_is_not_automatically_changed_on_edit",
+        "test_foreign_currency_and_cash_invoices_are_not_auto_rounded",
+        "test_switching_an_auto_draft_to_foreign_or_cash_without_a_round_off_does_not_leak_the_old_adjustment",
+        "test_proforma_conversion_preserves_exact_fractional_remainder_and_cash_claim",
+        "test_a_rounded_proforma_keeps_the_exact_fractional_remainder_after_a_partial_cash_conversion",
+        "test_partial_conversion_preserves_fractional_receipts_and_the_outstanding_balance",
+        "test_full_conversion_keeps_fractional_total_and_transferred_opening_receipt",
+        "test_auto_rounding_is_included_in_the_e_invoice_payload",
+        "test_duplicate_is_a_new_draft_with_auto_rounding_but_does_not_change_the_source",
+        "test_issued_tax_invoice_rejects_switching_rounding_policy_or_changing_the_adjustment",
+        "test_form_exposes_auto_rounding_and_manual_override_with_an_accessible_explanation"
       ]
     },
     {
@@ -1189,6 +1225,7 @@
     "tools/checks/docs-check.cjs",
     "tools/checks/employees-check.cjs",
     "tools/checks/feedback-check.cjs",
+    "tools/checks/invoice-rounding-browser.cjs",
     "tools/checks/invoices-check.cjs",
     "tools/checks/list-check.cjs",
     "tools/checks/mark-check.cjs",

@@ -1202,6 +1202,62 @@ Sources: `app/Services/CashInvoiceConversion.php`, `app/Services/CashInvoiceDele
 
 **Evidence:** `tests/Feature/InvoiceAdjustmentTest.php#test_notes_change_what_the_listing_counts_but_never_the_receipts`
 
+### IT-SALES-032 — New eligible INR invoice totals round half-up after tax and charges
+
+**Priority:** P0 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Full migrated schema; authorised office user; new INR proforma or tax invoice
+- **Data:** Final totals 100.49, 100.50, 100.99; fractional quantities; discounts, GST and charges
+1. Create eligible invoices through HTTP
+2. Inspect signed round-off, total, balance and words
+3. Inspect detail, print and e-invoice payload
+
+**Expected:** The final total rounds to the nearest whole rupee with half-up boundaries; signed adjustment, balance, documents and payload reconcile.
+
+**Evidence:** `tests/Integration/InvoiceAutoRoundingTest.php#test_new_inr_proformas_and_tax_invoices_round_half_up_and_store_the_signed_difference`; `tests/Integration/InvoiceAutoRoundingTest.php#test_half_paise_on_a_fractional_quantity_is_rounded_before_the_whole_rupee_total`; `tests/Integration/InvoiceAutoRoundingTest.php#test_rounding_is_after_discounts_and_charges_and_is_visible_on_print_and_detail`; `tests/Integration/InvoiceAutoRoundingTest.php#test_auto_rounding_is_applied_after_gst_invoice_discount_and_charges`; `tests/Integration/InvoiceAutoRoundingTest.php#test_auto_rounding_is_included_in_the_e_invoice_payload`; `tests/Database/MySqlInvoiceAutoRoundingTest.php#test_auto_manual_and_ineligible_amounts_are_stored_at_mysql_decimal_precision`
+
+### IT-SALES-033 — Staff can override automatic rounding without changing issued money
+
+**Priority:** P0 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Eligible draft and issued tax invoice; authorised office user
+- **Data:** Manual signed adjustment; tampered auto preview; draft edit; policy and adjustment change on sent tax invoice
+1. Choose manual mode and save an adjustment
+2. Enable auto mode and submit a forged adjustment
+3. Edit the draft and then try changing the issued invoice
+
+**Expected:** Manual values persist; the server recomputes auto values; issued monetary fields and rounding mode are locked while working fields remain editable.
+
+**Evidence:** `tests/Integration/InvoiceAutoRoundingTest.php#test_explicit_manual_override_is_preserved_and_auto_mode_does_not_trust_submitted_round_off`; `tests/Integration/InvoiceAutoRoundingTest.php#test_draft_edits_recompute_auto_mode_and_keep_manual_mode_when_it_is_selected`; `tests/Integration/InvoiceAutoRoundingTest.php#test_issued_tax_invoice_rejects_switching_rounding_policy_or_changing_the_adjustment`
+
+### IT-SALES-034 — Legacy, foreign-currency and cash invoices are not automatically re-rounded
+
+**Priority:** P0 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Existing manual invoice and new USD, RMB and cash documents; migrated schema
+- **Data:** Legacy fractional total; USD and RMB at 100.49; auto INR draft switched to foreign or cash without an adjustment
+1. Migrate and read existing invoice values
+2. Edit a legacy invoice
+3. Create foreign/cash invoices and switch an auto draft to an ineligible type
+
+**Expected:** Existing money is unchanged, ineligible invoices do not auto-round, and a prior computed INR adjustment does not leak into an ineligible document. Rollback refuses to discard active policies.
+
+**Evidence:** `tests/Integration/InvoiceAutoRoundingMigrationTest.php#test_existing_invoice_money_survives_migration_and_active_policy_cannot_be_dropped`; `tests/Database/MySqlWideningMigrationSafetyTest.php#test_existing_invoice_money_survives_migration_and_active_policy_cannot_be_dropped`; `tests/Integration/InvoiceAutoRoundingTest.php#test_existing_legacy_invoice_is_not_automatically_changed_on_edit`; `tests/Integration/InvoiceAutoRoundingTest.php#test_foreign_currency_and_cash_invoices_are_not_auto_rounded`; `tests/Integration/InvoiceAutoRoundingTest.php#test_switching_an_auto_draft_to_foreign_or_cash_without_a_round_off_does_not_leak_the_old_adjustment`; `tests/Database/MySqlInvoiceAutoRoundingTest.php#test_auto_manual_and_ineligible_amounts_are_stored_at_mysql_decimal_precision`
+
+### IT-SALES-035 — Conversions preserve exact claims and duplicate drafts round afresh
+
+**Priority:** P0 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence
+
+- **Preconditions:** Existing proforma with a fractional outstanding claim or partial cash conversion
+- **Data:** Full transfer of opening receipts; partial cash conversion leaving a fractional tax remainder; duplicate with manual round-off
+1. Convert proforma in full and in part
+2. Compare source and child totals and transferred receipts
+3. Duplicate an eligible invoice
+
+**Expected:** Tax and cash continuations preserve the exact outstanding claim including paise and never re-round; an eligible duplicate is a new automatically rounded draft and leaves its source untouched.
+
+**Evidence:** `tests/Integration/InvoiceAutoRoundingTest.php#test_proforma_conversion_preserves_exact_fractional_remainder_and_cash_claim`; `tests/Integration/InvoiceAutoRoundingTest.php#test_a_rounded_proforma_keeps_the_exact_fractional_remainder_after_a_partial_cash_conversion`; `tests/Integration/InvoiceAutoRoundingTest.php#test_partial_conversion_preserves_fractional_receipts_and_the_outstanding_balance`; `tests/Integration/InvoiceAutoRoundingTest.php#test_full_conversion_keeps_fractional_total_and_transferred_opening_receipt`; `tests/Integration/InvoiceAutoRoundingTest.php#test_duplicate_is_a_new_draft_with_auto_rounding_but_does_not_change_the_source`; `tests/Database/MySqlInvoiceAutoRoundingTest.php#test_partial_conversion_keeps_the_fractional_tax_remainder_on_mysql`
+
 ### IT-SALES-031 — Invoice mail audit remains honest before, during and after delivery attempt
 
 **Priority:** P0 · **Requirement:** REQ-SALES · **Implementation:** linked executable evidence

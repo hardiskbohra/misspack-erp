@@ -340,17 +340,31 @@ class SalesInvoiceController extends Controller
      */
     public function duplicate(SalesInvoice $salesInvoice): RedirectResponse
     {
-        $copy = $this->copyInvoice($salesInvoice, [
-            'invoice_number' => $this->makeInvoiceNumber($salesInvoice->invoice_type),
-            'status' => 'draft',
-            'amount_paid' => 0,
-            'balance_amount' => (float) $salesInvoice->total_amount,
-            'public_token' => null,
-            'sent_at' => null,
-            'accepted_at' => null,
-            'cancelled_at' => null,
-            'notes' => trim('Copy of '.$salesInvoice->invoice_number.'. '.($salesInvoice->notes ?? '')),
-        ]);
+        $copy = DB::transaction(function () use ($salesInvoice) {
+            $auto = $this->eligibleForAutoRounding($salesInvoice->invoice_type, $salesInvoice->currency);
+            $copy = $this->copyInvoice($salesInvoice, [
+                'invoice_number' => $this->makeInvoiceNumber($salesInvoice->invoice_type),
+                'status' => 'draft',
+                'amount_paid' => 0,
+                'balance_amount' => (float) $salesInvoice->total_amount,
+                'auto_round_total' => $auto,
+                'public_token' => null,
+                'sent_at' => null,
+                'accepted_at' => null,
+                'cancelled_at' => null,
+                'notes' => trim('Copy of '.$salesInvoice->invoice_number.'. '.($salesInvoice->notes ?? '')),
+            ]);
+
+            if ($auto) {
+                $beforeRoundOff = round((float) $copy->total_amount - (float) $copy->round_off, 2);
+                $adjustment = $this->rupeeRoundOff($beforeRoundOff);
+                $total = round($beforeRoundOff + $adjustment, 2);
+                $copy->update(['round_off' => $adjustment, 'total_amount' => $total, 'balance_amount' => $total,
+                    'amount_in_words' => $this->amountInWords($total, $copy->currency)]);
+            }
+
+            return $copy;
+        });
 
         return redirect()->route('sales-invoices.edit', $copy)
             ->with('success', $copy->invoice_number.' created as a draft copy of '.$salesInvoice->invoice_number.'.');
@@ -397,6 +411,8 @@ class SalesInvoiceController extends Controller
             $tax = $proforma->hasMonetaryConversions() ? $this->remainderTaxInvoice($proforma) : $this->copyInvoice($proforma, [
                 'invoice_type' => 'tax',
                 'invoice_number' => $this->makeInvoiceNumber('tax'),
+                // This continues an existing claim; never re-round it on conversion.
+                'auto_round_total' => false,
                 /* The conversion continues the document rather than restarting
                    it: whatever the proforma had reached — sent, accepted — the
                    tax invoice has reached too, and it is chased on the same due
@@ -440,7 +456,7 @@ class SalesInvoiceController extends Controller
             $plan = $conversion->plan($pi, $data['conversion_mode'], (float) $data['conversion_value']);
             $cash = $pi->replicate(['created_at', 'updated_at', 'converted_invoice_id', 'cash_converted_base_amount', 'cash_converted_total_amount']);
             $cash->fill(['invoice_type' => 'cash', 'invoice_number' => $this->makeInvoiceNumber('cash'),
-                'public_token' => null, 'source_proforma_id' => $pi->id, 'conversion_base_amount' => $plan['amount'],
+                'auto_round_total' => false, 'public_token' => null, 'source_proforma_id' => $pi->id, 'conversion_base_amount' => $plan['amount'],
                 'conversion_total_amount' => $plan['gross_consumed'], 'gst_type' => 'none', 'seller_gstin' => null,
                 'seller_pan' => null, 'client_gstin' => null, 'client_pan' => null, 'place_of_supply' => null,
                 'subtotal' => $plan['amount'], 'taxable_amount' => $plan['amount'], 'total_amount' => $plan['amount'],
@@ -483,7 +499,7 @@ class SalesInvoiceController extends Controller
         }
         $tax = $pi->replicate(['created_at', 'updated_at', 'converted_invoice_id', 'cash_converted_base_amount', 'cash_converted_total_amount']);
         $tax->fill(['invoice_type' => 'tax', 'invoice_number' => $this->makeInvoiceNumber('tax'), 'public_token' => null,
-            'source_proforma_id' => $pi->id, 'amount_paid' => 0, 'created_by' => Auth::id()]);
+            'auto_round_total' => false, 'source_proforma_id' => $pi->id, 'amount_paid' => 0, 'created_by' => Auth::id()]);
         foreach (['discount_amount', 'cgst_amount', 'sgst_amount', 'igst_amount', 'freight_amount', 'packing_amount', 'other_charges'] as $field) {
             $tax->$field = round((float) $pi->$field * $ratio, 2);
         }
@@ -751,6 +767,7 @@ class SalesInvoiceController extends Controller
             'valid_until' => now()->addDays(10)->toDateString(),
             'currency' => $client ? ($client->preferred_currency ?? 'INR') : 'INR',
             'gst_type' => 'intra_state',
+            'auto_round_total' => true,
             'payment_terms' => '50% advance, balance before dispatch',
             'advance_required' => $invoiceType === 'proforma',
             'advance_percentage' => $invoiceType === 'proforma' ? 50 : null,
@@ -780,6 +797,12 @@ class SalesInvoiceController extends Controller
         unset($data['items'], $data['attachments']);
 
         $data = $this->prepareInvoiceData($request, $data);
+        // A legacy API caller supplying a non-zero round-off is deliberately
+        // using the existing manual adjustment, unless it requests auto mode.
+        $auto = array_key_exists('auto_round_total', $data)
+            ? (bool) $data['auto_round_total']
+            : (float) $data['round_off'] === 0.0;
+        $data['auto_round_total'] = $this->eligibleForAutoRounding($data['invoice_type'], $data['currency']) && $auto;
         $data['invoice_number'] = $data['invoice_number'] ?: $this->makeInvoiceNumber($data['invoice_type']);
         $data['created_by'] = Auth::id();
 
@@ -868,6 +891,14 @@ class SalesInvoiceController extends Controller
         DB::transaction(function () use ($request, $salesInvoice, $data, $items) {
             $salesInvoice = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
             $this->assertEditable($salesInvoice);
+            $eligible = $this->eligibleForAutoRounding($data['invoice_type'], $data['currency']);
+            if (! $request->has('round_off')) {
+                // A computed INR adjustment is not a manual foreign/cash one.
+                $data['round_off'] = ! $eligible && $salesInvoice->auto_round_total ? 0 : $salesInvoice->round_off;
+            }
+            $auto = array_key_exists('auto_round_total', $data)
+                ? (bool) $data['auto_round_total'] : (bool) $salesInvoice->auto_round_total;
+            $data['auto_round_total'] = $eligible && $auto;
             /* An issued tax invoice is a legal document: its money and identity
                may only move through credit/debit notes, never an edit. */
             app(SalesInvoiceAdjustment::class)->assertMoneyFieldsUnchanged($salesInvoice, $data, $items);
@@ -1138,6 +1169,7 @@ class SalesInvoiceController extends Controller
             'packing_amount' => ['nullable', 'numeric', 'min:0'],
             'other_charges' => ['nullable', 'numeric', 'min:0'],
             'round_off' => ['nullable', 'numeric'],
+            'auto_round_total' => ['sometimes', 'boolean'],
             'amount_paid' => ['nullable', 'numeric', 'min:0'],
             'terms_conditions' => ['nullable', 'string'],
             'notes' => ['nullable', 'string'],
@@ -1201,6 +1233,20 @@ class SalesInvoiceController extends Controller
             $data['gst_type'] = 'none';
         }
         return $data;
+    }
+
+    private function eligibleForAutoRounding(string $type, string $currency): bool
+    {
+        return $currency === 'INR' && in_array($type, ['proforma', 'tax'], true);
+    }
+
+    private function rupeeRoundOff(float $amount): float
+    {
+        // Round the already calculated amount to paise first, then round a
+        // half rupee upward. The signed difference is part of the invoice.
+        $amount = round($amount, 2);
+
+        return round(round($amount, 0, PHP_ROUND_HALF_UP) - $amount, 2);
     }
 
     private function syncItemsAndTotals(SalesInvoice $invoice, array $items): void
@@ -1282,7 +1328,10 @@ class SalesInvoiceController extends Controller
         $igstTotal = round($igstTotal * $taxAdjustmentRatio, 2);
 
         $charges = (float) $invoice->freight_amount + (float) $invoice->packing_amount + (float) $invoice->other_charges;
-        $total = round($taxableAfterInvoiceDiscount + $cgstTotal + $sgstTotal + $igstTotal + $charges + (float) $invoice->round_off, 2);
+        $beforeRoundOff = round($taxableAfterInvoiceDiscount + $cgstTotal + $sgstTotal + $igstTotal + $charges, 2);
+        $roundOff = $invoice->auto_round_total && $this->eligibleForAutoRounding($invoice->invoice_type, $invoice->currency)
+            ? $this->rupeeRoundOff($beforeRoundOff) : (float) $invoice->round_off;
+        $total = round($beforeRoundOff + $roundOff, 2);
         /* The balance is the money rule's: what the invoice says was received
            before it was recorded in the ledger, plus every receipt filed against
            it. `PartyStatement` prints this column on a client's statement, so it
@@ -1296,6 +1345,7 @@ class SalesInvoiceController extends Controller
             'cgst_amount' => $cgstTotal,
             'sgst_amount' => $sgstTotal,
             'igst_amount' => $igstTotal,
+            'round_off' => $roundOff,
             'total_amount' => $total,
             'balance_amount' => $balance,
             'amount_in_words' => $this->amountInWords($total, $invoice->currency),
