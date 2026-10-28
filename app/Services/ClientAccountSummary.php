@@ -98,7 +98,7 @@ class ClientAccountSummary
                 // the remainder stays in bank currency; project-only advances stay here.
                 $remainder = max($entry->amountMoved() - $appliedCash, 0);
                 $signed = $entry->isMoneyOut() ? -$remainder : $remainder;
-                if (abs($signed) < 0.005) continue;
+                if (abs($signed) < 0.0005) continue;
                 $code = $this->currency($entry->currency);
                 $rows[$code] ??= $this->emptyRow($code);
                 $rows[$code]['payments'] += $signed;
@@ -109,10 +109,10 @@ class ClientAccountSummary
         if (! $rows) $rows[$preferred] = $this->emptyRow($preferred);
         foreach ($rows as &$row) {
             $row['unapplied_credit'] = max($row['unapplied_credit'], 0);
-            $net = round($row['invoice_total'] - $row['payments'], 2);
+            $net = round($row['invoice_total'] - $row['payments'], 3);
             $row['balance_due'] = max($net, 0);
             $row['net_credit'] = max(-$net, 0);
-            foreach ($row as $key => $value) if ($key !== 'currency') $row[$key] = round($value, 2);
+            foreach ($row as $key => $value) if ($key !== 'currency') $row[$key] = round($value, 3);
         }
         unset($row);
         uksort($rows, fn ($a, $b) => (($a !== $preferred) <=> ($b !== $preferred)) ?: strcmp($a, $b));

@@ -494,7 +494,7 @@ class VendorController extends Controller
             'paid_account_id' => ['nullable', 'integer'],
             'payment_mode' => ['nullable', 'string', 'max:40'],
             'bank_reference_number' => ['nullable', 'string', 'max:255'],
-            'amount_in_inr' => ['nullable', 'numeric', 'min:0'],
+            'amount_in_inr' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
             'remarks' => ['nullable', 'string'],
             'also_create_cashflow' => ['nullable', 'boolean'],
             'attachments' => ['nullable', 'array'],
@@ -561,7 +561,7 @@ class VendorController extends Controller
             'paid_account_id' => ['nullable','integer'],
             'payment_mode' => ['nullable','string','max:40'],
             'bank_reference_number' => ['nullable','string','max:255'],
-            'amount_in_inr' => ['nullable','numeric','min:0'],
+            'amount_in_inr' => ['nullable','numeric','decimal:0,3','min:0'],
             'remarks' => ['nullable','string'],
             'also_create_cashflow' => ['nullable','boolean'],
             'attachments' => ['nullable','array'],
@@ -821,14 +821,14 @@ class VendorController extends Controller
         $exchangeRate = (float) ($data['exchange_rate'] ?? 0);
 
         if ($amountInInr <= 0 && ($data['foreign_currency'] ?? null) === 'INR' && $foreignAmount > 0) {
-            return round($foreignAmount, 2);
+            return round($foreignAmount, 3);
         }
 
         if ($amountInInr <= 0 && $foreignAmount > 0 && $exchangeRate > 0) {
-            return round($foreignAmount * $exchangeRate, 2);
+            return round($foreignAmount * $exchangeRate, 3);
         }
 
-        return round($amountInInr, 2);
+        return round($amountInInr, 3);
     }
 
     private function storeVendorPaymentAttachments(Request $request, VendorPaymentEntry $entry): void
@@ -1035,7 +1035,7 @@ class VendorController extends Controller
                 $share = $bill['foreign_total'] > 0 ? $appliedForeign / $bill['foreign_total'] : 0;
 
                 $open[$index]['foreign_left'] = round($bill['foreign_left'] - $appliedForeign, 4);
-                $open[$index]['rupee_left'] = round($bill['rupee_left'] * (1 - $share), 2);
+                $open[$index]['rupee_left'] = round($bill['rupee_left'] * (1 - $share), 3);
                 $remaining = round($remaining - $appliedForeign, 4);
             }
         }
@@ -1055,7 +1055,7 @@ class VendorController extends Controller
         $dueSoon = 0.0;
 
         foreach ($open as $bill) {
-            if ((float) $bill['foreign_left'] <= 0.0001 && (float) $bill['rupee_left'] <= 0.009) {
+            if ((float) $bill['foreign_left'] < 0.00005 && (float) $bill['rupee_left'] < 0.0005) {
                 continue;
             }
 
@@ -1117,9 +1117,9 @@ class VendorController extends Controller
         return [
             'rows' => $rows,
             'buckets' => $buckets,
-            'outstanding' => round($outstanding, 2),
-            'overdue' => round($overdue, 2),
-            'due_soon' => round($dueSoon, 2),
+            'outstanding' => round($outstanding, 3),
+            'overdue' => round($overdue, 3),
+            'due_soon' => round($dueSoon, 3),
             'overdue_count' => $overdueBills,
             'next_due' => $nextDue['due'] ?? null,
         ];
@@ -1159,7 +1159,7 @@ class VendorController extends Controller
                 ->sum('foreign_amount');
 
             $peak = max($peak, $amount);
-            $series[] = ['label' => $month->format('M'), 'amount' => round($amount, 2)];
+            $series[] = ['label' => $month->format('M'), 'amount' => round($amount, 3)];
         }
 
         $billAmounts = $bills->pluck('foreign_amount')->map(fn ($value) => (float) $value)->filter();
@@ -1168,13 +1168,13 @@ class VendorController extends Controller
         return [
             'series' => $series,
             'peak' => $peak > 0 ? $peak : 1,
-            'billed' => round($billed, 2),
-            'paid' => round($paid, 2),
+            'billed' => round($billed, 3),
+            'paid' => round($paid, 3),
             'settled_percent' => $billed > 0 ? (int) round(min($paid / $billed, 1) * 100) : ($paid > 0 ? 100 : 0),
             'bills' => $bills->count(),
             'payments' => $payments->count(),
-            'average_bill' => $billAmounts->count() > 0 ? round($billAmounts->sum() / $billAmounts->count(), 2) : 0.0,
-            'largest_bill' => round((float) ($billAmounts->max() ?: 0), 2),
+            'average_bill' => $billAmounts->count() > 0 ? round($billAmounts->sum() / $billAmounts->count(), 3) : 0.0,
+            'largest_bill' => round((float) ($billAmounts->max() ?: 0), 3),
             'open_bills' => count($payables['rows']),
             'first_entry' => $dates->min() ? Carbon::parse($dates->min()) : null,
             'last_entry' => $dates->max() ? Carbon::parse($dates->max()) : null,
@@ -1210,7 +1210,7 @@ class VendorController extends Controller
                 select coalesce(sum(case when transaction_type = \'credit\' then foreign_amount else -foreign_amount end), 0)
                 from vendor_payment_entries
                 where vendor_id = vendors.id
-            ) > 0.009')
+            ) >= 0.001')
             ->count();
     }
 
@@ -1229,7 +1229,7 @@ class VendorController extends Controller
             ->where('transaction_type', 'credit')
             ->whereNotNull('due_date')
             ->whereDate('due_date', '<', Carbon::today())
-            ->sum('amount_in_inr'), 2);
+            ->sum('amount_in_inr'), 3);
     }
 
     private function overdueVendorCount(): int

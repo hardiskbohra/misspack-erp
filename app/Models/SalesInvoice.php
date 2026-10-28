@@ -37,8 +37,8 @@ class SalesInvoice extends Model
     ];
 
     protected $casts = [
-        'conversion_base_amount' => 'decimal:2', 'conversion_total_amount' => 'decimal:2',
-        'cash_converted_base_amount' => 'decimal:2', 'cash_converted_total_amount' => 'decimal:2',
+        'conversion_base_amount' => \App\Casts\DecimalUpToThree::class, 'conversion_total_amount' => \App\Casts\DecimalUpToThree::class,
+        'cash_converted_base_amount' => \App\Casts\DecimalUpToThree::class, 'cash_converted_total_amount' => \App\Casts\DecimalUpToThree::class,
         'invoice_date' => 'date',
         'due_date' => 'date',
         'valid_until' => 'date',
@@ -47,22 +47,22 @@ class SalesInvoice extends Model
         'advance_percentage' => 'decimal:2',
         'balance_before_dispatch' => 'boolean',
         'payment_tolerance' => 'decimal:2',
-        'subtotal' => 'decimal:2',
+        'subtotal' => \App\Casts\DecimalUpToThree::class,
         'exchange_rate' => 'decimal:6',
-        'discount_value' => 'decimal:2',
-        'discount_amount' => 'decimal:2',
-        'taxable_amount' => 'decimal:2',
-        'cgst_amount' => 'decimal:2',
-        'sgst_amount' => 'decimal:2',
-        'igst_amount' => 'decimal:2',
-        'freight_amount' => 'decimal:2',
-        'packing_amount' => 'decimal:2',
-        'other_charges' => 'decimal:2',
-        'round_off' => 'decimal:2',
+        'discount_value' => \App\Casts\DecimalUpToThree::class,
+        'discount_amount' => \App\Casts\DecimalUpToThree::class,
+        'taxable_amount' => \App\Casts\DecimalUpToThree::class,
+        'cgst_amount' => \App\Casts\DecimalUpToThree::class,
+        'sgst_amount' => \App\Casts\DecimalUpToThree::class,
+        'igst_amount' => \App\Casts\DecimalUpToThree::class,
+        'freight_amount' => \App\Casts\DecimalUpToThree::class,
+        'packing_amount' => \App\Casts\DecimalUpToThree::class,
+        'other_charges' => \App\Casts\DecimalUpToThree::class,
+        'round_off' => \App\Casts\DecimalUpToThree::class,
         'auto_round_total' => 'boolean',
-        'total_amount' => 'decimal:2',
-        'amount_paid' => 'decimal:2',
-        'balance_amount' => 'decimal:2',
+        'total_amount' => \App\Casts\DecimalUpToThree::class,
+        'amount_paid' => \App\Casts\DecimalUpToThree::class,
+        'balance_amount' => \App\Casts\DecimalUpToThree::class,
         'show_client_portal' => 'boolean',
         'sent_at' => 'datetime',
         'accepted_at' => 'datetime',
@@ -137,17 +137,17 @@ class SalesInvoice extends Model
     /** Original document less the gross value already replaced by cash invoices. */
     public function receivableTotal(): float
     {
-        return round(max((float) $this->total_amount - (float) $this->cash_converted_total_amount, 0), 2);
+        return round(max((float) $this->total_amount - (float) $this->cash_converted_total_amount, 0), 3);
     }
 
     public function cashConvertibleTotal(): float
     {
-        return round(max((float) $this->total_amount - (float) $this->cgst_amount - (float) $this->sgst_amount - (float) $this->igst_amount, 0), 2);
+        return round(max((float) $this->total_amount - (float) $this->cgst_amount - (float) $this->sgst_amount - (float) $this->igst_amount, 0), 3);
     }
 
     public function cashConvertibleRemaining(): float
     {
-        return round(max($this->cashConvertibleTotal() - (float) $this->cash_converted_base_amount, 0), 2);
+        return round(max($this->cashConvertibleTotal() - (float) $this->cash_converted_base_amount, 0), 3);
     }
 
     /** All monetary claims/credits continuing a baseline PI, each exactly once. */
@@ -376,18 +376,18 @@ class SalesInvoice extends Model
 
     public function creditedTotal(): float
     {
-        return round((float) $this->liveNotes()->where('kind', SalesInvoiceNote::KIND_CREDIT)->sum('total'), 2);
+        return round((float) $this->liveNotes()->where('kind', SalesInvoiceNote::KIND_CREDIT)->sum('total'), 3);
     }
 
     public function debitedTotal(): float
     {
-        return round((float) $this->liveNotes()->where('kind', SalesInvoiceNote::KIND_DEBIT)->sum('total'), 2);
+        return round((float) $this->liveNotes()->where('kind', SalesInvoiceNote::KIND_DEBIT)->sum('total'), 3);
     }
 
     /** What the document is worth after its corrections — what the client owes. */
     public function payableTotal(): float
     {
-        return round(max($this->receivableTotal() - $this->creditedTotal() + $this->debitedTotal(), 0), 2);
+        return round(max($this->receivableTotal() - $this->creditedTotal() + $this->debitedTotal(), 0), 3);
     }
 
 
@@ -403,7 +403,7 @@ class SalesInvoice extends Model
         if ($this->relationLoaded('payments')) {
             return round((float) $this->payments->sum(
                 fn ($payment) => (float) $payment->credit_amount - (float) $payment->debit_amount
-            ) + $this->allocatedReceived(), 2);
+            ) + $this->allocatedReceived(), 3);
         }
 
         if (array_key_exists('received_credit', $this->attributes) || array_key_exists('received_debit', $this->attributes)) {
@@ -411,7 +411,7 @@ class SalesInvoice extends Model
                 (float) ($this->attributes['received_credit'] ?? 0)
                     - (float) ($this->attributes['received_debit'] ?? 0)
                     + $this->allocatedReceived(),
-                2
+                3
             );
         }
 
@@ -422,7 +422,7 @@ class SalesInvoice extends Model
         return round((float) ($this->payments()
             ->reorder()
             ->selectRaw('coalesce(sum(credit_amount - debit_amount), 0) as received')
-            ->first()?->received ?? 0) + $this->allocatedReceived(), 2);
+            ->first()?->received ?? 0) + $this->allocatedReceived(), 3);
     }
 
     /**
@@ -437,7 +437,7 @@ class SalesInvoice extends Model
     {
         $attribute = $finalizedOnly ? 'client_portal_allocation_received' : 'allocation_received';
         if (array_key_exists($attribute, $this->attributes)) {
-            return round((float) ($this->attributes[$attribute] ?? 0), 2);
+            return round((float) ($this->attributes[$attribute] ?? 0), 3);
         }
         if (! $this->exists || ! Schema::hasTable('cashflow_allocations')) {
             return 0.0;
@@ -450,13 +450,13 @@ class SalesInvoice extends Model
             ->selectRaw("coalesce(sum(coalesce(cashflow_allocations.document_amount, cashflow_allocations.amount)), 0) as total")
             ->first()?->total;
 
-        return round((float) ($total ?? 0), 2);
+        return round((float) ($total ?? 0), 3);
     }
 
     /** Everything received: the invoice's opening figure plus the ledger's receipts. */
     public function receivedAmount(): float
     {
-        return round((float) $this->amount_paid + $this->ledgerReceived(), 2);
+        return round((float) $this->amount_paid + $this->ledgerReceived(), 3);
     }
 
     /** Client-safe received amount: the opening figure plus finalized receipts only. */
@@ -467,7 +467,7 @@ class SalesInvoice extends Model
                 ->whereIn('accounting_status', ['booked', 'reconciled'])
                 ->sum(fn ($payment) => (float) $payment->credit_amount - (float) $payment->debit_amount);
 
-            return round((float) $this->amount_paid + (float) $ledger + $this->allocatedReceived(true), 2);
+            return round((float) $this->amount_paid + (float) $ledger + $this->allocatedReceived(true), 3);
         }
 
         if (array_key_exists('client_portal_received_credit', $this->attributes)
@@ -477,7 +477,7 @@ class SalesInvoice extends Model
                     + (float) ($this->attributes['client_portal_received_credit'] ?? 0)
                     - (float) ($this->attributes['client_portal_received_debit'] ?? 0)
                     + $this->allocatedReceived(true),
-                2
+                3
             );
         }
 
@@ -491,7 +491,7 @@ class SalesInvoice extends Model
             ->selectRaw('coalesce(sum(credit_amount - debit_amount), 0) as received')
             ->first()?->received;
 
-        return round((float) $this->amount_paid + (float) ($ledger ?? 0) + $this->allocatedReceived(true), 2);
+        return round((float) $this->amount_paid + (float) ($ledger ?? 0) + $this->allocatedReceived(true), 3);
     }
 
     public function clientPortalBalanceDue(): float
@@ -500,7 +500,7 @@ class SalesInvoice extends Model
             return 0.0;
         }
 
-        return round(max($this->receivableTotal() - $this->clientPortalReceivedAmount(), 0), 2);
+        return round(max($this->receivableTotal() - $this->clientPortalReceivedAmount(), 0), 3);
     }
 
     public function clientPortalStateKey(?\DateTimeInterface $today = null): string
@@ -514,16 +514,16 @@ class SalesInvoice extends Model
         if ($this->status === 'draft') {
             return 'draft';
         }
-        if ($this->due_date && $this->clientPortalBalanceDue() > 0.01
+        if ($this->due_date && $this->clientPortalBalanceDue() >= 0.001
             && $this->due_date->lt($today ?: Carbon::today())) {
             return 'overdue';
         }
 
         $received = $this->clientPortalReceivedAmount();
-        if ($this->receivableTotal() > 0 && $received >= $this->receivableTotal() - 0.01) {
+        if ($this->receivableTotal() > 0 && $received >= $this->receivableTotal() - 0.0005) {
             return 'paid';
         }
-        if ($received > 0.01) {
+        if ($received >= 0.001) {
             return 'partial';
         }
 
@@ -557,12 +557,12 @@ class SalesInvoice extends Model
             return 0.0;
         }
 
-        return round(max($this->payableTotal() - $this->receivedAmount(), 0), 2);
+        return round(max($this->payableTotal() - $this->receivedAmount(), 0), 3);
     }
 
     public function advanceAmount(): float
     {
-        return round(max($this->receivedAmount() - $this->payableTotal(), 0), 2);
+        return round(max($this->receivedAmount() - $this->payableTotal(), 0), 3);
     }
 
     /** unpaid | partial | paid — read from the money, never from a stored word. */
@@ -576,11 +576,11 @@ class SalesInvoice extends Model
 
         /* A document credited down to zero has nothing left to collect, and
            anything already received shows as an advance — not as still owed. */
-        if ($total <= 0.01 || $received >= $total - 0.01) {
+        if ($total < 0.001 || $received >= $total - 0.0005) {
             return 'paid';
         }
 
-        return $received > 0.01 ? 'partial' : 'unpaid';
+        return $received >= 0.001 ? 'partial' : 'unpaid';
     }
 
     /**
@@ -596,7 +596,7 @@ class SalesInvoice extends Model
             return false;
         }
 
-        return $this->balanceDue() > 0.01
+        return $this->balanceDue() >= 0.001
             && $this->due_date->lt($today ?: Carbon::today());
     }
 
@@ -834,7 +834,7 @@ class SalesInvoice extends Model
             .($this->invoice_date ? ' dated '.$this->invoice_date->format('d M Y') : '')
             .' for '.$currency($this->receivableTotal()).'.';
 
-        if ($balance > 0.01) {
+        if ($balance >= 0.001) {
             $lines[] = $currency($balance).' is still outstanding'
                 .($this->due_date
                     ? ($this->isOverdue($today)

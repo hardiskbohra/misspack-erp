@@ -78,7 +78,7 @@ class PurchaseInvoiceController extends Controller
                 ." then purchase_invoices.total_amount else 0 end), 0) as open_".$code;
             $currencyBits[] = "coalesce(sum(case when $c and $live then ".$paid." else 0 end), 0) as paid_".$code;
             $currencyBits[] = "coalesce(sum(case when $c and $live and purchase_invoices.status <> 'draft'"
-                ." and ".$paid." < purchase_invoices.total_amount - 0.01"
+                ." and ".$paid." < purchase_invoices.total_amount - 0.0005"
                 ." then purchase_invoices.total_amount - ".$paid." else 0 end), 0) as outstanding_".$code;
         }
         $figures = $this->filteredQuery($filters)->reorder()->selectRaw(implode(', ', $currencyBits))->first();
@@ -136,7 +136,7 @@ class PurchaseInvoiceController extends Controller
                 if ($filters['status'] === 'overdue') {
                     return $query->where('purchase_invoices.due_date', '<', now()->toDateString())
                         ->whereNotIn('purchase_invoices.status', ['draft', 'cancelled'])
-                        ->whereRaw($this->paidSql().' < purchase_invoices.total_amount - 0.01');
+                        ->whereRaw($this->paidSql().' < purchase_invoices.total_amount - 0.0005');
                 }
 
                 return $query->where('purchase_invoices.status', $filters['status']);
@@ -148,10 +148,10 @@ class PurchaseInvoiceController extends Controller
                 $paid = $this->paidSql();
 
                 return match ($filters['payment']) {
-                    'nothing' => $query->whereRaw($paid.' <= 0.01'),
-                    'partial' => $query->whereRaw($paid.' > 0.01')
-                        ->whereRaw($paid.' < purchase_invoices.total_amount - 0.01'),
-                    'paid' => $query->whereRaw($paid.' >= purchase_invoices.total_amount - 0.01'),
+                    'nothing' => $query->whereRaw($paid.' < 0.001'),
+                    'partial' => $query->whereRaw($paid.' >= 0.001')
+                        ->whereRaw($paid.' < purchase_invoices.total_amount - 0.0005'),
+                    'paid' => $query->whereRaw($paid.' >= purchase_invoices.total_amount - 0.0005'),
                     default => $query,
                 };
             })
@@ -403,7 +403,7 @@ class PurchaseInvoiceController extends Controller
     {
         $this->assertDocType(request(), $purchaseInvoice);
 
-        if ((float) $purchaseInvoice->ledgerPaid() > 0.01) {
+        if ((float) $purchaseInvoice->ledgerPaid() >= 0.001) {
             return back()->with('error', $purchaseInvoice->invoice_number
                 .' has payments or cashflow allocations filed against it. Remove those links first, then delete the document.');
         }
@@ -540,11 +540,11 @@ class PurchaseInvoiceController extends Controller
 
         $data = $request->validate([
             'transaction_date' => ['nullable', 'date'],
-            'amount' => ['nullable', 'numeric', 'min:0.01'],
-            'foreign_amount' => ['nullable', 'numeric', 'min:0.01'],
+            'amount' => ['nullable', 'numeric', 'decimal:0,3', 'min:0.001'],
+            'foreign_amount' => ['nullable', 'numeric', 'decimal:0,4', 'min:0.001'],
             'foreign_currency' => ['nullable', 'string', 'max:10'],
             'exchange_rate' => ['nullable', 'numeric', 'min:0'],
-            'amount_in_inr' => ['nullable', 'numeric', 'min:0'],
+            'amount_in_inr' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
             'particular' => ['nullable', 'string', 'max:500'],
             'status' => ['nullable', 'in:pending,booked,paid,reconciled'],
             'project_id' => ['nullable', 'integer'],
@@ -573,7 +573,7 @@ class PurchaseInvoiceController extends Controller
             : (float) ($data['exchange_rate'] ?? $purchaseInvoice->exchange_rate ?: 0);
         $rupees = (float) ($data['amount_in_inr'] ?? 0);
         if ($rupees <= 0) {
-            $rupees = $rate > 0 ? round($amount * $rate, 2) : 0.0;
+            $rupees = $rate > 0 ? round($amount * $rate, 3) : 0.0;
         }
         if ($rate <= 0 && $rupees > 0 && $amount > 0) {
             $rate = round($rupees / $amount, 6);
@@ -604,7 +604,7 @@ class PurchaseInvoiceController extends Controller
             'paid_account_id' => $data['paid_account_id'] ?? null,
             'payment_mode' => $data['payment_mode'] ?? null,
             'bank_reference_number' => $data['bank_reference_number'] ?? null,
-            'amount_in_inr' => round($rupees, 2),
+            'amount_in_inr' => round($rupees, 3),
             'remarks' => $data['remarks'] ?? null,
             'created_by' => Auth::id(),
         ]);
@@ -615,8 +615,8 @@ class PurchaseInvoiceController extends Controller
 
         $this->refreshInvoiceMoney($purchaseInvoice->fresh());
 
-        return back()->with('success', 'Payment of '.number_format($amount, 2)
-            .' '.$purchaseInvoice->currency.' filed against '.$purchaseInvoice->invoice_number.'.');
+        return back()->with('success', 'Payment of '.\App\Helpers\CommonHelper::amount($amount, $purchaseInvoice->currency)
+            .' filed against '.$purchaseInvoice->invoice_number.'.');
     }
 
     public function updateStatus(Request $request, PurchaseInvoice $purchaseInvoice): RedirectResponse
@@ -685,7 +685,7 @@ class PurchaseInvoiceController extends Controller
                         continue;
                     }
 
-                    if ($invoice->isBill() && (float) $invoice->ledgerPaid() > 0.01) {
+                    if ($invoice->isBill() && (float) $invoice->ledgerPaid() >= 0.001) {
                         $skipped++;
                         continue;
                     }
@@ -834,7 +834,7 @@ class PurchaseInvoiceController extends Controller
             'packing_amount' => ['nullable', 'numeric', 'min:0'],
             'other_charges' => ['nullable', 'numeric', 'min:0'],
             'round_off' => ['nullable', 'numeric'],
-            'amount_paid' => ['nullable', 'numeric', 'min:0'],
+            'amount_paid' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
             'terms_conditions' => ['nullable', 'string'],
             'notes' => ['nullable', 'string'],
             'internal_notes' => ['nullable', 'string'],
@@ -847,7 +847,7 @@ class PurchaseInvoiceController extends Controller
             'items.*.hsn_sac' => ['nullable', 'string', 'max:40'],
             'items.*.quantity' => ['nullable', 'numeric', 'min:0'],
             'items.*.unit' => ['nullable', 'string', 'max:40'],
-            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
             'items.*.discount_percent' => ['nullable', 'numeric', 'min:0'],
             'items.*.gst_percent' => ['nullable', 'numeric', 'min:0'],
             'items.*.remarks' => ['nullable', 'string'],
@@ -938,9 +938,9 @@ class PurchaseInvoiceController extends Controller
             $productName = ($item['product_name'] ?? null) ?: $this->productName($item['product_id'] ?? null);
             $qty = (float) ($item['quantity'] ?? 1);
             $unitPrice = (float) ($item['unit_price'] ?? 0);
-            $gross = round($qty * $unitPrice, 2);
+            $gross = round($qty * $unitPrice, 3);
             $discountPercent = (float) ($item['discount_percent'] ?? 0);
-            $discountAmount = round($gross * ($discountPercent / 100), 2);
+            $discountAmount = round($gross * ($discountPercent / 100), 3);
             $taxable = max($gross - $discountAmount, 0);
             $gstPercent = (float) ($item['gst_percent'] ?? 18);
             $cgst = 0;
@@ -948,13 +948,13 @@ class PurchaseInvoiceController extends Controller
             $igst = 0;
 
             if ($invoice->gst_type === 'inter_state') {
-                $igst = round($taxable * ($gstPercent / 100), 2);
+                $igst = round($taxable * ($gstPercent / 100), 3);
             } elseif ($invoice->gst_type === 'intra_state') {
-                $cgst = round($taxable * (($gstPercent / 2) / 100), 2);
-                $sgst = round($taxable * (($gstPercent / 2) / 100), 2);
+                $cgst = round($taxable * (($gstPercent / 2) / 100), 3);
+                $sgst = round($taxable * (($gstPercent / 2) / 100), 3);
             }
 
-            $lineTotal = round($taxable + $cgst + $sgst + $igst, 2);
+            $lineTotal = round($taxable + $cgst + $sgst + $igst, 3);
 
             $invoice->items()->create([
                 'product_id' => $item['product_id'] ?? null,
@@ -988,22 +988,22 @@ class PurchaseInvoiceController extends Controller
 
         $invoiceDiscountValue = (float) ($invoice->discount_value ?? 0);
         $invoiceDiscount = $invoice->discount_type === 'percent'
-            ? round($taxableTotal * ($invoiceDiscountValue / 100), 2)
+            ? round($taxableTotal * ($invoiceDiscountValue / 100), 3)
             : min($invoiceDiscountValue, $taxableTotal);
 
         $taxableAfterInvoiceDiscount = max($taxableTotal - $invoiceDiscount, 0);
         $taxRatio = $taxableTotal > 0 ? ($taxableAfterInvoiceDiscount / $taxableTotal) : 1;
-        $cgstTotal = round($cgstTotal * $taxRatio, 2);
-        $sgstTotal = round($sgstTotal * $taxRatio, 2);
-        $igstTotal = round($igstTotal * $taxRatio, 2);
+        $cgstTotal = round($cgstTotal * $taxRatio, 3);
+        $sgstTotal = round($sgstTotal * $taxRatio, 3);
+        $igstTotal = round($igstTotal * $taxRatio, 3);
 
         $charges = (float) $invoice->freight_amount + (float) $invoice->packing_amount + (float) $invoice->other_charges;
-        $total = round($taxableAfterInvoiceDiscount + $cgstTotal + $sgstTotal + $igstTotal + $charges + (float) $invoice->round_off, 2);
+        $total = round($taxableAfterInvoiceDiscount + $cgstTotal + $sgstTotal + $igstTotal + $charges + (float) $invoice->round_off, 3);
 
         $invoice->update([
-            'subtotal' => round($subtotal, 2),
-            'discount_amount' => round($invoiceDiscount, 2),
-            'taxable_amount' => round($taxableAfterInvoiceDiscount, 2),
+            'subtotal' => round($subtotal, 3),
+            'discount_amount' => round($invoiceDiscount, 3),
+            'taxable_amount' => round($taxableAfterInvoiceDiscount, 3),
             'cgst_amount' => $cgstTotal,
             'sgst_amount' => $sgstTotal,
             'igst_amount' => $igstTotal,
@@ -1159,13 +1159,18 @@ class PurchaseInvoiceController extends Controller
 
     private function amountInWords(float $amount, string $currency): string
     {
-        $number = (int) floor($amount);
-        $paise = (int) round(($amount - $number) * 100);
+        $thousandths = (int) round($amount * 1000);
+        $number = intdiv($thousandths, 1000);
+        $paise = intdiv($thousandths % 1000, 10);
+        $tenthOfPaise = $thousandths % 10;
 
         $text = ($currency === 'INR' ? 'Rupees' : $currency).' '.$this->numberToWords($number);
 
         if ($paise > 0) {
             $text .= ' and '.$this->numberToWords($paise).' Paise';
+        }
+        if ($tenthOfPaise > 0) {
+            $text .= ' and '.$this->numberToWords($tenthOfPaise).' '.($tenthOfPaise === 1 ? 'Tenth' : 'Tenths').' of a Paise';
         }
 
         return $text.' Only';

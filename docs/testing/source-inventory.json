@@ -42,6 +42,15 @@
       ]
     },
     {
+      "file": "tests/Database/MySqlThreeDecimalPrecisionTest.php",
+      "methods": [
+        "test_discounted_tax_payload_reconciles_saved_mysql_totals",
+        "test_fractional_cash_conversion_of_a_paise_claim_keeps_the_exact_remainder_on_mysql",
+        "test_unsafe_partial_tax_conversion_is_atomic_on_native_mysql",
+        "test_sql_columns_and_http_writers_preserve_three_place_values"
+      ]
+    },
+    {
       "file": "tests/Database/MySqlVendorKycTest.php",
       "methods": [
         "test_native_json_schema_locking_and_stale_review_protection"
@@ -52,7 +61,8 @@
       "methods": [
         "test_gate_summary_migration_preserves_existing_values_and_refuses_lossy_rollback",
         "test_message_widening_preserves_old_values_and_checks_every_column_before_rollback",
-        "test_existing_invoice_money_survives_migration_and_active_policy_cannot_be_dropped"
+        "test_existing_invoice_money_survives_migration_and_active_policy_cannot_be_dropped",
+        "test_precision_migration_preserves_old_decimals_and_preflights_every_table_before_rollback"
       ]
     },
     {
@@ -73,6 +83,7 @@
         "test_full_conversion_can_retain_a_chosen_pi_advance_without_losing_it",
         "test_partial_direct_receipt_becomes_two_slices_of_the_same_bank_entry",
         "test_fx_allocation_splits_both_native_and_document_amounts_without_revaluation",
+        "test_unrepresentable_fx_allocation_split_rolls_back_without_zero_value_slices",
         "test_unsupported_direct_fx_transfer_rolls_back_the_entire_conversion",
         "test_remainder_can_be_tax_invoiced_without_rebilling_cash_or_moving_cash_receipts",
         "test_cash_print_has_no_gst_identifiers_or_tax_columns_even_with_a_stale_snapshot",
@@ -521,7 +532,7 @@
       "file": "tests/Integration/InvoiceAutoRoundingTest.php",
       "methods": [
         "test_new_inr_proformas_and_tax_invoices_round_half_up_and_store_the_signed_difference",
-        "test_half_paise_on_a_fractional_quantity_is_rounded_before_the_whole_rupee_total",
+        "test_fractional_quantity_uses_the_documents_precision_before_whole_rupee_rounding",
         "test_rounding_is_after_discounts_and_charges_and_is_visible_on_print_and_detail",
         "test_auto_rounding_is_applied_after_gst_invoice_discount_and_charges",
         "test_explicit_manual_override_is_preserved_and_auto_mode_does_not_trust_submitted_round_off",
@@ -630,6 +641,35 @@
         "test_print_masthead_separates_title_filters_from_aligned_party_names_and_removes_only_header_badges",
         "test_monthly_defaults_remain_unchanged_and_an_explicit_foreign_currency_is_retained",
         "test_vendor_preview_is_a_single_currency_payable_and_finance_boundary_is_retained"
+      ]
+    },
+    {
+      "file": "tests/Integration/ThreeDecimalPrecisionTest.php",
+      "methods": [
+        "test_proforma_keeps_three_decimal_unit_price_total_print_and_words",
+        "test_tax_invoice_keeps_the_rate_but_calculates_monetary_amounts_at_two_decimals",
+        "test_quantity_5000_times_0574_is_2870_and_the_tax_payload_keeps_the_rate",
+        "test_proforma_auto_rounding_keeps_the_precise_adjustment_before_rounding_to_whole_rupees",
+        "test_purchase_order_and_bill_store_three_decimal_unit_price_and_total",
+        "test_sales_and_purchase_payment_filters_count_one_thousandth_outstanding",
+        "test_prices_and_cashflow_amounts_over_three_decimal_places_are_refused",
+        "test_cashflow_entries_and_running_balances_keep_three_decimal_places",
+        "test_statement_and_report_csv_preserve_the_third_decimal",
+        "test_editing_an_account_recalculates_running_balances_without_losing_thousandths",
+        "test_purchase_order_conversion_and_vendor_posting_retain_fractional_values",
+        "test_vendor_payment_mirror_keeps_three_decimal_bank_and_ledger_amounts",
+        "test_financial_closure_detects_a_thousandth_balance_and_client_summary_preserves_it",
+        "test_three_decimal_cashflow_allocation_settles_the_exact_document_balance",
+        "test_exact_claim_conversion_recalculates_tax_components_and_keeps_fractional_receipts",
+        "test_partial_conversion_refuses_an_unrepresentable_tax_line_without_changing_the_claim",
+        "test_einvoice_allocates_an_invoice_wide_discount_without_double_counting",
+        "test_einvoice_refuses_inconsistent_saved_line_and_header_figures",
+        "test_issued_tax_invoice_rejects_a_one_thousandth_rate_change",
+        "test_over_allocating_by_one_thousandth_is_rejected_atomically",
+        "test_invoice_product_snapshot_preserves_the_three_decimal_rate",
+        "test_fractional_cash_conversion_of_a_paise_pi_preserves_the_exact_claim",
+        "test_cash_conversion_and_reversal_preserve_fractional_receipts_and_claims",
+        "test_unrepresentable_proforma_to_tax_conversion_is_blocked_without_changing_the_claim"
       ]
     },
     {
@@ -1286,6 +1326,7 @@
     "tools/checks/statement-list-browser.cjs",
     "tools/checks/statement-print-browser.cjs",
     "tools/checks/status-check.cjs",
+    "tools/checks/three-decimal-browser.cjs",
     "tools/checks/ui-components-check.cjs",
     "tools/checks/vendor-kyc-browser.cjs",
     "tools/checks/vendor-portal-check.cjs",

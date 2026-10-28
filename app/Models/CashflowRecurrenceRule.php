@@ -46,7 +46,7 @@ class CashflowRecurrenceRule extends Model
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
+        'amount' => \App\Casts\DecimalUpToThree::class,
         'starts_on' => 'date',
         'ends_on' => 'date',
         'occurrence_limit' => 'integer',

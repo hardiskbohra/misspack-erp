@@ -45,11 +45,11 @@ class CashInvoiceDeletion
             if (! Schema::hasTable('audit_logs')) {
                 throw ValidationException::withMessages(['invoice' => 'The audit register must be installed before reversing a Cash Invoice. Run the pending database migrations.']);
             }
-            $base = round((float) $children->sum('conversion_base_amount'), 2);
-            $gross = round((float) $children->sum('conversion_total_amount'), 2);
-            if (abs($base - (float) $pi->cash_converted_base_amount) > 0.001
-                || abs($gross - (float) $pi->cash_converted_total_amount) > 0.001
-                || $base > $pi->cashConvertibleTotal() + 0.001 || $gross > (float) $pi->total_amount + 0.001
+            $base = round((float) $children->sum('conversion_base_amount'), 3);
+            $gross = round((float) $children->sum('conversion_total_amount'), 3);
+            if (abs($base - (float) $pi->cash_converted_base_amount) > 0.0005
+                || abs($gross - (float) $pi->cash_converted_total_amount) > 0.0005
+                || $base > $pi->cashConvertibleTotal() + 0.0005 || $gross > (float) $pi->total_amount + 0.0005
                 || $children->contains(fn ($child) => (float) $child->conversion_base_amount <= 0 || (float) $child->conversion_total_amount < 0)
                 || ($pi->converted_invoice_id && ! $children->contains('id', $pi->converted_invoice_id))
                 || strtoupper($cash->currency ?: 'INR') !== strtoupper($pi->currency ?: 'INR')
@@ -92,9 +92,9 @@ class CashInvoiceDeletion
                 $this->requireSaved($entry->update($data));
             }
             $remaining = $children->reject(fn ($child) => $child->id === $cash->id);
-            $pi->amount_paid = round((float) $pi->amount_paid + (float) $cash->amount_paid, 2);
-            $pi->cash_converted_base_amount = round((float) $remaining->sum('conversion_base_amount'), 2);
-            $pi->cash_converted_total_amount = round((float) $remaining->sum('conversion_total_amount'), 2);
+            $pi->amount_paid = round((float) $pi->amount_paid + (float) $cash->amount_paid, 3);
+            $pi->cash_converted_base_amount = round((float) $remaining->sum('conversion_base_amount'), 3);
+            $pi->cash_converted_total_amount = round((float) $remaining->sum('conversion_total_amount'), 3);
             // Even deleting an earlier sibling of a fully converted PI reopens it.
             $pi->converted_invoice_id = null;
             $pi->balance_amount = $pi->balanceDue();

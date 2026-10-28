@@ -42,7 +42,7 @@ class CashflowAllocations
             $projectId = (int) ($row['project_id'] ?? 0) ?: null;
             $salesId = (int) ($row['sales_invoice_id'] ?? 0) ?: null;
             $purchaseId = (int) ($row['purchase_invoice_id'] ?? 0) ?: null;
-            $amount = round((float) ($row['amount'] ?? 0), 2);
+            $amount = round((float) ($row['amount'] ?? 0), 3);
 
             if ($amount <= 0) {
                 $errors[$field.'.amount'] = 'Enter an allocation amount greater than zero.';
@@ -83,7 +83,7 @@ class CashflowAllocations
 
             $documentCurrency = $document ? strtoupper((string) ($document->currency ?: $entry->currency)) : null;
             $documentAmount = filled($row['document_amount'] ?? null)
-                ? round((float) $row['document_amount'], 2)
+                ? round((float) $row['document_amount'], 3)
                 : null;
 
             if ($document) {
@@ -111,9 +111,9 @@ class CashflowAllocations
             ];
         }
 
-        if ($total > $entry->amountMoved() + 0.009) {
-            $errors['allocations'] = 'Allocated amount '.number_format($total, 2)
-                .' exceeds the cashflow entry amount '.number_format($entry->amountMoved(), 2).'.';
+        if (round($total, 3) > $entry->amountMoved()) {
+            $errors['allocations'] = 'Allocated amount '.number_format($total, 3)
+                .' exceeds the cashflow entry amount '.number_format($entry->amountMoved(), 3).'.';
         }
 
         /* A vendor payment and its cashflow mirror are the same money. The

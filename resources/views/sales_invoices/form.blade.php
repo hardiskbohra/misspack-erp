@@ -39,7 +39,7 @@
            against this invoice in the ledger. The saved balance is
            `max(total − (opening received + these), 0)` — the model's rule — so
            the preview is handed the same figure the server will use. */
-        $ledgerReceived = $isEdit ? round($invoice->receivedAmount() - (float) $invoice->amount_paid, 2) : 0;
+        $ledgerReceived = $isEdit ? round($invoice->receivedAmount() - (float) $invoice->amount_paid, 3) : 0;
     @endphp
     <div class="si-form" data-si-cash="{{ old('invoice_type', $invoice->invoice_type) === 'cash' ? 'true' : 'false' }}" data-invoice-edit="{{ $isEdit ? 'true' : 'false' }}" data-default-terms="{{ $defaultTerms }}" data-cash-terms="{{ \App\Models\SalesInvoice::defaultTerms(true) }}">
         {{-- The header every office screen wears: a card, the title, the way
@@ -471,7 +471,7 @@
                                     value="{{ old('other_charges', $invoice->other_charges) }}"></div>
                             <div class="master-field">
                                 <label class="master-label" for="roundOff">Round off</label>
-                                <input class="master-input" type="number" step="0.01" name="round_off" id="roundOff"
+                                <input class="master-input" type="number" step="0.001" name="round_off" id="roundOff"
                                     value="{{ old('round_off', $invoice->round_off) }}" aria-describedby="roundOffHelp">
                                 <label class="master-check">
                                     <input type="hidden" name="auto_round_total" value="0">
@@ -488,7 +488,7 @@
                                  (`SalesInvoice::receivedAmount()`). --}}
                             <div class="master-field full">
                                 <label class="master-label" for="amountPaid">Opening received</label>
-                                <input class="master-input" type="number" step="0.01" min="0" name="amount_paid"
+                                <input class="master-input" type="number" step="0.001" min="0" name="amount_paid"
                                     id="amountPaid" value="{{ old('amount_paid', $invoice->amount_paid) }}"
                                     aria-describedby="amountPaidHint">
                                 <p class="master-help" id="amountPaidHint">Money already received before it was recorded

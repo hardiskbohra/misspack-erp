@@ -304,12 +304,11 @@ check('a value the module does not know widens the list',
     'an unknown filter is a filter that failed — showing everything is the honest answer');
 
 check('the money filter asks the money, not a stored word',
-    /whereRaw\("\{\$received\} <= 0\.01"\)/.test(service)
-    && /whereRaw\("\{\$received\} > 0\.01"\)/.test(service)
-    /* "Covered" is judged against the note-adjusted payable: a credit note
-       can bring an invoice to settled without a single rupee moving, and the
-       filter must not chase money nobody owes any more. */
-    && /whereRaw\("\{\$received\} >= \{\$payable\} - 0\.01"\)/.test(service),
+    /whereRaw\("\{\$received\} < 0\.001"\)/.test(service)
+    && /whereRaw\("\{\$received\} >= 0\.001"\)/.test(service)
+    /* "Covered" is judged against the note-adjusted payable. A one-thousandth
+       outstanding amount is still real money, not a paid invoice. */
+    && /whereRaw\("\{\$received\} >= \{\$payable\} - 0\.0005"\)/.test(service),
     'an invoice marked paid a year ago, whose receipt was deleted, is not paid');
 
 /* ---- 4. the list wears the shared chrome ------------------------------- */

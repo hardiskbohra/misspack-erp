@@ -48,7 +48,7 @@ async function main() {
         assert.match(await page.locator('#previewTotal').innerText(), /101\.00/);
         // Select2 announces picks through jQuery, not a native input event.
         await page.evaluate(() => window.jQuery('#gstType').val('intra_state').trigger('change'));
-        assert.equal(await adjustment.inputValue(), '0.40', `${width}: GST selection recalculates round-off`);
+        assert.equal(await adjustment.inputValue(), '0.41', `${width}: three-decimal GST selection recalculates round-off`);
         assert.match(await page.locator('#previewTotal').innerText(), /119\.00/);
         await page.evaluate(() => window.jQuery('#gstType').val('export').trigger('change'));
         await page.locator('#discountValue').fill('10');
@@ -57,13 +57,12 @@ async function main() {
         assert.equal(await adjustment.inputValue(), '-0.45', `${width}: discount type selection recalculates round-off`);
         assert.match(await page.locator('#previewTotal').innerText(), /90\.00/);
         await page.locator('#discountValue').fill('0');
-        // A fractional quantity can land exactly halfway between paise; the
-        // server rounds that line first, before whole-rupee rounding.
+        // A PI keeps 9.495, then rounds the whole total down to 9.
         const quantity = page.locator('[name="items[0][quantity]"]');
         await quantity.fill('0.015');
-        await price.fill('633.00'); // 9.495 -> 9.50 -> 10.00
-        assert.equal(await adjustment.inputValue(), '0.50', `${width}: line paise matches server half-up`);
-        assert.match(await page.locator('#previewTotal').innerText(), /10\.00/);
+        await price.fill('633.00');
+        assert.equal(await adjustment.inputValue(), '-0.495', `${width}: three-decimal PI matches server`);
+        assert.match(await page.locator('#previewTotal').innerText(), /9\.00/);
         await quantity.fill('1');
         await price.fill('100.50');
 

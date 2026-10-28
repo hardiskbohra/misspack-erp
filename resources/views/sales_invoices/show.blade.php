@@ -128,7 +128,7 @@
                     <button type="button" class="master-btn master-btn-soft" data-open-payment
                         data-invoice-id="{{ $invoice->id }}"
                         data-invoice-number="{{ $invoice->invoice_number }}"
-                        data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
+                        data-invoice-amount="{{ number_format($balanceAmount, 3, '.', '') }}"
                         data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}"
                         data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
                         data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
@@ -241,8 +241,8 @@
                         @csrf
                         <div class="master-form-grid is-three">
                             <div class="master-field"><label class="master-label" for="cashConversionMode">Convert by</label><select class="master-select" id="cashConversionMode" name="conversion_mode"><option value="amount">Amount ({{ $invoice->currency }})</option><option value="percent" @selected(old('conversion_mode') === 'percent')>Percentage of remainder</option></select></div>
-                            <div class="master-field"><label class="master-label" for="cashConversionValue">Amount / percentage</label><input class="master-input" id="cashConversionValue" name="conversion_value" type="number" min="0.01" step="0.01" required value="{{ old('conversion_value', $invoice->cashConvertibleRemaining()) }}"></div>
-                            <div class="master-field"><label class="master-label" for="cashTransferReceived">Recorded receipts to transfer ({{ $invoice->currency }})</label><input class="master-input" id="cashTransferReceived" name="transfer_received" type="number" min="0" step="0.01" max="{{ min(max($receivedAmount, 0), $invoice->cashConvertibleRemaining()) }}" required data-preserve-transfer="{{ old('transfer_received') !== null ? 'true' : 'false' }}" value="{{ old('transfer_received', min(max($receivedAmount, 0), $invoice->cashConvertibleRemaining())) }}"></div>
+                            <div class="master-field"><label class="master-label" for="cashConversionValue">Amount / percentage</label><input class="master-input" id="cashConversionValue" name="conversion_value" type="number" min="0.001" step="0.001" required value="{{ old('conversion_value', $invoice->cashConvertibleRemaining()) }}"></div>
+                            <div class="master-field"><label class="master-label" for="cashTransferReceived">Recorded receipts to transfer ({{ $invoice->currency }})</label><input class="master-input" id="cashTransferReceived" name="transfer_received" type="number" min="0" step="0.001" max="{{ min(max($receivedAmount, 0), $invoice->cashConvertibleRemaining()) }}" required data-preserve-transfer="{{ old('transfer_received') !== null ? 'true' : 'false' }}" value="{{ old('transfer_received', min(max($receivedAmount, 0), $invoice->cashConvertibleRemaining())) }}"></div>
                         </div>
                         <p class="master-help">This does not record a new payment. Choose how much of the PI's existing receipts to apply, up to this Cash Invoice's value. Cash-mode / cash-account receipts are used first, then opening credit and other receipts. Untransferred receipts stay as a PI advance, even if its entire value is cash invoiced.</p>
                         <p id="cashTransferSummary" class="master-help" role="status" aria-live="polite"></p>
@@ -624,7 +624,7 @@
                                 <button type="button" class="master-btn master-btn-soft" data-open-payment
                                     data-invoice-id="{{ $invoice->id }}"
                                     data-invoice-number="{{ $invoice->invoice_number }}"
-                                    data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
+                                    data-invoice-amount="{{ number_format($balanceAmount, 3, '.', '') }}"
                                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}"
                                     data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
                                     data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
@@ -653,7 +653,7 @@
                                 <button type="button" class="master-btn master-btn-light" data-open-payment
                                     data-invoice-id="{{ $invoice->id }}"
                                     data-invoice-number="{{ $invoice->invoice_number }}"
-                                    data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
+                                    data-invoice-amount="{{ number_format($balanceAmount, 3, '.', '') }}"
                                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}"
                                     data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
                                     data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">
@@ -711,7 +711,7 @@
                                 {{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}
                             </strong>
                         </div>
-                        @if($advanceAmount > 0.009)
+                        @if($advanceAmount >= 0.001)
                             <div><span>Advance / overpayment</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($advanceAmount, $invoice->currency) }}</strong></div>
                         @endif
                     </div>

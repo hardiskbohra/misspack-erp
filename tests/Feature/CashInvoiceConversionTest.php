@@ -114,11 +114,14 @@ class CashInvoiceConversionTest extends TestCase
         // Deliberately record the bank receipt first: insertion order must not
         // consume that receipt instead of the cash payment.
         $bank = $this->receipt($pi, 50000);
-        $cashReceipt = $this->cashReceipt($pi, 100000);
+        // A 50% split is exactly representable by the original quantities and
+        // three-place rates. The former one-third split is now explicitly refused
+        // by the user-selected legal-line safety rule (covered in integration).
+        $cashReceipt = $this->cashReceipt($pi, 150000);
         foreach ([$bank->account_id, $cashReceipt->account_id] as $id) CashflowLedger::recalculateAccount($id);
         $balances = CashflowAccount::orderBy('id')->pluck('current_balance', 'id')->all();
-        $cash = $this->convert($pi, 100000, 100000);
-        $this->assertSame(100000.0, $cash->receivedAmount());
+        $cash = $this->convert($pi, 150000, 150000);
+        $this->assertSame(150000.0, $cash->receivedAmount());
         $this->assertSame(0.0, $cash->balanceDue());
         $this->assertSame(0.0, $cash->advanceAmount());
         $this->assertSame(50000.0, $pi->fresh()->receivedAmount());
@@ -126,17 +129,17 @@ class CashInvoiceConversionTest extends TestCase
         $this->assertSame($cash->id, $cashReceipt->fresh()->sales_invoice_id);
         (new SalesInvoiceController)->convert(Request::create('/', 'POST'), $pi->fresh());
         $tax = SalesInvoice::where('invoice_type', 'tax')->firstOrFail();
-        $this->assertSame(200000.0, (float) $tax->total_amount);
+        $this->assertSame(150000.0, (float) $tax->total_amount);
         $this->assertSame(50000.0, $tax->receivedAmount());
-        $this->assertSame(150000.0, $tax->balanceDue());
-        $this->assertSame(100000.0, $cash->fresh()->receivedAmount());
+        $this->assertSame(100000.0, $tax->balanceDue());
+        $this->assertSame(150000.0, $cash->fresh()->receivedAmount());
         $this->assertSame($tax->id, $bank->fresh()->sales_invoice_id);
         $this->assertSame(['Bottles', 'Cartons'], $tax->items->pluck('product_name')->all());
         $this->assertSame(['100.000', '100.000'], $tax->items->pluck('quantity')->all());
-        $this->assertSame(['666.67', '1333.33'], $tax->items->pluck('unit_price')->all());
-        $this->assertSame(200000.0, (float) $tax->items->sum('line_total'));
+        $this->assertSame(['500.00', '1000.00'], $tax->items->pluck('unit_price')->all());
+        $this->assertSame(150000.0, (float) $tax->items->sum('line_total'));
         $this->assertSame(2, CashflowEntry::count());
-        $this->assertSame(150000.0, (float) CashflowEntry::sum('credit_amount'));
+        $this->assertSame(200000.0, (float) CashflowEntry::sum('credit_amount'));
         $this->assertSame($balances, CashflowAccount::orderBy('id')->pluck('current_balance', 'id')->all());
         $this->assertSame(300000.0, (float) SalesInvoice::notSuperseded()->sum(SalesInvoice::raw(SalesInvoice::RECEIVABLE_TOTAL_SQL)));
         $print = view('sales_invoices.print', ['invoice' => $tax, 'publicMode' => false])->render();
@@ -216,7 +219,7 @@ class CashInvoiceConversionTest extends TestCase
     public function test_gst_inclusive_three_lakh_pi_restores_only_the_actual_taxable_remainder(): void
     {
         $pi = $this->pricedPi([['product_name' => 'Bottles', 'quantity' => 1, 'unit_price' => 254237.29,
-            'gst_percent' => 18, 'hsn_sac' => '3923']], ['gst_type' => 'intra_state', 'round_off' => -0.01]);
+            'gst_percent' => 18, 'hsn_sac' => '3923']], ['gst_type' => 'intra_state', 'round_off' => -0.002]);
         $this->assertSame(300000.0, (float) $pi->total_amount);
         $this->receipt($pi, 50000);
         $this->cashReceipt($pi, 100000);
@@ -241,7 +244,7 @@ class CashInvoiceConversionTest extends TestCase
             ['product_name' => 'Cartons', 'description' => 'Printed cartons', 'hsn_sac' => '4819', 'quantity' => 50,
                 'unit' => 'box', 'unit_price' => 2000, 'discount_percent' => 0, 'gst_percent' => 5],
         ], ['gst_type' => 'inter_state', 'discount_type' => 'percent', 'discount_value' => 10,
-            'freight_amount' => 1000, 'packing_amount' => 500, 'other_charges' => 250, 'round_off' => 0.07]);
+            'freight_amount' => 1000, 'packing_amount' => 500, 'other_charges' => 250, 'round_off' => 0.06]);
         $client = \App\Models\Client::create(['client_number' => 'CLIENT-P', 'company_name' => 'Buyer']);
         $project = new Project(['client_id' => $client->id, 'project_number' => 'PRJ-P', 'name' => 'Proration', 'currency' => 'INR']);
         $project->forceFill(['public_token' => 'proration'])->save();
@@ -250,7 +253,9 @@ class CashInvoiceConversionTest extends TestCase
         $pi->update(['project_id' => $project->id]);
         $pi->items()->first()->update(['project_product_id' => $product->id, 'product_id' => 123]);
         $originalItems = $pi->items()->get();
-        $this->convert($pi, 50000);
+        // Choose an exactly representable half: keep this metadata/discount/GST
+        // conservation test while unsafe prorations are covered as rejections.
+        $this->convert($pi, $pi->cashConvertibleTotal() / 2);
         $pi->refresh();
         $ratio = $pi->cashConvertibleRemaining() / $pi->cashConvertibleTotal();
         $expected = $pi->receivableTotal();
@@ -265,7 +270,7 @@ class CashInvoiceConversionTest extends TestCase
             foreach (['product_name', 'description', 'hsn_sac', 'quantity', 'unit', 'gst_percent', 'discount_percent', 'remarks', 'product_id', 'project_product_id', 'sort_order'] as $field) {
                 $this->assertSame($originalItems[$index]->$field, $line->$field, $field);
             }
-            $this->assertSame(round((float) $originalItems[$index]->unit_price * $ratio, 2), (float) $line->unit_price);
+            $this->assertSame(round((float) $originalItems[$index]->unit_price * $ratio, 3), (float) $line->unit_price);
             $this->assertSame(round((float) $line->gross_amount - (float) $line->discount_amount, 2), (float) $line->taxable_amount);
         }
         $this->assertSame((float) $tax->subtotal, (float) $tax->items->sum('gross_amount'));
@@ -301,12 +306,14 @@ class CashInvoiceConversionTest extends TestCase
     public function test_several_partial_cash_conversions_leave_an_exact_itemised_tax_claim(): void
     {
         $pi = $this->pricedPi([
-            ['product_name' => 'Bottles', 'quantity' => 3, 'unit_price' => 11.11, 'gst_percent' => 18],
-            ['product_name' => 'Cartons', 'quantity' => 2, 'unit_price' => 22.22, 'gst_percent' => 5],
+            ['product_name' => 'Bottles', 'quantity' => 3, 'unit_price' => 20, 'gst_percent' => 18],
+            ['product_name' => 'Cartons', 'quantity' => 2, 'unit_price' => 20, 'gst_percent' => 5],
         ], ['gst_type' => 'intra_state', 'discount_type' => 'percent', 'discount_value' => 12.5,
             'freight_amount' => 2.03, 'round_off' => 0.01]);
-        $first = $this->convert($pi, 15.01);
-        $second = $this->convert($pi, 15.01);
+        // Two 25% cash slices leave an exactly representable half for tax.
+        $this->assertSame(100.74, (float) $pi->total_amount);
+        $first = $this->convert($pi, 22.385);
+        $second = $this->convert($pi, 22.385);
         $pi->refresh();
         $remaining = $pi->receivableTotal();
         (new SalesInvoiceController)->convert(Request::create('/', 'POST'), $pi);
@@ -414,6 +421,25 @@ class CashInvoiceConversionTest extends TestCase
         $this->assertSame(75.0, $pi->fresh()->receivedAmount());
         $this->assertSame(25.0, $cash->fresh()->receivedAmount());
         $this->assertSame('USD', $cash->currency);
+    }
+
+    public function test_unrepresentable_fx_allocation_split_rolls_back_without_zero_value_slices(): void
+    {
+        $pi = $this->pi(['currency' => 'USD']);
+        $entry = $this->receipt(null, 0.001, 'INR');
+        $allocation = $entry->allocations()->create(['sales_invoice_id' => $pi->id, 'amount' => 0.001,
+            'document_amount' => 100, 'currency' => 'INR', 'document_currency' => 'USD']);
+        try {
+            $this->convert($pi, 50, 25);
+            $this->fail('An FX split that would create a zero-value native allocation must be rejected.');
+        } catch (ValidationException $error) {
+            $this->assertArrayHasKey('transfer_received', $error->errors());
+        }
+        $this->assertSame(0, SalesInvoice::where('invoice_type', 'cash')->count());
+        $this->assertSame(0.001, (float) $allocation->fresh()->amount);
+        $this->assertSame(100.0, (float) $allocation->fresh()->document_amount);
+        $this->assertSame($pi->id, $allocation->fresh()->sales_invoice_id);
+        $this->assertSame(100.0, $pi->fresh()->receivedAmount());
     }
 
     public function test_unsupported_direct_fx_transfer_rolls_back_the_entire_conversion(): void

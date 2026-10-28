@@ -51,14 +51,19 @@ class InvoiceAutoRoundingTest extends TestCase
         }
     }
 
-    public function test_half_paise_on_a_fractional_quantity_is_rounded_before_the_whole_rupee_total(): void
+    public function test_fractional_quantity_uses_the_documents_precision_before_whole_rupee_rounding(): void
     {
-        $invoice = $this->createInvoice($this->data('proforma', '633.00', [
-            'items' => [['product_name' => 'Cartons', 'quantity' => '0.015', 'unit' => 'pcs', 'unit_price' => '633.00', 'gst_percent' => 0]],
-        ]));
-        $this->assertSame('9.50', $invoice->items->first()->gross_amount);
-        $this->assertSame('0.50', $invoice->round_off);
-        $this->assertSame('10.00', $invoice->total_amount);
+        $items = [['product_name' => 'Cartons', 'quantity' => '0.015', 'unit' => 'pcs', 'unit_price' => '633.00', 'gst_percent' => 0]];
+        // User chose three-decimal PI calculations; 9.495 is below the half rupee.
+        $proforma = $this->createInvoice($this->data('proforma', '633.00', ['items' => $items]));
+        $this->assertSame('9.495', $proforma->items->first()->gross_amount);
+        $this->assertSame('-0.495', $proforma->round_off);
+        $this->assertSame('9.00', $proforma->total_amount);
+        // Legal tax invoice amounts remain two decimals, so its line is 9.50.
+        $tax = $this->createInvoice($this->data('tax', '633.00', ['items' => $items]));
+        $this->assertSame('9.50', $tax->items->first()->gross_amount);
+        $this->assertSame('0.50', $tax->round_off);
+        $this->assertSame('10.00', $tax->total_amount);
     }
 
     public function test_rounding_is_after_discounts_and_charges_and_is_visible_on_print_and_detail(): void

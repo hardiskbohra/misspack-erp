@@ -77,7 +77,7 @@ class SalesInvoiceAdjustment
                 continue;
             }
 
-            if (! $this->sameValue($invoice->{$key}, $data[$key])) {
+            if (! $this->sameValue($invoice->{$key}, $data[$key], $key === 'amount_paid' ? 3 : 2)) {
                 $changed[] = $label;
             }
         }
@@ -396,14 +396,14 @@ class SalesInvoiceAdjustment
     }
 
     /** Loose equality for money and dates: 2dp and the calendar day. */
-    protected function sameValue($current, $incoming): bool
+    protected function sameValue($current, $incoming, int $precision = 2): bool
     {
         /* Money columns read null on older rows and 0 / "" from forms; to the
            office they are all "no money". Comparing literally would lock the
            user out of their own document by an artefact of storage. */
         if (($current === null || is_numeric($current)) && ($incoming === null || is_numeric($incoming))
             && ($current !== null || $incoming !== null)) {
-            return round((float) ($current ?? 0), 2) === round((float) ($incoming ?? 0), 2);
+            return round((float) ($current ?? 0), $precision) === round((float) ($incoming ?? 0), $precision);
         }
 
         /* A `date` cast arrives as Carbon; the form sends "Y-m-d". */
@@ -414,7 +414,7 @@ class SalesInvoiceAdjustment
         }
 
         if ($incoming instanceof \DateTimeInterface) {
-            return $this->sameValue($incoming, $current);
+            return $this->sameValue($incoming, $current, $precision);
         }
 
         return (string) ($current ?? '') === (string) ($incoming ?? '');
@@ -442,7 +442,7 @@ class SalesInvoiceAdjustment
             foreach ($keys as $key) {
                 $value = $source === 'db' ? $row->{$key} : ($row[$key] ?? null);
                 $out[$key] = is_numeric($value)
-                    ? round((float) $value, $key === 'quantity' ? 4 : 2)
+                    ? round((float) $value, $key === 'quantity' ? 4 : ($key === 'unit_price' ? 3 : 2))
                     : (string) ($value ?? '');
             }
 

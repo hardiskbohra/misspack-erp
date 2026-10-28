@@ -50,7 +50,7 @@
 
     <div class="master-field">
         <label class="master-label" for="{{ $dialogId }}Amount">Amount <span class="master-required" aria-hidden="true">*</span></label>
-        <input class="master-input" id="{{ $dialogId }}Amount" type="number" name="amount" step="0.01" min="0.01"
+        <input class="master-input" id="{{ $dialogId }}Amount" type="number" name="amount" step="0.001" min="0.001"
             value="{{ $value('amount') }}" placeholder="0.00" required>
         @error('amount')<p class="master-error">{{ $message }}</p>@enderror
     </div>

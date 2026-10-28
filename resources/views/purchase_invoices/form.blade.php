@@ -27,7 +27,7 @@
             'description' => $product->description ?? '',
             'price' => 0,
         ])->values()->all();
-        $ledgerReceived = $isEdit ? round($invoice->paidAmount() - (float) $invoice->amount_paid, 2) : 0;
+        $ledgerReceived = $isEdit ? round($invoice->paidAmount() - (float) $invoice->amount_paid, 3) : 0;
         $nexts = \App\Models\PurchaseInvoice::STATUS_FLOW[$docType][$invoice->status] ?? [];
     @endphp
     <div class="si-form">
@@ -289,7 +289,7 @@
                         <div class="master-field"><label class="master-label">Round off</label><input class="master-input" type="number" step="0.01" name="round_off" id="roundOff" value="{{ old('round_off', $invoice->round_off) }}"></div>
                         <div class="master-field full">
                             <label class="master-label">Opening paid</label>
-                            <input class="master-input" type="number" step="0.01" min="0" name="amount_paid" id="amountPaid" value="{{ old('amount_paid', $invoice->amount_paid) }}">
+                            <input class="master-input" type="number" step="0.001" min="0" name="amount_paid" id="amountPaid" value="{{ old('amount_paid', $invoice->amount_paid) }}">
                             <p class="master-help">Money already paid outside the vendor ledger. Payments filed against this bill are added on top.</p>
                         </div>
                     </div>

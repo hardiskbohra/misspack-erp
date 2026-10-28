@@ -114,14 +114,14 @@ class UnallocatedCashflows
     private function snapshot(Collection $entries): array
     {
         $entries = $entries
-            ->filter(fn (CashflowEntry $entry) => $entry->unallocatedAmount() > 0.009)
+            ->filter(fn (CashflowEntry $entry) => $entry->unallocatedAmount() >= 0.001)
             ->values();
 
         $totals = $entries
             ->groupBy(fn (CashflowEntry $entry) => strtoupper((string) ($entry->currency ?: 'INR')))
             ->map(fn (Collection $rows) => round((float) $rows->sum(
                 fn (CashflowEntry $entry) => $entry->unallocatedAmount()
-            ), 2));
+            ), 3));
 
         return [
             'entries' => $entries,

@@ -111,21 +111,22 @@
         function money(v) {
             return currencySymbol() + (Number(v || 0)).toLocaleString('en-IN', {
                 minimumFractionDigits: 2,
-                maximumFractionDigits: 2
+                maximumFractionDigits: 3
             });
         }
 
         /* A figure that moves the total down is written as a subtraction, not as
            a negative amount: "− ₹ 1,000.00", never "₹ -1,000.00". */
         function minus(v) {
-            var amount = round2(Math.abs(Number(v) || 0));
+            var amount = round3(Math.abs(Number(v) || 0));
             return amount === 0 ? money(0) : '− ' + money(amount);
         }
 
-        /* The same rounding the server does, so a preview and a save agree to
-           the paisa. */
-        function round2(v) {
-            return Math.round((Number(v || 0) + Number.EPSILON) * 100) / 100;
+        /* Match the server's three-place, half-up document arithmetic. */
+        function round3(v) {
+            var number = Number(v || 0), absolute = Math.abs(number);
+            var units = Math.round((absolute + Number.EPSILON * Math.max(1, absolute)) * 1000);
+            return (number < 0 ? -units : units) / 1000;
         }
 
         /* Everything the office types into a field ends up inside an attribute
@@ -221,16 +222,16 @@
                 var discount = parseFloat((row.querySelector('input[name$="[discount_percent]"]') || {}).value) || 0;
                 var gst = parseFloat((row.querySelector('input[name$="[gst_percent]"]') || {}).value) || 0;
 
-                var lineGross = round2(qty * rate);
-                var lineTaxable = Math.max(round2(lineGross - round2(lineGross * discount / 100)), 0);
+                var lineGross = round3(qty * rate);
+                var lineTaxable = Math.max(round3(lineGross - round3(lineGross * discount / 100)), 0);
                 var lineTax = 0;
 
                 if (!exportSale) {
                     if (gstType === 'inter_state') {
-                        lineTax = round2(lineTaxable * gst / 100);
+                        lineTax = round3(lineTaxable * gst / 100);
                     } else {
-                        var half = round2(lineTaxable * (gst / 200));
-                        lineTax = round2(half * 2);
+                        var half = round3(lineTaxable * (gst / 200));
+                        lineTax = round3(half * 2);
                     }
                 }
 
@@ -241,41 +242,41 @@
                     if (gstType === 'inter_state') {
                         igst += lineTax;
                     } else {
-                        cgst += round2(lineTax / 2);
-                        sgst += round2(lineTax - round2(lineTax / 2));
+                        cgst += round3(lineTax / 2);
+                        sgst += round3(lineTax - round3(lineTax / 2));
                     }
                 }
 
                 var total = row.querySelector('.line-total');
-                if (total) total.textContent = money(round2(lineTaxable + lineTax));
+                if (total) total.textContent = money(round3(lineTaxable + lineTax));
             });
 
             var discountValue = fieldValue('discountValue');
             var discountType = fieldText('discountType') || 'amount';
             var invoiceDiscount = discountType === 'percent'
-                ? round2(taxable * discountValue / 100)
+                ? round3(taxable * discountValue / 100)
                 : Math.min(discountValue, taxable);
 
-            var taxableAfter = Math.max(round2(taxable - invoiceDiscount), 0);
+            var taxableAfter = Math.max(round3(taxable - invoiceDiscount), 0);
             var ratio = taxable > 0 ? (taxableAfter / taxable) : 1;
 
-            cgst = round2(cgst * ratio);
-            sgst = round2(sgst * ratio);
-            igst = round2(igst * ratio);
+            cgst = round3(cgst * ratio);
+            sgst = round3(sgst * ratio);
+            igst = round3(igst * ratio);
 
             var freight = fieldValue('freightAmount');
             var packing = fieldValue('packingAmount');
             var other = fieldValue('otherCharges');
             var roundOff = fieldValue('roundOff');
-            var charges = round2(freight + packing + other);
-            var tax = round2(cgst + sgst + igst);
+            var charges = round3(freight + packing + other);
+            var tax = round3(cgst + sgst + igst);
 
-            var total = round2(taxableAfter + tax + charges + roundOff);
-            var received = round2(fieldValue('amountPaid') + ledgerReceived);
-            var balance = Math.max(round2(total - received), 0);
+            var total = round3(taxableAfter + tax + charges + roundOff);
+            var received = round3(fieldValue('amountPaid') + ledgerReceived);
+            var balance = Math.max(round3(total - received), 0);
 
             setRow('rowSubtotal', 'previewSubtotal', money(gross), true);
-            setRow('rowLineDiscount', 'previewLineDiscount', minus(taxable - gross), round2(taxable - gross) !== 0);
+            setRow('rowLineDiscount', 'previewLineDiscount', minus(taxable - gross), round3(taxable - gross) !== 0);
             setRow('rowInvoiceDiscount', 'previewInvoiceDiscount', minus(invoiceDiscount), invoiceDiscount > 0);
             setRow('rowTaxable', 'previewTaxable', money(taxableAfter), !exportSale);
             setRow('rowCgst', 'previewCgst', money(cgst), cgst !== 0);
@@ -315,7 +316,7 @@
                 '    <td><input class="master-input" name="items[' + i + '][hsn_sac]" value="' + esc(val(item.hsn_sac, '')) + '" placeholder="HSN"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.001" min="0" name="items[' + i + '][quantity]" value="' + esc(val(item.quantity, 1)) + '"></td>',
                 '    <td><input class="master-input" name="items[' + i + '][unit]" value="' + esc(val(item.unit, 'pcs')) + '"></td>',
-                '    <td class="is-num"><input class="master-input calc" type="number" step="0.01" min="0" name="items[' + i + '][unit_price]" value="' + esc(val(item.unit_price, 0)) + '"></td>',
+                '    <td class="is-num"><input class="master-input calc" type="number" step="0.001" min="0" name="items[' + i + '][unit_price]" value="' + esc(val(item.unit_price, 0)) + '"></td>',
                 '    <td class="is-num"><input class="master-input calc" type="number" step="0.01" min="0" name="items[' + i + '][discount_percent]" value="' + esc(val(item.discount_percent, 0)) + '"></td>',
                 '    <td class="is-num si-tax-col"><input class="master-input calc" type="number" step="0.05" min="0" name="items[' + i + '][gst_percent]" value="' + esc(val(item.gst_percent, 0)) + '"></td>',
                 '    <td class="is-num"><strong class="line-total">₹ 0.00</strong>',
@@ -667,12 +668,12 @@
             var code = currency ? currency.value : '';
 
             if (code === 'INR' && foreign > 0) {
-                inr.value = foreign.toFixed(2);
+                inr.value = foreign.toFixed(3);
                 return;
             }
 
             if (foreign > 0 && exchange > 0) {
-                inr.value = (foreign * exchange).toFixed(2);
+                inr.value = (foreign * exchange).toFixed(3);
                 return;
             }
 

@@ -10,14 +10,14 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-VENDOR | Vendor master and payable profile | 8 | 12 | 15 |
 | REQ-PRODUCT | Products and price calculator | 3 | 3 | 0 |
 | REQ-LEAD | Leads and sales follow-up | 3 | 3 | 0 |
-| REQ-PROJECT | Project master and product lanes | 3 | 4 | 1 |
-| REQ-WORKFLOW | Execution, approvals, gates and financial closure | 3 | 6 | 6 |
+| REQ-PROJECT | Project master and product lanes | 3 | 5 | 2 |
+| REQ-WORKFLOW | Execution, approvals, gates and financial closure | 3 | 7 | 7 |
 | REQ-QC | Quality inspection and sampling | 3 | 3 | 0 |
 | REQ-PACK | Packaging lists, verification and print labels | 3 | 5 | 4 |
 | REQ-SHIP | Shipments, dispatch and delivery | 4 | 10 | 9 |
-| REQ-SALES | Proformas, cash invoices and tax invoices | 3 | 32 | 32 |
-| REQ-PURCHASE | Purchase documents and vendor settlement | 3 | 3 | 1 |
-| REQ-CASH | Cashflow, allocations and account transfers | 3 | 6 | 3 |
+| REQ-SALES | Proformas, cash invoices and tax invoices | 3 | 35 | 35 |
+| REQ-PURCHASE | Purchase documents and vendor settlement | 3 | 4 | 2 |
+| REQ-CASH | Cashflow, allocations and account transfers | 3 | 8 | 5 |
 | REQ-RECUR | Recurring cashflow planning and posting | 3 | 3 | 0 |
 | REQ-STATEMENT | Party statements and reconciliation | 4 | 7 | 5 |
 | REQ-ASSET | Asset register, allocation and depreciation | 3 | 3 | 3 |
@@ -35,4 +35,4 @@ One row is a test design requirement, **not a measured coverage percentage**. A 
 | REQ-AUDIT | Audit trail and sensitive operations | 3 | 4 | 2 |
 | REQ-FILES | Shared file policy and storage lifecycle | 3 | 4 | 4 |
 | REQ-UI | Shared UI, printing and accessible interactions | 4 | 9 | 5 |
-| REQ-TAX | GST: GSTIN checksum, HSN/SAC master and e-invoice (IRN/QR) | 1 | 11 | 12 |
+| REQ-TAX | GST: GSTIN checksum, HSN/SAC master and e-invoice (IRN/QR) | 1 | 13 | 14 |

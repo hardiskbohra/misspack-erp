@@ -5177,7 +5177,7 @@
       "expected": "The final total rounds to the nearest whole rupee with half-up boundaries; signed adjustment, balance, documents and payload reconcile.",
       "automation": [
         "tests/Integration/InvoiceAutoRoundingTest.php#test_new_inr_proformas_and_tax_invoices_round_half_up_and_store_the_signed_difference",
-        "tests/Integration/InvoiceAutoRoundingTest.php#test_half_paise_on_a_fractional_quantity_is_rounded_before_the_whole_rupee_total",
+        "tests/Integration/InvoiceAutoRoundingTest.php#test_fractional_quantity_uses_the_documents_precision_before_whole_rupee_rounding",
         "tests/Integration/InvoiceAutoRoundingTest.php#test_rounding_is_after_discounts_and_charges_and_is_visible_on_print_and_detail",
         "tests/Integration/InvoiceAutoRoundingTest.php#test_auto_rounding_is_applied_after_gst_invoice_discount_and_charges",
         "tests/Integration/InvoiceAutoRoundingTest.php#test_auto_rounding_is_included_in_the_e_invoice_payload",
@@ -5474,6 +5474,214 @@
         "tests/Database/MySqlPublicShortLinksTest.php#test_guest_links_use_current_tokens_and_the_original_handlers_on_mysql"
       ],
       "notes": "The empty-receipts failure predated short links; both SQLite and strict MySQL exercise its fix."
+    },
+    {
+      "id": "IT-SALES-036",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES",
+      "title": "Three-decimal prices with document-specific monetary precision",
+      "preconditions": "Full migrated schema and authorised office user",
+      "test_data": "Rate 0.574, quantities 1 and 5000; PI and tax invoice",
+      "steps": [
+        "Save both invoice types through HTTP",
+        "Inspect unit rate, totals, print, and tax JSON"
+      ],
+      "expected": "PI keeps 0.574; tax money remains in paise; 5000 × 0.574 is 2870; no rate truncation.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_proforma_keeps_three_decimal_unit_price_total_print_and_words",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_tax_invoice_keeps_the_rate_but_calculates_monetary_amounts_at_two_decimals",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_quantity_5000_times_0574_is_2870_and_the_tax_payload_keeps_the_rate",
+        "tests/Database/MySqlThreeDecimalPrecisionTest.php#test_sql_columns_and_http_writers_preserve_three_place_values"
+      ]
+    },
+    {
+      "id": "IT-SALES-037",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES",
+      "title": "Conversions and reversals conserve fractional claims and receipts",
+      "preconditions": "Full migrated schema; PI with a fractional rate and receipts",
+      "test_data": "Cash conversion, exact tax conversion, unrepresentable remainders and a one-thousandth rate edit",
+      "steps": [
+        "Convert and reverse a cash invoice",
+        "Convert a paise-representable PI",
+        "Attempt unsafe conversions and an issued rate edit"
+      ],
+      "expected": "Exact claims and receipts survive; a tax conversion that cannot represent the remaining claim or line is refused atomically; issued money is locked.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_cash_conversion_and_reversal_preserve_fractional_receipts_and_claims",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_exact_claim_conversion_recalculates_tax_components_and_keeps_fractional_receipts",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_unrepresentable_proforma_to_tax_conversion_is_blocked_without_changing_the_claim",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_partial_conversion_refuses_an_unrepresentable_tax_line_without_changing_the_claim",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_issued_tax_invoice_rejects_a_one_thousandth_rate_change",
+        "tests/Feature/CashInvoiceConversionTest.php#test_unrepresentable_fx_allocation_split_rolls_back_without_zero_value_slices",
+        "tests/Database/MySqlThreeDecimalPrecisionTest.php#test_unsafe_partial_tax_conversion_is_atomic_on_native_mysql"
+      ]
+    },
+    {
+      "id": "IT-PURCHASE-004",
+      "module": "PURCHASE",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PURCHASE",
+      "title": "Three-decimal purchase totals, posting and carried advances",
+      "preconditions": "Full migrated schema; authorised office user and vendor",
+      "test_data": "PO and bill at 0.574; PO advance 0.001",
+      "steps": [
+        "Save PO and bill",
+        "Post to vendor ledger",
+        "Convert an approved PO to a bill"
+      ],
+      "expected": "Three-decimal totals, vendor posting and carried advance remain exact.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_purchase_order_and_bill_store_three_decimal_unit_price_and_total",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_purchase_order_conversion_and_vendor_posting_retain_fractional_values",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_vendor_payment_mirror_keeps_three_decimal_bank_and_ledger_amounts",
+        "tests/Database/MySqlThreeDecimalPrecisionTest.php#test_sql_columns_and_http_writers_preserve_three_place_values"
+      ]
+    },
+    {
+      "id": "IT-CASH-007",
+      "module": "CASH",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-CASH",
+      "title": "Three-decimal entry, balance, allocation and account edit",
+      "preconditions": "Full migrated schema; active bank account and invoice",
+      "test_data": "Credit 0.574, debit 0.426, allocation and over-allocation by 0.001",
+      "steps": [
+        "Save credit/debit and allocate",
+        "Edit account opening balance",
+        "Attempt over-allocation or a fourth decimal"
+      ],
+      "expected": "Balances and linked document amounts retain thousandths; invalid or excessive entries are rejected without changes.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_cashflow_entries_and_running_balances_keep_three_decimal_places",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_editing_an_account_recalculates_running_balances_without_losing_thousandths",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_three_decimal_cashflow_allocation_settles_the_exact_document_balance",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_over_allocating_by_one_thousandth_is_rejected_atomically",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_prices_and_cashflow_amounts_over_three_decimal_places_are_refused",
+        "tests/Database/MySqlThreeDecimalPrecisionTest.php#test_sql_columns_and_http_writers_preserve_three_place_values",
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_statement_and_report_csv_preserve_the_third_decimal"
+      ]
+    },
+    {
+      "id": "IT-WORKFLOW-007",
+      "module": "WORKFLOW",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-WORKFLOW",
+      "title": "A thousandth outstanding prevents ordinary financial closure",
+      "preconditions": "Project with a linked PI and a client",
+      "test_data": "PI 0.574 with 0.573 received",
+      "steps": [
+        "Take a financial closure snapshot",
+        "Inspect client summary and closure flags"
+      ],
+      "expected": "The INR 0.001 receivable remains visible and financial closure is not incorrectly marked complete.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_financial_closure_detects_a_thousandth_balance_and_client_summary_preserves_it"
+      ]
+    },
+    {
+      "id": "IT-TAX-012",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "Reject inconsistent saved legal figures before e-registration",
+      "preconditions": "Tax invoice and saved item values",
+      "test_data": "Quantity 100, rate 666.667, allocated gross 66666.67",
+      "steps": [
+        "Try generating JSON with inconsistent gross",
+        "Try with mismatched header totals"
+      ],
+      "expected": "The payload is refused with a repair message instead of silently exporting different legal figures.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_einvoice_refuses_inconsistent_saved_line_and_header_figures"
+      ]
+    },
+    {
+      "id": "IT-PROJECT-005",
+      "module": "PROJECT",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-PROJECT",
+      "title": "Preserve three-decimal product snapshot from an invoice",
+      "preconditions": "Project with editable product sourced from a PI",
+      "test_data": "Unit price 0.574",
+      "steps": [
+        "Save PI against project",
+        "Reload the project product snapshot"
+      ],
+      "expected": "The source rate and derived amount retain their thousandths.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_invoice_product_snapshot_preserves_the_three_decimal_rate"
+      ]
+    },
+    {
+      "id": "IT-CASH-008",
+      "module": "CASH",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-CASH",
+      "title": "Decimal schema widening preserves values and guards lossy rollback",
+      "preconditions": "Disposable strict MySQL test schema; stop writers before DDL",
+      "test_data": "Existing cent values and one nonzero third-decimal value",
+      "steps": [
+        "Migrate up",
+        "Attempt rollback with fractional data",
+        "Clear fractional data, rollback and reapply"
+      ],
+      "expected": "Legacy data and defaults survive; the complete preflight refuses rollback before any table changes when a thousandth would be lost.",
+      "automation": [
+        "tests/Database/MySqlWideningMigrationSafetyTest.php#test_precision_migration_preserves_old_decimals_and_preflights_every_table_before_rollback"
+      ],
+      "notes": "DDL tests use a unique disposable database because MySQL commits schema changes independently."
+    },
+    {
+      "id": "IT-TAX-013",
+      "module": "TAX",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-TAX-EINV",
+      "title": "Allocate an invoice-wide discount once in the legal payload",
+      "preconditions": "Tax invoice with two GST-rated items and a pre-tax document-wide discount",
+      "test_data": "INR 10 at 18%, INR 20 at 5%, invoice-wide INR 3 discount",
+      "steps": [
+        "Create and save the tax invoice",
+        "Build the portal JSON",
+        "Compare line discounts, taxable values, GST and header total"
+      ],
+      "expected": "The allocated line discounts total INR 3, item taxable and tax values sum to the saved header, and the discount is not subtracted again at invoice level.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_einvoice_allocates_an_invoice_wide_discount_without_double_counting",
+        "tests/Database/MySqlThreeDecimalPrecisionTest.php#test_discounted_tax_payload_reconciles_saved_mysql_totals"
+      ]
+    },
+    {
+      "id": "IT-SALES-038",
+      "module": "SALES",
+      "level": "integration",
+      "priority": "P0",
+      "requirement": "REQ-SALES-PI",
+      "title": "Fractional cash conversion of a whole-paise PI preserves its exact remainder",
+      "preconditions": "A PI has an exact 1.00 claim and a recorded 0.001 advance",
+      "test_data": "Convert 0.001 to cash and transfer the 0.001 advance",
+      "steps": [
+        "Create the PI",
+        "Create the cash conversion",
+        "Compare the consumed claim, cash invoice, transferred receipt and remaining PI",
+        "Attempt tax conversion of the fractional remainder"
+      ],
+      "expected": "Cash and consumed claim are 0.001, PI remains 0.999, receipt transfers unchanged, and two-decimal tax conversion is blocked atomically.",
+      "automation": [
+        "tests/Integration/ThreeDecimalPrecisionTest.php#test_fractional_cash_conversion_of_a_paise_pi_preserves_the_exact_claim",
+        "tests/Database/MySqlThreeDecimalPrecisionTest.php#test_fractional_cash_conversion_of_a_paise_claim_keeps_the_exact_remainder_on_mysql"
+      ]
     }
   ]
 }

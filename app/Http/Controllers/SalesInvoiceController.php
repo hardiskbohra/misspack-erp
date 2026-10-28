@@ -101,11 +101,11 @@ class SalesInvoiceController extends Controller
                with the advance already on it. Only a cancellation takes a document
                out of what is owed. The payable spells in the model's SQL — credits
                and debits net into it, so the tile and the card agree. */
-            .", coalesce(sum(case when {$live} and {$receivedSql} < {$payableSql} - 0.01"
+            .", coalesce(sum(case when {$live} and {$receivedSql} < {$payableSql} - 0.0005"
                 ." and sales_invoices.status <> 'cancelled' then {$payableSql} - {$receivedSql} else 0 end), 0) as outstanding"
             .', coalesce(sum(case when sales_invoices.due_date is not null and sales_invoices.due_date < ?'
                 ." and sales_invoices.status not in ('draft', 'cancelled')"
-                ." and {$live} and {$receivedSql} < {$payableSql} - 0.01"
+                ." and {$live} and {$receivedSql} < {$payableSql} - 0.0005"
                 ." then {$payableSql} - {$receivedSql} else 0 end), 0) as overdue"
         )
             ->addBinding([now()->toDateString()], 'select')
@@ -131,7 +131,7 @@ class SalesInvoiceController extends Controller
         $totals = $this->filteredQuery($filters)->reorder()->selectRaw(
             "coalesce(sum(case when {$live} then {$invoiceTotal} else 0 end), 0) as counted"
             .", coalesce(sum(case when {$live} then {$receivedSql} else 0 end), 0) as received"
-            .", coalesce(sum(case when {$live} and {$receivedSql} < {$payableSql} - 0.01"
+            .", coalesce(sum(case when {$live} and {$receivedSql} < {$payableSql} - 0.0005"
                 ." and sales_invoices.status <> 'cancelled' then {$payableSql} - {$receivedSql} else 0 end), 0) as outstanding"
         )->first();
 
@@ -231,7 +231,7 @@ class SalesInvoiceController extends Controller
                 'Total', 'Received', 'Balance', 'State', 'Days late', 'Portal',
             ]);
 
-            $money = fn ($value) => number_format((float) $value, 2, '.', '');
+            $money = fn ($value) => \App\Helpers\CommonHelper::decimal($value);
 
             foreach ($rows as $invoice) {
                 $row([
@@ -266,7 +266,7 @@ class SalesInvoiceController extends Controller
     public function recordPayment(Request $request, SalesInvoice $salesInvoice): RedirectResponse
     {
         $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:0.01'],
+            'amount' => ['required', 'numeric', 'decimal:0,3', 'min:0.001'],
             'entry_date' => ['required', 'date'],
             'account_id' => ['required', 'integer', 'exists:cashflow_accounts,id'],
             'category_id' => ['nullable', 'integer', 'exists:cashflow_categories,id'],
@@ -281,7 +281,7 @@ class SalesInvoiceController extends Controller
         $entry->entry_date = $data['entry_date'];
         $entry->particular = $data['particular'] ?: 'Receipt against '.$salesInvoice->invoice_number;
         $entry->transaction_type = 'credit';
-        $entry->credit_amount = round((float) $data['amount'], 2);
+        $entry->credit_amount = round((float) $data['amount'], 3);
         $entry->debit_amount = 0;
         $entry->currency = in_array($salesInvoice->currency, array_keys(CashflowEntry::currencyOptions()), true)
             ? $salesInvoice->currency
@@ -317,7 +317,7 @@ class SalesInvoiceController extends Controller
             app(\App\Services\ProjectWorkflowGates::class)->evaluateAll($workflow, Auth::id());
         }
 
-        return back()->with('success', 'Receipt of '.number_format($entry->credit_amount, 2)
+        return back()->with('success', 'Receipt of '.\App\Helpers\CommonHelper::amount($entry->credit_amount, $entry->currency)
             .' recorded against '.$salesInvoice->invoice_number.'.');
     }
 
@@ -356,9 +356,10 @@ class SalesInvoiceController extends Controller
             ]);
 
             if ($auto) {
-                $beforeRoundOff = round((float) $copy->total_amount - (float) $copy->round_off, 2);
-                $adjustment = $this->rupeeRoundOff($beforeRoundOff);
-                $total = round($beforeRoundOff + $adjustment, 2);
+                $precision = $copy->invoice_type === 'tax' ? 2 : 3;
+                $beforeRoundOff = round((float) $copy->total_amount - (float) $copy->round_off, $precision);
+                $adjustment = $this->rupeeRoundOff($beforeRoundOff, $precision);
+                $total = round($beforeRoundOff + $adjustment, $precision);
                 $copy->update(['round_off' => $adjustment, 'total_amount' => $total, 'balance_amount' => $total,
                     'amount_in_words' => $this->amountInWords($total, $copy->currency)]);
             }
@@ -408,6 +409,13 @@ class SalesInvoiceController extends Controller
                 return null;
             }
 
+            // A tax invoice can only claim whole paise. Never silently change
+            // the PI's agreed claim to make it fit that legal document.
+            $claim = $proforma->receivableTotal();
+            if (abs($claim - round($claim, 2)) > 0.0005) {
+                return 'precision';
+            }
+
             $tax = $proforma->hasMonetaryConversions() ? $this->remainderTaxInvoice($proforma) : $this->copyInvoice($proforma, [
                 'invoice_type' => 'tax',
                 'invoice_number' => $this->makeInvoiceNumber('tax'),
@@ -426,6 +434,20 @@ class SalesInvoiceController extends Controller
                 'notes' => trim('Converted from '.$proforma->invoice_number.'. '.($proforma->notes ?? '')),
             ]);
 
+            if (! $proforma->hasMonetaryConversions()) {
+                // Recalculate the tax document at paise precision, retaining the
+                // three-place rates. Reconcile the difference in round-off, not
+                // in the claim or the receipts that are about to move across.
+                $rows = $tax->items()->orderBy('sort_order')->get()->map(fn ($item) => $item->toArray())->all();
+                $tax->round_off = 0;
+                $tax->save();
+                $this->syncItemsAndTotals($tax, $rows);
+                $tax->refresh();
+                $adjustment = round($claim - (float) $tax->total_amount, 2);
+                $tax->update(['round_off' => $adjustment, 'total_amount' => $claim,
+                    'balance_amount' => $claim, 'amount_in_words' => $this->amountInWords($claim, $tax->currency)]);
+            }
+
             $this->moveAdvanceTo($proforma, $tax);
 
             $proforma->converted_invoice_id = $tax->id;
@@ -435,6 +457,9 @@ class SalesInvoiceController extends Controller
             return $tax;
         });
 
+        if ($tax === 'precision') {
+            return back()->with('error', 'This PI has a three-decimal remaining claim that cannot be represented on a two-decimal tax invoice. Ask Accounts to review the PI or reverse a cash conversion before trying again; no invoice or receipt was changed.');
+        }
         if (! $tax) {
             return back()->with('error', 'This PI has no available remainder to tax invoice, or was already converted.');
         }
@@ -448,8 +473,8 @@ class SalesInvoiceController extends Controller
     {
         $data = $request->validate([
             'conversion_mode' => ['required', Rule::in(['amount', 'percent'])],
-            'conversion_value' => ['required', 'numeric', 'gt:0', 'decimal:0,2'],
-            'transfer_received' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
+            'conversion_value' => ['required', 'numeric', 'gt:0', 'decimal:0,3'],
+            'transfer_received' => ['required', 'numeric', 'min:0', 'decimal:0,3'],
         ]);
         $cash = DB::transaction(function () use ($salesInvoice, $data, $conversion) {
             $pi = SalesInvoice::whereKey($salesInvoice->id)->lockForUpdate()->firstOrFail();
@@ -472,8 +497,8 @@ class SalesInvoiceController extends Controller
                 'taxable_amount' => $plan['amount'], 'line_total' => $plan['amount'], 'gst_percent' => 0,
                 'discount_percent' => 0, 'discount_amount' => 0, 'cgst_amount' => 0, 'sgst_amount' => 0, 'igst_amount' => 0, 'sort_order' => 1]);
             $conversion->transferReceipts($pi, $cash, (float) $data['transfer_received']);
-            $pi->cash_converted_base_amount = round((float) $pi->cash_converted_base_amount + $plan['amount'], 2);
-            $pi->cash_converted_total_amount = round((float) $pi->cash_converted_total_amount + $plan['gross_consumed'], 2);
+            $pi->cash_converted_base_amount = round((float) $pi->cash_converted_base_amount + $plan['amount'], 3);
+            $pi->cash_converted_total_amount = round((float) $pi->cash_converted_total_amount + $plan['gross_consumed'], 3);
             // A retained advance stays on a zero-remainder PI rather than disappearing
             // from receivables/opening-credit reports when the PI is superseded.
             if ($plan['full'] && abs($pi->receivedAmount()) < 0.001) {
@@ -519,7 +544,7 @@ class SalesInvoiceController extends Controller
         foreach ($items as $item) {
             $line = $item->replicate(['created_at', 'updated_at']);
             $line->sales_invoice_id = $tax->id;
-            $line->unit_price = round((float) $item->unit_price * $ratio, 2);
+            $line->unit_price = round((float) $item->unit_price * $ratio, 3);
             foreach (array_keys($running) as $field) {
                 $running[$field] += (float) $item->$field;
                 $next = round($running[$field] * $ratio, 2);
@@ -527,6 +552,17 @@ class SalesInvoiceController extends Controller
                 $scaled[$field] = $next;
             }
             $line->gross_amount = round((float) $line->taxable_amount + (float) $line->discount_amount, 2);
+            // A legal tax line must still equal quantity × its three-place rate.
+            // Try the closest representable rate to the allocated gross; if even
+            // that cannot express it, abort the transaction rather than issue an
+            // internally inconsistent invoice or silently change the PI claim.
+            $quantity = (float) $line->quantity;
+            if (abs(round($quantity * (float) $line->unit_price, 2) - (float) $line->gross_amount) > 0.005 && $quantity > 0) {
+                $line->unit_price = round((float) $line->gross_amount / $quantity, 3);
+            }
+            if (abs(round($quantity * (float) $line->unit_price, 2) - (float) $line->gross_amount) > 0.005) {
+                throw ValidationException::withMessages(['invoice' => 'The remaining claim cannot be expressed by the original item quantities and three-decimal rates on a tax invoice. Review the PI or cash conversion with Accounts; no invoice or receipt was changed.']);
+            }
             $line->line_total = round((float) $line->taxable_amount + (float) $line->cgst_amount + (float) $line->sgst_amount + (float) $line->igst_amount, 2);
             $line->save();
             $subtotal += (float) $line->gross_amount;
@@ -554,10 +590,10 @@ class SalesInvoiceController extends Controller
      */
     private function moveAdvanceTo(SalesInvoice $proforma, SalesInvoice $tax): void
     {
-        $opening = round((float) $proforma->amount_paid, 2);
+        $opening = round((float) $proforma->amount_paid, 3);
 
         if ($opening > 0) {
-            $tax->amount_paid = round((float) $tax->amount_paid + $opening, 2);
+            $tax->amount_paid = round((float) $tax->amount_paid + $opening, 3);
             $proforma->amount_paid = 0;
             $tax->save();
             $proforma->save();
@@ -620,7 +656,7 @@ class SalesInvoiceController extends Controller
 
         $balance = $invoice->balanceDue();
 
-        if (abs((float) $invoice->balance_amount - $balance) > 0.001) {
+        if (abs((float) $invoice->balance_amount - $balance) > 0.0005) {
             $invoice->forceFill(['balance_amount' => $balance])->saveQuietly();
         }
     }
@@ -1168,9 +1204,9 @@ class SalesInvoiceController extends Controller
             'freight_amount' => ['nullable', 'numeric', 'min:0'],
             'packing_amount' => ['nullable', 'numeric', 'min:0'],
             'other_charges' => ['nullable', 'numeric', 'min:0'],
-            'round_off' => ['nullable', 'numeric'],
+            'round_off' => ['nullable', 'numeric', $request->input('invoice_type') === 'tax' ? 'decimal:0,2' : 'decimal:0,3'],
             'auto_round_total' => ['sometimes', 'boolean'],
-            'amount_paid' => ['nullable', 'numeric', 'min:0'],
+            'amount_paid' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
             'terms_conditions' => ['nullable', 'string'],
             'notes' => ['nullable', 'string'],
             'internal_notes' => ['nullable', 'string'],
@@ -1184,7 +1220,7 @@ class SalesInvoiceController extends Controller
             'items.*.hsn_sac' => ['nullable', 'string', 'max:30'],
             'items.*.quantity' => ['nullable', 'numeric', 'min:0'],
             'items.*.unit' => ['nullable', 'string', 'max:30'],
-            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'decimal:0,3', 'min:0'],
             'items.*.discount_percent' => ['nullable', 'numeric', 'min:0'],
             'items.*.gst_percent' => ['nullable', 'numeric', 'min:0'],
             'items.*.remarks' => ['nullable', 'string'],
@@ -1240,17 +1276,18 @@ class SalesInvoiceController extends Controller
         return $currency === 'INR' && in_array($type, ['proforma', 'tax'], true);
     }
 
-    private function rupeeRoundOff(float $amount): float
+    private function rupeeRoundOff(float $amount, int $precision): float
     {
-        // Round the already calculated amount to paise first, then round a
-        // half rupee upward. The signed difference is part of the invoice.
-        $amount = round($amount, 2);
+        // The document is calculated at its own precision before whole-INR
+        // rounding. Its signed adjustment is stored at that same precision.
+        $amount = round($amount, $precision);
 
-        return round(round($amount, 0, PHP_ROUND_HALF_UP) - $amount, 2);
+        return round(round($amount, 0, PHP_ROUND_HALF_UP) - $amount, $precision);
     }
 
     private function syncItemsAndTotals(SalesInvoice $invoice, array $items): void
     {
+        $precision = $invoice->invoice_type === 'tax' ? 2 : 3;
         $invoice->items()->delete();
 
         $subtotal = 0;
@@ -1268,9 +1305,9 @@ class SalesInvoiceController extends Controller
             $productName = $item['product_name'] ?: $this->productName($item['product_id'] ?? null);
             $qty = (float) ($item['quantity'] ?? 1);
             $unitPrice = (float) ($item['unit_price'] ?? 0);
-            $gross = round($qty * $unitPrice, 2);
+            $gross = round($qty * $unitPrice, $precision);
             $discountPercent = (float) ($item['discount_percent'] ?? 0);
-            $discountAmount = round($gross * ($discountPercent / 100), 2);
+            $discountAmount = round($gross * ($discountPercent / 100), $precision);
             $taxable = max($gross - $discountAmount, 0);
             $gstPercent = $invoice->isCash() ? 0 : (float) ($item['gst_percent'] ?? 18);
             $cgst = 0;
@@ -1278,13 +1315,13 @@ class SalesInvoiceController extends Controller
             $igst = 0;
 
             if ($invoice->gst_type === 'inter_state') {
-                $igst = round($taxable * ($gstPercent / 100), 2);
+                $igst = round($taxable * ($gstPercent / 100), $precision);
             } elseif ($invoice->gst_type === 'intra_state') {
-                $cgst = round($taxable * (($gstPercent / 2) / 100), 2);
-                $sgst = round($taxable * (($gstPercent / 2) / 100), 2);
+                $cgst = round($taxable * (($gstPercent / 2) / 100), $precision);
+                $sgst = round($taxable * (($gstPercent / 2) / 100), $precision);
             }
 
-            $lineTotal = round($taxable + $cgst + $sgst + $igst, 2);
+            $lineTotal = round($taxable + $cgst + $sgst + $igst, $precision);
 
             $invoice->items()->create([
                 'product_id' => $item['product_id'] ?? null,
@@ -1318,30 +1355,30 @@ class SalesInvoiceController extends Controller
 
         $invoiceDiscountValue = (float) ($invoice->discount_value ?? 0);
         $invoiceDiscount = $invoice->discount_type === 'percent'
-            ? round($taxableTotal * ($invoiceDiscountValue / 100), 2)
+            ? round($taxableTotal * ($invoiceDiscountValue / 100), $precision)
             : min($invoiceDiscountValue, $taxableTotal);
 
         $taxableAfterInvoiceDiscount = max($taxableTotal - $invoiceDiscount, 0);
         $taxAdjustmentRatio = $taxableTotal > 0 ? ($taxableAfterInvoiceDiscount / $taxableTotal) : 1;
-        $cgstTotal = round($cgstTotal * $taxAdjustmentRatio, 2);
-        $sgstTotal = round($sgstTotal * $taxAdjustmentRatio, 2);
-        $igstTotal = round($igstTotal * $taxAdjustmentRatio, 2);
+        $cgstTotal = round($cgstTotal * $taxAdjustmentRatio, $precision);
+        $sgstTotal = round($sgstTotal * $taxAdjustmentRatio, $precision);
+        $igstTotal = round($igstTotal * $taxAdjustmentRatio, $precision);
 
         $charges = (float) $invoice->freight_amount + (float) $invoice->packing_amount + (float) $invoice->other_charges;
-        $beforeRoundOff = round($taxableAfterInvoiceDiscount + $cgstTotal + $sgstTotal + $igstTotal + $charges, 2);
+        $beforeRoundOff = round($taxableAfterInvoiceDiscount + $cgstTotal + $sgstTotal + $igstTotal + $charges, $precision);
         $roundOff = $invoice->auto_round_total && $this->eligibleForAutoRounding($invoice->invoice_type, $invoice->currency)
-            ? $this->rupeeRoundOff($beforeRoundOff) : (float) $invoice->round_off;
-        $total = round($beforeRoundOff + $roundOff, 2);
+            ? $this->rupeeRoundOff($beforeRoundOff, $precision) : (float) $invoice->round_off;
+        $total = round($beforeRoundOff + $roundOff, $precision);
         /* The balance is the money rule's: what the invoice says was received
            before it was recorded in the ledger, plus every receipt filed against
            it. `PartyStatement` prints this column on a client's statement, so it
            has to agree with the list the client is chased from. */
-        $balance = max($total - round((float) $invoice->amount_paid + $invoice->ledgerReceived(), 2), 0);
+        $balance = max($total - round((float) $invoice->amount_paid + $invoice->ledgerReceived(), 3), 0);
 
         $invoice->update([
-            'subtotal' => round($subtotal, 2),
-            'discount_amount' => round($invoiceDiscount, 2),
-            'taxable_amount' => round($taxableAfterInvoiceDiscount, 2),
+            'subtotal' => round($subtotal, $precision),
+            'discount_amount' => round($invoiceDiscount, $precision),
+            'taxable_amount' => round($taxableAfterInvoiceDiscount, $precision),
             'cgst_amount' => $cgstTotal,
             'sgst_amount' => $sgstTotal,
             'igst_amount' => $igstTotal,
@@ -1463,8 +1500,10 @@ class SalesInvoiceController extends Controller
 
     private function amountInWords(float $amount, string $currency): string
     {
-        $number = (int) floor($amount);
-        $paise = (int) round(($amount - $number) * 100);
+        $thousandths = (int) round($amount * 1000);
+        $number = intdiv($thousandths, 1000);
+        $paise = intdiv($thousandths % 1000, 10);
+        $tenthOfPaise = $thousandths % 10;
 
         $words = $this->numberToWords($number);
         $currencyLabel = $currency === 'INR' ? 'Rupees' : $currency;
@@ -1472,6 +1511,9 @@ class SalesInvoiceController extends Controller
         $text = $currencyLabel.' '.$words;
         if ($paise > 0) {
             $text .= ' and '.$this->numberToWords($paise).' Paise';
+        }
+        if ($tenthOfPaise > 0) {
+            $text .= ' and '.$this->numberToWords($tenthOfPaise).' '.($tenthOfPaise === 1 ? 'Tenth' : 'Tenths').' of a Paise';
         }
 
         return $text.' Only';
@@ -1683,7 +1725,7 @@ class SalesInvoiceController extends Controller
             fwrite($out, "\xEF\xBB\xBF");
 
             $row = fn (array $cells) => fputcsv($out, $cells);
-            $money = fn ($value) => number_format((float) $value, 2, '.', '');
+            $money = fn ($value) => \App\Helpers\CommonHelper::decimal($value);
 
             $row(['GST summary — sales invoices']);
             $row(['Taken', now()->format('d M Y H:i')]);

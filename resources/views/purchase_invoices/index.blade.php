@@ -343,7 +343,7 @@
                                                     data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
                                                     data-invoice-rate="{{ $invoice->exchange_rate }}"
                                                     data-project-id="{{ $invoice->project_id }}"
-                                                    data-invoice-amount="{{ number_format($openAmt, 2, '.', '') }}"
+                                                    data-invoice-amount="{{ number_format($openAmt, 3, '.', '') }}"
                                                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($openAmt, $invoice->currency) }}">
                                                     <i class="fas fa-indian-rupee-sign"></i> {{ $invoice->isOrder() ? 'Record advance' : 'Record payment' }}
                                                 </button>
@@ -398,7 +398,7 @@
         @if ($invoices->isNotEmpty())
             @php
                 $currencyRows = collect($pageTotals['byCurrency'] ?? [])->filter(fn ($row) =>
-                    ((float) $row['billed'] + (float) $row['open'] + (float) $row['paid'] + (float) $row['outstanding']) > 0.01
+                    ((float) $row['billed'] + (float) $row['open'] + (float) $row['paid'] + (float) $row['outstanding']) >= 0.001
                 );
             @endphp
             <div class="master-list-foot">

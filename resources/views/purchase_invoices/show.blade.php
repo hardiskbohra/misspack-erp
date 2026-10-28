@@ -71,7 +71,7 @@
                     data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
                     data-invoice-rate="{{ $invoice->exchange_rate }}"
                     data-project-id="{{ $invoice->project_id }}"
-                    data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
+                    data-invoice-amount="{{ number_format($balanceAmount, 3, '.', '') }}"
                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}">
                     Record payment
                 </button>
@@ -83,7 +83,7 @@
                     data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
                     data-invoice-rate="{{ $invoice->exchange_rate }}"
                     data-project-id="{{ $invoice->project_id }}"
-                    data-invoice-amount="{{ number_format($advanceOpen, 2, '.', '') }}"
+                    data-invoice-amount="{{ number_format($advanceOpen, 3, '.', '') }}"
                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($advanceOpen, $invoice->currency) }}">
                     Record advance
                 </button>
@@ -319,7 +319,7 @@
                         data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
                         data-invoice-rate="{{ $invoice->exchange_rate }}"
                         data-project-id="{{ $invoice->project_id }}"
-                        data-invoice-amount="{{ number_format($balanceAmount, 2, '.', '') }}"
+                        data-invoice-amount="{{ number_format($balanceAmount, 3, '.', '') }}"
                         data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balanceAmount, $invoice->currency) }}">Record</button>
                 @elseif ($invoice->isOrder() && $invoice->canReceiveMoney() && max((float) $invoice->total_amount - $paidAmount, 0) > 0)
                     <button type="button" class="master-btn master-btn-soft" data-open-payment
@@ -329,7 +329,7 @@
                         data-invoice-currency="{{ $invoice->currency ?: 'RMB' }}"
                         data-invoice-rate="{{ $invoice->exchange_rate }}"
                         data-project-id="{{ $invoice->project_id }}"
-                        data-invoice-amount="{{ number_format(max((float) $invoice->total_amount - $paidAmount, 0), 2, '.', '') }}"
+                        data-invoice-amount="{{ number_format(max((float) $invoice->total_amount - $paidAmount, 0), 3, '.', '') }}"
                         data-invoice-balance="{{ \App\Helpers\CommonHelper::amount(max((float) $invoice->total_amount - $paidAmount, 0), $invoice->currency) }}">Record advance</button>
                 @endif
             </div>
@@ -359,7 +359,7 @@
             <div class="si-pay-foot">
                 <div><span>Paid</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($paidAmount, $invoice->currency) }}</strong></div>
                 <div><span>Still open</span><strong class="{{ $openAmount > 0 ? 'si-due' : 'si-clear' }}">{{ \App\Helpers\CommonHelper::amount($openAmount, $invoice->currency) }}</strong></div>
-                @if($advanceAmount > 0.009)<div><span>Advance / overpayment</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($advanceAmount, $invoice->currency) }}</strong></div>@endif
+                @if($advanceAmount >= 0.001)<div><span>Advance / overpayment</span><strong class="si-clear">{{ \App\Helpers\CommonHelper::amount($advanceAmount, $invoice->currency) }}</strong></div>@endif
             </div>
         </div>
     @endif

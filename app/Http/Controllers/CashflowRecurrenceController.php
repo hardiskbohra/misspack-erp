@@ -329,7 +329,7 @@ class CashflowRecurrenceController extends Controller
             'title' => ['required', 'string', 'max:'.RecurrenceVocabulary::TITLE_LIMIT],
             'particular' => ['required', 'string', 'max:'.RecurrenceVocabulary::PARTICULAR_LIMIT],
             'transaction_type' => ['required', Rule::in(array_keys(CashflowEntry::transactionTypeOptions()))],
-            'amount' => ['required', 'numeric', 'min:0.01'],
+            'amount' => ['required', 'numeric', 'decimal:0,3', 'min:0.001'],
             'currency' => ['nullable', Rule::in(array_keys(CashflowEntry::currencyOptions()))],
             'account_id' => ['required', 'exists:cashflow_accounts,id'],
             'category_id' => ['nullable', 'exists:cashflow_categories,id'],

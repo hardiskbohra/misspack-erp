@@ -489,7 +489,7 @@
                                                 <button type="button" data-open-payment
                                                     data-invoice-id="{{ $invoice->id }}"
                                                     data-invoice-number="{{ $invoice->invoice_number }}"
-                                                    data-invoice-amount="{{ number_format($balance, 2, '.', '') }}"
+                                                    data-invoice-amount="{{ number_format($balance, 3, '.', '') }}"
                                                     data-invoice-balance="{{ \App\Helpers\CommonHelper::amount($balance, $invoice->currency) }}"
                                                     data-invoice-client="{{ $invoice->client_company_name ?: 'Client not recorded' }}"
                                                     data-invoice-currency="{{ $invoice->currency ?: 'INR' }}">

@@ -276,7 +276,7 @@ class SalesInvoiceFilters
            the model spells for lists (`payableSql()`) and rows (`payableTotal()`). */
         $open = fn (Builder $q) => $q
             ->whereNotIn('status', ['draft', 'cancelled'])
-            ->whereRaw(SalesInvoice::RECEIVED_SQL.' < '.SalesInvoice::payableSql().' - 0.01');
+            ->whereRaw(SalesInvoice::RECEIVED_SQL.' < '.SalesInvoice::payableSql().' - 0.0005');
 
         return $query
             ->when($set('portal'), fn (Builder $q) => $q->where('show_client_portal', $value('portal') === 'visible'))
@@ -290,21 +290,21 @@ class SalesInvoiceFilters
                 $payable = SalesInvoice::payableSql();
 
                 return match ((string) $value('payment')) {
-                    'unpaid' => $q->whereRaw("{$received} <= 0.01")
-                        ->whereRaw("{$payable} > 0.01"),
-                    'partial' => $q->whereRaw("{$received} > 0.01")
-                        ->whereRaw("{$received} < {$payable} - 0.01"),
+                    'unpaid' => $q->whereRaw("{$received} < 0.001")
+                        ->whereRaw("{$payable} >= 0.001"),
+                    'partial' => $q->whereRaw("{$received} >= 0.001")
+                        ->whereRaw("{$received} < {$payable} - 0.0005"),
                     /* "Paid" covers both shapes: credited down to nothing —
                        and everything received that was already there — or
                        receipts that cover the note-adjusted payable. The OR
                        is grouped: a filter may never leak its conditions. */
                     'paid' => $q->where(fn (Builder $paid) => $paid
                         ->where(fn (Builder $zero) => $zero
-                            ->whereRaw("{$payable} <= 0.01")
+                            ->whereRaw("{$payable} < 0.001")
                             ->whereRaw(SalesInvoice::RECEIVABLE_TOTAL_SQL.' > 0'))
                         ->orWhere(fn (Builder $covered) => $covered
-                            ->whereRaw("{$payable} > 0.01")
-                            ->whereRaw("{$received} >= {$payable} - 0.01"))),
+                            ->whereRaw("{$payable} >= 0.001")
+                            ->whereRaw("{$received} >= {$payable} - 0.0005"))),
                 };
             })
             /* how late, in the buckets `SalesInvoice::ageingBuckets()` names */

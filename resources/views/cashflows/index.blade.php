@@ -613,7 +613,7 @@
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="quickAmount">Amount <span class="master-required" aria-hidden="true">*</span></label>
-                            <input class="master-input" id="quickAmount" type="number" step="0.01" min="0" name="amount"
+                            <input class="master-input" id="quickAmount" type="number" step="0.001" min="0" name="amount"
                                 value="{{ old('amount') }}" required>
                             @error('amount')<p class="master-error">{{ $message }}</p>@enderror
                         </div>
@@ -796,7 +796,7 @@
                         </div>
                         <div class="master-field">
                             <label class="master-label" for="accountOpening">Opening Balance</label>
-                            <input class="master-input" id="accountOpening" type="number" step="0.01" name="opening_balance"
+                            <input class="master-input" id="accountOpening" type="number" step="0.001" name="opening_balance"
                                 value="{{ old('opening_balance', '0') }}">
                         </div>
                         <div class="master-field">

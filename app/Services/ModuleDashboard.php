@@ -51,7 +51,7 @@ class ModuleDashboard
         $leadCount = fn (Carbon $start, Carbon $end) => $this->countRange('leads', 'created_at', $start, $end);
         $converted = fn (Carbon $start, Carbon $end) => $this->countRange('leads', 'updated_at', $start, $end, fn ($query) => $query->whereIn('status', ['converted', 'won', 'closed_won']));
         $invoices = Schema::hasTable('sales_invoices') ? SalesInvoice::query()->with(['payments', 'cashflowAllocations'])->whereIn('invoice_type', ['tax', 'cash'])->where('currency', $this->currency)->whereNotIn('status', ['draft', 'cancelled'])->get() : collect();
-        $receivable = round((float) $invoices->sum(fn ($invoice) => $invoice->balanceDue()), 2);
+        $receivable = round((float) $invoices->sum(fn ($invoice) => $invoice->balanceDue()), 3);
         $overdue = $invoices->filter(fn ($invoice) => $invoice->isOverdue())->values();
 
         return [
@@ -84,7 +84,7 @@ class ModuleDashboard
         $billCount = fn (Carbon $start, Carbon $end) => $this->countRange('purchase_invoices', 'invoice_date', $start, $end, fn ($query) => $query->where('invoice_type', 'bill')->where('status', '!=', 'cancelled'));
         $orderCount = fn (Carbon $start, Carbon $end) => $this->countRange('purchase_invoices', 'invoice_date', $start, $end, fn ($query) => $query->where('invoice_type', 'order')->where('status', '!=', 'cancelled'));
         $documents = Schema::hasTable('purchase_invoices') ? PurchaseInvoice::query()->with(['payments', 'cashflowAllocations'])->where('invoice_type', 'bill')->where('currency', $this->currency)->whereNotIn('status', ['draft', 'cancelled'])->get() : collect();
-        $payable = round((float) $documents->sum(fn ($bill) => $bill->balanceDue()), 2);
+        $payable = round((float) $documents->sum(fn ($bill) => $bill->balanceDue()), 3);
         $overdue = $documents->filter(fn ($bill) => $bill->isOverdue())->values();
 
         return [
@@ -181,13 +181,13 @@ class ModuleDashboard
         $outward = fn (Carbon $start, Carbon $end) => $this->sumRange('cashflow_entries', 'entry_date', 'debit_amount', $start, $end, fn ($query) => $this->excludeTransfers($query));
         $net = fn (Carbon $start, Carbon $end) => $inward($start, $end) - $outward($start, $end);
         $entries = Schema::hasTable('cashflow_entries') ? CashflowEntry::query()->with('allocations')->where('currency', $this->currency)->get() : collect();
-        $unallocatedEntries = $entries->filter(fn ($entry) => $entry->unallocatedAmount() > 0.009)->values();
-        $unallocated = round((float) $unallocatedEntries->sum(fn ($entry) => $entry->unallocatedAmount()), 2);
+        $unallocatedEntries = $entries->filter(fn ($entry) => $entry->unallocatedAmount() >= 0.001)->values();
+        $unallocated = round((float) $unallocatedEntries->sum(fn ($entry) => $entry->unallocatedAmount()), 3);
         $tentative = $this->countWhere('cashflow_entries', fn ($query) => $query->where('currency', $this->currency)->whereNotIn('accounting_status', ['booked', 'reconciled']));
         $salesDocs = Schema::hasTable('sales_invoices') ? SalesInvoice::query()->with(['payments', 'cashflowAllocations'])->whereIn('invoice_type', ['tax', 'cash'])->where('currency', $this->currency)->whereNotIn('status', ['draft', 'cancelled'])->get() : collect();
         $purchaseDocs = Schema::hasTable('purchase_invoices') ? PurchaseInvoice::query()->with(['payments', 'cashflowAllocations'])->where('invoice_type', 'bill')->where('currency', $this->currency)->whereNotIn('status', ['draft', 'cancelled'])->get() : collect();
-        $receivable = round((float) $salesDocs->sum(fn ($invoice) => $invoice->balanceDue()), 2);
-        $payable = round((float) $purchaseDocs->sum(fn ($bill) => $bill->balanceDue()), 2);
+        $receivable = round((float) $salesDocs->sum(fn ($invoice) => $invoice->balanceDue()), 3);
+        $payable = round((float) $purchaseDocs->sum(fn ($bill) => $bill->balanceDue()), 3);
 
         return [
             'metrics' => [
@@ -206,7 +206,7 @@ class ModuleDashboard
             ],
             'alerts' => collect([
                 $tentative ? ['level' => 'critical', 'title' => 'Tentative ledger entries', 'message' => $tentative.' entries still need booking or reconciliation.', 'url' => $this->url('cashflows.index')] : null,
-                $unallocated > 0.009 ? ['level' => 'critical', 'title' => 'Unallocated cash', 'message' => number_format($unallocated, 2).' remains unapplied in '.$this->currency.' entries.', 'url' => $this->url('cashflows.index')] : null,
+                $unallocated >= 0.001 ? ['level' => 'critical', 'title' => 'Unallocated cash', 'message' => \App\Helpers\CommonHelper::decimal($unallocated).' remains unapplied in '.$this->currency.' entries.', 'url' => $this->url('cashflows.index')] : null,
             ])->filter()->values()->all(),
         ];
     }

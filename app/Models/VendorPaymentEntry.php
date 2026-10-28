@@ -22,7 +22,7 @@ class VendorPaymentEntry extends Model
         'due_date' => 'date',
         'foreign_amount' => 'decimal:4',
         'exchange_rate' => 'decimal:6',
-        'amount_in_inr' => 'decimal:2',
+        'amount_in_inr' => \App\Casts\DecimalUpToThree::class,
     ];
 
     /**

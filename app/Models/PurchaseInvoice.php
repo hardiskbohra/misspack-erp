@@ -92,20 +92,20 @@ class PurchaseInvoice extends Model
         'expected_date' => 'date',
         'vendor_bill_date' => 'date',
         'exchange_rate' => 'decimal:6',
-        'subtotal' => 'decimal:2',
-        'discount_value' => 'decimal:2',
-        'discount_amount' => 'decimal:2',
-        'taxable_amount' => 'decimal:2',
-        'cgst_amount' => 'decimal:2',
-        'sgst_amount' => 'decimal:2',
-        'igst_amount' => 'decimal:2',
-        'freight_amount' => 'decimal:2',
-        'packing_amount' => 'decimal:2',
-        'other_charges' => 'decimal:2',
-        'round_off' => 'decimal:2',
-        'total_amount' => 'decimal:2',
-        'amount_paid' => 'decimal:2',
-        'balance_amount' => 'decimal:2',
+        'subtotal' => \App\Casts\DecimalUpToThree::class,
+        'discount_value' => \App\Casts\DecimalUpToThree::class,
+        'discount_amount' => \App\Casts\DecimalUpToThree::class,
+        'taxable_amount' => \App\Casts\DecimalUpToThree::class,
+        'cgst_amount' => \App\Casts\DecimalUpToThree::class,
+        'sgst_amount' => \App\Casts\DecimalUpToThree::class,
+        'igst_amount' => \App\Casts\DecimalUpToThree::class,
+        'freight_amount' => \App\Casts\DecimalUpToThree::class,
+        'packing_amount' => \App\Casts\DecimalUpToThree::class,
+        'other_charges' => \App\Casts\DecimalUpToThree::class,
+        'round_off' => \App\Casts\DecimalUpToThree::class,
+        'total_amount' => \App\Casts\DecimalUpToThree::class,
+        'amount_paid' => \App\Casts\DecimalUpToThree::class,
+        'balance_amount' => \App\Casts\DecimalUpToThree::class,
         'sent_at' => 'datetime',
         'approved_at' => 'datetime',
         'received_at' => 'datetime',
@@ -353,12 +353,12 @@ class PurchaseInvoice extends Model
                 ->first()?->total ?? 0);
         }
 
-        return round($vendorLedger + $allocated, 2);
+        return round($vendorLedger + $allocated, 3);
     }
 
     public function paidAmount(): float
     {
-        return round((float) $this->amount_paid + $this->ledgerPaid(), 2);
+        return round((float) $this->amount_paid + $this->ledgerPaid(), 3);
     }
 
     /**
@@ -373,12 +373,12 @@ class PurchaseInvoice extends Model
             return 0.0;
         }
 
-        return round(max((float) $this->total_amount - $this->paidAmount(), 0), 2);
+        return round(max((float) $this->total_amount - $this->paidAmount(), 0), 3);
     }
 
     public function advanceAmount(): float
     {
-        return round(max($this->paidAmount() - (float) $this->total_amount, 0), 2);
+        return round(max($this->paidAmount() - (float) $this->total_amount, 0), 3);
     }
 
     /** What is still open to record as an advance or a payment. */
@@ -388,27 +388,27 @@ class PurchaseInvoice extends Model
             return 0.0;
         }
 
-        return round(max((float) $this->total_amount - $this->paidAmount(), 0), 2);
+        return round(max((float) $this->total_amount - $this->paidAmount(), 0), 3);
     }
 
     /** unpaid | partial | paid — read from the money, never from a stored word. */
     public function paymentState(): string
     {
-        if ($this->balanceDue() <= 0.01) {
+        if ($this->balanceDue() < 0.001) {
             return 'paid';
         }
 
-        return $this->paidAmount() > 0.01 ? 'partial' : 'unpaid';
+        return $this->paidAmount() >= 0.001 ? 'partial' : 'unpaid';
     }
 
     /** How much of this order has been billed — 0 until its bill exists, then all of it. */
     public function billedAmount(): float
     {
         if (! $this->isOrder()) {
-            return round((float) $this->total_amount, 2);
+            return round((float) $this->total_amount, 3);
         }
 
-        return round((float) ($this->convertedInvoice?->total_amount ?? 0), 2);
+        return round((float) ($this->convertedInvoice?->total_amount ?? 0), 3);
     }
 
     public function isOverdue(?\DateTimeInterface $today = null): bool
@@ -417,7 +417,7 @@ class PurchaseInvoice extends Model
             return false;
         }
 
-        return $this->balanceDue() > 0.01
+        return $this->balanceDue() >= 0.001
             && $this->due_date->lt($today ?: Carbon::today());
     }
 
