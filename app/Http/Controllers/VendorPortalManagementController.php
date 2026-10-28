@@ -35,7 +35,7 @@ class VendorPortalManagementController extends Controller
         ]);
         if (! $vendor->portal_enabled) $vendor->update(['portal_enabled' => true, 'portal_enabled_at' => now()]);
         return back()->with('success', 'Portal user created. Copy the one-time credentials now.')
-            ->with('vendor_portal_credentials', ['name' => $user->displayName(), 'username' => $user->username, 'password' => $password, 'url' => route('vendor-portal.login')]);
+            ->with('vendor_portal_credentials', ['name' => $user->displayName(), 'username' => $user->username, 'password' => $password, 'url' => route('public-links.vendor-login')]);
     }
 
     public function resetUser(Vendor $vendor, VendorPortalUser $portalUser): RedirectResponse
@@ -44,7 +44,7 @@ class VendorPortalManagementController extends Controller
         $password = Str::password(16);
         $portalUser->update(['password' => Hash::make($password), 'must_change_password' => true, 'password_changed_at' => null, 'updated_by' => Auth::id()]);
         return back()->with('success', 'One-time password reset. Copy it now.')
-            ->with('vendor_portal_credentials', ['name' => $portalUser->displayName(), 'username' => $portalUser->username, 'password' => $password, 'url' => route('vendor-portal.login')]);
+            ->with('vendor_portal_credentials', ['name' => $portalUser->displayName(), 'username' => $portalUser->username, 'password' => $password, 'url' => route('public-links.vendor-login')]);
     }
 
     public function toggleUser(Vendor $vendor, VendorPortalUser $portalUser): RedirectResponse

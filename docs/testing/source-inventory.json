@@ -28,6 +28,12 @@
       ]
     },
     {
+      "file": "tests/Database/MySqlPublicShortLinksTest.php",
+      "methods": [
+        "test_guest_links_use_current_tokens_and_the_original_handlers_on_mysql"
+      ]
+    },
+    {
       "file": "tests/Database/MySqlReportingTest.php",
       "methods": [
         "test_real_database_aggregation_honours_custom_bounds",
@@ -576,6 +582,26 @@
       ]
     },
     {
+      "file": "tests/Integration/PublicShortLinksTest.php",
+      "methods": [
+        "test_client_kyc_copy_field_contains_a_short_working_link_and_the_old_link_still_works",
+        "test_vendor_kyc_link_can_be_copied_opened_submitted_rotated_and_revoked",
+        "test_shipment_share_fields_sticker_qr_and_tracking_link_use_the_same_short_url",
+        "test_other_bearer_link_types_resolve_only_to_their_existing_public_routes",
+        "test_authority_like_mount_prefixes_cannot_make_an_external_redirect",
+        "test_aliases_cannot_be_minted_for_unsaved_unsupported_or_tokenless_records",
+        "test_invalid_tampered_rotated_and_deleted_links_fail_without_redirecting_or_disclosing_secrets",
+        "test_old_signing_key_works_only_while_retained_and_never_invalidates_the_legacy_url",
+        "test_canonical_handlers_still_enforce_share_expiry_revocation_permissions_and_view_counts",
+        "test_client_statement_with_an_overlapping_project_receipt_counts_it_only_once",
+        "test_redirect_keeps_the_application_mount_prefix_without_becoming_an_external_url",
+        "test_short_link_throttle_is_isolated_from_the_existing_vendor_kyc_limit",
+        "test_audit_redacts_the_alias_as_a_bearer_token",
+        "test_portal_credential_sharing_and_kyc_workspace_use_short_addresses_but_still_require_login",
+        "test_static_public_aliases_serve_existing_forms_without_weakening_portal_authentication"
+      ]
+    },
+    {
       "file": "tests/Integration/RouteBoundaryInventoryTest.php",
       "methods": [
         "test_every_office_route_also_requires_authentication",
@@ -995,6 +1021,7 @@
     "app/Http/Controllers/PublicFeedbackController.php",
     "app/Http/Controllers/PublicLeadController.php",
     "app/Http/Controllers/PublicMediaController.php",
+    "app/Http/Controllers/PublicShortLinkController.php",
     "app/Http/Controllers/PurchaseInvoiceController.php",
     "app/Http/Controllers/SalesInvoiceController.php",
     "app/Http/Controllers/SalesInvoiceEInvoiceController.php",
@@ -1081,6 +1108,7 @@
     "app/Services/ProjectWorkflowMatrix.php",
     "app/Services/ProjectWorkflowNotifications.php",
     "app/Services/ProjectWorkflowReturn.php",
+    "app/Services/PublicShareLinks.php",
     "app/Services/PurchaseBillLedger.php",
     "app/Services/PurchaseInvoiceMoney.php",
     "app/Services/RecurrenceFigures.php",
@@ -1246,6 +1274,7 @@
     "tools/checks/project-workflow-check.cjs",
     "tools/checks/project-workflow-ux-check.cjs",
     "tools/checks/projects-check.cjs",
+    "tools/checks/public-short-links-browser.cjs",
     "tools/checks/recurring-check.cjs",
     "tools/checks/report-check.cjs",
     "tools/checks/responsive-check.cjs",

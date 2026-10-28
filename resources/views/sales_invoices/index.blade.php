@@ -513,7 +513,7 @@
                                             <a href="{{ route('sales-invoices.print', $invoice) }}" target="_blank">
                                                 <i class="fas fa-print" aria-hidden="true"></i> Print
                                             </a>
-                                            <button type="button" data-copy-link="{{ route('sales-invoices.public', $invoice->public_token) }}">
+                                            <button type="button" data-copy-link="{{ \App\Services\PublicShareLinks::url($invoice) }}">
                                                 <i class="fas fa-link" aria-hidden="true"></i> Copy client link
                                             </button>
                                             @if ($invoice->status === 'draft')

@@ -505,7 +505,7 @@ class ShipmentController extends Controller
         }
 
         $label = $shipment->statusLabel();
-        $url = route('shipments.publicTrack', $shipment->public_token);
+        $url = \App\Services\PublicShareLinks::url($shipment);
 
         app(ClientPortalNotifier::class)->notifyClient(
             (int) $shipment->client_id,

@@ -848,7 +848,7 @@ class SalesInvoice extends Model
 
         if ($this->show_client_portal && $this->public_token) {
             $lines[] = '';
-            $lines[] = 'View the invoice here: '.route('sales-invoices.public', $this->public_token);
+            $lines[] = 'View the invoice here: '.\App\Services\PublicShareLinks::url($this);
         }
 
         $lines[] = '';

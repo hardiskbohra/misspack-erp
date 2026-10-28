@@ -168,10 +168,10 @@
                             data-invoice-number="{{ $invoice->invoice_number }}">
                             <i class="fas fa-paper-plane" aria-hidden="true"></i> Email to client
                         </button>
-                        <button type="button" data-copy-link="{{ route('sales-invoices.public', $invoice->public_token) }}">
+                        <button type="button" data-copy-link="{{ \App\Services\PublicShareLinks::url($invoice) }}">
                             <i class="fas fa-link" aria-hidden="true"></i> Copy client link
                         </button>
-                        <a href="{{ route('sales-invoices.public', $invoice->public_token) }}" target="_blank" rel="noopener">
+                        <a href="{{ \App\Services\PublicShareLinks::url($invoice) }}" target="_blank" rel="noopener">
                             <i class="fas fa-up-right-from-square" aria-hidden="true"></i> Open client copy
                         </a>
                         @if ($invoice->status === 'draft')

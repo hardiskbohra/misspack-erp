@@ -163,7 +163,7 @@ Sources: `app/Services/EmployeeAccess.php`, `app/Services/EmployeeProfile.php`, 
 
 ## Client master, KYC and account profile (`CLIENT`)
 
-Sources: `app/Http/Controllers/ClientController.php`, `app/Services/ClientAccountSummary.php`, `app/Models/Client.php`.
+Sources: `app/Http/Controllers/ClientController.php`, `app/Services/ClientAccountSummary.php`, `app/Models/Client.php`, `app/Services/PublicShareLinks.php`.
 
 ### IT-CLIENT-001 — KYC approval uses correct client token
 
@@ -247,6 +247,23 @@ Sources: `app/Http/Controllers/ClientController.php`, `app/Services/ClientAccoun
 **Expected:** Document amount applied in document currency; only source remainder in bank currency.
 
 **Evidence:** `tests/Feature/ClientAccountSummaryTest.php#test_fx_allocations_use_document_currency_and_leave_only_remainder_in_bank_currency`
+
+### IT-CLIENT-008 — Short public bearer links retain the original security and legacy routes
+
+**Priority:** P0 · **Requirement:** REQ-CLIENT; REQ-VENDOR; REQ-AUTH; REQ-AUDIT · **Implementation:** linked executable evidence
+
+- **Preconditions:** Full disposable schema, private fake vendor evidence, testing-only application keys, guest and office sessions
+- **Data:** Client and vendor KYC, other public types, altered signature/type/id, rotated token and previous app key; mounted subdirectory
+1. Copy and open short KYC links; submit through the canonical forms
+2. Rotate and revoke vendor tokens; try altered and noncanonical aliases
+3. Verify previous-key handling, same-origin paths and isolated throttling
+4. Check document ownership, privacy headers and audit redaction
+
+**Expected:** Short links resolve only to allowlisted current tokens; old full links still work; tampered, deleted and rotated-token aliases fail; original KYC security remains authoritative.
+
+**Note:** Real Chromium clipboard and guest navigation are a separate check; web-server access logs still need operational redaction. See public-short-links.md.
+
+**Evidence:** `tests/Integration/PublicShortLinksTest.php#test_client_kyc_copy_field_contains_a_short_working_link_and_the_old_link_still_works`; `tests/Integration/PublicShortLinksTest.php#test_vendor_kyc_link_can_be_copied_opened_submitted_rotated_and_revoked`; `tests/Integration/PublicShortLinksTest.php#test_invalid_tampered_rotated_and_deleted_links_fail_without_redirecting_or_disclosing_secrets`; `tests/Integration/PublicShortLinksTest.php#test_old_signing_key_works_only_while_retained_and_never_invalidates_the_legacy_url`; `tests/Integration/PublicShortLinksTest.php#test_short_link_throttle_is_isolated_from_the_existing_vendor_kyc_limit`; `tests/Integration/PublicShortLinksTest.php#test_redirect_keeps_the_application_mount_prefix_without_becoming_an_external_url`; `tests/Integration/PublicShortLinksTest.php#test_authority_like_mount_prefixes_cannot_make_an_external_redirect`; `tests/Integration/PublicShortLinksTest.php#test_audit_redacts_the_alias_as_a_bearer_token`
 
 ## Vendor master and payable profile (`VENDOR`)
 
@@ -732,7 +749,7 @@ Sources: `app/Http/Controllers/PackagingListController.php`, `app/Services/Packa
 
 ## Shipments, dispatch and delivery (`SHIP`)
 
-Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDispatchAuthorization.php`, `app/Services/ShipmentDocuments.php`.
+Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDispatchAuthorization.php`, `app/Services/ShipmentDocuments.php`, `app/Services/PublicShareLinks.php`.
 
 ### IT-SHIP-001 — Shipment view uploads directly to project
 
@@ -854,6 +871,22 @@ Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDi
 **Expected:** Invalid edits produce field errors and preserve existing rows; valid limits and a blank template row save; omitted lines are preserved and evaluated from storage, while explicit clearing removes them.
 
 **Evidence:** `tests/Integration/FullSchemaReliabilityTest.php#test_malformed_or_incomplete_shipment_lines_cannot_silently_delete_existing_items`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_malformed_or_incomplete_shipment_lines_cannot_silently_delete_existing_items`; `tests/Integration/FullSchemaReliabilityTest.php#test_out_of_range_shipment_values_are_rejected_without_mutating_the_shipment_or_items`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_out_of_range_shipment_values_are_rejected_without_mutating_the_shipment_or_items`; `tests/Integration/FullSchemaReliabilityTest.php#test_values_with_excess_precision_are_not_silently_rounded`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_values_with_excess_precision_are_not_silently_rounded`; `tests/Integration/FullSchemaReliabilityTest.php#test_database_boundary_values_and_an_empty_template_row_are_accepted`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_database_boundary_values_and_an_empty_template_row_are_accepted`; `tests/Integration/FullSchemaReliabilityTest.php#test_missing_shipment_lines_are_preserved_but_explicitly_cleared_lines_are_removed`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_missing_shipment_lines_are_preserved_but_explicitly_cleared_lines_are_removed`; `tests/Integration/FullSchemaReliabilityTest.php#test_dispatch_with_omitted_lines_evaluates_the_stored_lines`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_dispatch_with_omitted_lines_evaluates_the_stored_lines`
+
+### IT-SHIP-010 — Short tracking link is consistent across copy, notifications and shipping marks
+
+**Priority:** P1 · **Requirement:** REQ-SHIP; REQ-UI · **Implementation:** linked executable evidence
+
+- **Preconditions:** Full disposable schema, guest tracking page and visible client notification
+- **Data:** A live shipment with a 48-character original token
+1. Read office tracking copy controls, shipment sticker and public share controls
+2. Open the short URL as a guest
+3. Notify the client of a status change and rotate the token
+
+**Expected:** All recipients receive the same short link; it redirects to the existing tracking page, and the old short alias stops working on token rotation.
+
+**Note:** Chromium additionally copies the URL on desktop/mobile and decodes the actual rendered QR. See public-short-links.md.
+
+**Evidence:** `tests/Integration/PublicShortLinksTest.php#test_shipment_share_fields_sticker_qr_and_tracking_link_use_the_same_short_url`; `tests/Integration/FullSchemaReliabilityTest.php#test_long_shipment_title_and_link_are_saved_to_both_notification_channels`; `tests/Database/MySqlFullSchemaReliabilityTest.php#test_long_shipment_title_and_link_are_saved_to_both_notification_channels`
 
 ## Proformas, cash invoices and tax invoices (`SALES`)
 
@@ -1429,7 +1462,7 @@ Sources: `app/Services/RecurrenceSchedule.php`, `app/Services/RecurrencePosting.
 
 ## Party statements and reconciliation (`STATEMENT`)
 
-Sources: `app/Services/PartyStatement.php`, `app/Http/Controllers/PartyStatementController.php`.
+Sources: `app/Services/PartyStatement.php`, `app/Http/Controllers/PartyStatementController.php`, `app/Services/PublicShareLinks.php`.
 
 ### IT-STATEMENT-001 — Statement reconciles to source documents
 
@@ -1509,6 +1542,22 @@ Sources: `app/Services/PartyStatement.php`, `app/Http/Controllers/PartyStatement
 **Note:** Real Chromium and PyMuPDF geometry/text/page checks are separate executed gates; see statement-print-preview.md. Download uses browser Save as PDF when optional Dompdf is not installed.
 
 **Evidence:** `tests/Integration/StatementPrintPreviewTest.php#test_statement_page_print_link_opens_new_tab_and_preserves_all_time_currency_and_ageing_off`; `tests/Integration/StatementPrintPreviewTest.php#test_preview_exposes_download_and_filters_with_same_all_time_scope`; `tests/Integration/StatementPrintPreviewTest.php#test_print_custom_dates_do_not_revert_to_current_month`; `tests/Integration/StatementPrintPreviewTest.php#test_compact_paper_header_has_logo_party_details_and_no_pan`; `tests/Integration/StatementPrintPreviewTest.php#test_monthly_defaults_remain_unchanged_and_an_explicit_foreign_currency_is_retained`; `tests/Integration/StatementPrintPreviewTest.php#test_vendor_preview_is_a_single_currency_payable_and_finance_boundary_is_retained`; `tests/Integration/StatementPrintPreviewTest.php#test_print_masthead_separates_title_filters_from_aligned_party_names_and_removes_only_header_badges`
+
+### IT-STATEMENT-007 — Shared client statements work with empty receipts and do not double count overlapping receipts
+
+**Priority:** P0 · **Requirement:** REQ-STATEMENT; REQ-CPORTAL · **Implementation:** linked executable evidence
+
+- **Preconditions:** Full disposable schema and guest statement link; both no-project and published-project cases
+- **Data:** Empty project receipts; one INR100 invoice and one INR40 receipt linked to both project and invoice
+1. Open the short statement as a guest with no published project receipts
+2. Open a statement where the same booked receipt appears through both sources
+3. Revoke or expire the shared link and inspect view counts
+
+**Expected:** Empty statements open instead of failing; the receipt appears once with INR60 closing balance; expiry/revocation and view counts remain authoritative at the original handler.
+
+**Note:** The empty-receipts failure predated short links; both SQLite and strict MySQL exercise its fix.
+
+**Evidence:** `tests/Integration/PublicShortLinksTest.php#test_canonical_handlers_still_enforce_share_expiry_revocation_permissions_and_view_counts`; `tests/Integration/PublicShortLinksTest.php#test_client_statement_with_an_overlapping_project_receipt_counts_it_only_once`; `tests/Database/MySqlPublicShortLinksTest.php#test_guest_links_use_current_tokens_and_the_original_handlers_on_mysql`
 
 ## Asset register, allocation and depreciation (`ASSET`)
 
@@ -1979,13 +2028,17 @@ Sources: `app/Http/Controllers/VendorPortalController.php`, `app/Http/Controller
 
 ### IT-VPORTAL-002 — Revoking existing share takes effect immediately
 
-**Priority:** P0 · **Requirement:** REQ-VPORTAL · **Implementation:** planned
+**Priority:** P0 · **Requirement:** REQ-VPORTAL · **Implementation:** partial evidence
 
 - **Preconditions:** VP1 for V1 and VP2 for V2; valid,revoked,expired share tokens
 - **Data:** Previously valid link open; office revokes
 1. GET link after revocation
 
 **Expected:** No cached authenticated content returned.
+
+**Note:** Exercises short redirect plus the original expired/revoked share response and view count; not all portal cache layers.
+
+**Evidence:** `tests/Integration/PublicShortLinksTest.php#test_canonical_handlers_still_enforce_share_expiry_revocation_permissions_and_view_counts`
 
 ### IT-VPORTAL-003 — Portal/share administration requires sensitive portal grant
 

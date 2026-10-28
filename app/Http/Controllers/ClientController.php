@@ -255,8 +255,8 @@ class ClientController extends Controller
         $oneTimePassword = (int) session('portal_plain_password_user_id') === (int) ($credentialUser?->id)
             ? session('portal_plain_password')
             : null;
-        $portalLoginUrl = \Illuminate\Support\Facades\Route::has('client-portal.login')
-            ? route('client-portal.login')
+        $portalLoginUrl = \Illuminate\Support\Facades\Route::has('public-links.client-login')
+            ? route('public-links.client-login')
             : null;
         $shareMessage = $this->portalShareMessage($client, $credentialUser, $oneTimePassword, $portalLoginUrl);
 

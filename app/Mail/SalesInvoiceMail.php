@@ -45,7 +45,7 @@ class SalesInvoiceMail extends Mailable
     public function publicUrl(): ?string
     {
         return $this->linkAllowed && $this->invoice->public_token
-            ? route('sales-invoices.public', $this->invoice->public_token)
+            ? \App\Services\PublicShareLinks::url($this->invoice)
             : null;
     }
 }

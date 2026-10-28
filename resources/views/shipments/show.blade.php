@@ -85,7 +85,7 @@
                 </a>
             </div>
 
-            <a href="{{ route('shipments.publicTrack', $shipment->public_token) }}" target="_blank" class="master-btn master-btn-soft">
+            <a href="{{ \App\Services\PublicShareLinks::url($shipment) }}" target="_blank" class="master-btn master-btn-soft">
                 <i class="fa-solid fa-arrow-up-right-from-square"></i> Public Tracking
             </a>
         </div>
@@ -338,7 +338,7 @@
                 <h3 class="master-section-title">Share Tracking</h3>
                 <p class="master-sub">Anyone with this link can follow the shipment without logging in.</p>
                 <div class="public-box">
-                    <input class="master-input" id="publicTrackingLink" readonly value="{{ route('shipments.publicTrack', $shipment->public_token) }}" aria-label="Public tracking link">
+                    <input class="master-input" id="publicTrackingLink" readonly value="{{ \App\Services\PublicShareLinks::url($shipment) }}" aria-label="Public tracking link">
                     <button type="button" class="master-btn master-btn-soft" onclick="maCopy('publicTrackingLink', 'Copy tracking link')">Copy</button>
                 </div>
             </section>

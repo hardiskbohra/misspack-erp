@@ -216,6 +216,9 @@ trait ErpReliabilityScenarios
             $this->assertGreaterThan(255, mb_strlen($notification->action_url));
             $this->assertStringStartsWith($root, $alert->action_url);
             $this->assertStringStartsWith($root, $notification->action_url);
+            $short = \App\Services\PublicShareLinks::url($shipment);
+            $this->assertSame($short, $notification->action_url);
+            $this->assertStringContainsString($short, $notification->message);
         } finally {
             app('url')->forceRootUrl(null);
         }

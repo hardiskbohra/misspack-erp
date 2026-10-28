@@ -100,8 +100,11 @@ check('a ten-digit number is an Indian mobile and gets its country code',
     /strlen\(\$digits\) === 10/.test(model) && /'91'\.\$digits/.test(model));
 check('an email link only exists for a valid address',
     /FILTER_VALIDATE_EMAIL/.test(model));
-check('the link is the public route, spelled once',
-    /route\('statements\.public', \$this->token\)/.test(model));
+const publicLinks = read('app/Services/PublicShareLinks.php');
+check('the share delegates to the single allowlisted statement public route',
+    /PublicShareLinks::url\(\$this\)/.test(model)
+    && /'a'\s*=>\s*\[PartyStatementShare::class,\s*'token',\s*'statements\.public'\]/.test(publicLinks)
+    && (publicLinks.match(/'statements\.public'/g) || []).length === 1);
 
 /* -------------------------------------------------------------- the engine */
 

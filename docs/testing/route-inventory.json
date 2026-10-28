@@ -3914,6 +3914,55 @@
             ]
         },
         {
+            "name": "public-links.client-login",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "s/c",
+            "action": "App\\Http\\Controllers\\ClientPortalAuthController@showLogin",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "public-links.enquiry",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "s/e",
+            "action": "App\\Http\\Controllers\\PublicLeadController@create",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "public-links.vendor-login",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "s/v",
+            "action": "App\\Http\\Controllers\\VendorPortalAuthController@showLogin",
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "name": "public-links.short",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "uri": "s/{token}",
+            "action": "App\\Http\\Controllers\\PublicShortLinkController@show",
+            "middleware": [
+                "web",
+                "throttle:120,1,short-links:"
+            ]
+        },
+        {
             "name": "sales-invoices.attachments.destroy",
             "methods": [
                 "DELETE"

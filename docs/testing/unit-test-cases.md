@@ -112,7 +112,7 @@ Sources: `app/Services/EmployeeAccess.php`, `app/Services/EmployeeProfile.php`, 
 
 ## Client master, KYC and account profile (`CLIENT`)
 
-Sources: `app/Http/Controllers/ClientController.php`, `app/Services/ClientAccountSummary.php`, `app/Models/Client.php`.
+Sources: `app/Http/Controllers/ClientController.php`, `app/Services/ClientAccountSummary.php`, `app/Models/Client.php`, `app/Services/PublicShareLinks.php`.
 
 ### UT-CLIENT-001 — Currencies remain separate
 
@@ -449,7 +449,7 @@ Sources: `app/Http/Controllers/PackagingListController.php`, `app/Services/Packa
 
 ## Shipments, dispatch and delivery (`SHIP`)
 
-Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDispatchAuthorization.php`, `app/Services/ShipmentDocuments.php`.
+Sources: `app/Http/Controllers/ShipmentController.php`, `app/Services/ShipmentDispatchAuthorization.php`, `app/Services/ShipmentDocuments.php`, `app/Services/PublicShareLinks.php`.
 
 ### UT-SHIP-001 — Dispatch gate requires full financial balance
 
@@ -634,7 +634,7 @@ Sources: `app/Services/RecurrenceSchedule.php`, `app/Services/RecurrencePosting.
 
 ## Party statements and reconciliation (`STATEMENT`)
 
-Sources: `app/Services/PartyStatement.php`, `app/Http/Controllers/PartyStatementController.php`.
+Sources: `app/Services/PartyStatement.php`, `app/Http/Controllers/PartyStatementController.php`, `app/Services/PublicShareLinks.php`.
 
 ### UT-STATEMENT-001 — Running balance respects debit/credit direction
 
@@ -1124,13 +1124,17 @@ Sources: `app/Services/AuditTrail.php`, `app/Http/Middleware/AuditMutations.php`
 
 ### UT-AUDIT-001 — Public tokens are redacted from logged URL
 
-**Priority:** P0 · **Requirement:** REQ-AUDIT · **Implementation:** planned
+**Priority:** P0 · **Requirement:** REQ-AUDIT · **Implementation:** partial evidence
 
 - **Preconditions:** Office,portal and anonymous actors; sensitive settings mutation and secret URL token
 - **Data:** Request path includes secure token
 1. Build audit URL
 
 **Expected:** Token replaced with redacted marker rather than stored plaintext.
+
+**Note:** Component evidence exercises AuditTrail with a bound short-link route; this is not an isolated unit proof of all audit redaction.
+
+**Evidence:** `tests/Integration/PublicShortLinksTest.php#test_audit_redacts_the_alias_as_a_bearer_token`
 
 ### UT-AUDIT-002 — Sensitive request bodies are not logged wholesale
 

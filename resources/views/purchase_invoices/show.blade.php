@@ -103,7 +103,7 @@
                     <i class="fas fa-ellipsis-v"></i>
                 </button>
                 <div class="master-dropdown-menu">
-                    <button type="button" data-copy-link="{{ route('purchase-invoices.public', $invoice->public_token) }}">
+                    <button type="button" data-copy-link="{{ \App\Services\PublicShareLinks::url($invoice) }}">
                         <i class="fa-solid fa-link" aria-hidden="true"></i> Copy public link
                     </button>
                     @if ($invoice->canConvert())

@@ -106,10 +106,10 @@
                     <div class="master-facts">
                         <div class="master-info"><span>Visible to</span><strong>{{ $project->clientName() }}</strong></div>
                         <div class="master-info"><span>Client signs in at</span>
-                            <strong>{{ route('client-portal.login') }}</strong></div>
+                            <strong>{{ route('public-links.client-login') }}</strong></div>
                     </div>
                     <div class="project-client-portal-actions">
-                        <a class="master-btn master-btn-light master-btn-sm" href="{{ route('client-portal.login') }}"
+                        <a class="master-btn master-btn-light master-btn-sm" href="{{ route('public-links.client-login') }}"
                             target="_blank" rel="noopener">
                             <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Open sign-in page
                         </a>

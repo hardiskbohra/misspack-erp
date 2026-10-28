@@ -96,6 +96,15 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 Route::get('/two-factor-challenge',  [TwoFactorChallengeController::class, 'show'])->name('two-factor.challenge');
 Route::post('/two-factor-challenge', [TwoFactorChallengeController::class, 'store'])->middleware('throttle:15,1')->name('two-factor.challenge.store');
 
+/* Short, same-domain sharing addresses. The token parameter name is important:
+   the audit trail redacts it just like the original bearer-token routes. The
+   canonical destinations, not this redirect, enforce each resource's policy. */
+Route::get('/s/e', [PublicLeadController::class, 'create'])->name('public-links.enquiry');
+Route::get('/s/c', [ClientPortalAuthController::class, 'showLogin'])->name('public-links.client-login');
+Route::get('/s/v', [VendorPortalAuthController::class, 'showLogin'])->name('public-links.vendor-login');
+Route::get('/s/{token}', [\App\Http\Controllers\PublicShortLinkController::class, 'show'])
+    ->middleware('throttle:120,1,short-links:')->name('public-links.short');
+
 // Shipment Tracking
 Route::get('/track-shipment/{token}', [ShipmentController::class, 'publicTrack'])->name('shipments.publicTrack');
 

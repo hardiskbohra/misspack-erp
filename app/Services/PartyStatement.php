@@ -158,10 +158,12 @@ class PartyStatement
                    excludes what the project read already found — one row, one
                    credit, whichever door it arrived by. */
                 $projectReceipts = ProjectReceipts::forClient($id);
+                // Either reader may return a plain empty Support collection;
+                // pluck works for that and for Eloquent model collections.
                 $receipts = $this->clientPortalInvoiceCashflowEntries(
                     $id,
-                    $invoices->modelKeys(),
-                    $projectReceipts->modelKeys()
+                    $invoices->pluck('id')->all(),
+                    $projectReceipts->pluck('id')->all()
                 );
 
                 $found = array_merge(
@@ -626,8 +628,8 @@ class PartyStatement
             $projectReceipts = ProjectReceipts::forClient($client->id);
             $entries = $this->clientPortalInvoiceCashflowEntries(
                 $client->id,
-                $invoices->modelKeys(),
-                $projectReceipts->modelKeys()
+                $invoices->pluck('id')->all(),
+                $projectReceipts->pluck('id')->all()
             );
         } else {
             $invoices = Schema::hasTable('sales_invoices')
@@ -942,8 +944,8 @@ class PartyStatement
             $receipts = ProjectReceipts::forClient((int) $party->id);
             $entries = $this->clientPortalInvoiceCashflowEntries(
                 (int) $party->id,
-                $invoices->modelKeys(),
-                $receipts->modelKeys()
+                $invoices->pluck('id')->all(),
+                $receipts->pluck('id')->all()
             );
 
             $collect($invoices->map(fn ($invoice) => [

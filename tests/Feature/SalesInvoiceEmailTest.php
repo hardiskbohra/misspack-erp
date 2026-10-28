@@ -9,6 +9,7 @@ use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceItem;
 use App\Models\SalesInvoiceSend;
 use App\Models\User;
+use App\Services\PublicShareLinks;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Symfony\Component\Mailer\Exception\TransportException;
@@ -125,7 +126,7 @@ class SalesInvoiceEmailTest extends TestCase
                 && str_contains($html, 'INV-TEST-0001')
                 && str_contains($html, 'Please find the October invoice.')
                 /* the link joins because this send flips the portal flag */
-                && str_contains($html, route('sales-invoices.public', $invoice->public_token));
+                && str_contains($html, PublicShareLinks::url($invoice));
         });
 
         $this->assertDatabaseHas('sales_invoice_sends', [
@@ -142,6 +143,10 @@ class SalesInvoiceEmailTest extends TestCase
         $this->assertSame('sent', $invoice->status);
         $this->assertNotNull($invoice->sent_at);
         $this->assertTrue((bool) $invoice->show_client_portal);
+        $short = PublicShareLinks::url($invoice);
+        $this->assertStringNotContainsString($invoice->public_token, $short);
+        $this->get($short)->assertStatus(302)->assertHeader('Location',
+            parse_url(route('sales-invoices.public', $invoice->public_token), PHP_URL_PATH));
 
         /* and the record page now answers "did anyone ever email this?" */
         $this->get(route('sales-invoices.show', $invoice))
