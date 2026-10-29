@@ -37,6 +37,7 @@
       "file": "tests/Database/MySqlPurchasePartialConversionTest.php",
       "methods": [
         "test_native_money_slices_and_lossy_rollback_guard",
+        "test_native_rmb_remainder_saves_a_visible_thousandth_round_off",
         "test_cross_order_bill_number_collision_retries_without_losing_either_conversion",
         "test_two_overlapping_conversions_serialize_and_cannot_consume_the_same_remainder"
       ]
@@ -625,6 +626,12 @@
       "methods": [
         "test_user_example_preserves_payment_provenance_in_all_three_currencies",
         "test_multiple_partial_bills_and_cash_reduce_the_gross_and_apportion_gst",
+        "test_rmb_remainder_bill_preserves_rate_and_payments_with_visible_round_off",
+        "test_purchase_bill_can_use_positive_rounding_and_the_five_thousandth_limit",
+        "test_small_quantity_rounding_keeps_apportioned_gst_and_reconciles_bill_total",
+        "test_quantity_rounding_preserves_discounts_gst_and_freight",
+        "test_rounding_cannot_make_line_or_invoice_taxable_amount_negative",
+        "test_purchase_rounding_rejects_large_cancelling_and_zero_quantity_slices_atomically",
         "test_foreign_or_excess_payment_selections_fail_atomically_and_unselected_advance_stays",
         "test_latest_conversion_reversal_restores_claim_payments_and_bank_without_duplication",
         "test_opening_and_fx_allocation_split_and_reverse_without_changing_the_bank_entry",

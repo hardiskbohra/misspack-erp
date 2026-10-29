@@ -334,20 +334,45 @@ class PurchasePartialConversion
     {
         $items = $order->items()->get();
         if ($items->isEmpty()) throw ValidationException::withMessages(['conversion' => 'The PO has no item lines to apportion. Ask Accounts to review it.']);
-        $portion = fn ($value) => round((float) $value * ($before + $amount) / $original, 3) - round((float) $value * $before / $original, 3);
+        // Cumulative decimal apportionment prevents a binary-float half-way
+        // value such as 0.1005 from being rounded down to 0.100 by accident.
+        $beforeDecimal = \Brick\Math\BigDecimal::of(number_format($before, 3, '.', ''));
+        $afterDecimal = $beforeDecimal->plus(number_format($amount, 3, '.', ''));
+        $originalDecimal = \Brick\Math\BigDecimal::of(number_format($original, 3, '.', ''));
+        $portion = static function ($value) use ($beforeDecimal, $afterDecimal, $originalDecimal): float {
+            $value = \Brick\Math\BigDecimal::of((string) ($value ?? '0'));
+            $after = $value->multipliedBy($afterDecimal)->dividedBy($originalDecimal, 3, \Brick\Math\RoundingMode::HalfUp);
+            $before = $value->multipliedBy($beforeDecimal)->dividedBy($originalDecimal, 3, \Brick\Math\RoundingMode::HalfUp);
+            return (float) (string) $after->minus($before);
+        };
         $bill->save();
         $subtotal = $lineTaxable = 0.0;
+        $roundingBudget = \Brick\Math\BigDecimal::zero();
         foreach ($items as $item) {
-            $gross = round($portion($item->gross_amount), 3);
+            $apportionedGross = round($portion($item->gross_amount), 3);
             $quantity = round($portion($item->quantity), 3);
-            if (abs(round($quantity * (float) $item->unit_price, 3) - $gross) > 0.0005) {
-                throw ValidationException::withMessages(['conversion' => 'This bill portion cannot be represented by the original item rates and three-decimal quantities. Ask Accounts to review the split; nothing was changed.']);
+            // The visible line gross must equal its displayed quantity × original
+            // rate. Up to five thousandths across the *whole bill* may be
+            // reconciled by the visible round-off below; summing absolute line
+            // differences prevents opposite discrepancies from hiding each other.
+            $grossDecimal = \Brick\Math\BigDecimal::of(number_format($quantity, 3, '.', ''))
+                ->multipliedBy((string) ($item->unit_price ?? '0'))
+                ->toScale(3, \Brick\Math\RoundingMode::HalfUp);
+            $gross = (float) (string) $grossDecimal;
+            $difference = $grossDecimal->minus(number_format($apportionedGross, 3, '.', ''))->abs();
+            $roundingBudget = $roundingBudget->plus($difference);
+            if ($roundingBudget->isGreaterThan('0.005') || ($apportionedGross > 0 && ($quantity <= 0 || $gross <= 0))
+                || ($apportionedGross <= 0 && $gross > 0)) {
+                throw ValidationException::withMessages(['conversion' => 'This bill portion cannot be represented by the original item rates and three-decimal quantities within the small rounding limit. Ask Accounts to review the split; nothing was changed.']);
             }
             $line = $item->replicate(['purchase_invoice_id']);
             $line->purchase_invoice_id = $bill->id;
             $line->quantity = $quantity;
             $line->gross_amount = $gross;
             $line->discount_amount = round($portion($item->discount_amount), 3);
+            if ((float) $line->discount_amount > $gross + 0.0005) {
+                throw ValidationException::withMessages(['conversion' => 'The apportioned discount exceeds the rounded item amount. Ask Accounts to review the split; nothing was changed.']);
+            }
             $line->taxable_amount = round($gross - (float) $line->discount_amount, 3);
             $line->cgst_amount = round($portion($item->cgst_amount), 3);
             $line->sgst_amount = round($portion($item->sgst_amount), 3);
@@ -358,6 +383,9 @@ class PurchasePartialConversion
             $lineTaxable += (float) $line->taxable_amount;
         }
         $discount = round($portion($order->discount_amount), 3);
+        if ($discount > $lineTaxable + 0.0005) {
+            throw ValidationException::withMessages(['conversion' => 'The apportioned invoice discount exceeds the rounded taxable amount. Ask Accounts to review the split; nothing was changed.']);
+        }
         $taxable = round($lineTaxable - $discount, 3);
         $cgst = round($portion($order->cgst_amount), 3);
         $sgst = round($portion($order->sgst_amount), 3);

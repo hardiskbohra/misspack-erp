@@ -36,6 +36,7 @@
                 <div class="master-field"><label class="master-label" for="purchaseVendorBillNumber">Supplier bill number</label><input class="master-input" id="purchaseVendorBillNumber" name="vendor_bill_number" value="{{ old('vendor_bill_number') }}" maxlength="255" placeholder="Optional"></div>
                 <div class="master-field"><label class="master-label" for="purchaseVendorBillDate">Supplier bill date</label><input class="master-input" id="purchaseVendorBillDate" name="vendor_bill_date" type="date" value="{{ old('vendor_bill_date') }}"></div>
             </div>
+            <p class="master-help">Purchase bills keep the original rates and three-decimal quantities. Up to 0.005 {{ $invoice->currency }} in item-quantity rounding across the bill may be included in its round off; larger differences are blocked. Check the supplier's bill.</p>
             <h3 class="master-section-title">Choose payments for this bill</h3>
             <p class="master-help">Enter how much of each advance to allocate, in {{ $invoice->currency }}. All start at zero; no payment is selected automatically. Unselected money stays on the PO. No new cash or bank movement is created.</p>
             @if ((float) $invoice->amount_paid > 0 || $conversionPayments->isNotEmpty())

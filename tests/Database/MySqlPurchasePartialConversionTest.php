@@ -76,6 +76,39 @@ class MySqlPurchasePartialConversionTest extends TestCase
         }
     }
 
+    public function test_native_rmb_remainder_saves_a_visible_thousandth_round_off(): void
+    {
+        $db = DB::connection();
+        $db->setTransactionManager(new DatabaseTransactionsManager([$db->getName()]));
+        $db->beginTransaction();
+        try {
+            $user = User::create(['name' => 'Accounts', 'email' => 'purchase-round-mysql@example.test', 'password' => 'fixture', 'role' => 'admin', 'access_profile' => 'full']);
+            $vendor = Vendor::create(['vendor_number' => 'MYSQL-RMB-ROUND', 'vendor_name' => 'RMB supplier']);
+            $this->actingAs($user)->post(route('purchase-invoices.store'), [
+                'invoice_number' => 'MYSQL-RMB-ROUND-PO', 'invoice_type' => 'order', 'status' => 'approved',
+                'vendor_id' => $vendor->id, 'currency' => 'RMB', 'gst_type' => 'export', 'terms_conditions' => null,
+                'items' => [['product_name' => 'Cartons', 'quantity' => 10000, 'unit_price' => '2.1', 'gst_percent' => 0]],
+            ])->assertRedirect()->assertSessionHasNoErrors();
+            $order = PurchaseInvoice::where('invoice_number', 'MYSQL-RMB-ROUND-PO')->firstOrFail();
+            $this->post(route('purchase-invoices.convert-partial', $order), ['kind' => 'cash', 'mode' => 'amount', 'value' => '9000'])
+                ->assertRedirect()->assertSessionHasNoErrors();
+            $this->post(route('purchase-invoices.convert-partial', $order), ['kind' => 'bill', 'mode' => 'amount', 'value' => '12000'])
+                ->assertRedirect()->assertSessionHasNoErrors();
+            $bill = $order->partialConversions()->reorder('id', 'desc')->firstOrFail();
+            $line = DB::table('purchase_invoice_items')->where('purchase_invoice_id', $bill->id)->first();
+            $saved = DB::table('purchase_invoices')->where('id', $bill->id)->first();
+            $this->assertSame('5714.286', $line->quantity);
+            $this->assertSame('2.100', $line->unit_price);
+            $this->assertSame('12000.001', $line->gross_amount);
+            $this->assertSame('12000.001', $saved->subtotal);
+            $this->assertSame('-0.001', $saved->round_off);
+            $this->assertSame('12000.000', $saved->total_amount);
+            $this->assertSame('0.000', DB::table('purchase_invoices')->where('id', $order->id)->value('total_amount'));
+        } finally {
+            while ($db->transactionLevel() > 0) $db->rollBack();
+        }
+    }
+
     public function test_cross_order_bill_number_collision_retries_without_losing_either_conversion(): void
     {
         $suffix = bin2hex(random_bytes(4));

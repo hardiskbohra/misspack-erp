@@ -1497,6 +1497,20 @@ Sources: `app/Services/PurchaseBillLedger.php`, `app/Services/PurchaseInvoiceMon
 
 **Evidence:** `tests/Integration/PurchasePartialConversionsTest.php#test_purchase_reader_and_guest_cannot_create_or_change_conversions`; `tests/Integration/PurchasePartialConversionsTest.php#test_stale_controller_models_cannot_cancel_or_delete_a_newly_split_order`; `tests/Integration/PurchasePartialConversionsTest.php#test_stale_order_cannot_record_a_payment_after_full_conversion`; `tests/Database/MySqlPurchasePartialConversionTest.php#test_native_money_slices_and_lossy_rollback_guard`; `tests/Database/MySqlPurchasePartialConversionTest.php#test_two_overlapping_conversions_serialize_and_cannot_consume_the_same_remainder`; `tests/Database/MySqlPurchasePartialConversionTest.php#test_cross_order_bill_number_collision_retries_without_losing_either_conversion`
 
+### IT-PURCHASE-010 — Small quantity rounding on a partial purchase bill is visible and bounded
+
+**Priority:** P0 · **Requirement:** REQ-PURCHASE · **Implementation:** linked executable evidence
+
+- **Preconditions:** Approved RMB PO, 10,000 units at 2.1, with a 9,000 cash conversion
+- **Data:** 12,000 RMB remaining tax bill; reverse sign, 0.005 boundary, GST, cancellation and zero-quantity cases
+1. Create the cash bill and then the remaining purchase bill
+2. Check original rate, three-decimal quantity, line totals, round-off, payments and print
+3. Attempt larger, cancelling and zero-quantity discrepancies
+
+**Expected:** Quantity 5,714.286, gross 12,000.001 and visible -0.001 round-off yield exactly 12,000; payment movements are unchanged. Up to 0.005 absolute line discrepancy is permitted per bill; unsafe splits fail atomically.
+
+**Evidence:** `tests/Integration/PurchasePartialConversionsTest.php#test_rmb_remainder_bill_preserves_rate_and_payments_with_visible_round_off`; `tests/Integration/PurchasePartialConversionsTest.php#test_purchase_bill_can_use_positive_rounding_and_the_five_thousandth_limit`; `tests/Integration/PurchasePartialConversionsTest.php#test_small_quantity_rounding_keeps_apportioned_gst_and_reconciles_bill_total`; `tests/Integration/PurchasePartialConversionsTest.php#test_purchase_rounding_rejects_large_cancelling_and_zero_quantity_slices_atomically`; `tests/Database/MySqlPurchasePartialConversionTest.php#test_native_rmb_remainder_saves_a_visible_thousandth_round_off`; `tests/Integration/PurchasePartialConversionsTest.php#test_quantity_rounding_preserves_discounts_gst_and_freight`; `tests/Integration/PurchasePartialConversionsTest.php#test_rounding_cannot_make_line_or_invoice_taxable_amount_negative`
+
 ## Cashflow, allocations and account transfers (`CASH`)
 
 Sources: `app/Services/CashflowAllocations.php`, `app/Services/CashflowLedger.php`, `app/Http/Controllers/CashflowController.php`.

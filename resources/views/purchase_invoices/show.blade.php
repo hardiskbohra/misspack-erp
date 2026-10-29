@@ -318,6 +318,9 @@
                 @if ((float) $invoice->packing_amount > 0)<div class="si-total-row"><span>Packing</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->packing_amount, $invoice->currency) }}</strong></div>@endif
                 @if ((float) $invoice->other_charges > 0)<div class="si-total-row"><span>Other</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->other_charges, $invoice->currency) }}</strong></div>@endif
             @endif
+            @if (abs((float) $invoice->round_off) >= 0.001)
+                <div class="si-total-row"><span>Round off</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->round_off, $invoice->currency) }}</strong></div>
+            @endif
             @if ($invoice->hasPartialConversions())
                 <div class="si-total-row"><span>Original PO total</span><strong>{{ \App\Helpers\CommonHelper::amount($invoice->original_total_amount, $invoice->currency) }}</strong></div>
                 <div class="si-total-row"><span>Less linked bills</span><strong>− {{ \App\Helpers\CommonHelper::amount($invoice->converted_amount, $invoice->currency) }}</strong></div>

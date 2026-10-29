@@ -79,7 +79,26 @@ async function main() {
             assert.equal(await row.getByRole('button', { name: /^Delete$/ }).count(), 0);
             assert.equal(await row.getByRole('link', { name: /^Edit$/ }).count(), 0);
         }
-        console.log(`PASS ${width}px: manual cash/bank split, validation, totals, print, supplier reference and protected vendor payments`);
+        const rmbOrderPath = `/purchase-invoices/${orders['rmb' + width]}`;
+        await page.goto(new URL(rmbOrderPath, base).href, { waitUntil: 'domcontentloaded' });
+        assert.match(await page.locator('#purchasePartialConversion').innerText(), /Up to 0\.005 RMB in item-quantity rounding/);
+        await page.locator('#purchaseConversionValue').fill('9000');
+        await Promise.all([page.waitForURL(url => url.pathname !== rmbOrderPath), page.getByRole('button', { name: 'Create linked bill' }).click()]);
+        await page.goto(new URL(rmbOrderPath, base).href, { waitUntil: 'domcontentloaded' });
+        await page.locator('#purchaseConversionKind').selectOption('bill');
+        await page.locator('#purchaseConversionValue').fill('12000');
+        await Promise.all([page.waitForURL(url => url.pathname !== rmbOrderPath), page.getByRole('button', { name: 'Create linked bill' }).click()]);
+        const rmbBillPath = new URL(page.url()).pathname;
+        const billText = await page.locator('body').innerText();
+        assert.match(billText, /5714\.286/);
+        assert.match(billText, /Round off\s+-¥0\.001/);
+        assert.match(billText, /Grand total\s+¥12,000(?:\.00)?/);
+        await page.goto(new URL(rmbBillPath + '/print', base).href, { waitUntil: 'domcontentloaded' });
+        const rmbPrint = await page.locator('body').innerText();
+        assert.match(rmbPrint, /5,714\.286/);
+        assert.match(rmbPrint, /Round off\s+-¥0\.001/);
+        assert.match(rmbPrint, /Grand total\s+¥12,000(?:\.00)?/);
+        console.log(`PASS ${width}px: manual payments, vendor provenance and RMB 21,000 → 9,000 cash + 12,000 bill with visible -0.001 round off`);
     }
     assert.deepEqual(errors, [], 'No uncaught browser JavaScript errors');
     await browser.close();

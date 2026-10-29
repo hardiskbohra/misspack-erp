@@ -44,5 +44,15 @@ foreach ([1440, 390] as $width) {
         app(VendorPaymentCashflowSync::class)->sync($payment, true);
     }
     $orders[(string) $width] = $order->id;
+
+    // One separate RMB order reproduces the cash-then-purchase-bill rounding case.
+    $rmb = PurchaseInvoice::create(['invoice_number' => 'BROWSER-RMB-PO-'.$width, 'invoice_type' => 'order',
+        'status' => 'approved', 'public_token' => \Illuminate\Support\Str::random(48), 'vendor_id' => $vendor->id,
+        'vendor_company_name' => 'Example supplier', 'invoice_date' => '2026-10-29', 'currency' => 'RMB', 'gst_type' => 'export',
+        'subtotal' => 21000, 'taxable_amount' => 21000, 'total_amount' => 21000, 'created_by' => $user->id]);
+    $rmb->items()->create(['product_name' => 'RMB cartons', 'quantity' => 10000, 'unit' => 'pcs', 'unit_price' => '2.1',
+        'gross_amount' => 21000, 'taxable_amount' => 21000, 'line_total' => 21000, 'sort_order' => 1]);
+    app(PurchaseBillLedger::class)->sync($rmb);
+    $orders['rmb'.$width] = $rmb->id;
 }
 echo json_encode($orders, JSON_THROW_ON_ERROR)."\n";
